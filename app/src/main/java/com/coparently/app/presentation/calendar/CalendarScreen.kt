@@ -3,7 +3,6 @@ package com.coparently.app.presentation.calendar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.Crossfade
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.spring
@@ -13,42 +12,29 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
-import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.Button
 import androidx.compose.material3.DatePickerDefaults
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -59,45 +45,28 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.role
-import androidx.compose.ui.semantics.selected
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.data.local.entity.CustodyScheduleEntity
+import com.coparently.app.presentation.calendar.components.CalendarHeader
+import com.coparently.app.presentation.calendar.components.ViewModeSelector
+import com.coparently.app.presentation.calendar.components.CustodyIndicatorToday
 import com.coparently.app.presentation.event.EventViewModel
 import com.coparently.app.presentation.theme.CoParentlyColors
 import com.coparently.app.presentation.theme.dimensions
-import com.kizitonwose.calendar.compose.VerticalCalendar
 import com.kizitonwose.calendar.compose.rememberCalendarState
 import com.kizitonwose.calendar.core.CalendarDay
 import com.kizitonwose.calendar.core.DayPosition
 import com.kizitonwose.calendar.core.firstDayOfWeekFromLocale
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ChildCare
-import androidx.compose.material.icons.filled.Face
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Settings
 import java.time.LocalDate
-import java.time.LocalDateTime
 import java.time.YearMonth
 import java.time.ZoneId
-import java.time.temporal.WeekFields
 import kotlinx.coroutines.launch
 
 /**
@@ -196,42 +165,10 @@ fun CalendarScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "${YearMonth.from(selectedDate).month.getDisplayName(java.time.format.TextStyle.SHORT, java.util.Locale.getDefault()).take(3).uppercase()} ${YearMonth.from(selectedDate).year}",
-                        style = MaterialTheme.typography.headlineMedium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                },
-                actions = {
-                    // Today button
-                    androidx.compose.material3.TextButton(
-                        onClick = {
-                            calendarViewModel.setSelectedDate(LocalDate.now())
-                        },
-                        modifier = Modifier.padding(horizontal = 4.dp)
-                    ) {
-                        Text(
-                            text = LocalDate.now().dayOfMonth.toString(),
-                            style = MaterialTheme.typography.titleLarge,
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-
-                    if (onSettingsClick != null) {
-                        IconButton(onClick = onSettingsClick) {
-                            Icon(
-                                imageVector = Icons.Default.Settings,
-                                contentDescription = stringResource(R.string.calendar_settings),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
+            CalendarHeader(
+                selectedDate = selectedDate,
+                onNavigateToToday = { calendarViewModel.setSelectedDate(LocalDate.now()) },
+                onSettingsClick = onSettingsClick
             )
         },
         floatingActionButton = {
@@ -255,7 +192,7 @@ fun CalendarScreen(
                 .padding(paddingValues)
         ) {
             // Animated view mode selector with sliding indicator
-            AnimatedViewModeSelector(
+            ViewModeSelector(
                 selectedMode = viewMode,
                 onModeSelected = { mode ->
                     calendarViewModel.setViewMode(mode)
@@ -407,121 +344,6 @@ fun CalendarScreen(
     }
 }
 
-/**
- * Custody indicator for today's date.
- */
-@Composable
-private fun CustodyIndicatorToday(custody: String) {
-    val backgroundColor = when (custody) {
-        "mom" -> CoParentlyColors.MomPink.copy(alpha = 0.2f)
-        "dad" -> CoParentlyColors.DadBlue.copy(alpha = 0.2f)
-        else -> MaterialTheme.colorScheme.surfaceVariant
-    }
-
-    val borderColor = when (custody) {
-        "mom" -> CoParentlyColors.MomPink
-        "dad" -> CoParentlyColors.DadBlue
-        else -> MaterialTheme.colorScheme.outline
-    }
-
-    val textColor = when (custody) {
-        "mom" -> CoParentlyColors.MomPinkDark
-        "dad" -> CoParentlyColors.DadBlueDark
-        else -> MaterialTheme.colorScheme.onSurface
-    }
-
-    val text = when (custody) {
-        "mom" -> stringResource(R.string.custody_with_mom)
-        "dad" -> stringResource(R.string.custody_with_dad)
-        else -> ""
-    }
-
-    // Animated icon rotation
-    val animatedRotation by animateFloatAsState(
-        targetValue = 360f,
-        animationSpec = tween(
-            durationMillis = 2000,
-            easing = FastOutSlowInEasing
-        ),
-        label = "iconRotation"
-    )
-
-    val dims = dimensions()
-
-    val custodyDescription = when (custody) {
-        "mom" -> "Today's child is with Mom"
-        "dad" -> "Today's child is with Dad"
-        else -> "Custody information for today"
-    }
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = dims.paddingMedium, vertical = dims.paddingSmall)
-            .semantics {
-                contentDescription = custodyDescription
-                role = Role.Image
-            },
-        shape = RoundedCornerShape(dims.cornerRadius),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = dims.cardElevation,
-            pressedElevation = dims.cardElevation / 2,
-            hoveredElevation = dims.cardElevation * 1.5f
-        ),
-        colors = CardDefaults.cardColors(
-            containerColor = backgroundColor
-        ),
-        border = BorderStroke(2.dp, borderColor)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(dims.paddingMedium),
-            horizontalArrangement = Arrangement.spacedBy(dims.paddingSmall * 1.5f),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Animated icon
-            Icon(
-                imageVector = when (custody) {
-                    "mom" -> Icons.Default.Face
-                    "dad" -> Icons.Default.Person
-                    else -> Icons.Default.ChildCare
-                },
-                contentDescription = null,
-                tint = borderColor,
-                modifier = Modifier
-                    .size(dims.iconSize * 1.33f)
-                    .graphicsLayer {
-                        rotationZ = animatedRotation
-                    }
-            )
-
-            Text(
-                text = text,
-                style = MaterialTheme.typography.titleMedium,
-                color = textColor
-            )
-        }
-    }
-}
-
-@Composable
-private fun CalendarMonthHeader(yearMonth: YearMonth) {
-    AnimatedContent(
-        targetState = yearMonth,
-        transitionSpec = {
-            (fadeIn(tween(300)) + slideInVertically(
-                animationSpec = tween(300),
-                initialOffsetY = { fullHeight: Int -> -fullHeight }
-            )) togetherWith (fadeOut(tween(300)) + slideOutVertically(
-                animationSpec = tween(300),
-                targetOffsetY = { fullHeight: Int -> fullHeight }
-            ))
-        }
-    ) { _: YearMonth ->
-        // Month header is now in TopAppBar title
-    }
-}
 
 @Composable
 private fun CalendarDayContent(
@@ -665,121 +487,3 @@ private fun EventIndicatorDot(
     )
 }
 
-/**
- * Animated view mode selector with iOS-style sliding indicator
- */
-@Composable
-private fun AnimatedViewModeSelector(
-    selectedMode: CalendarViewMode,
-    onModeSelected: (CalendarViewMode) -> Unit
-) {
-    val dims = dimensions()
-    val modes = CalendarViewMode.values()
-    val selectedIndex = modes.indexOf(selectedMode)
-
-    // Calculate button width dynamically (total width - padding) / number of modes
-    val screenWidth = LocalConfiguration.current.screenWidthDp.dp
-    val internalPadding = dims.paddingSmall / 2
-    val selectorPadding = (dims.paddingMedium * 2) + (internalPadding * 2) // horizontal padding + internal padding
-    val buttonWidth = (screenWidth - selectorPadding) / modes.size.toFloat()
-
-    val indicatorOffset by animateDpAsState(
-        targetValue = buttonWidth * selectedIndex.toFloat(),
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessLow
-        ),
-        label = "indicatorOffset"
-    )
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = dims.paddingMedium, vertical = dims.paddingSmall * 1.5f)
-            .height(dims.buttonHeight * 0.86f) // ~48dp for compact
-            .background(
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                shape = RoundedCornerShape(dims.cornerRadius * 2)
-            )
-            .semantics {
-                contentDescription = "Calendar view mode selector. Currently selected: ${
-                    when (selectedMode) {
-                        CalendarViewMode.DAY -> "Day view"
-                        CalendarViewMode.THREE_DAYS -> "3 Days view"
-                        CalendarViewMode.WEEK -> "Week view"
-                        CalendarViewMode.MONTH -> "Month view"
-                    }
-                }"
-            }
-            .padding(internalPadding)
-    ) {
-        // Animated background indicator
-        Box(
-            modifier = Modifier
-                .width(buttonWidth)
-                .height(dims.buttonHeight * 0.71f) // ~40dp for compact
-                .offset(x = indicatorOffset)
-                .background(
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                    shape = RoundedCornerShape(dims.cornerRadius * 1.67f)
-                )
-                .graphicsLayer {
-                    // Subtle shadow effect
-                    shadowElevation = 2.dp.toPx()
-                }
-        )
-
-        // Mode buttons
-        Row(
-            modifier = Modifier.fillMaxSize(),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            modes.forEach { mode ->
-                val isSelected = mode == selectedMode
-                val modeLabel = when (mode) {
-                    CalendarViewMode.DAY -> "Day"
-                    CalendarViewMode.THREE_DAYS -> "3 Days"
-                    CalendarViewMode.WEEK -> "Week"
-                    CalendarViewMode.MONTH -> "Month"
-                }
-
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(dims.buttonHeight * 0.71f) // ~40dp for compact
-                        .semantics {
-                            role = Role.RadioButton
-                            selected = isSelected
-                            contentDescription = "$modeLabel view mode"
-                        }
-                        .clickable(
-                            onClickLabel = "Select $modeLabel view"
-                        ) { onModeSelected(mode) },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = when (mode) {
-                            CalendarViewMode.DAY -> "Day"
-                            CalendarViewMode.THREE_DAYS -> "3 Days"
-                            CalendarViewMode.WEEK -> "Week"
-                            CalendarViewMode.MONTH -> "Month"
-                        },
-                        style = MaterialTheme.typography.labelLarge,
-                        color = if (isSelected) {
-                            MaterialTheme.colorScheme.onPrimaryContainer
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                        modifier = Modifier.graphicsLayer {
-                            // Scale animation
-                            val scale = if (isSelected) 1.05f else 1f
-                            scaleX = scale
-                            scaleY = scale
-                        }
-                    )
-                }
-            }
-        }
-    }
-}
