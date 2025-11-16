@@ -3,6 +3,7 @@ package com.coparently.app.presentation.calendar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.spring
@@ -27,10 +28,15 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -56,6 +62,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -76,6 +83,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ChildCare
+import androidx.compose.material.icons.filled.Face
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -236,53 +246,13 @@ fun CalendarScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // View mode selector with modern styling
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp)
-                    .background(
-                        color = MaterialTheme.colorScheme.surfaceVariant,
-                        shape = RoundedCornerShape(50.dp)
-                    )
-                    .padding(4.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                CalendarViewMode.values().forEach { mode ->
-                    val isSelected = viewMode == mode
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(40.dp)
-                            .background(
-                                color = if (isSelected) {
-                                    MaterialTheme.colorScheme.primaryContainer
-                                } else {
-                                    Color.Transparent
-                                },
-                                shape = RoundedCornerShape(50.dp)
-                            )
-                            .clickable { calendarViewModel.setViewMode(mode) },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = when (mode) {
-                                CalendarViewMode.DAY -> "Day"
-                                CalendarViewMode.THREE_DAYS -> "3 Days"
-                                CalendarViewMode.WEEK -> "Week"
-                                CalendarViewMode.MONTH -> "Month"
-                            },
-                            style = MaterialTheme.typography.labelLarge,
-                            color = if (isSelected) {
-                                MaterialTheme.colorScheme.onPrimaryContainer
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            },
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                        )
-                    }
+            // Animated view mode selector with sliding indicator
+            AnimatedViewModeSelector(
+                selectedMode = viewMode,
+                onModeSelected = { mode ->
+                    calendarViewModel.setViewMode(mode)
                 }
-            }
+            )
 
             // Today's custody indicator (only for month view)
             if (viewMode == CalendarViewMode.MONTH && custodySchedules.isNotEmpty()) {
@@ -458,30 +428,54 @@ private fun CustodyIndicatorToday(custody: String) {
         else -> ""
     }
 
-    Box(
+    // Animated icon rotation
+    val animatedRotation by animateFloatAsState(
+        targetValue = 360f,
+        animationSpec = tween(
+            durationMillis = 2000,
+            easing = FastOutSlowInEasing
+        ),
+        label = "iconRotation"
+    )
+
+    Card(
         modifier = Modifier
-            .fillMaxSize()
-            .background(
-                color = backgroundColor,
-                shape = RoundedCornerShape(12.dp)
-            )
-            .border(
-                width = 2.dp,
-                color = borderColor,
-                shape = RoundedCornerShape(12.dp)
-            )
-            .padding(12.dp),
-        contentAlignment = Alignment.Center
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 4.dp,
+            pressedElevation = 2.dp,
+            hoveredElevation = 6.dp
+        ),
+        colors = CardDefaults.cardColors(
+            containerColor = backgroundColor
+        ),
+        border = BorderStroke(2.dp, borderColor)
     ) {
         Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(
+            // Animated icon
+            Icon(
+                imageVector = when (custody) {
+                    "mom" -> Icons.Default.Face
+                    "dad" -> Icons.Default.Person
+                    else -> Icons.Default.ChildCare
+                },
+                contentDescription = null,
+                tint = borderColor,
                 modifier = Modifier
-                    .size(12.dp)
-                    .background(color = borderColor, shape = CircleShape)
+                    .size(32.dp)
+                    .graphicsLayer {
+                        rotationZ = animatedRotation
+                    }
             )
+
             Text(
                 text = text,
                 style = MaterialTheme.typography.titleMedium,
@@ -649,4 +643,98 @@ private fun EventIndicatorDot(
             }
             .background(color = color, shape = CircleShape)
     )
+}
+
+/**
+ * Animated view mode selector with iOS-style sliding indicator
+ */
+@Composable
+private fun AnimatedViewModeSelector(
+    selectedMode: CalendarViewMode,
+    onModeSelected: (CalendarViewMode) -> Unit
+) {
+    val modes = CalendarViewMode.values()
+    val selectedIndex = modes.indexOf(selectedMode)
+
+    // Calculate button width dynamically (total width - padding) / number of modes
+    val screenWidth = LocalConfiguration.current.screenWidthDp.dp
+    val selectorPadding = (16.dp * 2) + (4.dp * 2) // horizontal padding + internal padding
+    val buttonWidth = (screenWidth - selectorPadding) / modes.size.toFloat()
+
+    val indicatorOffset by animateDpAsState(
+        targetValue = buttonWidth * selectedIndex.toFloat(),
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "indicatorOffset"
+    )
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .height(48.dp)
+            .background(
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                shape = RoundedCornerShape(24.dp)
+            )
+            .padding(4.dp)
+    ) {
+        // Animated background indicator
+        Box(
+            modifier = Modifier
+                .width(buttonWidth)
+                .height(40.dp)
+                .offset(x = indicatorOffset)
+                .background(
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    shape = RoundedCornerShape(20.dp)
+                )
+                .graphicsLayer {
+                    // Subtle shadow effect
+                    shadowElevation = 2.dp.toPx()
+                }
+        )
+
+        // Mode buttons
+        Row(
+            modifier = Modifier.fillMaxSize(),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            modes.forEach { mode ->
+                val isSelected = mode == selectedMode
+
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(40.dp)
+                        .clickable { onModeSelected(mode) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = when (mode) {
+                            CalendarViewMode.DAY -> "Day"
+                            CalendarViewMode.THREE_DAYS -> "3 Days"
+                            CalendarViewMode.WEEK -> "Week"
+                            CalendarViewMode.MONTH -> "Month"
+                        },
+                        style = MaterialTheme.typography.labelLarge,
+                        color = if (isSelected) {
+                            MaterialTheme.colorScheme.onPrimaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                        modifier = Modifier.graphicsLayer {
+                            // Scale animation
+                            val scale = if (isSelected) 1.05f else 1f
+                            scaleX = scale
+                            scaleY = scale
+                        }
+                    )
+                }
+            }
+        }
+    }
 }

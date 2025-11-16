@@ -1,8 +1,21 @@
 package com.coparently.app.presentation.calendar
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -21,6 +34,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -34,6 +48,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -352,6 +367,13 @@ private fun RowScope.DayCell(
         else -> MaterialTheme.colorScheme.surface
     }
 
+    // Ripple color based on custody
+    val rippleColor = when (custody) {
+        "mom" -> CoParentlyColors.MomPink
+        "dad" -> CoParentlyColors.DadBlue
+        else -> MaterialTheme.colorScheme.primary
+    }
+
     Box(
         modifier = Modifier
             .weight(1f)
@@ -361,11 +383,20 @@ private fun RowScope.DayCell(
                 color = backgroundColor,
                 shape = RoundedCornerShape(6.dp)
             )
-            .clickable(enabled = !isSwipeInProgress) {
-                if (!isSwipeInProgress) {
-                    onDayClick(date)
-                }
-            }
+            .clickable(
+                enabled = !isSwipeInProgress,
+                onClick = {
+                    if (!isSwipeInProgress) {
+                        onDayClick(date)
+                    }
+                },
+                indication = rememberRipple(
+                    bounded = true,
+                    radius = 24.dp,
+                    color = rippleColor
+                ),
+                interactionSource = remember { MutableInteractionSource() }
+            )
             .padding(4.dp),
         contentAlignment = Alignment.TopCenter
     ) {
@@ -408,25 +439,63 @@ private fun RowScope.DayCell(
                         else -> MaterialTheme.colorScheme.tertiary
                     }
 
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(
-                                color = eventColor.copy(alpha = 0.9f),
-                                shape = RoundedCornerShape(3.dp)
+                    // Animated visibility for events with spring animation
+                    var isVisible by remember { mutableStateOf(false) }
+                    LaunchedEffect(event.id) {
+                        isVisible = true
+                    }
+
+                    AnimatedVisibility(
+                        visible = isVisible,
+                        enter = scaleIn(
+                            animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioMediumBouncy,
+                                stiffness = Spring.StiffnessMedium
                             )
-                            .padding(horizontal = 2.dp, vertical = 1.dp),
-                        contentAlignment = Alignment.Center
+                        ) + fadeIn(),
+                        exit = scaleOut() + fadeOut()
                     ) {
-                        Text(
-                            text = event.title,
-                            style = MaterialTheme.typography.labelSmall,
-                            fontSize = 8.sp,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            color = Color.White,
-                            fontWeight = FontWeight.Medium
-                        )
+                        // Pulse animation for today's events
+                        val pulseModifier = if (isToday && event.startDateTime.toLocalDate() == LocalDate.now()) {
+                            val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+                            val pulse by infiniteTransition.animateFloat(
+                                initialValue = 0.95f,
+                                targetValue = 1.05f,
+                                animationSpec = infiniteRepeatable(
+                                    animation = tween(1000),
+                                    repeatMode = RepeatMode.Reverse
+                                ),
+                                label = "pulseAnimation"
+                            )
+                            Modifier.graphicsLayer {
+                                scaleX = pulse
+                                scaleY = pulse
+                            }
+                        } else {
+                            Modifier
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .then(pulseModifier)
+                                .background(
+                                    color = eventColor.copy(alpha = 0.9f),
+                                    shape = RoundedCornerShape(3.dp)
+                                )
+                                .padding(horizontal = 2.dp, vertical = 1.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = event.title,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontSize = 8.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                color = Color.White,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
                     }
                 }
 
