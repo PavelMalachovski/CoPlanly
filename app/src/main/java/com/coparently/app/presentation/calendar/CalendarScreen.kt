@@ -74,6 +74,7 @@ import com.coparently.app.R
 import com.coparently.app.data.local.entity.CustodyScheduleEntity
 import com.coparently.app.presentation.event.EventViewModel
 import com.coparently.app.presentation.theme.CoParentlyColors
+import com.coparently.app.presentation.theme.dimensions
 import com.kizitonwose.calendar.compose.VerticalCalendar
 import com.kizitonwose.calendar.compose.rememberCalendarState
 import com.kizitonwose.calendar.core.CalendarDay
@@ -107,6 +108,8 @@ fun CalendarScreen(
     eventViewModel: EventViewModel = hiltViewModel(),
     calendarViewModel: CalendarViewModel = hiltViewModel()
 ) {
+    // Get responsive dimensions
+    val dims = dimensions()
     val events by eventViewModel.events.collectAsState()
     val custodySchedules by calendarViewModel.custodySchedules.collectAsState()
     val viewMode by calendarViewModel.viewMode.collectAsState()
@@ -231,12 +234,12 @@ fun CalendarScreen(
                 onClick = onAddEventClick,
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(dims.cornerRadius)
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
                     contentDescription = stringResource(R.string.calendar_add_event),
-                    modifier = Modifier.size(28.dp)
+                    modifier = Modifier.size(dims.iconSize)
                 )
             }
         }
@@ -270,7 +273,7 @@ fun CalendarScreen(
                                 targetOffsetY = { it }
                             ) + fadeOut()
                         },
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                        modifier = Modifier.padding(horizontal = dims.paddingMedium, vertical = dims.paddingSmall)
                     ) { custody ->
                         CustodyIndicatorToday(custody = custody)
                     }
@@ -438,15 +441,17 @@ private fun CustodyIndicatorToday(custody: String) {
         label = "iconRotation"
     )
 
+    val dims = dimensions()
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        shape = RoundedCornerShape(16.dp),
+            .padding(horizontal = dims.paddingMedium, vertical = dims.paddingSmall),
+        shape = RoundedCornerShape(dims.cornerRadius),
         elevation = CardDefaults.cardElevation(
-            defaultElevation = 4.dp,
-            pressedElevation = 2.dp,
-            hoveredElevation = 6.dp
+            defaultElevation = dims.cardElevation,
+            pressedElevation = dims.cardElevation / 2,
+            hoveredElevation = dims.cardElevation * 1.5f
         ),
         colors = CardDefaults.cardColors(
             containerColor = backgroundColor
@@ -456,8 +461,8 @@ private fun CustodyIndicatorToday(custody: String) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(dims.paddingMedium),
+            horizontalArrangement = Arrangement.spacedBy(dims.paddingSmall * 1.5f),
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Animated icon
@@ -470,7 +475,7 @@ private fun CustodyIndicatorToday(custody: String) {
                 contentDescription = null,
                 tint = borderColor,
                 modifier = Modifier
-                    .size(32.dp)
+                    .size(dims.iconSize * 1.33f)
                     .graphicsLayer {
                         rotationZ = animatedRotation
                     }
@@ -653,12 +658,14 @@ private fun AnimatedViewModeSelector(
     selectedMode: CalendarViewMode,
     onModeSelected: (CalendarViewMode) -> Unit
 ) {
+    val dims = dimensions()
     val modes = CalendarViewMode.values()
     val selectedIndex = modes.indexOf(selectedMode)
 
     // Calculate button width dynamically (total width - padding) / number of modes
     val screenWidth = LocalConfiguration.current.screenWidthDp.dp
-    val selectorPadding = (16.dp * 2) + (4.dp * 2) // horizontal padding + internal padding
+    val internalPadding = dims.paddingSmall / 2
+    val selectorPadding = (dims.paddingMedium * 2) + (internalPadding * 2) // horizontal padding + internal padding
     val buttonWidth = (screenWidth - selectorPadding) / modes.size.toFloat()
 
     val indicatorOffset by animateDpAsState(
@@ -673,23 +680,23 @@ private fun AnimatedViewModeSelector(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp)
-            .height(48.dp)
+            .padding(horizontal = dims.paddingMedium, vertical = dims.paddingSmall * 1.5f)
+            .height(dims.buttonHeight * 0.86f) // ~48dp for compact
             .background(
                 color = MaterialTheme.colorScheme.surfaceVariant,
-                shape = RoundedCornerShape(24.dp)
+                shape = RoundedCornerShape(dims.cornerRadius * 2)
             )
-            .padding(4.dp)
+            .padding(internalPadding)
     ) {
         // Animated background indicator
         Box(
             modifier = Modifier
                 .width(buttonWidth)
-                .height(40.dp)
+                .height(dims.buttonHeight * 0.71f) // ~40dp for compact
                 .offset(x = indicatorOffset)
                 .background(
                     color = MaterialTheme.colorScheme.primaryContainer,
-                    shape = RoundedCornerShape(20.dp)
+                    shape = RoundedCornerShape(dims.cornerRadius * 1.67f)
                 )
                 .graphicsLayer {
                     // Subtle shadow effect
@@ -705,10 +712,12 @@ private fun AnimatedViewModeSelector(
             modes.forEach { mode ->
                 val isSelected = mode == selectedMode
 
+                val dims = dimensions()
+
                 Box(
                     modifier = Modifier
                         .weight(1f)
-                        .height(40.dp)
+                        .height(dims.buttonHeight * 0.71f) // ~40dp for compact
                         .clickable { onModeSelected(mode) },
                     contentAlignment = Alignment.Center
                 ) {

@@ -8,6 +8,7 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
+import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
@@ -105,16 +106,19 @@ val LocalThemeState = staticCompositionLocalOf { false }
 
 /**
  * Material 3 theme for CoParently app.
- * Supports both light and dark themes with enhanced color schemes.
+ * Supports both light and dark themes with enhanced color schemes,
+ * and responsive design based on window size.
  *
  * @param darkTheme Whether to use dark theme (defaults to system setting)
  * @param dynamicColor Whether to use dynamic colors (Android 12+)
+ * @param windowSizeClass Window size class for responsive dimensions (optional)
  * @param content The composable content to display with this theme
  */
 @Composable
 fun CoParentlyTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     dynamicColor: Boolean = false, // Disabled by default for brand consistency
+    windowSizeClass: WindowSizeClass? = null,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
@@ -126,6 +130,10 @@ fun CoParentlyTheme(
         else -> LightColorScheme
     }
 
+    // Calculate dimensions based on window size class
+    // Falls back to compact dimensions for phones if no window size class provided
+    val dimensions = windowSizeClass?.getDimensions() ?: compactDimensions
+
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
@@ -135,7 +143,11 @@ fun CoParentlyTheme(
         }
     }
 
-    CompositionLocalProvider(LocalThemeState provides darkTheme) {
+    // Provide both theme state and dimensions through CompositionLocal
+    CompositionLocalProvider(
+        LocalThemeState provides darkTheme,
+        LocalDimensions provides dimensions
+    ) {
         MaterialTheme(
             colorScheme = colorScheme,
             typography = Typography,
