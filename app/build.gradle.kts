@@ -2,8 +2,18 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("com.google.dagger.hilt.android")
-    id("com.google.gms.google-services")
     kotlin("kapt")
+}
+
+// Apply Google Services plugin only if a google-services.json is present
+val hasGoogleServicesJson =
+    file("google-services.json").exists() ||
+    file("src/google-services.json").exists() ||
+    file("src/debug/google-services.json").exists() ||
+    file("src/release/google-services.json").exists()
+
+if (hasGoogleServicesJson) {
+    apply(plugin = "com.google.gms.google-services")
 }
 
 android {
