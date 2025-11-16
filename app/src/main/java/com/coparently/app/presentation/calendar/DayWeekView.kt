@@ -40,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.coparently.app.data.local.entity.CustodyScheduleEntity
@@ -132,20 +133,16 @@ fun DayWeekView(
                 (0 until daysCount).map { startDate.plusDays(it.toLong()) }
             }
 
-            Row(
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(90.dp)
                     .background(MaterialTheme.colorScheme.surface)
-                    .padding(horizontal = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .padding(horizontal = 8.dp)
             ) {
-                // Week number for 3 days and week views (moved to the left)
-                // Show only once per week to avoid duplicates
+                // Week number for 3 days and week views (absolutely positioned, doesn't affect layout)
                 if (daysCount >= 3) {
                     val weekFields = WeekFields.of(Locale.getDefault())
-                    // Use the first date of the displayed range to get week number
                     val firstDate = currentDates.firstOrNull() ?: currentDate
                     val weekNumber = firstDate.get(weekFields.weekOfWeekBasedYear())
 
@@ -153,7 +150,7 @@ fun DayWeekView(
                         modifier = Modifier
                             .width(32.dp)
                             .fillMaxHeight()
-                            .padding(end = 4.dp),
+                            .align(Alignment.CenterStart),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
@@ -166,54 +163,66 @@ fun DayWeekView(
                     }
                 }
 
-                // Time column space - fixed width for consistency
-                Spacer(modifier = Modifier.width(52.dp))
-
-                currentDates.forEach { date ->
-                    val isToday = date == LocalDate.now()
-
+                // Main row with time column and dates - exactly matches content structure
+                // This row is identical to content row, ensuring perfect alignment
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .align(Alignment.Center),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    // Time column space - fixed width for consistency (matches content layout)
                     Box(
                         modifier = Modifier
-                            .weight(1f)
+                            .width(52.dp)
                             .fillMaxHeight()
-                            .background(
-                                color = if (isToday) {
-                                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)
-                                } else {
-                                    Color.Transparent
-                                },
-                                shape = RoundedCornerShape(8.dp)
-                            )
-                            .padding(6.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center,
-                            modifier = Modifier.padding(vertical = 4.dp)
+                    )
+
+                    currentDates.forEach { date ->
+                        val isToday = date == LocalDate.now()
+
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .background(
+                                    color = if (isToday) {
+                                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)
+                                    } else {
+                                        Color.Transparent
+                                    },
+                                    shape = RoundedCornerShape(8.dp)
+                                ),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                text = date.format(DateTimeFormatter.ofPattern("EEE")),
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Normal,
-                                fontSize = 9.sp,
-                                color = if (isToday) {
-                                    MaterialTheme.colorScheme.primary
-                                } else {
-                                    MaterialTheme.colorScheme.onSurfaceVariant
-                                }
-                            )
-                            Text(
-                                text = date.dayOfMonth.toString(),
-                                style = MaterialTheme.typography.titleLarge,
-                                fontSize = 20.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (isToday) {
-                                    MaterialTheme.colorScheme.primary
-                                } else {
-                                    MaterialTheme.colorScheme.onSurface
-                                }
-                            )
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Text(
+                                    text = date.format(DateTimeFormatter.ofPattern("EEE")),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Normal,
+                                    fontSize = 9.sp,
+                                    color = if (isToday) {
+                                        MaterialTheme.colorScheme.primary
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                    }
+                                )
+                                Text(
+                                    text = date.dayOfMonth.toString(),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isToday) {
+                                        MaterialTheme.colorScheme.primary
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurface
+                                    }
+                                )
+                            }
                         }
                     }
                 }
@@ -321,26 +330,33 @@ fun DayWeekView(
                                 contentAlignment = Alignment.Center
                             ) {
                                 if (dateEvents.isNotEmpty()) {
-                                    Column(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .padding(6.dp),
-                                        horizontalAlignment = Alignment.Start,
-                                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                                    Box(
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentAlignment = Alignment.Center
                                     ) {
-                                        dateEvents.take(2).forEach { event ->
-                                            EventChip(
-                                                event = event,
-                                                onClick = { onEventClick(event.id) }
-                                            )
-                                        }
-                                        if (dateEvents.size > 2) {
-                                            Text(
-                                                text = "+${dateEvents.size - 2}",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = MaterialTheme.colorScheme.primary,
-                                                fontWeight = FontWeight.Bold
-                                            )
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(6.dp),
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            dateEvents.take(2).forEach { event ->
+                                                EventChip(
+                                                    event = event,
+                                                    onClick = { onEventClick(event.id) }
+                                                )
+                                            }
+                                            if (dateEvents.size > 2) {
+                                                Text(
+                                                    text = "+${dateEvents.size - 2}",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = MaterialTheme.colorScheme.primary,
+                                                    fontWeight = FontWeight.Bold,
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    textAlign = TextAlign.Center
+                                                )
+                                            }
                                         }
                                     }
                                 }
@@ -381,14 +397,16 @@ private fun EventChip(
             )
             .clickable(onClick = onClick)
             .padding(horizontal = 8.dp, vertical = 4.dp),
-        contentAlignment = Alignment.CenterStart
+        contentAlignment = Alignment.Center
     ) {
         Text(
             text = event.title,
             style = MaterialTheme.typography.labelSmall,
             color = textColor,
             maxLines = 1,
-            fontWeight = FontWeight.Medium
+            fontWeight = FontWeight.Medium,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth()
         )
     }
 }

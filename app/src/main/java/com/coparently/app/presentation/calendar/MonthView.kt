@@ -194,14 +194,14 @@ fun MonthView(
 }
 
 /**
- * Weekday header row (Mon, Tue, Wed, etc.) - 1.5x larger
+ * Weekday header row (Mon, Tue, Wed, etc.) - reduced height by 2x
  */
 @Composable
 private fun WeekdayHeader(firstDayOfWeek: DayOfWeek) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(90.dp)
+            .height(45.dp)
             .background(MaterialTheme.colorScheme.surface),
         horizontalArrangement = Arrangement.spacedBy(0.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -210,7 +210,7 @@ private fun WeekdayHeader(firstDayOfWeek: DayOfWeek) {
         Box(
             modifier = Modifier
                 .width(32.dp)
-                .height(90.dp)
+                .height(45.dp)
                 .padding(end = 4.dp),
             contentAlignment = Alignment.Center
         ) {
@@ -260,7 +260,7 @@ private fun WeekdayHeader(firstDayOfWeek: DayOfWeek) {
                     ),
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Normal,
-                    fontSize = 9.sp,
+                    fontSize = 8.sp,
                     color = if (isToday) {
                         MaterialTheme.colorScheme.primary
                     } else {
