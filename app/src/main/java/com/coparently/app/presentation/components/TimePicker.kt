@@ -9,6 +9,9 @@ import androidx.compose.material3.TimePicker
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
+import com.coparently.app.utils.LightDarkPreviews
+import com.coparently.app.utils.PreviewWrapper
 import java.time.LocalTime
 
 /**
@@ -60,5 +63,52 @@ fun TimePickerDialog(
             )
         }
     )
+}
+
+// ==================== Previews ====================
+
+/**
+ * Preview of TimePickerDialog in both light and dark themes.
+ */
+@LightDarkPreviews
+@Composable
+private fun TimePickerDialogPreview() {
+    PreviewWrapper {
+        TimePickerDialog(
+            initialTime = LocalTime.of(14, 30),
+            onTimeSelected = {},
+            onDismiss = {}
+        )
+    }
+}
+
+/**
+ * Preview of TimePickerDialog with morning time.
+ */
+@Preview(name = "Morning Time", showBackground = true)
+@Composable
+private fun TimePickerDialogMorningPreview() {
+    PreviewWrapper {
+        TimePickerDialog(
+            initialTime = LocalTime.of(9, 0),
+            onTimeSelected = {},
+            onDismiss = {}
+        )
+    }
+}
+
+/**
+ * Preview of TimePickerDialog with evening time.
+ */
+@Preview(name = "Evening Time", showBackground = true)
+@Composable
+private fun TimePickerDialogEveningPreview() {
+    PreviewWrapper {
+        TimePickerDialog(
+            initialTime = LocalTime.of(18, 45),
+            onTimeSelected = {},
+            onDismiss = {}
+        )
+    }
 }
 

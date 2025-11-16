@@ -1,5 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Main app theme -->
     <style name="Theme.CoParently" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <!-- Splash Screen theme for Android 12+ -->
+    <!-- Based on Material3 SplashScreen API -->
+    <style name="Theme.CoParently.Starting" parent="Theme.SplashScreen">
+        <!-- Background color for the splash screen -->
+        <item name="windowSplashScreenBackground">@color/brand_primary</item>
+        <!-- Center animated icon/logo -->
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher_foreground</item>
+        <!-- Animation duration in milliseconds -->
+        <item name="windowSplashScreenAnimationDuration">300</item>
+        <!-- Theme to use after splash screen -->
+        <item name="postSplashScreenTheme">@style/Theme.CoParently</item>
+    </style>
 </resources>
 

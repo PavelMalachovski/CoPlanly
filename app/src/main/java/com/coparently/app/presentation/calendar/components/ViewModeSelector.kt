@@ -29,9 +29,12 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.coparently.app.presentation.calendar.CalendarViewMode
 import com.coparently.app.presentation.theme.dimensions
+import com.coparently.app.utils.LightDarkPreviews
+import com.coparently.app.utils.PreviewWrapper
 
 /**
  * Animated view mode selector with iOS-style sliding indicator.
@@ -148,6 +151,47 @@ fun ViewModeSelector(
                 }
             }
         }
+    }
+}
+
+// ==================== Previews ====================
+
+/**
+ * Preview of ViewModeSelector in both light and dark themes.
+ */
+@LightDarkPreviews
+@Composable
+private fun ViewModeSelectorPreview() {
+    PreviewWrapper {
+        ViewModeSelector(
+            selectedMode = CalendarViewMode.MONTH,
+            onModeSelected = {}
+        )
+    }
+}
+
+/**
+ * Preview of ViewModeSelector with different modes selected.
+ */
+@Preview(name = "Day Mode", showBackground = true)
+@Composable
+private fun ViewModeSelectorDayPreview() {
+    PreviewWrapper {
+        ViewModeSelector(
+            selectedMode = CalendarViewMode.DAY,
+            onModeSelected = {}
+        )
+    }
+}
+
+@Preview(name = "Week Mode", showBackground = true)
+@Composable
+private fun ViewModeSelectorWeekPreview() {
+    PreviewWrapper {
+        ViewModeSelector(
+            selectedMode = CalendarViewMode.WEEK,
+            onModeSelected = {}
+        )
     }
 }
 

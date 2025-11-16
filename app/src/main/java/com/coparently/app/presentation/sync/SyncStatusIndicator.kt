@@ -10,8 +10,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.coparently.app.data.sync.SyncStatus
+import com.coparently.app.utils.LightDarkPreviews
+import com.coparently.app.utils.PreviewWrapper
+import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 /**
@@ -309,6 +313,106 @@ fun SyncStatusBadge(
             style = MaterialTheme.typography.bodySmall,
             color = color
         )
+    }
+}
+
+// ==================== Previews ====================
+
+/**
+ * Preview of SyncStatusIndicator in syncing state.
+ */
+@LightDarkPreviews
+@Composable
+private fun SyncStatusIndicatorSyncingPreview() {
+    PreviewWrapper {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            SyncStatusIndicator(
+                syncStatus = SyncStatus.Syncing(progress = 5, total = 10)
+            )
+        }
+    }
+}
+
+/**
+ * Preview of SyncStatusIndicator in success state.
+ */
+@Preview(name = "Success State", showBackground = true)
+@Composable
+private fun SyncStatusIndicatorSuccessPreview() {
+    PreviewWrapper {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            SyncStatusIndicator(
+                syncStatus = SyncStatus.Success(lastSyncTime = LocalDateTime.now())
+            )
+        }
+    }
+}
+
+/**
+ * Preview of SyncStatusIndicator in error state.
+ */
+@Preview(name = "Error State", showBackground = true)
+@Composable
+private fun SyncStatusIndicatorErrorPreview() {
+    PreviewWrapper {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            SyncStatusIndicator(
+                syncStatus = SyncStatus.Error(message = "Network connection failed")
+            )
+        }
+    }
+}
+
+/**
+ * Preview of SyncStatusIcon in different states.
+ */
+@Preview(name = "Status Icons", showBackground = true)
+@Composable
+private fun SyncStatusIconPreview() {
+    PreviewWrapper {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            SyncStatusIcon(syncStatus = SyncStatus.Idle, onClick = {})
+            SyncStatusIcon(syncStatus = SyncStatus.Syncing(5, 10), onClick = {})
+            SyncStatusIcon(
+                syncStatus = SyncStatus.Success(LocalDateTime.now()),
+                onClick = {}
+            )
+            SyncStatusIcon(
+                syncStatus = SyncStatus.Error("Error"),
+                onClick = {}
+            )
+        }
+    }
+}
+
+/**
+ * Preview of SyncStatusBadge in different states.
+ */
+@Preview(name = "Status Badges", showBackground = true)
+@Composable
+private fun SyncStatusBadgePreview() {
+    PreviewWrapper {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            SyncStatusBadge(syncStatus = SyncStatus.Idle)
+            SyncStatusBadge(syncStatus = SyncStatus.Syncing(5, 10))
+            SyncStatusBadge(syncStatus = SyncStatus.Success(LocalDateTime.now()))
+            SyncStatusBadge(syncStatus = SyncStatus.Error("Network error"))
+        }
     }
 }
 

@@ -29,10 +29,13 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.coparently.app.R
 import com.coparently.app.presentation.theme.CoParentlyColors
 import com.coparently.app.presentation.theme.dimensions
+import com.coparently.app.utils.LightDarkPreviews
+import com.coparently.app.utils.PreviewWrapper
 
 /**
  * Custody indicator for today's date.
@@ -132,6 +135,41 @@ fun CustodyIndicatorToday(custody: String) {
                 color = textColor
             )
         }
+    }
+}
+
+// ==================== Previews ====================
+
+/**
+ * Preview of CustodyIndicatorToday with Mom custody.
+ */
+@LightDarkPreviews
+@Composable
+private fun CustodyIndicatorMomPreview() {
+    PreviewWrapper {
+        CustodyIndicatorToday(custody = "mom")
+    }
+}
+
+/**
+ * Preview of CustodyIndicatorToday with Dad custody.
+ */
+@Preview(name = "Dad Custody", showBackground = true)
+@Composable
+private fun CustodyIndicatorDadPreview() {
+    PreviewWrapper {
+        CustodyIndicatorToday(custody = "dad")
+    }
+}
+
+/**
+ * Preview of CustodyIndicatorToday with no specific custody.
+ */
+@Preview(name = "No Custody", showBackground = true)
+@Composable
+private fun CustodyIndicatorNonePreview() {
+    PreviewWrapper {
+        CustodyIndicatorToday(custody = "")
     }
 }
 

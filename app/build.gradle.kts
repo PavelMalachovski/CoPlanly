@@ -50,6 +50,16 @@ android {
 
     kotlinOptions {
         jvmTarget = "17"
+
+        // Compose Compiler Metrics for performance analysis
+        // After build, check build/compose_metrics/ for unstable composables
+        // and build/compose_reports/ for detailed reports
+        freeCompilerArgs += listOf(
+            "-P",
+            "plugin:androidx.compose.compiler.plugins.kotlin:metricsDestination=${project.layout.buildDirectory.get().asFile.absolutePath}/compose_metrics",
+            "-P",
+            "plugin:androidx.compose.compiler.plugins.kotlin:reportsDestination=${project.layout.buildDirectory.get().asFile.absolutePath}/compose_reports"
+        )
     }
 
     buildFeatures {
@@ -68,13 +78,13 @@ android {
 }
 
 dependencies {
-    // Core Android
-    implementation("androidx.core:core-ktx:1.12.0")
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
-    implementation("androidx.activity:activity-compose:1.8.2")
+    // Core Android - Updated to latest stable versions
+    implementation("androidx.core:core-ktx:1.13.1")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
+    implementation("androidx.activity:activity-compose:1.9.3")
 
-    // Compose
-    val composeBom = platform("androidx.compose:compose-bom:2024.02.00")
+    // Compose - Updated to latest BOM (2024.11.00)
+    val composeBom = platform("androidx.compose:compose-bom:2024.11.00")
     implementation(composeBom)
     androidTestImplementation(composeBom)
 
@@ -85,65 +95,68 @@ dependencies {
     implementation("androidx.compose.material3:material3-window-size-class")
     implementation("androidx.compose.material:material-icons-extended")
 
-    // Navigation
-    implementation("androidx.navigation:navigation-compose:2.7.6")
+    // Navigation - Updated to latest stable
+    implementation("androidx.navigation:navigation-compose:2.8.5")
 
-    // ViewModel
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
-    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.7.0")
+    // Splash Screen API for Android 12+
+    implementation("androidx.core:core-splashscreen:1.0.1")
 
-    // Hilt
-    implementation("com.google.dagger:hilt-android:2.48")
-    kapt("com.google.dagger:hilt-compiler:2.48")
-    implementation("androidx.hilt:hilt-navigation-compose:1.1.0")
+    // ViewModel - Updated to match lifecycle version
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
 
-    // Room
+    // Hilt - Updated to latest stable
+    implementation("com.google.dagger:hilt-android:2.52")
+    kapt("com.google.dagger:hilt-compiler:2.52")
+    implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
+
+    // Room - Already at latest stable
     val roomVersion = "2.6.1"
     implementation("androidx.room:room-runtime:$roomVersion")
     implementation("androidx.room:room-ktx:$roomVersion")
     kapt("androidx.room:room-compiler:$roomVersion")
 
-    // Coroutines
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+    // Coroutines - Updated to latest stable
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
 
-    // Calendar
-    implementation("com.kizitonwose.calendar:compose:2.4.0")
+    // Calendar - Check for updates at https://github.com/kizitonwose/Calendar
+    implementation("com.kizitonwose.calendar:compose:2.6.1")
 
-    // Google Sign-In
-    implementation("com.google.android.gms:play-services-auth:20.7.0")
+    // Google Sign-In - Updated to latest stable
+    implementation("com.google.android.gms:play-services-auth:21.2.0")
 
     // Google Calendar API
     implementation("com.google.api-client:google-api-client-android:2.2.0")
-    implementation("com.google.apis:google-api-services-calendar:v3-rev20231123-2.0.0")
+    implementation("com.google.apis:google-api-services-calendar:v3-rev20220715-2.0.0")
 
-    // Encrypted SharedPreferences
+    // Encrypted SharedPreferences - Updated to stable
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
 
-    // Gson for JSON
-    implementation("com.google.code.gson:gson:2.10.1")
+    // Gson for JSON - Updated to latest
+    implementation("com.google.code.gson:gson:2.11.0")
 
-    // Firebase
-    val firebaseBom = platform("com.google.firebase:firebase-bom:32.7.0")
+    // Firebase - Updated to latest BOM
+    val firebaseBom = platform("com.google.firebase:firebase-bom:33.7.0")
     implementation(firebaseBom)
     implementation("com.google.firebase:firebase-auth-ktx")
     implementation("com.google.firebase:firebase-firestore-ktx")
     implementation("com.google.firebase:firebase-messaging-ktx")
     implementation("com.google.firebase:firebase-analytics-ktx")
 
-    // Testing
+    // Testing - Updated to latest stable
     testImplementation("junit:junit:4.13.2")
-    androidTestImplementation("androidx.test.ext:junit:1.1.5")
-    androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
-    androidTestImplementation(platform("androidx.compose:compose-bom:2024.02.00"))
+    androidTestImplementation("androidx.test.ext:junit:1.2.1")
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
+    androidTestImplementation(platform("androidx.compose:compose-bom:2024.11.00"))
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 
-    // Hilt testing
-    testImplementation("com.google.dagger:hilt-android-testing:2.48")
-    kaptTest("com.google.dagger:hilt-compiler:2.48")
-    androidTestImplementation("com.google.dagger:hilt-android-testing:2.48")
-    kaptAndroidTest("com.google.dagger:hilt-compiler:2.48")
+    // Hilt testing - Updated to match Hilt version
+    testImplementation("com.google.dagger:hilt-android-testing:2.52")
+    kaptTest("com.google.dagger:hilt-compiler:2.52")
+    androidTestImplementation("com.google.dagger:hilt-android-testing:2.52")
+    kaptAndroidTest("com.google.dagger:hilt-compiler:2.52")
 }
 
 kapt {

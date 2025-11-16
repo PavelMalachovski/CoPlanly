@@ -15,9 +15,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.coparently.app.R
+import com.coparently.app.utils.LightDarkPreviews
+import com.coparently.app.utils.PreviewWrapper
 import java.time.LocalDate
 import java.time.YearMonth
 
@@ -100,6 +103,53 @@ private fun SettingsButton(onClick: () -> Unit) {
             imageVector = Icons.Default.Settings,
             contentDescription = stringResource(R.string.calendar_settings),
             tint = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+// ==================== Previews ====================
+
+/**
+ * Preview of CalendarHeader with settings button.
+ */
+@LightDarkPreviews
+@Composable
+private fun CalendarHeaderWithSettingsPreview() {
+    PreviewWrapper {
+        CalendarHeader(
+            selectedDate = LocalDate.now(),
+            onNavigateToToday = {},
+            onSettingsClick = {}
+        )
+    }
+}
+
+/**
+ * Preview of CalendarHeader without settings button.
+ */
+@Preview(name = "No Settings Button", showBackground = true)
+@Composable
+private fun CalendarHeaderNoSettingsPreview() {
+    PreviewWrapper {
+        CalendarHeader(
+            selectedDate = LocalDate.now(),
+            onNavigateToToday = {},
+            onSettingsClick = null
+        )
+    }
+}
+
+/**
+ * Preview of CalendarHeader with different date.
+ */
+@Preview(name = "Different Date", showBackground = true)
+@Composable
+private fun CalendarHeaderDifferentDatePreview() {
+    PreviewWrapper {
+        CalendarHeader(
+            selectedDate = LocalDate.of(2025, 12, 25),
+            onNavigateToToday = {},
+            onSettingsClick = {}
         )
     }
 }

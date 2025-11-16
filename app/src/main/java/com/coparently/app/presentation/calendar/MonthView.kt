@@ -34,7 +34,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -448,13 +447,8 @@ private fun RowScope.DayCell(
                         onDayClick(date)
                     }
                 },
-                onClickLabel = clickLabel,
-                indication = rememberRipple(
-                    bounded = true,
-                    radius = dims.iconSize,
-                    color = rippleColor
-                ),
-                interactionSource = remember { MutableInteractionSource() }
+                onClickLabel = clickLabel
+                // Material3 automatically applies ripple effect
             )
             .padding(dims.paddingSmall / 2),
         contentAlignment = Alignment.TopCenter
