@@ -135,6 +135,12 @@ dependencies {
     // Gson for JSON - Updated to latest
     implementation("com.google.code.gson:gson:2.11.0")
 
+    // Lottie for Compose - Animations library
+    implementation("com.airbnb.android:lottie-compose:6.5.2")
+
+    // Accompanist - System UI Controller for transparent system bars
+    implementation("com.google.accompanist:accompanist-systemuicontroller:0.36.0")
+
     // Firebase - Updated to latest BOM
     val firebaseBom = platform("com.google.firebase:firebase-bom:33.7.0")
     implementation(firebaseBom)

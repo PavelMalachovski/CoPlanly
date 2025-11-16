@@ -15,6 +15,8 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -49,6 +51,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.data.local.entity.CustodyScheduleEntity
@@ -82,8 +86,9 @@ fun CalendarScreen(
     eventViewModel: EventViewModel = hiltViewModel(),
     calendarViewModel: CalendarViewModel = hiltViewModel()
 ) {
-    // Get responsive dimensions
+    // Get responsive dimensions and haptic feedback
     val dims = dimensions()
+    val haptic = LocalHapticFeedback.current
     val events by eventViewModel.events.collectAsState()
     val custodySchedules by calendarViewModel.custodySchedules.collectAsState()
     val viewMode by calendarViewModel.viewMode.collectAsState()
@@ -109,6 +114,10 @@ fun CalendarScreen(
         yearRange = IntRange(now.year - 5, now.year + 5)
     )
     val scope = rememberCoroutineScope()
+
+    // Pull-to-Refresh state
+    var isRefreshing by remember { mutableStateOf(false) }
+    val pullToRefreshState = rememberPullToRefreshState()
 
     // Load events based on view mode
     LaunchedEffect(viewMode, selectedDate) {
@@ -173,7 +182,10 @@ fun CalendarScreen(
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = onAddEventClick,
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onAddEventClick()
+                },
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                 shape = RoundedCornerShape(dims.cornerRadius)
@@ -186,18 +198,63 @@ fun CalendarScreen(
             }
         }
     ) { paddingValues ->
-        Column(
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = {
+                isRefreshing = true
+                scope.launch {
+                    // Refresh events for current view
+                    val start = when (viewMode) {
+                        CalendarViewMode.DAY -> selectedDate.atStartOfDay()
+                        CalendarViewMode.THREE_DAYS -> selectedDate.atStartOfDay()
+                        CalendarViewMode.WEEK -> {
+                            val dayOfWeek = selectedDate.dayOfWeek.value
+                            val daysToSubtract = (dayOfWeek - 1).toLong()
+                            val firstDay = selectedDate.minusDays(daysToSubtract)
+                            firstDay.atStartOfDay()
+                        }
+                        CalendarViewMode.MONTH -> {
+                            val visibleMonth = YearMonth.from(selectedDate)
+                            visibleMonth.atDay(1).atStartOfDay()
+                        }
+                    }
+
+                    val end = when (viewMode) {
+                        CalendarViewMode.DAY -> selectedDate.atTime(23, 59, 59)
+                        CalendarViewMode.THREE_DAYS -> selectedDate.plusDays(2).atTime(23, 59, 59)
+                        CalendarViewMode.WEEK -> {
+                            val dayOfWeek = selectedDate.dayOfWeek.value
+                            val daysToAdd = (7 - dayOfWeek).toLong()
+                            val lastDay = selectedDate.plusDays(daysToAdd)
+                            lastDay.atTime(23, 59, 59)
+                        }
+                        CalendarViewMode.MONTH -> {
+                            val visibleMonth = YearMonth.from(selectedDate)
+                            visibleMonth.atEndOfMonth().atTime(23, 59, 59)
+                        }
+                    }
+
+                    eventViewModel.loadEventsForDateRange(start, end)
+                    calendarViewModel.loadCustodySchedules()
+                    kotlinx.coroutines.delay(500) // Small delay for better UX
+                    isRefreshing = false
+                }
+            },
+            state = pullToRefreshState,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Animated view mode selector with sliding indicator
-            ViewModeSelector(
-                selectedMode = viewMode,
-                onModeSelected = { mode ->
-                    calendarViewModel.setViewMode(mode)
-                }
-            )
+            Column(
+                modifier = Modifier.fillMaxSize()
+            ) {
+                // Animated view mode selector with sliding indicator
+                ViewModeSelector(
+                    selectedMode = viewMode,
+                    onModeSelected = { mode ->
+                        calendarViewModel.setViewMode(mode)
+                    }
+                )
 
             // Today's custody indicator (only for month view)
             if (viewMode == CalendarViewMode.MONTH && custodySchedules.isNotEmpty()) {
@@ -295,6 +352,7 @@ fun CalendarScreen(
                     }
                 }
             }
+            }
         }
     }
 
@@ -350,7 +408,8 @@ private fun CalendarDayContent(
     day: CalendarDay,
     events: List<com.coparently.app.domain.model.Event>,
     custodySchedules: List<CustodyScheduleEntity>,
-    onClick: (CalendarDay) -> Unit
+    onClick: (CalendarDay) -> Unit,
+    haptic: androidx.compose.ui.hapticfeedback.HapticFeedback = LocalHapticFeedback.current
 ) {
     val isToday = CustodyHelper.isToday(day.date)
     val custody = CustodyHelper.getCustodyForDate(day.date, custodySchedules)
@@ -372,7 +431,10 @@ private fun CalendarDayContent(
                 scaleX = scale
                 scaleY = scale
             }
-            .clickable { onClick(day) },
+            .clickable {
+                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                onClick(day)
+            },
         contentAlignment = Alignment.Center
     ) {
         Column(

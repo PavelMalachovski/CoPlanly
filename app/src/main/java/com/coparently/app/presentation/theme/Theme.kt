@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
+import com.google.accompanist.systemuicontroller.rememberSystemUiController
 
 /**
  * Light color scheme for CoParently app.
@@ -134,13 +135,27 @@ fun CoParentlyTheme(
     // Falls back to compact dimensions for phones if no window size class provided
     val dimensions = windowSizeClass?.getDimensions() ?: compactDimensions
 
-    val view = LocalView.current
-    if (!view.isInEditMode) {
-        SideEffect {
-            val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.surface.toArgb()
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
-        }
+    // Use Accompanist System UI Controller for modern, transparent system bars
+    val systemUiController = rememberSystemUiController()
+    val useDarkIcons = !darkTheme
+
+    SideEffect {
+        // Set transparent system bars with appropriate icon colors
+        systemUiController.setSystemBarsColor(
+            color = Color.Transparent,
+            darkIcons = useDarkIcons
+        )
+
+        // Alternative: Use scrim for better text readability on light backgrounds
+        // Uncomment if you want a subtle background on system bars
+        // systemUiController.setStatusBarColor(
+        //     color = colorScheme.surface.copy(alpha = 0.9f),
+        //     darkIcons = useDarkIcons
+        // )
+        // systemUiController.setNavigationBarColor(
+        //     color = colorScheme.surface.copy(alpha = 0.9f),
+        //     darkIcons = useDarkIcons
+        // )
     }
 
     // Provide both theme state and dimensions through CompositionLocal
