@@ -2,6 +2,8 @@ package com.coparently.app.presentation.calendar
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
@@ -101,37 +103,41 @@ fun DayWeekView(
             }
     ) {
         // Fixed header row with modern design - 1.5x larger
-        // Animated header with same animation as hour columns
+        // Animated header with optimized animation (200ms slide + 150ms fade)
         AnimatedContent(
             targetState = selectedDate,
             transitionSpec = {
                 val direction = swipeDirection
                 (slideInHorizontally(
-                    animationSpec = tween(300),
+                    animationSpec = tween(
+                        durationMillis = 200,
+                        easing = FastOutSlowInEasing
+                    ),
                     initialOffsetX = { fullWidth -> fullWidth * direction }
-                ) + fadeIn(animationSpec = tween(300))) togetherWith
+                ) + fadeIn(
+                    animationSpec = tween(
+                        durationMillis = 150,
+                        easing = LinearEasing
+                    )
+                )) togetherWith
                 (slideOutHorizontally(
-                    animationSpec = tween(300),
+                    animationSpec = tween(
+                        durationMillis = 200,
+                        easing = FastOutSlowInEasing
+                    ),
                     targetOffsetX = { fullWidth -> -fullWidth * direction }
-                ) + fadeOut(animationSpec = tween(300)))
+                ) + fadeOut(
+                    animationSpec = tween(
+                        durationMillis = 150,
+                        easing = LinearEasing
+                    )
+                ))
             },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(90.dp)
         ) { currentDate ->
-            val currentDates = remember(currentDate, daysCount) {
-                val startDate = if (daysCount == 7) {
-                    // For week view, start from Monday of the week containing currentDate
-                    val weekFields = WeekFields.of(Locale.getDefault())
-                    val dayOfWeek = currentDate.dayOfWeek
-                    val daysFromMonday = (dayOfWeek.value - weekFields.firstDayOfWeek.value + 7) % 7
-                    currentDate.minusDays(daysFromMonday.toLong())
-                } else {
-                    // For day and 3-day views, start from currentDate
-                    currentDate
-                }
-                (0 until daysCount).map { startDate.plusDays(it.toLong()) }
-            }
+            val currentDates = DateRangeHelper.rememberDateRange(currentDate, daysCount)
 
             Box(
                 modifier = Modifier
@@ -262,36 +268,40 @@ fun DayWeekView(
                         )
                     }
 
-                    // Day columns - animated, inside AnimatedContent
+                    // Day columns - animated, optimized animation (200ms slide + 150ms fade)
                     AnimatedContent(
                         targetState = selectedDate,
                         transitionSpec = {
                             val direction = swipeDirection
                             (slideInHorizontally(
-                                animationSpec = tween(300),
+                                animationSpec = tween(
+                                    durationMillis = 200,
+                                    easing = FastOutSlowInEasing
+                                ),
                                 initialOffsetX = { fullWidth -> fullWidth * direction }
-                            ) + fadeIn(animationSpec = tween(300))) togetherWith
+                            ) + fadeIn(
+                                animationSpec = tween(
+                                    durationMillis = 150,
+                                    easing = LinearEasing
+                                )
+                            )) togetherWith
                             (slideOutHorizontally(
-                                animationSpec = tween(300),
+                                animationSpec = tween(
+                                    durationMillis = 200,
+                                    easing = FastOutSlowInEasing
+                                ),
                                 targetOffsetX = { fullWidth -> -fullWidth * direction }
-                            ) + fadeOut(animationSpec = tween(300)))
+                            ) + fadeOut(
+                                animationSpec = tween(
+                                    durationMillis = 150,
+                                    easing = LinearEasing
+                                )
+                            ))
                         },
                         modifier = Modifier.weight(1f)
                     ) { currentDate ->
-                        // Day columns for this hour - use same logic as dates array
-                        val currentDates = remember(currentDate, daysCount) {
-                            val startDate = if (daysCount == 7) {
-                                // For week view, start from Monday of the week containing currentDate
-                                val weekFields = WeekFields.of(Locale.getDefault())
-                                val dayOfWeek = currentDate.dayOfWeek
-                                val daysFromMonday = (dayOfWeek.value - weekFields.firstDayOfWeek.value + 7) % 7
-                                currentDate.minusDays(daysFromMonday.toLong())
-                            } else {
-                                // For day and 3-day views, start from currentDate
-                                currentDate
-                            }
-                            (0 until daysCount).map { startDate.plusDays(it.toLong()) }
-                        }
+                        // Day columns for this hour - use optimized DateRangeHelper
+                        val currentDates = DateRangeHelper.rememberDateRange(currentDate, daysCount)
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),

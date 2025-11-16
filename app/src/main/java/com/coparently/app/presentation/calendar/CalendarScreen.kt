@@ -2,8 +2,12 @@ package com.coparently.app.presentation.calendar
 
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -51,6 +55,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -302,12 +307,13 @@ fun CalendarScreen(
                 }
             }
 
-            // Calendar content based on view mode
-            AnimatedContent(
+            // Calendar content based on view mode - optimized with Crossfade
+            Crossfade(
                 targetState = viewMode,
-                transitionSpec = {
-                    fadeIn(tween(300)) togetherWith fadeOut(tween(300))
-                },
+                animationSpec = tween(
+                    durationMillis = 200,
+                    easing = FastOutSlowInEasing
+                ),
                 modifier = Modifier.weight(1f)
             ) { mode ->
                 when (mode) {
@@ -513,17 +519,23 @@ private fun CalendarDayContent(
     val isToday = CustodyHelper.isToday(day.date)
     val custody = CustodyHelper.getCustodyForDate(day.date, custodySchedules)
 
-    // Animate scale for today
+    // Animate scale for today - optimized with graphicsLayer
     val scale by animateFloatAsState(
         targetValue = if (isToday) 1.1f else 1f,
-        animationSpec = tween(300),
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMedium
+        ),
         label = "dayScale"
     )
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .scale(scale)
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
             .clickable { onClick(day) },
         contentAlignment = Alignment.Center
     ) {
@@ -619,15 +631,22 @@ private fun EventIndicatorDot(
     color: Color,
     isToday: Boolean = false
 ) {
-    val size by animateFloatAsState(
-        targetValue = if (isToday) 8f else 6f,
-        animationSpec = tween(200),
-        label = "dotSize"
+    val scale by animateFloatAsState(
+        targetValue = if (isToday) 1.33f else 1f, // 8dp / 6dp = 1.33
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMedium
+        ),
+        label = "dotScale"
     )
 
     Box(
         modifier = Modifier
-            .size(size.dp)
+            .size(6.dp) // Base size
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
             .background(color = color, shape = CircleShape)
     )
 }
