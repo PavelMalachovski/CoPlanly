@@ -9,30 +9,23 @@ import androidx.compose.ui.unit.sp
 import com.coparently.app.R
 
 /**
- * Custom font family: Poppins (Placeholder)
+ * Custom font family: Poppins
  *
  * The Poppins font provides a modern, geometric sans-serif typeface
  * that is highly readable and works well for both headings and body text.
  *
- * Currently using FontFamily.Default as a placeholder.
- *
- * To add custom Poppins font:
- * 1. Download Poppins from https://fonts.google.com/specimen/Poppins
- * 2. Add these files to res/font/ directory:
- *    - poppins_regular.ttf
- *    - poppins_medium.ttf
- *    - poppins_semibold.ttf
- *    - poppins_bold.ttf
- * 3. Uncomment and update the FontFamily below:
- *
- * private val PoppinsFontFamily = FontFamily(
- *     Font(R.font.poppins_regular, FontWeight.Normal),
- *     Font(R.font.poppins_medium, FontWeight.Medium),
- *     Font(R.font.poppins_semibold, FontWeight.SemiBold),
- *     Font(R.font.poppins_bold, FontWeight.Bold)
- * )
+ * Font files are located in res/font/ directory:
+ * - poppins_regular.ttf - Normal weight (400)
+ * - poppins_medium.ttf - Medium weight (500)
+ * - poppins_semibold.ttf - SemiBold weight (600)
+ * - poppins_bold.ttf - Bold weight (700)
  */
-private val PoppinsFontFamily = FontFamily.Default
+private val PoppinsFontFamily = FontFamily(
+    Font(R.font.poppins_regular, FontWeight.Normal),
+    Font(R.font.poppins_medium, FontWeight.Medium),
+    Font(R.font.poppins_semibold, FontWeight.SemiBold),
+    Font(R.font.poppins_bold, FontWeight.Bold)
+)
 
 /**
  * Enhanced Typography for CoParently app.

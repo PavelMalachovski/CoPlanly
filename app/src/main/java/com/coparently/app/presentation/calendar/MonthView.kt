@@ -81,7 +81,6 @@ fun MonthView(
     onMonthChange: (YearMonth) -> Unit,
     onDateChange: ((LocalDate) -> Unit)? = null
 ) {
-    val dims = dimensions()
     val weekFields = remember { WeekFields.of(Locale.getDefault()) }
     val firstDayOfWeek = remember { weekFields.firstDayOfWeek }
 
@@ -215,10 +214,12 @@ fun MonthView(
  */
 @Composable
 private fun WeekdayHeader(firstDayOfWeek: DayOfWeek) {
+    val dims = dimensions()
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(45.dp)
+            .height(dims.buttonHeight * 0.8f) // ~45dp for compact
             .background(MaterialTheme.colorScheme.surface),
         horizontalArrangement = Arrangement.spacedBy(0.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -226,9 +227,9 @@ private fun WeekdayHeader(firstDayOfWeek: DayOfWeek) {
         // Week number column header
         Box(
             modifier = Modifier
-                .width(32.dp)
-                .height(45.dp)
-                .padding(end = 4.dp),
+                .width(dims.iconSize * 1.33f) // ~32dp for compact
+                .height(dims.buttonHeight * 0.8f) // ~45dp for compact
+                .padding(end = dims.paddingSmall / 2),
             contentAlignment = Alignment.Center
         ) {
             Text(
@@ -258,16 +259,16 @@ private fun WeekdayHeader(firstDayOfWeek: DayOfWeek) {
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight()
-                    .padding(1.dp)
+                    .padding(dims.paddingSmall / 8) // ~1dp for compact
                     .background(
                         color = if (isToday) {
                             MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)
                         } else {
                             Color.Transparent
                         },
-                        shape = RoundedCornerShape(6.dp)
+                        shape = RoundedCornerShape(dims.cornerRadius / 2)
                     )
-                    .padding(4.dp),
+                    .padding(dims.paddingSmall / 2),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
@@ -304,6 +305,7 @@ private fun WeekRow(
     isSwipeInProgress: Boolean = false,
     showWeekNumber: Boolean = true
 ) {
+    val dims = dimensions()
     val weekNumber = remember(week) {
         week.firstOrNull()?.get(weekFields.weekOfWeekBasedYear()) ?: 0
     }
@@ -317,9 +319,9 @@ private fun WeekRow(
         // Week number - only show if not duplicate
         Box(
             modifier = Modifier
-                .width(32.dp)
+                .width(dims.iconSize * 1.33f) // ~32dp for compact
                 .fillMaxHeight()
-                .padding(end = 4.dp),
+                .padding(end = dims.paddingSmall / 2),
             contentAlignment = Alignment.Center
         ) {
             if (showWeekNumber) {
@@ -359,6 +361,7 @@ private fun RowScope.DayCell(
     onDayClick: (LocalDate) -> Unit,
     isSwipeInProgress: Boolean = false
 ) {
+    val dims = dimensions()
     val isToday = CustodyHelper.isToday(date)
     val custody = CustodyHelper.getCustodyForDate(date, custodySchedules)
 
@@ -380,10 +383,10 @@ private fun RowScope.DayCell(
         modifier = Modifier
             .weight(1f)
             .fillMaxSize()
-            .padding(1.dp)
+            .padding(dims.paddingSmall / 8) // ~1dp for compact
             .background(
                 color = backgroundColor,
-                shape = RoundedCornerShape(6.dp)
+                shape = RoundedCornerShape(dims.cornerRadius / 2)
             )
             .clickable(
                 enabled = !isSwipeInProgress,
@@ -394,12 +397,12 @@ private fun RowScope.DayCell(
                 },
                 indication = rememberRipple(
                     bounded = true,
-                    radius = 24.dp,
+                    radius = dims.iconSize,
                     color = rippleColor
                 ),
                 interactionSource = remember { MutableInteractionSource() }
             )
-            .padding(4.dp),
+            .padding(dims.paddingSmall / 2),
         contentAlignment = Alignment.TopCenter
     ) {
         Column(

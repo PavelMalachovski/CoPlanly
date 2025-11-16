@@ -137,16 +137,16 @@ fun DayWeekView(
             },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(90.dp)
+                .height(dims.buttonHeight * 1.6f) // ~90dp for compact
         ) { currentDate ->
             val currentDates = DateRangeHelper.rememberDateRange(currentDate, daysCount)
 
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(90.dp)
+                    .height(dims.buttonHeight * 1.6f) // ~90dp for compact
                     .background(MaterialTheme.colorScheme.surface)
-                    .padding(horizontal = 8.dp)
+                    .padding(horizontal = dims.paddingSmall)
             ) {
                 // Week number for 3 days and week views (absolutely positioned, doesn't affect layout)
                 if (daysCount >= 3) {
@@ -156,7 +156,7 @@ fun DayWeekView(
 
                     Box(
                         modifier = Modifier
-                            .width(32.dp)
+                            .width(dims.iconSize * 1.33f) // ~32dp for compact
                             .fillMaxHeight()
                             .align(Alignment.CenterStart),
                         contentAlignment = Alignment.Center
@@ -182,7 +182,7 @@ fun DayWeekView(
                     // Time column space - fixed width for consistency (matches content layout)
                     Box(
                         modifier = Modifier
-                            .width(52.dp)
+                            .width(dims.iconSize * 2.17f) // ~52dp for compact
                             .fillMaxHeight()
                     )
 
@@ -255,9 +255,9 @@ fun DayWeekView(
                     // Fixed width to ensure consistent layout and single-line time display
                     Box(
                         modifier = Modifier
-                            .width(52.dp)
-                            .height(60.dp)
-                            .padding(top = 4.dp),
+                            .width(dims.iconSize * 2.17f) // ~52dp for compact
+                            .height(dims.buttonHeight * 1.07f) // ~60dp for compact
+                            .padding(top = dims.paddingSmall / 2),
                         contentAlignment = Alignment.TopCenter
                     ) {
                         Text(
@@ -327,10 +327,10 @@ fun DayWeekView(
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
-                                    .height(60.dp)
+                                    .height(dims.buttonHeight * 1.07f) // ~60dp for compact
                                     .background(
                                         color = backgroundColor,
-                                        shape = RoundedCornerShape(8.dp)
+                                        shape = RoundedCornerShape(dims.paddingSmall)
                                     )
                                     .clickable {
                                         if (dateEvents.isNotEmpty()) {
@@ -349,9 +349,9 @@ fun DayWeekView(
                                         Column(
                                             modifier = Modifier
                                                 .fillMaxWidth()
-                                                .padding(6.dp),
+                                                .padding(dims.paddingSmall * 0.75f), // ~6dp for compact
                                             horizontalAlignment = Alignment.CenterHorizontally,
-                                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                                            verticalArrangement = Arrangement.spacedBy(dims.paddingSmall / 2)
                                         ) {
                                             dateEvents.take(2).forEach { event ->
                                                 EventChip(
