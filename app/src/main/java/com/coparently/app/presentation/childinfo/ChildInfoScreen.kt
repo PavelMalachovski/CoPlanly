@@ -10,6 +10,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.domain.model.Activity
@@ -32,6 +34,7 @@ fun ChildInfoScreen(
     onEditClick: (String) -> Unit,
     viewModel: ChildInfoViewModel = hiltViewModel()
 ) {
+    val haptic = LocalHapticFeedback.current
     val uiState by viewModel.uiState.collectAsState()
     val currentChildInfo by viewModel.currentChildInfo.collectAsState()
 
@@ -40,17 +43,26 @@ fun ChildInfoScreen(
             TopAppBar(
                 title = { Text("Child Information") },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
+                    IconButton(onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        onNavigateBack()
+                    }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
                     if (currentChildInfo != null) {
-                        IconButton(onClick = { currentChildInfo?.let { onEditClick(it.id) } }) {
+                        IconButton(onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            currentChildInfo?.let { onEditClick(it.id) }
+                        }) {
                             Icon(Icons.Default.Edit, contentDescription = "Edit")
                         }
                     }
-                    IconButton(onClick = { viewModel.syncChildInfo() }) {
+                    IconButton(onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        viewModel.syncChildInfo()
+                    }) {
                         Icon(Icons.Default.Refresh, contentDescription = "Sync")
                     }
                 }
@@ -81,7 +93,10 @@ fun ChildInfoScreen(
                             color = MaterialTheme.colorScheme.error
                         )
                         Spacer(modifier = Modifier.height(8.dp))
-                        Button(onClick = { viewModel.loadChildInfo() }) {
+                        Button(onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            viewModel.loadChildInfo()
+                        }) {
                             Text("Retry")
                         }
                     }

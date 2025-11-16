@@ -3,6 +3,7 @@ package com.coparently.app.presentation
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
@@ -35,6 +36,11 @@ class MainActivity : ComponentActivity() {
         installSplashScreen()
 
         super.onCreate(savedInstanceState)
+
+        // Enable edge-to-edge display for modern Android UI
+        // This makes the app draw behind the system bars
+        enableEdgeToEdge()
+
         setContent {
             CoParentlyTheme {
                 Surface(

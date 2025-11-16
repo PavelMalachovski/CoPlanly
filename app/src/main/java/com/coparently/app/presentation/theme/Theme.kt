@@ -18,7 +18,6 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
-import com.google.accompanist.systemuicontroller.rememberSystemUiController
 
 /**
  * Light color scheme for CoParently app.
@@ -135,27 +134,26 @@ fun CoParentlyTheme(
     // Falls back to compact dimensions for phones if no window size class provided
     val dimensions = windowSizeClass?.getDimensions() ?: compactDimensions
 
-    // Use Accompanist System UI Controller for modern, transparent system bars
-    val systemUiController = rememberSystemUiController()
-    val useDarkIcons = !darkTheme
+    // Configure system UI appearance using EdgeToEdge API
+    // This is the modern approach recommended by Google (replaces Accompanist)
+    val view = LocalView.current
+    if (!view.isInEditMode) {
+        SideEffect {
+            val window = (view.context as Activity).window
 
-    SideEffect {
-        // Set transparent system bars with appropriate icon colors
-        systemUiController.setSystemBarsColor(
-            color = Color.Transparent,
-            darkIcons = useDarkIcons
-        )
+            // Set transparent status and navigation bars for edge-to-edge experience
+            window.statusBarColor = Color.Transparent.toArgb()
+            window.navigationBarColor = Color.Transparent.toArgb()
 
-        // Alternative: Use scrim for better text readability on light backgrounds
-        // Uncomment if you want a subtle background on system bars
-        // systemUiController.setStatusBarColor(
-        //     color = colorScheme.surface.copy(alpha = 0.9f),
-        //     darkIcons = useDarkIcons
-        // )
-        // systemUiController.setNavigationBarColor(
-        //     color = colorScheme.surface.copy(alpha = 0.9f),
-        //     darkIcons = useDarkIcons
-        // )
+            // Configure system bar icons based on theme
+            val windowInsetsController = WindowCompat.getInsetsController(window, view)
+            windowInsetsController.isAppearanceLightStatusBars = !darkTheme
+            windowInsetsController.isAppearanceLightNavigationBars = !darkTheme
+
+            // Note: For full edge-to-edge experience, ensure:
+            // 1. enableEdgeToEdge() is called in MainActivity.onCreate()
+            // 2. Scaffold with appropriate padding for system bars
+        }
     }
 
     // Provide both theme state and dimensions through CompositionLocal

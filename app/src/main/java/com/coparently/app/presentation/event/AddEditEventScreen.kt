@@ -56,7 +56,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
@@ -93,6 +95,8 @@ fun AddEditEventScreen(
     onCancel: () -> Unit,
     viewModel: EventViewModel = hiltViewModel()
 ) {
+    val haptic = LocalHapticFeedback.current
+
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var parentOwner by remember { mutableStateOf("mom") }
@@ -142,7 +146,10 @@ fun AddEditEventScreen(
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = onCancel) {
+                    IconButton(onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        onCancel()
+                    }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Cancel"
@@ -154,6 +161,7 @@ fun AddEditEventScreen(
                     IconButton(
                         onClick = {
                             if (isFormValid) {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 scope.launch {
                                     val event = Event(
                                         id = eventId ?: UUID.randomUUID().toString(),
@@ -292,7 +300,10 @@ fun AddEditEventScreen(
                                 scaleX = scale
                                 scaleY = scale
                             },
-                        onClick = { parentOwner = value },
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            parentOwner = value
+                        },
                         colors = CardDefaults.cardColors(
                             containerColor = if (isSelected) {
                                 when (value) {
@@ -373,7 +384,10 @@ fun AddEditEventScreen(
                     ).forEach { (value, label) ->
                         FilterChip(
                             selected = eventType == value,
-                            onClick = { eventType = value },
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                eventType = value
+                            },
                             label = { Text(label) },
                             leadingIcon = {
                                 if (eventType == value) {
@@ -400,7 +414,10 @@ fun AddEditEventScreen(
                     ).forEach { (value, label) ->
                         FilterChip(
                             selected = eventType == value,
-                            onClick = { eventType = value },
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                eventType = value
+                            },
                             label = { Text(label) },
                             leadingIcon = {
                                 if (eventType == value) {
@@ -435,7 +452,10 @@ fun AddEditEventScreen(
                         role = Role.Button
                         contentDescription = "Select date, currently ${startDate.format(DateTimeFormatter.ofPattern("EEEE, MMMM dd, yyyy"))}"
                     },
-                onClick = { showDatePicker = true }
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    showDatePicker = true
+                }
             ) {
                 Row(
                     modifier = Modifier
@@ -489,7 +509,10 @@ fun AddEditEventScreen(
                             role = Role.Button
                             contentDescription = "Select start time, currently ${startTime.format(DateTimeFormatter.ofPattern("HH:mm"))}"
                         },
-                    onClick = { showStartTimePicker = true }
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        showStartTimePicker = true
+                    }
                 ) {
                     Column(
                         modifier = Modifier
@@ -525,7 +548,10 @@ fun AddEditEventScreen(
                             role = Role.Button
                             contentDescription = "Select end time, currently ${endTime.format(DateTimeFormatter.ofPattern("HH:mm"))}"
                         },
-                    onClick = { showEndTimePicker = true }
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        showEndTimePicker = true
+                    }
                 ) {
                     Column(
                         modifier = Modifier

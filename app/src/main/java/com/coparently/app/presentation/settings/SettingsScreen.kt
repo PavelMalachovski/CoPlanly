@@ -14,6 +14,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.presentation.sync.GoogleCalendarSyncState
 import com.coparently.app.presentation.sync.SyncStatusIndicator
@@ -31,6 +33,7 @@ fun SettingsScreen(
     onNavigateToPairing: (() -> Unit)? = null,
     viewModel: SyncViewModel = hiltViewModel()
 ) {
+    val haptic = LocalHapticFeedback.current
     val isSignedIn by viewModel.isSignedIn.collectAsState()
     val isSyncEnabled by viewModel.isSyncEnabled.collectAsState()
     val googleSyncState by viewModel.syncState.collectAsState()
@@ -92,7 +95,10 @@ fun SettingsScreen(
                             text = "Co-Parent Sync",
                             style = MaterialTheme.typography.titleLarge
                         )
-                        IconButton(onClick = { viewModel.performFirestoreSync() }) {
+                        IconButton(onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            viewModel.performFirestoreSync()
+                        }) {
                             Icon(Icons.Default.Refresh, contentDescription = "Sync")
                         }
                     }
@@ -142,6 +148,7 @@ fun SettingsScreen(
                         Switch(
                             checked = isSyncEnabled,
                             onCheckedChange = { enabled ->
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 viewModel.toggleSync(enabled)
                             },
                             enabled = isSignedIn || !isSyncEnabled
@@ -198,6 +205,7 @@ fun SettingsScreen(
                     if (!isSignedIn) {
                         Button(
                             onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 val signInIntent = viewModel.getSignInIntent()
                                 signInLauncher.launch(signInIntent)
                             },
@@ -214,6 +222,7 @@ fun SettingsScreen(
                         if (needsCalendarPermission) {
                             Button(
                                 onClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                     val signInIntent = viewModel.getSignInIntentWithScope()
                                     signInLauncher.launch(signInIntent)
                                 },
@@ -226,7 +235,10 @@ fun SettingsScreen(
                         }
 
                         Button(
-                            onClick = { viewModel.syncFromGoogle() },
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                viewModel.syncFromGoogle()
+                            },
                             enabled = isSyncEnabled && !needsCalendarPermission,
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -236,7 +248,10 @@ fun SettingsScreen(
                         }
 
                         Button(
-                            onClick = { viewModel.signOut() },
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                viewModel.signOut()
+                            },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(top = 8.dp)
@@ -251,7 +266,10 @@ fun SettingsScreen(
             onNavigateToPairing?.let { navigate ->
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    onClick = navigate
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        navigate()
+                    }
                 ) {
                     Row(
                         modifier = Modifier
@@ -294,7 +312,10 @@ fun SettingsScreen(
             onNavigateToChildInfo?.let { navigate ->
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    onClick = navigate
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        navigate()
+                    }
                 ) {
                     Row(
                         modifier = Modifier
@@ -367,7 +388,10 @@ fun SettingsScreen(
                     }
                     Switch(
                         checked = true,
-                        onCheckedChange = { /* TODO: Handle notification settings */ },
+                        onCheckedChange = {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            /* TODO: Handle notification settings */
+                        },
                         enabled = false // For now, always enabled
                     )
                 }

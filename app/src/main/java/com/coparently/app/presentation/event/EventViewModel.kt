@@ -37,9 +37,14 @@ class EventViewModel @Inject constructor(
      */
     fun loadEvents() {
         viewModelScope.launch {
-            eventRepository.getAllEvents().collect { eventList ->
-                _events.value = eventList
-                _uiState.value = EventUiState.Success(eventList)
+            _uiState.value = EventUiState.Loading
+            try {
+                eventRepository.getAllEvents().collect { eventList ->
+                    _events.value = eventList
+                    _uiState.value = EventUiState.Success(eventList)
+                }
+            } catch (e: Exception) {
+                _uiState.value = EventUiState.Error(e.message ?: "Failed to load events")
             }
         }
     }
@@ -49,9 +54,14 @@ class EventViewModel @Inject constructor(
      */
     fun loadEventsForDate(date: LocalDateTime) {
         viewModelScope.launch {
-            eventRepository.getEventsByDate(date).collect { eventList ->
-                _events.value = eventList
-                _uiState.value = EventUiState.Success(eventList)
+            _uiState.value = EventUiState.Loading
+            try {
+                eventRepository.getEventsByDate(date).collect { eventList ->
+                    _events.value = eventList
+                    _uiState.value = EventUiState.Success(eventList)
+                }
+            } catch (e: Exception) {
+                _uiState.value = EventUiState.Error(e.message ?: "Failed to load events for date")
             }
         }
     }
@@ -61,9 +71,14 @@ class EventViewModel @Inject constructor(
      */
     fun loadEventsForDateRange(start: LocalDateTime, end: LocalDateTime) {
         viewModelScope.launch {
-            eventRepository.getEventsByDateRange(start, end).collect { eventList ->
-                _events.value = eventList
-                _uiState.value = EventUiState.Success(eventList)
+            _uiState.value = EventUiState.Loading
+            try {
+                eventRepository.getEventsByDateRange(start, end).collect { eventList ->
+                    _events.value = eventList
+                    _uiState.value = EventUiState.Success(eventList)
+                }
+            } catch (e: Exception) {
+                _uiState.value = EventUiState.Error(e.message ?: "Failed to load events for date range")
             }
         }
     }
@@ -85,9 +100,12 @@ class EventViewModel @Inject constructor(
                     updatedAt = now
                 )
                 eventRepository.insertEvent(finalEvent)
+                _uiState.value = EventUiState.OperationSuccess("Event created successfully")
+                // После короткой задержки вернемся к Success состоянию
+                kotlinx.coroutines.delay(2000)
                 _uiState.value = EventUiState.Success(_events.value)
             } catch (e: Exception) {
-                _uiState.value = EventUiState.Error(e.message ?: "Unknown error")
+                _uiState.value = EventUiState.Error(e.message ?: "Failed to create event")
             }
         }
     }
@@ -100,9 +118,11 @@ class EventViewModel @Inject constructor(
             try {
                 val updatedEvent = event.copy(updatedAt = LocalDateTime.now())
                 eventRepository.updateEvent(updatedEvent)
+                _uiState.value = EventUiState.OperationSuccess("Event updated successfully")
+                kotlinx.coroutines.delay(2000)
                 _uiState.value = EventUiState.Success(_events.value)
             } catch (e: Exception) {
-                _uiState.value = EventUiState.Error(e.message ?: "Unknown error")
+                _uiState.value = EventUiState.Error(e.message ?: "Failed to update event")
             }
         }
     }
@@ -114,9 +134,11 @@ class EventViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 eventRepository.deleteEvent(event)
+                _uiState.value = EventUiState.OperationSuccess("Event deleted successfully")
+                kotlinx.coroutines.delay(2000)
                 _uiState.value = EventUiState.Success(_events.value)
             } catch (e: Exception) {
-                _uiState.value = EventUiState.Error(e.message ?: "Unknown error")
+                _uiState.value = EventUiState.Error(e.message ?: "Failed to delete event")
             }
         }
     }
@@ -128,9 +150,11 @@ class EventViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 eventRepository.deleteEventById(id)
+                _uiState.value = EventUiState.OperationSuccess("Event deleted successfully")
+                kotlinx.coroutines.delay(2000)
                 _uiState.value = EventUiState.Success(_events.value)
             } catch (e: Exception) {
-                _uiState.value = EventUiState.Error(e.message ?: "Unknown error")
+                _uiState.value = EventUiState.Error(e.message ?: "Failed to delete event")
             }
         }
     }
@@ -147,8 +171,25 @@ class EventViewModel @Inject constructor(
  * UI state for events.
  */
 sealed class EventUiState {
+    /**
+     * Loading state - показываем Skeleton Loading
+     */
     data object Loading : EventUiState()
+
+    /**
+     * Success state - данные загружены успешно
+     */
     data class Success(val events: List<Event>) : EventUiState()
+
+    /**
+     * Operation Success state - операция (создание/обновление/удаление) выполнена успешно
+     * Показываем Lottie Success анимацию
+     */
+    data class OperationSuccess(val message: String = "Operation completed successfully") : EventUiState()
+
+    /**
+     * Error state - произошла ошибка, показываем Lottie Error анимацию
+     */
     data class Error(val message: String) : EventUiState()
 }
 
