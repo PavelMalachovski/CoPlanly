@@ -40,6 +40,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.presentation.theme.CoParentlyColors
+import com.coparently.app.presentation.theme.dimensions
 
 /**
  * Authentication screen for login and registration.
@@ -51,6 +52,7 @@ fun AuthScreen(
     viewModel: AuthViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val dims = dimensions()
 
     // Gradient background
     Box(
@@ -69,7 +71,7 @@ fun AuthScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(24.dp)
+                .padding(dims.paddingLarge)
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -96,7 +98,7 @@ fun AuthScreen(
                     imageVector = Icons.Default.ChildCare,
                     contentDescription = "CoParently Logo",
                     modifier = Modifier
-                        .size(80.dp)
+                        .size(dims.iconSize * 3.33f) // ~80dp for compact
                         .graphicsLayer {
                             scaleX = pulse
                             scaleY = pulse
@@ -235,7 +237,7 @@ fun AuthScreen(
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(12.dp),
+                                    .padding(dims.paddingSmall * 1.5f),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
@@ -267,7 +269,7 @@ fun AuthScreen(
                         },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(56.dp),
+                            .height(dims.buttonHeight),
                         enabled = !uiState.isLoading &&
                                   uiState.email.isNotBlank() &&
                                   uiState.password.isNotBlank(),

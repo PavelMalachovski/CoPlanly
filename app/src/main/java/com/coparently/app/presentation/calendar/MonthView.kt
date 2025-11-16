@@ -58,6 +58,7 @@ import androidx.compose.ui.unit.sp
 import com.coparently.app.data.local.entity.CustodyScheduleEntity
 import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.theme.CoParentlyColors
+import com.coparently.app.presentation.theme.dimensions
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
@@ -80,6 +81,7 @@ fun MonthView(
     onMonthChange: (YearMonth) -> Unit,
     onDateChange: ((LocalDate) -> Unit)? = null
 ) {
+    val dims = dimensions()
     val weekFields = remember { WeekFields.of(Locale.getDefault()) }
     val firstDayOfWeek = remember { weekFields.firstDayOfWeek }
 

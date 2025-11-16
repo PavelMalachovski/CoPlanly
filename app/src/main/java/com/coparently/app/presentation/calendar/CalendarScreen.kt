@@ -364,13 +364,13 @@ fun CalendarScreen(
                 Button(
                     onClick = {
                         datePickerState.selectedDateMillis?.let { millis ->
-                            val selectedDate = LocalDate.ofInstant(
+                            val pickedDate = LocalDate.ofInstant(
                                 java.time.Instant.ofEpochMilli(millis),
                                 ZoneId.systemDefault()
                             )
-                            val selectedYearMonth = YearMonth.from(selectedDate)
+                            val selectedYearMonth = YearMonth.from(pickedDate)
 
-                            calendarViewModel.setSelectedDate(selectedDate)
+                            calendarViewModel.setSelectedDate(pickedDate)
                             if (viewMode != CalendarViewMode.MONTH) {
                                 calendarViewModel.setViewMode(CalendarViewMode.MONTH)
                             } else {
@@ -711,8 +711,6 @@ private fun AnimatedViewModeSelector(
         ) {
             modes.forEach { mode ->
                 val isSelected = mode == selectedMode
-
-                val dims = dimensions()
 
                 Box(
                     modifier = Modifier

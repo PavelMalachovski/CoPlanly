@@ -64,6 +64,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.components.TimePickerDialog
 import com.coparently.app.presentation.theme.CoParentlyColors
+import com.coparently.app.presentation.theme.dimensions
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
@@ -101,6 +102,7 @@ fun AddEditEventScreen(
     val scope = rememberCoroutineScope()
     val scrollState = rememberScrollState()
     val focusManager = LocalFocusManager.current
+    val dims = dimensions()
 
     // Validation
     val isTitleValid = title.isNotBlank()
@@ -191,8 +193,8 @@ fun AddEditEventScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
                 .verticalScroll(scrollState)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
+                .padding(dims.paddingMedium),
+            verticalArrangement = Arrangement.spacedBy(dims.paddingMedium + dims.paddingSmall / 2)
         ) {
             // Title Section
             OutlinedTextField(
@@ -235,9 +237,9 @@ fun AddEditEventScreen(
                         contentDescription = null
                     )
                 },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(120.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(dims.buttonHeight * 2.14f), // ~120dp for compact
                 maxLines = 4,
                 keyboardOptions = KeyboardOptions(
                     capitalization = KeyboardCapitalization.Sentences,
@@ -269,7 +271,7 @@ fun AddEditEventScreen(
                     Card(
                         modifier = Modifier
                             .weight(1f)
-                            .height(80.dp)
+                            .height(dims.buttonHeight * 1.43f) // ~80dp for compact
                             .graphicsLayer {
                                 scaleX = scale
                                 scaleY = scale
@@ -319,9 +321,9 @@ fun AddEditEventScreen(
                                     "dad" -> CoParentlyColors.DadBlue
                                     else -> MaterialTheme.colorScheme.primary
                                 },
-                                modifier = Modifier.size(28.dp)
+                                modifier = Modifier.size(dims.iconSize * 1.17f) // ~28dp for compact
                             )
-                            Spacer(modifier = Modifier.height(4.dp))
+                            Spacer(modifier = Modifier.height(dims.paddingSmall / 2))
                             Text(
                                 text = label,
                                 style = MaterialTheme.typography.labelLarge,
@@ -362,7 +364,7 @@ fun AddEditEventScreen(
                                     Icon(
                                         imageVector = Icons.Default.Check,
                                         contentDescription = null,
-                                        modifier = Modifier.size(18.dp)
+                                        modifier = Modifier.size(dims.iconSize * 0.75f) // ~18dp for compact
                                     )
                                 }
                             }
@@ -386,7 +388,7 @@ fun AddEditEventScreen(
                                     Icon(
                                         imageVector = Icons.Default.Check,
                                         contentDescription = null,
-                                        modifier = Modifier.size(18.dp)
+                                        modifier = Modifier.size(dims.iconSize * 0.75f) // ~18dp for compact
                                     )
                                 }
                             }
@@ -410,12 +412,12 @@ fun AddEditEventScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
+                        .padding(dims.paddingMedium),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(dims.paddingSmall * 1.5f),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
@@ -458,16 +460,16 @@ fun AddEditEventScreen(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(16.dp),
+                            .padding(dims.paddingMedium),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Icon(
                             imageVector = Icons.Default.Schedule,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(24.dp)
+                            modifier = Modifier.size(dims.iconSize)
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(dims.paddingSmall))
                         Text(
                             text = "Start Time",
                             style = MaterialTheme.typography.labelSmall,
@@ -488,16 +490,16 @@ fun AddEditEventScreen(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(16.dp),
+                            .padding(dims.paddingMedium),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Icon(
                             imageVector = Icons.Default.Schedule,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(24.dp)
+                            modifier = Modifier.size(dims.iconSize)
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(dims.paddingSmall))
                         Text(
                             text = "End Time",
                             style = MaterialTheme.typography.labelSmall,

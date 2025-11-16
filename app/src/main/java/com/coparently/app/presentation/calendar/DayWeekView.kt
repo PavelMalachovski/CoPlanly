@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.sp
 import com.coparently.app.data.local.entity.CustodyScheduleEntity
 import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.theme.CoParentlyColors
+import com.coparently.app.presentation.theme.dimensions
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.temporal.WeekFields
@@ -67,6 +68,7 @@ fun DayWeekView(
     onEventClick: (String) -> Unit,
     onAddEventClick: (LocalDate, Int) -> Unit = { _, _ -> }
 ) {
+    val dims = dimensions()
     val hours = (0..23).toList()
 
     // Handle swipe to change dates
