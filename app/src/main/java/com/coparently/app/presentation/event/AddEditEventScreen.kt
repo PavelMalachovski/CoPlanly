@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -56,6 +57,11 @@ import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -237,13 +243,18 @@ fun AddEditEventScreen(
                         contentDescription = null
                     )
                 },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(dims.buttonHeight * 2.14f), // ~120dp for compact
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(dims.buttonHeight * 2.14f), // ~120dp for compact
                 maxLines = 4,
                 keyboardOptions = KeyboardOptions(
                     capitalization = KeyboardCapitalization.Sentences,
                     imeAction = ImeAction.Done
+                ),
+                keyboardActions = KeyboardActions(
+                    onDone = {
+                        focusManager.clearFocus() // Clear focus when Done is pressed
+                    }
                 )
             )
 
@@ -272,6 +283,11 @@ fun AddEditEventScreen(
                         modifier = Modifier
                             .weight(1f)
                             .height(dims.buttonHeight * 1.43f) // ~80dp for compact
+                            .semantics {
+                                role = Role.RadioButton
+                                selected = isSelected
+                                contentDescription = "Assign to $label, ${if (isSelected) "selected" else "not selected"}"
+                            }
                             .graphicsLayer {
                                 scaleX = scale
                                 scaleY = scale
@@ -367,6 +383,9 @@ fun AddEditEventScreen(
                                         modifier = Modifier.size(dims.iconSize * 0.75f) // ~18dp for compact
                                     )
                                 }
+                            },
+                            modifier = Modifier.semantics {
+                                contentDescription = "$label event type, ${if (eventType == value) "selected" else "not selected"}"
                             }
                         )
                     }
@@ -391,6 +410,9 @@ fun AddEditEventScreen(
                                         modifier = Modifier.size(dims.iconSize * 0.75f) // ~18dp for compact
                                     )
                                 }
+                            },
+                            modifier = Modifier.semantics {
+                                contentDescription = "$label event type, ${if (eventType == value) "selected" else "not selected"}"
                             }
                         )
                     }
@@ -406,7 +428,13 @@ fun AddEditEventScreen(
 
             // Date Picker Button
             OutlinedCard(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .defaultMinSize(minHeight = 48.dp) // Ensure minimum touch target
+                    .semantics {
+                        role = Role.Button
+                        contentDescription = "Select date, currently ${startDate.format(DateTimeFormatter.ofPattern("EEEE, MMMM dd, yyyy"))}"
+                    },
                 onClick = { showDatePicker = true }
             ) {
                 Row(
@@ -454,7 +482,13 @@ fun AddEditEventScreen(
             ) {
                 // Start Time
                 OutlinedCard(
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .defaultMinSize(minHeight = 48.dp) // Ensure minimum touch target
+                        .semantics {
+                            role = Role.Button
+                            contentDescription = "Select start time, currently ${startTime.format(DateTimeFormatter.ofPattern("HH:mm"))}"
+                        },
                     onClick = { showStartTimePicker = true }
                 ) {
                     Column(
@@ -484,7 +518,13 @@ fun AddEditEventScreen(
 
                 // End Time
                 OutlinedCard(
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .defaultMinSize(minHeight = 48.dp) // Ensure minimum touch target
+                        .semantics {
+                            role = Role.Button
+                            contentDescription = "Select end time, currently ${endTime.format(DateTimeFormatter.ofPattern("HH:mm"))}"
+                        },
                     onClick = { showEndTimePicker = true }
                 ) {
                     Column(

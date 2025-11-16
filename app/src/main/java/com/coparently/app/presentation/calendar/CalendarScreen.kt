@@ -64,6 +64,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -443,10 +448,20 @@ private fun CustodyIndicatorToday(custody: String) {
 
     val dims = dimensions()
 
+    val custodyDescription = when (custody) {
+        "mom" -> "Today's child is with Mom"
+        "dad" -> "Today's child is with Dad"
+        else -> "Custody information for today"
+    }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = dims.paddingMedium, vertical = dims.paddingSmall),
+            .padding(horizontal = dims.paddingMedium, vertical = dims.paddingSmall)
+            .semantics {
+                contentDescription = custodyDescription
+                role = Role.Image
+            },
         shape = RoundedCornerShape(dims.cornerRadius),
         elevation = CardDefaults.cardElevation(
             defaultElevation = dims.cardElevation,
@@ -686,6 +701,16 @@ private fun AnimatedViewModeSelector(
                 color = MaterialTheme.colorScheme.surfaceVariant,
                 shape = RoundedCornerShape(dims.cornerRadius * 2)
             )
+            .semantics {
+                contentDescription = "Calendar view mode selector. Currently selected: ${
+                    when (selectedMode) {
+                        CalendarViewMode.DAY -> "Day view"
+                        CalendarViewMode.THREE_DAYS -> "3 Days view"
+                        CalendarViewMode.WEEK -> "Week view"
+                        CalendarViewMode.MONTH -> "Month view"
+                    }
+                }"
+            }
             .padding(internalPadding)
     ) {
         // Animated background indicator
@@ -711,12 +736,25 @@ private fun AnimatedViewModeSelector(
         ) {
             modes.forEach { mode ->
                 val isSelected = mode == selectedMode
+                val modeLabel = when (mode) {
+                    CalendarViewMode.DAY -> "Day"
+                    CalendarViewMode.THREE_DAYS -> "3 Days"
+                    CalendarViewMode.WEEK -> "Week"
+                    CalendarViewMode.MONTH -> "Month"
+                }
 
                 Box(
                     modifier = Modifier
                         .weight(1f)
                         .height(dims.buttonHeight * 0.71f) // ~40dp for compact
-                        .clickable { onModeSelected(mode) },
+                        .semantics {
+                            role = Role.RadioButton
+                            selected = isSelected
+                            contentDescription = "$modeLabel view mode"
+                        }
+                        .clickable(
+                            onClickLabel = "Select $modeLabel view"
+                        ) { onModeSelected(mode) },
                     contentAlignment = Alignment.Center
                 ) {
                     Text(

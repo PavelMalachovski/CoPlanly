@@ -45,16 +45,24 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import java.time.format.DateTimeFormatter
+import java.time.format.TextStyle
+import java.util.Locale as JavaLocale
 import com.coparently.app.data.local.entity.CustodyScheduleEntity
 import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.theme.CoParentlyColors
@@ -220,7 +228,10 @@ private fun WeekdayHeader(firstDayOfWeek: DayOfWeek) {
         modifier = Modifier
             .fillMaxWidth()
             .height(dims.buttonHeight * 0.8f) // ~45dp for compact
-            .background(MaterialTheme.colorScheme.surface),
+            .background(MaterialTheme.colorScheme.surface)
+            .semantics {
+                contentDescription = "Calendar weekday header"
+            },
         horizontalArrangement = Arrangement.spacedBy(0.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -379,10 +390,52 @@ private fun RowScope.DayCell(
         else -> MaterialTheme.colorScheme.primary
     }
 
+    // Build semantic content description for accessibility
+    val semanticDescription = buildString {
+        // Date information
+        append(date.format(DateTimeFormatter.ofPattern("EEEE, MMMM d", JavaLocale.getDefault())))
+
+        // Today indicator
+        if (isToday) {
+            append(", Today")
+        }
+
+        // Month context
+        if (!isCurrentMonth) {
+            append(", Outside current month")
+        }
+
+        // Custody information
+        if (custody != null) {
+            append(", With ")
+            append(if (custody == "mom") "Mom" else "Dad")
+        }
+
+        // Events information
+        if (events.isNotEmpty()) {
+            append(", ")
+            append(events.size)
+            append(" event")
+            if (events.size > 1) append("s")
+            // List first event title
+            events.firstOrNull()?.let { event ->
+                append(": ")
+                append(event.title)
+            }
+        }
+    }
+
+    val clickLabel = "View events for ${date.format(DateTimeFormatter.ofPattern("MMMM d", JavaLocale.getDefault()))}"
+
     Box(
         modifier = Modifier
             .weight(1f)
             .fillMaxSize()
+            .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp) // Ensure 48dp minimum touch target
+            .semantics {
+                contentDescription = semanticDescription
+                role = Role.Button
+            }
             .padding(dims.paddingSmall / 8) // ~1dp for compact
             .background(
                 color = backgroundColor,
@@ -395,6 +448,7 @@ private fun RowScope.DayCell(
                         onDayClick(date)
                     }
                 },
+                onClickLabel = clickLabel,
                 indication = rememberRipple(
                     bounded = true,
                     radius = dims.iconSize,
@@ -409,9 +463,10 @@ private fun RowScope.DayCell(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
+            // Day number with minimum touch target size (48dp for accessibility)
             Box(
                 modifier = Modifier
-                    .size(if (isToday) 26.dp else 24.dp)
+                    .defaultMinSize(minWidth = 32.dp, minHeight = 32.dp) // Visual size
                     .background(
                         color = if (isToday) {
                             MaterialTheme.colorScheme.primary
