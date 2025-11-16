@@ -142,9 +142,12 @@ fun DayWeekView(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Week number for 3 days and week views (moved to the left)
+                // Show only once per week to avoid duplicates
                 if (daysCount >= 3) {
                     val weekFields = WeekFields.of(Locale.getDefault())
-                    val weekNumber = currentDate.get(weekFields.weekOfWeekBasedYear())
+                    // Use the first date of the displayed range to get week number
+                    val firstDate = currentDates.firstOrNull() ?: currentDate
+                    val weekNumber = firstDate.get(weekFields.weekOfWeekBasedYear())
 
                     Box(
                         modifier = Modifier
@@ -163,8 +166,8 @@ fun DayWeekView(
                     }
                 }
 
-                // Time column space
-                Spacer(modifier = Modifier.width(if (daysCount >= 3) 20.dp else 52.dp))
+                // Time column space - fixed width for consistency
+                Spacer(modifier = Modifier.width(52.dp))
 
                 currentDates.forEach { date ->
                     val isToday = date == LocalDate.now()
@@ -232,6 +235,7 @@ fun DayWeekView(
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     // Hour label - static, outside AnimatedContent
+                    // Fixed width to ensure consistent layout and single-line time display
                     Box(
                         modifier = Modifier
                             .width(52.dp)
@@ -244,7 +248,8 @@ fun DayWeekView(
                             style = MaterialTheme.typography.bodyMedium,
                             fontSize = 11.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontWeight = FontWeight.Medium
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 1
                         )
                     }
 

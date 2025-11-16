@@ -122,6 +122,19 @@ fun MonthView(
                 if (calculated < 48.dp) 48.dp else calculated
             }
 
+            // Track week numbers to avoid duplicates
+            val weeksWithVisibility = remember(weeks, weekFields) {
+                val seen = mutableSetOf<Int>()
+                weeks.mapIndexed { index, week ->
+                    val weekNumber = week.firstOrNull()?.get(weekFields.weekOfWeekBasedYear()) ?: 0
+                    val isDuplicate = seen.contains(weekNumber)
+                    if (!isDuplicate) {
+                        seen.add(weekNumber)
+                    }
+                    Triple(week, index, !isDuplicate)
+                }
+            }
+
             LazyColumn(
                 state = lazyListState,
                 modifier = Modifier
@@ -160,9 +173,9 @@ fun MonthView(
                 userScrollEnabled = false
             ) {
                 items(
-                    items = weeks,
-                    key = { week -> week.firstOrNull() ?: currentWeekStart }
-                ) { week ->
+                    items = weeksWithVisibility,
+                    key = { (week, _, _) -> week.firstOrNull() ?: currentWeekStart }
+                ) { (week, _, showWeekNumber) ->
                     WeekRow(
                         week = week,
                         selectedMonth = selectedMonth,
@@ -171,7 +184,8 @@ fun MonthView(
                         weekFields = weekFields,
                         weekHeight = weekRowHeight,
                         onDayClick = onDayClick,
-                        isSwipeInProgress = isSwipeInProgress
+                        isSwipeInProgress = isSwipeInProgress,
+                        showWeekNumber = showWeekNumber
                     )
                 }
             }
@@ -188,9 +202,8 @@ private fun WeekdayHeader(firstDayOfWeek: DayOfWeek) {
         modifier = Modifier
             .fillMaxWidth()
             .height(90.dp)
-            .background(MaterialTheme.colorScheme.surface)
-            .padding(horizontal = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
+            .background(MaterialTheme.colorScheme.surface),
+        horizontalArrangement = Arrangement.spacedBy(0.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Week number column header
@@ -227,38 +240,33 @@ private fun WeekdayHeader(firstDayOfWeek: DayOfWeek) {
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .height(90.dp)
+                    .fillMaxHeight()
+                    .padding(1.dp)
                     .background(
                         color = if (isToday) {
                             MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)
                         } else {
                             Color.Transparent
                         },
-                        shape = RoundedCornerShape(8.dp)
+                        shape = RoundedCornerShape(6.dp)
                     )
-                    .padding(6.dp),
+                    .padding(4.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center,
-                    modifier = Modifier.padding(vertical = 4.dp)
-                ) {
-                    Text(
-                        text = dayOfWeek.getDisplayName(
-                            java.time.format.TextStyle.SHORT,
-                            Locale.getDefault()
-                        ),
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Normal,
-                        fontSize = 9.sp,
-                        color = if (isToday) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        }
-                    )
-                }
+                Text(
+                    text = dayOfWeek.getDisplayName(
+                        java.time.format.TextStyle.SHORT,
+                        Locale.getDefault()
+                    ),
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Normal,
+                    fontSize = 9.sp,
+                    color = if (isToday) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    }
+                )
             }
         }
     }
@@ -276,7 +284,8 @@ private fun WeekRow(
     weekFields: WeekFields,
     weekHeight: Dp,
     onDayClick: (LocalDate) -> Unit,
-    isSwipeInProgress: Boolean = false
+    isSwipeInProgress: Boolean = false,
+    showWeekNumber: Boolean = true
 ) {
     val weekNumber = remember(week) {
         week.firstOrNull()?.get(weekFields.weekOfWeekBasedYear()) ?: 0
@@ -288,7 +297,7 @@ private fun WeekRow(
             .height(weekHeight),
         horizontalArrangement = Arrangement.spacedBy(0.dp)
     ) {
-        // Week number
+        // Week number - only show if not duplicate
         Box(
             modifier = Modifier
                 .width(32.dp)
@@ -296,13 +305,15 @@ private fun WeekRow(
                 .padding(end = 4.dp),
             contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = weekNumber.toString(),
-                style = MaterialTheme.typography.labelSmall,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-            )
+            if (showWeekNumber) {
+                Text(
+                    text = weekNumber.toString(),
+                    style = MaterialTheme.typography.labelSmall,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                )
+            }
         }
 
         // Day cells

@@ -5,6 +5,8 @@ framework: Jetpack Compose
 style: Clean Architecture
 
 rules:
+  - Ты senior разработчик и понимаешь все аспекты разработки игр
+  - Ты senior UX/UI разработчик и понимаешь все аспекты UX/UI разработки
   - Использовать только Jetpack Compose (никакого XML)
   - Минимальный SDK = 26
   - Все UI-компоненты должны быть stateless
