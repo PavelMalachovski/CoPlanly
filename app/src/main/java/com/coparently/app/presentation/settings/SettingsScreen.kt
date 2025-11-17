@@ -3,6 +3,8 @@ package com.coparently.app.presentation.settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
@@ -87,6 +89,7 @@ fun SettingsScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .verticalScroll(rememberScrollState())
                 .padding(paddingValues)
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -312,34 +315,6 @@ fun SettingsScreen(
                 },
                 enabled = !settingsUiState.isLoading
             )
-
-            // Show success/error messages
-            settingsUiState.errorMessage?.let { message ->
-                Snackbar(
-                    modifier = Modifier.padding(8.dp),
-                    action = {
-                        TextButton(onClick = { settingsViewModel.clearMessages() }) {
-                            Text("Dismiss")
-                        }
-                    }
-                ) {
-                    Text(message)
-                }
-            }
-
-            settingsUiState.successMessage?.let { message ->
-                Snackbar(
-                    modifier = Modifier.padding(8.dp),
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    action = {
-                        TextButton(onClick = { settingsViewModel.clearMessages() }) {
-                            Text("OK")
-                        }
-                    }
-                ) {
-                    Text(message)
-                }
-            }
 
             // About
             Card(
