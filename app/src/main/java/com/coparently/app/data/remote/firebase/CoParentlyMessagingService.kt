@@ -10,6 +10,10 @@ import androidx.core.app.NotificationCompat
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
@@ -51,8 +55,14 @@ class CoParentlyMessagingService : FirebaseMessagingService() {
 
     override fun onNewToken(token: String) {
         super.onNewToken(token)
-        // The token needs to be saved to Firestore
-        // This should be handled by a repository or use case
+        // Save the new token to Firestore
+        CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+            try {
+                fcmService.updateUserToken(token)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
     }
 
     /**
@@ -108,4 +118,3 @@ class CoParentlyMessagingService : FirebaseMessagingService() {
         private const val CHANNEL_DESCRIPTION = "Notifications for events and invitations"
     }
 }
-

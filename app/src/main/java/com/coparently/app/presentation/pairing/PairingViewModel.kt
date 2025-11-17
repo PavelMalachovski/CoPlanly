@@ -72,18 +72,39 @@ class PairingViewModel @Inject constructor(
         _uiState.value = state.copy(isLoading = true, errorMessage = null)
 
         viewModelScope.launch {
-            val currentUser = firebaseAuthService.getCurrentUser()
-            val currentUserData = userRepository.getCurrentUser()
-            if (currentUser != null && currentUserData != null) {
+            try {
+                val currentUser = firebaseAuthService.getCurrentUser()
+                if (currentUser == null) {
+                    _uiState.value = state.copy(
+                        isLoading = false,
+                        errorMessage = "User not authenticated. Please sign in."
+                    )
+                    return@launch
+                }
+
+                val currentUserData = userRepository.getCurrentUser()
+                if (currentUserData == null) {
+                    _uiState.value = state.copy(
+                        isLoading = false,
+                        errorMessage = "User data not found. Please try again."
+                    )
+                    return@launch
+                }
+
                 val result = pairingService.sendInvitation(
                     currentUser.uid,
                     currentUser.email ?: "",
                     currentUserData.name,
                     state.invitationEmail
                 )
+
                 result.fold(
                     onSuccess = {
-                        _uiState.value = state.copy(isLoading = false)
+                        _uiState.value = state.copy(
+                            isLoading = false,
+                            invitationEmail = "", // Clear the email field
+                            errorMessage = null
+                        )
                         onSuccess()
                     },
                     onFailure = { error ->
@@ -92,6 +113,11 @@ class PairingViewModel @Inject constructor(
                             errorMessage = error.message ?: "Failed to send invitation"
                         )
                     }
+                )
+            } catch (e: Exception) {
+                _uiState.value = state.copy(
+                    isLoading = false,
+                    errorMessage = "Error: ${e.message}"
                 )
             }
         }

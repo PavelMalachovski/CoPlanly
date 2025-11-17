@@ -1,6 +1,8 @@
 package com.coparently.app.presentation.pairing
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -12,7 +14,12 @@ import androidx.hilt.navigation.compose.hiltViewModel
 
 /**
  * Screen for managing co-parent pairing and invitations.
+ * Stateless composable that receives navigation callbacks and ViewModel.
+ *
+ * @param onNavigateBack Navigation callback to go back
+ * @param viewModel ViewModel for pairing operations
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PairingScreen(
     onNavigateBack: () -> Unit,
@@ -20,17 +27,27 @@ fun PairingScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp)
-    ) {
-        Text(
-            text = "Co-Parent Pairing",
-            style = MaterialTheme.typography.headlineMedium
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Co-Parent Pairing") },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back"
+                        )
+                    }
+                }
+            )
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(24.dp)
+        ) {
 
         if (uiState.partnerEmail != null) {
             Card(
@@ -145,6 +162,7 @@ fun PairingScreen(
                     }
                 }
             }
+        }
         }
     }
 }

@@ -114,7 +114,10 @@ fun ChildInfoScreen(
                                 style = MaterialTheme.typography.bodyLarge
                             )
                             Spacer(modifier = Modifier.height(8.dp))
-                            Button(onClick = { onEditClick("new") }) {
+                            Button(onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                onEditClick("new")
+                            }) {
                                 Icon(Icons.Default.Add, contentDescription = null)
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text("Add Child Info")

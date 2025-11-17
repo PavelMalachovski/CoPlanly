@@ -5,18 +5,17 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.coparently.app.presentation.settings.components.SettingsNavigationCard
+import com.coparently.app.presentation.settings.components.SettingsSwitchCard
 import com.coparently.app.presentation.sync.GoogleCalendarSyncState
 import com.coparently.app.presentation.sync.SyncStatusIndicator
 import com.coparently.app.presentation.sync.SyncViewModel
@@ -24,6 +23,13 @@ import com.google.android.gms.auth.api.signin.GoogleSignIn
 
 /**
  * Settings screen for managing app settings and synchronization.
+ * This is a stateless composable that delegates state management to ViewModels.
+ *
+ * @param onNavigateUp Navigation callback for back action
+ * @param onNavigateToChildInfo Navigation callback for child info screen
+ * @param onNavigateToPairing Navigation callback for pairing screen
+ * @param syncViewModel ViewModel for sync operations
+ * @param settingsViewModel ViewModel for settings state
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -31,13 +37,19 @@ fun SettingsScreen(
     onNavigateUp: () -> Unit,
     onNavigateToChildInfo: (() -> Unit)? = null,
     onNavigateToPairing: (() -> Unit)? = null,
-    viewModel: SyncViewModel = hiltViewModel()
+    syncViewModel: SyncViewModel = hiltViewModel(),
+    settingsViewModel: SettingsViewModel = hiltViewModel()
 ) {
     val haptic = LocalHapticFeedback.current
-    val isSignedIn by viewModel.isSignedIn.collectAsState()
-    val isSyncEnabled by viewModel.isSyncEnabled.collectAsState()
-    val googleSyncState by viewModel.syncState.collectAsState()
-    val firestoreSyncStatus by viewModel.firestoreSyncStatus.collectAsState()
+
+    // Sync ViewModel states
+    val isSignedIn by syncViewModel.isSignedIn.collectAsState()
+    val isSyncEnabled by syncViewModel.isSyncEnabled.collectAsState()
+    val googleSyncState by syncViewModel.syncState.collectAsState()
+    val firestoreSyncStatus by syncViewModel.firestoreSyncStatus.collectAsState()
+
+    // Settings ViewModel states
+    val settingsUiState by settingsViewModel.uiState.collectAsState()
 
     // Launcher for Google Sign-In
     val signInLauncher = rememberLauncherForActivityResult(
@@ -47,7 +59,7 @@ fun SettingsScreen(
             try {
                 val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
                 task.addOnSuccessListener { account ->
-                    viewModel.handleSignInResult(account)
+                    syncViewModel.handleSignInResult(account)
                 }.addOnFailureListener { exception ->
                     exception.printStackTrace()
                 }
@@ -97,7 +109,7 @@ fun SettingsScreen(
                         )
                         IconButton(onClick = {
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            viewModel.performFirestoreSync()
+                            syncViewModel.performFirestoreSync()
                         }) {
                             Icon(Icons.Default.Refresh, contentDescription = "Sync")
                         }
@@ -149,7 +161,7 @@ fun SettingsScreen(
                             checked = isSyncEnabled,
                             onCheckedChange = { enabled ->
                                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                viewModel.toggleSync(enabled)
+                                syncViewModel.toggleSync(enabled)
                             },
                             enabled = isSignedIn || !isSyncEnabled
                         )
@@ -206,7 +218,7 @@ fun SettingsScreen(
                         Button(
                             onClick = {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                val signInIntent = viewModel.getSignInIntent()
+                                val signInIntent = syncViewModel.getSignInIntent()
                                 signInLauncher.launch(signInIntent)
                             },
                             modifier = Modifier
@@ -217,13 +229,13 @@ fun SettingsScreen(
                         }
                     } else {
                         // Check if we need to request calendar permission
-                        val needsCalendarPermission = isSignedIn && !viewModel.hasCalendarScope()
+                        val needsCalendarPermission = isSignedIn && !syncViewModel.hasCalendarScope()
 
                         if (needsCalendarPermission) {
                             Button(
                                 onClick = {
                                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    val signInIntent = viewModel.getSignInIntentWithScope()
+                                    val signInIntent = syncViewModel.getSignInIntentWithScope()
                                     signInLauncher.launch(signInIntent)
                                 },
                                 modifier = Modifier
@@ -237,7 +249,7 @@ fun SettingsScreen(
                         Button(
                             onClick = {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                viewModel.syncFromGoogle()
+                                syncViewModel.syncFromGoogle()
                             },
                             enabled = isSyncEnabled && !needsCalendarPermission,
                             modifier = Modifier
@@ -250,7 +262,7 @@ fun SettingsScreen(
                         Button(
                             onClick = {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                viewModel.signOut()
+                                syncViewModel.signOut()
                             },
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -264,136 +276,68 @@ fun SettingsScreen(
 
             // Co-Parent Pairing
             onNavigateToPairing?.let { navigate ->
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
+                SettingsNavigationCard(
+                    title = "Co-Parent Pairing",
+                    description = "Invite or manage your co-parent",
+                    icon = Icons.Default.Group,
                     onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         navigate()
                     }
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(16.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Group,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                            Column {
-                                Text(
-                                    text = "Co-Parent Pairing",
-                                    style = MaterialTheme.typography.titleMedium
-                                )
-                                Text(
-                                    text = "Invite or manage your co-parent",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                            contentDescription = "Navigate",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
+                )
             }
 
             // Child Information
             onNavigateToChildInfo?.let { navigate ->
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
+                SettingsNavigationCard(
+                    title = "Child Information",
+                    description = "Medications, activities, allergies",
+                    icon = Icons.Default.ChildCare,
                     onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         navigate()
                     }
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(16.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.ChildCare,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                            Column {
-                                Text(
-                                    text = "Child Information",
-                                    style = MaterialTheme.typography.titleMedium
-                                )
-                                Text(
-                                    text = "Medications, activities, allergies",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                            contentDescription = "Navigate",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
+                )
             }
 
             // Notifications Settings
-            Card(
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Notifications,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                        Column {
-                            Text(
-                                text = "Push Notifications",
-                                style = MaterialTheme.typography.titleMedium
-                            )
-                            Text(
-                                text = "Get notified about changes",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+            SettingsSwitchCard(
+                title = "Push Notifications",
+                description = "Get notified about changes",
+                icon = Icons.Default.Notifications,
+                checked = settingsUiState.notificationsEnabled,
+                onCheckedChange = { enabled ->
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    settingsViewModel.toggleNotifications(enabled)
+                },
+                enabled = !settingsUiState.isLoading
+            )
+
+            // Show success/error messages
+            settingsUiState.errorMessage?.let { message ->
+                Snackbar(
+                    modifier = Modifier.padding(8.dp),
+                    action = {
+                        TextButton(onClick = { settingsViewModel.clearMessages() }) {
+                            Text("Dismiss")
                         }
                     }
-                    Switch(
-                        checked = true,
-                        onCheckedChange = {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            /* TODO: Handle notification settings */
-                        },
-                        enabled = false // For now, always enabled
-                    )
+                ) {
+                    Text(message)
+                }
+            }
+
+            settingsUiState.successMessage?.let { message ->
+                Snackbar(
+                    modifier = Modifier.padding(8.dp),
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    action = {
+                        TextButton(onClick = { settingsViewModel.clearMessages() }) {
+                            Text("OK")
+                        }
+                    }
+                ) {
+                    Text(message)
                 }
             }
 

@@ -103,8 +103,23 @@ fun NavGraph(navController: NavHostController) {
                     navController.popBackStack()
                 },
                 onEditClick = { childInfoId ->
-                    // Future: navigate to edit screen
-                    // For now, just navigate back
+                    navController.navigate(Screen.EditChildInfo.createRoute(childInfoId))
+                }
+            )
+        }
+
+        composable(
+            route = Screen.EditChildInfo.route,
+            arguments = listOf(
+                navArgument(Screen.EditChildInfo.ARG_CHILD_INFO_ID) {
+                    type = NavType.StringType
+                }
+            )
+        ) { backStackEntry ->
+            val childInfoId = backStackEntry.arguments?.getString(Screen.EditChildInfo.ARG_CHILD_INFO_ID) ?: "new"
+            com.coparently.app.presentation.childinfo.AddEditChildInfoScreen(
+                childInfoId = childInfoId,
+                onNavigateBack = {
                     navController.popBackStack()
                 }
             )
@@ -136,6 +151,14 @@ sealed class Screen(val route: String) {
 
         fun createRoute(eventId: String): String {
             return "edit_event/$eventId"
+        }
+    }
+
+    data object EditChildInfo : Screen("edit_child_info/{childInfoId}") {
+        const val ARG_CHILD_INFO_ID = "childInfoId"
+
+        fun createRoute(childInfoId: String): String {
+            return "edit_child_info/$childInfoId"
         }
     }
 }
