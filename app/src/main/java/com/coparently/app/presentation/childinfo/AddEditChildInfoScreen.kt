@@ -12,10 +12,14 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.coparently.app.domain.model.*
+import com.coparently.app.presentation.childinfo.components.*
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
 /**
  * Screen for adding or editing child information.
- * Provides form for entering child details, medications, activities, etc.
+ * Provides comprehensive form for entering child details, medications, activities, etc.
  *
  * @param childInfoId ID of the child info to edit, or "new" for creating new
  * @param onNavigateBack Navigation callback
@@ -32,7 +36,15 @@ fun AddEditChildInfoScreen(
 
     // State for form fields
     var childName by remember { mutableStateOf("") }
+    var dateOfBirth by remember { mutableStateOf<LocalDateTime?>(null) }
+    var medications by remember { mutableStateOf<List<Medication>>(emptyList()) }
+    var activities by remember { mutableStateOf<List<Activity>>(emptyList()) }
+    var allergies by remember { mutableStateOf<List<String>>(emptyList()) }
+    var medicalNotes by remember { mutableStateOf("") }
+    var emergencyContacts by remember { mutableStateOf<List<EmergencyContact>>(emptyList()) }
+    var schoolInfo by remember { mutableStateOf<SchoolInfo?>(null) }
     var isSaving by remember { mutableStateOf(false) }
+    var showDatePicker by remember { mutableStateOf(false) }
 
     // Load existing child info if editing
     LaunchedEffect(childInfoId) {
@@ -48,7 +60,26 @@ fun AddEditChildInfoScreen(
     LaunchedEffect(currentChildInfo) {
         currentChildInfo?.let { info ->
             childName = info.childName
+            dateOfBirth = info.dateOfBirth
+            medications = info.medications
+            activities = info.activities
+            allergies = info.allergies
+            medicalNotes = info.medicalNotes ?: ""
+            emergencyContacts = info.emergencyContacts
+            schoolInfo = info.schoolInfo
         }
+    }
+
+    // Date picker dialog
+    if (showDatePicker) {
+        DatePickerDialog(
+            onDateSelected = { date ->
+                dateOfBirth = date
+                showDatePicker = false
+            },
+            onDismiss = { showDatePicker = false },
+            initialDate = dateOfBirth
+        )
     }
 
     Scaffold(
@@ -92,16 +123,26 @@ fun AddEditChildInfoScreen(
                     OutlinedTextField(
                         value = childName,
                         onValueChange = { childName = it },
-                        label = { Text("Child's Name") },
+                        label = { Text("Child's Name *") },
                         modifier = Modifier.fillMaxWidth(),
-                        enabled = !isSaving
+                        enabled = !isSaving,
+                        singleLine = true
                     )
 
-                    Text(
-                        text = "Date of Birth (Coming Soon)",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    // Date of Birth Picker
+                    OutlinedButton(
+                        onClick = { showDatePicker = true },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !isSaving
+                    ) {
+                        Text(
+                            text = if (dateOfBirth != null) {
+                                "Date of Birth: ${dateOfBirth!!.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))}"
+                            } else {
+                                "Select Date of Birth"
+                            }
+                        )
+                    }
                 }
             }
 
@@ -110,17 +151,29 @@ fun AddEditChildInfoScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp)
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
                         text = "Medications",
                         style = MaterialTheme.typography.titleMedium
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Add medications functionality coming soon",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+
+                    MedicationEditor(
+                        medications = medications,
+                        onAdd = { medication ->
+                            medications = medications + medication
+                        },
+                        onEdit = { index, medication ->
+                            medications = medications.toMutableList().apply {
+                                set(index, medication)
+                            }
+                        },
+                        onRemove = { index ->
+                            medications = medications.toMutableList().apply {
+                                removeAt(index)
+                            }
+                        }
                     )
                 }
             }
@@ -130,17 +183,29 @@ fun AddEditChildInfoScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp)
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
                         text = "Activities & Classes",
                         style = MaterialTheme.typography.titleMedium
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Add activities functionality coming soon",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+
+                    ActivityEditor(
+                        activities = activities,
+                        onAdd = { activity ->
+                            activities = activities + activity
+                        },
+                        onEdit = { index, activity ->
+                            activities = activities.toMutableList().apply {
+                                set(index, activity)
+                            }
+                        },
+                        onRemove = { index ->
+                            activities = activities.toMutableList().apply {
+                                removeAt(index)
+                            }
+                        }
                     )
                 }
             }
@@ -150,17 +215,104 @@ fun AddEditChildInfoScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp)
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
                         text = "Allergies",
                         style = MaterialTheme.typography.titleMedium
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
+
+                    AllergyEditor(
+                        allergies = allergies,
+                        onAdd = { allergy ->
+                            allergies = allergies + allergy
+                        },
+                        onRemove = { index ->
+                            allergies = allergies.toMutableList().apply {
+                                removeAt(index)
+                            }
+                        }
+                    )
+                }
+            }
+
+            // Medical Notes Section
+            Card(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     Text(
-                        text = "Add allergies functionality coming soon",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        text = "Medical Notes",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+
+                    OutlinedTextField(
+                        value = medicalNotes,
+                        onValueChange = { medicalNotes = it },
+                        label = { Text("Additional medical information") },
+                        placeholder = { Text("Any other important medical information...") },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !isSaving,
+                        minLines = 3,
+                        maxLines = 5
+                    )
+                }
+            }
+
+            // Emergency Contacts Section
+            Card(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "Emergency Contacts",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+
+                    EmergencyContactEditor(
+                        contacts = emergencyContacts,
+                        onAdd = { contact ->
+                            emergencyContacts = emergencyContacts + contact
+                        },
+                        onEdit = { index, contact ->
+                            emergencyContacts = emergencyContacts.toMutableList().apply {
+                                set(index, contact)
+                            }
+                        },
+                        onRemove = { index ->
+                            emergencyContacts = emergencyContacts.toMutableList().apply {
+                                removeAt(index)
+                            }
+                        }
+                    )
+                }
+            }
+
+            // School Information Section
+            Card(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "School Information",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+
+                    SchoolInfoEditor(
+                        schoolInfo = schoolInfo,
+                        onSave = { info ->
+                            schoolInfo = info
+                        }
                     )
                 }
             }
@@ -174,13 +326,13 @@ fun AddEditChildInfoScreen(
                         viewModel.upsertChildInfo(
                             id = if (childInfoId == "new") null else childInfoId,
                             childName = childName,
-                            dateOfBirth = null,
-                            medications = emptyList(),
-                            activities = emptyList(),
-                            allergies = emptyList(),
-                            medicalNotes = null,
-                            emergencyContacts = emptyList(),
-                            schoolInfo = null
+                            dateOfBirth = dateOfBirth,
+                            medications = medications,
+                            activities = activities,
+                            allergies = allergies,
+                            medicalNotes = medicalNotes.ifBlank { null },
+                            emergencyContacts = emergencyContacts,
+                            schoolInfo = schoolInfo
                         )
                         onNavigateBack()
                     }
@@ -199,14 +351,8 @@ fun AddEditChildInfoScreen(
                 Text(if (childInfoId == "new") "Add Child" else "Save Changes")
             }
 
-            // Note about features
-            Text(
-                text = "Note: This is a simplified version. Full editing capabilities for medications, activities, allergies, and emergency contacts will be added in future updates.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 8.dp)
-            )
+            // Bottom spacing
+            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }
-

@@ -53,7 +53,8 @@ fun SettingsScreen(
     val userEmail by syncViewModel.userEmail.collectAsState()
 
     // Settings ViewModel states
-    val settingsUiState by settingsViewModel.uiState.collectAsState()
+    val settingsUiState by settingsViewModel.settingsState.collectAsState()
+    val operationState by settingsViewModel.operationState.collectAsState()
 
     Scaffold(
         topBar = {

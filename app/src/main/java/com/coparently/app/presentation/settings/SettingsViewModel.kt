@@ -4,11 +4,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.domain.repository.UserRepository
+import com.coparently.app.presentation.common.UiError
+import com.coparently.app.presentation.common.UiState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.io.IOException
 import javax.inject.Inject
 
 /**
@@ -21,8 +24,11 @@ class SettingsViewModel @Inject constructor(
     private val userRepository: UserRepository
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(SettingsUiState())
-    val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
+    private val _settingsState = MutableStateFlow(SettingsUiState())
+    val settingsState: StateFlow<SettingsUiState> = _settingsState.asStateFlow()
+
+    private val _operationState = MutableStateFlow<UiState<Unit>>(UiState.Idle)
+    val operationState: StateFlow<UiState<Unit>> = _operationState.asStateFlow()
 
     init {
         loadSettings()
@@ -33,6 +39,7 @@ class SettingsViewModel @Inject constructor(
      */
     private fun loadSettings() {
         viewModelScope.launch {
+            _operationState.value = UiState.Loading("Loading settings...")
             try {
                 // Get current user
                 val currentUser = userRepository.getCurrentUser()
@@ -40,17 +47,18 @@ class SettingsViewModel @Inject constructor(
                 // Get FCM token status
                 val fcmToken = fcmService.getCurrentToken()
 
-                _uiState.value = _uiState.value.copy(
+                _settingsState.value = _settingsState.value.copy(
                     notificationsEnabled = fcmToken != null,
                     userEmail = currentUser?.email,
                     userName = currentUser?.name,
                     partnerId = currentUser?.partnerId,
                     isLoading = false
                 )
+                _operationState.value = UiState.Success(Unit)
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    errorMessage = e.message
+                _settingsState.value = _settingsState.value.copy(isLoading = false)
+                _operationState.value = UiState.Error(
+                    UiError.fromException(e, retry = { loadSettings() })
                 )
             }
         }
@@ -61,29 +69,43 @@ class SettingsViewModel @Inject constructor(
      */
     fun toggleNotifications(enabled: Boolean) {
         viewModelScope.launch {
-            try {
-                _uiState.value = _uiState.value.copy(isLoading = true)
+            _operationState.value = UiState.Loading(
+                message = if (enabled) "Enabling notifications..." else "Disabling notifications..."
+            )
 
+            try {
                 if (enabled) {
                     // Get and register FCM token
                     val token = fcmService.getCurrentToken()
-                    if (token != null) {
-                        fcmService.updateUserToken(token).getOrThrow()
-                    }
+                        ?: throw IOException("Failed to get FCM token")
+
+                    fcmService.updateUserToken(token).getOrThrow()
                 } else {
                     // Optionally clear token or unsubscribe from topics
                     // For now, just update UI state
                 }
 
-                _uiState.value = _uiState.value.copy(
+                _settingsState.value = _settingsState.value.copy(
                     notificationsEnabled = enabled,
-                    isLoading = false,
                     successMessage = if (enabled) "Notifications enabled" else "Notifications disabled"
                 )
+                _operationState.value = UiState.Success(
+                    data = Unit,
+                    message = if (enabled) "Notifications enabled successfully" else "Notifications disabled"
+                )
+            } catch (e: IOException) {
+                _operationState.value = UiState.Error(
+                    UiError.network(
+                        message = "Network error. Please check your connection and try again.",
+                        retry = { toggleNotifications(enabled) }
+                    )
+                )
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    errorMessage = "Failed to toggle notifications: ${e.message}"
+                _operationState.value = UiState.Error(
+                    UiError.fromException(
+                        throwable = e,
+                        retry = { toggleNotifications(enabled) }
+                    )
                 )
             }
         }
@@ -94,22 +116,28 @@ class SettingsViewModel @Inject constructor(
      */
     fun requestNotificationPermission() {
         viewModelScope.launch {
+            _operationState.value = UiState.Loading("Requesting permission...")
+
             try {
                 val token = fcmService.getCurrentToken()
-                if (token != null) {
-                    fcmService.updateUserToken(token).getOrThrow()
-                    _uiState.value = _uiState.value.copy(
-                        notificationsEnabled = true,
-                        successMessage = "Notifications enabled"
-                    )
-                } else {
-                    _uiState.value = _uiState.value.copy(
-                        errorMessage = "Failed to get notification token"
-                    )
-                }
+                    ?: throw IOException("Failed to get notification token")
+
+                fcmService.updateUserToken(token).getOrThrow()
+
+                _settingsState.value = _settingsState.value.copy(
+                    notificationsEnabled = true,
+                    successMessage = "Notifications enabled"
+                )
+                _operationState.value = UiState.Success(
+                    data = Unit,
+                    message = "Notifications enabled successfully"
+                )
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    errorMessage = "Failed to enable notifications: ${e.message}"
+                _operationState.value = UiState.Error(
+                    UiError.fromException(
+                        throwable = e,
+                        retry = { requestNotificationPermission() }
+                    )
                 )
             }
         }
@@ -119,10 +147,11 @@ class SettingsViewModel @Inject constructor(
      * Clears success/error messages.
      */
     fun clearMessages() {
-        _uiState.value = _uiState.value.copy(
+        _settingsState.value = _settingsState.value.copy(
             successMessage = null,
             errorMessage = null
         )
+        _operationState.value = UiState.Idle
     }
 }
 

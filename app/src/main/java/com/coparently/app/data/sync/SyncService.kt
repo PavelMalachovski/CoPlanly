@@ -31,7 +31,8 @@ class SyncService @Inject constructor(
     private val firestoreChildInfoDataSource: FirestoreChildInfoDataSource,
     private val firestoreUserDataSource: FirestoreUserDataSource,
     private val firebaseAuthService: FirebaseAuthService,
-    private val fcmService: FcmService
+    private val fcmService: FcmService,
+    private val conflictResolver: ConflictResolver
 ) {
     private val gson = Gson()
     private val formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
@@ -111,15 +112,58 @@ class SyncService @Inject constructor(
             }
         }
 
-        // Download events from Firestore
+        // Download events from Firestore with conflict resolution
         val localUser = userDao.getUserById(userId)
         val partnerId = localUser?.partnerId
 
         if (partnerId != null) {
             firestoreEventDataSource.observeEventsForParents(listOf(userId, partnerId)).collect { firestoreEvents ->
                 for (firestoreData in firestoreEvents) {
-                    val eventEntity = firestoreData.toEventEntity()
-                    eventDao.insertEvent(eventEntity.copy(syncedToFirestore = true))
+                    val remoteEntity = firestoreData.toEventEntity()
+                    val localEntity = eventDao.getEventById(remoteEntity.id)
+
+                    if (localEntity != null && !localEntity.syncedToFirestore) {
+                        // Conflict detected - resolve it
+                        val resolution = conflictResolver.resolveEventConflict(
+                            local = localEntity,
+                            remote = remoteEntity,
+                            currentUserId = userId
+                        )
+
+                        when (resolution) {
+                            is ConflictResolution.UseLocal -> {
+                                // Keep local, upload to remote
+                                val localData = mapOf(
+                                    "id" to localEntity.id,
+                                    "title" to localEntity.title,
+                                    "description" to localEntity.description,
+                                    "startDateTime" to localEntity.startDateTime.format(formatter),
+                                    "endDateTime" to localEntity.endDateTime?.format(formatter),
+                                    "eventType" to localEntity.eventType,
+                                    "parentOwner" to localEntity.parentOwner,
+                                    "isRecurring" to localEntity.isRecurring,
+                                    "recurrencePattern" to localEntity.recurrencePattern,
+                                    "createdAt" to localEntity.createdAt.format(formatter),
+                                    "updatedAt" to LocalDateTime.now().format(formatter),
+                                    "createdByFirebaseUid" to localEntity.createdByFirebaseUid,
+                                    "lastModifiedBy" to userId
+                                )
+                                firestoreEventDataSource.updateEvent(localEntity.id, localData)
+                                eventDao.markAsSynced(localEntity.id)
+                            }
+                            is ConflictResolution.UseRemote -> {
+                                // Use remote version
+                                eventDao.insertEvent(remoteEntity.copy(syncedToFirestore = true))
+                            }
+                            is ConflictResolution.Merged -> {
+                                // Future: handle merged data
+                                eventDao.insertEvent(resolution.data.copy(syncedToFirestore = true))
+                            }
+                        }
+                    } else {
+                        // No conflict - just insert/update
+                        eventDao.insertEvent(remoteEntity.copy(syncedToFirestore = true))
+                    }
                 }
             }
         }
@@ -163,11 +207,54 @@ class SyncService @Inject constructor(
             }
         }
 
-        // Download child info from Firestore
+        // Download child info from Firestore with conflict resolution
         firestoreChildInfoDataSource.getChildInfoForParent(userId).collect { firestoreList ->
             for (firestoreData in firestoreList) {
-                val childInfoEntity = firestoreData.toChildInfoEntity()
-                childInfoDao.insertChildInfo(childInfoEntity.copy(syncedToFirestore = true))
+                val remoteEntity = firestoreData.toChildInfoEntity()
+                val localEntity = childInfoDao.getChildInfoById(remoteEntity.id)
+
+                if (localEntity != null && !localEntity.syncedToFirestore) {
+                    // Conflict detected - resolve it
+                    val resolution = conflictResolver.resolveChildInfoConflict(
+                        local = localEntity,
+                        remote = remoteEntity,
+                        currentUserId = userId
+                    )
+
+                    when (resolution) {
+                        is ConflictResolution.UseLocal -> {
+                            // Keep local, upload to remote
+                            val localData = mapOf(
+                                "id" to localEntity.id,
+                                "childName" to localEntity.childName,
+                                "dateOfBirth" to localEntity.dateOfBirth?.format(formatter),
+                                "medications" to gson.fromJson(localEntity.medicationsJson, List::class.java),
+                                "activities" to gson.fromJson(localEntity.activitiesJson, List::class.java),
+                                "allergies" to gson.fromJson(localEntity.allergiesJson, List::class.java),
+                                "medicalNotes" to localEntity.medicalNotes,
+                                "emergencyContacts" to gson.fromJson(localEntity.emergencyContactsJson, List::class.java),
+                                "schoolInfo" to localEntity.schoolInfoJson?.let { gson.fromJson(it, Map::class.java) },
+                                "createdAt" to localEntity.createdAt.format(formatter),
+                                "updatedAt" to LocalDateTime.now().format(formatter),
+                                "createdByFirebaseUid" to localEntity.createdByFirebaseUid,
+                                "lastModifiedBy" to userId
+                            )
+                            firestoreChildInfoDataSource.upsertChildInfo(localEntity.id, localData)
+                            childInfoDao.markAsSynced(localEntity.id)
+                        }
+                        is ConflictResolution.UseRemote -> {
+                            // Use remote version
+                            childInfoDao.insertChildInfo(remoteEntity.copy(syncedToFirestore = true))
+                        }
+                        is ConflictResolution.Merged -> {
+                            // Future: handle merged data
+                            childInfoDao.insertChildInfo(resolution.data.copy(syncedToFirestore = true))
+                        }
+                    }
+                } else {
+                    // No conflict - just insert/update
+                    childInfoDao.insertChildInfo(remoteEntity.copy(syncedToFirestore = true))
+                }
             }
         }
     }
