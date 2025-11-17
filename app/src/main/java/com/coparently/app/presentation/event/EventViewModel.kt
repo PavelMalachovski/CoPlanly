@@ -12,6 +12,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime
+import java.time.LocalDate
+import java.time.Duration
 import java.util.UUID
 import javax.inject.Inject
 
@@ -162,6 +164,35 @@ class EventViewModel @Inject constructor(
                 _uiState.value = EventUiState.Success(_events.value)
             } catch (e: Exception) {
                 _uiState.value = EventUiState.Error(e.message ?: "Failed to delete event")
+            }
+        }
+    }
+
+    /**
+     * Moves event to a new date/time (drag & drop support).
+     */
+    fun moveEvent(eventId: String, targetDate: LocalDate, targetHour: Int? = null) {
+        viewModelScope.launch {
+            try {
+                val event = eventRepository.getEventById(eventId) ?: return@launch
+                val duration = Duration.between(event.startDateTime, event.endDateTime)
+                val originalTime = event.startDateTime.toLocalTime()
+                val adjustedTime = targetHour?.let { originalTime.withHour(it) } ?: originalTime
+                val newStart = targetDate.atTime(adjustedTime)
+                val newEnd = newStart.plus(duration)
+                val updatedEvent = event.copy(
+                    startDateTime = newStart,
+                    endDateTime = newEnd,
+                    updatedAt = LocalDateTime.now()
+                )
+                eventRepository.updateEvent(updatedEvent)
+                analyticsManager.logEventUpdated(event.eventType)
+                _uiState.value = EventUiState.OperationSuccess("Event rescheduled")
+                kotlinx.coroutines.delay(1500)
+                _uiState.value = EventUiState.Success(_events.value)
+            } catch (e: Exception) {
+                crashlyticsManager.recordException(e)
+                _uiState.value = EventUiState.Error(e.message ?: "Failed to move event")
             }
         }
     }

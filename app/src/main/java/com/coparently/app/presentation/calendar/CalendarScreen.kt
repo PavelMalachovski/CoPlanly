@@ -347,10 +347,7 @@ fun CalendarScreen(
                                 onAddEventClick()
                             },
                             onEventDragDrop = { eventId, targetDate, targetHour ->
-                                // Handle event drag and drop - update event time
-                                // This would typically call a method to update the event in the repository
-                                // For now, just log it
-                                android.util.Log.d("CalendarScreen", "Event $eventId dragged to $targetDate at $targetHour:00")
+                                eventViewModel.moveEvent(eventId, targetDate, targetHour)
                             }
                         )
                     }
@@ -366,7 +363,7 @@ fun CalendarScreen(
                                 onAddEventClick()
                             },
                             onEventDragDrop = { eventId, targetDate, targetHour ->
-                                android.util.Log.d("CalendarScreen", "Event $eventId dragged to $targetDate at $targetHour:00")
+                                eventViewModel.moveEvent(eventId, targetDate, targetHour)
                             }
                         )
                     }
@@ -382,7 +379,7 @@ fun CalendarScreen(
                                 onAddEventClick()
                             },
                             onEventDragDrop = { eventId, targetDate, targetHour ->
-                                android.util.Log.d("CalendarScreen", "Event $eventId dragged to $targetDate at $targetHour:00")
+                                eventViewModel.moveEvent(eventId, targetDate, targetHour)
                             }
                         )
                     }
@@ -405,7 +402,7 @@ fun CalendarScreen(
                                 calendarViewModel.setSelectedDate(newDate)
                             },
                             onEventDragDrop = { eventId, targetDate ->
-                                android.util.Log.d("CalendarScreen", "Event $eventId dragged to $targetDate")
+                                eventViewModel.moveEvent(eventId, targetDate)
                             }
                         )
                     }

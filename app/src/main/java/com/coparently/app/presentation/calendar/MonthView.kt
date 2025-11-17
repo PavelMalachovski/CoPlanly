@@ -15,8 +15,7 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
-import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -52,6 +51,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
@@ -74,6 +75,7 @@ import java.time.YearMonth
 import java.time.temporal.WeekFields
 import java.util.Locale
 import kotlin.math.abs
+import kotlin.math.roundToInt
 
 /**
  * Enhanced month view with week numbers and modern UX.
@@ -93,6 +95,7 @@ fun MonthView(
 ) {
     val weekFields = remember { WeekFields.of(Locale.getDefault()) }
     val firstDayOfWeek = remember { weekFields.firstDayOfWeek }
+    val density = LocalDensity.current
 
     val referenceDate = selectedDate ?: selectedMonth.atDay(1)
     val currentWeekStart = remember(referenceDate, firstDayOfWeek) {
@@ -146,6 +149,9 @@ fun MonthView(
             val weekRowHeight = remember(maxHeight) {
                 val calculated = (maxHeight - totalSpacing) / visibleWeeks
                 if (calculated < 48.dp) 48.dp else calculated
+            }
+            val weekRowHeightPx = remember(weekRowHeight, density) {
+                with(density) { weekRowHeight.toPx() }
             }
 
             // Track week numbers to avoid duplicates
@@ -212,7 +218,8 @@ fun MonthView(
                         onDayClick = onDayClick,
                         isSwipeInProgress = isSwipeInProgress,
                         showWeekNumber = showWeekNumber,
-                        onEventDragDrop = onEventDragDrop
+                        onEventDragDrop = onEventDragDrop,
+                        weekRowHeightPx = weekRowHeightPx
                     )
                 }
             }
@@ -318,7 +325,8 @@ private fun WeekRow(
     onDayClick: (LocalDate) -> Unit,
     isSwipeInProgress: Boolean = false,
     showWeekNumber: Boolean = true,
-    onEventDragDrop: ((String, LocalDate) -> Unit)? = null
+    onEventDragDrop: ((String, LocalDate) -> Unit)? = null,
+    weekRowHeightPx: Float
 ) {
     val dims = dimensions()
     val weekNumber = remember(week) {
@@ -359,7 +367,8 @@ private fun WeekRow(
                 custodySchedules = custodySchedules,
                 onDayClick = onDayClick,
                 isSwipeInProgress = isSwipeInProgress,
-                onEventDragDrop = onEventDragDrop
+                onEventDragDrop = onEventDragDrop,
+                weekRowHeightPx = weekRowHeightPx
             )
         }
     }
@@ -376,7 +385,8 @@ private fun RowScope.DayCell(
     custodySchedules: List<CustodyScheduleEntity>,
     onDayClick: (LocalDate) -> Unit,
     isSwipeInProgress: Boolean = false,
-    onEventDragDrop: ((String, LocalDate) -> Unit)? = null
+    onEventDragDrop: ((String, LocalDate) -> Unit)? = null,
+    weekRowHeightPx: Float
 ) {
     val dims = dimensions()
     val isToday = CustodyHelper.isToday(date)
@@ -387,13 +397,6 @@ private fun RowScope.DayCell(
         custody == "mom" -> CoParentlyColors.MomPink.copy(alpha = 0.08f)
         custody == "dad" -> CoParentlyColors.DadBlue.copy(alpha = 0.08f)
         else -> MaterialTheme.colorScheme.surface
-    }
-
-    // Ripple color based on custody
-    val rippleColor = when (custody) {
-        "mom" -> CoParentlyColors.MomPink
-        "dad" -> CoParentlyColors.DadBlue
-        else -> MaterialTheme.colorScheme.primary
     }
 
     // Build semantic content description for accessibility
@@ -433,6 +436,8 @@ private fun RowScope.DayCell(
 
     val clickLabel = "View events for ${date.format(DateTimeFormatter.ofPattern("MMMM d", JavaLocale.getDefault()))}"
 
+    var cellWidthPx by remember { mutableStateOf(0f) }
+
     Box(
         modifier = Modifier
             .weight(1f)
@@ -447,6 +452,9 @@ private fun RowScope.DayCell(
                 color = backgroundColor,
                 shape = RoundedCornerShape(dims.cornerRadius / 2)
             )
+            .onGloballyPositioned { coordinates ->
+                cellWidthPx = coordinates.size.width.toFloat()
+            }
             .clickable(
                 enabled = !isSwipeInProgress,
                 onClick = {
@@ -491,7 +499,7 @@ private fun RowScope.DayCell(
                 )
             }
 
-            if (events.isNotEmpty() && isCurrentMonth) {
+            if (events.isNotEmpty()) {
                 val eventToShow = events.firstOrNull()
                 eventToShow?.let { event ->
                     val eventColor = when (event.parentOwner) {
@@ -538,7 +546,7 @@ private fun RowScope.DayCell(
 
                         // Drag and drop state
                         var isDragging by remember { mutableStateOf(false) }
-                        var dragOffset by remember { mutableStateOf(Offset.Zero) }
+                        var totalDrag by remember { mutableStateOf(Offset.Zero) }
 
                         Box(
                             modifier = Modifier
@@ -548,32 +556,33 @@ private fun RowScope.DayCell(
                                     color = eventColor.copy(alpha = if (isDragging) 0.7f else 0.9f),
                                     shape = RoundedCornerShape(3.dp)
                                 )
-                                .pointerInput(onEventDragDrop) {
-                                    if (onEventDragDrop != null) {
-                                        detectDragGestures(
+                                .pointerInput(cellWidthPx, weekRowHeightPx, onEventDragDrop) {
+                                    if (onEventDragDrop != null && cellWidthPx > 0f && weekRowHeightPx > 0f) {
+                                        detectDragGesturesAfterLongPress(
                                             onDragStart = {
                                                 isDragging = true
-                                                dragOffset = Offset.Zero
-                                            },
-                                            onDragEnd = {
-                                                isDragging = false
-                                                // Handle drop logic - for month view, drop on target date
-                                                // This is simplified - in real app would need better drop detection
-                                                if (dragOffset.getDistance() > 30f) {
-                                                    // Calculate target date based on drag direction
-                                                    // This is placeholder logic
-                                                    val daysDragged = (dragOffset.x / 50f).toInt() // Assuming ~50dp per day
-                                                    val targetDate = date.plusDays(daysDragged.toLong())
-                                                    onEventDragDrop(event.id, targetDate)
-                                                }
+                                                totalDrag = Offset.Zero
                                             },
                                             onDragCancel = {
                                                 isDragging = false
-                                                dragOffset = Offset.Zero
+                                                totalDrag = Offset.Zero
+                                            },
+                                            onDragEnd = {
+                                                if (isDragging) {
+                                                    val horizontalDays = (totalDrag.x / cellWidthPx).roundToInt()
+                                                    val verticalWeeks = (totalDrag.y / weekRowHeightPx).roundToInt()
+                                                    val dayOffset = horizontalDays + verticalWeeks * 7
+                                                    if (dayOffset != 0) {
+                                                        val targetDate = date.plusDays(dayOffset.toLong())
+                                                        onEventDragDrop(event.id, targetDate)
+                                                    }
+                                                }
+                                                isDragging = false
+                                                totalDrag = Offset.Zero
                                             }
                                         ) { change, dragAmount ->
                                             change.consume()
-                                            dragOffset += dragAmount
+                                            totalDrag += dragAmount
                                         }
                                     }
                                 }
@@ -598,7 +607,11 @@ private fun RowScope.DayCell(
                         text = "+${events.size - 1}",
                         style = MaterialTheme.typography.labelSmall,
                         fontSize = 8.sp,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = if (isCurrentMonth) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
+                        },
                         fontWeight = FontWeight.Bold
                     )
                 }

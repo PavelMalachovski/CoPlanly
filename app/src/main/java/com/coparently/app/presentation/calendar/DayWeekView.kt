@@ -12,7 +12,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
-import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -43,6 +43,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -55,6 +57,7 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.temporal.WeekFields
 import java.util.Locale
+import kotlin.math.roundToInt
 
 /**
  * Hourly view for day/week calendar views.
@@ -73,6 +76,11 @@ fun DayWeekView(
 ) {
     val dims = dimensions()
     val hours = (0..23).toList()
+    val density = LocalDensity.current
+    val hourCellHeight = dims.buttonHeight * 1.07f
+    val hourCellHeightPx = remember(hourCellHeight, density) {
+        with(density) { hourCellHeight.toPx() }
+    }
 
     // Handle swipe to change dates
     val totalDragState = remember { mutableFloatStateOf(0f) }
@@ -259,7 +267,7 @@ fun DayWeekView(
                     Box(
                         modifier = Modifier
                             .width(dims.iconSize * 2.17f) // ~52dp for compact
-                            .height(dims.buttonHeight * 1.07f) // ~60dp for compact
+                            .height(hourCellHeight) // ~60dp for compact
                             .padding(top = dims.paddingSmall / 2),
                         contentAlignment = Alignment.TopCenter
                     ) {
@@ -313,6 +321,7 @@ fun DayWeekView(
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             currentDates.forEach { date ->
+                            var columnWidthPx by remember { mutableFloatStateOf(0f) }
                             val dateEvents = events.filter {
                                 it.startDateTime.toLocalDate() == date &&
                                 it.startDateTime.hour == hour
@@ -330,7 +339,10 @@ fun DayWeekView(
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
-                                    .height(dims.buttonHeight * 1.07f) // ~60dp for compact
+                                    .height(hourCellHeight) // ~60dp for compact
+                                    .onGloballyPositioned { coordinates ->
+                                        columnWidthPx = coordinates.size.width.toFloat()
+                                    }
                                     .background(
                                         color = backgroundColor,
                                         shape = RoundedCornerShape(dims.paddingSmall)
@@ -360,9 +372,11 @@ fun DayWeekView(
                                                 EventChip(
                                                     event = event,
                                                     onClick = { onEventClick(event.id) },
-                                                    onDragDrop = if (onEventDragDrop != null) { targetDate, targetHour ->
-                                                        onEventDragDrop(event.id, targetDate, targetHour)
-                                                    } else null
+                                                    columnWidthPx = columnWidthPx,
+                                                    hourHeightPx = hourCellHeightPx,
+                                                    baseDate = date,
+                                                    baseHour = hour,
+                                                    onDragDrop = onEventDragDrop
                                                 )
                                             }
                                             if (dateEvents.size > 2) {
@@ -393,7 +407,11 @@ fun DayWeekView(
 private fun EventChip(
     event: Event,
     onClick: () -> Unit,
-    onDragDrop: ((LocalDate, Int) -> Unit)? = null
+    columnWidthPx: Float,
+    hourHeightPx: Float,
+    baseDate: LocalDate,
+    baseHour: Int,
+    onDragDrop: ((String, LocalDate, Int) -> Unit)?
 ) {
     val backgroundColor = when (event.parentOwner) {
         "mom" -> CoParentlyColors.MomPink.copy(alpha = 0.9f)
@@ -407,8 +425,8 @@ private fun EventChip(
         else -> MaterialTheme.colorScheme.onTertiaryContainer
     }
 
-    var dragOffset by remember { mutableStateOf(Offset.Zero) }
     var isDragging by remember { mutableStateOf(false) }
+    var totalDrag by remember { mutableStateOf(Offset.Zero) }
 
     Box(
         modifier = Modifier
@@ -418,24 +436,33 @@ private fun EventChip(
                 shape = RoundedCornerShape(6.dp)
             )
             .clickable(enabled = !isDragging, onClick = onClick)
-            .pointerInput(onDragDrop) {
-                if (onDragDrop != null) {
-                    detectDragGestures(
+            .pointerInput(columnWidthPx, hourHeightPx, onDragDrop) {
+                if (onDragDrop != null && columnWidthPx > 0f && hourHeightPx > 0f) {
+                    detectDragGesturesAfterLongPress(
                         onDragStart = {
                             isDragging = true
-                            dragOffset = Offset.Zero
-                        },
-                        onDragEnd = {
-                            isDragging = false
-                            // Handle drop logic here if needed
+                            totalDrag = Offset.Zero
                         },
                         onDragCancel = {
                             isDragging = false
-                            dragOffset = Offset.Zero
+                            totalDrag = Offset.Zero
+                        },
+                        onDragEnd = {
+                            if (isDragging) {
+                                val dayOffset = (totalDrag.x / columnWidthPx).roundToInt()
+                                val hourOffset = (totalDrag.y / hourHeightPx).roundToInt()
+                                if (dayOffset != 0 || hourOffset != 0) {
+                                    val targetDate = baseDate.plusDays(dayOffset.toLong())
+                                    val targetHour = (baseHour + hourOffset).coerceIn(0, 23)
+                                    onDragDrop(event.id, targetDate, targetHour)
+                                }
+                            }
+                            isDragging = false
+                            totalDrag = Offset.Zero
                         }
                     ) { change, dragAmount ->
                         change.consume()
-                        dragOffset += dragAmount
+                        totalDrag += dragAmount
                     }
                 }
             }
