@@ -12,6 +12,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -39,6 +40,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
@@ -66,7 +68,8 @@ fun DayWeekView(
     custodySchedules: List<CustodyScheduleEntity>,
     onDateChange: (LocalDate) -> Unit,
     onEventClick: (String) -> Unit,
-    onAddEventClick: (LocalDate, Int) -> Unit = { _, _ -> }
+    onAddEventClick: (LocalDate, Int) -> Unit = { _, _ -> },
+    onEventDragDrop: ((String, LocalDate, Int) -> Unit)? = null
 ) {
     val dims = dimensions()
     val hours = (0..23).toList()
@@ -356,7 +359,10 @@ fun DayWeekView(
                                             dateEvents.take(2).forEach { event ->
                                                 EventChip(
                                                     event = event,
-                                                    onClick = { onEventClick(event.id) }
+                                                    onClick = { onEventClick(event.id) },
+                                                    onDragDrop = if (onEventDragDrop != null) { targetDate, targetHour ->
+                                                        onEventDragDrop(event.id, targetDate, targetHour)
+                                                    } else null
                                                 )
                                             }
                                             if (dateEvents.size > 2) {
@@ -386,7 +392,8 @@ fun DayWeekView(
 @Composable
 private fun EventChip(
     event: Event,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onDragDrop: ((LocalDate, Int) -> Unit)? = null
 ) {
     val backgroundColor = when (event.parentOwner) {
         "mom" -> CoParentlyColors.MomPink.copy(alpha = 0.9f)
@@ -400,14 +407,38 @@ private fun EventChip(
         else -> MaterialTheme.colorScheme.onTertiaryContainer
     }
 
+    var dragOffset by remember { mutableStateOf(Offset.Zero) }
+    var isDragging by remember { mutableStateOf(false) }
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .background(
-                color = backgroundColor,
+                color = backgroundColor.copy(alpha = if (isDragging) 0.7f else 1f),
                 shape = RoundedCornerShape(6.dp)
             )
-            .clickable(onClick = onClick)
+            .clickable(enabled = !isDragging, onClick = onClick)
+            .pointerInput(onDragDrop) {
+                if (onDragDrop != null) {
+                    detectDragGestures(
+                        onDragStart = {
+                            isDragging = true
+                            dragOffset = Offset.Zero
+                        },
+                        onDragEnd = {
+                            isDragging = false
+                            // Handle drop logic here if needed
+                        },
+                        onDragCancel = {
+                            isDragging = false
+                            dragOffset = Offset.Zero
+                        }
+                    ) { change, dragAmount ->
+                        change.consume()
+                        dragOffset += dragAmount
+                    }
+                }
+            }
             .padding(horizontal = 8.dp, vertical = 4.dp),
         contentAlignment = Alignment.Center
     ) {

@@ -15,6 +15,7 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -47,6 +48,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -86,7 +88,8 @@ fun MonthView(
     custodySchedules: List<CustodyScheduleEntity>,
     onDayClick: (LocalDate) -> Unit,
     onMonthChange: (YearMonth) -> Unit,
-    onDateChange: ((LocalDate) -> Unit)? = null
+    onDateChange: ((LocalDate) -> Unit)? = null,
+    onEventDragDrop: ((String, LocalDate) -> Unit)? = null
 ) {
     val weekFields = remember { WeekFields.of(Locale.getDefault()) }
     val firstDayOfWeek = remember { weekFields.firstDayOfWeek }
@@ -208,7 +211,8 @@ fun MonthView(
                         weekHeight = weekRowHeight,
                         onDayClick = onDayClick,
                         isSwipeInProgress = isSwipeInProgress,
-                        showWeekNumber = showWeekNumber
+                        showWeekNumber = showWeekNumber,
+                        onEventDragDrop = onEventDragDrop
                     )
                 }
             }
@@ -313,7 +317,8 @@ private fun WeekRow(
     weekHeight: Dp,
     onDayClick: (LocalDate) -> Unit,
     isSwipeInProgress: Boolean = false,
-    showWeekNumber: Boolean = true
+    showWeekNumber: Boolean = true,
+    onEventDragDrop: ((String, LocalDate) -> Unit)? = null
 ) {
     val dims = dimensions()
     val weekNumber = remember(week) {
@@ -353,7 +358,8 @@ private fun WeekRow(
                 events = events.filter { it.startDateTime.toLocalDate() == date },
                 custodySchedules = custodySchedules,
                 onDayClick = onDayClick,
-                isSwipeInProgress = isSwipeInProgress
+                isSwipeInProgress = isSwipeInProgress,
+                onEventDragDrop = onEventDragDrop
             )
         }
     }
@@ -369,7 +375,8 @@ private fun RowScope.DayCell(
     events: List<Event>,
     custodySchedules: List<CustodyScheduleEntity>,
     onDayClick: (LocalDate) -> Unit,
-    isSwipeInProgress: Boolean = false
+    isSwipeInProgress: Boolean = false,
+    onEventDragDrop: ((String, LocalDate) -> Unit)? = null
 ) {
     val dims = dimensions()
     val isToday = CustodyHelper.isToday(date)
@@ -529,14 +536,47 @@ private fun RowScope.DayCell(
                             Modifier
                         }
 
+                        // Drag and drop state
+                        var isDragging by remember { mutableStateOf(false) }
+                        var dragOffset by remember { mutableStateOf(Offset.Zero) }
+
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .then(pulseModifier)
                                 .background(
-                                    color = eventColor.copy(alpha = 0.9f),
+                                    color = eventColor.copy(alpha = if (isDragging) 0.7f else 0.9f),
                                     shape = RoundedCornerShape(3.dp)
                                 )
+                                .pointerInput(onEventDragDrop) {
+                                    if (onEventDragDrop != null) {
+                                        detectDragGestures(
+                                            onDragStart = {
+                                                isDragging = true
+                                                dragOffset = Offset.Zero
+                                            },
+                                            onDragEnd = {
+                                                isDragging = false
+                                                // Handle drop logic - for month view, drop on target date
+                                                // This is simplified - in real app would need better drop detection
+                                                if (dragOffset.getDistance() > 30f) {
+                                                    // Calculate target date based on drag direction
+                                                    // This is placeholder logic
+                                                    val daysDragged = (dragOffset.x / 50f).toInt() // Assuming ~50dp per day
+                                                    val targetDate = date.plusDays(daysDragged.toLong())
+                                                    onEventDragDrop(event.id, targetDate)
+                                                }
+                                            },
+                                            onDragCancel = {
+                                                isDragging = false
+                                                dragOffset = Offset.Zero
+                                            }
+                                        ) { change, dragAmount ->
+                                            change.consume()
+                                            dragOffset += dragAmount
+                                        }
+                                    }
+                                }
                                 .padding(horizontal = 2.dp, vertical = 1.dp),
                             contentAlignment = Alignment.Center
                         ) {

@@ -132,8 +132,19 @@ fun CalendarScreen(
                 firstDay.atStartOfDay()
             }
             CalendarViewMode.MONTH -> {
+                // Load events for extended range to support MonthView buffer (6 weeks before/after)
                 val visibleMonth = YearMonth.from(selectedDate)
-                visibleMonth.atDay(1).atStartOfDay()
+                val weekFields = java.time.temporal.WeekFields.of(java.util.Locale.getDefault())
+                val firstDayOfWeek = weekFields.firstDayOfWeek
+
+                // Calculate the start of the week 6 weeks before the first day of month
+                var startDate = visibleMonth.atDay(1)
+                while (startDate.dayOfWeek != firstDayOfWeek) {
+                    startDate = startDate.minusDays(1)
+                }
+                startDate = startDate.minusWeeks(6)
+
+                startDate.atStartOfDay()
             }
         }
 
@@ -146,10 +157,21 @@ fun CalendarScreen(
                 val lastDay = selectedDate.plusDays(daysToAdd)
                 lastDay.atTime(23, 59, 59)
             }
-            CalendarViewMode.MONTH -> {
-                val visibleMonth = YearMonth.from(selectedDate)
-                visibleMonth.atEndOfMonth().atTime(23, 59, 59)
-            }
+                        CalendarViewMode.MONTH -> {
+                            // Load events for extended range to support MonthView buffer (6 weeks before/after)
+                            val visibleMonth = YearMonth.from(selectedDate)
+                            val weekFields = java.time.temporal.WeekFields.of(java.util.Locale.getDefault())
+                            val firstDayOfWeek = weekFields.firstDayOfWeek
+
+                            // Calculate the end of the week 6 weeks after the last day of month
+                            var endDate = visibleMonth.atEndOfMonth()
+                            while (endDate.dayOfWeek != firstDayOfWeek.plus(6)) { // Last day of week
+                                endDate = endDate.plusDays(1)
+                            }
+                            endDate = endDate.plusWeeks(6)
+
+                            endDate.atTime(23, 59, 59)
+                        }
         }
 
         eventViewModel.loadEventsForDateRange(start, end)
@@ -214,8 +236,19 @@ fun CalendarScreen(
                             firstDay.atStartOfDay()
                         }
                         CalendarViewMode.MONTH -> {
+                            // Load events for extended range to support MonthView buffer (6 weeks before/after)
                             val visibleMonth = YearMonth.from(selectedDate)
-                            visibleMonth.atDay(1).atStartOfDay()
+                            val weekFields = java.time.temporal.WeekFields.of(java.util.Locale.getDefault())
+                            val firstDayOfWeek = weekFields.firstDayOfWeek
+
+                            // Calculate the start of the week 6 weeks before the first day of month
+                            var startDate = visibleMonth.atDay(1)
+                            while (startDate.dayOfWeek != firstDayOfWeek) {
+                                startDate = startDate.minusDays(1)
+                            }
+                            startDate = startDate.minusWeeks(6)
+
+                            startDate.atStartOfDay()
                         }
                     }
 
@@ -229,8 +262,19 @@ fun CalendarScreen(
                             lastDay.atTime(23, 59, 59)
                         }
                         CalendarViewMode.MONTH -> {
+                            // Load events for extended range to support MonthView buffer (6 weeks before/after)
                             val visibleMonth = YearMonth.from(selectedDate)
-                            visibleMonth.atEndOfMonth().atTime(23, 59, 59)
+                            val weekFields = java.time.temporal.WeekFields.of(java.util.Locale.getDefault())
+                            val firstDayOfWeek = weekFields.firstDayOfWeek
+
+                            // Calculate the end of the week 6 weeks after the last day of month
+                            var endDate = visibleMonth.atEndOfMonth()
+                            while (endDate.dayOfWeek != firstDayOfWeek.plus(6)) { // Last day of week
+                                endDate = endDate.plusDays(1)
+                            }
+                            endDate = endDate.plusWeeks(6)
+
+                            endDate.atTime(23, 59, 59)
                         }
                     }
 
@@ -301,6 +345,12 @@ fun CalendarScreen(
                                 // Navigate to add event screen with preselected date and time
                                 // For now, just call onAddEventClick
                                 onAddEventClick()
+                            },
+                            onEventDragDrop = { eventId, targetDate, targetHour ->
+                                // Handle event drag and drop - update event time
+                                // This would typically call a method to update the event in the repository
+                                // For now, just log it
+                                android.util.Log.d("CalendarScreen", "Event $eventId dragged to $targetDate at $targetHour:00")
                             }
                         )
                     }
@@ -314,6 +364,9 @@ fun CalendarScreen(
                             onEventClick = onEventClick,
                             onAddEventClick = { _, _ ->
                                 onAddEventClick()
+                            },
+                            onEventDragDrop = { eventId, targetDate, targetHour ->
+                                android.util.Log.d("CalendarScreen", "Event $eventId dragged to $targetDate at $targetHour:00")
                             }
                         )
                     }
@@ -327,6 +380,9 @@ fun CalendarScreen(
                             onEventClick = onEventClick,
                             onAddEventClick = { _, _ ->
                                 onAddEventClick()
+                            },
+                            onEventDragDrop = { eventId, targetDate, targetHour ->
+                                android.util.Log.d("CalendarScreen", "Event $eventId dragged to $targetDate at $targetHour:00")
                             }
                         )
                     }
@@ -347,6 +403,9 @@ fun CalendarScreen(
                             },
                             onDateChange = { newDate ->
                                 calendarViewModel.setSelectedDate(newDate)
+                            },
+                            onEventDragDrop = { eventId, targetDate ->
+                                android.util.Log.d("CalendarScreen", "Event $eventId dragged to $targetDate")
                             }
                         )
                     }

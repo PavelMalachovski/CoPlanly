@@ -35,10 +35,6 @@ class CredentialManagerService @Inject constructor(
 
     companion object {
         private const val TAG = "CredentialManager"
-
-        // Получить Web Client ID из strings.xml или google-services.json
-        // Это значение должно совпадать с OAuth 2.0 Client ID из Google Cloud Console
-        private const val WEB_CLIENT_ID = "YOUR_WEB_CLIENT_ID" // TODO: Replace with actual client ID
     }
 
     /**
@@ -186,14 +182,20 @@ class CredentialManagerService @Inject constructor(
 
     /**
      * Получает Web Client ID из ресурсов или конфигурации.
+     * Web Client ID должен быть настроен в Google Cloud Console как OAuth 2.0 Client ID для веб-приложения
+     * и добавлен в strings.xml как default_web_client_id
      */
     private fun getWebClientId(): String {
         return try {
             // Попытка получить из strings.xml
-            context.getString(R.string.default_web_client_id)
+            val clientId = context.getString(R.string.default_web_client_id)
+            if (clientId.contains("YOUR_WEB_CLIENT_ID")) {
+                throw IllegalStateException("Web Client ID not configured. Please set up OAuth 2.0 Client ID in Google Cloud Console and update default_web_client_id in strings.xml")
+            }
+            clientId
         } catch (e: Exception) {
-            Log.w(TAG, "Web Client ID not found in resources, using default")
-            WEB_CLIENT_ID
+            Log.e(TAG, "Web Client ID not configured: ${e.message}")
+            throw IllegalStateException("Google OAuth not configured. Please:\n1. Go to Google Cloud Console\n2. Create OAuth 2.0 Client ID for Web application\n3. Add the Client ID to default_web_client_id in strings.xml\n4. Enable Google Calendar API")
         }
     }
 }

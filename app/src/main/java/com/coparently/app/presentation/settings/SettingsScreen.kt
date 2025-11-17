@@ -12,6 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -123,9 +124,9 @@ fun SettingsScreen(
                                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 settingsViewModel.resetThemeToSystemDefault()
                             },
-                            label = { Text(stringResource(R.string.settings_theme_system)) },
+                            label = { Text(stringResource(R.string.settings_theme_system), fontSize = 12.sp) },
                             leadingIcon = if (darkTheme == null) {
-                                { Icon(Icons.Default.Check, contentDescription = null, Modifier.size(18.dp)) }
+                                { Icon(Icons.Default.Check, contentDescription = null, Modifier.size(16.dp)) }
                             } else null,
                             modifier = Modifier.weight(1f)
                         )
@@ -137,11 +138,11 @@ fun SettingsScreen(
                                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 settingsViewModel.toggleDarkTheme(false)
                             },
-                            label = { Text(stringResource(R.string.settings_theme_light)) },
+                            label = { Text(stringResource(R.string.settings_theme_light), fontSize = 12.sp) },
                             leadingIcon = if (darkTheme == false) {
-                                { Icon(Icons.Default.Check, contentDescription = null, Modifier.size(18.dp)) }
+                                { Icon(Icons.Default.Check, contentDescription = null, Modifier.size(16.dp)) }
                             } else {
-                                { Icon(Icons.Default.LightMode, contentDescription = null, Modifier.size(18.dp)) }
+                                { Icon(Icons.Default.LightMode, contentDescription = null, Modifier.size(16.dp)) }
                             },
                             modifier = Modifier.weight(1f)
                         )
@@ -153,11 +154,11 @@ fun SettingsScreen(
                                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 settingsViewModel.toggleDarkTheme(true)
                             },
-                            label = { Text(stringResource(R.string.settings_theme_dark)) },
+                            label = { Text(stringResource(R.string.settings_theme_dark), fontSize = 12.sp) },
                             leadingIcon = if (darkTheme == true) {
-                                { Icon(Icons.Default.Check, contentDescription = null, Modifier.size(18.dp)) }
+                                { Icon(Icons.Default.Check, contentDescription = null, Modifier.size(16.dp)) }
                             } else {
-                                { Icon(Icons.Default.DarkMode, contentDescription = null, Modifier.size(18.dp)) }
+                                { Icon(Icons.Default.DarkMode, contentDescription = null, Modifier.size(16.dp)) }
                             },
                             modifier = Modifier.weight(1f)
                         )
