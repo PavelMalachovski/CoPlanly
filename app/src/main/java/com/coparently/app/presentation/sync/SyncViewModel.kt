@@ -1,14 +1,13 @@
 package com.coparently.app.presentation.sync
 
-import android.content.Intent
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.coparently.app.data.remote.google.GoogleSignInService
+import com.coparently.app.data.local.preferences.EncryptedPreferences
+import com.coparently.app.data.remote.google.CredentialManagerService
 import com.coparently.app.data.sync.CalendarSyncRepository
 import com.coparently.app.data.sync.SyncResult
 import com.coparently.app.data.sync.SyncService
 import com.coparently.app.data.sync.SyncStatus
-import com.google.android.gms.auth.api.signin.GoogleSignInAccount
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -17,14 +16,17 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
- * ViewModel for managing synchronization operations.
- * Handles both Firestore sync and Google Calendar sync.
+ * ViewModel для управления операциями синхронизации.
+ * Обрабатывает синхронизацию с Firestore и Google Calendar.
+ *
+ * Обновлено для использования нового Credential Manager API вместо deprecated GoogleSignIn API.
  */
 @HiltViewModel
 class SyncViewModel @Inject constructor(
     private val syncService: SyncService,
     private val calendarSyncRepository: CalendarSyncRepository,
-    private val googleSignInService: GoogleSignInService
+    private val credentialManagerService: CredentialManagerService,
+    private val encryptedPreferences: EncryptedPreferences
 ) : ViewModel() {
 
     // Google Calendar sync state
@@ -37,8 +39,8 @@ class SyncViewModel @Inject constructor(
     private val _syncState = MutableStateFlow<GoogleCalendarSyncState>(GoogleCalendarSyncState.Idle)
     val syncState: StateFlow<GoogleCalendarSyncState> = _syncState.asStateFlow()
 
-    private val _currentAccount = MutableStateFlow<GoogleSignInAccount?>(null)
-    val currentAccount: StateFlow<GoogleSignInAccount?> = _currentAccount.asStateFlow()
+    private val _userEmail = MutableStateFlow<String?>(null)
+    val userEmail: StateFlow<String?> = _userEmail.asStateFlow()
 
     // Firestore sync status
     val firestoreSyncStatus: StateFlow<SyncStatus> = syncService.syncStatus
@@ -48,58 +50,90 @@ class SyncViewModel @Inject constructor(
     }
 
     /**
-     * Checks current Google Sign-In status.
+     * Проверяет текущий статус входа в Google.
      */
     private fun checkSignInStatus() {
-        val account = googleSignInService.getLastSignedInAccount()
-        _isSignedIn.value = account != null
-        _currentAccount.value = account
+        _isSignedIn.value = credentialManagerService.isSignedIn()
+        _userEmail.value = encryptedPreferences.getUserEmail()
     }
 
     /**
-     * Gets the Google Sign-In intent.
+     * Инициирует процесс входа через Google Credential Manager.
+     * Должен быть вызван из Activity/Composable с соответствующим UI контекстом.
      */
-    fun getSignInIntent(): Intent {
-        return googleSignInService.googleSignInClient.signInIntent
-    }
+    suspend fun signIn(): GoogleCalendarSyncState {
+        _syncState.value = GoogleCalendarSyncState.Syncing("Signing in...")
 
-    /**
-     * Gets the Google Sign-In intent with Calendar scope.
-     */
-    fun getSignInIntentWithScope(): Intent {
-        return googleSignInService.getSignInIntentWithScope()
-    }
+        val (credential, error) = credentialManagerService.getGoogleIdCredential(
+            filterByAuthorizedAccounts = false
+        )
 
-    /**
-     * Checks if the current account has calendar scope.
-     */
-    fun hasCalendarScope(): Boolean {
-        val account = _currentAccount.value ?: return false
-        return googleSignInService.hasCalendarScope(account)
-    }
-
-    /**
-     * Handles Google Sign-In result.
-     */
-    fun handleSignInResult(account: GoogleSignInAccount) {
-        viewModelScope.launch {
-            _currentAccount.value = account
+        return if (credential != null) {
+            // Сохраняем email пользователя
+            encryptedPreferences.putUserEmail(credential.id)
+            _userEmail.value = credential.id
             _isSignedIn.value = true
 
-            // Try to get access token to verify authentication
-            val (token, error) = googleSignInService.getAccessToken(account)
+            // Получаем access token для Calendar API
+            val (token, tokenError) = credentialManagerService.getAccessToken(credential.id)
             if (token != null) {
-                _syncState.value = GoogleCalendarSyncState.Success("Signed in successfully")
+                val successState = GoogleCalendarSyncState.Success("Signed in successfully as ${credential.displayName ?: credential.id}")
+                _syncState.value = successState
+                successState
             } else {
-                _syncState.value = GoogleCalendarSyncState.Error(
-                    error ?: "Failed to get access token"
+                val errorState = GoogleCalendarSyncState.Error(
+                    tokenError ?: "Failed to get Calendar access"
                 )
+                _syncState.value = errorState
+                errorState
             }
+        } else {
+            val errorState = GoogleCalendarSyncState.Error(
+                error ?: "Sign in failed"
+            )
+            _syncState.value = errorState
+            errorState
         }
     }
 
     /**
-     * Toggles Google Calendar sync enabled state.
+     * Повторная попытка входа (например, если пользователь не авторизован).
+     */
+    suspend fun retrySignIn(): GoogleCalendarSyncState {
+        _syncState.value = GoogleCalendarSyncState.Syncing("Signing in...")
+
+        val (credential, error) = credentialManagerService.getGoogleIdCredential(
+            filterByAuthorizedAccounts = true
+        )
+
+        return if (credential != null) {
+            encryptedPreferences.putUserEmail(credential.id)
+            _userEmail.value = credential.id
+            _isSignedIn.value = true
+
+            val (token, tokenError) = credentialManagerService.getAccessToken(credential.id)
+            if (token != null) {
+                val successState = GoogleCalendarSyncState.Success("Signed in successfully")
+                _syncState.value = successState
+                successState
+            } else {
+                val errorState = GoogleCalendarSyncState.Error(
+                    tokenError ?: "Failed to get Calendar access"
+                )
+                _syncState.value = errorState
+                errorState
+            }
+        } else {
+            val errorState = GoogleCalendarSyncState.Error(
+                error ?: "Sign in failed"
+            )
+            _syncState.value = errorState
+            errorState
+        }
+    }
+
+    /**
+     * Переключает состояние синхронизации Google Calendar.
      */
     fun toggleSync(enabled: Boolean) {
         _isSyncEnabled.value = enabled
@@ -109,7 +143,7 @@ class SyncViewModel @Inject constructor(
     }
 
     /**
-     * Syncs events from Google Calendar.
+     * Синхронизирует события из Google Calendar.
      */
     fun syncFromGoogle() {
         if (!_isSignedIn.value) {
@@ -118,6 +152,12 @@ class SyncViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
+            // Обновляем access token перед синхронизацией
+            val email = _userEmail.value
+            if (email != null) {
+                credentialManagerService.refreshAccessToken(email)
+            }
+
             calendarSyncRepository.syncFromGoogle().collect { result ->
                 _syncState.value = when (result) {
                     is SyncResult.Progress -> GoogleCalendarSyncState.Syncing(result.message)
@@ -129,20 +169,18 @@ class SyncViewModel @Inject constructor(
     }
 
     /**
-     * Signs out from Google.
+     * Выполняет выход из учетной записи Google.
      */
     fun signOut() {
-        viewModelScope.launch {
-            googleSignInService.signOut()
-            _isSignedIn.value = false
-            _isSyncEnabled.value = false
-            _syncState.value = GoogleCalendarSyncState.Idle
-            _currentAccount.value = null
-        }
+        credentialManagerService.signOut()
+        _isSignedIn.value = false
+        _isSyncEnabled.value = false
+        _syncState.value = GoogleCalendarSyncState.Idle
+        _userEmail.value = null
     }
 
     /**
-     * Performs full Firestore synchronization.
+     * Выполняет полную синхронизацию с Firestore.
      */
     fun performFirestoreSync() {
         viewModelScope.launch {

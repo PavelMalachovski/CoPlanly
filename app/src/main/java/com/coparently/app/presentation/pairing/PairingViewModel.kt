@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.coparently.app.data.remote.firebase.CoParentPairingService
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.domain.repository.UserRepository
+import com.coparently.app.utils.ValidationResult
+import com.coparently.app.utils.ValidationUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -14,7 +16,9 @@ import javax.inject.Inject
 
 /**
  * ViewModel for pairing screen.
- * Manages co-parent pairing and invitation state.
+ * Управляет состоянием pairing и приглашений co-parent.
+ *
+ * Обновлен для использования ValidationUtils для валидации email.
  */
 @HiltViewModel
 class PairingViewModel @Inject constructor(
@@ -59,17 +63,41 @@ class PairingViewModel @Inject constructor(
     }
 
     fun updateInvitationEmail(email: String) {
-        _uiState.value = _uiState.value.copy(invitationEmail = email, errorMessage = null)
+        _uiState.value = _uiState.value.copy(
+            invitationEmail = email,
+            errorMessage = null,
+            emailError = null
+        )
     }
 
     fun sendInvitation(onSuccess: () -> Unit) {
         val state = _uiState.value
-        if (state.invitationEmail.isBlank()) {
-            _uiState.value = state.copy(errorMessage = "Please enter an email")
+
+        // Валидация email перед отправкой
+        val emailValidation = ValidationUtils.validateEmail(state.invitationEmail)
+        if (emailValidation is ValidationResult.Error) {
+            _uiState.value = state.copy(
+                emailError = emailValidation.message,
+                errorMessage = null
+            )
             return
         }
 
-        _uiState.value = state.copy(isLoading = true, errorMessage = null)
+        // Дополнительная проверка - нельзя отправить приглашение самому себе
+        val currentUserEmail = firebaseAuthService.getCurrentUser()?.email
+        if (state.invitationEmail.equals(currentUserEmail, ignoreCase = true)) {
+            _uiState.value = state.copy(
+                emailError = "You cannot invite yourself",
+                errorMessage = null
+            )
+            return
+        }
+
+        _uiState.value = state.copy(
+            isLoading = true,
+            errorMessage = null,
+            emailError = null
+        )
 
         viewModelScope.launch {
             try {
@@ -173,12 +201,20 @@ class PairingViewModel @Inject constructor(
 
 /**
  * UI state for pairing screen.
+ *
+ * @param invitationEmail Email для отправки приглашения
+ * @param partnerEmail Email текущего партнера (если есть)
+ * @param pendingInvitations Список ожидающих приглашений
+ * @param isLoading Состояние загрузки
+ * @param errorMessage Общее сообщение об ошибке
+ * @param emailError Ошибка валидации email
  */
 data class PairingUiState(
     val invitationEmail: String = "",
     val partnerEmail: String? = null,
     val pendingInvitations: List<Map<String, Any?>> = emptyList(),
     val isLoading: Boolean = false,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val emailError: String? = null
 )
 

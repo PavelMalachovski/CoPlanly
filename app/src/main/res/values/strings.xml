@@ -71,4 +71,9 @@
     <string name="common_loading">Loading…</string>
     <string name="common_error">Error</string>
     <string name="common_unknown">Unknown</string>
+
+    <!-- Google OAuth Configuration -->
+    <!-- TODO: Replace with actual Web Client ID from Google Cloud Console -->
+    <!-- Get it from: https://console.cloud.google.com/apis/credentials -->
+    <string name="default_web_client_id" translatable="false">YOUR_WEB_CLIENT_ID.apps.googleusercontent.com</string>
 </resources>

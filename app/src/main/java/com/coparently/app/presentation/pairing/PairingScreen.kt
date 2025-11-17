@@ -82,17 +82,26 @@ fun PairingScreen(
                 onValueChange = viewModel::updateInvitationEmail,
                 label = { Text("Partner email") },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = !uiState.isLoading
+                enabled = !uiState.isLoading,
+                isError = uiState.emailError != null,
+                supportingText = if (uiState.emailError != null) {
+                    { Text(
+                        text = uiState.emailError ?: "",
+                        color = MaterialTheme.colorScheme.error
+                    ) }
+                } else null,
+                singleLine = true
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             if (uiState.errorMessage != null) {
                 Text(
                     text = uiState.errorMessage ?: "",
-                    color = MaterialTheme.colorScheme.error
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall
                 )
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(8.dp))
             }
 
             if (uiState.isLoading) {

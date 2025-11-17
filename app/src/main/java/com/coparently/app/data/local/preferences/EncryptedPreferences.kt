@@ -93,6 +93,38 @@ class EncryptedPreferences @Inject constructor(
     }
 
     /**
+     * Stores Google ID token (from Credential Manager).
+     */
+    fun putGoogleIdToken(token: String) {
+        encryptedPreferences.edit()
+            .putString(KEY_GOOGLE_ID_TOKEN, token)
+            .apply()
+    }
+
+    /**
+     * Retrieves the stored Google ID token.
+     */
+    fun getGoogleIdToken(): String? {
+        return encryptedPreferences.getString(KEY_GOOGLE_ID_TOKEN, null)
+    }
+
+    /**
+     * Stores user email from Google account.
+     */
+    fun putUserEmail(email: String) {
+        encryptedPreferences.edit()
+            .putString(KEY_USER_EMAIL, email)
+            .apply()
+    }
+
+    /**
+     * Retrieves the stored user email.
+     */
+    fun getUserEmail(): String? {
+        return encryptedPreferences.getString(KEY_USER_EMAIL, null)
+    }
+
+    /**
      * Clears all stored preferences.
      */
     fun clear() {
@@ -104,6 +136,8 @@ class EncryptedPreferences @Inject constructor(
         private const val KEY_REFRESH_TOKEN = "refresh_token"
         private const val KEY_CALENDAR_ID = "calendar_id"
         private const val KEY_SYNC_ENABLED = "sync_enabled"
+        private const val KEY_GOOGLE_ID_TOKEN = "google_id_token"
+        private const val KEY_USER_EMAIL = "user_email"
     }
 }
 

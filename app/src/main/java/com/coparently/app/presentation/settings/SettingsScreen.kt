@@ -1,7 +1,5 @@
 package com.coparently.app.presentation.settings
 
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -21,17 +19,19 @@ import com.coparently.app.presentation.settings.components.SettingsSwitchCard
 import com.coparently.app.presentation.sync.GoogleCalendarSyncState
 import com.coparently.app.presentation.sync.SyncStatusIndicator
 import com.coparently.app.presentation.sync.SyncViewModel
-import com.google.android.gms.auth.api.signin.GoogleSignIn
+import kotlinx.coroutines.launch
 
 /**
- * Settings screen for managing app settings and synchronization.
- * This is a stateless composable that delegates state management to ViewModels.
+ * Settings screen для управления настройками приложения и синхронизацией.
+ * Stateless composable, который делегирует управление состоянием ViewModels.
  *
- * @param onNavigateUp Navigation callback for back action
- * @param onNavigateToChildInfo Navigation callback for child info screen
- * @param onNavigateToPairing Navigation callback for pairing screen
- * @param syncViewModel ViewModel for sync operations
- * @param settingsViewModel ViewModel for settings state
+ * Обновлен для использования нового Credential Manager API вместо deprecated GoogleSignIn.
+ *
+ * @param onNavigateUp Навигационный callback для возврата назад
+ * @param onNavigateToChildInfo Навигационный callback для экрана информации о ребенке
+ * @param onNavigateToPairing Навигационный callback для экрана pairing
+ * @param syncViewModel ViewModel для операций синхронизации
+ * @param settingsViewModel ViewModel для состояния настроек
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,33 +43,17 @@ fun SettingsScreen(
     settingsViewModel: SettingsViewModel = hiltViewModel()
 ) {
     val haptic = LocalHapticFeedback.current
+    val coroutineScope = rememberCoroutineScope()
 
     // Sync ViewModel states
     val isSignedIn by syncViewModel.isSignedIn.collectAsState()
     val isSyncEnabled by syncViewModel.isSyncEnabled.collectAsState()
     val googleSyncState by syncViewModel.syncState.collectAsState()
     val firestoreSyncStatus by syncViewModel.firestoreSyncStatus.collectAsState()
+    val userEmail by syncViewModel.userEmail.collectAsState()
 
     // Settings ViewModel states
     val settingsUiState by settingsViewModel.uiState.collectAsState()
-
-    // Launcher for Google Sign-In
-    val signInLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == android.app.Activity.RESULT_OK && result.data != null) {
-            try {
-                val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
-                task.addOnSuccessListener { account ->
-                    syncViewModel.handleSignInResult(account)
-                }.addOnFailureListener { exception ->
-                    exception.printStackTrace()
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
-    }
 
     Scaffold(
         topBar = {
@@ -172,7 +156,7 @@ fun SettingsScreen(
 
                     // Sign-in status
                     Text(
-                        text = if (isSignedIn) "Signed in to Google" else "Not signed in",
+                        text = if (isSignedIn) "Signed in as: ${userEmail ?: "Unknown"}" else "Not signed in",
                         style = MaterialTheme.typography.bodyMedium,
                         color = if (isSignedIn) MaterialTheme.colorScheme.primary
                         else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
@@ -221,44 +205,44 @@ fun SettingsScreen(
                         Button(
                             onClick = {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                val signInIntent = syncViewModel.getSignInIntent()
-                                signInLauncher.launch(signInIntent)
+                                coroutineScope.launch {
+                                    syncViewModel.signIn()
+                                }
                             },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(top = 16.dp)
+                                .padding(top = 16.dp),
+                            enabled = googleSyncState !is GoogleCalendarSyncState.Syncing
                         ) {
+                            if (googleSyncState is GoogleCalendarSyncState.Syncing) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.onPrimary
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                            }
                             Text("Sign in with Google")
                         }
                     } else {
-                        // Check if we need to request calendar permission
-                        val needsCalendarPermission = isSignedIn && !syncViewModel.hasCalendarScope()
-
-                        if (needsCalendarPermission) {
-                            Button(
-                                onClick = {
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    val signInIntent = syncViewModel.getSignInIntentWithScope()
-                                    signInLauncher.launch(signInIntent)
-                                },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(top = 16.dp)
-                            ) {
-                                Text("Grant Calendar Permission")
-                            }
-                        }
-
                         Button(
                             onClick = {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 syncViewModel.syncFromGoogle()
                             },
-                            enabled = isSyncEnabled && !needsCalendarPermission,
+                            enabled = isSyncEnabled && googleSyncState !is GoogleCalendarSyncState.Syncing,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(top = if (needsCalendarPermission) 8.dp else 16.dp)
+                                .padding(top = 16.dp)
                         ) {
+                            if (googleSyncState is GoogleCalendarSyncState.Syncing) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.onPrimary
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                            }
                             Text("Sync from Google Calendar")
                         }
 
@@ -269,7 +253,8 @@ fun SettingsScreen(
                             },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(top = 8.dp)
+                                .padding(top = 8.dp),
+                            enabled = googleSyncState !is GoogleCalendarSyncState.Syncing
                         ) {
                             Text("Sign Out")
                         }

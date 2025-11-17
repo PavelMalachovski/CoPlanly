@@ -73,6 +73,8 @@ import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.components.TimePickerDialog
 import com.coparently.app.presentation.theme.CoParentlyColors
 import com.coparently.app.presentation.theme.dimensions
+import com.coparently.app.utils.ValidationResult
+import com.coparently.app.utils.ValidationUtils
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
@@ -114,9 +116,27 @@ fun AddEditEventScreen(
     val focusManager = LocalFocusManager.current
     val dims = dimensions()
 
+    // Validation states
+    var titleError by remember { mutableStateOf<String?>(null) }
+    var descriptionError by remember { mutableStateOf<String?>(null) }
+
+    // Validate title
+    fun validateTitle(): Boolean {
+        val result = ValidationUtils.validateEventTitle(title)
+        titleError = if (result is ValidationResult.Error) result.message else null
+        return result is ValidationResult.Success
+    }
+
+    // Validate description
+    fun validateDescription(): Boolean {
+        val result = ValidationUtils.validateDescription(description)
+        descriptionError = if (result is ValidationResult.Error) result.message else null
+        return result is ValidationResult.Success
+    }
+
     // Validation
-    val isTitleValid = title.isNotBlank()
-    val isFormValid = isTitleValid
+    val isTitleValid = title.isNotBlank() && titleError == null
+    val isFormValid = isTitleValid && descriptionError == null
 
     // Load event if editing
     LaunchedEffect(eventId) {
@@ -160,7 +180,11 @@ fun AddEditEventScreen(
                     // Save button in app bar
                     IconButton(
                         onClick = {
-                            if (isFormValid) {
+                            // Выполняем валидацию
+                            val isTitleValidated = validateTitle()
+                            val isDescriptionValidated = validateDescription()
+
+                            if (isFormValid && isTitleValidated && isDescriptionValidated) {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 scope.launch {
                                     val event = Event(
@@ -213,7 +237,11 @@ fun AddEditEventScreen(
             // Title Section
             OutlinedTextField(
                 value = title,
-                onValueChange = { title = it },
+                onValueChange = {
+                    title = it
+                    if (it.isNotEmpty()) validateTitle()
+                    else titleError = null
+                },
                 label = { Text("Event Title") },
                 placeholder = { Text("e.g., Soccer Practice") },
                 leadingIcon = {
@@ -222,12 +250,13 @@ fun AddEditEventScreen(
                         contentDescription = null
                     )
                 },
-                isError = !isTitleValid && title.isNotEmpty(),
-                supportingText = {
-                    if (!isTitleValid && title.isNotEmpty()) {
-                        Text("Title is required")
-                    }
-                },
+                isError = titleError != null,
+                supportingText = if (titleError != null) {
+                    { Text(
+                        text = titleError ?: "",
+                        color = MaterialTheme.colorScheme.error
+                    ) }
+                } else null,
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(
@@ -242,7 +271,10 @@ fun AddEditEventScreen(
             // Description Section
             OutlinedTextField(
                 value = description,
-                onValueChange = { description = it },
+                onValueChange = {
+                    description = it
+                    validateDescription()
+                },
                 label = { Text("Description (Optional)") },
                 placeholder = { Text("Add details about the event...") },
                 leadingIcon = {
@@ -251,6 +283,13 @@ fun AddEditEventScreen(
                         contentDescription = null
                     )
                 },
+                isError = descriptionError != null,
+                supportingText = if (descriptionError != null) {
+                    { Text(
+                        text = descriptionError ?: "",
+                        color = MaterialTheme.colorScheme.error
+                    ) }
+                } else null,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(dims.buttonHeight * 2.14f), // ~120dp for compact

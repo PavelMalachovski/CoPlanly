@@ -122,8 +122,14 @@ dependencies {
     // Calendar - Check for updates at https://github.com/kizitonwose/Calendar
     implementation("com.kizitonwose.calendar:compose:2.6.1")
 
-    // Google Sign-In - Updated to latest stable
+    // Google Sign-In - Migrating to Credential Manager API
+    // Old deprecated API (will be removed)
     implementation("com.google.android.gms:play-services-auth:21.2.0")
+
+    // New Credential Manager API
+    implementation("androidx.credentials:credentials:1.2.2")
+    implementation("androidx.credentials:credentials-play-services-auth:1.2.2")
+    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
 
     // Google Calendar API
     implementation("com.google.api-client:google-api-client-android:2.2.0")
