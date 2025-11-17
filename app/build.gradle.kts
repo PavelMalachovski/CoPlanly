@@ -2,6 +2,7 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("com.google.dagger.hilt.android")
+    id("io.gitlab.arturbosch.detekt")
     kotlin("kapt")
 }
 
@@ -27,7 +28,7 @@ android {
         versionCode = 1
         versionName = "1.0.0"
 
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner = "com.coparently.app.HiltTestRunner"
         vectorDrawables {
             useSupportLibrary = true
         }
@@ -161,11 +162,29 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 
+    // MockK for mocking - Latest stable
+    testImplementation("io.mockk:mockk:1.13.13")
+    testImplementation("io.mockk:mockk-android:1.13.13")
+    androidTestImplementation("io.mockk:mockk-android:1.13.13")
+
+    // Coroutines Test - Latest stable
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
+    androidTestImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
+
+    // Turbine for Flow testing
+    testImplementation("app.cash.turbine:turbine:1.2.0")
+
+    // ArchCore Testing for LiveData and ViewModel
+    testImplementation("androidx.arch.core:core-testing:2.2.0")
+
     // Hilt testing - Updated to match Hilt version
     testImplementation("com.google.dagger:hilt-android-testing:2.52")
     kaptTest("com.google.dagger:hilt-compiler:2.52")
     androidTestImplementation("com.google.dagger:hilt-android-testing:2.52")
     kaptAndroidTest("com.google.dagger:hilt-compiler:2.52")
+
+    // Navigation Testing
+    androidTestImplementation("androidx.navigation:navigation-testing:2.8.5")
 }
 
 kapt {
@@ -173,5 +192,17 @@ kapt {
     arguments {
         arg("room.schemaLocation", "$projectDir/schemas")
     }
+}
+
+// Detekt configuration for static code analysis
+detekt {
+    buildUponDefaultConfig = true
+    allRules = false
+    config.setFrom("$projectDir/config/detekt/detekt.yml")
+    baseline = file("$projectDir/config/detekt/baseline.xml")
+}
+
+dependencies {
+    detektPlugins("io.gitlab.arturbosch.detekt:detekt-formatting:1.23.7")
 }
 
