@@ -2,6 +2,8 @@ package com.coparently.app.presentation.event
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.coparently.app.data.analytics.AnalyticsManager
+import com.coparently.app.data.crashlytics.CrashlyticsManager
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.repository.EventRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -19,7 +21,9 @@ import javax.inject.Inject
  */
 @HiltViewModel
 class EventViewModel @Inject constructor(
-    private val eventRepository: EventRepository
+    private val eventRepository: EventRepository,
+    private val analyticsManager: AnalyticsManager,
+    private val crashlyticsManager: CrashlyticsManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<EventUiState>(EventUiState.Loading)
@@ -100,6 +104,7 @@ class EventViewModel @Inject constructor(
                     updatedAt = now
                 )
                 eventRepository.insertEvent(finalEvent)
+                analyticsManager.logEventCreated(event.eventType)
                 _uiState.value = EventUiState.OperationSuccess("Event created successfully")
                 // После короткой задержки вернемся к Success состоянию
                 kotlinx.coroutines.delay(2000)
@@ -118,6 +123,7 @@ class EventViewModel @Inject constructor(
             try {
                 val updatedEvent = event.copy(updatedAt = LocalDateTime.now())
                 eventRepository.updateEvent(updatedEvent)
+                analyticsManager.logEventUpdated(event.eventType)
                 _uiState.value = EventUiState.OperationSuccess("Event updated successfully")
                 kotlinx.coroutines.delay(2000)
                 _uiState.value = EventUiState.Success(_events.value)
@@ -134,6 +140,7 @@ class EventViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 eventRepository.deleteEvent(event)
+                analyticsManager.logEventDeleted(event.eventType)
                 _uiState.value = EventUiState.OperationSuccess("Event deleted successfully")
                 kotlinx.coroutines.delay(2000)
                 _uiState.value = EventUiState.Success(_events.value)

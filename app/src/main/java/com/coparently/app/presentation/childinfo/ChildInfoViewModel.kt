@@ -2,6 +2,8 @@ package com.coparently.app.presentation.childinfo
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.coparently.app.data.analytics.AnalyticsManager
+import com.coparently.app.data.crashlytics.CrashlyticsManager
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.domain.model.Activity
 import com.coparently.app.domain.model.ChildInfo
@@ -25,7 +27,9 @@ import javax.inject.Inject
 @HiltViewModel
 class ChildInfoViewModel @Inject constructor(
     private val childInfoRepository: ChildInfoRepository,
-    private val firebaseAuthService: FirebaseAuthService
+    private val firebaseAuthService: FirebaseAuthService,
+    private val analyticsManager: AnalyticsManager,
+    private val crashlyticsManager: CrashlyticsManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<ChildInfoUiState>(ChildInfoUiState.Loading)
@@ -88,6 +92,7 @@ class ChildInfoViewModel @Inject constructor(
                     ?: throw IllegalStateException("User not authenticated")
 
                 val now = LocalDateTime.now()
+                val isNewChild = id == null
                 val childInfo = ChildInfo(
                     id = id ?: UUID.randomUUID().toString(),
                     childName = childName,
@@ -106,7 +111,18 @@ class ChildInfoViewModel @Inject constructor(
                 )
 
                 childInfoRepository.upsertChildInfo(childInfo)
+
+                // Log analytics event
+                if (isNewChild) {
+                    analyticsManager.logChildInfoAdded()
+                } else {
+                    analyticsManager.logChildInfoUpdated()
+                }
             } catch (e: Exception) {
+                crashlyticsManager.recordExceptionWithContext(
+                    e,
+                    mapOf("action" to "upsert_child_info", "child_name" to childName)
+                )
                 _uiState.value = ChildInfoUiState.Error(e.message ?: "Failed to save child info")
             }
         }
@@ -119,8 +135,13 @@ class ChildInfoViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 childInfoRepository.deleteChildInfo(childInfo)
+                analyticsManager.logChildInfoDeleted()
                 loadChildInfo()
             } catch (e: Exception) {
+                crashlyticsManager.recordExceptionWithContext(
+                    e,
+                    mapOf("action" to "delete_child_info", "child_id" to childInfo.id)
+                )
                 _uiState.value = ChildInfoUiState.Error(e.message ?: "Failed to delete child info")
             }
         }

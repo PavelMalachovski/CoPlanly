@@ -22,11 +22,35 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid in sharedList;
     }
 
+    // Validate that required fields exist
+    function hasRequiredFields(data, fields) {
+      return fields.hasAll(data.keys());
+    }
+
+    // Validate string field length
+    function isValidLength(str, minLen, maxLen) {
+      return str.size() >= minLen && str.size() <= maxLen;
+    }
+
+    // Check if user can modify resource (rate limiting)
+    function canModify() {
+      return request.time > resource.data.updatedAt + duration.value(1, 's');
+    }
+
     // Users collection - users can read/write their own profile and read partner's profile
     match /users/{userId} {
       allow read: if isOwner(userId) || isPartnerOf(userId);
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId);
+
+      allow create: if isOwner(userId) &&
+                      hasRequiredFields(request.resource.data, ['email', 'name', 'firebaseUid']) &&
+                      request.resource.data.firebaseUid == request.auth.uid &&
+                      isValidLength(request.resource.data.name, 1, 100);
+
+      allow update: if isOwner(userId) &&
+                      request.resource.data.firebaseUid == resource.data.firebaseUid &&
+                      (!request.resource.data.keys().hasAny(['firebaseUid']) ||
+                       request.resource.data.firebaseUid == resource.data.firebaseUid);
+
       allow delete: if isOwner(userId);
     }
 
@@ -38,16 +62,23 @@ service cloud.firestore {
         request.auth.uid in resource.data.sharedWith
       );
 
-      // Users can create events
+      // Users can create events with validation
       allow create: if isAuthenticated() &&
-                      request.resource.data.createdByFirebaseUid == request.auth.uid;
+                      request.resource.data.createdByFirebaseUid == request.auth.uid &&
+                      hasRequiredFields(request.resource.data, ['title', 'startDateTime', 'endDateTime', 'eventType']) &&
+                      isValidLength(request.resource.data.title, 1, 200) &&
+                      request.resource.data.startDateTime is timestamp &&
+                      request.resource.data.endDateTime is timestamp &&
+                      request.resource.data.startDateTime <= request.resource.data.endDateTime;
 
       // Users can update events they created or have write permissions
       allow update: if isAuthenticated() && (
         resource.data.createdByFirebaseUid == request.auth.uid ||
         (request.auth.uid in resource.data.sharedWith &&
          resource.data.permissions == 'read_write')
-      ) && request.resource.data.lastModifiedBy == request.auth.uid;
+      ) && request.resource.data.lastModifiedBy == request.auth.uid &&
+           request.resource.data.createdByFirebaseUid == resource.data.createdByFirebaseUid &&
+           canModify();
 
       // Users can delete events they created
       allow delete: if isAuthenticated() &&
@@ -60,15 +91,19 @@ service cloud.firestore {
       allow read: if isAuthenticated() &&
                     request.auth.uid in resource.data.sharedWith;
 
-      // Users can create child info
+      // Users can create child info with validation
       allow create: if isAuthenticated() &&
                       request.resource.data.createdByFirebaseUid == request.auth.uid &&
-                      request.auth.uid in request.resource.data.sharedWith;
+                      request.auth.uid in request.resource.data.sharedWith &&
+                      hasRequiredFields(request.resource.data, ['childName', 'createdByFirebaseUid', 'sharedWith']) &&
+                      isValidLength(request.resource.data.childName, 1, 100);
 
       // Users can update child info they have access to
       allow update: if isAuthenticated() &&
                       request.auth.uid in resource.data.sharedWith &&
-                      request.resource.data.lastModifiedBy == request.auth.uid;
+                      request.resource.data.lastModifiedBy == request.auth.uid &&
+                      request.resource.data.createdByFirebaseUid == resource.data.createdByFirebaseUid &&
+                      canModify();
 
       // Users can delete child info they created
       allow delete: if isAuthenticated() &&
@@ -83,15 +118,21 @@ service cloud.firestore {
         resource.data.fromUserId == request.auth.uid
       );
 
-      // Users can create invitations
+      // Users can create invitations with validation
       allow create: if isAuthenticated() &&
-                      request.resource.data.fromUserId == request.auth.uid;
+                      request.resource.data.fromUserId == request.auth.uid &&
+                      hasRequiredFields(request.resource.data, ['fromUserId', 'toEmail', 'status', 'sentAt']) &&
+                      request.resource.data.toEmail.matches('^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$') &&
+                      request.resource.data.toEmail != request.auth.token.email &&
+                      request.resource.data.status == 'pending';
 
       // Users can update invitation status (for accepting/rejecting)
       allow update: if isAuthenticated() && (
-        resource.data.toEmail == request.auth.token.email ||
-        resource.data.fromUserId == request.auth.uid
-      );
+        (resource.data.toEmail == request.auth.token.email &&
+         request.resource.data.status in ['accepted', 'rejected']) ||
+        (resource.data.fromUserId == request.auth.uid &&
+         request.resource.data.status == 'cancelled')
+      ) && resource.data.status == 'pending';
 
       // Users can delete invitations they sent
       allow delete: if isAuthenticated() &&

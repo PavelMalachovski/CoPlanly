@@ -2,6 +2,7 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("com.google.dagger.hilt.android")
+    id("com.google.firebase.crashlytics")
     id("io.gitlab.arturbosch.detekt")
     kotlin("kapt")
 }
@@ -152,6 +153,7 @@ dependencies {
     implementation("com.google.firebase:firebase-firestore-ktx")
     implementation("com.google.firebase:firebase-messaging-ktx")
     implementation("com.google.firebase:firebase-analytics-ktx")
+    implementation("com.google.firebase:firebase-crashlytics-ktx")
 
     // Testing - Updated to latest stable
     testImplementation("junit:junit:4.13.2")

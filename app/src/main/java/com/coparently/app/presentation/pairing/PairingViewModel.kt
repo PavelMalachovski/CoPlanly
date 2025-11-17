@@ -2,6 +2,7 @@ package com.coparently.app.presentation.pairing
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.coparently.app.data.analytics.AnalyticsManager
 import com.coparently.app.data.remote.firebase.CoParentPairingService
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.domain.repository.UserRepository
@@ -24,7 +25,8 @@ import javax.inject.Inject
 class PairingViewModel @Inject constructor(
     private val pairingService: CoParentPairingService,
     private val firebaseAuthService: FirebaseAuthService,
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
+    private val analyticsManager: AnalyticsManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PairingUiState())
@@ -128,6 +130,7 @@ class PairingViewModel @Inject constructor(
 
                 result.fold(
                     onSuccess = {
+                        analyticsManager.logInvitationSent()
                         _uiState.value = state.copy(
                             isLoading = false,
                             invitationEmail = "", // Clear the email field
@@ -158,6 +161,7 @@ class PairingViewModel @Inject constructor(
                 val result = pairingService.acceptInvitation(invitationId, currentUser.uid)
                 result.fold(
                     onSuccess = {
+                        analyticsManager.logInvitationAccepted()
                         loadPairingInfo()
                         loadPendingInvitations()
                     },

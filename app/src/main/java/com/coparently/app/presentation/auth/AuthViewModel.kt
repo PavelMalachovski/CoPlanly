@@ -2,6 +2,8 @@ package com.coparently.app.presentation.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.coparently.app.data.analytics.AnalyticsManager
+import com.coparently.app.data.crashlytics.CrashlyticsManager
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,7 +18,9 @@ import javax.inject.Inject
  */
 @HiltViewModel
 class AuthViewModel @Inject constructor(
-    private val firebaseAuthService: FirebaseAuthService
+    private val firebaseAuthService: FirebaseAuthService,
+    private val analyticsManager: AnalyticsManager,
+    private val crashlyticsManager: CrashlyticsManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AuthUiState())
@@ -50,10 +54,15 @@ class AuthViewModel @Inject constructor(
             val result = firebaseAuthService.signInWithEmail(state.email, state.password)
             result.fold(
                 onSuccess = {
+                    analyticsManager.logLogin("email")
                     _uiState.value = state.copy(isLoading = false)
                     onSuccess()
                 },
                 onFailure = { error ->
+                    crashlyticsManager.recordExceptionWithContext(
+                        error,
+                        mapOf("action" to "sign_in", "email" to state.email)
+                    )
                     _uiState.value = state.copy(
                         isLoading = false,
                         errorMessage = error.message ?: "Sign in failed"
@@ -76,10 +85,15 @@ class AuthViewModel @Inject constructor(
             val result = firebaseAuthService.createAccountWithEmail(state.email, state.password)
             result.fold(
                 onSuccess = {
+                    analyticsManager.logSignUp("email")
                     _uiState.value = state.copy(isLoading = false)
                     onSuccess()
                 },
                 onFailure = { error ->
+                    crashlyticsManager.recordExceptionWithContext(
+                        error,
+                        mapOf("action" to "sign_up", "email" to state.email)
+                    )
                     _uiState.value = state.copy(
                         isLoading = false,
                         errorMessage = error.message ?: "Sign up failed"

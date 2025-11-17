@@ -2,6 +2,7 @@ package com.coparently.app.presentation.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.coparently.app.data.analytics.AnalyticsManager
 import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.domain.repository.PreferencesRepository
 import com.coparently.app.domain.repository.UserRepository
@@ -23,7 +24,8 @@ import javax.inject.Inject
 class SettingsViewModel @Inject constructor(
     private val fcmService: FcmService,
     private val userRepository: UserRepository,
-    private val preferencesRepository: PreferencesRepository
+    private val preferencesRepository: PreferencesRepository,
+    private val analyticsManager: AnalyticsManager
 ) : ViewModel() {
 
     private val _settingsState = MutableStateFlow(SettingsUiState())
@@ -96,6 +98,7 @@ class SettingsViewModel @Inject constructor(
                     // For now, just update UI state
                 }
 
+                analyticsManager.logNotificationsToggled(enabled)
                 _settingsState.value = _settingsState.value.copy(
                     notificationsEnabled = enabled,
                     successMessage = if (enabled) "Notifications enabled" else "Notifications disabled"
@@ -163,6 +166,7 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 preferencesRepository.setDarkTheme(isDarkTheme)
+                analyticsManager.logThemeChanged(isDarkTheme)
             } catch (e: Exception) {
                 _operationState.value = UiState.Error(
                     UiError.fromException(e)
