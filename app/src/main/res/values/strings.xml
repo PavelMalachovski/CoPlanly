@@ -47,6 +47,14 @@
     <string name="settings_sync_from_google">Sync from Google Calendar</string>
     <string name="settings_sign_out">Sign Out</string>
     <string name="settings_syncing">Syncing…</string>
+    <string name="settings_theme">Theme</string>
+    <string name="settings_theme_system">Use system default</string>
+    <string name="settings_theme_light">Light theme</string>
+    <string name="settings_theme_dark">Dark theme</string>
+    <string name="settings_theme_description">Choose your preferred theme</string>
+    <string name="settings_notifications">Notifications</string>
+    <string name="settings_push_notifications">Push Notifications</string>
+    <string name="settings_push_notifications_description">Get notified about changes</string>
 
     <!-- Pairing Screen -->
     <string name="pairing_title">Co-Parent Pairing</string>
@@ -71,6 +79,72 @@
     <string name="common_loading">Loading…</string>
     <string name="common_error">Error</string>
     <string name="common_unknown">Unknown</string>
+    <string name="common_save">Save</string>
+    <string name="common_cancel">Cancel</string>
+    <string name="common_delete">Delete</string>
+    <string name="common_edit">Edit</string>
+    <string name="common_add">Add</string>
+    <string name="common_retry">Retry</string>
+    <string name="common_try_again">Try Again</string>
+    <string name="common_clear">Clear</string>
+    <string name="common_optional">optional</string>
+
+    <!-- Child Info Screen -->
+    <string name="child_info_title">Child Information</string>
+    <string name="child_info_add">Add Child</string>
+    <string name="child_info_edit">Edit Child</string>
+    <string name="child_info_name">Child\'s Name</string>
+    <string name="child_info_name_required">Child\'s Name *</string>
+    <string name="child_info_medical_notes">Additional medical information</string>
+    <string name="child_info_medical_notes_hint">Any other important medical information…</string>
+    <string name="child_info_medications">Medications</string>
+    <string name="child_info_activities">Activities</string>
+    <string name="child_info_allergies">Allergies</string>
+    <string name="child_info_emergency_contacts">Emergency Contacts</string>
+    <string name="child_info_school">School Information</string>
+    <string name="child_info_empty">No children added yet</string>
+
+    <!-- Medication Editor -->
+    <string name="medication_name">Medication Name</string>
+    <string name="medication_dosage">Dosage</string>
+    <string name="medication_frequency">Frequency</string>
+    <string name="medication_notes">Notes (optional)</string>
+    <string name="medication_add">Add Medication</string>
+
+    <!-- Activity Editor -->
+    <string name="activity_name">Activity Name</string>
+    <string name="activity_schedule">Schedule</string>
+    <string name="activity_location">Location (optional)</string>
+    <string name="activity_notes">Notes (optional)</string>
+    <string name="activity_add">Add Activity</string>
+
+    <!-- Allergy Editor -->
+    <string name="allergy_name">Allergy Name</string>
+    <string name="allergy_severity">Severity</string>
+    <string name="allergy_reaction">Reaction</string>
+    <string name="allergy_notes">Notes (optional)</string>
+    <string name="allergy_add">Add Allergy</string>
+
+    <!-- Emergency Contact Editor -->
+    <string name="emergency_contact_add">Add Emergency Contact</string>
+    <string name="emergency_contact_name">Name</string>
+    <string name="emergency_contact_relationship">Relationship</string>
+    <string name="emergency_contact_relationship_hint">e.g., Grandmother, Uncle</string>
+    <string name="emergency_contact_phone">Phone Number</string>
+    <string name="emergency_contact_alternate">Alternate Phone (optional)</string>
+
+    <!-- School Info Editor -->
+    <string name="school_name">School Name</string>
+    <string name="school_address">Address (optional)</string>
+    <string name="school_phone">School Phone (optional)</string>
+    <string name="school_grade">Grade (optional)</string>
+    <string name="school_grade_hint">e.g., 3rd Grade</string>
+    <string name="school_teacher_name">Teacher Name (optional)</string>
+    <string name="school_teacher_email">Teacher Email (optional)</string>
+
+    <!-- Sync -->
+    <string name="sync_sign_in_google">Sign in with Google</string>
+    <string name="sync_syncing_from_google">Sync from Google Calendar</string>
 
     <!-- Google OAuth Configuration -->
     <!-- TODO: Replace with actual Web Client ID from Google Cloud Console -->

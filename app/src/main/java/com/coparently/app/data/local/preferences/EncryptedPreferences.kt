@@ -125,6 +125,40 @@ class EncryptedPreferences @Inject constructor(
     }
 
     /**
+     * Stores dark theme preference.
+     *
+     * @param isDarkTheme Whether dark theme is enabled
+     */
+    fun putDarkTheme(isDarkTheme: Boolean) {
+        encryptedPreferences.edit()
+            .putBoolean(KEY_DARK_THEME, isDarkTheme)
+            .apply()
+    }
+
+    /**
+     * Retrieves dark theme preference.
+     * Returns null if not set (use system default).
+     *
+     * @return True if dark theme, false if light theme, null if system default
+     */
+    fun getDarkTheme(): Boolean? {
+        return if (encryptedPreferences.contains(KEY_DARK_THEME)) {
+            encryptedPreferences.getBoolean(KEY_DARK_THEME, false)
+        } else {
+            null // Not set, use system default
+        }
+    }
+
+    /**
+     * Clears dark theme preference (reverts to system default).
+     */
+    fun clearDarkTheme() {
+        encryptedPreferences.edit()
+            .remove(KEY_DARK_THEME)
+            .apply()
+    }
+
+    /**
      * Clears all stored preferences.
      */
     fun clear() {
@@ -138,6 +172,7 @@ class EncryptedPreferences @Inject constructor(
         private const val KEY_SYNC_ENABLED = "sync_enabled"
         private const val KEY_GOOGLE_ID_TOKEN = "google_id_token"
         private const val KEY_USER_EMAIL = "user_email"
+        private const val KEY_DARK_THEME = "dark_theme"
     }
 }
 

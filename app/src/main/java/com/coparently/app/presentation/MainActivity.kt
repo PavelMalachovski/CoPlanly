@@ -8,17 +8,25 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.rememberNavController
 import com.coparently.app.data.notification.NotificationManager
+import com.coparently.app.domain.repository.PreferencesRepository
 import com.coparently.app.presentation.navigation.NavGraph
 import com.coparently.app.presentation.theme.CoParentlyTheme
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
@@ -31,6 +39,12 @@ class MainActivity : ComponentActivity() {
 
     @Inject
     lateinit var notificationManager: NotificationManager
+
+    @Inject
+    lateinit var preferencesRepository: PreferencesRepository
+
+    private val _darkThemeState = MutableStateFlow<Boolean?>(null)
+    private val darkThemeState: StateFlow<Boolean?> = _darkThemeState
 
     // Notification permission launcher for Android 13+
     private val notificationPermissionLauncher = registerForActivityResult(
@@ -67,8 +81,21 @@ class MainActivity : ComponentActivity() {
         // Initialize notifications
         notificationManager.initializeNotifications()
 
+        // Load theme preference
+        lifecycleScope.launch {
+            preferencesRepository.getDarkThemeFlow().collect { isDark ->
+                _darkThemeState.value = isDark
+            }
+        }
+
         setContent {
-            CoParentlyTheme {
+            val darkTheme by darkThemeState.collectAsState()
+            val systemDarkTheme = isSystemInDarkTheme()
+
+            // Use saved preference or fall back to system default
+            val useDarkTheme = darkTheme ?: systemDarkTheme
+
+            CoParentlyTheme(darkTheme = useDarkTheme) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background

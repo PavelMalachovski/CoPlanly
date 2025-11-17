@@ -10,10 +10,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.coparently.app.R
 import com.coparently.app.presentation.settings.components.SettingsNavigationCard
 import com.coparently.app.presentation.settings.components.SettingsSwitchCard
 import com.coparently.app.presentation.sync.GoogleCalendarSyncState
@@ -55,16 +57,17 @@ fun SettingsScreen(
     // Settings ViewModel states
     val settingsUiState by settingsViewModel.settingsState.collectAsState()
     val operationState by settingsViewModel.operationState.collectAsState()
+    val darkTheme by settingsViewModel.darkThemeFlow.collectAsState()
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Settings") },
+                title = { Text(stringResource(R.string.settings_title)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateUp) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
+                            contentDescription = stringResource(R.string.settings_back)
                         )
                     }
                 }
@@ -79,6 +82,89 @@ fun SettingsScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // Theme Settings
+            Card(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Palette,
+                            contentDescription = null,
+                            modifier = Modifier.padding(end = 8.dp)
+                        )
+                        Text(
+                            text = stringResource(R.string.settings_theme),
+                            style = MaterialTheme.typography.titleLarge
+                        )
+                    }
+
+                    Text(
+                        text = stringResource(R.string.settings_theme_description),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+
+                    // Theme options
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // System Default
+                        FilterChip(
+                            selected = darkTheme == null,
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                settingsViewModel.resetThemeToSystemDefault()
+                            },
+                            label = { Text(stringResource(R.string.settings_theme_system)) },
+                            leadingIcon = if (darkTheme == null) {
+                                { Icon(Icons.Default.Check, contentDescription = null, Modifier.size(18.dp)) }
+                            } else null,
+                            modifier = Modifier.weight(1f)
+                        )
+
+                        // Light Theme
+                        FilterChip(
+                            selected = darkTheme == false,
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                settingsViewModel.toggleDarkTheme(false)
+                            },
+                            label = { Text(stringResource(R.string.settings_theme_light)) },
+                            leadingIcon = if (darkTheme == false) {
+                                { Icon(Icons.Default.Check, contentDescription = null, Modifier.size(18.dp)) }
+                            } else {
+                                { Icon(Icons.Default.LightMode, contentDescription = null, Modifier.size(18.dp)) }
+                            },
+                            modifier = Modifier.weight(1f)
+                        )
+
+                        // Dark Theme
+                        FilterChip(
+                            selected = darkTheme == true,
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                settingsViewModel.toggleDarkTheme(true)
+                            },
+                            label = { Text(stringResource(R.string.settings_theme_dark)) },
+                            leadingIcon = if (darkTheme == true) {
+                                { Icon(Icons.Default.Check, contentDescription = null, Modifier.size(18.dp)) }
+                            } else {
+                                { Icon(Icons.Default.DarkMode, contentDescription = null, Modifier.size(18.dp)) }
+                            },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+            }
+
             // Firestore Sync Status
             Card(
                 modifier = Modifier.fillMaxWidth()
@@ -223,7 +309,7 @@ fun SettingsScreen(
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                             }
-                            Text("Sign in with Google")
+                            Text(stringResource(R.string.sync_sign_in_google))
                         }
                     } else {
                         Button(
@@ -244,7 +330,7 @@ fun SettingsScreen(
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                             }
-                            Text("Sync from Google Calendar")
+                            Text(stringResource(R.string.settings_sync_from_google))
                         }
 
                         Button(
@@ -257,7 +343,7 @@ fun SettingsScreen(
                                 .padding(top = 8.dp),
                             enabled = googleSyncState !is GoogleCalendarSyncState.Syncing
                         ) {
-                            Text("Sign Out")
+                            Text(stringResource(R.string.settings_sign_out))
                         }
                     }
                 }
@@ -291,8 +377,8 @@ fun SettingsScreen(
 
             // Notifications Settings
             SettingsSwitchCard(
-                title = "Push Notifications",
-                description = "Get notified about changes",
+                title = stringResource(R.string.settings_push_notifications),
+                description = stringResource(R.string.settings_push_notifications_description),
                 icon = Icons.Default.Notifications,
                 checked = settingsUiState.notificationsEnabled,
                 onCheckedChange = { enabled ->

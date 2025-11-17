@@ -3,6 +3,7 @@ package com.coparently.app.presentation.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.coparently.app.data.remote.firebase.FcmService
+import com.coparently.app.domain.repository.PreferencesRepository
 import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.presentation.common.UiError
 import com.coparently.app.presentation.common.UiState
@@ -21,7 +22,8 @@ import javax.inject.Inject
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val fcmService: FcmService,
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
+    private val preferencesRepository: PreferencesRepository
 ) : ViewModel() {
 
     private val _settingsState = MutableStateFlow(SettingsUiState())
@@ -29,6 +31,15 @@ class SettingsViewModel @Inject constructor(
 
     private val _operationState = MutableStateFlow<UiState<Unit>>(UiState.Idle)
     val operationState: StateFlow<UiState<Unit>> = _operationState.asStateFlow()
+
+    val darkThemeFlow: StateFlow<Boolean?> = preferencesRepository.getDarkThemeFlow()
+        .let { flow ->
+            val stateFlow = MutableStateFlow<Boolean?>(null)
+            viewModelScope.launch {
+                flow.collect { stateFlow.value = it }
+            }
+            stateFlow
+        }
 
     init {
         loadSettings()
@@ -138,6 +149,38 @@ class SettingsViewModel @Inject constructor(
                         throwable = e,
                         retry = { requestNotificationPermission() }
                     )
+                )
+            }
+        }
+    }
+
+    /**
+     * Toggles dark theme on/off.
+     *
+     * @param isDarkTheme True to enable dark theme, false to enable light theme
+     */
+    fun toggleDarkTheme(isDarkTheme: Boolean) {
+        viewModelScope.launch {
+            try {
+                preferencesRepository.setDarkTheme(isDarkTheme)
+            } catch (e: Exception) {
+                _operationState.value = UiState.Error(
+                    UiError.fromException(e)
+                )
+            }
+        }
+    }
+
+    /**
+     * Resets theme to system default.
+     */
+    fun resetThemeToSystemDefault() {
+        viewModelScope.launch {
+            try {
+                preferencesRepository.clearDarkTheme()
+            } catch (e: Exception) {
+                _operationState.value = UiState.Error(
+                    UiError.fromException(e)
                 )
             }
         }

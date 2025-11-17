@@ -10,8 +10,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.coparently.app.R
 
 /**
  * Composable to display error messages with retry option.
@@ -85,7 +87,7 @@ fun ErrorDisplay(
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Retry")
+                            Text(stringResource(R.string.common_retry))
                         }
                     }
                 }
@@ -118,7 +120,7 @@ fun ErrorSnackbar(
         action = if (error.retry != null) {
             {
                 TextButton(onClick = error.retry) {
-                    Text("Retry")
+                    Text(stringResource(R.string.common_retry))
                 }
             }
         } else null,
@@ -189,7 +191,7 @@ fun ErrorScreen(
                         contentDescription = null
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Try Again")
+                    Text(stringResource(R.string.common_try_again))
                 }
             }
         }

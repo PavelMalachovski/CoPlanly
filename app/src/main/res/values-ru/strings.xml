@@ -47,6 +47,14 @@
     <string name="settings_sync_from_google">Синхронизировать из Google Calendar</string>
     <string name="settings_sign_out">Выйти</string>
     <string name="settings_syncing">Синхронизация…</string>
+    <string name="settings_theme">Тема</string>
+    <string name="settings_theme_system">Как в системе</string>
+    <string name="settings_theme_light">Светлая тема</string>
+    <string name="settings_theme_dark">Темная тема</string>
+    <string name="settings_theme_description">Выберите предпочитаемую тему</string>
+    <string name="settings_notifications">Уведомления</string>
+    <string name="settings_push_notifications">Push-уведомления</string>
+    <string name="settings_push_notifications_description">Получать уведомления об изменениях</string>
 
     <!-- Pairing Screen -->
     <string name="pairing_title">Связь родителей</string>
@@ -71,5 +79,71 @@
     <string name="common_loading">Загрузка…</string>
     <string name="common_error">Ошибка</string>
     <string name="common_unknown">Неизвестно</string>
+    <string name="common_save">Сохранить</string>
+    <string name="common_cancel">Отмена</string>
+    <string name="common_delete">Удалить</string>
+    <string name="common_edit">Изменить</string>
+    <string name="common_add">Добавить</string>
+    <string name="common_retry">Повторить</string>
+    <string name="common_try_again">Попробовать снова</string>
+    <string name="common_clear">Очистить</string>
+    <string name="common_optional">необязательно</string>
+
+    <!-- Child Info Screen -->
+    <string name="child_info_title">Информация о ребенке</string>
+    <string name="child_info_add">Добавить ребенка</string>
+    <string name="child_info_edit">Изменить данные ребенка</string>
+    <string name="child_info_name">Имя ребенка</string>
+    <string name="child_info_name_required">Имя ребенка *</string>
+    <string name="child_info_medical_notes">Дополнительная медицинская информация</string>
+    <string name="child_info_medical_notes_hint">Любая другая важная медицинская информация…</string>
+    <string name="child_info_medications">Лекарства</string>
+    <string name="child_info_activities">Занятия</string>
+    <string name="child_info_allergies">Аллергии</string>
+    <string name="child_info_emergency_contacts">Экстренные контакты</string>
+    <string name="child_info_school">Информация о школе</string>
+    <string name="child_info_empty">Пока нет добавленных детей</string>
+
+    <!-- Medication Editor -->
+    <string name="medication_name">Название лекарства</string>
+    <string name="medication_dosage">Дозировка</string>
+    <string name="medication_frequency">Частота приема</string>
+    <string name="medication_notes">Заметки (необязательно)</string>
+    <string name="medication_add">Добавить лекарство</string>
+
+    <!-- Activity Editor -->
+    <string name="activity_name">Название занятия</string>
+    <string name="activity_schedule">Расписание</string>
+    <string name="activity_location">Место (необязательно)</string>
+    <string name="activity_notes">Заметки (необязательно)</string>
+    <string name="activity_add">Добавить занятие</string>
+
+    <!-- Allergy Editor -->
+    <string name="allergy_name">Название аллергии</string>
+    <string name="allergy_severity">Тяжесть</string>
+    <string name="allergy_reaction">Реакция</string>
+    <string name="allergy_notes">Заметки (необязательно)</string>
+    <string name="allergy_add">Добавить аллергию</string>
+
+    <!-- Emergency Contact Editor -->
+    <string name="emergency_contact_add">Добавить экстренный контакт</string>
+    <string name="emergency_contact_name">Имя</string>
+    <string name="emergency_contact_relationship">Родство</string>
+    <string name="emergency_contact_relationship_hint">например, Бабушка, Дядя</string>
+    <string name="emergency_contact_phone">Номер телефона</string>
+    <string name="emergency_contact_alternate">Альтернативный телефон (необязательно)</string>
+
+    <!-- School Info Editor -->
+    <string name="school_name">Название школы</string>
+    <string name="school_address">Адрес (необязательно)</string>
+    <string name="school_phone">Телефон школы (необязательно)</string>
+    <string name="school_grade">Класс (необязательно)</string>
+    <string name="school_grade_hint">например, 3 класс</string>
+    <string name="school_teacher_name">Имя учителя (необязательно)</string>
+    <string name="school_teacher_email">Email учителя (необязательно)</string>
+
+    <!-- Sync -->
+    <string name="sync_sign_in_google">Войти через Google</string>
+    <string name="sync_syncing_from_google">Синхронизировать из Google Calendar</string>
 </resources>
 

@@ -8,6 +8,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.coparently.app.presentation.calendar.CalendarScreen
 import com.coparently.app.presentation.childinfo.ChildInfoScreen
+import com.coparently.app.presentation.common.animations.*
 import com.coparently.app.presentation.event.AddEditEventScreen
 import com.coparently.app.presentation.event.EventListScreen
 import com.coparently.app.presentation.pairing.PairingScreen
@@ -23,7 +24,11 @@ fun NavGraph(navController: NavHostController) {
         navController = navController,
         startDestination = Screen.Calendar.route
     ) {
-        composable(Screen.Calendar.route) {
+        composable(
+            route = Screen.Calendar.route,
+            enterTransition = { fadeInSlideUp() },
+            exitTransition = { fadeOutSlideDown() }
+        ) {
             CalendarScreen(
                 onEventClick = { eventId ->
                     navController.navigate(Screen.EditEvent.createRoute(eventId))
@@ -37,7 +42,13 @@ fun NavGraph(navController: NavHostController) {
             )
         }
 
-        composable(Screen.EventList.route) {
+        composable(
+            route = Screen.EventList.route,
+            enterTransition = { slideInFromRight() },
+            exitTransition = { slideOutToLeft() },
+            popEnterTransition = { slideInFromLeft() },
+            popExitTransition = { slideOutToRight() }
+        ) {
             EventListScreen(
                 onEventClick = { eventId ->
                     navController.navigate(Screen.EditEvent.createRoute(eventId))
@@ -51,7 +62,13 @@ fun NavGraph(navController: NavHostController) {
             )
         }
 
-        composable(Screen.AddEvent.route) {
+        composable(
+            route = Screen.AddEvent.route,
+            enterTransition = { fadeInScaleUp() },
+            exitTransition = { fadeOutScaleDown() },
+            popEnterTransition = { fadeInScaleUp() },
+            popExitTransition = { fadeOutScaleDown() }
+        ) {
             AddEditEventScreen(
                 eventId = null,
                 onSave = {
@@ -69,7 +86,11 @@ fun NavGraph(navController: NavHostController) {
                 navArgument(Screen.EditEvent.ARG_EVENT_ID) {
                     type = NavType.StringType
                 }
-            )
+            ),
+            enterTransition = { fadeInScaleUp() },
+            exitTransition = { fadeOutScaleDown() },
+            popEnterTransition = { fadeInScaleUp() },
+            popExitTransition = { fadeOutScaleDown() }
         ) { backStackEntry ->
             val eventId = backStackEntry.arguments?.getString(Screen.EditEvent.ARG_EVENT_ID) ?: return@composable
             AddEditEventScreen(
@@ -83,7 +104,13 @@ fun NavGraph(navController: NavHostController) {
             )
         }
 
-        composable(Screen.Settings.route) {
+        composable(
+            route = Screen.Settings.route,
+            enterTransition = { slideInFromRight() },
+            exitTransition = { slideOutToLeft() },
+            popEnterTransition = { slideInFromLeft() },
+            popExitTransition = { slideOutToRight() }
+        ) {
             SettingsScreen(
                 onNavigateUp = {
                     navController.popBackStack()
@@ -97,7 +124,13 @@ fun NavGraph(navController: NavHostController) {
             )
         }
 
-        composable(Screen.ChildInfo.route) {
+        composable(
+            route = Screen.ChildInfo.route,
+            enterTransition = { slideInFromRight() },
+            exitTransition = { slideOutToLeft() },
+            popEnterTransition = { slideInFromLeft() },
+            popExitTransition = { slideOutToRight() }
+        ) {
             ChildInfoScreen(
                 onNavigateBack = {
                     navController.popBackStack()
@@ -114,7 +147,11 @@ fun NavGraph(navController: NavHostController) {
                 navArgument(Screen.EditChildInfo.ARG_CHILD_INFO_ID) {
                     type = NavType.StringType
                 }
-            )
+            ),
+            enterTransition = { fadeInScaleUp() },
+            exitTransition = { fadeOutScaleDown() },
+            popEnterTransition = { fadeInScaleUp() },
+            popExitTransition = { fadeOutScaleDown() }
         ) { backStackEntry ->
             val childInfoId = backStackEntry.arguments?.getString(Screen.EditChildInfo.ARG_CHILD_INFO_ID) ?: "new"
             com.coparently.app.presentation.childinfo.AddEditChildInfoScreen(
@@ -125,7 +162,13 @@ fun NavGraph(navController: NavHostController) {
             )
         }
 
-        composable(Screen.Pairing.route) {
+        composable(
+            route = Screen.Pairing.route,
+            enterTransition = { slideInFromRight() },
+            exitTransition = { slideOutToLeft() },
+            popEnterTransition = { slideInFromLeft() },
+            popExitTransition = { slideOutToRight() }
+        ) {
             PairingScreen(
                 onNavigateBack = {
                     navController.popBackStack()

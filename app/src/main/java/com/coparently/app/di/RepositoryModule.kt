@@ -2,8 +2,10 @@ package com.coparently.app.di
 
 import com.coparently.app.data.repository.ChildInfoRepositoryImpl
 import com.coparently.app.data.repository.EventRepositoryImpl
+import com.coparently.app.data.repository.PreferencesRepositoryImpl
 import com.coparently.app.domain.repository.ChildInfoRepository
 import com.coparently.app.domain.repository.EventRepository
+import com.coparently.app.domain.repository.PreferencesRepository
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -34,5 +36,14 @@ abstract class RepositoryModule {
     abstract fun bindChildInfoRepository(
         childInfoRepositoryImpl: ChildInfoRepositoryImpl
     ): ChildInfoRepository
+
+    /**
+     * Provides PreferencesRepository implementation.
+     */
+    @Binds
+    @Singleton
+    abstract fun bindPreferencesRepository(
+        preferencesRepositoryImpl: PreferencesRepositoryImpl
+    ): PreferencesRepository
 }
 
