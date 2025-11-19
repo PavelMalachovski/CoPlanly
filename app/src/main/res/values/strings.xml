@@ -169,5 +169,5 @@
         - Android Client ID (for Google Sign-In SDK - stored in google-services.json)
         - Web Client ID (for Credential Manager API - stored here in strings.xml)
     -->
-    <string name="default_web_client_id" translatable="false">492948924829-m22iudtoaj437i518qm2p4do8t35vv1g.apps.googleusercontent.com.apps.googleusercontent.com</string>
+    <string name="default_web_client_id" translatable="false">492948924829-m22iudtoaj437i518qm2p4do8t35vv1g.apps.googleusercontent.com</string>
 </resources>
