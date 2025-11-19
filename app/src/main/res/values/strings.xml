@@ -146,8 +146,28 @@
     <string name="sync_sign_in_google">Sign in with Google</string>
     <string name="sync_syncing_from_google">Sync from Google Calendar</string>
 
-    <!-- Google OAuth Configuration -->
-    <!-- TODO: Replace with actual Web Client ID from Google Cloud Console -->
-    <!-- Get it from: https://console.cloud.google.com/apis/credentials -->
-    <string name="default_web_client_id" translatable="false">YOUR_WEB_CLIENT_ID.apps.googleusercontent.com</string>
+    <!-- Google OAuth Configuration - Web Client ID for Credential Manager API -->
+    <!--
+        IMPORTANT: This must be an OAuth 2.0 Client ID for Web application, NOT Android!
+
+        Setup Instructions:
+        1. Go to Google Cloud Console: https://console.cloud.google.com/apis/credentials
+        2. Select your project (coparently-a39c9)
+        3. Click "+ CREATE CREDENTIALS" → "OAuth client ID"
+        4. Select application type: "Web application"
+        5. Enter a name (e.g., "CoParently Web Client")
+        6. Leave Authorized redirect URIs empty (not needed for mobile)
+        7. Click "CREATE"
+        8. Copy the Client ID (format: XXXX-XXXX.apps.googleusercontent.com)
+        9. Paste it below, replacing YOUR_WEB_CLIENT_ID
+        10. Enable Google Calendar API if not already enabled:
+            - Go to APIs & Services → Library
+            - Search for "Google Calendar API"
+            - Click "Enable"
+
+        Note: This is DIFFERENT from the Android Client ID. You need BOTH:
+        - Android Client ID (for Google Sign-In SDK - stored in google-services.json)
+        - Web Client ID (for Credential Manager API - stored here in strings.xml)
+    -->
+    <string name="default_web_client_id" translatable="false">492948924829-m22iudtoaj437i518qm2p4do8t35vv1g.apps.googleusercontent.com.apps.googleusercontent.com</string>
 </resources>
