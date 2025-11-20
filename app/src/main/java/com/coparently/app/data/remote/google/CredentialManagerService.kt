@@ -133,9 +133,9 @@ class CredentialManagerService @Inject constructor(
                     HTTP_TRANSPORT,
                     JSON_FACTORY,
                     getWebClientId(),
-                    "", // client secret не нужен для Android apps
+                    getClientSecret(), // client secret required for web OAuth clients
                     authCode,
-                    "" // redirect URI не нужен для Android apps
+                    "" // redirect URI not needed for mobile apps
                 ).execute()
             }
 
@@ -208,7 +208,7 @@ class CredentialManagerService @Inject constructor(
                     JSON_FACTORY,
                     refreshToken,
                     getWebClientId(),
-                    "" // client secret не нужен для Android apps
+                    getClientSecret() // client secret required for web OAuth clients
                 ).execute()
             }
 
@@ -282,6 +282,25 @@ class CredentialManagerService @Inject constructor(
         } catch (e: Exception) {
             Log.e(TAG, "Web Client ID not configured: ${e.message}")
             throw IllegalStateException("Google OAuth not configured. Please:\n1. Go to Google Cloud Console\n2. Create OAuth 2.0 Client ID for Web application\n3. Add the Client ID to default_web_client_id in strings.xml\n4. Enable Google Calendar API")
+        }
+    }
+
+    /**
+     * Получает Client Secret из ресурсов или конфигурации.
+     * Client Secret должен быть получен из Google Cloud Console для Web Client ID
+     * и добавлен в strings.xml как google_client_secret
+     */
+    private fun getClientSecret(): String {
+        return try {
+            // Попытка получить из strings.xml
+            val clientSecret = context.getString(R.string.google_client_secret)
+            if (clientSecret.contains("YOUR_CLIENT_SECRET") || clientSecret.contains("PASTE_YOUR_CLIENT_SECRET")) {
+                throw IllegalStateException("Client Secret not configured. Please:\n1. Go to Google Cloud Console\n2. Find your Web Client ID\n3. Copy the Client Secret\n4. Update google_client_secret in strings.xml")
+            }
+            clientSecret
+        } catch (e: Exception) {
+            Log.e(TAG, "Client Secret not configured: ${e.message}")
+            throw IllegalStateException("Google OAuth client secret not configured. Please update google_client_secret in strings.xml with the client secret from Google Cloud Console")
         }
     }
 }

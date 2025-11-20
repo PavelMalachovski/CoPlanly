@@ -77,6 +77,10 @@ captures/
 # Google Services (e.g. APIs or Firebase)
 google-services.json
 
+# Strings file (contains API keys, client secrets, etc.)
+app/src/main/res/values/strings.xml
+app/src/main/res/values-*/strings.xml
+
 # Freeline
 freeline.py
 freeline/
