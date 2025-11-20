@@ -1,13 +1,12 @@
 package com.coparently.app.presentation.navigation
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
-import androidx.compose.runtime.staticCompositionLocalOf
+import com.coparently.app.presentation.LocalGoogleSignInCallback
 import com.coparently.app.presentation.calendar.CalendarScreen
 import com.coparently.app.presentation.childinfo.ChildInfoScreen
 import com.coparently.app.presentation.common.animations.*
@@ -15,21 +14,17 @@ import com.coparently.app.presentation.event.AddEditEventScreen
 import com.coparently.app.presentation.event.EventListScreen
 import com.coparently.app.presentation.pairing.PairingScreen
 import com.coparently.app.presentation.settings.SettingsScreen
-
-/**
- * External declaration of LocalGoogleSignInCallback from MainActivity.
- * This allows NavGraph to access the callback without direct dependency.
- */
-val LocalGoogleSignInCallback = staticCompositionLocalOf<((android.content.Intent) -> Unit)?> {
-    null
-}
+import com.coparently.app.presentation.sync.SyncViewModel
 
 /**
  * Navigation graph for the app.
  * Defines all navigation routes and their destinations.
  */
 @Composable
-fun NavGraph(navController: NavHostController) {
+fun NavGraph(
+    navController: NavHostController,
+    syncViewModel: SyncViewModel
+) {
     NavHost(
         navController = navController,
         startDestination = Screen.Calendar.route
@@ -132,7 +127,8 @@ fun NavGraph(navController: NavHostController) {
                 onNavigateToPairing = {
                     navController.navigate(Screen.Pairing.route)
                 },
-                onStartGoogleSignIn = googleSignInCallback
+                onStartGoogleSignIn = googleSignInCallback,
+                syncViewModel = syncViewModel
             )
         }
 

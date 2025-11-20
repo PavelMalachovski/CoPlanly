@@ -52,19 +52,6 @@ fun SettingsScreen(
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
 
-    // Create GoogleSignInClient
-    val googleSignInClient = remember(context) {
-        val gso = com.google.android.gms.auth.api.signin.GoogleSignInOptions.Builder(
-            com.google.android.gms.auth.api.signin.GoogleSignInOptions.DEFAULT_SIGN_IN
-        )
-            .requestIdToken("492948924829-m22iudtoaj437i518qm2p4do8t35vv1g.apps.googleusercontent.com")
-            .requestServerAuthCode("492948924829-m22iudtoaj437i518qm2p4do8t35vv1g.apps.googleusercontent.com")
-            .requestEmail()
-            .requestScopes(com.google.android.gms.common.api.Scope(com.google.api.services.calendar.CalendarScopes.CALENDAR))
-            .build()
-        com.google.android.gms.auth.api.signin.GoogleSignIn.getClient(context, gso)
-    }
-
     // Sync ViewModel states
     val isSignedIn by syncViewModel.isSignedIn.collectAsState()
     val isSyncEnabled by syncViewModel.isSyncEnabled.collectAsState()
@@ -312,19 +299,15 @@ fun SettingsScreen(
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 println("DEBUG: Sign in button clicked")
 
-                                try {
-                                    val signInIntent = googleSignInClient.signInIntent
-                                    println("DEBUG: Sign-in intent created: $signInIntent")
-
+                                val signInIntent = syncViewModel.createGoogleSignInIntent()
+                                if (signInIntent != null) {
                                     if (onStartGoogleSignIn != null) {
                                         onStartGoogleSignIn(signInIntent)
-                                        println("DEBUG: onStartGoogleSignIn called successfully")
                                     } else {
-                                        println("DEBUG: onStartGoogleSignIn callback is null!")
+                                        syncViewModel.handleSignInCancellation(
+                                            context.getString(R.string.sync_google_sign_in_failed)
+                                        )
                                     }
-                                } catch (e: Exception) {
-                                    println("DEBUG: Error creating sign-in intent: ${e.message}")
-                                    e.printStackTrace()
                                 }
                             },
                             modifier = Modifier

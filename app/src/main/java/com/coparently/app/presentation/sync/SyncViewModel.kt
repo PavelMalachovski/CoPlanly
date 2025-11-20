@@ -1,5 +1,6 @@
 package com.coparently.app.presentation.sync
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.coparently.app.data.local.preferences.EncryptedPreferences
@@ -28,6 +29,10 @@ class SyncViewModel @Inject constructor(
     private val credentialManagerService: CredentialManagerService,
     private val encryptedPreferences: EncryptedPreferences
 ) : ViewModel() {
+
+    companion object {
+        private const val TAG = "SyncViewModel"
+    }
 
     // Google Calendar sync state
     private val _isSignedIn = MutableStateFlow(false)
@@ -58,14 +63,27 @@ class SyncViewModel @Inject constructor(
     }
 
     /**
-     * Начинает процесс входа через Google Sign-In.
-     * Этот метод больше не используется - вход запускается напрямую через callback.
+     * Создает Intent для запуска Google Sign-In flow через Credential Manager.
      */
-    fun startSignIn(): Pair<android.content.Intent?, String?> {
-        android.util.Log.w("SyncViewModel", "startSignIn() called but should use callback instead")
-        return Pair(null, "Use callback instead")
+    fun createGoogleSignInIntent(): android.content.Intent? {
+        return try {
+            _syncState.value = GoogleCalendarSyncState.Syncing("Opening Google Sign-In...")
+            credentialManagerService.getGoogleSignInClient().signInIntent
+        } catch (e: Exception) {
+            Log.e(TAG, "Unable to create Google Sign-In intent", e)
+            _syncState.value = GoogleCalendarSyncState.Error(
+                "Unable to start Google Sign-In: ${e.message ?: "Unknown error"}"
+            )
+            null
+        }
     }
 
+    /**
+     * Сообщает об отмене/ошибке входа, чтобы обновить UI.
+     */
+    fun handleSignInCancellation(message: String) {
+        _syncState.value = GoogleCalendarSyncState.Error(message)
+    }
 
     /**
      * Обрабатывает результат Google Sign-In.
@@ -101,14 +119,6 @@ class SyncViewModel @Inject constructor(
             _syncState.value = errorState
             errorState
         }
-    }
-
-    /**
-     * Повторная попытка входа.
-     * Возвращает Intent для запуска Google Sign-In flow.
-     */
-    fun retrySignIn(): Pair<android.content.Intent?, String?> {
-        return startSignIn()
     }
 
     /**
