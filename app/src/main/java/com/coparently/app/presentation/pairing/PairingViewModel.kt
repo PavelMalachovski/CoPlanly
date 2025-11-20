@@ -160,17 +160,41 @@ class PairingViewModel @Inject constructor(
     }
 
     fun acceptInvitation(invitationId: String) {
+        _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
+
         viewModelScope.launch {
-            val currentUser = firebaseAuthService.getCurrentUser()
-            if (currentUser != null) {
+            try {
+                val currentUser = firebaseAuthService.getCurrentUser()
+                if (currentUser == null) {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        errorMessage = "User not authenticated. Please sign in."
+                    )
+                    return@launch
+                }
+
                 val result = pairingService.acceptInvitation(invitationId, currentUser.uid)
                 result.fold(
                     onSuccess = {
                         analyticsManager.logInvitationAccepted()
                         loadPairingInfo()
                         loadPendingInvitations()
+                        _uiState.value = _uiState.value.copy(
+                            isLoading = false,
+                            errorMessage = null
+                        )
                     },
-                    onFailure = { /* Handle error */ }
+                    onFailure = { error ->
+                        _uiState.value = _uiState.value.copy(
+                            isLoading = false,
+                            errorMessage = error.message ?: "Failed to accept invitation"
+                        )
+                    }
+                )
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    errorMessage = "Error accepting invitation: ${e.message}"
                 )
             }
         }
@@ -261,6 +285,16 @@ class PairingViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(
             showQRCodeDialog = false,
             qrCodeBitmap = null
+        )
+    }
+
+    /**
+     * Shows an error message in the UI.
+     */
+    fun showError(message: String) {
+        _uiState.value = _uiState.value.copy(
+            errorMessage = message,
+            isLoading = false
         )
     }
 }

@@ -274,3 +274,186 @@ exports.onChildInfoUpdated = functions.firestore
       return null;
     });
 
+/**
+ * Cloud Function for processing QR code invitation acceptance.
+ * Callable function that accepts QR invitation and pairs users.
+ */
+exports.acceptQRInvitation = functions.https.onCall(async (data, context) => {
+  // Check authentication
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+  }
+
+  const { invitationId } = data;
+
+  if (!invitationId) {
+    throw new functions.https.HttpsError('invalid-argument', 'Invitation ID is required');
+  }
+
+  try {
+    // Get the invitation
+    const invitationDoc = await admin.firestore()
+        .collection('invitations')
+        .doc(invitationId)
+        .get();
+
+    if (!invitationDoc.exists) {
+      throw new functions.https.HttpsError('not-found', 'Invitation not found');
+    }
+
+    const invitation = invitationDoc.data();
+
+    // Check if invitation is for QR type and is pending
+    if (invitation.status !== 'pending') {
+      throw new functions.https.HttpsError('failed-precondition', 'Invitation is no longer valid');
+    }
+
+    // Check if current user is the recipient
+    if (invitation.toEmail !== context.auth.token.email) {
+      throw new functions.https.HttpsError('permission-denied', 'This invitation is not for you');
+    }
+
+    const fromUserId = invitation.fromUserId;
+    const acceptingUserId = context.auth.uid;
+
+    // Update both users with partner IDs
+    await admin.firestore()
+        .collection('users')
+        .doc(fromUserId)
+        .update({ partnerId: acceptingUserId });
+
+    await admin.firestore()
+        .collection('users')
+        .doc(acceptingUserId)
+        .update({ partnerId: fromUserId });
+
+    // Update invitation status
+    await admin.firestore()
+        .collection('invitations')
+        .doc(invitationId)
+        .update({ status: 'accepted' });
+
+    // Send notification to the inviting user
+    const acceptingUserDoc = await admin.firestore()
+        .collection('users')
+        .doc(acceptingUserId)
+        .get();
+
+    if (acceptingUserDoc.exists) {
+      const acceptingUserData = acceptingUserDoc.data();
+
+      await admin.firestore()
+          .collection('notification_queue')
+          .add({
+            targetUserId: fromUserId,
+            data: {
+              title: 'Co-Parent Invitation Accepted',
+              body: `${acceptingUserData.name || 'Your co-parent'} accepted your invitation via QR code!`,
+              type: 'invitation_accepted',
+            },
+            status: 'pending',
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+    }
+
+    console.log(`QR invitation ${invitationId} accepted by user ${acceptingUserId}`);
+    return { success: true };
+
+  } catch (error) {
+    console.error('Error accepting QR invitation:', error);
+    throw new functions.https.HttpsError('internal', 'Failed to accept invitation');
+  }
+});
+
+/**
+ * Cloud Function for sending email invitations.
+ * Triggered when a new invitation is created in Firestore.
+ */
+exports.sendEmailInvitation = functions.firestore
+    .document('invitations/{invitationId}')
+    .onCreate(async (snap, context) => {
+      const invitation = snap.data();
+      const invitationId = context.params.invitationId;
+
+      console.log(`Processing email invitation ${invitationId} to ${invitation.toEmail}`);
+
+      try {
+        // Get sender's information
+        const senderDoc = await admin.firestore()
+            .collection('users')
+            .doc(invitation.fromUserId)
+            .get();
+
+        if (!senderDoc.exists) {
+          console.error('Sender not found for invitation:', invitationId);
+          return null;
+        }
+
+        const senderData = senderDoc.data();
+
+        // Create invitation acceptance URL
+        const acceptUrl = `https://coparently.app/pair?invitation=${invitationId}`;
+
+        // Email content (in production, use a proper email service like SendGrid)
+        const emailContent = {
+          to: invitation.toEmail,
+          subject: 'Co-Parent Invitation from CoParently',
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <h1 style="color: #4CAF50;">Co-Parent Invitation</h1>
+              <p>Hello,</p>
+              <p><strong>${senderData.name}</strong> has invited you to connect as co-parents on CoParently!</p>
+              <p>CoParently helps co-parents coordinate childcare schedules, share information, and stay organized.</p>
+
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${acceptUrl}"
+                   style="background-color: #4CAF50; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">
+                  Accept Invitation
+                </a>
+              </div>
+
+              <p>If the button doesn't work, copy and paste this link into your browser:</p>
+              <p style="word-break: break-all; color: #666;">${acceptUrl}</p>
+
+              <p>This invitation will expire in 7 days.</p>
+              <p>If you didn't expect this invitation, you can safely ignore this email.</p>
+
+              <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+              <p style="color: #666; font-size: 12px;">
+                CoParently - Making co-parenting easier
+              </p>
+            </div>
+          `
+        };
+
+        // In production, integrate with email service (SendGrid, Mailgun, etc.)
+        // For now, we'll log the email content
+        console.log('Email invitation prepared:', {
+          to: emailContent.to,
+          subject: emailContent.subject,
+          acceptUrl: acceptUrl
+        });
+
+        // TODO: Replace with actual email sending service
+        // Example with SendGrid:
+        // const sgMail = require('@sendgrid/mail');
+        // sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+        // await sgMail.send(emailContent);
+
+        console.log(`Email invitation sent to ${invitation.toEmail}`);
+        return null;
+
+      } catch (error) {
+        console.error('Error sending email invitation:', error);
+
+        // Mark invitation as failed
+        await snap.ref.update({
+          status: 'failed',
+          error: error.message,
+          sentAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+
+        throw error;
+      }
+    });
+

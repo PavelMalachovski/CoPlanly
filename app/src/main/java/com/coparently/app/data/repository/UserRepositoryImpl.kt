@@ -42,50 +42,76 @@ class UserRepositoryImpl @Inject constructor(
 
     override suspend fun getCurrentUser(): User? {
         val firebaseUser = firebaseAuthService.getCurrentUser() ?: return null
-        return getUserById(firebaseUser.uid)
+
+        return try {
+            getUserById(firebaseUser.uid)
+        } catch (e: Exception) {
+            android.util.Log.e("UserRepository", "Failed to get current user data", e)
+            null
+        }
     }
 
     override suspend fun upsertUser(user: User) {
-        userDao.insertUser(user.toEntity())
+        try {
+            userDao.insertUser(user.toEntity())
+        } catch (e: Exception) {
+            android.util.Log.e("UserRepository", "Failed to save user to local database", e)
+            throw e
+        }
 
         // Also sync to Firestore
         val firebaseUser = firebaseAuthService.getCurrentUser()
         if (firebaseUser != null) {
-            val userData = mapOf(
-                "id" to user.id,
-                "email" to user.email,
-                "name" to user.name,
-                "role" to user.role,
-                "colorCode" to user.colorCode,
-                "profilePhotoUrl" to (user.profilePhotoUrl ?: ""),
-                "googleCalendarSyncEnabled" to user.googleCalendarSyncEnabled,
-                "googleCalendarId" to (user.googleCalendarId ?: ""),
-                "partnerId" to (user.partnerId ?: ""),
-                "fcmToken" to (user.fcmToken ?: "")
-            )
-            firestoreUserDataSource.upsertUser(firebaseUser.uid, userData)
+            try {
+                val userData = mapOf(
+                    "id" to user.id,
+                    "email" to user.email,
+                    "name" to user.name,
+                    "role" to user.role,
+                    "colorCode" to user.colorCode,
+                    "profilePhotoUrl" to (user.profilePhotoUrl ?: ""),
+                    "googleCalendarSyncEnabled" to user.googleCalendarSyncEnabled,
+                    "googleCalendarId" to (user.googleCalendarId ?: ""),
+                    "partnerId" to (user.partnerId ?: ""),
+                    "fcmToken" to (user.fcmToken ?: "")
+                )
+                firestoreUserDataSource.upsertUser(firebaseUser.uid, userData).getOrThrow()
+            } catch (e: Exception) {
+                android.util.Log.e("UserRepository", "Failed to sync user to Firestore", e)
+                // Don't throw here - local save succeeded, Firestore sync failed
+            }
         }
     }
 
     override suspend fun updateUser(user: User) {
-        userDao.updateUser(user.toEntity())
+        try {
+            userDao.updateUser(user.toEntity())
+        } catch (e: Exception) {
+            android.util.Log.e("UserRepository", "Failed to update user in local database", e)
+            throw e
+        }
 
         // Also sync to Firestore
         val firebaseUser = firebaseAuthService.getCurrentUser()
         if (firebaseUser != null) {
-            val userData = mapOf(
-                "id" to user.id,
-                "email" to user.email,
-                "name" to user.name,
-                "role" to user.role,
-                "colorCode" to user.colorCode,
-                "profilePhotoUrl" to (user.profilePhotoUrl ?: ""),
-                "googleCalendarSyncEnabled" to user.googleCalendarSyncEnabled,
-                "googleCalendarId" to (user.googleCalendarId ?: ""),
-                "partnerId" to (user.partnerId ?: ""),
-                "fcmToken" to (user.fcmToken ?: "")
-            )
-            firestoreUserDataSource.updateUser(firebaseUser.uid, userData)
+            try {
+                val userData = mapOf(
+                    "id" to user.id,
+                    "email" to user.email,
+                    "name" to user.name,
+                    "role" to user.role,
+                    "colorCode" to user.colorCode,
+                    "profilePhotoUrl" to (user.profilePhotoUrl ?: ""),
+                    "googleCalendarSyncEnabled" to user.googleCalendarSyncEnabled,
+                    "googleCalendarId" to (user.googleCalendarId ?: ""),
+                    "partnerId" to (user.partnerId ?: ""),
+                    "fcmToken" to (user.fcmToken ?: "")
+                )
+                firestoreUserDataSource.updateUser(firebaseUser.uid, userData).getOrThrow()
+            } catch (e: Exception) {
+                android.util.Log.e("UserRepository", "Failed to sync user update to Firestore", e)
+                // Don't throw here - local update succeeded, Firestore sync failed
+            }
         }
     }
 
@@ -96,12 +122,21 @@ class UserRepositoryImpl @Inject constructor(
     override suspend fun syncWithFirestore() {
         val firebaseUser = firebaseAuthService.getCurrentUser() ?: return
 
-        // Fetch user data from Firestore
-        val firestoreData = firestoreUserDataSource.getUserById(firebaseUser.uid) ?: return
+        try {
+            // Fetch user data from Firestore
+            val firestoreData = firestoreUserDataSource.getUserById(firebaseUser.uid)
+            if (firestoreData == null) {
+                android.util.Log.w("UserRepository", "No user data found in Firestore for user: ${firebaseUser.uid}")
+                return
+            }
 
-        // Update local database
-        val user = firestoreData.toUser()
-        userDao.insertUser(user.toEntity())
+            // Update local database
+            val user = firestoreData.toUser()
+            userDao.insertUser(user.toEntity())
+        } catch (e: Exception) {
+            android.util.Log.e("UserRepository", "Failed to sync user data from Firestore", e)
+            throw e
+        }
     }
 
     override suspend fun updateFcmToken(token: String) {

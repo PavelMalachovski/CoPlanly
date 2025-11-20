@@ -5,7 +5,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.QrCode
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material3.*
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -29,6 +32,29 @@ fun PairingScreen(
     viewModel: PairingViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val context = androidx.compose.ui.platform.LocalContext.current
+
+    // QR Scanner launcher
+    val qrScannerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        when (result.resultCode) {
+            android.app.Activity.RESULT_OK -> {
+                val data = result.data
+                val invitationId = data?.getStringExtra(QRScannerActivity.EXTRA_INVITATION_ID)
+
+                if (invitationId != null) {
+                    viewModel.acceptInvitation(invitationId)
+                }
+            }
+            android.app.Activity.RESULT_CANCELED -> {
+                val message = result.data?.getStringExtra(QRScannerActivity.EXTRA_MESSAGE)
+                if (message != null) {
+                    viewModel.showError(message)
+                }
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -131,6 +157,27 @@ fun PairingScreen(
                         modifier = Modifier.padding(end = 8.dp)
                     )
                     Text("Share QR Code")
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // QR code scanning button
+                OutlinedButton(
+                    onClick = {
+                        val intent = android.content.Intent(
+                            context,
+                            QRScannerActivity::class.java
+                        )
+                        qrScannerLauncher.launch(intent)
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.QrCodeScanner,
+                        contentDescription = null,
+                        modifier = Modifier.padding(end = 8.dp)
+                    )
+                    Text("Scan QR Code")
                 }
             }
         }

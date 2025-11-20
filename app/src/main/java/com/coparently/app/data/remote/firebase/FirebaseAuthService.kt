@@ -172,11 +172,10 @@ class FirebaseAuthService @Inject constructor(
         val startTime = System.currentTimeMillis()
 
         while (System.currentTimeMillis() - startTime < timeoutMs) {
-            val currentUser = getCurrentUser()
-            if (currentUser != null || firebaseAuth.app.options.projectId != null) {
-                // If we have a user OR Firebase is initialized (indicated by projectId being set),
-                // consider auth ready
-                return currentUser
+            // Check if Firebase is properly initialized by verifying projectId exists
+            if (firebaseAuth.app.options.projectId != null) {
+                // Firebase is ready, return current user (may be null if not signed in)
+                return getCurrentUser()
             }
             kotlinx.coroutines.delay(100) // Wait 100ms before checking again
         }

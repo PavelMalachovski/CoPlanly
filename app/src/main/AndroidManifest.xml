@@ -5,6 +5,7 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.CAMERA" />
 
     <application
         android:name=".CoParentlyApplication"
@@ -23,6 +24,24 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- QR Scanner Activity -->
+        <activity
+            android:name=".presentation.pairing.QRScannerActivity"
+            android:exported="true"
+            android:theme="@style/Theme.CoParently"
+            android:screenOrientation="portrait">
+            <!-- Deeplink handling for QR invitation URLs -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="https"
+                    android:host="coparently.app"
+                    android:pathPrefix="/pair" />
             </intent-filter>
         </activity>
 

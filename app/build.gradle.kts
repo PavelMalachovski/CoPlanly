@@ -149,6 +149,9 @@ dependencies {
     // ZXing for QR code generation
     implementation("com.google.zxing:core:3.5.3")
 
+    // ML Kit for QR code scanning
+    implementation("com.google.mlkit:barcode-scanning:17.3.0")
+
     // Firebase - Updated to latest BOM
     val firebaseBom = platform("com.google.firebase:firebase-bom:33.7.0")
     implementation(firebaseBom)
