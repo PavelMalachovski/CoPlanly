@@ -54,6 +54,15 @@ class CredentialManagerService @Inject constructor(
         GoogleSignIn.getClient(context, gso)
     }
 
+    // Separate client for authentication (without calendar scope)
+    private val _authGoogleSignInClient: GoogleSignInClient by lazy {
+        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+            .requestIdToken(getWebClientId())
+            .requestEmail()
+            .build()
+        GoogleSignIn.getClient(context, gso)
+    }
+
     companion object {
         private const val TAG = "CredentialManager"
         private val JSON_FACTORY = GsonFactory.getDefaultInstance()
@@ -65,6 +74,13 @@ class CredentialManagerService @Inject constructor(
      */
     fun getGoogleSignInClient(): GoogleSignInClient {
         return _googleSignInClient
+    }
+
+    /**
+     * Получает Google Sign-In Client для аутентификации (без calendar scope).
+     */
+    fun getAuthGoogleSignInClient(): GoogleSignInClient {
+        return _authGoogleSignInClient
     }
 
     /**

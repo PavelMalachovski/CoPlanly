@@ -41,6 +41,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.presentation.theme.CoParentlyColors
 import com.coparently.app.presentation.theme.dimensions
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 
 /**
  * Authentication screen for login and registration.
@@ -53,9 +55,11 @@ fun AuthScreen(
     viewModel: AuthViewModel = hiltViewModel()
 ) {
     // Call the callback when viewModel is ready
+    viewModel.onAuthSuccess = onAuthSuccess
     onViewModelReady?.invoke(viewModel)
     val uiState by viewModel.uiState.collectAsState()
     val dims = dimensions()
+    val coroutineScope = rememberCoroutineScope()
 
     // Gradient background
     Box(
@@ -260,6 +264,53 @@ fun AuthScreen(
                     }
 
                     Spacer(modifier = Modifier.height(8.dp))
+
+                    // Google Sign-In Button
+                    OutlinedButton(
+                        onClick = {
+                            coroutineScope.launch {
+                                viewModel.signInWithGoogle().fold(
+                                    onSuccess = {
+                                        // Google Sign-In successful, navigation handled by AuthViewModel
+                                    },
+                                    onFailure = { error ->
+                                        viewModel.updateErrorMessage(error.message ?: "Google Sign-In failed")
+                                    }
+                                )
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(dims.buttonHeight),
+                        enabled = !uiState.isLoading,
+                        shape = RoundedCornerShape(16.dp),
+                        border = ButtonDefaults.outlinedButtonBorder(enabled = true).copy(
+                            width = 2.dp
+                        )
+                    ) {
+                        Text(
+                            text = "Sign in with Google",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+
+                    // Divider with "or"
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        HorizontalDivider(modifier = Modifier.weight(1f))
+                        Text(
+                            text = "or",
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        HorizontalDivider(modifier = Modifier.weight(1f))
+                    }
 
                     // Primary Action Button
                     Button(

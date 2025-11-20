@@ -2,6 +2,7 @@ package com.coparently.app.data.remote.firebase
 
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.auth.GoogleAuthProvider
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -81,6 +82,23 @@ class FirebaseAuthService @Inject constructor(
     }
 
     /**
+     * Signs in with Google ID token.
+     *
+     * @param idToken Google ID token from Google Sign-In
+     * @return Result containing FirebaseUser on success or error message on failure
+     */
+    suspend fun signInWithGoogleIdToken(idToken: String): Result<FirebaseUser> {
+        return try {
+            val credential = GoogleAuthProvider.getCredential(idToken, null)
+            val result = firebaseAuth.signInWithCredential(credential).await()
+            Result.success(result.user!!)
+        } catch (e: Exception) {
+            android.util.Log.e("FirebaseAuthService", "Google sign-in failed", e)
+            Result.failure(e)
+        }
+    }
+
+    /**
      * Sends a password reset email.
      *
      * @param email User's email address
@@ -100,6 +118,20 @@ class FirebaseAuthService @Inject constructor(
      */
     fun signOut() {
         firebaseAuth.signOut()
+    }
+
+    /**
+     * Signs out the current user from Firebase authentication.
+     * This should be called when the user wants to sign out of the app completely.
+     */
+    suspend fun signOutCompletely(): Result<Unit> {
+        return try {
+            firebaseAuth.signOut()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            android.util.Log.e("FirebaseAuthService", "Error signing out: ${e.message}", e)
+            Result.failure(e)
+        }
     }
 
     /**

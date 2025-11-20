@@ -50,4 +50,15 @@ class AuthStateViewModel @Inject constructor(
     fun refreshAuthState() {
         checkAuthState()
     }
+
+    /**
+     * Signs out the current user from Firebase authentication.
+     * This should be called when the user wants to sign out of the app completely.
+     */
+    fun signOut() {
+        viewModelScope.launch {
+            firebaseAuthService.signOutCompletely()
+            refreshAuthState()
+        }
+    }
 }

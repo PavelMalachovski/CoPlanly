@@ -1,11 +1,20 @@
 package com.coparently.app.presentation.auth
 
+import androidx.credentials.CredentialManager
+import androidx.credentials.GetCredentialRequest
+import androidx.credentials.GetCredentialResponse
+import androidx.credentials.exceptions.GetCredentialException
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.coparently.app.data.analytics.AnalyticsManager
 import com.coparently.app.data.crashlytics.CrashlyticsManager
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
+import com.coparently.app.data.remote.google.CredentialManagerService
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import com.google.firebase.auth.FirebaseUser
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -19,12 +28,17 @@ import javax.inject.Inject
 @HiltViewModel
 class AuthViewModel @Inject constructor(
     private val firebaseAuthService: FirebaseAuthService,
+    private val credentialManagerService: CredentialManagerService,
     private val analyticsManager: AnalyticsManager,
-    private val crashlyticsManager: CrashlyticsManager
+    private val crashlyticsManager: CrashlyticsManager,
+    @ApplicationContext private val context: android.content.Context
 ) : ViewModel() {
 
     // Callback to refresh auth state after successful authentication
     var onAuthStateChanged: (() -> Unit)? = null
+
+    // Callback for navigation after successful authentication
+    var onAuthSuccess: (() -> Unit)? = null
 
     private val _uiState = MutableStateFlow(AuthUiState())
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
@@ -35,6 +49,10 @@ class AuthViewModel @Inject constructor(
 
     fun updatePassword(password: String) {
         _uiState.value = _uiState.value.copy(password = password, errorMessage = null)
+    }
+
+    fun updateErrorMessage(message: String) {
+        _uiState.value = _uiState.value.copy(errorMessage = message)
     }
 
     fun toggleSignInMode() {
@@ -107,6 +125,75 @@ class AuthViewModel @Inject constructor(
             )
         }
     }
+
+    fun createGoogleSignInRequest(): GetCredentialRequest {
+        val googleIdOption = GetGoogleIdOption.Builder()
+            .setServerClientId("492948924829-m22iudtoaj437i518qm2p4do8t35vv1g.apps.googleusercontent.com") // Web client ID
+            .setFilterByAuthorizedAccounts(false) // Allow new accounts
+            .build()
+
+        return GetCredentialRequest.Builder()
+            .addCredentialOption(googleIdOption)
+            .build()
+    }
+
+    suspend fun signInWithGoogle(): Result<Unit> {
+        return try {
+            val credentialManager = CredentialManager.create(context)
+            val request = createGoogleSignInRequest()
+
+            val result = credentialManager.getCredential(context, request)
+            handleCredentialResult(result)
+        } catch (e: GetCredentialException) {
+            crashlyticsManager.recordExceptionWithContext(
+                e,
+                mapOf("action" to "google_sign_in_credential_manager")
+            )
+            Result.failure(e)
+        } catch (e: Exception) {
+            crashlyticsManager.recordExceptionWithContext(
+                e,
+                mapOf("action" to "google_sign_in_unexpected_error")
+            )
+            Result.failure(e)
+        }
+    }
+
+    private suspend fun handleCredentialResult(result: GetCredentialResponse): Result<Unit> {
+        return try {
+            val credential = result.credential
+
+            when (credential.type) {
+                GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL -> {
+                    val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
+                    val idToken = googleIdTokenCredential.idToken
+
+                    val authResult = firebaseAuthService.signInWithGoogleIdToken(idToken)
+                    authResult.fold(
+                        onSuccess = {
+                            analyticsManager.logLogin("google")
+                            onAuthStateChanged?.invoke()
+                            onAuthSuccess?.invoke()
+                            Result.success(Unit)
+                        },
+                        onFailure = { error ->
+                            crashlyticsManager.recordExceptionWithContext(
+                                error,
+                                mapOf("action" to "firebase_google_auth", "email" to googleIdTokenCredential.id)
+                            )
+                            Result.failure(error)
+                        }
+                    )
+                }
+                else -> {
+                    Result.failure(Exception("Unexpected credential type: ${credential.type}"))
+                }
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
 }
 
 /**

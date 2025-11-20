@@ -191,6 +191,11 @@ fun NavGraph(
                     navController.navigate(Screen.Pairing.route)
                 },
                 onStartGoogleSignIn = googleSignInCallback,
+                onSignOut = {
+                    navController.navigate(Screen.Auth.route) {
+                        popUpTo(Screen.Calendar.route) { inclusive = true }
+                    }
+                },
                 syncViewModel = syncViewModel
             )
         }

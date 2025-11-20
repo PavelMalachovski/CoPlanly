@@ -45,8 +45,10 @@ fun SettingsScreen(
     onNavigateToChildInfo: (() -> Unit)? = null,
     onNavigateToPairing: (() -> Unit)? = null,
     onStartGoogleSignIn: ((android.content.Intent) -> Unit)? = null,
+    onSignOut: (() -> Unit)? = null,
     syncViewModel: SyncViewModel = hiltViewModel(),
-    settingsViewModel: SettingsViewModel = hiltViewModel()
+    settingsViewModel: SettingsViewModel = hiltViewModel(),
+    authStateViewModel: com.coparently.app.presentation.sync.AuthStateViewModel = hiltViewModel()
 ) {
     val haptic = LocalHapticFeedback.current
     val coroutineScope = rememberCoroutineScope()
@@ -347,7 +349,7 @@ fun SettingsScreen(
                             Text(stringResource(R.string.settings_sync_from_google))
                         }
 
-                        Button(
+                        OutlinedButton(
                             onClick = {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 coroutineScope.launch {
@@ -359,8 +361,50 @@ fun SettingsScreen(
                                 .padding(top = 8.dp),
                             enabled = googleSyncState !is GoogleCalendarSyncState.Syncing
                         ) {
-                            Text(stringResource(R.string.settings_sign_out))
+                            Text("Sign Out from Calendar Sync")
                         }
+                    }
+                }
+            }
+
+            // Account Management
+            Card(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    Text(
+                        text = "Account",
+                        style = MaterialTheme.typography.titleLarge,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+
+                    Text(
+                        text = "Sign out of the app completely. This will require you to sign in again to access your account.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+
+                    Button(
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            // First sign out from Google Calendar sync
+                            coroutineScope.launch {
+                                syncViewModel.signOut()
+                            }
+                            // Then sign out from Firebase authentication
+                            authStateViewModel.signOut()
+                            // Navigate back to auth screen
+                            onSignOut?.invoke()
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error
+                        )
+                    ) {
+                        Text("Sign Out of App")
                     }
                 }
             }

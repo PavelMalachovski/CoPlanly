@@ -42,6 +42,7 @@ val LocalGoogleSignInCallback = staticCompositionLocalOf<((android.content.Inten
     null
 }
 
+
 /**
  * Main Activity for CoParently app.
  * Entry point of the application.
@@ -71,7 +72,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // Google Sign-In Activity Result launcher
+    // Google Sign-In Activity Result launcher for sync
     private val googleSignInLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -92,6 +93,7 @@ class MainActivity : ComponentActivity() {
             syncViewModel.handleSignInCancellation(message)
         }
     }
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // Install splash screen before calling super.onCreate()
@@ -137,7 +139,9 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     val navController = rememberNavController()
-                    CompositionLocalProvider(LocalGoogleSignInCallback provides googleSignInCallback) {
+                    CompositionLocalProvider(
+                        LocalGoogleSignInCallback provides googleSignInCallback
+                    ) {
                         NavGraph(
                             navController = navController,
                             syncViewModel = syncViewModel
