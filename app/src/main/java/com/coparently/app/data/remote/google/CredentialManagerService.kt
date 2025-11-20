@@ -9,22 +9,34 @@ import androidx.credentials.GetCredentialResponse
 import androidx.credentials.exceptions.GetCredentialException
 import com.coparently.app.R
 import com.coparently.app.data.local.preferences.EncryptedPreferences
-import com.google.android.gms.auth.GoogleAuthUtil
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInAccount
+import com.google.android.gms.auth.api.signin.GoogleSignInClient
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.common.api.ApiException
+import com.google.android.gms.common.api.Scope
+import com.google.android.gms.tasks.Task
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
+import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeTokenRequest
+import com.google.api.client.googleapis.auth.oauth2.GoogleTokenResponse
+import com.google.api.client.http.javanet.NetHttpTransport
+import com.google.api.client.json.gson.GsonFactory
 import com.google.api.services.calendar.CalendarScopes
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
+import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Сервис для аутентификации Google с использованием нового Credential Manager API.
- * Заменяет deprecated GoogleSignIn API.
+ * Сервис для аутентификации Google с использованием Google Sign-In API и OAuth2.
+ * Обеспечивает полный OAuth2 flow с access и refresh токенами.
  *
- * @see <a href="https://developer.android.com/training/sign-in/credential-manager">Credential Manager Guide</a>
+ * @see <a href="https://developers.google.com/identity/sign-in/android/start">Google Sign-In for Android</a>
  */
 @Singleton
 class CredentialManagerService @Inject constructor(
@@ -32,152 +44,226 @@ class CredentialManagerService @Inject constructor(
     private val encryptedPreferences: EncryptedPreferences
 ) {
     private val credentialManager = CredentialManager.create(context)
+    private val _googleSignInClient: GoogleSignInClient by lazy {
+        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+            .requestIdToken(getWebClientId())
+            .requestServerAuthCode(getWebClientId())
+            .requestEmail()
+            .requestScopes(Scope(CalendarScopes.CALENDAR))
+            .build()
+        GoogleSignIn.getClient(context, gso)
+    }
 
     companion object {
         private const val TAG = "CredentialManager"
+        private val JSON_FACTORY = GsonFactory.getDefaultInstance()
+        private val HTTP_TRANSPORT = NetHttpTransport()
     }
 
     /**
-     * Получает учетные данные Google ID с помощью Credential Manager.
-     * Это современная замена GoogleSignIn.getSignedInAccountFromIntent().
-     *
-     * @param filterByAuthorizedAccounts Если true, показывать только авторизованные аккаунты
-     * @return Pair of (GoogleIdTokenCredential?, errorMessage?)
+     * Получает Google Sign-In Client для использования в UI компонентах.
      */
-    suspend fun getGoogleIdCredential(
-        filterByAuthorizedAccounts: Boolean = true
-    ): Pair<GoogleIdTokenCredential?, String?> {
+    fun getGoogleSignInClient(): GoogleSignInClient {
+        return _googleSignInClient
+    }
+
+    /**
+     * Выполняет аутентификацию через Google Sign-In и получает OAuth2 токены.
+     * Это полноценный OAuth2 flow для Google Calendar API.
+     *
+     * @return Pair of (GoogleSignInAccount?, errorMessage?)
+     */
+    suspend fun signInWithGoogle(): Pair<GoogleSignInAccount?, String?> {
         return try {
-            val googleIdOption = GetGoogleIdOption.Builder()
-                .setFilterByAuthorizedAccounts(filterByAuthorizedAccounts)
-                .setServerClientId(getWebClientId())
-                .setAutoSelectEnabled(true)
-                .build()
-
-            val request = GetCredentialRequest.Builder()
-                .addCredentialOption(googleIdOption)
-                .build()
-
-            val result = credentialManager.getCredential(
-                request = request,
-                context = context
-            )
-
-            handleSignInResult(result)
-        } catch (e: GetCredentialException) {
-            Log.e(TAG, "Error getting credential: ${e.message}", e)
-            Pair(null, "Authentication failed: ${e.message}")
+            val signInIntent = _googleSignInClient.signInIntent
+            // Note: This method assumes the sign-in intent is handled by an Activity
+            // The actual implementation should be in an Activity or Fragment
+            Pair(null, "Sign-in intent should be handled by Activity")
         } catch (e: Exception) {
-            Log.e(TAG, "Unexpected error: ${e.message}", e)
+            Log.e(TAG, "Error starting sign-in: ${e.message}", e)
+            Pair(null, "Failed to start sign-in: ${e.message}")
+        }
+    }
+
+    /**
+     * Обрабатывает результат Google Sign-In и обменивает authorization code на токены.
+     *
+     * @param completedTask Task с результатом Google Sign-In
+     * @return Pair of (GoogleSignInAccount?, errorMessage?)
+     */
+    suspend fun handleSignInResult(completedTask: Task<GoogleSignInAccount>): Pair<GoogleSignInAccount?, String?> {
+        return try {
+            val account = completedTask.await()
+            Log.d(TAG, "Sign-in successful for: ${account.email}")
+
+            // Получаем authorization code
+            val authCode = account.serverAuthCode
+            if (authCode != null) {
+                // Обмениваем authorization code на access и refresh токены
+                exchangeAuthCodeForTokens(authCode, account.email ?: "")
+                Pair(account, null)
+            } else {
+                Pair(null, "No authorization code received")
+            }
+        } catch (e: ApiException) {
+            Log.e(TAG, "Sign-in failed with code: ${e.statusCode}", e)
+            val errorMsg = when (e.statusCode) {
+                12500 -> "Google Play Services not available"
+                12501 -> "Sign-in cancelled by user"
+                12502 -> "Sign-in failed"
+                else -> "Sign-in error: ${e.message}"
+            }
+            Pair(null, errorMsg)
+        } catch (e: Exception) {
+            Log.e(TAG, "Unexpected error during sign-in: ${e.message}", e)
             Pair(null, "Unexpected error: ${e.message}")
         }
     }
 
     /**
-     * Обрабатывает результат получения учетных данных.
+     * Обменивает authorization code на access и refresh токены.
+     *
+     * @param authCode Authorization code от Google Sign-In
+     * @param email Email пользователя для идентификации
      */
-    private fun handleSignInResult(result: GetCredentialResponse): Pair<GoogleIdTokenCredential?, String?> {
-        return when (val credential = result.credential) {
-            is CustomCredential -> {
-                if (credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
-                    try {
-                        val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
-
-                        // Сохраняем ID токен
-                        encryptedPreferences.putGoogleIdToken(googleIdTokenCredential.idToken)
-
-                        Log.d(TAG, "Successfully signed in with user: ${googleIdTokenCredential.id}")
-                        Pair(googleIdTokenCredential, null)
-                    } catch (e: GoogleIdTokenParsingException) {
-                        Log.e(TAG, "Invalid Google ID token: ${e.message}", e)
-                        Pair(null, "Invalid Google ID token")
-                    }
-                } else {
-                    Log.e(TAG, "Unexpected credential type: ${credential.type}")
-                    Pair(null, "Unexpected credential type")
-                }
+    private suspend fun exchangeAuthCodeForTokens(authCode: String, email: String) {
+        try {
+            val tokenResponse = withContext(Dispatchers.IO) {
+                GoogleAuthorizationCodeTokenRequest(
+                    HTTP_TRANSPORT,
+                    JSON_FACTORY,
+                    getWebClientId(),
+                    "", // client secret не нужен для Android apps
+                    authCode,
+                    "" // redirect URI не нужен для Android apps
+                ).execute()
             }
-            else -> {
-                Log.e(TAG, "Unexpected credential class: ${credential::class.java.name}")
-                Pair(null, "Unexpected credential type")
+
+            val accessToken = tokenResponse.accessToken
+            val refreshToken = tokenResponse.refreshToken
+            val expiresInSeconds = tokenResponse.expiresInSeconds
+
+            if (accessToken != null) {
+                encryptedPreferences.putAccessToken(accessToken)
+                encryptedPreferences.putRefreshToken(refreshToken ?: "")
+                encryptedPreferences.putTokenExpiry(System.currentTimeMillis() + (expiresInSeconds ?: 3600) * 1000)
+                encryptedPreferences.putUserEmail(email)
+
+                Log.d(TAG, "Tokens obtained and stored successfully")
+            } else {
+                Log.e(TAG, "No access token received")
             }
+        } catch (e: IOException) {
+            Log.e(TAG, "Error exchanging auth code for tokens: ${e.message}", e)
+            throw e
         }
     }
 
     /**
-     * Получает access token для доступа к Google Calendar API.
-     * Использует GoogleAuthUtil для получения токена с нужными scopes.
+     * Получает access token, проверяя срок действия и обновляя при необходимости.
+     * Использует сохраненные токены и refresh токен для обновления.
      *
-     * @param email Email пользователя из GoogleIdTokenCredential
      * @return Pair of (accessToken?, errorMessage?)
      */
-    suspend fun getAccessToken(email: String): Pair<String?, String?> {
+    suspend fun getAccessToken(): Pair<String?, String?> {
         return try {
-            val scopeString = "oauth2:${CalendarScopes.CALENDAR}"
-            Log.d(TAG, "Requesting access token with scope: $scopeString")
+            val storedToken = encryptedPreferences.getAccessToken()
+            val expiryTime = encryptedPreferences.getTokenExpiry()
+            val refreshToken = encryptedPreferences.getRefreshToken()
 
-            val token = withContext(Dispatchers.IO) {
-                GoogleAuthUtil.getToken(
-                    context,
-                    email,
-                    scopeString
-                )
+            // Проверяем, истек ли токен (с запасом в 5 минут)
+            if (storedToken != null && expiryTime != null &&
+                expiryTime > System.currentTimeMillis() + 300000) {
+                Log.d(TAG, "Using stored access token")
+                return Pair(storedToken, null)
             }
 
-            if (token.isNotBlank()) {
-                encryptedPreferences.putAccessToken(token)
-                Log.d(TAG, "Access token obtained successfully")
-                Pair(token, null)
-            } else {
-                Log.e(TAG, "Token is blank")
-                Pair(null, "Token is empty")
+            // Если токен истек или отсутствует, обновляем
+            if (refreshToken.isNullOrEmpty()) {
+                Log.e(TAG, "No refresh token available")
+                return Pair(null, "No refresh token available. Please sign in again.")
             }
-        } catch (e: com.google.android.gms.auth.UserRecoverableAuthException) {
-            Log.e(TAG, "UserRecoverableAuthException: ${e.message}", e)
-            Pair(null, "Permission required: ${e.message}")
-        } catch (e: com.google.android.gms.auth.GoogleAuthException) {
-            Log.e(TAG, "GoogleAuthException: ${e.message}", e)
-            val errorMsg = when {
-                e.message?.contains("API", ignoreCase = true) == true ->
-                    "Google Calendar API is not enabled"
-                e.message?.contains("OAuth", ignoreCase = true) == true ||
-                e.message?.contains("client", ignoreCase = true) == true ->
-                    "OAuth 2.0 Client ID is not configured"
-                else ->
-                    "Authentication error: ${e.message}"
-            }
-            Pair(null, errorMsg)
+
+            Log.d(TAG, "Refreshing access token")
+            refreshAccessToken()
         } catch (e: Exception) {
             Log.e(TAG, "Error getting access token: ${e.message}", e)
-            Pair(null, "Error: ${e.message}")
+            Pair(null, "Error getting access token: ${e.message}")
         }
     }
 
     /**
-     * Обновляет access token.
-     * Следует вызывать перед API вызовами, если токен может быть истекшим.
+     * Обновляет access token используя refresh токен.
+     *
+     * @return Pair of (accessToken?, errorMessage?)
      */
-    suspend fun refreshAccessToken(email: String): String? {
-        val (token, error) = getAccessToken(email)
-        if (error != null) {
-            Log.e(TAG, "Failed to refresh token: $error")
+    private suspend fun refreshAccessToken(): Pair<String?, String?> {
+        return try {
+            val refreshToken = encryptedPreferences.getRefreshToken()
+                ?: return Pair(null, "No refresh token available")
+
+            val tokenResponse = withContext(Dispatchers.IO) {
+                com.google.api.client.googleapis.auth.oauth2.GoogleRefreshTokenRequest(
+                    HTTP_TRANSPORT,
+                    JSON_FACTORY,
+                    refreshToken,
+                    getWebClientId(),
+                    "" // client secret не нужен для Android apps
+                ).execute()
+            }
+
+            val newAccessToken = tokenResponse.accessToken
+            val expiresInSeconds = tokenResponse.expiresInSeconds
+
+            if (newAccessToken != null) {
+                encryptedPreferences.putAccessToken(newAccessToken)
+                encryptedPreferences.putTokenExpiry(System.currentTimeMillis() + (expiresInSeconds ?: 3600) * 1000)
+
+                Log.d(TAG, "Access token refreshed successfully")
+                Pair(newAccessToken, null)
+            } else {
+                Log.e(TAG, "No access token in refresh response")
+                Pair(null, "Failed to refresh token")
+            }
+        } catch (e: IOException) {
+            Log.e(TAG, "Error refreshing token: ${e.message}", e)
+            Pair(null, "Network error refreshing token: ${e.message}")
+        } catch (e: Exception) {
+            Log.e(TAG, "Unexpected error refreshing token: ${e.message}", e)
+            Pair(null, "Error refreshing token: ${e.message}")
         }
-        return token
     }
 
     /**
-     * Проверяет, есть ли сохраненный Google ID токен.
+     * Проверяет, есть ли активная сессия с валидными токенами.
      */
     fun isSignedIn(): Boolean {
-        return encryptedPreferences.getGoogleIdToken() != null
+        val token = encryptedPreferences.getAccessToken()
+        val expiry = encryptedPreferences.getTokenExpiry()
+        return token != null && expiry != null && expiry > System.currentTimeMillis() + 300000
     }
 
     /**
-     * Выполняет выход из аккаунта, очищая все сохраненные токены.
+     * Выполняет выход из аккаунта, очищая все сохраненные токены и завершая Google Sign-In сессию.
      */
-    fun signOut() {
-        encryptedPreferences.clear()
-        Log.d(TAG, "User signed out")
+    suspend fun signOut(): Pair<Boolean, String?> {
+        return try {
+            _googleSignInClient.signOut().await()
+            _googleSignInClient.revokeAccess().await()
+            encryptedPreferences.clear()
+            Log.d(TAG, "User signed out successfully")
+            Pair(true, null)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error during sign out: ${e.message}", e)
+            Pair(false, "Error during sign out: ${e.message}")
+        }
+    }
+
+    /**
+     * Получает email текущего пользователя.
+     */
+    fun getCurrentUserEmail(): String? {
+        return encryptedPreferences.getUserEmail()
     }
 
     /**

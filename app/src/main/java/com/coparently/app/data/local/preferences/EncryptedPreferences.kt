@@ -61,6 +61,23 @@ class EncryptedPreferences @Inject constructor(
     }
 
     /**
+     * Stores token expiry time in milliseconds.
+     */
+    fun putTokenExpiry(expiryTimeMillis: Long) {
+        encryptedPreferences.edit()
+            .putLong(KEY_TOKEN_EXPIRY, expiryTimeMillis)
+            .apply()
+    }
+
+    /**
+     * Retrieves the stored token expiry time.
+     */
+    fun getTokenExpiry(): Long? {
+        val expiry = encryptedPreferences.getLong(KEY_TOKEN_EXPIRY, -1)
+        return if (expiry == -1L) null else expiry
+    }
+
+    /**
      * Stores Google Calendar ID.
      */
     fun putCalendarId(calendarId: String) {
@@ -168,6 +185,7 @@ class EncryptedPreferences @Inject constructor(
     companion object {
         private const val KEY_ACCESS_TOKEN = "access_token"
         private const val KEY_REFRESH_TOKEN = "refresh_token"
+        private const val KEY_TOKEN_EXPIRY = "token_expiry"
         private const val KEY_CALENDAR_ID = "calendar_id"
         private const val KEY_SYNC_ENABLED = "sync_enabled"
         private const val KEY_GOOGLE_ID_TOKEN = "google_id_token"

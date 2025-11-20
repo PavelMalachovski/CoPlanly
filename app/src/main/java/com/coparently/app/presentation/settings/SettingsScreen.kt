@@ -10,11 +10,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.presentation.settings.components.SettingsNavigationCard
@@ -28,11 +29,12 @@ import kotlinx.coroutines.launch
  * Settings screen для управления настройками приложения и синхронизацией.
  * Stateless composable, который делегирует управление состоянием ViewModels.
  *
- * Обновлен для использования нового Credential Manager API вместо deprecated GoogleSignIn.
+ * Использует Google Sign-In API для аутентификации с OAuth2 токенами.
  *
  * @param onNavigateUp Навигационный callback для возврата назад
  * @param onNavigateToChildInfo Навигационный callback для экрана информации о ребенке
  * @param onNavigateToPairing Навигационный callback для экрана pairing
+ * @param onStartGoogleSignIn Callback для запуска Google Sign-In Activity
  * @param syncViewModel ViewModel для операций синхронизации
  * @param settingsViewModel ViewModel для состояния настроек
  */
@@ -42,11 +44,26 @@ fun SettingsScreen(
     onNavigateUp: () -> Unit,
     onNavigateToChildInfo: (() -> Unit)? = null,
     onNavigateToPairing: (() -> Unit)? = null,
+    onStartGoogleSignIn: ((android.content.Intent) -> Unit)? = null,
     syncViewModel: SyncViewModel = hiltViewModel(),
     settingsViewModel: SettingsViewModel = hiltViewModel()
 ) {
     val haptic = LocalHapticFeedback.current
     val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
+
+    // Create GoogleSignInClient
+    val googleSignInClient = remember(context) {
+        val gso = com.google.android.gms.auth.api.signin.GoogleSignInOptions.Builder(
+            com.google.android.gms.auth.api.signin.GoogleSignInOptions.DEFAULT_SIGN_IN
+        )
+            .requestIdToken("492948924829-m22iudtoaj437i518qm2p4do8t35vv1g.apps.googleusercontent.com")
+            .requestServerAuthCode("492948924829-m22iudtoaj437i518qm2p4do8t35vv1g.apps.googleusercontent.com")
+            .requestEmail()
+            .requestScopes(com.google.android.gms.common.api.Scope(com.google.api.services.calendar.CalendarScopes.CALENDAR))
+            .build()
+        com.google.android.gms.auth.api.signin.GoogleSignIn.getClient(context, gso)
+    }
 
     // Sync ViewModel states
     val isSignedIn by syncViewModel.isSignedIn.collectAsState()
@@ -293,8 +310,21 @@ fun SettingsScreen(
                         Button(
                             onClick = {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                coroutineScope.launch {
-                                    syncViewModel.signIn()
+                                println("DEBUG: Sign in button clicked")
+
+                                try {
+                                    val signInIntent = googleSignInClient.signInIntent
+                                    println("DEBUG: Sign-in intent created: $signInIntent")
+
+                                    if (onStartGoogleSignIn != null) {
+                                        onStartGoogleSignIn(signInIntent)
+                                        println("DEBUG: onStartGoogleSignIn called successfully")
+                                    } else {
+                                        println("DEBUG: onStartGoogleSignIn callback is null!")
+                                    }
+                                } catch (e: Exception) {
+                                    println("DEBUG: Error creating sign-in intent: ${e.message}")
+                                    e.printStackTrace()
                                 }
                             },
                             modifier = Modifier
@@ -337,7 +367,9 @@ fun SettingsScreen(
                         Button(
                             onClick = {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                syncViewModel.signOut()
+                                coroutineScope.launch {
+                                    syncViewModel.signOut()
+                                }
                             },
                             modifier = Modifier
                                 .fillMaxWidth()

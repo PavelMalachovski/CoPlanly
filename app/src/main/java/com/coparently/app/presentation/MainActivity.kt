@@ -14,20 +14,33 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.rememberNavController
 import com.coparently.app.data.notification.NotificationManager
 import com.coparently.app.domain.repository.PreferencesRepository
 import com.coparently.app.presentation.navigation.NavGraph
 import com.coparently.app.presentation.theme.CoParentlyTheme
+import com.coparently.app.presentation.sync.SyncViewModel
+import com.google.android.gms.auth.api.signin.GoogleSignIn
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+
+/**
+ * CompositionLocal for providing Google Sign-In callback throughout the app.
+ */
+val LocalGoogleSignInCallback = staticCompositionLocalOf<((android.content.Intent) -> Unit)?> {
+    null
+}
 
 /**
  * Main Activity for CoParently app.
@@ -46,6 +59,9 @@ class MainActivity : ComponentActivity() {
     private val _darkThemeState = MutableStateFlow<Boolean?>(null)
     private val darkThemeState: StateFlow<Boolean?> = _darkThemeState
 
+    // Google Sign-In client
+    private lateinit var googleSignInClient: com.google.android.gms.auth.api.signin.GoogleSignInClient
+
     // Notification permission launcher for Android 13+
     private val notificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -56,12 +72,41 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // Use Activity Result API instead of deprecated onActivityResult
-    private val signInResultLauncher = registerForActivityResult(
-        ActivityResultContracts.StartIntentSenderForResult()
+    // Google Sign-In Activity Result launcher
+    private val googleSignInLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
     ) { result ->
-        // Result handling moved to SettingsScreen via Activity Result API
-        // This launcher is kept for backward compatibility if needed
+        // This launcher is no longer used since we switched to Credential Manager
+        // Keeping it for backward compatibility if needed
+    }
+
+    /**
+     * Инициализирует Google Sign-In client
+     */
+    private fun initializeGoogleSignIn() {
+        val gso = com.google.android.gms.auth.api.signin.GoogleSignInOptions.Builder(
+            com.google.android.gms.auth.api.signin.GoogleSignInOptions.DEFAULT_SIGN_IN
+        )
+            .requestIdToken("492948924829-s931c9gsdqsdq2n07dh6te4d5hr4tblu.apps.googleusercontent.com")
+            .requestServerAuthCode("492948924829-s931c9gsdqsdq2n07dh6te4d5hr4tblu.apps.googleusercontent.com")
+            .requestEmail()
+            .requestScopes(com.google.android.gms.common.api.Scope(com.google.api.services.calendar.CalendarScopes.CALENDAR))
+            .build()
+
+        googleSignInClient = com.google.android.gms.auth.api.signin.GoogleSignIn.getClient(this, gso)
+    }
+
+    /**
+     * Обрабатывает результат Google Sign-In.
+     * Создает временный экземпляр SyncViewModel для обработки результата.
+     */
+    private fun handleGoogleSignInResult(task: com.google.android.gms.tasks.Task<com.google.android.gms.auth.api.signin.GoogleSignInAccount>) {
+        // Поскольку SyncViewModel создается через Hilt в Composable,
+        // мы создаем его через ViewModelProvider для обработки результата
+        val viewModel = androidx.lifecycle.ViewModelProvider(this)[SyncViewModel::class.java]
+        lifecycleScope.launch {
+            viewModel.handleSignInResult(task)
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -74,6 +119,9 @@ class MainActivity : ComponentActivity() {
         // Enable edge-to-edge display for modern Android UI
         // This makes the app draw behind the system bars
         enableEdgeToEdge()
+
+        // Initialize Google Sign-In client
+        initializeGoogleSignIn()
 
         // Request notification permission on Android 13+
         requestNotificationPermissionIfNeeded()
@@ -95,13 +143,23 @@ class MainActivity : ComponentActivity() {
             // Use saved preference or fall back to system default
             val useDarkTheme = darkTheme ?: systemDarkTheme
 
+            // Provide Google Sign-In callback through CompositionLocal
+            val googleSignInCallback: (android.content.Intent) -> Unit = remember {
+                { intent ->
+                    // This callback is no longer used since we switched to Credential Manager
+                    // Keeping it for backward compatibility
+                }
+            }
+
             CoParentlyTheme(darkTheme = useDarkTheme) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
                     val navController = rememberNavController()
-                    NavGraph(navController = navController)
+                    CompositionLocalProvider(LocalGoogleSignInCallback provides googleSignInCallback) {
+                        NavGraph(navController = navController)
+                    }
                 }
             }
         }

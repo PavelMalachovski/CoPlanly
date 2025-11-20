@@ -37,16 +37,9 @@ class CalendarSyncRepository @Inject constructor(
         try {
             emit(SyncResult.Progress("Starting sync from Google Calendar..."))
 
-            var credential = credentialProvider.getCredential()
+            val credential = credentialProvider.getCredential()
                 ?: throw IllegalStateException("Not authenticated. Please sign in to Google.")
-
-            // Refresh token if needed (in case it expired)
-            if (credentialProvider is CredentialProviderImpl) {
-                credentialProvider.refreshAccessToken()
-                // Get credential again with refreshed token
-                credential = credentialProvider.getCredential()
-                    ?: throw IllegalStateException("Failed to get credential after token refresh.")
-            }
+            // Token refresh is now handled automatically in getCredential()
 
             emit(SyncResult.Progress("Fetching events from Google Calendar..."))
 
@@ -129,16 +122,9 @@ class CalendarSyncRepository @Inject constructor(
         try {
             emit(SyncResult.Progress("Syncing event to Google Calendar..."))
 
-            var credential = credentialProvider.getCredential()
+            val credential = credentialProvider.getCredential()
                 ?: throw IllegalStateException("Not authenticated. Please sign in to Google.")
-
-            // Refresh token if needed (in case it expired)
-            if (credentialProvider is CredentialProviderImpl) {
-                credentialProvider.refreshAccessToken()
-                // Get credential again with refreshed token
-                credential = credentialProvider.getCredential()
-                    ?: throw IllegalStateException("Failed to get credential after token refresh.")
-            }
+            // Token refresh is now handled automatically in getCredential()
 
             // Execute API call on IO dispatcher to avoid NetworkOnMainThreadException
             withContext(Dispatchers.IO) {
