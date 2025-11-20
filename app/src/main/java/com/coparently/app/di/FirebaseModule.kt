@@ -67,6 +67,15 @@ object FirebaseModule {
     fun provideFirebaseCrashlytics(): FirebaseCrashlytics {
         return FirebaseCrashlytics.getInstance()
     }
+
+    /**
+     * Provides QR Code service for generating pairing QR codes.
+     */
+    @Provides
+    @Singleton
+    fun provideQRCodeService(): com.coparently.app.data.remote.firebase.QRCodeService {
+        return com.coparently.app.data.remote.firebase.QRCodeService()
+    }
 }
 
 /**

@@ -1,6 +1,7 @@
 package com.coparently.app
 
 import android.app.Application
+import com.google.firebase.FirebaseApp
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 import dagger.hilt.android.HiltAndroidApp
 
@@ -15,6 +16,16 @@ class CoParentlyApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+
+        // Initialize Firebase
+        val firebaseApp = FirebaseApp.initializeApp(this)
+        if (firebaseApp != null) {
+            android.util.Log.d("CoParentlyApplication", "Firebase initialized successfully")
+            android.util.Log.d("CoParentlyApplication", "Project ID: ${firebaseApp.options.projectId}")
+            android.util.Log.d("CoParentlyApplication", "API Key: ${firebaseApp.options.apiKey?.take(10)}...")
+        } else {
+            android.util.Log.e("CoParentlyApplication", "Firebase initialization failed")
+        }
 
         // Enable Crashlytics collection
         FirebaseCrashlytics.getInstance().setCrashlyticsCollectionEnabled(true)

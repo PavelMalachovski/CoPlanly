@@ -45,6 +45,7 @@ fun AddEditChildInfoScreen(
     var schoolInfo by remember { mutableStateOf<SchoolInfo?>(null) }
     var isSaving by remember { mutableStateOf(false) }
     var showDatePicker by remember { mutableStateOf(false) }
+    var saveCompleted by remember { mutableStateOf(false) }
 
     // Load existing child info if editing
     LaunchedEffect(childInfoId) {
@@ -334,7 +335,7 @@ fun AddEditChildInfoScreen(
                             emergencyContacts = emergencyContacts,
                             schoolInfo = schoolInfo
                         )
-                        onNavigateBack()
+                        saveCompleted = true
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),
@@ -349,6 +350,13 @@ fun AddEditChildInfoScreen(
                     Spacer(modifier = Modifier.width(8.dp))
                 }
                 Text(if (childInfoId == "new") "Add Child" else "Save Changes")
+            }
+
+            // Navigate back after save completes
+            LaunchedEffect(saveCompleted, isSaving) {
+                if (saveCompleted && !isSaving) {
+                    onNavigateBack()
+                }
             }
 
             // Bottom spacing

@@ -1,34 +1,97 @@
 package com.coparently.app.presentation.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable as ComposeComposable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import com.coparently.app.presentation.LocalGoogleSignInCallback
+import com.coparently.app.presentation.auth.AuthScreen
 import com.coparently.app.presentation.calendar.CalendarScreen
 import com.coparently.app.presentation.childinfo.ChildInfoScreen
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import com.coparently.app.presentation.common.animations.*
 import com.coparently.app.presentation.event.AddEditEventScreen
 import com.coparently.app.presentation.event.EventListScreen
 import com.coparently.app.presentation.pairing.PairingScreen
 import com.coparently.app.presentation.settings.SettingsScreen
+import com.coparently.app.presentation.sync.AuthStateViewModel
 import com.coparently.app.presentation.sync.SyncViewModel
 
 /**
  * Navigation graph for the app.
  * Defines all navigation routes and their destinations.
+ * Includes authentication guard to redirect unauthenticated users to AuthScreen.
  */
 @Composable
 fun NavGraph(
     navController: NavHostController,
     syncViewModel: SyncViewModel
 ) {
+    val authStateViewModel: AuthStateViewModel = hiltViewModel()
+    val isAuthenticated by authStateViewModel.isAuthenticated.collectAsState()
+    val isLoading by authStateViewModel.isLoading.collectAsState()
+
+    // Determine start destination based on authentication state
+    val startDestination = when {
+        isLoading -> Screen.Loading.route
+        isAuthenticated == true -> Screen.Calendar.route
+        else -> Screen.Auth.route
+    }
+
     NavHost(
         navController = navController,
-        startDestination = Screen.Calendar.route
+        startDestination = startDestination
     ) {
+        // Loading screen while checking authentication
+        composable(
+            route = Screen.Loading.route,
+            enterTransition = { fadeIn() },
+            exitTransition = { fadeOut() }
+        ) {
+            LoadingScreen()
+        }
+
+        // Authentication screen for unauthenticated users
+        composable(
+            route = Screen.Auth.route,
+            enterTransition = { slideInFromRight() },
+            exitTransition = { slideOutToLeft() }
+        ) {
+            AuthScreen(
+                onAuthSuccess = {
+                    // Refresh auth state and navigate to main app
+                    authStateViewModel.refreshAuthState()
+                    navController.navigate(Screen.Calendar.route) {
+                        popUpTo(Screen.Auth.route) { inclusive = true }
+                    }
+                },
+                onViewModelReady = { authViewModel ->
+                    // Set callback to refresh auth state when authentication succeeds
+                    authViewModel.onAuthStateChanged = {
+                        authStateViewModel.refreshAuthState()
+                    }
+                }
+            )
+        }
+
         composable(
             route = Screen.Calendar.route,
             enterTransition = { fadeInSlideUp() },
@@ -187,9 +250,34 @@ fun NavGraph(
 }
 
 /**
+ * Loading screen displayed while checking authentication state.
+ */
+@Composable
+private fun LoadingScreen() {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            CircularProgressIndicator()
+            Text(
+                text = "Checking authentication...",
+                style = MaterialTheme.typography.bodyLarge,
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
+/**
  * Sealed class representing all navigation screens.
  */
 sealed class Screen(val route: String) {
+    data object Loading : Screen("loading")
+    data object Auth : Screen("auth")
     data object Calendar : Screen("calendar")
     data object EventList : Screen("event_list")
     data object AddEvent : Screen("add_event")

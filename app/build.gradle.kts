@@ -146,6 +146,9 @@ dependencies {
     // Lottie for Compose - Animations library
     implementation("com.airbnb.android:lottie-compose:6.5.2")
 
+    // ZXing for QR code generation
+    implementation("com.google.zxing:core:3.5.3")
+
     // Firebase - Updated to latest BOM
     val firebaseBom = platform("com.google.firebase:firebase-bom:33.7.0")
     implementation(firebaseBom)

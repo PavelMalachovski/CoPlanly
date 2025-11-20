@@ -1,14 +1,17 @@
 package com.coparently.app.presentation.pairing
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 
@@ -107,11 +110,27 @@ fun PairingScreen(
             if (uiState.isLoading) {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
             } else {
+                // Email invitation button
                 Button(
                     onClick = { viewModel.sendInvitation(onNavigateBack) },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Send Invitation")
+                    Text("Send Email Invitation")
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // QR code sharing button
+                OutlinedButton(
+                    onClick = { viewModel.generateQRCode() },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.QrCode,
+                        contentDescription = null,
+                        modifier = Modifier.padding(end = 8.dp)
+                    )
+                    Text("Share QR Code")
                 }
             }
         }
@@ -172,6 +191,62 @@ fun PairingScreen(
                 }
             }
         }
+        }
+
+        // QR Code sharing dialog
+        uiState.qrCodeBitmap?.let { qrBitmap ->
+            if (uiState.showQRCodeDialog) {
+                AlertDialog(
+                    onDismissRequest = { viewModel.dismissQRCodeDialog() },
+                    title = {
+                        Text(
+                            text = "Co-Parent Invitation QR Code",
+                            style = MaterialTheme.typography.headlineSmall
+                        )
+                    },
+                    text = {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            Text(
+                                text = "Share this QR code with your co-parent. They can scan it to accept your invitation.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
+
+                            Card(
+                                modifier = Modifier.size(256.dp),
+                                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(16.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Image(
+                                        bitmap = qrBitmap.asImageBitmap(),
+                                        contentDescription = "Pairing QR Code",
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                }
+                            }
+
+                            Text(
+                                text = "This QR code expires in 24 hours for security.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(onClick = { viewModel.dismissQRCodeDialog() }) {
+                            Text("Close")
+                        }
+                    }
+                )
+            }
         }
     }
 }

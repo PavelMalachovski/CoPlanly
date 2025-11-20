@@ -23,6 +23,9 @@ class AuthViewModel @Inject constructor(
     private val crashlyticsManager: CrashlyticsManager
 ) : ViewModel() {
 
+    // Callback to refresh auth state after successful authentication
+    var onAuthStateChanged: (() -> Unit)? = null
+
     private val _uiState = MutableStateFlow(AuthUiState())
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
 
@@ -56,6 +59,7 @@ class AuthViewModel @Inject constructor(
                 onSuccess = {
                     analyticsManager.logLogin("email")
                     _uiState.value = state.copy(isLoading = false)
+                    onAuthStateChanged?.invoke()
                     onSuccess()
                 },
                 onFailure = { error ->
@@ -87,6 +91,7 @@ class AuthViewModel @Inject constructor(
                 onSuccess = {
                     analyticsManager.logSignUp("email")
                     _uiState.value = state.copy(isLoading = false)
+                    onAuthStateChanged?.invoke()
                     onSuccess()
                 },
                 onFailure = { error ->

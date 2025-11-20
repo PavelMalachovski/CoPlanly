@@ -49,8 +49,11 @@ import com.coparently.app.presentation.theme.dimensions
 @Composable
 fun AuthScreen(
     onAuthSuccess: () -> Unit,
+    onViewModelReady: ((AuthViewModel) -> Unit)? = null,
     viewModel: AuthViewModel = hiltViewModel()
 ) {
+    // Call the callback when viewModel is ready
+    onViewModelReady?.invoke(viewModel)
     val uiState by viewModel.uiState.collectAsState()
     val dims = dimensions()
 

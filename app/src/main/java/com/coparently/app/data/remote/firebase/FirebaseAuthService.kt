@@ -2,6 +2,9 @@ package com.coparently.app.data.remote.firebase
 
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -62,9 +65,17 @@ class FirebaseAuthService @Inject constructor(
      */
     suspend fun createAccountWithEmail(email: String, password: String): Result<FirebaseUser> {
         return try {
+            // Log Firebase configuration for debugging
+            val projectId = firebaseAuth.app.options.projectId
+            val apiKey = firebaseAuth.app.options.apiKey
+            android.util.Log.d("FirebaseAuthService", "Firebase config - projectId: $projectId, apiKey: ${apiKey?.take(10)}...")
+
             val result = firebaseAuth.createUserWithEmailAndPassword(email, password).await()
             Result.success(result.user!!)
         } catch (e: Exception) {
+            // Log detailed error information
+            android.util.Log.e("FirebaseAuthService", "Account creation failed", e)
+            android.util.Log.e("FirebaseAuthService", "Error details - message: ${e.message}, cause: ${e.cause}")
             Result.failure(e)
         }
     }
@@ -103,6 +114,43 @@ class FirebaseAuthService @Inject constructor(
         } catch (e: Exception) {
             Result.failure(e)
         }
+    }
+
+    /**
+     * Gets the authentication state as a Flow.
+     * Emits the current user whenever auth state changes.
+     */
+    fun getAuthStateFlow(): Flow<FirebaseUser?> = callbackFlow {
+        val listener = FirebaseAuth.AuthStateListener { auth ->
+            trySend(auth.currentUser)
+        }
+
+        firebaseAuth.addAuthStateListener(listener)
+        awaitClose { firebaseAuth.removeAuthStateListener(listener) }
+    }
+
+    /**
+     * Waits for authentication to be ready and returns the current user.
+     * This is useful when you need to ensure auth state is initialized.
+     *
+     * @param timeoutMs Maximum time to wait in milliseconds (default: 5000ms)
+     * @return FirebaseUser if authenticated, null if not authenticated or timeout
+     */
+    suspend fun waitForAuthReady(timeoutMs: Long = 5000): FirebaseUser? {
+        val startTime = System.currentTimeMillis()
+
+        while (System.currentTimeMillis() - startTime < timeoutMs) {
+            val currentUser = getCurrentUser()
+            if (currentUser != null || firebaseAuth.app.options.projectId != null) {
+                // If we have a user OR Firebase is initialized (indicated by projectId being set),
+                // consider auth ready
+                return currentUser
+            }
+            kotlinx.coroutines.delay(100) // Wait 100ms before checking again
+        }
+
+        // Timeout reached, return whatever we have
+        return getCurrentUser()
     }
 }
 

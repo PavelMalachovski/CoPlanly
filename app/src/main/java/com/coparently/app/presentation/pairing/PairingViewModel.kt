@@ -1,10 +1,12 @@
 package com.coparently.app.presentation.pairing
 
+import android.graphics.Bitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.coparently.app.data.analytics.AnalyticsManager
 import com.coparently.app.data.remote.firebase.CoParentPairingService
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
+import com.coparently.app.data.remote.firebase.QRCodeService
 import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.utils.ValidationResult
 import com.coparently.app.utils.ValidationUtils
@@ -26,7 +28,8 @@ class PairingViewModel @Inject constructor(
     private val pairingService: CoParentPairingService,
     private val firebaseAuthService: FirebaseAuthService,
     private val userRepository: UserRepository,
-    private val analyticsManager: AnalyticsManager
+    private val analyticsManager: AnalyticsManager,
+    private val qrCodeService: QRCodeService
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PairingUiState())
@@ -103,7 +106,9 @@ class PairingViewModel @Inject constructor(
 
         viewModelScope.launch {
             try {
-                val currentUser = firebaseAuthService.getCurrentUser()
+                // Wait for authentication to be ready (up to 5 seconds)
+                val currentUser = firebaseAuthService.waitForAuthReady()
+
                 if (currentUser == null) {
                     _uiState.value = state.copy(
                         isLoading = false,
@@ -201,6 +206,63 @@ class PairingViewModel @Inject constructor(
             }
         }
     }
+
+    /**
+     * Generates a QR code for co-parent pairing invitation.
+     */
+    fun generateQRCode() {
+        viewModelScope.launch {
+            try {
+                // Wait for authentication to be ready
+                val currentUser = firebaseAuthService.waitForAuthReady()
+                val currentUserData = userRepository.getCurrentUser()
+
+                if (currentUser == null || currentUserData == null) {
+                    _uiState.value = _uiState.value.copy(
+                        errorMessage = "User not authenticated. Please sign in."
+                    )
+                    return@launch
+                }
+
+                // Generate invitation ID for QR code
+                val invitationId = "qr_${currentUser.uid}_${System.currentTimeMillis()}"
+
+                // Generate QR code bitmap
+                val qrBitmap = qrCodeService.generatePairingQRCode(
+                    invitationId = invitationId,
+                    inviterName = currentUserData.name,
+                    inviterEmail = currentUser.email ?: ""
+                )
+
+                if (qrBitmap != null) {
+                    _uiState.value = _uiState.value.copy(
+                        qrCodeBitmap = qrBitmap,
+                        showQRCodeDialog = true,
+                        errorMessage = null
+                    )
+                    analyticsManager.logInvitationSent() // Log QR code generation as invitation sent
+                } else {
+                    _uiState.value = _uiState.value.copy(
+                        errorMessage = "Failed to generate QR code. Please try again."
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    errorMessage = "Error generating QR code: ${e.message}"
+                )
+            }
+        }
+    }
+
+    /**
+     * Dismisses the QR code dialog.
+     */
+    fun dismissQRCodeDialog() {
+        _uiState.value = _uiState.value.copy(
+            showQRCodeDialog = false,
+            qrCodeBitmap = null
+        )
+    }
 }
 
 /**
@@ -212,6 +274,8 @@ class PairingViewModel @Inject constructor(
  * @param isLoading Состояние загрузки
  * @param errorMessage Общее сообщение об ошибке
  * @param emailError Ошибка валидации email
+ * @param qrCodeBitmap Generated QR code bitmap for sharing
+ * @param showQRCodeDialog Whether to show the QR code sharing dialog
  */
 data class PairingUiState(
     val invitationEmail: String = "",
@@ -219,6 +283,8 @@ data class PairingUiState(
     val pendingInvitations: List<Map<String, Any?>> = emptyList(),
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
-    val emailError: String? = null
+    val emailError: String? = null,
+    val qrCodeBitmap: Bitmap? = null,
+    val showQRCodeDialog: Boolean = false
 )
 
