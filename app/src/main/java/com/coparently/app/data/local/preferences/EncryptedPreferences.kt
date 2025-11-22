@@ -29,22 +29,41 @@ class EncryptedPreferences @Inject constructor(
 
     private val encryptedPreferences: SharedPreferences = try {
         if (masterKey != null) {
-            EncryptedSharedPreferences.create(
-                context,
-                "encrypted_prefs",
-                masterKey,
-                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-            )
+            try {
+                EncryptedSharedPreferences.create(
+                    context,
+                    "encrypted_prefs",
+                    masterKey,
+                    EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                    EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+                )
+            } catch (e: Exception) {
+                Log.e("EncryptedPreferences", "Failed to create EncryptedSharedPreferences, trying to delete corrupted file", e)
+                // Try to delete the corrupted encrypted file and fall back
+                try {
+                    context.deleteFile("encrypted_prefs.xml")
+                    context.deleteFile("encrypted_prefs.xml.bak")
+                } catch (deleteEx: Exception) {
+                    Log.w("EncryptedPreferences", "Could not delete corrupted encrypted file", deleteEx)
+                }
+                // Fallback to regular SharedPreferences
+                Log.w("EncryptedPreferences", "Using regular SharedPreferences as fallback")
+                context.getSharedPreferences("encrypted_prefs", Context.MODE_PRIVATE)
+            }
         } else {
             // Fallback to regular SharedPreferences if encryption fails
-            Log.w("EncryptedPreferences", "Using regular SharedPreferences as fallback")
+            Log.w("EncryptedPreferences", "Using regular SharedPreferences as fallback (no master key)")
             context.getSharedPreferences("encrypted_prefs", Context.MODE_PRIVATE)
         }
     } catch (e: Exception) {
-        Log.e("EncryptedPreferences", "Failed to create EncryptedSharedPreferences, falling back to regular SharedPreferences", e)
-        // Fallback to regular SharedPreferences if encryption fails
-        context.getSharedPreferences("encrypted_prefs", Context.MODE_PRIVATE)
+        Log.e("EncryptedPreferences", "Failed to create SharedPreferences, using application context", e)
+        // Last resort: use application context
+        try {
+            context.applicationContext.getSharedPreferences("encrypted_prefs", Context.MODE_PRIVATE)
+        } catch (e2: Exception) {
+            Log.e("EncryptedPreferences", "Critical: Failed to create any SharedPreferences", e2)
+            throw RuntimeException("Cannot initialize preferences storage", e2)
+        }
     }
 
     /**

@@ -107,20 +107,37 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         // Request notification permission on Android 13+
-        requestNotificationPermissionIfNeeded()
+        try {
+            requestNotificationPermissionIfNeeded()
+        } catch (e: Exception) {
+            Log.e("MainActivity", "Error requesting notification permission", e)
+        }
 
         // Initialize notifications
-        notificationManager.initializeNotifications()
+        try {
+            notificationManager.initializeNotifications()
+        } catch (e: Exception) {
+            Log.e("MainActivity", "Error initializing notifications", e)
+        }
 
         // Setup app shortcuts (Android 7.1+)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1) {
-            com.coparently.app.utils.AppShortcuts.setupShortcuts(this)
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1) {
+                com.coparently.app.utils.AppShortcuts.setupShortcuts(this)
+            }
+        } catch (e: Exception) {
+            Log.e("MainActivity", "Error setting up app shortcuts", e)
         }
 
         // Load theme preference
         lifecycleScope.launch {
-            preferencesRepository.getDarkThemeFlow().collect { isDark ->
-                _darkThemeState.value = isDark
+            try {
+                preferencesRepository.getDarkThemeFlow().collect { isDark ->
+                    _darkThemeState.value = isDark
+                }
+            } catch (e: Exception) {
+                Log.e("MainActivity", "Error loading theme preference", e)
+                _darkThemeState.value = null // Use system default on error
             }
         }
 

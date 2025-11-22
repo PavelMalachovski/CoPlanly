@@ -43,7 +43,12 @@ class CredentialManagerService @Inject constructor(
     @ApplicationContext private val context: Context,
     private val encryptedPreferences: EncryptedPreferences
 ) {
-    private val credentialManager = CredentialManager.create(context)
+    private val credentialManager: CredentialManager? = try {
+        CredentialManager.create(context)
+    } catch (e: Exception) {
+        Log.e(TAG, "Failed to create CredentialManager", e)
+        null
+    }
     private val _googleSignInClient: GoogleSignInClient? by lazy {
         try {
             val webClientId = getWebClientId()
