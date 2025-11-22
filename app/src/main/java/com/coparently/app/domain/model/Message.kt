@@ -29,7 +29,8 @@ data class Message(
     val attachments: List<String> = emptyList(),
     val isRead: Boolean = false,
     val replyToMessageId: String? = null,
-    val syncedToFirestore: Boolean = false
+    val syncedToFirestore: Boolean = false,
+    val status: MessageSendStatus = MessageSendStatus.SENT
 )
 
 /**
@@ -40,4 +41,13 @@ enum class MessageType {
     IMAGE,
     VOICE,
     EVENT_LINK
+}
+
+/**
+ * Status of message delivery.
+ */
+enum class MessageSendStatus {
+    SENDING,
+    SENT,
+    ERROR
 }

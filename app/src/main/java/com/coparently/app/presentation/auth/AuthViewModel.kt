@@ -138,6 +138,8 @@ class AuthViewModel @Inject constructor(
     }
 
     suspend fun signInWithGoogle(): Result<Unit> {
+        _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
+
         return try {
             val credentialManager = CredentialManager.create(context)
             val request = createGoogleSignInRequest()
@@ -145,9 +147,14 @@ class AuthViewModel @Inject constructor(
             val result = credentialManager.getCredential(context, request)
             handleCredentialResult(result)
         } catch (e: GetCredentialException) {
+            val errorMessage = mapGoogleAuthError(e)
             crashlyticsManager.recordExceptionWithContext(
                 e,
                 mapOf("action" to "google_sign_in_credential_manager")
+            )
+            _uiState.value = _uiState.value.copy(
+                isLoading = false,
+                errorMessage = errorMessage
             )
             Result.failure(e)
         } catch (e: Exception) {
@@ -155,7 +162,20 @@ class AuthViewModel @Inject constructor(
                 e,
                 mapOf("action" to "google_sign_in_unexpected_error")
             )
+            _uiState.value = _uiState.value.copy(
+                isLoading = false,
+                errorMessage = "An unexpected error occurred. Please try again."
+            )
             Result.failure(e)
+        }
+    }
+
+    private fun mapGoogleAuthError(e: GetCredentialException): String {
+        return when (e) {
+            is androidx.credentials.exceptions.GetCredentialCancellationException -> "Sign in cancelled"
+            is androidx.credentials.exceptions.GetCredentialInterruptedException -> "Sign in interrupted. Please try again."
+            is androidx.credentials.exceptions.NoCredentialException -> "No Google account found on this device."
+            else -> "Google sign in failed. Please try again."
         }
     }
 

@@ -49,6 +49,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import com.coparently.app.data.local.entity.CustodyScheduleEntity
 import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.theme.CoParentlyColors
@@ -425,6 +428,8 @@ private fun EventChip(
         else -> MaterialTheme.colorScheme.onTertiaryContainer
     }
 
+    val hapticFeedback = LocalHapticFeedback.current
+
     var isDragging by remember { mutableStateOf(false) }
     var totalDrag by remember { mutableStateOf(Offset.Zero) }
 
@@ -442,6 +447,8 @@ private fun EventChip(
                         onDragStart = {
                             isDragging = true
                             totalDrag = Offset.Zero
+                            // Haptic feedback on drag start
+                            hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
                         },
                         onDragCancel = {
                             isDragging = false
@@ -455,6 +462,8 @@ private fun EventChip(
                                     val targetDate = baseDate.plusDays(dayOffset.toLong())
                                     val targetHour = (baseHour + hourOffset).coerceIn(0, 23)
                                     onDragDrop(event.id, targetDate, targetHour)
+                                    // Haptic feedback on successful drop
+                                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
                                 }
                             }
                             isDragging = false
@@ -464,6 +473,14 @@ private fun EventChip(
                         change.consume()
                         totalDrag += dragAmount
                     }
+                }
+            }
+            .graphicsLayer {
+                if (isDragging) {
+                    shadowElevation = 8.dp.toPx()
+                    translationX = totalDrag.x
+                    translationY = totalDrag.y
+                    alpha = 0.8f
                 }
             }
             .padding(horizontal = 8.dp, vertical = 4.dp),

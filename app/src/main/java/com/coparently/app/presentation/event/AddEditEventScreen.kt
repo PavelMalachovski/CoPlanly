@@ -119,6 +119,8 @@ fun AddEditEventScreen(
     // Validation states
     var titleError by remember { mutableStateOf<String?>(null) }
     var descriptionError by remember { mutableStateOf<String?>(null) }
+    var showTimeValidationError by remember { mutableStateOf(false) }
+    var timeValidationMessage by remember { mutableStateOf("") }
 
     // Validate title
     fun validateTitle(): Boolean {
@@ -134,9 +136,20 @@ fun AddEditEventScreen(
         return result is ValidationResult.Success
     }
 
+    // Time validation effect
+    LaunchedEffect(startTime, endTime) {
+        if (endTime.isBefore(startTime)) {
+            showTimeValidationError = true
+            timeValidationMessage = "End time must be after start time"
+        } else {
+            showTimeValidationError = false
+            timeValidationMessage = ""
+        }
+    }
+
     // Validation
     val isTitleValid = title.isNotBlank() && titleError == null
-    val isFormValid = isTitleValid && descriptionError == null
+    val isFormValid = isTitleValid && descriptionError == null && !showTimeValidationError
 
     // Load event if editing
     LaunchedEffect(eventId) {
@@ -531,6 +544,36 @@ fun AddEditEventScreen(
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                }
+            }
+
+            // Time validation error display
+            if (showTimeValidationError) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(dims.paddingMedium),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Schedule,
+                            contentDescription = "Error",
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Text(
+                            text = timeValidationMessage,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                    }
                 }
             }
 

@@ -17,6 +17,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import com.coparently.app.presentation.common.ConfirmationDialog
 
 /**
  * Screen for managing co-parent pairing and invitations.
@@ -56,6 +60,10 @@ fun PairingScreen(
         }
     }
 
+    // State for confirmation dialog
+    var showConfirmDialog by remember { mutableStateOf(false) }
+    var invitationToAccept by remember { mutableStateOf<Map<String, Any?>?>(null) }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -73,7 +81,6 @@ fun PairingScreen(
     ) { paddingValues ->
         Column(
             modifier = Modifier
-                .fillMaxSize()
                 .padding(paddingValues)
                 .padding(24.dp)
         ) {
@@ -217,9 +224,8 @@ fun PairingScreen(
                         Row {
                             TextButton(
                                 onClick = {
-                                    viewModel.acceptInvitation(
-                                        invitation["id"] as? String ?: ""
-                                    )
+                                    invitationToAccept = invitation
+                                    showConfirmDialog = true
                                 }
                             ) {
                                 Text("Accept")
@@ -237,7 +243,6 @@ fun PairingScreen(
                     }
                 }
             }
-        }
         }
 
         // QR Code sharing dialog
@@ -295,6 +300,32 @@ fun PairingScreen(
                 )
             }
         }
+
+        // Confirmation dialog for accepting pairing
+        if (showConfirmDialog && invitationToAccept != null) {
+            val fromName = invitationToAccept?.get("fromUserName") as? String ?: "Unknown User"
+            val fromEmail = invitationToAccept?.get("fromUserEmail") as? String ?: ""
+
+            ConfirmationDialog(
+                title = "Pair with Co-Parent?",
+                message = "Are you sure you want to pair with $fromName ($fromEmail)? This will allow you to share calendar events and communicate with them.",
+                confirmText = "Accept Pairing",
+                dismissText = "Cancel",
+                onConfirm = {
+                    invitationToAccept?.get("id")?.let { invId ->
+                        viewModel.acceptInvitation(invId as String)
+                    }
+                    showConfirmDialog = false
+                    invitationToAccept = null
+                },
+                onDismiss = {
+                    showConfirmDialog = false
+                    invitationToAccept = null
+                }
+            )
+        }
+    }
     }
 }
+
 
