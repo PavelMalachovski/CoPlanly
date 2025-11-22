@@ -19,13 +19,12 @@ import javax.inject.Inject
 
 /**
  * ViewModel for managing events.
- * Handles UI state and business logic for event operations.
+ * Handles UI state and business logic for event operations using Use Cases.
  */
 @HiltViewModel
 class EventViewModel @Inject constructor(
-    private val eventRepository: EventRepository,
-    private val analyticsManager: AnalyticsManager,
-    private val crashlyticsManager: CrashlyticsManager
+    private val eventUseCases: com.coparently.app.domain.usecase.EventUseCases,
+    private val errorHandler: com.coparently.app.domain.error.ErrorHandler
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<EventUiState>(EventUiState.Loading)
@@ -45,12 +44,13 @@ class EventViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = EventUiState.Loading
             try {
-                eventRepository.getAllEvents().collect { eventList ->
+                eventUseCases.getEvents().collect { eventList ->
                     _events.value = eventList
                     _uiState.value = EventUiState.Success(eventList)
                 }
             } catch (e: Exception) {
-                _uiState.value = EventUiState.Error(e.message ?: "Failed to load events")
+                val appError = errorHandler.handleError(e)
+                _uiState.value = EventUiState.Error(appError.userMessage)
             }
         }
     }
@@ -62,12 +62,13 @@ class EventViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = EventUiState.Loading
             try {
-                eventRepository.getEventsByDate(date).collect { eventList ->
+                eventUseCases.getEvents.getByDate(date).collect { eventList ->
                     _events.value = eventList
                     _uiState.value = EventUiState.Success(eventList)
                 }
             } catch (e: Exception) {
-                _uiState.value = EventUiState.Error(e.message ?: "Failed to load events for date")
+                val appError = errorHandler.handleError(e)
+                _uiState.value = EventUiState.Error(appError.userMessage)
             }
         }
     }
@@ -79,12 +80,13 @@ class EventViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = EventUiState.Loading
             try {
-                eventRepository.getEventsByDateRange(start, end).collect { eventList ->
+                eventUseCases.getEvents.getByDateRange(start, end).collect { eventList ->
                     _events.value = eventList
                     _uiState.value = EventUiState.Success(eventList)
                 }
             } catch (e: Exception) {
-                _uiState.value = EventUiState.Error(e.message ?: "Failed to load events for date range")
+                val appError = errorHandler.handleError(e)
+                _uiState.value = EventUiState.Error(appError.userMessage)
             }
         }
     }
@@ -94,25 +96,15 @@ class EventViewModel @Inject constructor(
      */
     fun createEvent(event: Event) {
         viewModelScope.launch {
-            try {
-                val eventWithId = if (event.id.isEmpty()) {
-                    event.copy(id = UUID.randomUUID().toString())
-                } else {
-                    event
-                }
-                val now = LocalDateTime.now()
-                val finalEvent = eventWithId.copy(
-                    createdAt = now,
-                    updatedAt = now
-                )
-                eventRepository.insertEvent(finalEvent)
-                analyticsManager.logEventCreated(event.eventType)
+            _uiState.value = EventUiState.Loading
+            val result = eventUseCases.createEvent(event)
+            result.onSuccess {
                 _uiState.value = EventUiState.OperationSuccess("Event created successfully")
-                // После короткой задержки вернемся к Success состоянию
                 kotlinx.coroutines.delay(2000)
                 _uiState.value = EventUiState.Success(_events.value)
-            } catch (e: Exception) {
-                _uiState.value = EventUiState.Error(e.message ?: "Failed to create event")
+            }.onFailure { error ->
+                val appError = errorHandler.handleError(error)
+                _uiState.value = EventUiState.Error(appError.userMessage)
             }
         }
     }
@@ -122,15 +114,14 @@ class EventViewModel @Inject constructor(
      */
     fun updateEvent(event: Event) {
         viewModelScope.launch {
-            try {
-                val updatedEvent = event.copy(updatedAt = LocalDateTime.now())
-                eventRepository.updateEvent(updatedEvent)
-                analyticsManager.logEventUpdated(event.eventType)
+            val result = eventUseCases.updateEvent(event)
+            result.onSuccess {
                 _uiState.value = EventUiState.OperationSuccess("Event updated successfully")
                 kotlinx.coroutines.delay(2000)
                 _uiState.value = EventUiState.Success(_events.value)
-            } catch (e: Exception) {
-                _uiState.value = EventUiState.Error(e.message ?: "Failed to update event")
+            }.onFailure { error ->
+                val appError = errorHandler.handleError(error)
+                _uiState.value = EventUiState.Error(appError.userMessage)
             }
         }
     }
@@ -140,14 +131,14 @@ class EventViewModel @Inject constructor(
      */
     fun deleteEvent(event: Event) {
         viewModelScope.launch {
-            try {
-                eventRepository.deleteEvent(event)
-                analyticsManager.logEventDeleted(event.eventType)
+            val result = eventUseCases.deleteEvent(event)
+            result.onSuccess {
                 _uiState.value = EventUiState.OperationSuccess("Event deleted successfully")
                 kotlinx.coroutines.delay(2000)
                 _uiState.value = EventUiState.Success(_events.value)
-            } catch (e: Exception) {
-                _uiState.value = EventUiState.Error(e.message ?: "Failed to delete event")
+            }.onFailure { error ->
+                val appError = errorHandler.handleError(error)
+                _uiState.value = EventUiState.Error(appError.userMessage)
             }
         }
     }
@@ -157,13 +148,14 @@ class EventViewModel @Inject constructor(
      */
     fun deleteEventById(id: String) {
         viewModelScope.launch {
-            try {
-                eventRepository.deleteEventById(id)
+            val result = eventUseCases.deleteEvent.deleteById(id)
+            result.onSuccess {
                 _uiState.value = EventUiState.OperationSuccess("Event deleted successfully")
                 kotlinx.coroutines.delay(2000)
                 _uiState.value = EventUiState.Success(_events.value)
-            } catch (e: Exception) {
-                _uiState.value = EventUiState.Error(e.message ?: "Failed to delete event")
+            }.onFailure { error ->
+                val appError = errorHandler.handleError(error)
+                _uiState.value = EventUiState.Error(appError.userMessage)
             }
         }
     }
@@ -174,7 +166,7 @@ class EventViewModel @Inject constructor(
     fun moveEvent(eventId: String, targetDate: LocalDate, targetHour: Int? = null) {
         viewModelScope.launch {
             try {
-                val event = eventRepository.getEventById(eventId) ?: return@launch
+                val event = eventUseCases.getEvents.getById(eventId) ?: return@launch
                 val duration = Duration.between(event.startDateTime, event.endDateTime)
                 val originalTime = event.startDateTime.toLocalTime()
                 val adjustedTime = targetHour?.let { originalTime.withHour(it) } ?: originalTime
@@ -182,17 +174,20 @@ class EventViewModel @Inject constructor(
                 val newEnd = newStart.plus(duration)
                 val updatedEvent = event.copy(
                     startDateTime = newStart,
-                    endDateTime = newEnd,
-                    updatedAt = LocalDateTime.now()
+                    endDateTime = newEnd
                 )
-                eventRepository.updateEvent(updatedEvent)
-                analyticsManager.logEventUpdated(event.eventType)
-                _uiState.value = EventUiState.OperationSuccess("Event rescheduled")
-                kotlinx.coroutines.delay(1500)
-                _uiState.value = EventUiState.Success(_events.value)
+                val result = eventUseCases.updateEvent(updatedEvent)
+                result.onSuccess {
+                    _uiState.value = EventUiState.OperationSuccess("Event rescheduled")
+                    kotlinx.coroutines.delay(1500)
+                    _uiState.value = EventUiState.Success(_events.value)
+                }.onFailure { error ->
+                    val appError = errorHandler.handleError(error)
+                    _uiState.value = EventUiState.Error(appError.userMessage)
+                }
             } catch (e: Exception) {
-                crashlyticsManager.recordException(e)
-                _uiState.value = EventUiState.Error(e.message ?: "Failed to move event")
+                val appError = errorHandler.handleError(e)
+                _uiState.value = EventUiState.Error(appError.userMessage)
             }
         }
     }
@@ -201,7 +196,7 @@ class EventViewModel @Inject constructor(
      * Gets an event by ID.
      */
     suspend fun getEventById(id: String): Event? {
-        return eventRepository.getEventById(id)
+        return eventUseCases.getEvents.getById(id)
     }
 }
 

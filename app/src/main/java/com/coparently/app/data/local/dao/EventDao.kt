@@ -87,5 +87,55 @@ interface EventDao {
      */
     @Query("UPDATE events SET syncedToFirestore = 1 WHERE id = :id")
     suspend fun markAsSynced(id: String)
+
+    /**
+     * Upserts an event (insert or update if exists).
+     */
+    @androidx.room.Upsert
+    suspend fun upsertEvent(event: EventEntity)
+
+    /**
+     * Batch insert events.
+     */
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertEventsBatch(events: List<EventEntity>)
+
+    /**
+     * Batch delete events.
+     */
+    @Delete
+    suspend fun deleteEventsBatch(events: List<EventEntity>)
+
+    /**
+     * Gets events for a specific child with pagination.
+     */
+    @Query("""
+        SELECT * FROM events
+        WHERE parentOwner = :parentOwner
+        AND startDateTime BETWEEN :start AND :end
+        ORDER BY startDateTime ASC
+        LIMIT :limit OFFSET :offset
+    """)
+    suspend fun getEventsForParentPaginated(
+        parentOwner: String,
+        start: LocalDateTime,
+        end: LocalDateTime,
+        limit: Int,
+        offset: Int
+    ): List<EventEntity>
+
+    /**
+     * Gets count of events for a specific parent in date range.
+     */
+    @Query("""
+        SELECT COUNT(*) FROM events
+        WHERE parentOwner = :parentOwner
+        AND startDateTime BETWEEN :start AND :end
+    """)
+    suspend fun getEventsCountForParent(
+        parentOwner: String,
+        start: LocalDateTime,
+        end: LocalDateTime
+    ): Int
 }
 

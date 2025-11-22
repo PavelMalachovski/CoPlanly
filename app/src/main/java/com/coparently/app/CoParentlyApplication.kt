@@ -29,6 +29,9 @@ class CoParentlyApplication : Application() {
 
         // Enable Crashlytics collection
         FirebaseCrashlytics.getInstance().setCrashlyticsCollectionEnabled(true)
+
+        // Schedule periodic background sync
+        com.coparently.app.data.sync.SyncWorker.schedulePeriodicSync(this)
     }
 }
 

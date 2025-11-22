@@ -37,7 +37,7 @@ object DatabaseModule {
             CoParentlyDatabase::class.java,
             "coparently_database"
         )
-            .fallbackToDestructiveMigration()
+            .addMigrations(com.coparently.app.data.local.DatabaseMigrations.MIGRATION_5_6)
             .build()
     }
 
