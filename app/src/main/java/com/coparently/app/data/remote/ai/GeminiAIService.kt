@@ -129,7 +129,291 @@ class GeminiAIService @Inject constructor(
         }
     }
 
+    // Day 3: Communication Intelligence implementations
+
+    override suspend fun analyzeSentiment(text: String): SentimentResult {
+        return try {
+            val prompt = """
+                Analyze the sentiment of this message:
+
+                "$text"
+
+                Return in JSON format:
+                {
+                    "score": number between -1 (negative) and 1 (positive),
+                    "magnitude": number representing emotional strength,
+                    "label": one of "VERY_POSITIVE", "POSITIVE", "NEUTRAL", "NEGATIVE", "VERY_NEGATIVE"
+                }
+            """.trimIndent()
+
+            val response = generativeModel.generateContent(prompt)
+            val responseText = response.text ?: throw Exception("Empty response")
+
+            Log.d(TAG, "Sentiment analysis response: $responseText")
+
+            parseSentimentResult(responseText)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error analyzing sentiment", e)
+            SentimentResult(score = 0.0, magnitude = 0.0, label = SentimentLabel.NEUTRAL)
+        }
+    }
+
+    override suspend fun analyzeCommunication(prompt: String): ToneAnalysisResponse {
+        return try {
+            val response = generativeModel.generateContent(prompt)
+            val responseText = response.text ?: throw Exception("Empty response")
+
+            Log.d(TAG, "Communication analysis response: $responseText")
+
+            parseToneAnalysisResponse(responseText)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error analyzing communication", e)
+            ToneAnalysisResponse(
+                tone = "neutral",
+                intensity = 5,
+                potentialIssues = emptyList(),
+                improvements = emptyList(),
+                effectiveness = 0.5
+            )
+        }
+    }
+
+    override suspend fun generateMessageRewrites(prompt: String): List<String> {
+        return try {
+            val response = generativeModel.generateContent(prompt)
+            val responseText = response.text ?: return emptyList()
+
+            Log.d(TAG, "Message rewrites response: $responseText")
+
+            parseMessageRewrites(responseText)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error generating message rewrites", e)
+            emptyList()
+        }
+    }
+
+    override suspend fun generateConversationSummary(prompt: String): ConversationSummaryResponse {
+        return try {
+            val response = generativeModel.generateContent(prompt)
+            val responseText = response.text ?: throw Exception("Empty response")
+
+            Log.d(TAG, "Conversation summary response: $responseText")
+
+            parseConversationSummary(responseText)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error generating conversation summary", e)
+            ConversationSummaryResponse(
+                summary = "Unable to generate summary",
+                keyPoints = emptyList(),
+                actionItems = emptyList(),
+                agreements = emptyList(),
+                conflicts = emptyList(),
+                overallSentiment = "neutral"
+            )
+        }
+    }
+
+    // Day 4: Family Insights & Analytics implementations
+
+    override suspend fun generateFamilyInsights(prompt: String): FamilyInsightsResponse {
+        return try {
+            val response = generativeModel.generateContent(prompt)
+            val responseText = response.text ?: throw Exception("Empty response")
+
+            Log.d(TAG, "Family insights response: $responseText")
+
+            parseFamilyInsights(responseText)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error generating family insights", e)
+            FamilyInsightsResponse(
+                recommendations = emptyList(),
+                concerns = emptyList(),
+                positiveTrends = emptyList()
+            )
+        }
+    }
+
+    override suspend fun predictExpenseTrends(prompt: String): ExpenseTrendPrediction {
+        return try {
+            val response = generativeModel.generateContent(prompt)
+            val responseText = response.text ?: throw Exception("Empty response")
+
+            Log.d(TAG, "Expense trends response: $responseText")
+
+            parseExpenseTrendPrediction(responseText)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error predicting expense trends", e)
+            ExpenseTrendPrediction(
+                monthlyPredictions = emptyList(),
+                seasonalVariations = emptyMap(),
+                expectedCostIncrease = 0.0,
+                budgetRecommendations = listOf("Unable to generate predictions")
+            )
+        }
+    }
+
+    // Helper methods for parsing new responses
+
+    private fun parseSentimentResult(responseText: String): SentimentResult {
+        return try {
+            val jsonMatch = extractJsonFromResponse(responseText)
+            if (jsonMatch != null) {
+                val obj = JsonParser.parseString(jsonMatch).asJsonObject
+                SentimentResult(
+                    score = obj.get("score").asDouble,
+                    magnitude = obj.get("magnitude").asDouble,
+                    label = SentimentLabel.valueOf(obj.get("label").asString)
+                )
+            } else {
+                SentimentResult(score = 0.0, magnitude = 0.0, label = SentimentLabel.NEUTRAL)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error parsing sentiment result", e)
+            SentimentResult(score = 0.0, magnitude = 0.0, label = SentimentLabel.NEUTRAL)
+        }
+    }
+
+    private fun parseToneAnalysisResponse(responseText: String): ToneAnalysisResponse {
+        return try {
+            val jsonMatch = extractJsonFromResponse(responseText)
+            if (jsonMatch != null) {
+                val obj = JsonParser.parseString(jsonMatch).asJsonObject
+                ToneAnalysisResponse(
+                    tone = obj.get("tone").asString,
+                    intensity = obj.get("intensity").asInt,
+                    potentialIssues = obj.get("potentialIssues").asJsonArray.map { it.asString },
+                    improvements = obj.get("improvements").asJsonArray.map { it.asString },
+                    effectiveness = obj.get("effectiveness").asDouble
+                )
+            } else {
+                ToneAnalysisResponse("neutral", 5, emptyList(), emptyList(), 0.5)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error parsing tone analysis", e)
+            ToneAnalysisResponse("neutral", 5, emptyList(), emptyList(), 0.5)
+        }
+    }
+
+    private fun parseMessageRewrites(responseText: String): List<String> {
+        return try {
+            val jsonMatch = extractJsonFromResponse(responseText)
+            if (jsonMatch != null) {
+                val jsonArray = JsonParser.parseString(jsonMatch).asJsonArray
+                jsonArray.map { it.asString }
+            } else {
+                // Try to parse plain text alternatives
+                responseText.split("\n")
+                    .filter { it.isNotBlank() && it.length > 10 }
+                    .take(3)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error parsing message rewrites", e)
+            emptyList()
+        }
+    }
+
+    private fun parseConversationSummary(responseText: String): ConversationSummaryResponse {
+        return try {
+            val jsonMatch = extractJsonFromResponse(responseText)
+            if (jsonMatch != null) {
+                val obj = JsonParser.parseString(jsonMatch).asJsonObject
+                ConversationSummaryResponse(
+                    summary = obj.get("summary").asString,
+                    keyPoints = obj.get("keyPoints").asJsonArray.map { it.asString },
+                    actionItems = obj.get("actionItems").asJsonArray.map { it.asString },
+                    agreements = obj.get("agreements").asJsonArray.map { it.asString },
+                    conflicts = obj.get("conflicts").asJsonArray.map { it.asString },
+                    overallSentiment = obj.get("overallSentiment").asString
+                )
+            } else {
+                ConversationSummaryResponse(
+                    summary = responseText.take(200),
+                    keyPoints = emptyList(),
+                    actionItems = emptyList(),
+                    agreements = emptyList(),
+                    conflicts = emptyList(),
+                    overallSentiment = "neutral"
+                )
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error parsing conversation summary", e)
+            ConversationSummaryResponse(
+                summary = "Error parsing summary",
+                keyPoints = emptyList(),
+                actionItems = emptyList(),
+                agreements = emptyList(),
+                conflicts = emptyList(),
+                overallSentiment = "neutral"
+            )
+        }
+    }
+
+    private fun parseFamilyInsights(responseText: String): FamilyInsightsResponse {
+        return try {
+            val jsonMatch = extractJsonFromResponse(responseText)
+            if (jsonMatch != null) {
+                val obj = JsonParser.parseString(jsonMatch).asJsonObject
+                FamilyInsightsResponse(
+                    recommendations = obj.get("recommendations").asJsonArray.map { it.asString },
+                    concerns = obj.get("concerns").asJsonArray.map { it.asString },
+                    positiveTrends = obj.get("positiveTrends").asJsonArray.map { it.asString }
+                )
+            } else {
+                FamilyInsightsResponse(emptyList(), emptyList(), emptyList())
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error parsing family insights", e)
+            FamilyInsightsResponse(emptyList(), emptyList(), emptyList())
+        }
+    }
+
+    private fun parseExpenseTrendPrediction(responseText: String): ExpenseTrendPrediction {
+        return try {
+            val jsonMatch = extractJsonFromResponse(responseText)
+            if (jsonMatch != null) {
+                val obj = JsonParser.parseString(jsonMatch).asJsonObject
+
+                val monthlyPredictions = obj.get("monthlyPredictions").asJsonArray.map { element ->
+                    val predObj = element.asJsonObject
+                    MonthlyExpensePrediction(
+                        month = predObj.get("month").asString,
+                        predictedAmount = predObj.get("predictedAmount").asDouble,
+                        confidence = predObj.get("confidence").asDouble,
+                        breakdown = predObj.get("breakdown").asJsonObject.entrySet()
+                            .associate { it.key to it.value.asDouble }
+                    )
+                }
+
+                val seasonalVariations = obj.get("seasonalVariations").asJsonObject.entrySet()
+                    .associate { it.key to it.value.asDouble }
+
+                ExpenseTrendPrediction(
+                    monthlyPredictions = monthlyPredictions,
+                    seasonalVariations = seasonalVariations,
+                    expectedCostIncrease = obj.get("expectedCostIncrease").asDouble,
+                    budgetRecommendations = obj.get("budgetRecommendations").asJsonArray.map { it.asString }
+                )
+            } else {
+                ExpenseTrendPrediction(
+                    monthlyPredictions = emptyList(),
+                    seasonalVariations = emptyMap(),
+                    expectedCostIncrease = 0.0,
+                    budgetRecommendations = emptyList()
+                )
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error parsing expense trend prediction", e)
+            ExpenseTrendPrediction(
+                monthlyPredictions = emptyList(),
+                seasonalVariations = emptyMap(),
+                expectedCostIncrease = 0.0,
+                budgetRecommendations = emptyList()
+            )
+        }
+    }
+
     // Helper methods for parsing responses
+
 
     private fun parseTimeSlotSuggestions(responseText: String): List<TimeSlotSuggestion> {
         return try {
