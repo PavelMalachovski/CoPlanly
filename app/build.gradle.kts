@@ -146,6 +146,10 @@ dependencies {
     // Lottie for Compose - Animations library
     implementation("com.airbnb.android:lottie-compose:6.5.2")
 
+    // Jetpack Glance for Widgets
+    implementation("androidx.glance:glance-appwidget:1.1.1")
+    implementation("androidx.glance:glance-material3:1.1.1")
+
     // ZXing for QR code generation
     implementation("com.google.zxing:core:3.5.3")
 

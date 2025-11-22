@@ -112,6 +112,11 @@ class MainActivity : ComponentActivity() {
         // Initialize notifications
         notificationManager.initializeNotifications()
 
+        // Setup app shortcuts (Android 7.1+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1) {
+            com.coparently.app.utils.AppShortcuts.setupShortcuts(this)
+        }
+
         // Load theme preference
         lifecycleScope.launch {
             preferencesRepository.getDarkThemeFlow().collect { isDark ->
