@@ -15,17 +15,20 @@ import androidx.compose.ui.graphics.TransformOrigin
 /**
  * Standard duration for short animations (150ms).
  */
-const val ANIMATION_DURATION_SHORT = 150
+/**
+ * Standard duration for short animations (150ms).
+ */
+const val ANIMATION_DURATION_SHORT = com.coparently.app.utils.AnimationConstants.FAST
 
 /**
  * Standard duration for medium animations (300ms).
  */
-const val ANIMATION_DURATION_MEDIUM = 300
+const val ANIMATION_DURATION_MEDIUM = com.coparently.app.utils.AnimationConstants.NORMAL
 
 /**
  * Standard duration for long animations (500ms).
  */
-const val ANIMATION_DURATION_LONG = 500
+const val ANIMATION_DURATION_LONG = com.coparently.app.utils.AnimationConstants.SLOW
 
 /**
  * Standard easing for emphasized animations (deceleration).
