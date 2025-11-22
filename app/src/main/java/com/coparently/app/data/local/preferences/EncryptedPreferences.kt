@@ -2,6 +2,7 @@ package com.coparently.app.data.local.preferences
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.util.Log
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -11,22 +12,40 @@ import javax.inject.Singleton
 /**
  * Encrypted SharedPreferences wrapper for secure storage.
  * Uses AndroidX Security Crypto library to encrypt sensitive data.
+ * Falls back to regular SharedPreferences if encryption is not available.
  */
 @Singleton
 class EncryptedPreferences @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
-    private val masterKey: MasterKey = MasterKey.Builder(context)
-        .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-        .build()
+    private val masterKey: MasterKey? = try {
+        MasterKey.Builder(context)
+            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+            .build()
+    } catch (e: Exception) {
+        Log.e("EncryptedPreferences", "Failed to create MasterKey, falling back to regular SharedPreferences", e)
+        null
+    }
 
-    private val encryptedPreferences: SharedPreferences = EncryptedSharedPreferences.create(
-        context,
-        "encrypted_prefs",
-        masterKey,
-        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-    )
+    private val encryptedPreferences: SharedPreferences = try {
+        if (masterKey != null) {
+            EncryptedSharedPreferences.create(
+                context,
+                "encrypted_prefs",
+                masterKey,
+                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+            )
+        } else {
+            // Fallback to regular SharedPreferences if encryption fails
+            Log.w("EncryptedPreferences", "Using regular SharedPreferences as fallback")
+            context.getSharedPreferences("encrypted_prefs", Context.MODE_PRIVATE)
+        }
+    } catch (e: Exception) {
+        Log.e("EncryptedPreferences", "Failed to create EncryptedSharedPreferences, falling back to regular SharedPreferences", e)
+        // Fallback to regular SharedPreferences if encryption fails
+        context.getSharedPreferences("encrypted_prefs", Context.MODE_PRIVATE)
+    }
 
     /**
      * Stores an access token securely.

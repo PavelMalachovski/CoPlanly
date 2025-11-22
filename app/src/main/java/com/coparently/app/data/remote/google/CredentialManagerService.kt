@@ -44,23 +44,35 @@ class CredentialManagerService @Inject constructor(
     private val encryptedPreferences: EncryptedPreferences
 ) {
     private val credentialManager = CredentialManager.create(context)
-    private val _googleSignInClient: GoogleSignInClient by lazy {
-        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-            .requestIdToken(getWebClientId())
-            .requestServerAuthCode(getWebClientId())
-            .requestEmail()
-            .requestScopes(Scope(CalendarScopes.CALENDAR))
-            .build()
-        GoogleSignIn.getClient(context, gso)
+    private val _googleSignInClient: GoogleSignInClient? by lazy {
+        try {
+            val webClientId = getWebClientId()
+            val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                .requestIdToken(webClientId)
+                .requestServerAuthCode(webClientId)
+                .requestEmail()
+                .requestScopes(Scope(CalendarScopes.CALENDAR))
+                .build()
+            GoogleSignIn.getClient(context, gso)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to create GoogleSignInClient", e)
+            null
+        }
     }
 
     // Separate client for authentication (without calendar scope)
-    private val _authGoogleSignInClient: GoogleSignInClient by lazy {
-        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-            .requestIdToken(getWebClientId())
-            .requestEmail()
-            .build()
-        GoogleSignIn.getClient(context, gso)
+    private val _authGoogleSignInClient: GoogleSignInClient? by lazy {
+        try {
+            val webClientId = getWebClientId()
+            val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                .requestIdToken(webClientId)
+                .requestEmail()
+                .build()
+            GoogleSignIn.getClient(context, gso)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to create auth GoogleSignInClient", e)
+            null
+        }
     }
 
     companion object {
@@ -72,14 +84,14 @@ class CredentialManagerService @Inject constructor(
     /**
      * Получает Google Sign-In Client для использования в UI компонентах.
      */
-    fun getGoogleSignInClient(): GoogleSignInClient {
+    fun getGoogleSignInClient(): GoogleSignInClient? {
         return _googleSignInClient
     }
 
     /**
      * Получает Google Sign-In Client для аутентификации (без calendar scope).
      */
-    fun getAuthGoogleSignInClient(): GoogleSignInClient {
+    fun getAuthGoogleSignInClient(): GoogleSignInClient? {
         return _authGoogleSignInClient
     }
 
@@ -91,10 +103,15 @@ class CredentialManagerService @Inject constructor(
      */
     suspend fun signInWithGoogle(): Pair<GoogleSignInAccount?, String?> {
         return try {
-            val signInIntent = _googleSignInClient.signInIntent
-            // Note: This method assumes the sign-in intent is handled by an Activity
-            // The actual implementation should be in an Activity or Fragment
-            Pair(null, "Sign-in intent should be handled by Activity")
+            val client = _googleSignInClient
+            if (client == null) {
+                Pair(null, "Google Sign-In client is not available. OAuth may not be configured.")
+            } else {
+                val signInIntent = client.signInIntent
+                // Note: This method assumes the sign-in intent is handled by an Activity
+                // The actual implementation should be in an Activity or Fragment
+                Pair(null, "Sign-in intent should be handled by Activity")
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Error starting sign-in: ${e.message}", e)
             Pair(null, "Failed to start sign-in: ${e.message}")
@@ -264,8 +281,8 @@ class CredentialManagerService @Inject constructor(
      */
     suspend fun signOut(): Pair<Boolean, String?> {
         return try {
-            _googleSignInClient.signOut().await()
-            _googleSignInClient.revokeAccess().await()
+            _googleSignInClient?.signOut()?.await()
+            _googleSignInClient?.revokeAccess()?.await()
             encryptedPreferences.clear()
             Log.d(TAG, "User signed out successfully")
             Pair(true, null)

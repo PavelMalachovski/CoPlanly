@@ -58,8 +58,14 @@ class SyncViewModel @Inject constructor(
      * Проверяет текущий статус входа в Google.
      */
     private fun checkSignInStatus() {
-        _isSignedIn.value = credentialManagerService.isSignedIn()
-        _userEmail.value = encryptedPreferences.getUserEmail()
+        try {
+            _isSignedIn.value = credentialManagerService.isSignedIn()
+            _userEmail.value = encryptedPreferences.getUserEmail()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error checking sign-in status", e)
+            _isSignedIn.value = false
+            _userEmail.value = null
+        }
     }
 
     /**
@@ -68,7 +74,16 @@ class SyncViewModel @Inject constructor(
     fun createGoogleSignInIntent(): android.content.Intent? {
         return try {
             _syncState.value = GoogleCalendarSyncState.Syncing("Opening Google Sign-In...")
-            credentialManagerService.getGoogleSignInClient().signInIntent
+            val client = credentialManagerService.getGoogleSignInClient()
+            if (client == null) {
+                Log.e(TAG, "Google Sign-In client is not available. OAuth may not be configured.")
+                _syncState.value = GoogleCalendarSyncState.Error(
+                    "Google Sign-In is not available. Please check OAuth configuration."
+                )
+                null
+            } else {
+                client.signInIntent
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Unable to create Google Sign-In intent", e)
             _syncState.value = GoogleCalendarSyncState.Error(
