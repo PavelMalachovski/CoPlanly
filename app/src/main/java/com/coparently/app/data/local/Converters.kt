@@ -47,5 +47,21 @@ class Converters {
         val listType = object : TypeToken<List<String>>() {}.type
         return gson.fromJson(value, listType)
     }
+
+    /**
+     * Converts a LocalDate to a String for database storage.
+     */
+    @TypeConverter
+    fun fromLocalDate(value: java.time.LocalDate?): String? {
+        return value?.format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE)
+    }
+
+    /**
+     * Converts a String to a LocalDate from database storage.
+     */
+    @TypeConverter
+    fun toLocalDate(value: String?): java.time.LocalDate? {
+        return value?.let { java.time.LocalDate.parse(it, java.time.format.DateTimeFormatter.ISO_LOCAL_DATE) }
+    }
 }
 

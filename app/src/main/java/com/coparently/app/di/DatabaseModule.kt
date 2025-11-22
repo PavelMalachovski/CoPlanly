@@ -3,9 +3,12 @@ package com.coparently.app.di
 import android.content.Context
 import androidx.room.Room
 import com.coparently.app.data.local.CoParentlyDatabase
+import com.coparently.app.data.local.dao.BudgetDao
 import com.coparently.app.data.local.dao.ChildInfoDao
 import com.coparently.app.data.local.dao.CustodyScheduleDao
 import com.coparently.app.data.local.dao.EventDao
+import com.coparently.app.data.local.dao.ExpenseDao
+import com.coparently.app.data.local.dao.MessageDao
 import com.coparently.app.data.local.dao.UserDao
 import dagger.Module
 import dagger.Provides
@@ -68,6 +71,30 @@ object DatabaseModule {
     @Provides
     fun provideChildInfoDao(database: CoParentlyDatabase): ChildInfoDao {
         return database.childInfoDao()
+    }
+
+    /**
+     * Provides MessageDao.
+     */
+    @Provides
+    fun provideMessageDao(database: CoParentlyDatabase): MessageDao {
+        return database.messageDao()
+    }
+
+    /**
+     * Provides ExpenseDao.
+     */
+    @Provides
+    fun provideExpenseDao(database: CoParentlyDatabase): ExpenseDao {
+        return database.expenseDao()
+    }
+
+    /**
+     * Provides BudgetDao.
+     */
+    @Provides
+    fun provideBudgetDao(database: CoParentlyDatabase): BudgetDao {
+        return database.budgetDao()
     }
 }
 

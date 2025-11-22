@@ -1,0 +1,86 @@
+package com.coparently.app.presentation.expenses
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.coparently.app.domain.model.Budget
+import com.coparently.app.domain.model.BudgetAlert
+import com.coparently.app.domain.model.ExpenseCategory
+import com.coparently.app.domain.repository.BudgetRepository
+import com.coparently.app.domain.repository.UserRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import java.time.LocalDateTime
+import java.util.UUID
+import javax.inject.Inject
+
+@HiltViewModel
+class BudgetViewModel @Inject constructor(
+    private val budgetRepository: BudgetRepository,
+    private val userRepository: UserRepository
+) : ViewModel() {
+
+    private val _currentUserId = MutableStateFlow<String>("")
+
+    init {
+        viewModelScope.launch {
+            userRepository.getCurrentUser()?.let { user ->
+                _currentUserId.value = user.id
+                budgetRepository.syncWithFirestore()
+            }
+        }
+    }
+
+    val budgets: StateFlow<List<Budget>> = budgetRepository.getActiveBudgets()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    private val _activeAlerts = MutableStateFlow<List<BudgetAlert>>(emptyList())
+    val activeAlerts: StateFlow<List<BudgetAlert>> = _activeAlerts.asStateFlow()
+
+    init {
+        refreshAlerts()
+    }
+
+    fun refreshAlerts() {
+        viewModelScope.launch {
+            _activeAlerts.value = budgetRepository.getBudgetAlerts()
+        }
+    }
+
+    suspend fun getSpentForBudget(budgetId: String): Double {
+        return budgetRepository.getSpentForBudget(budgetId)
+    }
+
+    fun addBudget(
+        category: ExpenseCategory,
+        monthlyLimit: Double,
+        childId: String? = null
+    ) {
+        viewModelScope.launch {
+            val budget = Budget(
+                id = UUID.randomUUID().toString(),
+                childId = childId,
+                category = category,
+                monthlyLimit = monthlyLimit,
+                createdAt = LocalDateTime.now()
+            )
+            budgetRepository.addBudget(budget)
+            refreshAlerts()
+        }
+    }
+
+    fun deleteBudget(budgetId: String) {
+        viewModelScope.launch {
+            budgetRepository.deleteBudget(budgetId)
+            refreshAlerts()
+        }
+    }
+}

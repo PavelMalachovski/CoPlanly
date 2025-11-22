@@ -1,0 +1,122 @@
+package com.coparently.app.presentation.expenses
+
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.coparently.app.domain.model.BudgetAlert
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun BudgetScreen(
+    viewModel: BudgetViewModel = hiltViewModel()
+) {
+    val budgets by viewModel.budgets.collectAsState()
+    val alerts by viewModel.activeAlerts.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.refreshAlerts()
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(title = { Text("Budgets") })
+        },
+        floatingActionButton = {
+            FloatingActionButton(onClick = { /* TODO: Add budget dialog */ }) {
+                Icon(Icons.Default.Add, contentDescription = "Add Budget")
+            }
+        }
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(16.dp)
+        ) {
+            // Active alerts
+            if (alerts.isNotEmpty()) {
+                AlertSection(alerts = alerts)
+            }
+
+            // Budget list
+            LazyColumn {
+                items(budgets) { budget ->
+                    // We need to fetch spent amount for each budget
+                    // In a real app, this might be better handled in the VM with a combined state
+                    var spentAmount by remember { mutableStateOf(0.0) }
+
+                    LaunchedEffect(budget.id) {
+                        spentAmount = viewModel.getSpentForBudget(budget.id)
+                    }
+
+                    BudgetItem(
+                        budget = budget,
+                        spentAmount = spentAmount,
+                        onEdit = { /* navigate to edit */ }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun AlertSection(alerts: List<BudgetAlert>) {
+    Column(modifier = Modifier.padding(bottom = 16.dp)) {
+        Text(
+            text = "Alerts",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.error,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+
+        alerts.forEach { alert ->
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp)
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text(
+                        text = "Budget Exceeded: ${alert.category.displayName}",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                    Text(
+                        text = "You have spent ${(alert.percentage * 100).toInt()}% of your limit.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                }
+            }
+        }
+    }
+}

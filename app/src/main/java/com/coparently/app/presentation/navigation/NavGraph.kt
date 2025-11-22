@@ -251,6 +251,81 @@ fun NavGraph(
                 }
             )
         }
+
+        // Chat & Communications
+        composable(
+            route = Screen.Conversations.route,
+            enterTransition = { slideInFromRight() },
+            exitTransition = { slideOutToLeft() },
+            popEnterTransition = { slideInFromLeft() },
+            popExitTransition = { slideOutToRight() }
+        ) {
+            com.coparently.app.presentation.chat.ConversationsScreen(
+                onConversationClick = { conversationId ->
+                    navController.navigate(Screen.Chat.createRoute(conversationId))
+                }
+            )
+        }
+
+        composable(
+            route = Screen.Chat.route,
+            arguments = listOf(
+                navArgument(Screen.Chat.ARG_CONVERSATION_ID) {
+                    type = NavType.StringType
+                }
+            ),
+            enterTransition = { slideInFromRight() },
+            exitTransition = { slideOutToLeft() },
+            popEnterTransition = { slideInFromLeft() },
+            popExitTransition = { slideOutToRight() }
+        ) { backStackEntry ->
+            val conversationId = backStackEntry.arguments?.getString(Screen.Chat.ARG_CONVERSATION_ID) ?: return@composable
+            com.coparently.app.presentation.chat.ChatScreen(
+                conversationId = conversationId,
+                onBack = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        // Expenses & Budget
+        composable(
+            route = Screen.Expenses.route,
+            enterTransition = { slideInFromRight() },
+            exitTransition = { slideOutToLeft() },
+            popEnterTransition = { slideInFromLeft() },
+            popExitTransition = { slideOutToRight() }
+        ) {
+            com.coparently.app.presentation.expenses.ExpenseScreen(
+                onAddExpense = {
+                    navController.navigate(Screen.AddExpense.route)
+                }
+            )
+        }
+
+        composable(
+            route = Screen.AddExpense.route,
+            enterTransition = { fadeInScaleUp() },
+            exitTransition = { fadeOutScaleDown() },
+            popEnterTransition = { fadeInScaleUp() },
+            popExitTransition = { fadeOutScaleDown() }
+        ) {
+            com.coparently.app.presentation.expenses.AddExpenseScreen(
+                onBack = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        composable(
+            route = Screen.Budgets.route,
+            enterTransition = { slideInFromRight() },
+            exitTransition = { slideOutToLeft() },
+            popEnterTransition = { slideInFromLeft() },
+            popExitTransition = { slideOutToRight() }
+        ) {
+            com.coparently.app.presentation.expenses.BudgetScreen()
+        }
     }
 }
 
@@ -305,5 +380,17 @@ sealed class Screen(val route: String) {
             return "edit_child_info/$childInfoId"
         }
     }
+
+    data object Conversations : Screen("conversations")
+    data object Chat : Screen("chat/{conversationId}") {
+        const val ARG_CONVERSATION_ID = "conversationId"
+
+        fun createRoute(conversationId: String): String {
+            return "chat/$conversationId"
+        }
+    }
+    data object Expenses : Screen("expenses")
+    data object AddExpense : Screen("add_expense")
+    data object Budgets : Screen("budgets")
 }
 

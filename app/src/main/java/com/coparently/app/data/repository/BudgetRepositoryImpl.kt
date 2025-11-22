@@ -1,0 +1,173 @@
+package com.coparently.app.data.repository
+
+import com.coparently.app.data.local.dao.BudgetDao
+import com.coparently.app.data.local.dao.ExpenseDao
+import com.coparently.app.data.local.entity.BudgetEntity
+import com.coparently.app.data.remote.firebase.FirebaseAuthService
+import com.coparently.app.data.remote.firebase.FirestoreBudgetDataSource
+import com.coparently.app.domain.model.Budget
+import com.coparently.app.domain.model.BudgetAlert
+import com.coparently.app.domain.model.ExpenseCategory
+import com.coparently.app.domain.repository.BudgetRepository
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+import javax.inject.Inject
+import javax.inject.Singleton
+
+@Singleton
+class BudgetRepositoryImpl @Inject constructor(
+    private val budgetDao: BudgetDao,
+    private val expenseDao: ExpenseDao,
+    private val firebaseAuthService: FirebaseAuthService,
+    private val firestoreBudgetDataSource: FirestoreBudgetDataSource
+) : BudgetRepository {
+
+    private val dateTimeFormatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
+
+    override fun getAllBudgets(): Flow<List<Budget>> {
+        return budgetDao.getAllBudgets().map { entities ->
+            entities.map { it.toDomain() }
+        }
+    }
+
+    override fun getActiveBudgets(): Flow<List<Budget>> {
+        return budgetDao.getActiveBudgets().map { entities ->
+            entities.map { it.toDomain() }
+        }
+    }
+
+    override fun getBudgetsForChild(childId: String): Flow<List<Budget>> {
+        return budgetDao.getBudgetsForChild(childId).map { entities ->
+            entities.map { it.toDomain() }
+        }
+    }
+
+    override suspend fun getBudgetById(id: String): Budget? {
+        return budgetDao.getBudgetById(id)?.toDomain()
+    }
+
+    override suspend fun getBudgetAlerts(): List<BudgetAlert> {
+        val activeBudgets = getActiveBudgets().first()
+        val alerts = mutableListOf<BudgetAlert>()
+
+        activeBudgets.forEach { budget ->
+            val spent = getSpentForBudget(budget.id)
+            val percentage = if (budget.monthlyLimit > 0) spent / budget.monthlyLimit else 0.0
+
+            if (percentage >= budget.alertThreshold) {
+                alerts.add(
+                    BudgetAlert(
+                        budgetId = budget.id,
+                        currentSpent = spent,
+                        limit = budget.monthlyLimit,
+                        percentage = percentage,
+                        category = budget.category
+                    )
+                )
+            }
+        }
+
+        return alerts
+    }
+
+    override suspend fun getSpentForBudget(budgetId: String): Double {
+        val budget = getBudgetById(budgetId) ?: return 0.0
+        val now = LocalDate.now()
+        val startOfMonth = now.withDayOfMonth(1)
+        val endOfMonth = now.withDayOfMonth(now.lengthOfMonth())
+
+        val expenses = expenseDao.getExpensesByCategory(budget.category.name).first()
+
+        return expenses.filter {
+            !it.date.isBefore(startOfMonth) && !it.date.isAfter(endOfMonth) &&
+            (budget.childId == null || it.childId == budget.childId)
+        }.sumOf { it.amount }
+    }
+
+    override suspend fun addBudget(budget: Budget) {
+        val entity = budget.toEntity()
+        budgetDao.insertBudget(entity)
+
+        val firebaseUser = firebaseAuthService.getCurrentUser()
+        if (firebaseUser != null) {
+            val budgetData = mapOf(
+                "id" to budget.id,
+                "childId" to (budget.childId ?: ""),
+                "category" to budget.category.name,
+                "monthlyLimit" to budget.monthlyLimit,
+                "currency" to budget.currency,
+                "alertThreshold" to budget.alertThreshold,
+                "isActive" to budget.isActive,
+                "createdAt" to budget.createdAt.format(dateTimeFormatter)
+            )
+            firestoreBudgetDataSource.setBudget(budget.id, budgetData)
+
+            val syncedBudget = budget.copy(syncedToFirestore = true)
+            budgetDao.insertBudget(syncedBudget.toEntity())
+        }
+    }
+
+    override suspend fun updateBudget(budget: Budget) {
+        addBudget(budget)
+    }
+
+    override suspend fun deleteBudget(budgetId: String) {
+        budgetDao.deleteBudget(budgetId)
+
+        val firebaseUser = firebaseAuthService.getCurrentUser()
+        if (firebaseUser != null) {
+            firestoreBudgetDataSource.deleteBudget(budgetId)
+        }
+    }
+
+    override suspend fun syncWithFirestore() {
+        firestoreBudgetDataSource.getAllBudgets().collect { budgets ->
+            budgets.forEach { data ->
+                val budget = Budget(
+                    id = data["id"] as String,
+                    childId = (data["childId"] as? String)?.takeIf { it.isNotEmpty() },
+                    category = ExpenseCategory.valueOf(data["category"] as String),
+                    monthlyLimit = (data["monthlyLimit"] as Number).toDouble(),
+                    currency = data["currency"] as String,
+                    alertThreshold = (data["alertThreshold"] as Number).toDouble(),
+                    isActive = (data["isActive"] as? Boolean) ?: true,
+                    createdAt = LocalDateTime.parse(data["createdAt"] as String, dateTimeFormatter),
+                    syncedToFirestore = true
+                )
+                budgetDao.insertBudget(budget.toEntity())
+            }
+        }
+    }
+
+    private fun BudgetEntity.toDomain(): Budget {
+        return Budget(
+            id = id,
+            childId = childId,
+            category = ExpenseCategory.valueOf(category),
+            monthlyLimit = monthlyLimit,
+            currency = currency,
+            alertThreshold = alertThreshold,
+            isActive = isActive,
+            createdAt = createdAt,
+            syncedToFirestore = syncedToFirestore
+        )
+    }
+
+    private fun Budget.toEntity(): BudgetEntity {
+        return BudgetEntity(
+            id = id,
+            childId = childId,
+            category = category.name,
+            monthlyLimit = monthlyLimit,
+            currency = currency,
+            alertThreshold = alertThreshold,
+            isActive = isActive,
+            createdAt = createdAt,
+            syncedToFirestore = syncedToFirestore
+        )
+    }
+}

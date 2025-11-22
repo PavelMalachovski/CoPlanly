@@ -1,10 +1,16 @@
 package com.coparently.app.di
 
+import com.coparently.app.data.repository.BudgetRepositoryImpl
 import com.coparently.app.data.repository.ChildInfoRepositoryImpl
 import com.coparently.app.data.repository.EventRepositoryImpl
+import com.coparently.app.data.repository.ExpenseRepositoryImpl
+import com.coparently.app.data.repository.MessageRepositoryImpl
 import com.coparently.app.data.repository.PreferencesRepositoryImpl
+import com.coparently.app.domain.repository.BudgetRepository
 import com.coparently.app.domain.repository.ChildInfoRepository
 import com.coparently.app.domain.repository.EventRepository
+import com.coparently.app.domain.repository.ExpenseRepository
+import com.coparently.app.domain.repository.MessageRepository
 import com.coparently.app.domain.repository.PreferencesRepository
 import dagger.Binds
 import dagger.Module
@@ -45,5 +51,32 @@ abstract class RepositoryModule {
     abstract fun bindPreferencesRepository(
         preferencesRepositoryImpl: PreferencesRepositoryImpl
     ): PreferencesRepository
+
+    /**
+     * Provides MessageRepository implementation.
+     */
+    @Binds
+    @Singleton
+    abstract fun bindMessageRepository(
+        messageRepositoryImpl: MessageRepositoryImpl
+    ): MessageRepository
+
+    /**
+     * Provides ExpenseRepository implementation.
+     */
+    @Binds
+    @Singleton
+    abstract fun bindExpenseRepository(
+        expenseRepositoryImpl: ExpenseRepositoryImpl
+    ): ExpenseRepository
+
+    /**
+     * Provides BudgetRepository implementation.
+     */
+    @Binds
+    @Singleton
+    abstract fun bindBudgetRepository(
+        budgetRepositoryImpl: BudgetRepositoryImpl
+    ): BudgetRepository
 }
 
