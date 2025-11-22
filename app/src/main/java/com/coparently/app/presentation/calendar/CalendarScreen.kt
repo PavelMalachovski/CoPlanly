@@ -1,6 +1,7 @@
 package com.coparently.app.presentation.calendar
 
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.animateFloatAsState
@@ -19,6 +20,7 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -59,6 +61,9 @@ import com.coparently.app.data.local.entity.CustodyScheduleEntity
 import com.coparently.app.presentation.calendar.components.CalendarHeader
 import com.coparently.app.presentation.calendar.components.ViewModeSelector
 import com.coparently.app.presentation.calendar.components.CustodyIndicatorToday
+import com.coparently.app.presentation.calendar.navigation.CalendarNavigation
+import com.coparently.app.presentation.common.QuickActionsBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
 import com.coparently.app.presentation.event.EventViewModel
 import com.coparently.app.presentation.theme.CoParentlyColors
 import com.coparently.app.presentation.theme.dimensions
@@ -77,7 +82,7 @@ import kotlinx.coroutines.launch
  * Main calendar screen showing calendar view with events.
  * Supports multiple view modes: Day, 3 Days, Week, Month.
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun CalendarScreen(
     onEventClick: (String) -> Unit = {},
@@ -118,6 +123,10 @@ fun CalendarScreen(
     // Pull-to-Refresh state
     var isRefreshing by remember { mutableStateOf(false) }
     val pullToRefreshState = rememberPullToRefreshState()
+
+    // Quick Actions Bottom Sheet state
+    var showQuickActions by remember { mutableStateOf(false) }
+    val quickActionsSheetState = rememberModalBottomSheetState()
 
     // Load events based on view mode
     LaunchedEffect(viewMode, selectedDate) {
@@ -196,27 +205,45 @@ fun CalendarScreen(
 
     Scaffold(
         topBar = {
-            CalendarHeader(
-                selectedDate = selectedDate,
-                onNavigateToToday = { calendarViewModel.setSelectedDate(LocalDate.now()) },
-                onSettingsClick = onSettingsClick
-            )
+            CalendarNavigation(
+                currentDate = selectedDate,
+                viewMode = viewMode,
+                onDateChange = { newDate ->
+                    calendarViewModel.setSelectedDate(newDate)
+                }
+            ) { date ->
+                CalendarHeader(
+                    selectedDate = date,
+                    onNavigateToToday = { calendarViewModel.setSelectedDate(LocalDate.now()) },
+                    onSettingsClick = onSettingsClick
+                )
+            }
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    onAddEventClick()
-                },
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                shape = RoundedCornerShape(dims.cornerRadius)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = stringResource(R.string.calendar_add_event),
-                    modifier = Modifier.size(dims.iconSize)
+            Box(
+                modifier = Modifier.combinedClickable(
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onAddEventClick()
+                    },
+                    onLongClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        showQuickActions = true
+                    }
                 )
+            ) {
+                FloatingActionButton(
+                    onClick = {}, // Handled by Box's combinedClickable
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    shape = RoundedCornerShape(dims.cornerRadius)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = stringResource(R.string.calendar_add_event),
+                        modifier = Modifier.size(dims.iconSize)
+                    )
+                }
             }
         }
     ) { paddingValues ->
@@ -455,6 +482,17 @@ fun CalendarScreen(
                 showModeToggle = true
             )
         }
+    }
+
+    // Quick Actions Bottom Sheet
+    if (showQuickActions) {
+        QuickActionsBottomSheet(
+            onEventCreate = onAddEventClick,
+            onNavigateToToday = { calendarViewModel.setSelectedDate(LocalDate.now()) },
+            onShowSettings = { onSettingsClick?.invoke() },
+            onDismiss = { showQuickActions = false },
+            sheetState = quickActionsSheetState
+        )
     }
 }
 
