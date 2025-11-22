@@ -146,5 +146,20 @@ class CrashlyticsManager @Inject constructor(
         }
         crashlytics.recordException(throwable)
     }
+
+    /**
+     * Logs a security issue to Crashlytics.
+     *
+     * @param issue The security issue to log
+     */
+    fun logSecurityIssue(issue: com.coparently.app.domain.model.SecurityIssue) {
+        crashlytics.setCustomKey("security_issue", issue.name)
+        crashlytics.setCustomKey("security_severity", issue.severity.name)
+        crashlytics.log("Security Issue Detected: ${issue.description}")
+
+        // Record as a non-fatal exception for better visibility
+        val exception = SecurityException(issue.description)
+        crashlytics.recordException(exception)
+    }
 }
 

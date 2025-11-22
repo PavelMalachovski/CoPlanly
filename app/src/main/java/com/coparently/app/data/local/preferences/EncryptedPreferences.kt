@@ -176,6 +176,29 @@ class EncryptedPreferences @Inject constructor(
     }
 
     /**
+     * Stores a boolean value.
+     *
+     * @param key The key name
+     * @param value The boolean value
+     */
+    fun putBoolean(key: String, value: Boolean) {
+        encryptedPreferences.edit()
+            .putBoolean(key, value)
+            .apply()
+    }
+
+    /**
+     * Retrieves a boolean value.
+     *
+     * @param key The key name
+     * @param defaultValue The default value if not found
+     * @return The boolean value
+     */
+    fun getBoolean(key: String, defaultValue: Boolean): Boolean {
+        return encryptedPreferences.getBoolean(key, defaultValue)
+    }
+
+    /**
      * Clears all stored preferences.
      */
     fun clear() {

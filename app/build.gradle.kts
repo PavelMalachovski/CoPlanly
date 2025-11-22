@@ -36,12 +36,20 @@ android {
     }
 
     buildTypes {
-        release {
+        debug {
             isMinifyEnabled = false
+            buildConfigField("Boolean", "ENABLE_CRASHLYTICS", "false")
+            buildConfigField("Boolean", "ENABLE_ANALYTICS", "false")
+        }
+
+        release {
+            isMinifyEnabled = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            buildConfigField("Boolean", "ENABLE_CRASHLYTICS", "true")
+            buildConfigField("Boolean", "ENABLE_ANALYTICS", "true")
         }
     }
 
@@ -66,10 +74,22 @@ android {
 
     buildFeatures {
         compose = true
+        // Keep BuildConfig enabled for feature flags
+        buildConfig = true
     }
 
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.14"
+    }
+
+    // Test optimizations
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+            isReturnDefaultValues = true
+        }
+        // Disable animations for faster UI tests
+        animationsDisabled = true
     }
 
     packaging {
@@ -169,6 +189,7 @@ dependencies {
     implementation("com.google.firebase:firebase-messaging-ktx")
     implementation("com.google.firebase:firebase-analytics-ktx")
     implementation("com.google.firebase:firebase-crashlytics-ktx")
+    implementation("com.google.firebase:firebase-config-ktx")
 
     // Testing - Updated to latest stable
     testImplementation("junit:junit:4.13.2")
