@@ -40,6 +40,8 @@ android {
             isMinifyEnabled = false
             buildConfigField("Boolean", "ENABLE_CRASHLYTICS", "false")
             buildConfigField("Boolean", "ENABLE_ANALYTICS", "false")
+            // Gemini API key from gradle.properties or environment variable
+            buildConfigField("String", "GEMINI_API_KEY", "\"${project.findProperty("GEMINI_API_KEY") ?: System.getenv("GEMINI_API_KEY") ?: ""}\"")
         }
 
         release {
@@ -50,6 +52,8 @@ android {
             )
             buildConfigField("Boolean", "ENABLE_CRASHLYTICS", "true")
             buildConfigField("Boolean", "ENABLE_ANALYTICS", "true")
+            // Gemini API key from gradle.properties or environment variable
+            buildConfigField("String", "GEMINI_API_KEY", "\"${project.findProperty("GEMINI_API_KEY") ?: System.getenv("GEMINI_API_KEY") ?: ""}\"")
         }
     }
 
@@ -180,6 +184,17 @@ dependencies {
 
     // ML Kit for QR code scanning
     implementation("com.google.mlkit:barcode-scanning:17.3.0")
+
+    // Generative AI - Gemini API
+    implementation("com.google.ai.client.generativeai:generativeai:0.9.0")
+
+    // Retrofit for AI API calls
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+
+    // OkHttp for HTTP client
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
 
     // Firebase - Updated to latest BOM
     val firebaseBom = platform("com.google.firebase:firebase-bom:33.7.0")
