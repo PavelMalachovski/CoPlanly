@@ -101,8 +101,8 @@ fun NavGraph(
                 onEventClick = { eventId ->
                     navController.navigate(Screen.EditEvent.createRoute(eventId))
                 },
-                onAddEventClick = {
-                    navController.navigate(Screen.AddEvent.route)
+                onAddEventClick = { date, hour ->
+                    navController.navigate(Screen.AddEvent.createRoute(date, hour))
                 },
                 onSettingsClick = {
                     navController.navigate(Screen.Settings.route)
@@ -132,13 +132,31 @@ fun NavGraph(
 
         composable(
             route = Screen.AddEvent.route,
+            arguments = listOf(
+                navArgument(Screen.AddEvent.ARG_DATE) {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
+                navArgument(Screen.AddEvent.ARG_HOUR) {
+                    type = NavType.IntType
+                    defaultValue = -1
+                }
+            ),
             enterTransition = { fadeInScaleUp() },
             exitTransition = { fadeOutScaleDown() },
             popEnterTransition = { fadeInScaleUp() },
             popExitTransition = { fadeOutScaleDown() }
-        ) {
+        ) { backStackEntry ->
+            val dateString = backStackEntry.arguments?.getString(Screen.AddEvent.ARG_DATE)
+            val hourValue = backStackEntry.arguments?.getInt(Screen.AddEvent.ARG_HOUR) ?: -1
+            val hour = if (hourValue >= 0) hourValue else null
+            val initialDate = dateString?.let { java.time.LocalDate.parse(it) }
+
             AddEditEventScreen(
                 eventId = null,
+                initialDate = initialDate,
+                initialHour = hour,
                 onSave = {
                     navController.popBackStack()
                 },
@@ -360,7 +378,18 @@ sealed class Screen(val route: String) {
     data object Auth : Screen("auth")
     data object Calendar : Screen("calendar")
     data object EventList : Screen("event_list")
-    data object AddEvent : Screen("add_event")
+    data object AddEvent : Screen("add_event?date={date}&hour={hour}") {
+        const val ARG_DATE = "date"
+        const val ARG_HOUR = "hour"
+
+        fun createRoute(date: java.time.LocalDate? = null, hour: Int? = null): String {
+            return if (date != null && hour != null) {
+                "add_event?date=$date&hour=$hour"
+            } else {
+                "add_event"
+            }
+        }
+    }
     data object Settings : Screen("settings")
     data object ChildInfo : Screen("child_info")
     data object Pairing : Screen("pairing")

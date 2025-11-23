@@ -13,6 +13,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,6 +31,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -425,67 +427,50 @@ private fun EventChip(
     baseHour: Int,
     onDragDrop: ((String, LocalDate, Int) -> Unit)?
 ) {
+    val density = LocalDensity.current
+    val hapticFeedback = LocalHapticFeedback.current
+
+    // Calculate event duration and height
+    val duration = java.time.Duration.between(event.startDateTime, event.endDateTime ?: event.startDateTime.plusHours(1))
+    val durationMinutes = duration.toMinutes()
+    val eventHeightDp = with(density) { (hourHeightPx * durationMinutes / 60f).toDp() }
+
+    // Transparent background colors
     val backgroundColor = when (event.parentOwner) {
-        "mom" -> CoParentlyColors.MomPink.copy(alpha = 0.9f)
-        "dad" -> CoParentlyColors.DadBlue.copy(alpha = 0.9f)
-        else -> MaterialTheme.colorScheme.tertiaryContainer
+        "mom" -> CoParentlyColors.MomPink.copy(alpha = 0.6f)
+        "dad" -> CoParentlyColors.DadBlue.copy(alpha = 0.6f)
+        else -> MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.6f)
+    }
+
+    val borderColor = when (event.parentOwner) {
+        "mom" -> CoParentlyColors.MomPink
+        "dad" -> CoParentlyColors.DadBlue
+        else -> MaterialTheme.colorScheme.tertiary
     }
 
     val textColor = when (event.parentOwner) {
-        "mom" -> Color.White
-        "dad" -> Color.White
+        "mom" -> CoParentlyColors.MomPink
+        "dad" -> CoParentlyColors.DadBlue
         else -> MaterialTheme.colorScheme.onTertiaryContainer
     }
 
-    val hapticFeedback = LocalHapticFeedback.current
-
-    var isDragging by remember { mutableStateOf(false) }
+    // Drag states
+    var isDraggingEvent by remember { mutableStateOf(false) }
+    var isResizingStart by remember { mutableStateOf(false) }
+    var isResizingEnd by remember { mutableStateOf(false) }
     var totalDrag by remember { mutableStateOf(Offset.Zero) }
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
+            .height(eventHeightDp.coerceAtLeast(32.dp))
             .background(
-                color = backgroundColor.copy(alpha = if (isDragging) 0.7f else 1f),
+                color = backgroundColor,
                 shape = RoundedCornerShape(6.dp)
             )
-            .clickable(enabled = !isDragging, onClick = onClick)
-            .pointerInput(columnWidthPx, hourHeightPx, onDragDrop) {
-                if (onDragDrop != null && columnWidthPx > 0f && hourHeightPx > 0f) {
-                    detectDragGesturesAfterLongPress(
-                        onDragStart = {
-                            isDragging = true
-                            totalDrag = Offset.Zero
-                            // Haptic feedback on drag start
-                            hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                        },
-                        onDragCancel = {
-                            isDragging = false
-                            totalDrag = Offset.Zero
-                        },
-                        onDragEnd = {
-                            if (isDragging) {
-                                val dayOffset = (totalDrag.x / columnWidthPx).roundToInt()
-                                val hourOffset = (totalDrag.y / hourHeightPx).roundToInt()
-                                if (dayOffset != 0 || hourOffset != 0) {
-                                    val targetDate = baseDate.plusDays(dayOffset.toLong())
-                                    val targetHour = (baseHour + hourOffset).coerceIn(0, 23)
-                                    onDragDrop(event.id, targetDate, targetHour)
-                                    // Haptic feedback on successful drop
-                                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                                }
-                            }
-                            isDragging = false
-                            totalDrag = Offset.Zero
-                        }
-                    ) { change, dragAmount ->
-                        change.consume()
-                        totalDrag += dragAmount
-                    }
-                }
-            }
+            .clickable(enabled = !isDraggingEvent && !isResizingStart && !isResizingEnd, onClick = onClick)
             .graphicsLayer {
-                if (isDragging) {
+                if (isDraggingEvent) {
                     shadowElevation = 8.dp.toPx()
                     translationX = totalDrag.x
                     translationY = totalDrag.y
@@ -493,19 +478,134 @@ private fun EventChip(
                 }
             }
             .semantics {
-                contentDescription = "${event.title} event. ${if (isDragging) "Dragging" else "Long press and drag to move to different time slot."}"
+                contentDescription = "${event.title} event, duration ${durationMinutes} minutes. ${
+                    when {
+                        isDraggingEvent -> "Dragging"
+                        isResizingStart -> "Resizing start time"
+                        isResizingEnd -> "Resizing end time"
+                        else -> "Tap to view, long press center to move, drag corners to resize"
+                    }
+                }"
             }
-            .padding(horizontal = 8.dp, vertical = 4.dp),
-        contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = event.title,
-            style = MaterialTheme.typography.labelSmall,
-            color = textColor,
-            maxLines = 1,
-            fontWeight = FontWeight.Medium,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth()
+        // Event content
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 8.dp, vertical = 4.dp)
+                .pointerInput(columnWidthPx, hourHeightPx, onDragDrop) {
+                    // Center drag for moving event
+                    if (onDragDrop != null && columnWidthPx > 0f && hourHeightPx > 0f) {
+                        detectDragGesturesAfterLongPress(
+                            onDragStart = {
+                                isDraggingEvent = true
+                                totalDrag = Offset.Zero
+                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                            },
+                            onDragCancel = {
+                                isDraggingEvent = false
+                                totalDrag = Offset.Zero
+                            },
+                            onDragEnd = {
+                                if (isDraggingEvent) {
+                                    val dayOffset = (totalDrag.x / columnWidthPx).roundToInt()
+                                    val hourOffset = (totalDrag.y / hourHeightPx).roundToInt()
+                                    if (dayOffset != 0 || hourOffset != 0) {
+                                        val targetDate = baseDate.plusDays(dayOffset.toLong())
+                                        val targetHour = (baseHour + hourOffset).coerceIn(0, 23)
+                                        onDragDrop(event.id, targetDate, targetHour)
+                                        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    }
+                                }
+                                isDraggingEvent = false
+                                totalDrag = Offset.Zero
+                            }
+                        ) { change, dragAmount ->
+                            change.consume()
+                            totalDrag += dragAmount
+                        }
+                    }
+                },
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = event.title,
+                style = MaterialTheme.typography.labelSmall,
+                color = textColor,
+                maxLines = if (durationMinutes >= 60) 2 else 1,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Start,
+                modifier = Modifier.fillMaxWidth()
+            )
+            if (durationMinutes >= 45) {
+                Text(
+                    text = "${event.startDateTime.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))} - ${(event.endDateTime ?: event.startDateTime.plusHours(1)).format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))}",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontSize = 10.sp,
+                    color = textColor.copy(alpha = 0.8f),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
+
+        // Top-left resize handle (for start time)
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .size(16.dp)
+                .padding(2.dp)
+                .background(
+                    color = borderColor.copy(alpha = 0.8f),
+                    shape = CircleShape
+                )
+                .pointerInput(Unit) {
+                    detectDragGestures(
+                        onDragStart = {
+                            isResizingStart = true
+                            hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                        },
+                        onDragEnd = {
+                            isResizingStart = false
+                            hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                        },
+                        onDragCancel = {
+                            isResizingStart = false
+                        }
+                    ) { change, dragAmount ->
+                        change.consume()
+                        // TODO: Implement resize logic in next iteration
+                    }
+                }
+        )
+
+        // Bottom-right resize handle (for end time)
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .size(16.dp)
+                .padding(2.dp)
+                .background(
+                    color = borderColor.copy(alpha = 0.8f),
+                    shape = CircleShape
+                )
+                .pointerInput(Unit) {
+                    detectDragGestures(
+                        onDragStart = {
+                            isResizingEnd = true
+                            hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                        },
+                        onDragEnd = {
+                            isResizingEnd = false
+                            hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                        },
+                        onDragCancel = {
+                            isResizingEnd = false
+                        }
+                    ) { change, dragAmount ->
+                        change.consume()
+                        // TODO: Implement resize logic in next iteration
+                    }
+                }
         )
     }
 }

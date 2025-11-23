@@ -23,6 +23,8 @@ import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -93,7 +95,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun CalendarScreen(
     onEventClick: (String) -> Unit = {},
-    onAddEventClick: () -> Unit,
+    onAddEventClick: (LocalDate?, Int?) -> Unit,
     onSettingsClick: (() -> Unit)? = null,
     eventViewModel: EventViewModel = hiltViewModel(),
     calendarViewModel: CalendarViewModel = hiltViewModel()
@@ -263,30 +265,20 @@ fun CalendarScreen(
             SnackbarHost(hostState = snackbarHostState)
         },
         floatingActionButton = {
-            Box(
-                modifier = Modifier.combinedClickable(
-                    onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        onAddEventClick()
-                    },
-                    onLongClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        showQuickActions = true
-                    }
-                )
+            FloatingActionButton(
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    onAddEventClick(null, null)
+                },
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                shape = RoundedCornerShape(dims.cornerRadius)
             ) {
-                FloatingActionButton(
-                    onClick = {}, // Handled by Box's combinedClickable
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    shape = RoundedCornerShape(dims.cornerRadius)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = stringResource(R.string.calendar_add_event),
-                        modifier = Modifier.size(dims.iconSize)
-                    )
-                }
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = stringResource(R.string.calendar_add_event),
+                    modifier = Modifier.size(dims.iconSize)
+                )
             }
         }
     ) { paddingValues ->
@@ -416,8 +408,8 @@ fun CalendarScreen(
                                 custodySchedules = custodySchedules,
                                 onDateChange = { calendarViewModel.setSelectedDate(it) },
                                 onEventClick = onEventClick,
-                                onAddEventClick = { _, _ ->
-                                    onAddEventClick()
+                                onAddEventClick = { date, hour ->
+                                    onAddEventClick(date, hour)
                                 },
                                 onEventDragDrop = { eventId, targetDate, targetHour ->
                                     eventViewModel.moveEvent(eventId, targetDate, targetHour)
@@ -432,8 +424,8 @@ fun CalendarScreen(
                                 custodySchedules = custodySchedules,
                                 onDateChange = { calendarViewModel.setSelectedDate(it) },
                                 onEventClick = onEventClick,
-                                onAddEventClick = { _, _ ->
-                                    onAddEventClick()
+                                onAddEventClick = { date, hour ->
+                                    onAddEventClick(date, hour)
                                 },
                                 onEventDragDrop = { eventId, targetDate, targetHour ->
                                     eventViewModel.moveEvent(eventId, targetDate, targetHour)
@@ -448,8 +440,8 @@ fun CalendarScreen(
                                 custodySchedules = custodySchedules,
                                 onDateChange = { calendarViewModel.setSelectedDate(it) },
                                 onEventClick = onEventClick,
-                                onAddEventClick = { _, _ ->
-                                    onAddEventClick()
+                                onAddEventClick = { date, hour ->
+                                    onAddEventClick(date, hour)
                                 },
                                 onEventDragDrop = { eventId, targetDate, targetHour ->
                                     eventViewModel.moveEvent(eventId, targetDate, targetHour)
@@ -534,7 +526,7 @@ fun CalendarScreen(
     // Quick Actions Bottom Sheet
     if (showQuickActions) {
         QuickActionsBottomSheet(
-            onEventCreate = onAddEventClick,
+            onEventCreate = { onAddEventClick(null, null) },
             onNavigateToToday = { calendarViewModel.setSelectedDate(LocalDate.now()) },
             onShowSettings = { onSettingsClick?.invoke() },
             onDismiss = { showQuickActions = false },

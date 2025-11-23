@@ -98,6 +98,8 @@ import javax.inject.Inject
 @Composable
 fun AddEditEventScreen(
     eventId: String?,
+    initialDate: LocalDate? = null,
+    initialHour: Int? = null,
     onSave: () -> Unit,
     onCancel: () -> Unit,
     viewModel: EventViewModel = hiltViewModel()
@@ -108,9 +110,19 @@ fun AddEditEventScreen(
     var description by remember { mutableStateOf("") }
     var parentOwner by remember { mutableStateOf("mom") }
     var eventType by remember { mutableStateOf("general") }
-    var startDate by remember { mutableStateOf(LocalDate.now()) }
-    var startTime by remember { mutableStateOf(LocalTime.now()) }
-    var endTime by remember { mutableStateOf(LocalTime.now().plusHours(1)) }
+    var startDate by remember { mutableStateOf(initialDate ?: LocalDate.now()) }
+    var startTime by remember {
+        mutableStateOf(
+            if (initialHour != null) LocalTime.of(initialHour, 0)
+            else LocalTime.now()
+        )
+    }
+    var endTime by remember {
+        mutableStateOf(
+            if (initialHour != null) LocalTime.of(initialHour, 0).plusHours(1)
+            else LocalTime.now().plusHours(1)
+        )
+    }
 
     var showDatePicker by remember { mutableStateOf(false) }
     var showStartTimePicker by remember { mutableStateOf(false) }
