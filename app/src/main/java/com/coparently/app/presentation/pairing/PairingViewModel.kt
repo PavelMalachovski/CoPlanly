@@ -259,9 +259,12 @@ class PairingViewModel @Inject constructor(
                 )
 
                 if (qrBitmap != null) {
+                    // QR code expires in 24 hours
+                    val expirationTime = System.currentTimeMillis() + (24 * 60 * 60 * 1000)
                     _uiState.value = _uiState.value.copy(
                         qrCodeBitmap = qrBitmap,
                         showQRCodeDialog = true,
+                        qrCodeExpirationTime = expirationTime,
                         errorMessage = null
                     )
                     analyticsManager.logInvitationSent() // Log QR code generation as invitation sent
@@ -284,8 +287,16 @@ class PairingViewModel @Inject constructor(
     fun dismissQRCodeDialog() {
         _uiState.value = _uiState.value.copy(
             showQRCodeDialog = false,
-            qrCodeBitmap = null
+            qrCodeBitmap = null,
+            qrCodeExpirationTime = null
         )
+    }
+
+    /**
+     * Regenerates QR code when expired.
+     */
+    fun regenerateQRCode() {
+        generateQRCode()
     }
 
     /**
@@ -310,6 +321,7 @@ class PairingViewModel @Inject constructor(
  * @param emailError Ошибка валидации email
  * @param qrCodeBitmap Generated QR code bitmap for sharing
  * @param showQRCodeDialog Whether to show the QR code sharing dialog
+ * @param qrCodeExpirationTime Timestamp when QR code expires (24 hours from generation)
  */
 data class PairingUiState(
     val invitationEmail: String = "",
@@ -319,6 +331,7 @@ data class PairingUiState(
     val errorMessage: String? = null,
     val emailError: String? = null,
     val qrCodeBitmap: Bitmap? = null,
-    val showQRCodeDialog: Boolean = false
+    val showQRCodeDialog: Boolean = false,
+    val qrCodeExpirationTime: Long? = null
 )
 

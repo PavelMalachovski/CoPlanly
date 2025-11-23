@@ -20,7 +20,11 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import com.coparently.app.presentation.common.ConfirmationDialog
+import kotlinx.coroutines.delay
+import java.util.concurrent.TimeUnit
 
 /**
  * Screen for managing co-parent pairing and invitations.
@@ -285,11 +289,60 @@ fun PairingScreen(
                                 }
                             }
 
-                            Text(
-                                text = "This QR code expires in 24 hours for security.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                            // Countdown timer for QR code expiration
+                            var currentTime by remember { mutableStateOf(System.currentTimeMillis()) }
+
+                            LaunchedEffect(uiState.qrCodeExpirationTime) {
+                                while (uiState.qrCodeExpirationTime != null && uiState.showQRCodeDialog) {
+                                    currentTime = System.currentTimeMillis()
+                                    delay(1000) // Update every second
+                                }
+                            }
+
+                            val timeRemaining = uiState.qrCodeExpirationTime?.let { expiration ->
+                                (expiration - currentTime).coerceAtLeast(0)
+                            } ?: 0
+
+                            val isExpired = timeRemaining <= 0
+
+                            if (isExpired && uiState.qrCodeExpirationTime != null) {
+                                // Show expired message and regenerate button
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Text(
+                                        text = "QR code has expired",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.error
+                                    )
+                                    Button(
+                                        onClick = { viewModel.regenerateQRCode() }
+                                    ) {
+                                        Text("Generate New QR Code")
+                                    }
+                                }
+                            } else {
+                                val hours = TimeUnit.MILLISECONDS.toHours(timeRemaining)
+                                val minutes = TimeUnit.MILLISECONDS.toMinutes(timeRemaining % TimeUnit.HOURS.toMillis(1))
+                                val seconds = TimeUnit.MILLISECONDS.toSeconds(timeRemaining % TimeUnit.MINUTES.toMillis(1))
+
+                                val timeText = when {
+                                    hours > 0 -> "${hours}h ${minutes}m remaining"
+                                    minutes > 0 -> "${minutes}m ${seconds}s remaining"
+                                    else -> "${seconds}s remaining"
+                                }
+
+                                Text(
+                                    text = "Expires in: $timeText",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = when {
+                                        hours < 1 -> MaterialTheme.colorScheme.error
+                                        hours < 6 -> MaterialTheme.colorScheme.errorContainer
+                                        else -> MaterialTheme.colorScheme.onSurfaceVariant
+                                    }
+                                )
+                            }
                         }
                     },
                     confirmButton = {

@@ -161,12 +161,30 @@ class EventViewModel @Inject constructor(
     }
 
     /**
+     * Data class to store previous event position for undo functionality.
+     */
+    data class PreviousEventPosition(
+        val eventId: String,
+        val previousDate: LocalDate,
+        val previousHour: Int?
+    )
+
+    private var lastMoveUndoInfo: PreviousEventPosition? = null
+
+    /**
      * Moves event to a new date/time (drag & drop support).
+     * Stores previous position for undo functionality.
      */
     fun moveEvent(eventId: String, targetDate: LocalDate, targetHour: Int? = null) {
         viewModelScope.launch {
             try {
                 val event = eventUseCases.getEvents.getById(eventId) ?: return@launch
+
+                // Store previous position for undo
+                val previousDate = event.startDateTime.toLocalDate()
+                val previousHour = event.startDateTime.hour
+                lastMoveUndoInfo = PreviousEventPosition(eventId, previousDate, previousHour)
+
                 val duration = Duration.between(event.startDateTime, event.endDateTime)
                 val originalTime = event.startDateTime.toLocalTime()
                 val adjustedTime = targetHour?.let { originalTime.withHour(it) } ?: originalTime
@@ -184,6 +202,43 @@ class EventViewModel @Inject constructor(
                 }.onFailure { error ->
                     val appError = errorHandler.handleError(error)
                     _uiState.value = EventUiState.Error(appError.userMessage)
+                    lastMoveUndoInfo = null // Clear undo info on error
+                }
+            } catch (e: Exception) {
+                val appError = errorHandler.handleError(e)
+                _uiState.value = EventUiState.Error(appError.userMessage)
+                lastMoveUndoInfo = null // Clear undo info on error
+            }
+        }
+    }
+
+    /**
+     * Undoes the last event move operation.
+     * Restores event to its previous position.
+     */
+    fun undoLastMove() {
+        val undoInfo = lastMoveUndoInfo ?: return
+        viewModelScope.launch {
+            try {
+                val event = eventUseCases.getEvents.getById(undoInfo.eventId) ?: return@launch
+                val duration = Duration.between(event.startDateTime, event.endDateTime)
+                val originalTime = event.startDateTime.toLocalTime()
+                val previousTime = undoInfo.previousHour?.let { originalTime.withHour(it) } ?: originalTime
+                val previousStart = undoInfo.previousDate.atTime(previousTime)
+                val previousEnd = previousStart.plus(duration)
+                val restoredEvent = event.copy(
+                    startDateTime = previousStart,
+                    endDateTime = previousEnd
+                )
+                val result = eventUseCases.updateEvent(restoredEvent)
+                result.onSuccess {
+                    lastMoveUndoInfo = null // Clear undo info after successful undo
+                    _uiState.value = EventUiState.OperationSuccess("Move undone")
+                    kotlinx.coroutines.delay(1500)
+                    _uiState.value = EventUiState.Success(_events.value)
+                }.onFailure { error ->
+                    val appError = errorHandler.handleError(error)
+                    _uiState.value = EventUiState.Error(appError.userMessage)
                 }
             } catch (e: Exception) {
                 val appError = errorHandler.handleError(e)
@@ -191,6 +246,11 @@ class EventViewModel @Inject constructor(
             }
         }
     }
+
+    /**
+     * Checks if there's an undo action available.
+     */
+    fun hasUndoAction(): Boolean = lastMoveUndoInfo != null
 
     /**
      * Gets an event by ID.

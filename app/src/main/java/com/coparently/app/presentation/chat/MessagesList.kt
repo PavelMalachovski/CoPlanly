@@ -44,9 +44,20 @@ fun MessagesList(
 ) {
     val listState = rememberLazyListState()
 
+    // Auto-scroll only if user is already at the bottom (within last 2 items)
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) {
-            listState.animateScrollToItem(messages.size - 1)
+            val firstVisibleIndex = listState.firstVisibleItemIndex
+            val lastVisibleIndex = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+            val totalItems = messages.size
+
+            // Check if user is already near the bottom (within last 2 items or at the end)
+            val isNearBottom = lastVisibleIndex >= totalItems - 2 ||
+                               firstVisibleIndex >= totalItems - 3
+
+            if (isNearBottom) {
+                listState.animateScrollToItem(messages.size - 1)
+            }
         }
     }
 

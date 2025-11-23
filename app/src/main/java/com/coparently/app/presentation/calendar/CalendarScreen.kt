@@ -39,6 +39,10 @@ import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.Button
 import androidx.compose.material3.DatePickerDefaults
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -65,6 +69,7 @@ import com.coparently.app.presentation.calendar.navigation.CalendarNavigation
 import com.coparently.app.presentation.common.QuickActionsBottomSheet
 import androidx.compose.material3.rememberModalBottomSheetState
 import com.coparently.app.presentation.event.EventViewModel
+import com.coparently.app.presentation.event.EventUiState
 import com.coparently.app.presentation.theme.CoParentlyColors
 import com.coparently.app.presentation.theme.dimensions
 import com.kizitonwose.calendar.compose.rememberCalendarState
@@ -127,6 +132,10 @@ fun CalendarScreen(
     // Quick Actions Bottom Sheet state
     var showQuickActions by remember { mutableStateOf(false) }
     val quickActionsSheetState = rememberModalBottomSheetState()
+
+    // Snackbar state for undo functionality
+    val snackbarHostState = remember { SnackbarHostState() }
+    val uiState by eventViewModel.uiState.collectAsState()
 
     // Load events based on view mode
     LaunchedEffect(viewMode, selectedDate) {
@@ -203,6 +212,25 @@ fun CalendarScreen(
         }
     }
 
+    // Show snackbar with undo when event is moved
+    LaunchedEffect(uiState) {
+        when (val state = uiState) {
+            is EventUiState.OperationSuccess -> {
+                if (state.message == "Event rescheduled" && eventViewModel.hasUndoAction()) {
+                    val result = snackbarHostState.showSnackbar(
+                        message = "Event moved",
+                        actionLabel = "Undo",
+                        duration = SnackbarDuration.Short
+                    )
+                    if (result == SnackbarResult.ActionPerformed) {
+                        eventViewModel.undoLastMove()
+                    }
+                }
+            }
+            else -> {}
+        }
+    }
+
     Scaffold(
         topBar = {
             CalendarNavigation(
@@ -218,6 +246,9 @@ fun CalendarScreen(
                     onSettingsClick = onSettingsClick
                 )
             }
+        },
+        snackbarHost = {
+            SnackbarHost(hostState = snackbarHostState)
         },
         floatingActionButton = {
             Box(

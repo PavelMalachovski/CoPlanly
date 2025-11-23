@@ -40,9 +40,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -115,6 +119,8 @@ fun AddEditEventScreen(
     val scrollState = rememberScrollState()
     val focusManager = LocalFocusManager.current
     val dims = dimensions()
+    val snackbarHostState = remember { SnackbarHostState() }
+    var isSaving by remember { mutableStateOf(false) }
 
     // Validation states
     var titleError by remember { mutableStateOf<String?>(null) }
@@ -200,46 +206,75 @@ fun AddEditEventScreen(
                             val isTitleValidated = validateTitle()
                             val isDescriptionValidated = validateDescription()
 
-                            if (isFormValid && isTitleValidated && isDescriptionValidated) {
+                            if (isFormValid && isTitleValidated && isDescriptionValidated && !isSaving) {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                isSaving = true
                                 scope.launch {
-                                    val event = Event(
-                                        id = eventId ?: UUID.randomUUID().toString(),
-                                        title = title,
-                                        description = description.ifEmpty { null },
-                                        startDateTime = LocalDateTime.of(startDate, startTime),
-                                        endDateTime = LocalDateTime.of(startDate, endTime),
-                                        eventType = eventType,
-                                        parentOwner = parentOwner,
-                                        isRecurring = false,
-                                        recurrencePattern = null,
-                                        createdAt = LocalDateTime.now(),
-                                        updatedAt = LocalDateTime.now()
-                                    )
+                                    try {
+                                        val event = Event(
+                                            id = eventId ?: UUID.randomUUID().toString(),
+                                            title = title,
+                                            description = description.ifEmpty { null },
+                                            startDateTime = LocalDateTime.of(startDate, startTime),
+                                            endDateTime = LocalDateTime.of(startDate, endTime),
+                                            eventType = eventType,
+                                            parentOwner = parentOwner,
+                                            isRecurring = false,
+                                            recurrencePattern = null,
+                                            createdAt = LocalDateTime.now(),
+                                            updatedAt = LocalDateTime.now()
+                                        )
 
-                                    if (eventId == null) {
-                                        viewModel.createEvent(event)
-                                    } else {
-                                        viewModel.updateEvent(event)
+                                        if (eventId == null) {
+                                            viewModel.createEvent(event)
+                                        } else {
+                                            viewModel.updateEvent(event)
+                                        }
+
+                                        // Show success snackbar
+                                        snackbarHostState.showSnackbar(
+                                            message = if (eventId == null) "Event created successfully" else "Event updated successfully",
+                                            duration = SnackbarDuration.Short
+                                        )
+
+                                        // Navigate after a short delay
+                                        kotlinx.coroutines.delay(500)
+                                        onSave()
+                                    } catch (e: Exception) {
+                                        snackbarHostState.showSnackbar(
+                                            message = "Failed to save event: ${e.message}",
+                                            duration = SnackbarDuration.Long
+                                        )
+                                        isSaving = false
                                     }
-                                    onSave()
                                 }
                             }
                         },
-                        enabled = isFormValid
+                        enabled = isFormValid && !isSaving
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = "Save",
-                            tint = if (isFormValid) {
-                                MaterialTheme.colorScheme.primary
-                            } else {
-                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                            }
-                        )
+                        if (isSaving) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                color = MaterialTheme.colorScheme.primary,
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = "Save",
+                                tint = if (isFormValid) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                }
+                            )
+                        }
                     }
                 }
             )
+        },
+        snackbarHost = {
+            SnackbarHost(hostState = snackbarHostState)
         }
     ) { paddingValues ->
         Column(

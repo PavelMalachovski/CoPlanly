@@ -244,6 +244,7 @@ fun EventDetailRow(label: String, value: String) {
 
 @Composable
 fun ConfidenceBadge(confidence: Double) {
+    val percentage = (confidence * 100).toInt()
     val (color, label) = when {
         confidence >= 0.8 -> MaterialTheme.colorScheme.primary to "High"
         confidence >= 0.6 -> MaterialTheme.colorScheme.tertiary to "Medium"
@@ -255,7 +256,7 @@ fun ConfidenceBadge(confidence: Double) {
         shape = MaterialTheme.shapes.small
     ) {
         Text(
-            text = "$label confidence",
+            text = "$label confidence ($percentage%)",
             style = MaterialTheme.typography.labelSmall,
             color = color,
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
