@@ -1,5 +1,6 @@
 package com.coparently.app.data.local.entity
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import java.time.LocalDateTime
@@ -20,5 +21,7 @@ data class MessageEntity(
     val attachmentsJson: String = "[]", // JSON array of URLs
     val isRead: Boolean = false,
     val replyToMessageId: String? = null,
-    val syncedToFirestore: Boolean = false
+    val syncedToFirestore: Boolean = false,
+    @ColumnInfo(defaultValue = "SENT")
+    val status: String? = null // Stored as string (SENDING, SENT, ERROR), nullable for migration compatibility
 )

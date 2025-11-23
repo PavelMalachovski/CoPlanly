@@ -48,7 +48,7 @@ import com.coparently.app.data.local.entity.UserEntity
         GradeEntity::class,
         SchoolEventEntity::class
     ],
-    version = 6,
+    version = 7,
     exportSchema = true
 )
 @TypeConverters(Converters::class)

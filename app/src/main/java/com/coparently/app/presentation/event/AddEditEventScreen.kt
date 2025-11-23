@@ -137,8 +137,11 @@ fun AddEditEventScreen(
     }
 
     // Time validation effect
-    LaunchedEffect(startTime, endTime) {
-        if (endTime.isBefore(startTime)) {
+    LaunchedEffect(startTime, endTime, startDate) {
+        val startDateTime = LocalDateTime.of(startDate, startTime)
+        val endDateTime = LocalDateTime.of(startDate, endTime)
+
+        if (endDateTime.isBefore(startDateTime) || endDateTime.isEqual(startDateTime)) {
             showTimeValidationError = true
             timeValidationMessage = "End time must be after start time"
         } else {

@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.coparently.app.domain.model.Conversation
 import com.coparently.app.domain.model.Message
+import com.coparently.app.domain.model.MessageSendStatus
 import com.coparently.app.domain.model.MessageTemplate
 import com.coparently.app.domain.model.MessageType
 import com.coparently.app.domain.repository.MessageRepository
@@ -86,7 +87,8 @@ class ChatViewModel @Inject constructor(
                 content = content,
                 timestamp = LocalDateTime.now(),
                 messageType = type,
-                attachments = attachments
+                attachments = attachments,
+                status = MessageSendStatus.SENDING
             )
             messageRepository.sendMessage(message)
         }

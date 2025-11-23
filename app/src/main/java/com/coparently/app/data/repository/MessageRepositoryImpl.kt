@@ -7,6 +7,7 @@ import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestoreMessageDataSource
 import com.coparently.app.domain.model.Conversation
 import com.coparently.app.domain.model.Message
+import com.coparently.app.domain.model.MessageSendStatus
 import com.coparently.app.domain.model.MessageType
 import com.coparently.app.domain.repository.MessageRepository
 import com.google.gson.Gson
@@ -46,29 +47,53 @@ class MessageRepositoryImpl @Inject constructor(
     }
 
     override suspend fun sendMessage(message: Message) {
-        val entity = message.toEntity()
+        // Insert message with SENDING status
+        val sendingMessage = if (message.status == MessageSendStatus.SENT) {
+            message.copy(status = MessageSendStatus.SENDING)
+        } else {
+            message
+        }
+        val entity = sendingMessage.toEntity()
         messageDao.insertMessage(entity)
 
         // Sync to Firestore
         val firebaseUser = firebaseAuthService.getCurrentUser()
         if (firebaseUser != null) {
-            val messageData = mapOf(
-                "id" to message.id,
-                "conversationId" to message.conversationId,
-                "senderId" to message.senderId,
-                "senderName" to message.senderName,
-                "content" to message.content,
-                "timestamp" to message.timestamp.format(dateFormatter),
-                "messageType" to message.messageType.name,
-                "attachments" to message.attachments,
-                "isRead" to message.isRead,
-                "replyToMessageId" to (message.replyToMessageId ?: "")
-            )
-            firestoreMessageDataSource.sendMessage(message.id, messageData)
+            try {
+                val messageData = mapOf(
+                    "id" to message.id,
+                    "conversationId" to message.conversationId,
+                    "senderId" to message.senderId,
+                    "senderName" to message.senderName,
+                    "content" to message.content,
+                    "timestamp" to message.timestamp.format(dateFormatter),
+                    "messageType" to message.messageType.name,
+                    "attachments" to message.attachments,
+                    "isRead" to message.isRead,
+                    "replyToMessageId" to (message.replyToMessageId ?: "")
+                )
+                firestoreMessageDataSource.sendMessage(message.id, messageData)
 
-            // Mark as synced
-            val syncedMessage = message.copy(syncedToFirestore = true)
-            messageDao.insertMessage(syncedMessage.toEntity())
+                // Mark as synced and SENT
+                val syncedMessage = message.copy(
+                    syncedToFirestore = true,
+                    status = MessageSendStatus.SENT
+                )
+                messageDao.insertMessage(syncedMessage.toEntity())
+            } catch (e: Exception) {
+                // Mark as ERROR on failure
+                val errorMessage = message.copy(
+                    status = MessageSendStatus.ERROR
+                )
+                messageDao.insertMessage(errorMessage.toEntity())
+                throw e
+            }
+        } else {
+            // No user, mark as ERROR
+            val errorMessage = message.copy(
+                status = MessageSendStatus.ERROR
+            )
+            messageDao.insertMessage(errorMessage.toEntity())
         }
     }
 
@@ -142,7 +167,8 @@ class MessageRepositoryImpl @Inject constructor(
                     attachments = (data["attachments"] as? List<String>) ?: emptyList(),
                     isRead = (data["isRead"] as? Boolean) ?: false,
                     replyToMessageId = data["replyToMessageId"] as? String,
-                    syncedToFirestore = true
+                    syncedToFirestore = true,
+                    status = MessageSendStatus.SENT // Messages from Firestore are always SENT
                 )
                 messageDao.insertMessage(message.toEntity())
             }
@@ -189,7 +215,12 @@ class MessageRepositoryImpl @Inject constructor(
             attachments = attachments,
             isRead = isRead,
             replyToMessageId = replyToMessageId,
-            syncedToFirestore = syncedToFirestore
+            syncedToFirestore = syncedToFirestore,
+            status = try {
+                MessageSendStatus.valueOf(status ?: "SENT")
+            } catch (e: IllegalArgumentException) {
+                MessageSendStatus.SENT // Default to SENT for old messages or invalid values
+            }
         )
     }
 
@@ -205,7 +236,8 @@ class MessageRepositoryImpl @Inject constructor(
             attachmentsJson = gson.toJson(attachments),
             isRead = isRead,
             replyToMessageId = replyToMessageId,
-            syncedToFirestore = syncedToFirestore
+            syncedToFirestore = syncedToFirestore,
+            status = status.name // Will never be null as Message always has a status
         )
     }
 }
