@@ -413,6 +413,9 @@ fun CalendarScreen(
                                 },
                                 onEventDragDrop = { eventId, targetDate, targetHour ->
                                     eventViewModel.moveEvent(eventId, targetDate, targetHour)
+                                },
+                                onEventResize = { eventId: String, newStartTime: java.time.LocalDateTime?, newEndTime: java.time.LocalDateTime? ->
+                                    eventViewModel.resizeEvent(eventId, newStartTime, newEndTime)
                                 }
                             )
                         }
@@ -429,6 +432,9 @@ fun CalendarScreen(
                                 },
                                 onEventDragDrop = { eventId, targetDate, targetHour ->
                                     eventViewModel.moveEvent(eventId, targetDate, targetHour)
+                                },
+                                onEventResize = { eventId: String, newStartTime: java.time.LocalDateTime?, newEndTime: java.time.LocalDateTime? ->
+                                    eventViewModel.resizeEvent(eventId, newStartTime, newEndTime)
                                 }
                             )
                         }
@@ -445,6 +451,9 @@ fun CalendarScreen(
                                 },
                                 onEventDragDrop = { eventId, targetDate, targetHour ->
                                     eventViewModel.moveEvent(eventId, targetDate, targetHour)
+                                },
+                                onEventResize = { eventId: String, newStartTime: java.time.LocalDateTime?, newEndTime: java.time.LocalDateTime? ->
+                                    eventViewModel.resizeEvent(eventId, newStartTime, newEndTime)
                                 }
                             )
                         }

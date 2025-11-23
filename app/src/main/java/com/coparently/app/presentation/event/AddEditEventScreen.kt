@@ -111,13 +111,13 @@ fun AddEditEventScreen(
     var parentOwner by remember { mutableStateOf("mom") }
     var eventType by remember { mutableStateOf("general") }
     var startDate by remember { mutableStateOf(initialDate ?: LocalDate.now()) }
-    var startTime by remember {
+    var startTime by remember(initialHour, initialDate) {
         mutableStateOf(
             if (initialHour != null) LocalTime.of(initialHour, 0)
             else LocalTime.now()
         )
     }
-    var endTime by remember {
+    var endTime by remember(initialHour) {
         mutableStateOf(
             if (initialHour != null) LocalTime.of(initialHour, 0).plusHours(1)
             else LocalTime.now().plusHours(1)

@@ -151,7 +151,7 @@ fun NavGraph(
             val dateString = backStackEntry.arguments?.getString(Screen.AddEvent.ARG_DATE)
             val hourValue = backStackEntry.arguments?.getInt(Screen.AddEvent.ARG_HOUR) ?: -1
             val hour = if (hourValue >= 0) hourValue else null
-            val initialDate = dateString?.let { java.time.LocalDate.parse(it) }
+            val initialDate = dateString?.takeIf { it != "null" }?.let { java.time.LocalDate.parse(it) }
 
             AddEditEventScreen(
                 eventId = null,
@@ -383,11 +383,9 @@ sealed class Screen(val route: String) {
         const val ARG_HOUR = "hour"
 
         fun createRoute(date: java.time.LocalDate? = null, hour: Int? = null): String {
-            return if (date != null && hour != null) {
-                "add_event?date=$date&hour=$hour"
-            } else {
-                "add_event"
-            }
+            val dateParam = date?.toString() ?: "null"
+            val hourParam = hour?.toString() ?: "-1"
+            return "add_event?date=$dateParam&hour=$hourParam"
         }
     }
     data object Settings : Screen("settings")

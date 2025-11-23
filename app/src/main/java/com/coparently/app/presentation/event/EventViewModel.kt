@@ -273,6 +273,46 @@ class EventViewModel @Inject constructor(
     fun hasUndoAction(): Boolean = lastMoveUndoInfo != null
 
     /**
+     * Resizes event by changing start or end time.
+     * @param eventId The ID of the event to resize
+     * @param newStartTime New start time (null if not changing)
+     * @param newEndTime New end time (null if not changing)
+     */
+    fun resizeEvent(eventId: String, newStartTime: LocalDateTime? = null, newEndTime: LocalDateTime? = null) {
+        viewModelScope.launch {
+            try {
+                val event = eventUseCases.getEvents.getById(eventId) ?: return@launch
+
+                val updatedStart = newStartTime ?: event.startDateTime
+                val updatedEnd = newEndTime ?: (event.endDateTime ?: event.startDateTime.plusHours(1))
+
+                // Validate that end is after start
+                if (updatedEnd.isBefore(updatedStart) || updatedEnd.isEqual(updatedStart)) {
+                    _uiState.value = EventUiState.Error("End time must be after start time")
+                    return@launch
+                }
+
+                val updatedEvent = event.copy(
+                    startDateTime = updatedStart,
+                    endDateTime = updatedEnd
+                )
+                val result = eventUseCases.updateEvent(updatedEvent)
+                result.onSuccess {
+                    _uiState.value = EventUiState.OperationSuccess("Event resized")
+                    kotlinx.coroutines.delay(1500)
+                    _uiState.value = EventUiState.Success(_events.value)
+                }.onFailure { error ->
+                    val appError = errorHandler.handleError(error)
+                    _uiState.value = EventUiState.Error(appError.userMessage)
+                }
+            } catch (e: Exception) {
+                val appError = errorHandler.handleError(e)
+                _uiState.value = EventUiState.Error(appError.userMessage)
+            }
+        }
+    }
+
+    /**
      * Gets an event by ID.
      */
     suspend fun getEventById(id: String): Event? {

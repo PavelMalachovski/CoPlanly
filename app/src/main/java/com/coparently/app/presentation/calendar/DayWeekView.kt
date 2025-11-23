@@ -10,6 +10,7 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
@@ -61,6 +62,7 @@ import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.theme.CoParentlyColors
 import com.coparently.app.presentation.theme.dimensions
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.time.temporal.WeekFields
 import java.util.Locale
@@ -79,7 +81,8 @@ fun DayWeekView(
     onDateChange: (LocalDate) -> Unit,
     onEventClick: (String) -> Unit,
     onAddEventClick: (LocalDate, Int) -> Unit = { _, _ -> },
-    onEventDragDrop: ((String, LocalDate, Int) -> Unit)? = null
+    onEventDragDrop: ((String, LocalDate, Int) -> Unit)? = null,
+    onEventResize: ((String, LocalDateTime?, LocalDateTime?) -> Unit)? = null
 ) {
     val dims = dimensions()
     val hours = (0..23).toList()
@@ -323,66 +326,69 @@ fun DayWeekView(
                         // Day columns for this hour - use optimized DateRangeHelper
                         val currentDates = DateRangeHelper.rememberDateRange(currentDate, daysCount)
 
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        // Create a Box to overlay events that span multiple hours
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(hourCellHeight)
                         ) {
-                            currentDates.forEach { date ->
-                            var columnWidthPx by remember { mutableFloatStateOf(0f) }
-                            val dateEvents = events.filter {
-                                it.startDateTime.toLocalDate() == date &&
-                                it.startDateTime.hour == hour
-                            }
-                            val isToday = date == LocalDate.now()
-                            val custody = CustodyHelper.getCustodyForDate(date, custodySchedules)
-                            val backgroundColor = when {
-                                dateEvents.isNotEmpty() -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                                isToday -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.05f)
-                                custody == "mom" -> CoParentlyColors.MomPink.copy(alpha = 0.03f)
-                                custody == "dad" -> CoParentlyColors.DadBlue.copy(alpha = 0.03f)
-                                else -> MaterialTheme.colorScheme.surface
-                            }
-
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(hourCellHeight) // ~60dp for compact
-                                    .onGloballyPositioned { coordinates ->
-                                        columnWidthPx = coordinates.size.width.toFloat()
-                                    }
-                                    .background(
-                                        color = backgroundColor,
-                                        shape = RoundedCornerShape(dims.paddingSmall)
-                                    )
-                                    .clickable {
-                                        if (dateEvents.isNotEmpty()) {
-                                            onEventClick(dateEvents.first().id)
-                                        } else {
-                                            onAddEventClick(date, hour)
-                                        }
-                                    }
-                                    .semantics {
-                                        contentDescription = if (dateEvents.isNotEmpty()) {
-                                            "Time slot at ${String.format("%02d:00", hour)} on ${date.format(DateTimeFormatter.ofPattern("MMM dd"))}, ${dateEvents.size} event(s). Tap to view, long press and drag to move."
-                                        } else {
-                                            "Empty time slot at ${String.format("%02d:00", hour)} on ${date.format(DateTimeFormatter.ofPattern("MMM dd"))}. Tap to add event."
-                                        }
-                                    },
-                                contentAlignment = Alignment.Center
+                            // Background cells for each day
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
-                                if (dateEvents.isNotEmpty()) {
+                                currentDates.forEachIndexed { dayIndex, date ->
+                                    var columnWidthPx by remember { mutableFloatStateOf(0f) }
+                                    val isToday = date == LocalDate.now()
+                                    val custody = CustodyHelper.getCustodyForDate(date, custodySchedules)
+                                    val backgroundColor = when {
+                                        isToday -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.05f)
+                                        custody == "mom" -> CoParentlyColors.MomPink.copy(alpha = 0.03f)
+                                        custody == "dad" -> CoParentlyColors.DadBlue.copy(alpha = 0.03f)
+                                        else -> MaterialTheme.colorScheme.surface
+                                    }
+
                                     Box(
-                                        modifier = Modifier.fillMaxSize(),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Column(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(dims.paddingSmall * 0.75f), // ~6dp for compact
-                                            horizontalAlignment = Alignment.CenterHorizontally,
-                                            verticalArrangement = Arrangement.spacedBy(dims.paddingSmall / 2)
-                                        ) {
-                                            dateEvents.take(2).forEach { event ->
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .fillMaxHeight()
+                                            .onGloballyPositioned { coordinates ->
+                                                columnWidthPx = coordinates.size.width.toFloat()
+                                            }
+                                            .background(
+                                                color = backgroundColor,
+                                                shape = RoundedCornerShape(dims.paddingSmall)
+                                            )
+                                            .clickable {
+                                                onAddEventClick(date, hour)
+                                            }
+                                            .semantics {
+                                                contentDescription = "Time slot at ${String.format("%02d:00", hour)} on ${date.format(DateTimeFormatter.ofPattern("MMM dd"))}. Tap to add event."
+                                            }
+                                    )
+
+                                    // Find events for this date that start in this hour or earlier
+                                    val hourStart = date.atTime(hour, 0)
+                                    val hourEnd = date.atTime(hour, 59, 59)
+
+                                    val eventsForThisDate = events.filter { event ->
+                                        val eventStart = event.startDateTime
+                                        val eventEnd = event.endDateTime ?: event.startDateTime.plusHours(1)
+                                        eventStart.toLocalDate() == date &&
+                                        eventStart.hour <= hour &&
+                                        !(eventEnd.isBefore(hourStart) || eventStart.isAfter(hourEnd))
+                                    }
+
+                                    // Show events that start in this hour or earlier (to show multi-hour events)
+                                    eventsForThisDate.forEach { event ->
+                                        val eventStart = event.startDateTime
+                                        // Only render if this is the first hour the event appears in
+                                        if (eventStart.toLocalDate() == date && eventStart.hour == hour) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxSize()
+                                                    .padding(horizontal = 2.dp)
+                                            ) {
                                                 EventChip(
                                                     event = event,
                                                     onClick = { onEventClick(event.id) },
@@ -390,24 +396,14 @@ fun DayWeekView(
                                                     hourHeightPx = hourCellHeightPx,
                                                     baseDate = date,
                                                     baseHour = hour,
-                                                    onDragDrop = onEventDragDrop
-                                                )
-                                            }
-                                            if (dateEvents.size > 2) {
-                                                Text(
-                                                    text = "+${dateEvents.size - 2}",
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    color = MaterialTheme.colorScheme.primary,
-                                                    fontWeight = FontWeight.Bold,
-                                                    modifier = Modifier.fillMaxWidth(),
-                                                    textAlign = TextAlign.Center
+                                                    onDragDrop = onEventDragDrop,
+                                                    onResize = onEventResize
                                                 )
                                             }
                                         }
                                     }
                                 }
                             }
-                        }
                         }
                     }
                 }
@@ -425,27 +421,39 @@ private fun EventChip(
     hourHeightPx: Float,
     baseDate: LocalDate,
     baseHour: Int,
-    onDragDrop: ((String, LocalDate, Int) -> Unit)?
+    onDragDrop: ((String, LocalDate, Int) -> Unit)?,
+    onResize: ((String, LocalDateTime?, LocalDateTime?) -> Unit)? = null
 ) {
     val density = LocalDensity.current
     val hapticFeedback = LocalHapticFeedback.current
 
-    // Calculate event duration and height
-    val duration = java.time.Duration.between(event.startDateTime, event.endDateTime ?: event.startDateTime.plusHours(1))
-    val durationMinutes = duration.toMinutes()
-    val eventHeightDp = with(density) { (hourHeightPx * durationMinutes / 60f).toDp() }
+    // Calculate event position and height based on actual start/end times
+    val eventStart = event.startDateTime
+    val eventEnd = event.endDateTime ?: event.startDateTime.plusHours(1)
+    val hourStart = baseDate.atTime(baseHour, 0)
+    val hourEnd = baseDate.atTime(baseHour + 1, 0)
 
-    // Transparent background colors
+    // Calculate offset from top of hour slot (in minutes from start of hour)
+    val startMinutes = if (eventStart.isBefore(hourStart)) 0f else
+        (eventStart.minute + eventStart.second / 60f + (eventStart.hour - baseHour) * 60f)
+    val topOffsetDp = with(density) { (hourHeightPx * startMinutes / 60f).toDp() }
+
+    // Calculate total event duration in minutes
+    val totalDuration = java.time.Duration.between(eventStart, eventEnd)
+    val totalMinutes = totalDuration.toMinutes().coerceAtLeast(15) // Minimum 15 minutes
+    val eventHeightDp = with(density) { (hourHeightPx * totalMinutes / 60f).toDp() }
+
+    // Transparent background colors (more transparent)
     val backgroundColor = when (event.parentOwner) {
-        "mom" -> CoParentlyColors.MomPink.copy(alpha = 0.6f)
-        "dad" -> CoParentlyColors.DadBlue.copy(alpha = 0.6f)
-        else -> MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.6f)
+        "mom" -> CoParentlyColors.MomPink.copy(alpha = 0.3f)
+        "dad" -> CoParentlyColors.DadBlue.copy(alpha = 0.3f)
+        else -> MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.3f)
     }
 
     val borderColor = when (event.parentOwner) {
-        "mom" -> CoParentlyColors.MomPink
-        "dad" -> CoParentlyColors.DadBlue
-        else -> MaterialTheme.colorScheme.tertiary
+        "mom" -> CoParentlyColors.MomPink.copy(alpha = 0.8f)
+        "dad" -> CoParentlyColors.DadBlue.copy(alpha = 0.8f)
+        else -> MaterialTheme.colorScheme.tertiary.copy(alpha = 0.8f)
     }
 
     val textColor = when (event.parentOwner) {
@@ -459,13 +467,21 @@ private fun EventChip(
     var isResizingStart by remember { mutableStateOf(false) }
     var isResizingEnd by remember { mutableStateOf(false) }
     var totalDrag by remember { mutableStateOf(Offset.Zero) }
+    var resizeDragStart by remember { mutableStateOf(Offset.Zero) }
+    var resizeDragAmount by remember { mutableStateOf(0f) }
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(eventHeightDp.coerceAtLeast(32.dp))
+            .padding(top = topOffsetDp)
+            .height(eventHeightDp.coerceAtLeast(24.dp))
             .background(
                 color = backgroundColor,
+                shape = RoundedCornerShape(6.dp)
+            )
+            .border(
+                width = 1.dp,
+                color = borderColor,
                 shape = RoundedCornerShape(6.dp)
             )
             .clickable(enabled = !isDraggingEvent && !isResizingStart && !isResizingEnd, onClick = onClick)
@@ -478,7 +494,7 @@ private fun EventChip(
                 }
             }
             .semantics {
-                contentDescription = "${event.title} event, duration ${durationMinutes} minutes. ${
+                contentDescription = "${event.title} event, duration ${totalMinutes} minutes. ${
                     when {
                         isDraggingEvent -> "Dragging"
                         isResizingStart -> "Resizing start time"
@@ -488,11 +504,12 @@ private fun EventChip(
                 }"
             }
     ) {
-        // Event content
+        // Event content - center area for drag & drop
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = 8.dp, vertical = 4.dp)
+                .padding(start = 12.dp, end = 12.dp) // Padding to avoid resize handles
                 .pointerInput(columnWidthPx, hourHeightPx, onDragDrop) {
                     // Center drag for moving event
                     if (onDragDrop != null && columnWidthPx > 0f && hourHeightPx > 0f) {
@@ -532,14 +549,14 @@ private fun EventChip(
                 text = event.title,
                 style = MaterialTheme.typography.labelSmall,
                 color = textColor,
-                maxLines = if (durationMinutes >= 60) 2 else 1,
+                maxLines = if (totalMinutes >= 60) 2 else 1,
                 fontWeight = FontWeight.SemiBold,
                 textAlign = TextAlign.Start,
                 modifier = Modifier.fillMaxWidth()
             )
-            if (durationMinutes >= 45) {
+            if (totalMinutes >= 45) {
                 Text(
-                    text = "${event.startDateTime.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))} - ${(event.endDateTime ?: event.startDateTime.plusHours(1)).format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))}",
+                    text = "${eventStart.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))} - ${eventEnd.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))}",
                     style = MaterialTheme.typography.labelSmall,
                     fontSize = 10.sp,
                     color = textColor.copy(alpha = 0.8f),
@@ -549,64 +566,94 @@ private fun EventChip(
         }
 
         // Top-left resize handle (for start time)
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .size(16.dp)
-                .padding(2.dp)
-                .background(
-                    color = borderColor.copy(alpha = 0.8f),
-                    shape = CircleShape
-                )
-                .pointerInput(Unit) {
-                    detectDragGestures(
-                        onDragStart = {
-                            isResizingStart = true
-                            hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                        },
-                        onDragEnd = {
-                            isResizingStart = false
-                            hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                        },
-                        onDragCancel = {
-                            isResizingStart = false
+        if (onResize != null) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .size(20.dp)
+                    .background(
+                        color = borderColor,
+                        shape = CircleShape
+                    )
+                    .pointerInput(hourHeightPx, onResize) {
+                        detectDragGestures(
+                            onDragStart = { startOffset ->
+                                isResizingStart = true
+                                resizeDragStart = startOffset
+                                resizeDragAmount = 0f
+                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                            },
+                            onDragEnd = {
+                                if (isResizingStart && onResize != null) {
+                                    // Calculate new start time based on drag
+                                    val minutesChange = (resizeDragAmount / hourHeightPx * 60f).roundToInt()
+                                    val newStartTime = eventStart.plusMinutes(minutesChange.toLong())
+
+                                    // Ensure new start time is before end time and not negative
+                                    if (newStartTime.isBefore(eventEnd) && newStartTime.isAfter(eventStart.minusDays(1))) {
+                                        onResize(event.id, newStartTime, null)
+                                    }
+                                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                }
+                                isResizingStart = false
+                                resizeDragAmount = 0f
+                            },
+                            onDragCancel = {
+                                isResizingStart = false
+                                resizeDragAmount = 0f
+                            }
+                        ) { change, dragAmount ->
+                            change.consume()
+                            resizeDragAmount += dragAmount.y
                         }
-                    ) { change, dragAmount ->
-                        change.consume()
-                        // TODO: Implement resize logic in next iteration
                     }
-                }
-        )
+            )
+        }
 
         // Bottom-right resize handle (for end time)
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .size(16.dp)
-                .padding(2.dp)
-                .background(
-                    color = borderColor.copy(alpha = 0.8f),
-                    shape = CircleShape
-                )
-                .pointerInput(Unit) {
-                    detectDragGestures(
-                        onDragStart = {
-                            isResizingEnd = true
-                            hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                        },
-                        onDragEnd = {
-                            isResizingEnd = false
-                            hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                        },
-                        onDragCancel = {
-                            isResizingEnd = false
+        if (onResize != null) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .size(20.dp)
+                    .background(
+                        color = borderColor,
+                        shape = CircleShape
+                    )
+                    .pointerInput(hourHeightPx, onResize) {
+                        detectDragGestures(
+                            onDragStart = { startOffset ->
+                                isResizingEnd = true
+                                resizeDragStart = startOffset
+                                resizeDragAmount = 0f
+                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                            },
+                            onDragEnd = {
+                                if (isResizingEnd && onResize != null) {
+                                    // Calculate new end time based on drag
+                                    val minutesChange = (resizeDragAmount / hourHeightPx * 60f).roundToInt()
+                                    val newEndTime = eventEnd.plusMinutes(minutesChange.toLong())
+
+                                    // Ensure new end time is after start time
+                                    if (newEndTime.isAfter(eventStart)) {
+                                        onResize(event.id, null, newEndTime)
+                                    }
+                                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                }
+                                isResizingEnd = false
+                                resizeDragAmount = 0f
+                            },
+                            onDragCancel = {
+                                isResizingEnd = false
+                                resizeDragAmount = 0f
+                            }
+                        ) { change, dragAmount ->
+                            change.consume()
+                            resizeDragAmount += dragAmount.y
                         }
-                    ) { change, dragAmount ->
-                        change.consume()
-                        // TODO: Implement resize logic in next iteration
                     }
-                }
-        )
+            )
+        }
     }
 }
 
