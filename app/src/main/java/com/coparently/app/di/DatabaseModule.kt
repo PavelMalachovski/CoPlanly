@@ -38,6 +38,7 @@ object DatabaseModule {
             "coparently_database"
         )
             .addMigrations(com.coparently.app.data.local.DatabaseMigrations.MIGRATION_5_6)
+            .fallbackToDestructiveMigration() // Allow destructive migration for missing migration paths (e.g., 3->6)
             .build()
     }
 

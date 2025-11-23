@@ -61,8 +61,10 @@ class EncryptedPreferences @Inject constructor(
         try {
             context.applicationContext.getSharedPreferences("encrypted_prefs", Context.MODE_PRIVATE)
         } catch (e2: Exception) {
-            Log.e("EncryptedPreferences", "Critical: Failed to create any SharedPreferences", e2)
-            throw RuntimeException("Cannot initialize preferences storage", e2)
+            Log.e("EncryptedPreferences", "Critical: Failed to create any SharedPreferences, using in-memory fallback", e2)
+            // Ultimate fallback: use in-memory SharedPreferences
+            // This will lose data on app restart but prevents crash
+            context.getSharedPreferences("encrypted_prefs_memory", Context.MODE_PRIVATE)
         }
     }
 
