@@ -87,6 +87,7 @@ import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.UUID
+import javax.inject.Inject
 
 /**
  * Screen for adding or editing an event.
@@ -160,7 +161,8 @@ fun AddEditEventScreen(
     val isTitleValid = title.isNotBlank() && titleError == null
     val isFormValid = isTitleValid && descriptionError == null && !showTimeValidationError
 
-    // Load event if editing
+    // Load event if editing, or load draft if creating new event
+    // Issue 1.3: Draft saving functionality
     LaunchedEffect(eventId) {
         if (eventId != null) {
             scope.launch {
@@ -175,6 +177,37 @@ fun AddEditEventScreen(
                     endTime = it.endDateTime?.toLocalTime() ?: startTime.plusHours(1)
                 }
             }
+        } else {
+            // Load draft for new event
+            scope.launch {
+                val draft = viewModel.loadEventDraft()
+                draft?.let {
+                    title = it.title
+                    description = it.description
+                    parentOwner = it.parentOwner
+                    eventType = it.eventType
+                    startDate = LocalDate.parse(it.startDate)
+                    startTime = LocalTime.parse(it.startTime)
+                    endTime = LocalTime.parse(it.endTime)
+                }
+            }
+        }
+    }
+
+    // Auto-save draft when fields change (debounced)
+    // Issue 1.3: Draft saving functionality
+    LaunchedEffect(title, description, parentOwner, eventType, startDate, startTime, endTime) {
+        if (eventId == null) { // Only save draft for new events
+            kotlinx.coroutines.delay(1000) // Debounce 1 second
+            viewModel.saveEventDraft(
+                title = title,
+                description = description,
+                parentOwner = parentOwner,
+                eventType = eventType,
+                startDate = startDate,
+                startTime = startTime,
+                endTime = endTime
+            )
         }
     }
 
@@ -229,6 +262,12 @@ fun AddEditEventScreen(
                                             viewModel.createEvent(event)
                                         } else {
                                             viewModel.updateEvent(event)
+                                        }
+
+                                        // Clear draft after successful save
+                                        // Issue 1.3: Draft saving functionality
+                                        if (eventId == null) {
+                                            viewModel.clearEventDraft()
                                         }
 
                                         // Show success snackbar
@@ -298,7 +337,7 @@ fun AddEditEventScreen(
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Default.Title,
-                        contentDescription = null
+                        contentDescription = "Event title icon"
                     )
                 },
                 isError = titleError != null,
@@ -331,7 +370,7 @@ fun AddEditEventScreen(
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Default.Description,
-                        contentDescription = null
+                        contentDescription = "Event description icon"
                     )
                 },
                 isError = descriptionError != null,
@@ -432,7 +471,7 @@ fun AddEditEventScreen(
                                     "dad" -> Icons.Default.Person
                                     else -> Icons.Default.Person
                                 },
-                                contentDescription = null,
+                                contentDescription = "$label icon",
                                 tint = when (value) {
                                     "mom" -> CoParentlyColors.MomPink
                                     "dad" -> CoParentlyColors.DadBlue
@@ -483,7 +522,7 @@ fun AddEditEventScreen(
                                 if (eventType == value) {
                                     Icon(
                                         imageVector = Icons.Default.Check,
-                                        contentDescription = null,
+                                        contentDescription = "Selected",
                                         modifier = Modifier.size(dims.iconSize * 0.75f) // ~18dp for compact
                                     )
                                 }
@@ -513,7 +552,7 @@ fun AddEditEventScreen(
                                 if (eventType == value) {
                                     Icon(
                                         imageVector = Icons.Default.Check,
-                                        contentDescription = null,
+                                        contentDescription = "Selected",
                                         modifier = Modifier.size(dims.iconSize * 0.75f) // ~18dp for compact
                                     )
                                 }
@@ -560,7 +599,7 @@ fun AddEditEventScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Default.CalendarMonth,
-                            contentDescription = null,
+                            contentDescription = "Calendar icon",
                             tint = MaterialTheme.colorScheme.primary
                         )
                         Column {
@@ -579,7 +618,7 @@ fun AddEditEventScreen(
                     }
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                        contentDescription = null,
+                        contentDescription = "Navigate to date picker",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -642,7 +681,7 @@ fun AddEditEventScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Schedule,
-                            contentDescription = null,
+                            contentDescription = "Time picker icon",
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(dims.iconSize)
                         )
@@ -681,7 +720,7 @@ fun AddEditEventScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Schedule,
-                            contentDescription = null,
+                            contentDescription = "Time picker icon",
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(dims.iconSize)
                         )

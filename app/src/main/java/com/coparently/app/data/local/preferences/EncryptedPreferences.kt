@@ -239,6 +239,34 @@ class EncryptedPreferences @Inject constructor(
     }
 
     /**
+     * Stores event draft data as JSON string.
+     * Issue 1.3: Draft saving functionality.
+     */
+    fun putEventDraft(draftJson: String) {
+        encryptedPreferences.edit()
+            .putString(KEY_EVENT_DRAFT, draftJson)
+            .apply()
+    }
+
+    /**
+     * Retrieves the stored event draft.
+     * Issue 1.3: Draft saving functionality.
+     */
+    fun getEventDraft(): String? {
+        return encryptedPreferences.getString(KEY_EVENT_DRAFT, null)
+    }
+
+    /**
+     * Clears the stored event draft.
+     * Issue 1.3: Draft saving functionality.
+     */
+    fun clearEventDraft() {
+        encryptedPreferences.edit()
+            .remove(KEY_EVENT_DRAFT)
+            .apply()
+    }
+
+    /**
      * Clears all stored preferences.
      */
     fun clear() {
@@ -254,6 +282,7 @@ class EncryptedPreferences @Inject constructor(
         private const val KEY_GOOGLE_ID_TOKEN = "google_id_token"
         private const val KEY_USER_EMAIL = "user_email"
         private const val KEY_DARK_THEME = "dark_theme"
+        private const val KEY_EVENT_DRAFT = "event_draft"
     }
 }
 

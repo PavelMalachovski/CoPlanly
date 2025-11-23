@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -31,6 +32,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.domain.model.Conversation
+import com.coparently.app.presentation.common.animations.AnimatedEmptyState
 import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -51,17 +53,31 @@ fun ConversationsScreen(
             }
         }
     ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-        ) {
-            items(conversations) { conversation ->
-                ConversationItem(
-                    conversation = conversation,
-                    onClick = { onConversationClick(conversation.id) }
-                )
-                HorizontalDivider()
+        if (conversations.isEmpty()) {
+            // Issue 8.2: Empty state for conversations
+            AnimatedEmptyState(
+                icon = Icons.Default.Chat,
+                title = "No conversations yet",
+                description = "Start a conversation with your co-parent to coordinate schedules and share updates.",
+                actionText = "New Conversation",
+                onActionClick = { /* TODO: Implement new conversation dialog */ }
+            )
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+            ) {
+                items(
+                    items = conversations,
+                    key = { conversation -> conversation.id }
+                ) { conversation ->
+                    ConversationItem(
+                        conversation = conversation,
+                        onClick = { onConversationClick(conversation.id) }
+                    )
+                    HorizontalDivider()
+                }
             }
         }
     }

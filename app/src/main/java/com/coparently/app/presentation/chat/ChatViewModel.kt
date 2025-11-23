@@ -113,4 +113,17 @@ class ChatViewModel @Inject constructor(
             _currentConversationId.value = conversation.id
         }
     }
+
+    /**
+     * Refresh messages for the current conversation.
+     * Issue 6.2: Pull-to-refresh functionality.
+     */
+    fun refreshMessages() {
+        viewModelScope.launch {
+            val conversationId = _currentConversationId.value
+            if (conversationId != null) {
+                messageRepository.syncWithFirestore()
+            }
+        }
+    }
 }

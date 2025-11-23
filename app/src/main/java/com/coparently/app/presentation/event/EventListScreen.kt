@@ -40,6 +40,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Event
+import com.coparently.app.presentation.common.animations.AnimatedEmptyState
 import kotlin.math.roundToInt
 
 /**
@@ -117,22 +119,14 @@ fun EventListScreen(
                 // After operation success, show the current events list
                 // The state will automatically transition to Success after delay
                 if (events.isEmpty()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(paddingValues),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                text = (uiState as EventUiState.OperationSuccess).message,
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    }
+                    // Issue 8.2: Empty state for events
+                    AnimatedEmptyState(
+                        icon = Icons.Default.Event,
+                        title = "No events yet",
+                        description = "Create your first event to start organizing your co-parenting schedule.",
+                        actionText = "Add Event",
+                        onActionClick = onAddEventClick
+                    )
                 } else {
                     LazyColumn(
                         modifier = Modifier
@@ -154,17 +148,14 @@ fun EventListScreen(
 
             is EventUiState.Success -> {
                 if (events.isEmpty()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(paddingValues)
-                    ) {
-                        Text(
-                            text = "No events yet",
-                            style = MaterialTheme.typography.bodyLarge,
-                            modifier = Modifier.padding(16.dp)
-                        )
-                    }
+                    // Issue 8.2: Empty state for events
+                    AnimatedEmptyState(
+                        icon = Icons.Default.Event,
+                        title = "No events yet",
+                        description = "Create your first event to start organizing your co-parenting schedule.",
+                        actionText = "Add Event",
+                        onActionClick = onAddEventClick
+                    )
                 } else {
                     LazyColumn(
                         modifier = Modifier

@@ -13,7 +13,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -26,23 +29,40 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.material.icons.filled.Message
 import com.coparently.app.domain.model.Message
 import com.coparently.app.domain.model.MessageSendStatus
+import com.coparently.app.presentation.common.animations.AnimatedEmptyState
+import kotlinx.coroutines.launch
 import java.time.format.DateTimeFormatter
 
+/**
+ * Messages list with pull-to-refresh functionality.
+ * Issue 6.2: Added PullToRefreshBox to allow manual message reloading.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MessagesList(
     messages: List<Message>,
     currentUserId: String,
+    onRefresh: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val listState = rememberLazyListState()
+    val pullToRefreshState = rememberPullToRefreshState()
+    val scope = rememberCoroutineScope()
+    var isRefreshing by remember { mutableStateOf(false) }
 
     // Auto-scroll only if user is already at the bottom (within last 2 items)
     LaunchedEffect(messages.size) {
@@ -61,17 +81,47 @@ fun MessagesList(
         }
     }
 
-    LazyColumn(
-        state = listState,
-        modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+    PullToRefreshBox(
+        isRefreshing = isRefreshing,
+        onRefresh = {
+            if (onRefresh != null) {
+                isRefreshing = true
+                scope.launch {
+                    onRefresh()
+                    kotlinx.coroutines.delay(500) // Small delay for better UX
+                    isRefreshing = false
+                }
+            }
+        },
+        state = pullToRefreshState,
+        modifier = modifier.fillMaxSize()
     ) {
-        items(messages) { message ->
-            MessageItem(
-                message = message,
-                isCurrentUser = message.senderId == currentUserId
+        if (messages.isEmpty()) {
+            // Issue 8.2: Empty state for messages
+            AnimatedEmptyState(
+                icon = Icons.Default.Message,
+                title = "No messages yet",
+                description = "Start the conversation by sending a message to your co-parent.",
+                actionText = null,
+                onActionClick = null
             )
+        } else {
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(
+                    items = messages,
+                    key = { message -> message.id }
+                ) { message ->
+                    MessageItem(
+                        message = message,
+                        isCurrentUser = message.senderId == currentUserId
+                    )
+                }
+            }
         }
     }
 }

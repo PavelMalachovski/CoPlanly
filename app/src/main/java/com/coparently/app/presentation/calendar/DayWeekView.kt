@@ -52,6 +52,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.coparently.app.data.local.entity.CustodyScheduleEntity
 import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.theme.CoParentlyColors
@@ -356,6 +358,13 @@ fun DayWeekView(
                                         } else {
                                             onAddEventClick(date, hour)
                                         }
+                                    }
+                                    .semantics {
+                                        contentDescription = if (dateEvents.isNotEmpty()) {
+                                            "Time slot at ${String.format("%02d:00", hour)} on ${date.format(DateTimeFormatter.ofPattern("MMM dd"))}, ${dateEvents.size} event(s). Tap to view, long press and drag to move."
+                                        } else {
+                                            "Empty time slot at ${String.format("%02d:00", hour)} on ${date.format(DateTimeFormatter.ofPattern("MMM dd"))}. Tap to add event."
+                                        }
                                     },
                                 contentAlignment = Alignment.Center
                             ) {
@@ -482,6 +491,9 @@ private fun EventChip(
                     translationY = totalDrag.y
                     alpha = 0.8f
                 }
+            }
+            .semantics {
+                contentDescription = "${event.title} event. ${if (isDragging) "Dragging" else "Long press and drag to move to different time slot."}"
             }
             .padding(horizontal = 8.dp, vertical = 4.dp),
         contentAlignment = Alignment.Center

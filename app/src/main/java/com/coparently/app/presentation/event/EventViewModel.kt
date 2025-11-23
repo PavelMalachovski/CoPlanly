@@ -4,8 +4,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.coparently.app.data.analytics.AnalyticsManager
 import com.coparently.app.data.crashlytics.CrashlyticsManager
+import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.repository.EventRepository
+import com.google.gson.Gson
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -13,7 +15,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.Duration
+import java.time.format.DateTimeFormatter
 import java.util.UUID
 import javax.inject.Inject
 
@@ -21,10 +25,26 @@ import javax.inject.Inject
  * ViewModel for managing events.
  * Handles UI state and business logic for event operations using Use Cases.
  */
+/**
+ * Data class for event draft.
+ * Issue 1.3: Draft saving functionality.
+ */
+data class EventDraft(
+    val title: String,
+    val description: String,
+    val parentOwner: String,
+    val eventType: String,
+    val startDate: String, // ISO format
+    val startTime: String, // ISO format
+    val endTime: String // ISO format
+)
+
 @HiltViewModel
 class EventViewModel @Inject constructor(
     private val eventUseCases: com.coparently.app.domain.usecase.EventUseCases,
-    private val errorHandler: com.coparently.app.domain.error.ErrorHandler
+    private val errorHandler: com.coparently.app.domain.error.ErrorHandler,
+    private val encryptedPreferences: EncryptedPreferences,
+    private val gson: Gson
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<EventUiState>(EventUiState.Loading)
@@ -257,6 +277,59 @@ class EventViewModel @Inject constructor(
      */
     suspend fun getEventById(id: String): Event? {
         return eventUseCases.getEvents.getById(id)
+    }
+
+    /**
+     * Saves event draft to local storage.
+     * Issue 1.3: Draft saving functionality.
+     */
+    fun saveEventDraft(
+        title: String,
+        description: String,
+        parentOwner: String,
+        eventType: String,
+        startDate: LocalDate,
+        startTime: LocalTime,
+        endTime: LocalTime
+    ) {
+        viewModelScope.launch {
+            try {
+                val draft = EventDraft(
+                    title = title,
+                    description = description,
+                    parentOwner = parentOwner,
+                    eventType = eventType,
+                    startDate = startDate.toString(),
+                    startTime = startTime.toString(),
+                    endTime = endTime.toString()
+                )
+                val draftJson = gson.toJson(draft)
+                encryptedPreferences.putEventDraft(draftJson)
+            } catch (e: Exception) {
+                // Silently fail - draft saving is not critical
+            }
+        }
+    }
+
+    /**
+     * Loads event draft from local storage.
+     * Issue 1.3: Draft saving functionality.
+     */
+    fun loadEventDraft(): EventDraft? {
+        return try {
+            val draftJson = encryptedPreferences.getEventDraft() ?: return null
+            gson.fromJson(draftJson, EventDraft::class.java)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    /**
+     * Clears event draft from local storage.
+     * Issue 1.3: Draft saving functionality.
+     */
+    fun clearEventDraft() {
+        encryptedPreferences.clearEventDraft()
     }
 }
 

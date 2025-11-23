@@ -62,6 +62,9 @@ fun ChatScreen(
             MessagesList(
                 messages = messages,
                 currentUserId = currentUserId,
+                onRefresh = {
+                    viewModel.refreshMessages()
+                },
                 modifier = Modifier.weight(1f)
             )
 

@@ -16,6 +16,8 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.runtime.key
+import android.os.Build
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.foundation.background
@@ -103,6 +105,16 @@ fun CalendarScreen(
     val custodySchedules by calendarViewModel.custodySchedules.collectAsState()
     val viewMode by calendarViewModel.viewMode.collectAsState()
     val selectedDate by calendarViewModel.selectedDate.collectAsState()
+
+    // Animation optimization: Check device capabilities (3.2)
+    // Reduce animation duration on older devices for better performance
+    val animationDuration = remember {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
+            150 // Faster animations on older devices (API < 28)
+        } else {
+            200 // Normal animations on modern devices
+        }
+    }
 
     val firstDayOfWeek = remember { firstDayOfWeekFromLocale() }
     val now = remember { YearMonth.now() }
@@ -359,110 +371,114 @@ fun CalendarScreen(
                 )
 
             // Today's custody indicator (only for month view)
+            // Optimization 3.1: Use key() to prevent unnecessary recompositions
             if (viewMode == CalendarViewMode.MONTH && custodySchedules.isNotEmpty()) {
                 val today = LocalDate.now()
                 val todayCustody = CustodyHelper.getCustodyForDate(today, custodySchedules)
                 if (todayCustody != null) {
-                    AnimatedContent(
-                        targetState = todayCustody,
-                        transitionSpec = {
-                            slideInVertically(
-                                animationSpec = tween(300),
-                                initialOffsetY = { -it }
-                            ) + fadeIn() togetherWith slideOutVertically(
-                                animationSpec = tween(300),
-                                targetOffsetY = { it }
-                            ) + fadeOut()
-                        },
-                        modifier = Modifier.padding(horizontal = dims.paddingMedium, vertical = dims.paddingSmall)
-                    ) { custody ->
-                        CustodyIndicatorToday(custody = custody)
+                    key(todayCustody) {
+                        AnimatedContent(
+                            targetState = todayCustody,
+                            transitionSpec = {
+                                slideInVertically(
+                                    animationSpec = tween(animationDuration),
+                                    initialOffsetY = { -it }
+                                ) + fadeIn() togetherWith slideOutVertically(
+                                    animationSpec = tween(animationDuration),
+                                    targetOffsetY = { it }
+                                ) + fadeOut()
+                            },
+                            modifier = Modifier.padding(horizontal = dims.paddingMedium, vertical = dims.paddingSmall)
+                        ) { custody ->
+                            CustodyIndicatorToday(custody = custody)
+                        }
                     }
                 }
             }
 
             // Calendar content based on view mode - optimized with Crossfade
+            // Optimization 3.1: Use key() to prevent unnecessary recompositions
             Crossfade(
                 targetState = viewMode,
                 animationSpec = tween(
-                    durationMillis = 200,
+                    durationMillis = animationDuration,
                     easing = FastOutSlowInEasing
                 ),
                 modifier = Modifier.weight(1f)
             ) { mode ->
-                when (mode) {
-                    CalendarViewMode.DAY -> {
-                        DayWeekView(
-                            selectedDate = selectedDate,
-                            daysCount = 1,
-                            events = events,
-                            custodySchedules = custodySchedules,
-                            onDateChange = { calendarViewModel.setSelectedDate(it) },
-                            onEventClick = onEventClick,
-                            onAddEventClick = { _, _ ->
-                                // Navigate to add event screen with preselected date and time
-                                // For now, just call onAddEventClick
-                                onAddEventClick()
-                            },
-                            onEventDragDrop = { eventId, targetDate, targetHour ->
-                                eventViewModel.moveEvent(eventId, targetDate, targetHour)
-                            }
-                        )
-                    }
-                    CalendarViewMode.THREE_DAYS -> {
-                        DayWeekView(
-                            selectedDate = selectedDate,
-                            daysCount = 3,
-                            events = events,
-                            custodySchedules = custodySchedules,
-                            onDateChange = { calendarViewModel.setSelectedDate(it) },
-                            onEventClick = onEventClick,
-                            onAddEventClick = { _, _ ->
-                                onAddEventClick()
-                            },
-                            onEventDragDrop = { eventId, targetDate, targetHour ->
-                                eventViewModel.moveEvent(eventId, targetDate, targetHour)
-                            }
-                        )
-                    }
-                    CalendarViewMode.WEEK -> {
-                        DayWeekView(
-                            selectedDate = selectedDate,
-                            daysCount = 7,
-                            events = events,
-                            custodySchedules = custodySchedules,
-                            onDateChange = { calendarViewModel.setSelectedDate(it) },
-                            onEventClick = onEventClick,
-                            onAddEventClick = { _, _ ->
-                                onAddEventClick()
-                            },
-                            onEventDragDrop = { eventId, targetDate, targetHour ->
-                                eventViewModel.moveEvent(eventId, targetDate, targetHour)
-                            }
-                        )
-                    }
-                    CalendarViewMode.MONTH -> {
-                        val visibleMonthYear = YearMonth.from(selectedDate)
+                key(mode) {
+                    when (mode) {
+                        CalendarViewMode.DAY -> {
+                            DayWeekView(
+                                selectedDate = selectedDate,
+                                daysCount = 1,
+                                events = events,
+                                custodySchedules = custodySchedules,
+                                onDateChange = { calendarViewModel.setSelectedDate(it) },
+                                onEventClick = onEventClick,
+                                onAddEventClick = { _, _ ->
+                                    onAddEventClick()
+                                },
+                                onEventDragDrop = { eventId, targetDate, targetHour ->
+                                    eventViewModel.moveEvent(eventId, targetDate, targetHour)
+                                }
+                            )
+                        }
+                        CalendarViewMode.THREE_DAYS -> {
+                            DayWeekView(
+                                selectedDate = selectedDate,
+                                daysCount = 3,
+                                events = events,
+                                custodySchedules = custodySchedules,
+                                onDateChange = { calendarViewModel.setSelectedDate(it) },
+                                onEventClick = onEventClick,
+                                onAddEventClick = { _, _ ->
+                                    onAddEventClick()
+                                },
+                                onEventDragDrop = { eventId, targetDate, targetHour ->
+                                    eventViewModel.moveEvent(eventId, targetDate, targetHour)
+                                }
+                            )
+                        }
+                        CalendarViewMode.WEEK -> {
+                            DayWeekView(
+                                selectedDate = selectedDate,
+                                daysCount = 7,
+                                events = events,
+                                custodySchedules = custodySchedules,
+                                onDateChange = { calendarViewModel.setSelectedDate(it) },
+                                onEventClick = onEventClick,
+                                onAddEventClick = { _, _ ->
+                                    onAddEventClick()
+                                },
+                                onEventDragDrop = { eventId, targetDate, targetHour ->
+                                    eventViewModel.moveEvent(eventId, targetDate, targetHour)
+                                }
+                            )
+                        }
+                        CalendarViewMode.MONTH -> {
+                            val visibleMonthYear = YearMonth.from(selectedDate)
 
-                        MonthView(
-                            selectedMonth = visibleMonthYear,
-                            selectedDate = selectedDate,
-                            events = events,
-                            custodySchedules = custodySchedules,
-                            onDayClick = { clickedDate ->
-                                calendarViewModel.setSelectedDate(clickedDate)
-                                calendarViewModel.setViewMode(CalendarViewMode.DAY)
-                            },
-                            onMonthChange = { newMonth ->
-                                calendarViewModel.setSelectedDate(newMonth.atDay(1))
-                            },
-                            onDateChange = { newDate ->
-                                calendarViewModel.setSelectedDate(newDate)
-                            },
-                            onEventDragDrop = { eventId, targetDate ->
-                                eventViewModel.moveEvent(eventId, targetDate)
-                            }
-                        )
+                            MonthView(
+                                selectedMonth = visibleMonthYear,
+                                selectedDate = selectedDate,
+                                events = events,
+                                custodySchedules = custodySchedules,
+                                onDayClick = { clickedDate ->
+                                    calendarViewModel.setSelectedDate(clickedDate)
+                                    calendarViewModel.setViewMode(CalendarViewMode.DAY)
+                                },
+                                onMonthChange = { newMonth ->
+                                    calendarViewModel.setSelectedDate(newMonth.atDay(1))
+                                },
+                                onDateChange = { newDate ->
+                                    calendarViewModel.setSelectedDate(newDate)
+                                },
+                                onEventDragDrop = { eventId, targetDate ->
+                                    eventViewModel.moveEvent(eventId, targetDate)
+                                }
+                            )
+                        }
                     }
                 }
             }
