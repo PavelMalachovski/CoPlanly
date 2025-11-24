@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -327,10 +328,15 @@ fun DayWeekView(
                         val currentDates = DateRangeHelper.rememberDateRange(currentDate, daysCount)
 
                         // Create a Box to overlay events that span multiple hours
+                        var containerWidthPx by remember { mutableFloatStateOf(0f) }
+
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(hourCellHeight)
+                                .onGloballyPositioned { coordinates ->
+                                    containerWidthPx = coordinates.size.width.toFloat()
+                                }
                         ) {
                             // Background cells for each day
                             Row(
@@ -338,7 +344,6 @@ fun DayWeekView(
                                 horizontalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
                                 currentDates.forEachIndexed { dayIndex, date ->
-                                    var columnWidthPx by remember { mutableFloatStateOf(0f) }
                                     val isToday = date == LocalDate.now()
                                     val custody = CustodyHelper.getCustodyForDate(date, custodySchedules)
                                     val backgroundColor = when {
@@ -352,9 +357,6 @@ fun DayWeekView(
                                         modifier = Modifier
                                             .weight(1f)
                                             .fillMaxHeight()
-                                            .onGloballyPositioned { coordinates ->
-                                                columnWidthPx = coordinates.size.width.toFloat()
-                                            }
                                             .background(
                                                 color = backgroundColor,
                                                 shape = RoundedCornerShape(dims.paddingSmall)
@@ -366,40 +368,43 @@ fun DayWeekView(
                                                 contentDescription = "Time slot at ${String.format("%02d:00", hour)} on ${date.format(DateTimeFormatter.ofPattern("MMM dd"))}. Tap to add event."
                                             }
                                     )
+                                }
+                            }
 
-                                    // Find events for this date that start in this hour or earlier
-                                    val hourStart = date.atTime(hour, 0)
-                                    val hourEnd = date.atTime(hour, 59, 59)
-
-                                    val eventsForThisDate = events.filter { event ->
+                            // Render events on top of background cells
+                            // Only render events that START in this hour
+                            if (containerWidthPx > 0f) {
+                                currentDates.forEachIndexed { dayIndex, date ->
+                                    // Find events that start in this hour for this specific date
+                                    val eventsStartingHere = events.filter { event ->
                                         val eventStart = event.startDateTime
-                                        val eventEnd = event.endDateTime ?: event.startDateTime.plusHours(1)
-                                        eventStart.toLocalDate() == date &&
-                                        eventStart.hour <= hour &&
-                                        !(eventEnd.isBefore(hourStart) || eventStart.isAfter(hourEnd))
+                                        eventStart.toLocalDate() == date && eventStart.hour == hour
                                     }
 
-                                    // Show events that start in this hour or earlier (to show multi-hour events)
-                                    eventsForThisDate.forEach { event ->
-                                        val eventStart = event.startDateTime
-                                        // Only render if this is the first hour the event appears in
-                                        if (eventStart.toLocalDate() == date && eventStart.hour == hour) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .fillMaxSize()
-                                                    .padding(horizontal = 2.dp)
-                                            ) {
-                                                EventChip(
-                                                    event = event,
-                                                    onClick = { onEventClick(event.id) },
-                                                    columnWidthPx = columnWidthPx,
-                                                    hourHeightPx = hourCellHeightPx,
-                                                    baseDate = date,
-                                                    baseHour = hour,
-                                                    onDragDrop = onEventDragDrop,
-                                                    onResize = onEventResize
-                                                )
-                                            }
+                                    eventsStartingHere.forEach { event ->
+                                        // Calculate column width for positioning
+                                        val spacingPx = with(density) { 4.dp.toPx() }
+                                        val totalSpacingPx = spacingPx * (currentDates.size - 1)
+                                        val columnWidth = (containerWidthPx - totalSpacingPx) / currentDates.size
+                                        val horizontalOffset = dayIndex * (columnWidth + spacingPx)
+
+
+                                        Box(
+                                            modifier = Modifier
+                                                .offset(x = with(density) { horizontalOffset.toDp() })
+                                                .width(with(density) { columnWidth.toDp() })
+                                                .padding(horizontal = 2.dp)
+                                        ) {
+                                            EventChip(
+                                                event = event,
+                                                onClick = { onEventClick(event.id) },
+                                                columnWidthPx = columnWidth,
+                                                hourHeightPx = hourCellHeightPx,
+                                                baseDate = date,
+                                                baseHour = hour,
+                                                onDragDrop = onEventDragDrop,
+                                                onResize = onEventResize
+                                            )
                                         }
                                     }
                                 }
@@ -468,13 +473,34 @@ private fun EventChip(
     var isResizingEnd by remember { mutableStateOf(false) }
     var totalDrag by remember { mutableStateOf(Offset.Zero) }
     var resizeDragStart by remember { mutableStateOf(Offset.Zero) }
-    var resizeDragAmount by remember { mutableStateOf(0f) }
+    var resizeDragAmountStart by remember { mutableStateOf(0f) }
+    var resizeDragAmountEnd by remember { mutableStateOf(0f) }
+
+    // Calculate dynamic height and offset based on resize state
+    val dynamicTopOffsetDp = if (isResizingStart) {
+        (topOffsetDp + with(density) { resizeDragAmountStart.toDp() }).coerceAtLeast(0.dp)
+    } else {
+        topOffsetDp
+    }
+
+    val dynamicHeightDp = if (isResizingStart || isResizingEnd) {
+        val heightAdjustment = with(density) {
+            when {
+                isResizingStart -> -resizeDragAmountStart.toDp()
+                isResizingEnd -> resizeDragAmountEnd.toDp()
+                else -> 0.dp
+            }
+        }
+        (eventHeightDp + heightAdjustment).coerceAtLeast(24.dp)
+    } else {
+        eventHeightDp.coerceAtLeast(24.dp)
+    }
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = topOffsetDp)
-            .height(eventHeightDp.coerceAtLeast(24.dp))
+            .padding(top = dynamicTopOffsetDp)
+            .height(dynamicHeightDp)
             .background(
                 color = backgroundColor,
                 shape = RoundedCornerShape(6.dp)
@@ -580,13 +606,13 @@ private fun EventChip(
                             onDragStart = { startOffset ->
                                 isResizingStart = true
                                 resizeDragStart = startOffset
-                                resizeDragAmount = 0f
+                                resizeDragAmountStart = 0f
                                 hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
                             },
                             onDragEnd = {
                                 if (isResizingStart && onResize != null) {
                                     // Calculate new start time based on drag
-                                    val minutesChange = (resizeDragAmount / hourHeightPx * 60f).roundToInt()
+                                    val minutesChange = (resizeDragAmountStart / hourHeightPx * 60f).roundToInt()
                                     val newStartTime = eventStart.plusMinutes(minutesChange.toLong())
 
                                     // Ensure new start time is before end time and not negative
@@ -596,15 +622,15 @@ private fun EventChip(
                                     hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
                                 }
                                 isResizingStart = false
-                                resizeDragAmount = 0f
+                                resizeDragAmountStart = 0f
                             },
                             onDragCancel = {
                                 isResizingStart = false
-                                resizeDragAmount = 0f
+                                resizeDragAmountStart = 0f
                             }
                         ) { change, dragAmount ->
                             change.consume()
-                            resizeDragAmount += dragAmount.y
+                            resizeDragAmountStart += dragAmount.y
                         }
                     }
             )
@@ -625,13 +651,13 @@ private fun EventChip(
                             onDragStart = { startOffset ->
                                 isResizingEnd = true
                                 resizeDragStart = startOffset
-                                resizeDragAmount = 0f
+                                resizeDragAmountEnd = 0f
                                 hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
                             },
                             onDragEnd = {
                                 if (isResizingEnd && onResize != null) {
                                     // Calculate new end time based on drag
-                                    val minutesChange = (resizeDragAmount / hourHeightPx * 60f).roundToInt()
+                                    val minutesChange = (resizeDragAmountEnd / hourHeightPx * 60f).roundToInt()
                                     val newEndTime = eventEnd.plusMinutes(minutesChange.toLong())
 
                                     // Ensure new end time is after start time
@@ -641,19 +667,18 @@ private fun EventChip(
                                     hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
                                 }
                                 isResizingEnd = false
-                                resizeDragAmount = 0f
+                                resizeDragAmountEnd = 0f
                             },
                             onDragCancel = {
                                 isResizingEnd = false
-                                resizeDragAmount = 0f
+                                resizeDragAmountEnd = 0f
                             }
                         ) { change, dragAmount ->
                             change.consume()
-                            resizeDragAmount += dragAmount.y
+                            resizeDragAmountEnd += dragAmount.y
                         }
                     }
             )
         }
     }
 }
-
