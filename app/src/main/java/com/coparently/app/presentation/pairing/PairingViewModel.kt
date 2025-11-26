@@ -247,15 +247,23 @@ class PairingViewModel @Inject constructor(
 
                         // Check for specific Firestore errors
                         val errorMessage = when {
+                            // Database not created
                             error.message?.contains("NOT_FOUND") == true ||
                             error.message?.contains("database (default) does not exist") == true ||
                             error.message?.contains("add a Cloud Datastore or Cloud Firestore database") == true -> {
                                 "Firestore database is not created. Please create it:\nhttps://console.cloud.google.com/datastore/setup?project=coparently-a39c9"
                             }
+                            // Permission denied - usually means security rules issue
                             error.message?.contains("PERMISSION_DENIED") == true ||
-                            error.message?.contains("Cloud Firestore API has not been used") == true -> {
+                            error.message?.contains("Missing or insufficient permissions") == true -> {
+                                "Permission denied. Please check Firestore security rules:\nhttps://console.firebase.google.com/project/coparently-a39c9/firestore/rules\n\nMake sure rules are deployed and allow authenticated users to read/write their data."
+                            }
+                            // API not enabled (less common, usually shows different error)
+                            error.message?.contains("Cloud Firestore API has not been used") == true ||
+                            error.message?.contains("API has not been enabled") == true -> {
                                 "Firestore API is not enabled. Please enable it in Google Cloud Console:\nhttps://console.developers.google.com/apis/api/firestore.googleapis.com/overview?project=coparently-a39c9"
                             }
+                            // Network errors
                             error.message?.contains("UNAVAILABLE") == true ||
                             error.message?.contains("Unable to resolve host") == true ||
                             error.message?.contains("UnknownHostException") == true -> {
@@ -377,17 +385,30 @@ class PairingViewModel @Inject constructor(
                         )
                     },
                     onFailure = { error ->
+                        // Log full error for debugging
+                        android.util.Log.e("PairingViewModel", "Failed to accept invitation", error)
+                        android.util.Log.e("PairingViewModel", "Error type: ${error.javaClass.simpleName}")
+                        android.util.Log.e("PairingViewModel", "Error message: ${error.message}")
+
                         // Check for specific Firestore errors
                         val errorMessage = when {
+                            // Database not created
                             error.message?.contains("NOT_FOUND") == true ||
                             error.message?.contains("database (default) does not exist") == true ||
                             error.message?.contains("add a Cloud Datastore or Cloud Firestore database") == true -> {
                                 "Firestore database is not created. Please create it:\nhttps://console.cloud.google.com/datastore/setup?project=coparently-a39c9"
                             }
+                            // Permission denied - usually means security rules issue
                             error.message?.contains("PERMISSION_DENIED") == true ||
-                            error.message?.contains("Cloud Firestore API has not been used") == true -> {
+                            error.message?.contains("Missing or insufficient permissions") == true -> {
+                                "Permission denied. Please check Firestore security rules:\nhttps://console.firebase.google.com/project/coparently-a39c9/firestore/rules\n\nMake sure rules are deployed and allow authenticated users to read/write their data."
+                            }
+                            // API not enabled (less common, usually shows different error)
+                            error.message?.contains("Cloud Firestore API has not been used") == true ||
+                            error.message?.contains("API has not been enabled") == true -> {
                                 "Firestore API is not enabled. Please enable it in Google Cloud Console:\nhttps://console.developers.google.com/apis/api/firestore.googleapis.com/overview?project=coparently-a39c9"
                             }
+                            // Network errors
                             error.message?.contains("UNAVAILABLE") == true ||
                             error.message?.contains("Unable to resolve host") == true ||
                             error.message?.contains("UnknownHostException") == true -> {

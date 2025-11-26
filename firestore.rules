@@ -22,9 +22,9 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid in sharedList;
     }
 
-    // Validate that required fields exist
+    // Validate that required fields exist in data
     function hasRequiredFields(data, fields) {
-      return fields.hasAll(data.keys());
+      return fields.hasAll(data.keys()) && data.keys().hasAll(fields);
     }
 
     // Validate string field length
@@ -42,20 +42,23 @@ service cloud.firestore {
       // Allow read if user owns the profile or is the partner
       allow read: if isOwner(userId) || isPartnerOf(userId);
 
-      // Allow create if user owns the profile, has required fields, and firebaseUid matches
+      // Allow create if user owns the profile
+      // Require email and name fields (check existence, not exact match)
+      // firebaseUid is optional but if present must match auth.uid
       allow create: if isOwner(userId) &&
-                      request.resource.data.keys().hasAll(['email', 'name', 'firebaseUid']) &&
-                      request.resource.data.firebaseUid == request.auth.uid &&
-                      isValidLength(request.resource.data.name, 1, 100);
-
-      // Allow update if user owns the profile
-      // If firebaseUid exists in resource, it must match auth.uid
-      // If firebaseUid is being added/updated, it must match auth.uid
-      allow update: if isOwner(userId) &&
-                      (resource.data.firebaseUid == null ||
-                       resource.data.firebaseUid == request.auth.uid) &&
+                      'email' in request.resource.data &&
+                      'name' in request.resource.data &&
+                      isValidLength(request.resource.data.name, 1, 100) &&
                       (request.resource.data.firebaseUid == null ||
                        request.resource.data.firebaseUid == request.auth.uid);
+
+      // Allow update if user owns the profile
+      // Allow updating any field as long as firebaseUid (if present) matches auth.uid
+      allow update: if isOwner(userId) &&
+                      (request.resource.data.firebaseUid == null ||
+                       request.resource.data.firebaseUid == request.auth.uid) &&
+                      (resource.data.firebaseUid == null ||
+                       resource.data.firebaseUid == request.auth.uid);
 
       // Allow delete if user owns the profile
       allow delete: if isOwner(userId);
@@ -126,12 +129,12 @@ service cloud.firestore {
       );
 
       // Users can create invitations with validation
-      // Note: createdAt is used in code, not sentAt
+      // Check that required fields exist and fromUserId matches authenticated user
       allow create: if isAuthenticated() &&
                       request.resource.data.fromUserId == request.auth.uid &&
-                      hasRequiredFields(request.resource.data, ['fromUserId', 'toEmail', 'status', 'createdAt']) &&
-                      request.resource.data.toEmail.matches('^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$') &&
-                      request.resource.data.toEmail != request.auth.token.email &&
+                      'toEmail' in request.resource.data &&
+                      'status' in request.resource.data &&
+                      'createdAt' in request.resource.data &&
                       request.resource.data.status == 'pending';
 
       // Users can update invitation status (for accepting/rejecting)
