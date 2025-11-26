@@ -53,12 +53,11 @@ service cloud.firestore {
                        request.resource.data.firebaseUid == request.auth.uid);
 
       // Allow update if user owns the profile
-      // Allow updating any field as long as firebaseUid (if present) matches auth.uid
+      // Allow updating any field - firebaseUid (if present) must match auth.uid
+      // This also handles .set() operations on empty/partial documents
       allow update: if isOwner(userId) &&
                       (request.resource.data.firebaseUid == null ||
-                       request.resource.data.firebaseUid == request.auth.uid) &&
-                      (resource.data.firebaseUid == null ||
-                       resource.data.firebaseUid == request.auth.uid);
+                       request.resource.data.firebaseUid == request.auth.uid);
 
       // Allow delete if user owns the profile
       allow delete: if isOwner(userId);
