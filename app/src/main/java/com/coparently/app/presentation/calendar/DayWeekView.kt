@@ -527,18 +527,11 @@ private fun EventChip(
         } else eventEnd
     }
 
-    // Calculate dynamic height based on resize state (no offset needed - handled by overlay)
-    // Fix for top resize: clamp the drag amount so we don't shrink below minimum height
-    // This prevents the bottom edge from moving when we hit the minimum height constraint
-    val effectiveResizeDragStart = if (isResizingStart) {
-        val maxDragDown = with(density) { (eventHeightDp - 24.dp).toPx() }
-        resizeDragAmountStart.coerceAtMost(maxDragDown)
-    } else 0f
-
+    // Calculate dynamic height based on resize state
     val dynamicHeightDp = if (isResizingStart || isResizingEnd) {
         val heightAdjustment = with(density) {
             when {
-                isResizingStart -> -effectiveResizeDragStart.toDp()
+                isResizingStart -> -resizeDragAmountStart.toDp()
                 isResizingEnd -> resizeDragAmountEnd.toDp()
                 else -> 0.dp
             }
@@ -548,10 +541,18 @@ private fun EventChip(
         eventHeightDp.coerceAtLeast(24.dp)
     }
 
+    // Calculate vertical offset to keep bottom edge fixed when resizing from top
+    val verticalOffsetDp = if (isResizingStart) {
+        with(density) { resizeDragAmountStart.toDp() }
+    } else {
+        0.dp
+    }
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(dynamicHeightDp)
+            .offset(y = verticalOffsetDp)
             .background(
                 color = backgroundColor,
                 shape = RoundedCornerShape(6.dp)
@@ -568,10 +569,6 @@ private fun EventChip(
                     translationX = totalDrag.x
                     translationY = totalDrag.y
                     alpha = 0.8f
-                } else if (isResizingStart) {
-                    // Fix for top resize animation: move the box visually by the drag amount
-                    // Use effectiveResizeDragStart to ensure visual top matches layout top + translation
-                    translationY = effectiveResizeDragStart
                 }
             }
             .semantics {
@@ -687,15 +684,11 @@ private fun EventChip(
                             },
                             onDragEnd = {
                                 if (isResizingStart && onResize != null) {
-                                    // Calculate new start time directly from drag amount to ensure latest value
-                                    // Apply the same clamping as the visual effect
-                                    val maxDragDown = with(density) { (eventHeightDp - 24.dp).toPx() }
-                                    val effectiveDrag = resizeDragAmountStart.coerceAtMost(maxDragDown)
-
-                                    val minutesChange = (effectiveDrag / hourHeightPx * 60f).roundToInt()
+                                    // Calculate new start time directly from drag amount (same as bottom-right logic)
+                                    val minutesChange = (resizeDragAmountStart / hourHeightPx * 60f).roundToInt()
                                     val newStartTime = eventStart.plusMinutes(minutesChange.toLong())
 
-                                    // Ensure new start time is before end time and not negative
+                                    // Ensure new start time is before end time
                                     if (newStartTime.isBefore(eventEnd) && newStartTime.isAfter(eventStart.minusDays(1))) {
                                         onResize(event.id, newStartTime, null)
                                     }
