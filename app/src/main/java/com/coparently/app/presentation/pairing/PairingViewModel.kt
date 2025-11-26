@@ -132,6 +132,15 @@ class PairingViewModel @Inject constructor(
                         userRepository.syncWithFirestore()
                     } ?: android.util.Log.w("PairingViewModel", "Sync with Firestore timed out")
                 } catch (e: Exception) {
+                    // Check if it's a NOT_FOUND error (database not created)
+                    if (e.message?.contains("NOT_FOUND") == true ||
+                        e.message?.contains("database (default) does not exist") == true) {
+                        _uiState.value = state.copy(
+                            isLoading = false,
+                            errorMessage = "Firestore database is not created. Please create it:\nhttps://console.cloud.google.com/datastore/setup?project=coparently-a39c9"
+                        )
+                        return@launch
+                    }
                     android.util.Log.w("PairingViewModel", "Failed to sync user data, trying to get from local DB", e)
                 }
 
@@ -169,6 +178,15 @@ class PairingViewModel @Inject constructor(
                             currentUserData = userRepository.getCurrentUser()
                         }
                     } catch (e: Exception) {
+                        // Check if it's a NOT_FOUND error (database not created)
+                        if (e.message?.contains("NOT_FOUND") == true ||
+                            e.message?.contains("database (default) does not exist") == true) {
+                            _uiState.value = state.copy(
+                                isLoading = false,
+                                errorMessage = "Firestore database is not created. Please create it:\nhttps://console.cloud.google.com/datastore/setup?project=coparently-a39c9"
+                            )
+                            return@launch
+                        }
                         // If Firestore is offline or unavailable, create user from Firebase auth data
                         android.util.Log.w("PairingViewModel", "Firestore unavailable, creating user from Firebase auth", e)
                         val newUser = com.coparently.app.domain.model.User(
