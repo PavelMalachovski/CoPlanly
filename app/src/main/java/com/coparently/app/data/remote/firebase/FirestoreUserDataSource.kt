@@ -21,6 +21,12 @@ class FirestoreUserDataSource @Inject constructor(
      * Uses DEFAULT source which tries server first, falls back to cache automatically if offline.
      */
     suspend fun getUserById(uid: String): Map<String, Any?>? {
+        // Validate uid before making request
+        if (uid.isBlank()) {
+            android.util.Log.w("FirestoreUserDataSource", "Attempted to get user with blank uid")
+            return null
+        }
+
         return try {
             // Use DEFAULT source - tries server first, automatically falls back to cache if offline
             val snapshot = firestore.collection(usersCollection)
@@ -134,6 +140,12 @@ class FirestoreUserDataSource @Inject constructor(
      * Uses DEFAULT source which tries server first, falls back to cache automatically if offline.
      */
     suspend fun getInvitationsForEmail(email: String): List<Map<String, Any?>> {
+        // Validate email before making request
+        if (email.isBlank()) {
+            android.util.Log.w("FirestoreUserDataSource", "Attempted to get invitations with blank email")
+            return emptyList()
+        }
+
         return try {
             // Use DEFAULT source - tries server first, automatically falls back to cache if offline
             val snapshot = firestore.collection(invitationsCollection)

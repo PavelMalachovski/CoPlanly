@@ -123,9 +123,10 @@ service cloud.firestore {
     // Invitations collection - for co-parent pairing
     match /invitations/{invitationId} {
       // Users can read invitations sent to them or by them
+      // Allow reading if: sent by them (fromUserId) OR sent to their email (if email exists in token)
       allow read: if isAuthenticated() && (
-        resource.data.toEmail == request.auth.token.email ||
-        resource.data.fromUserId == request.auth.uid
+        resource.data.fromUserId == request.auth.uid ||
+        (request.auth.token.email != null && resource.data.toEmail == request.auth.token.email)
       );
 
       // Users can create invitations with validation
@@ -138,8 +139,9 @@ service cloud.firestore {
                       request.resource.data.status == 'pending';
 
       // Users can update invitation status (for accepting/rejecting)
+      // Allow update if: invitation sent to user's email (if email exists) OR invitation sent by user
       allow update: if isAuthenticated() && (
-        (resource.data.toEmail == request.auth.token.email &&
+        (request.auth.token.email != null && resource.data.toEmail == request.auth.token.email &&
          request.resource.data.status in ['accepted', 'rejected']) ||
         (resource.data.fromUserId == request.auth.uid &&
          request.resource.data.status == 'cancelled')

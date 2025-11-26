@@ -50,7 +50,7 @@ class PairingViewModel @Inject constructor(
     private fun loadPairingInfo() {
         viewModelScope.launch {
             val currentUser = userRepository.getCurrentUser()
-            currentUser?.partnerId?.let { partnerId ->
+            currentUser?.partnerId?.takeIf { it.isNotBlank() }?.let { partnerId ->
                 val partnerInfo = pairingService.getPartnerInfo(partnerId)
                 _uiState.value = _uiState.value.copy(
                     partnerEmail = partnerInfo?.get("email") as? String
@@ -62,14 +62,20 @@ class PairingViewModel @Inject constructor(
     private fun loadPendingInvitations() {
         viewModelScope.launch {
             val currentUser = firebaseAuthService.getCurrentUser()
-            if (currentUser != null) {
-                val result = pairingService.getPendingInvitations(currentUser.email ?: "")
+            val userEmail = currentUser?.email
+            if (currentUser != null && !userEmail.isNullOrBlank()) {
+                val result = pairingService.getPendingInvitations(userEmail)
                 result.fold(
                     onSuccess = { invitations ->
                         _uiState.value = _uiState.value.copy(pendingInvitations = invitations)
                     },
-                    onFailure = { /* Handle error */ }
+                    onFailure = { error ->
+                        android.util.Log.w("PairingViewModel", "Failed to load pending invitations", error)
+                        // Don't show error to user - just log it
+                    }
                 )
+            } else {
+                android.util.Log.w("PairingViewModel", "Cannot load pending invitations: user email is null or blank")
             }
         }
     }
