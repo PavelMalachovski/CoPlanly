@@ -59,12 +59,14 @@ class FirestoreUserDataSource @Inject constructor(
 
     /**
      * Updates a user profile.
+     * Uses set with merge to create document if it doesn't exist.
      */
     suspend fun updateUser(uid: String, userData: Map<String, Any?>): Result<Unit> {
         return try {
+            // Use set with merge instead of update to create document if it doesn't exist
             firestore.collection(usersCollection)
                 .document(uid)
-                .update(userData)
+                .set(userData, com.google.firebase.firestore.SetOptions.merge())
                 .await()
             Result.success(Unit)
         } catch (e: Exception) {

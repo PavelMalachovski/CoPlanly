@@ -43,9 +43,10 @@ class FcmService @Inject constructor(
                 IllegalStateException("User not authenticated")
             )
 
+            // Use set with merge to create document if it doesn't exist
             firestore.collection("users")
                 .document(currentUser.uid)
-                .update("fcmToken", token)
+                .set(mapOf("fcmToken" to token), com.google.firebase.firestore.SetOptions.merge())
                 .await()
 
             Result.success(Unit)
