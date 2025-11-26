@@ -42,6 +42,7 @@ object DatabaseModule {
                 com.coparently.app.data.local.DatabaseMigrations.MIGRATION_6_7
             )
             .fallbackToDestructiveMigration() // Allow destructive migration for missing migration paths (e.g., 3->6)
+            .fallbackToDestructiveMigrationOnDowngrade() // Allow destructive migration when downgrading database version
             .build()
     }
 

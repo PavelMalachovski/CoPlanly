@@ -1,9 +1,12 @@
 package com.coparently.app
 
 import android.app.Application
+import androidx.hilt.work.HiltWorkerFactory
+import androidx.work.Configuration
 import com.google.firebase.FirebaseApp
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 import dagger.hilt.android.HiltAndroidApp
+import javax.inject.Inject
 
 /**
  * Application class for CoParently.
@@ -12,7 +15,19 @@ import dagger.hilt.android.HiltAndroidApp
  * @see HiltAndroidApp
  */
 @HiltAndroidApp
-class CoParentlyApplication : Application() {
+class CoParentlyApplication : Application(), Configuration.Provider {
+
+    @Inject
+    lateinit var workerFactory: HiltWorkerFactory
+
+    /**
+     * Provides WorkManager configuration with HiltWorkerFactory.
+     * This enables dependency injection in WorkManager workers.
+     */
+    override val workManagerConfiguration: Configuration
+        get() = Configuration.Builder()
+            .setWorkerFactory(workerFactory)
+            .build()
 
     override fun onCreate() {
         super.onCreate()
@@ -31,6 +46,7 @@ class CoParentlyApplication : Application() {
         FirebaseCrashlytics.getInstance().setCrashlyticsCollectionEnabled(true)
 
         // Schedule periodic background sync
+        // Note: WorkManager is initialized via Hilt, so we can schedule work here
         com.coparently.app.data.sync.SyncWorker.schedulePeriodicSync(this)
     }
 }
