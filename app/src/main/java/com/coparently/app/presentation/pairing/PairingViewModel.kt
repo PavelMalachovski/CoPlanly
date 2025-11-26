@@ -126,9 +126,9 @@ class PairingViewModel @Inject constructor(
 
                 // Sync user data from Firestore before getting current user
                 // This ensures user data exists in local database
-                // Use timeout to prevent hanging
+                // Use timeout to prevent hanging (increased to 30 seconds for first connection)
                 try {
-                    withTimeoutOrNull(5000) {
+                    withTimeoutOrNull(30000) {
                         userRepository.syncWithFirestore()
                     } ?: android.util.Log.w("PairingViewModel", "Sync with Firestore timed out")
                 } catch (e: Exception) {
@@ -150,15 +150,15 @@ class PairingViewModel @Inject constructor(
                 if (currentUserData == null) {
                     android.util.Log.d("PairingViewModel", "User data not found in local DB, creating from Firebase user")
                     try {
-                        // Use timeout to prevent hanging on Firestore operations
-                        val firestoreData = withTimeoutOrNull(3000) {
+                        // Use timeout to prevent hanging on Firestore operations (increased to 20 seconds)
+                        val firestoreData = withTimeoutOrNull(20000) {
                             pairingService.getPartnerInfo(currentUser.uid)
                         }
 
                         if (firestoreData != null) {
-                            // User exists in Firestore, sync it
+                            // User exists in Firestore, sync it (increased to 30 seconds)
                             try {
-                                withTimeoutOrNull(5000) {
+                                withTimeoutOrNull(30000) {
                                     userRepository.syncWithFirestore()
                                 }
                             } catch (e: Exception) {
@@ -209,8 +209,8 @@ class PairingViewModel @Inject constructor(
                     return@launch
                 }
 
-                // Send invitation with timeout to prevent hanging
-                val result = withTimeoutOrNull(10000) {
+                // Send invitation with timeout to prevent hanging (increased to 30 seconds)
+                val result = withTimeoutOrNull(30000) {
                     pairingService.sendInvitation(
                         currentUser.uid,
                         currentUser.email ?: "",
@@ -231,6 +231,7 @@ class PairingViewModel @Inject constructor(
                 result.fold(
                     onSuccess = {
                         analyticsManager.logInvitationSent()
+                        android.util.Log.d("PairingViewModel", "Invitation sent successfully")
                         _uiState.value = state.copy(
                             isLoading = false,
                             invitationEmail = "", // Clear the email field
@@ -239,6 +240,11 @@ class PairingViewModel @Inject constructor(
                         onSuccess()
                     },
                     onFailure = { error ->
+                        // Log full error for debugging
+                        android.util.Log.e("PairingViewModel", "Failed to send invitation", error)
+                        android.util.Log.e("PairingViewModel", "Error type: ${error.javaClass.simpleName}")
+                        android.util.Log.e("PairingViewModel", "Error message: ${error.message}")
+
                         // Check for specific Firestore errors
                         val errorMessage = when {
                             error.message?.contains("NOT_FOUND") == true ||
@@ -295,17 +301,17 @@ class PairingViewModel @Inject constructor(
                     return@launch
                 }
 
-                // Sync user data before accepting invitation
+                // Sync user data before accepting invitation (increased to 30 seconds)
                 try {
-                    withTimeoutOrNull(5000) {
+                    withTimeoutOrNull(30000) {
                         userRepository.syncWithFirestore()
                     }
                 } catch (e: Exception) {
                     android.util.Log.w("PairingViewModel", "Failed to sync user data before accepting invitation", e)
                 }
 
-                // Get invitation details to know who we're pairing with
-                val pendingInvitationsResult = withTimeoutOrNull(5000) {
+                // Get invitation details to know who we're pairing with (increased to 30 seconds)
+                val pendingInvitationsResult = withTimeoutOrNull(30000) {
                     pairingService.getPendingInvitations(currentUser.email ?: "")
                 } ?: run {
                     _uiState.value = _uiState.value.copy(
@@ -318,7 +324,7 @@ class PairingViewModel @Inject constructor(
                 val invitation = pendingInvitationsResult.getOrNull()?.firstOrNull { it["id"] == invitationId }
                 val fromUserId = invitation?.get("fromUserId") as? String
 
-                val result = withTimeoutOrNull(10000) {
+                val result = withTimeoutOrNull(30000) {
                     pairingService.acceptInvitation(invitationId, currentUser.uid)
                 } ?: run {
                     _uiState.value = _uiState.value.copy(
@@ -331,9 +337,9 @@ class PairingViewModel @Inject constructor(
                     onSuccess = {
                         analyticsManager.logInvitationAccepted()
 
-                        // Sync user data again to get updated partnerId
+                        // Sync user data again to get updated partnerId (increased to 30 seconds)
                         try {
-                            withTimeoutOrNull(5000) {
+                            withTimeoutOrNull(30000) {
                                 userRepository.syncWithFirestore()
                             }
                         } catch (e: Exception) {

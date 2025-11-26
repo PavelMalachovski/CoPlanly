@@ -7,7 +7,6 @@ import com.google.firebase.analytics.ktx.analytics
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.FirebaseFirestoreSettings
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.messaging.FirebaseMessaging
 import dagger.Binds
@@ -35,15 +34,21 @@ object FirebaseModule {
 
     /**
      * Provides Firebase Firestore instance.
-     * Offline persistence is enabled by default in newer versions of Firestore.
+     * Uses the default database (default).
+     * Offline persistence is enabled by default in Firestore SDK v24.0.0+
      * The app will automatically cache data locally for offline access.
      */
     @Provides
     @Singleton
     fun provideFirebaseFirestore(): FirebaseFirestore {
-        // Offline persistence is enabled by default in Firestore SDK v24.0.0+
-        // No need to explicitly enable it
-        return FirebaseFirestore.getInstance()
+        // Use the default database - Firebase uses "(default)" as the database name
+        val db = FirebaseFirestore.getInstance()
+
+        // In Firestore SDK v24.0.0+, offline persistence is enabled by default
+        // No need to configure it explicitly unless you want to disable it
+        android.util.Log.d("FirebaseModule", "Firestore initialized (offline persistence enabled by default)")
+
+        return db
     }
 
     /**

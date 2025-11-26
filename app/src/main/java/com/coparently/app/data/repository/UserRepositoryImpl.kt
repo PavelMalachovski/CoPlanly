@@ -65,6 +65,7 @@ class UserRepositoryImpl @Inject constructor(
             try {
                 val userData = mapOf(
                     "id" to user.id,
+                    "firebaseUid" to firebaseUser.uid, // Required by Firestore security rules
                     "email" to user.email,
                     "name" to user.name,
                     "role" to user.role,
@@ -97,6 +98,7 @@ class UserRepositoryImpl @Inject constructor(
             try {
                 val userData = mapOf(
                     "id" to user.id,
+                    "firebaseUid" to firebaseUser.uid, // Required by Firestore security rules
                     "email" to user.email,
                     "name" to user.name,
                     "role" to user.role,
