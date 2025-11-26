@@ -1,6 +1,7 @@
 package com.coparently.app.data.remote.firebase
 
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Source
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -18,13 +19,30 @@ class FirestoreUserDataSource @Inject constructor(
 
     /**
      * Gets a user by Firebase UID.
+     * Tries to get from server first, falls back to cache if offline.
      */
     suspend fun getUserById(uid: String): Map<String, Any?>? {
-        return firestore.collection(usersCollection)
-            .document(uid)
-            .get()
-            .await()
-            .data
+        return try {
+            // Try to get from server first
+            firestore.collection(usersCollection)
+                .document(uid)
+                .get(Source.SERVER)
+                .await()
+                .data
+        } catch (e: Exception) {
+            // If offline or server unavailable, try cache
+            try {
+                android.util.Log.d("FirestoreUserDataSource", "Server unavailable, trying cache for user: $uid", e)
+                firestore.collection(usersCollection)
+                    .document(uid)
+                    .get(Source.CACHE)
+                    .await()
+                    .data
+            } catch (cacheException: Exception) {
+                android.util.Log.w("FirestoreUserDataSource", "Failed to get user from cache: $uid", cacheException)
+                null
+            }
+        }
     }
 
     /**
@@ -59,15 +77,32 @@ class FirestoreUserDataSource @Inject constructor(
 
     /**
      * Gets a user by email.
+     * Tries to get from server first, falls back to cache if offline.
      */
     suspend fun getUserByEmail(email: String): Map<String, Any?>? {
-        val snapshot = firestore.collection(usersCollection)
-            .whereEqualTo("email", email)
-            .limit(1)
-            .get()
-            .await()
-
-        return snapshot.documents.firstOrNull()?.data
+        return try {
+            // Try to get from server first
+            val snapshot = firestore.collection(usersCollection)
+                .whereEqualTo("email", email)
+                .limit(1)
+                .get(Source.SERVER)
+                .await()
+            snapshot.documents.firstOrNull()?.data
+        } catch (e: Exception) {
+            // If offline or server unavailable, try cache
+            try {
+                android.util.Log.d("FirestoreUserDataSource", "Server unavailable, trying cache for email: $email", e)
+                val snapshot = firestore.collection(usersCollection)
+                    .whereEqualTo("email", email)
+                    .limit(1)
+                    .get(Source.CACHE)
+                    .await()
+                snapshot.documents.firstOrNull()?.data
+            } catch (cacheException: Exception) {
+                android.util.Log.w("FirestoreUserDataSource", "Failed to get user by email from cache: $email", cacheException)
+                null
+            }
+        }
     }
 
     /**
@@ -94,25 +129,60 @@ class FirestoreUserDataSource @Inject constructor(
 
     /**
      * Gets invitation by ID.
+     * Tries to get from server first, falls back to cache if offline.
      */
     suspend fun getInvitationById(invitationId: String): Map<String, Any?>? {
-        return firestore.collection(invitationsCollection)
-            .document(invitationId)
-            .get()
-            .await()
-            .data
+        return try {
+            // Try to get from server first
+            firestore.collection(invitationsCollection)
+                .document(invitationId)
+                .get(Source.SERVER)
+                .await()
+                .data
+        } catch (e: Exception) {
+            // If offline or server unavailable, try cache
+            try {
+                android.util.Log.d("FirestoreUserDataSource", "Server unavailable, trying cache for invitation: $invitationId", e)
+                firestore.collection(invitationsCollection)
+                    .document(invitationId)
+                    .get(Source.CACHE)
+                    .await()
+                    .data
+            } catch (cacheException: Exception) {
+                android.util.Log.w("FirestoreUserDataSource", "Failed to get invitation from cache: $invitationId", cacheException)
+                null
+            }
+        }
     }
 
     /**
      * Gets invitations for a specific email.
+     * Tries to get from server first, falls back to cache if offline.
      */
     suspend fun getInvitationsForEmail(email: String): List<Map<String, Any?>> {
-        val snapshot = firestore.collection(invitationsCollection)
-            .whereEqualTo("toEmail", email)
-            .whereEqualTo("status", "pending")
-            .get()
-            .await()
-        return snapshot.documents.map { it.data!! }
+        return try {
+            // Try to get from server first
+            val snapshot = firestore.collection(invitationsCollection)
+                .whereEqualTo("toEmail", email)
+                .whereEqualTo("status", "pending")
+                .get(Source.SERVER)
+                .await()
+            snapshot.documents.map { it.data!! }
+        } catch (e: Exception) {
+            // If offline or server unavailable, try cache
+            try {
+                android.util.Log.d("FirestoreUserDataSource", "Server unavailable, trying cache for invitations: $email", e)
+                val snapshot = firestore.collection(invitationsCollection)
+                    .whereEqualTo("toEmail", email)
+                    .whereEqualTo("status", "pending")
+                    .get(Source.CACHE)
+                    .await()
+                snapshot.documents.map { it.data!! }
+            } catch (cacheException: Exception) {
+                android.util.Log.w("FirestoreUserDataSource", "Failed to get invitations from cache: $email", cacheException)
+                emptyList()
+            }
+        }
     }
 
     /**

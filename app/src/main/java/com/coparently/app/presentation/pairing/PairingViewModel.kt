@@ -7,14 +7,20 @@ import com.coparently.app.data.analytics.AnalyticsManager
 import com.coparently.app.data.remote.firebase.CoParentPairingService
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.QRCodeService
+import com.coparently.app.domain.model.Conversation
+import com.coparently.app.domain.repository.MessageRepository
 import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.utils.ValidationResult
 import com.coparently.app.utils.ValidationUtils
+import java.time.LocalDateTime
+import java.util.UUID
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.TimeoutCancellationException
 import javax.inject.Inject
 
 /**
@@ -28,6 +34,7 @@ class PairingViewModel @Inject constructor(
     private val pairingService: CoParentPairingService,
     private val firebaseAuthService: FirebaseAuthService,
     private val userRepository: UserRepository,
+    private val messageRepository: MessageRepository,
     private val analyticsManager: AnalyticsManager,
     private val qrCodeService: QRCodeService
 ) : ViewModel() {
@@ -117,7 +124,65 @@ class PairingViewModel @Inject constructor(
                     return@launch
                 }
 
-                val currentUserData = userRepository.getCurrentUser()
+                // Sync user data from Firestore before getting current user
+                // This ensures user data exists in local database
+                // Use timeout to prevent hanging
+                try {
+                    withTimeoutOrNull(5000) {
+                        userRepository.syncWithFirestore()
+                    } ?: android.util.Log.w("PairingViewModel", "Sync with Firestore timed out")
+                } catch (e: Exception) {
+                    android.util.Log.w("PairingViewModel", "Failed to sync user data, trying to get from local DB", e)
+                }
+
+                var currentUserData = userRepository.getCurrentUser()
+
+                // If user data still not found, try to create it from Firebase user
+                if (currentUserData == null) {
+                    android.util.Log.d("PairingViewModel", "User data not found in local DB, creating from Firebase user")
+                    try {
+                        // Use timeout to prevent hanging on Firestore operations
+                        val firestoreData = withTimeoutOrNull(3000) {
+                            pairingService.getPartnerInfo(currentUser.uid)
+                        }
+
+                        if (firestoreData != null) {
+                            // User exists in Firestore, sync it
+                            try {
+                                withTimeoutOrNull(5000) {
+                                    userRepository.syncWithFirestore()
+                                }
+                            } catch (e: Exception) {
+                                android.util.Log.w("PairingViewModel", "Failed to sync after getting Firestore data", e)
+                            }
+                            currentUserData = userRepository.getCurrentUser()
+                        } else {
+                            // User doesn't exist in Firestore or Firestore unavailable, create basic user profile
+                            val newUser = com.coparently.app.domain.model.User(
+                                id = currentUser.uid,
+                                email = currentUser.email ?: "",
+                                name = currentUser.displayName ?: currentUser.email?.substringBefore("@") ?: "User",
+                                role = "mom",
+                                colorCode = "#FF4081"
+                            )
+                            userRepository.upsertUser(newUser)
+                            currentUserData = userRepository.getCurrentUser()
+                        }
+                    } catch (e: Exception) {
+                        // If Firestore is offline or unavailable, create user from Firebase auth data
+                        android.util.Log.w("PairingViewModel", "Firestore unavailable, creating user from Firebase auth", e)
+                        val newUser = com.coparently.app.domain.model.User(
+                            id = currentUser.uid,
+                            email = currentUser.email ?: "",
+                            name = currentUser.displayName ?: currentUser.email?.substringBefore("@") ?: "User",
+                            role = "mom",
+                            colorCode = "#FF4081"
+                        )
+                        userRepository.upsertUser(newUser)
+                        currentUserData = userRepository.getCurrentUser()
+                    }
+                }
+
                 if (currentUserData == null) {
                     _uiState.value = state.copy(
                         isLoading = false,
@@ -126,12 +191,24 @@ class PairingViewModel @Inject constructor(
                     return@launch
                 }
 
-                val result = pairingService.sendInvitation(
-                    currentUser.uid,
-                    currentUser.email ?: "",
-                    currentUserData.name,
-                    state.invitationEmail
-                )
+                // Send invitation with timeout to prevent hanging
+                val result = withTimeoutOrNull(10000) {
+                    pairingService.sendInvitation(
+                        currentUser.uid,
+                        currentUser.email ?: "",
+                        currentUserData.name,
+                        state.invitationEmail
+                    )
+                }
+
+                if (result == null) {
+                    // Timeout occurred
+                    _uiState.value = state.copy(
+                        isLoading = false,
+                        errorMessage = "Request timed out. Please check your internet connection and try again."
+                    )
+                    return@launch
+                }
 
                 result.fold(
                     onSuccess = {
@@ -144,9 +221,36 @@ class PairingViewModel @Inject constructor(
                         onSuccess()
                     },
                     onFailure = { error ->
+                        // Check for specific Firestore errors
+                        val errorMessage = when {
+                            error.message?.contains("NOT_FOUND") == true ||
+                            error.message?.contains("database (default) does not exist") == true ||
+                            error.message?.contains("add a Cloud Datastore or Cloud Firestore database") == true -> {
+                                "Firestore database is not created. Please create it:\nhttps://console.cloud.google.com/datastore/setup?project=coparently-a39c9"
+                            }
+                            error.message?.contains("PERMISSION_DENIED") == true ||
+                            error.message?.contains("Cloud Firestore API has not been used") == true -> {
+                                "Firestore API is not enabled. Please enable it in Google Cloud Console:\nhttps://console.developers.google.com/apis/api/firestore.googleapis.com/overview?project=coparently-a39c9"
+                            }
+                            error.message?.contains("UNAVAILABLE") == true ||
+                            error.message?.contains("Unable to resolve host") == true ||
+                            error.message?.contains("UnknownHostException") == true -> {
+                                "No internet connection or DNS error. Please check your internet connection and try again."
+                            }
+                            error.message?.contains("offline") == true ||
+                            error.message?.contains("client is offline") == true -> {
+                                "No internet connection. Please check your connection and try again."
+                            }
+                            error.message?.contains("timeout") == true ||
+                            error.message?.contains("timed out") == true -> {
+                                "Request timed out. Please check your internet connection and try again."
+                            }
+                            else -> error.message ?: "Failed to send invitation"
+                        }
+
                         _uiState.value = state.copy(
                             isLoading = false,
-                            errorMessage = error.message ?: "Failed to send invitation"
+                            errorMessage = errorMessage
                         )
                     }
                 )
@@ -173,10 +277,74 @@ class PairingViewModel @Inject constructor(
                     return@launch
                 }
 
-                val result = pairingService.acceptInvitation(invitationId, currentUser.uid)
+                // Sync user data before accepting invitation
+                try {
+                    withTimeoutOrNull(5000) {
+                        userRepository.syncWithFirestore()
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.w("PairingViewModel", "Failed to sync user data before accepting invitation", e)
+                }
+
+                // Get invitation details to know who we're pairing with
+                val pendingInvitationsResult = withTimeoutOrNull(5000) {
+                    pairingService.getPendingInvitations(currentUser.email ?: "")
+                } ?: run {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        errorMessage = "Request timed out. Please check your internet connection and try again."
+                    )
+                    return@launch
+                }
+
+                val invitation = pendingInvitationsResult.getOrNull()?.firstOrNull { it["id"] == invitationId }
+                val fromUserId = invitation?.get("fromUserId") as? String
+
+                val result = withTimeoutOrNull(10000) {
+                    pairingService.acceptInvitation(invitationId, currentUser.uid)
+                } ?: run {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        errorMessage = "Request timed out. Please check your internet connection and try again."
+                    )
+                    return@launch
+                }
                 result.fold(
                     onSuccess = {
                         analyticsManager.logInvitationAccepted()
+
+                        // Sync user data again to get updated partnerId
+                        try {
+                            withTimeoutOrNull(5000) {
+                                userRepository.syncWithFirestore()
+                            }
+                        } catch (e: Exception) {
+                            android.util.Log.w("PairingViewModel", "Failed to sync user data after accepting invitation", e)
+                        }
+
+                        // Create conversation for chat between the two parents
+                        if (fromUserId != null) {
+                            try {
+                                val partnerInfo = pairingService.getPartnerInfo(fromUserId)
+                                val partnerName = partnerInfo?.get("name") as? String ?: "Co-Parent"
+
+                                // Create conversation - MessageRepository will handle duplicates
+                                val conversation = Conversation(
+                                    id = UUID.randomUUID().toString(),
+                                    participants = listOf(currentUser.uid, fromUserId),
+                                    title = partnerName,
+                                    createdAt = LocalDateTime.now(),
+                                    unreadCount = 0,
+                                    syncedToFirestore = false
+                                )
+                                messageRepository.createConversation(conversation)
+                                android.util.Log.d("PairingViewModel", "Created conversation with partner: $partnerName")
+                            } catch (e: Exception) {
+                                android.util.Log.e("PairingViewModel", "Failed to create conversation after pairing", e)
+                                // Don't fail the pairing if conversation creation fails
+                            }
+                        }
+
                         loadPairingInfo()
                         loadPendingInvitations()
                         _uiState.value = _uiState.value.copy(
@@ -185,9 +353,36 @@ class PairingViewModel @Inject constructor(
                         )
                     },
                     onFailure = { error ->
+                        // Check for specific Firestore errors
+                        val errorMessage = when {
+                            error.message?.contains("NOT_FOUND") == true ||
+                            error.message?.contains("database (default) does not exist") == true ||
+                            error.message?.contains("add a Cloud Datastore or Cloud Firestore database") == true -> {
+                                "Firestore database is not created. Please create it:\nhttps://console.cloud.google.com/datastore/setup?project=coparently-a39c9"
+                            }
+                            error.message?.contains("PERMISSION_DENIED") == true ||
+                            error.message?.contains("Cloud Firestore API has not been used") == true -> {
+                                "Firestore API is not enabled. Please enable it in Google Cloud Console:\nhttps://console.developers.google.com/apis/api/firestore.googleapis.com/overview?project=coparently-a39c9"
+                            }
+                            error.message?.contains("UNAVAILABLE") == true ||
+                            error.message?.contains("Unable to resolve host") == true ||
+                            error.message?.contains("UnknownHostException") == true -> {
+                                "No internet connection or DNS error. Please check your internet connection and try again."
+                            }
+                            error.message?.contains("offline") == true ||
+                            error.message?.contains("client is offline") == true -> {
+                                "No internet connection. Please check your connection and try again."
+                            }
+                            error.message?.contains("timeout") == true ||
+                            error.message?.contains("timed out") == true -> {
+                                "Request timed out. Please check your internet connection and try again."
+                            }
+                            else -> error.message ?: "Failed to accept invitation"
+                        }
+
                         _uiState.value = _uiState.value.copy(
                             isLoading = false,
-                            errorMessage = error.message ?: "Failed to accept invitation"
+                            errorMessage = errorMessage
                         )
                     }
                 )
