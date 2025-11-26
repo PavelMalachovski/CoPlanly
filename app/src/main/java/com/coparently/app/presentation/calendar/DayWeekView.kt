@@ -15,6 +15,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -37,7 +38,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -49,8 +55,11 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.PointerEventPass
+import kotlinx.coroutines.launch
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -85,7 +94,11 @@ fun DayWeekView(
     onEventClick: (String) -> Unit,
     onAddEventClick: (LocalDate, Int) -> Unit = { _, _ -> },
     onEventDragDrop: ((String, LocalDate, Int) -> Unit)? = null,
-    onEventResize: ((String, LocalDateTime?, LocalDateTime?) -> Unit)? = null
+    onEventResize: ((String, LocalDateTime?, LocalDateTime?) -> Unit)? = null,
+    onEventDelete: ((String) -> Unit)? = null,
+    onEventLongPressStart: ((String) -> Unit)? = null,
+    onEventLongPressEnd: (() -> Unit)? = null,
+    onDragOverDeleteButton: ((Boolean) -> Unit)? = null
 ) {
     val dims = dimensions()
     val hours = (0..23).toList()
@@ -449,7 +462,11 @@ fun DayWeekView(
                                         baseDate = date,
                                         baseHour = startHour,
                                         onDragDrop = onEventDragDrop,
-                                        onResize = onEventResize
+                                        onResize = onEventResize,
+                                        onDelete = onEventDelete,
+                                        onLongPressStart = onEventLongPressStart,
+                                        onLongPressEnd = onEventLongPressEnd,
+                                        onDragOverDeleteButton = onDragOverDeleteButton
                                     )
                                 }
                             }
@@ -471,10 +488,15 @@ private fun EventChip(
     baseDate: LocalDate,
     baseHour: Int,
     onDragDrop: ((String, LocalDate, Int) -> Unit)?,
-    onResize: ((String, LocalDateTime?, LocalDateTime?) -> Unit)? = null
+    onResize: ((String, LocalDateTime?, LocalDateTime?) -> Unit)? = null,
+    onDelete: ((String) -> Unit)? = null,
+    onLongPressStart: ((String) -> Unit)? = null,
+    onLongPressEnd: (() -> Unit)? = null,
+    onDragOverDeleteButton: ((Boolean) -> Unit)? = null
 ) {
     val density = LocalDensity.current
     val hapticFeedback = LocalHapticFeedback.current
+    val configuration = LocalConfiguration.current
 
     // Calculate event position and height based on actual start/end times
     val eventStart = event.startDateTime
@@ -512,6 +534,12 @@ private fun EventChip(
     var resizeDragStart by remember { mutableStateOf(Offset.Zero) }
     var resizeDragAmountStart by remember { mutableStateOf(0f) }
     var resizeDragAmountEnd by remember { mutableStateOf(0f) }
+
+    // Track if event is over delete button
+    var isOverDeleteButton by remember { mutableStateOf(false) }
+
+    // Long press state - track when user is holding the event
+    var isLongPressing by remember { mutableStateOf(false) }
     // Calculate temporary times for display during resize
     val tempStartTime = remember(isResizingStart, resizeDragAmountStart, eventStart) {
         if (isResizingStart) {
@@ -548,13 +576,25 @@ private fun EventChip(
         0.dp
     }
 
+    // Track global position for delete button detection
+    var eventGlobalPosition by remember { mutableStateOf(Offset.Zero) }
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(dynamicHeightDp)
             .offset(y = verticalOffsetDp)
+            .onGloballyPositioned { coordinates ->
+                // Store global position of event for delete button detection
+                // localToWindow converts local coordinates to window coordinates
+                eventGlobalPosition = coordinates.localToWindow(Offset.Zero)
+            }
             .background(
-                color = backgroundColor,
+                color = if (isDraggingEvent && isOverDeleteButton) {
+                    MaterialTheme.colorScheme.error.copy(alpha = 0.3f)
+                } else {
+                    backgroundColor
+                },
                 shape = RoundedCornerShape(6.dp)
             )
             .border(
@@ -562,13 +602,56 @@ private fun EventChip(
                 color = borderColor,
                 shape = RoundedCornerShape(6.dp)
             )
-            .clickable(enabled = !isDraggingEvent && !isResizingStart && !isResizingEnd, onClick = onClick)
+            .pointerInput(event.id, onDelete, onLongPressStart, onLongPressEnd) {
+                if (onDelete != null && onLongPressStart != null && onLongPressEnd != null) {
+                    detectTapGestures(
+                        onTap = {
+                            if (!isLongPressing) {
+                                // Normal click - open event
+                                onClick()
+                            }
+                        },
+                        onLongPress = {
+                            isLongPressing = true
+                            onLongPressStart(event.id)
+                            hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                        }
+                    )
+                } else {
+                    // If no delete handler, use normal clickable
+                    detectTapGestures(
+                        onTap = { onClick() }
+                    )
+                }
+            }
+            // Track pointer release when long pressing - restart when isLongPressing changes
+            .pointerInput(event.id, isLongPressing) {
+                if (isLongPressing && onLongPressEnd != null) {
+                    awaitPointerEventScope {
+                        while (isLongPressing) {
+                            val event = awaitPointerEvent(PointerEventPass.Main)
+                            val isPressed = event.changes.firstOrNull()?.pressed == true
+                            if (!isPressed) {
+                                // Released - hide delete button
+                                isLongPressing = false
+                                onLongPressEnd()
+                                break
+                            }
+                        }
+                    }
+                }
+            }
             .graphicsLayer {
                 if (isDraggingEvent) {
                     shadowElevation = 8.dp.toPx()
                     translationX = totalDrag.x
                     translationY = totalDrag.y
-                    alpha = 0.8f
+                    // Make event more transparent and red-tinted when over delete button
+                    alpha = if (isOverDeleteButton) 0.5f else 0.8f
+                    if (isOverDeleteButton) {
+                        // Add red tint when over delete button
+                        // This is handled by changing the background color in the Box
+                    }
                 }
             }
             .semantics {
@@ -577,7 +660,8 @@ private fun EventChip(
                         isDraggingEvent -> "Dragging"
                         isResizingStart -> "Resizing start time to ${tempStartTime.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))}"
                         isResizingEnd -> "Resizing end time to ${tempEndTime.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))}"
-                        else -> "Tap to view, long press center to move, drag corners to resize"
+                        isLongPressing -> "Long pressed, delete button shown"
+                        else -> "Tap to view, long press to show delete, drag corners to resize"
                     }
                 }"
             }
@@ -588,36 +672,80 @@ private fun EventChip(
                 .fillMaxSize()
                 .padding(horizontal = 8.dp, vertical = 4.dp)
                 .padding(start = 12.dp, end = 12.dp) // Padding to avoid resize handles
-                .pointerInput(columnWidthPx, hourHeightPx, onDragDrop) {
+                .pointerInput(columnWidthPx, hourHeightPx, onDragDrop, onDelete, onDragOverDeleteButton, configuration, eventGlobalPosition) {
                     // Center drag for moving event
                     if (onDragDrop != null && columnWidthPx > 0f && hourHeightPx > 0f) {
+                        val screenWidth = with(density) { configuration.screenWidthDp.dp.toPx() }
+                        val screenHeight = with(density) { configuration.screenHeightDp.dp.toPx() }
+
+                        // Store initial touch position in window coordinates
+                        var startPositionInWindow = Offset.Zero
+
                         detectDragGesturesAfterLongPress(
-                            onDragStart = {
+                            onDragStart = { startOffset ->
                                 isDraggingEvent = true
                                 totalDrag = Offset.Zero
+                                // Calculate initial position in window: event position + offset from event top-left
+                                startPositionInWindow = eventGlobalPosition + startOffset
                                 hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
                             },
                             onDragCancel = {
                                 isDraggingEvent = false
                                 totalDrag = Offset.Zero
+                                isOverDeleteButton = false
+                                onDragOverDeleteButton?.invoke(false)
                             },
                             onDragEnd = {
                                 if (isDraggingEvent) {
-                                    val dayOffset = (totalDrag.x / columnWidthPx).roundToInt()
-                                    val hourOffset = (totalDrag.y / hourHeightPx).roundToInt()
-                                    if (dayOffset != 0 || hourOffset != 0) {
-                                        val targetDate = baseDate.plusDays(dayOffset.toLong())
-                                        val targetHour = (baseHour + hourOffset).coerceIn(0, 23)
-                                        onDragDrop(event.id, targetDate, targetHour)
+                                    // Check if dropped over delete button area using the last known position
+                                    // The position is already tracked in the drag handler
+                                    if (isOverDeleteButton && onDelete != null) {
+                                        // Delete event
                                         hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        onDelete(event.id)
+                                        isOverDeleteButton = false
+                                        onDragOverDeleteButton?.invoke(false)
+                                    } else {
+                                        // Normal drag & drop
+                                        val dayOffset = (totalDrag.x / columnWidthPx).roundToInt()
+                                        val hourOffset = (totalDrag.y / hourHeightPx).roundToInt()
+                                        if (dayOffset != 0 || hourOffset != 0) {
+                                            val targetDate = baseDate.plusDays(dayOffset.toLong())
+                                            val targetHour = (baseHour + hourOffset).coerceIn(0, 23)
+                                            onDragDrop(event.id, targetDate, targetHour)
+                                            hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        }
                                     }
                                 }
                                 isDraggingEvent = false
                                 totalDrag = Offset.Zero
+                                isOverDeleteButton = false
+                                onDragOverDeleteButton?.invoke(false)
                             }
                         ) { change, dragAmount ->
                             change.consume()
                             totalDrag += dragAmount
+
+                            // Calculate absolute position of pointer in window
+                            // startPositionInWindow is the initial touch position in window coordinates
+                            // totalDrag is the accumulated drag offset
+                            // So current position = startPositionInWindow + totalDrag
+                            val currentPositionInWindow = startPositionInWindow + totalDrag
+
+                            // Delete button is in the right-bottom corner (FloatingActionButton)
+                            // Check if pointer is in the right-bottom area (last 25% width, last 25% height)
+                            val deleteAreaWidth = screenWidth * 0.25f
+                            val deleteAreaHeight = screenHeight * 0.25f
+                            val isInDeleteArea = currentPositionInWindow.x >= (screenWidth - deleteAreaWidth) &&
+                                    currentPositionInWindow.y >= (screenHeight - deleteAreaHeight)
+
+                            if (isInDeleteArea != isOverDeleteButton) {
+                                isOverDeleteButton = isInDeleteArea
+                                onDragOverDeleteButton?.invoke(isInDeleteArea)
+                                if (isInDeleteArea) {
+                                    hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                }
+                            }
                         }
                     }
                 },
@@ -753,5 +881,6 @@ private fun EventChip(
                     }
             )
         }
+
     }
 }

@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -82,6 +83,7 @@ import com.kizitonwose.calendar.core.DayPosition
 import com.kizitonwose.calendar.core.firstDayOfWeekFromLocale
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
@@ -150,6 +152,11 @@ fun CalendarScreen(
     // Snackbar state for undo functionality
     val snackbarHostState = remember { SnackbarHostState() }
     val uiState by eventViewModel.uiState.collectAsState()
+
+    // Delete button state - show red cross when long pressing event
+    var showDeleteButton by remember { mutableStateOf(false) }
+    var eventToDelete by remember { mutableStateOf<String?>(null) }
+    var isDragOverDeleteButton by remember { mutableStateOf(false) }
 
     // Load events based on view mode
     LaunchedEffect(viewMode, selectedDate) {
@@ -265,20 +272,57 @@ fun CalendarScreen(
             SnackbarHost(hostState = snackbarHostState)
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                    onAddEventClick(null, null)
-                },
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                shape = RoundedCornerShape(dims.cornerRadius)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = stringResource(R.string.calendar_add_event),
-                    modifier = Modifier.size(dims.iconSize)
-                )
+            Box {
+                // Red delete button - appears above the "+" button when long pressing event or dragging
+                if ((showDeleteButton && eventToDelete != null) || isDragOverDeleteButton) {
+                    FloatingActionButton(
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            eventToDelete?.let { eventId ->
+                                eventViewModel.deleteEventById(eventId)
+                            }
+                            showDeleteButton = false
+                            eventToDelete = null
+                        },
+                        containerColor = if (isDragOverDeleteButton) {
+                            MaterialTheme.colorScheme.error.copy(alpha = 0.9f)
+                        } else {
+                            MaterialTheme.colorScheme.error
+                        },
+                        contentColor = MaterialTheme.colorScheme.onError,
+                        shape = RoundedCornerShape(dims.cornerRadius),
+                        modifier = Modifier
+                            .offset(y = (-64).dp) // Position above the "+" button
+                            .graphicsLayer {
+                                // Scale up when dragging over it
+                                scaleX = if (isDragOverDeleteButton) 1.2f else 1f
+                                scaleY = if (isDragOverDeleteButton) 1.2f else 1f
+                            }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Delete event",
+                            modifier = Modifier.size(dims.iconSize)
+                        )
+                    }
+                }
+
+                // Regular "+" button
+                FloatingActionButton(
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        onAddEventClick(null, null)
+                    },
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    shape = RoundedCornerShape(dims.cornerRadius)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = stringResource(R.string.calendar_add_event),
+                        modifier = Modifier.size(dims.iconSize)
+                    )
+                }
             }
         }
     ) { paddingValues ->
@@ -416,6 +460,20 @@ fun CalendarScreen(
                                 },
                                 onEventResize = { eventId: String, newStartTime: java.time.LocalDateTime?, newEndTime: java.time.LocalDateTime? ->
                                     eventViewModel.resizeEvent(eventId, newStartTime, newEndTime)
+                                },
+                                onEventDelete = { eventId ->
+                                    eventViewModel.deleteEventById(eventId)
+                                },
+                                onEventLongPressStart = { eventId ->
+                                    showDeleteButton = true
+                                    eventToDelete = eventId
+                                },
+                                onEventLongPressEnd = {
+                                    showDeleteButton = false
+                                    eventToDelete = null
+                                },
+                                onDragOverDeleteButton = { isOver ->
+                                    isDragOverDeleteButton = isOver
                                 }
                             )
                         }
@@ -435,6 +493,20 @@ fun CalendarScreen(
                                 },
                                 onEventResize = { eventId: String, newStartTime: java.time.LocalDateTime?, newEndTime: java.time.LocalDateTime? ->
                                     eventViewModel.resizeEvent(eventId, newStartTime, newEndTime)
+                                },
+                                onEventDelete = { eventId ->
+                                    eventViewModel.deleteEventById(eventId)
+                                },
+                                onEventLongPressStart = { eventId ->
+                                    showDeleteButton = true
+                                    eventToDelete = eventId
+                                },
+                                onEventLongPressEnd = {
+                                    showDeleteButton = false
+                                    eventToDelete = null
+                                },
+                                onDragOverDeleteButton = { isOver ->
+                                    isDragOverDeleteButton = isOver
                                 }
                             )
                         }
@@ -454,6 +526,20 @@ fun CalendarScreen(
                                 },
                                 onEventResize = { eventId: String, newStartTime: java.time.LocalDateTime?, newEndTime: java.time.LocalDateTime? ->
                                     eventViewModel.resizeEvent(eventId, newStartTime, newEndTime)
+                                },
+                                onEventDelete = { eventId ->
+                                    eventViewModel.deleteEventById(eventId)
+                                },
+                                onEventLongPressStart = { eventId ->
+                                    showDeleteButton = true
+                                    eventToDelete = eventId
+                                },
+                                onEventLongPressEnd = {
+                                    showDeleteButton = false
+                                    eventToDelete = null
+                                },
+                                onDragOverDeleteButton = { isOver ->
+                                    isDragOverDeleteButton = isOver
                                 }
                             )
                         }

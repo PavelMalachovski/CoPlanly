@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Title
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DatePicker
@@ -45,6 +46,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.rememberDatePickerState
@@ -134,6 +136,8 @@ fun AddEditEventScreen(
     val dims = dimensions()
     val snackbarHostState = remember { SnackbarHostState() }
     var isSaving by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var isDeleting by remember { mutableStateOf(false) }
 
     // Validation states
     var titleError by remember { mutableStateOf<String?>(null) }
@@ -244,6 +248,31 @@ fun AddEditEventScreen(
                     }
                 },
                 actions = {
+                    // Delete button (only when editing existing event)
+                    if (eventId != null) {
+                        IconButton(
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                showDeleteDialog = true
+                            },
+                            enabled = !isDeleting && !isSaving
+                        ) {
+                            if (isDeleting) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(24.dp),
+                                    color = MaterialTheme.colorScheme.error,
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.Delete,
+                                    contentDescription = "Delete event",
+                                    tint = MaterialTheme.colorScheme.error
+                                )
+                            }
+                        }
+                    }
+
                     // Save button in app bar
                     IconButton(
                         onClick = {
@@ -301,7 +330,7 @@ fun AddEditEventScreen(
                                 }
                             }
                         },
-                        enabled = isFormValid && !isSaving
+                        enabled = isFormValid && !isSaving && !isDeleting
                     ) {
                         if (isSaving) {
                             CircularProgressIndicator(
@@ -810,6 +839,71 @@ fun AddEditEventScreen(
                 endTime = selectedTime
             },
             onDismiss = { showEndTimePicker = false }
+        )
+    }
+
+    // Delete Confirmation Dialog
+    if (showDeleteDialog && eventId != null) {
+        AlertDialog(
+            onDismissRequest = {
+                if (!isDeleting) {
+                    showDeleteDialog = false
+                }
+            },
+            title = {
+                Text("Delete Event")
+            },
+            text = {
+                Text("Are you sure you want to delete this event? This action cannot be undone.")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        isDeleting = true
+                        scope.launch {
+                            try {
+                                val event = viewModel.getEventById(eventId)
+                                event?.let {
+                                    viewModel.deleteEvent(it)
+                                    snackbarHostState.showSnackbar(
+                                        message = "Event deleted successfully",
+                                        duration = SnackbarDuration.Short
+                                    )
+                                    kotlinx.coroutines.delay(500)
+                                    onSave() // Navigate back
+                                } ?: run {
+                                    snackbarHostState.showSnackbar(
+                                        message = "Event not found",
+                                        duration = SnackbarDuration.Short
+                                    )
+                                    isDeleting = false
+                                    showDeleteDialog = false
+                                }
+                            } catch (e: Exception) {
+                                snackbarHostState.showSnackbar(
+                                    message = "Failed to delete event: ${e.message}",
+                                    duration = SnackbarDuration.Long
+                                )
+                                isDeleting = false
+                                showDeleteDialog = false
+                            }
+                        }
+                    },
+                    enabled = !isDeleting
+                ) {
+                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteDialog = false
+                    },
+                    enabled = !isDeleting
+                ) {
+                    Text("Cancel")
+                }
+            }
         )
     }
 }
