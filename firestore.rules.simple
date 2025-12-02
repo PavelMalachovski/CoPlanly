@@ -7,12 +7,29 @@ service cloud.firestore {
     // TODO: Replace with production rules after testing
 
     // Allow authenticated users to read/write their own user document
+    // Also allow reading partner's user document (for co-parent pairing)
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read: if request.auth != null && (
+        request.auth.uid == userId ||
+        // Allow reading partner's profile if they are paired
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.partnerId == userId
+      );
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
 
     // Allow authenticated users to create/read invitations
     match /invitations/{invitationId} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Allow authenticated users to work with events
+    match /events/{eventId} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Allow authenticated users to work with child_info
+    match /child_info/{childInfoId} {
       allow read, write: if request.auth != null;
     }
 
