@@ -50,10 +50,35 @@ object DatabaseMigrations {
     }
 
     /**
+     * Migration from version 7 to 8.
+     * Creates custody_models table for advanced custody pattern configuration.
+     */
+    val MIGRATION_7_8 = object : Migration(7, 8) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS custody_models (
+                    id TEXT PRIMARY KEY NOT NULL,
+                    modelType TEXT NOT NULL,
+                    patternDays INTEGER NOT NULL,
+                    momDaysPattern TEXT NOT NULL,
+                    startDate TEXT NOT NULL,
+                    isActive INTEGER NOT NULL DEFAULT 1,
+                    repeatYearly INTEGER NOT NULL DEFAULT 1,
+                    createdAt TEXT NOT NULL,
+                    lastModifiedAt TEXT NOT NULL
+                )
+                """.trimIndent()
+            )
+        }
+    }
+
+    /**
      * List of all migrations in order.
      */
     val ALL_MIGRATIONS = arrayOf(
         MIGRATION_5_6,
-        MIGRATION_6_7
+        MIGRATION_6_7,
+        MIGRATION_7_8
     )
 }

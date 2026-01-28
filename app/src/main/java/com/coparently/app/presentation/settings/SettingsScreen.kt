@@ -44,6 +44,7 @@ fun SettingsScreen(
     onNavigateUp: () -> Unit,
     onNavigateToChildInfo: (() -> Unit)? = null,
     onNavigateToPairing: (() -> Unit)? = null,
+    onNavigateToCustodySetup: (() -> Unit)? = null,
     onStartGoogleSignIn: ((android.content.Intent) -> Unit)? = null,
     onSignOut: (() -> Unit)? = null,
     syncViewModel: SyncViewModel = hiltViewModel(),
@@ -428,6 +429,19 @@ fun SettingsScreen(
                     title = "Child Information",
                     description = "Medications, activities, allergies",
                     icon = Icons.Default.ChildCare,
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        navigate()
+                    }
+                )
+            }
+
+            // Custody Schedule Setup
+            onNavigateToCustodySetup?.let { navigate ->
+                SettingsNavigationCard(
+                    title = "Custody Schedule",
+                    description = "Set up your custody pattern (week-on/week-off, 2-2-3, etc.)",
+                    icon = Icons.Default.DateRange,
                     onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         navigate()

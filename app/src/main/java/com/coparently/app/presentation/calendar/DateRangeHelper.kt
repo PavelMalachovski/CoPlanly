@@ -45,7 +45,7 @@ object DateRangeHelper {
         val startDate = when {
             daysCount == 7 -> {
                 // For week view, start from Monday of the week containing currentDate
-                val weekFields = WeekFields.of(Locale.getDefault())
+                val weekFields = WeekFields.ISO // Always use Monday-first week
                 val dayOfWeek = currentDate.dayOfWeek
                 val daysFromMonday = (dayOfWeek.value - weekFields.firstDayOfWeek.value + 7) % 7
                 currentDate.minusDays(daysFromMonday.toLong())

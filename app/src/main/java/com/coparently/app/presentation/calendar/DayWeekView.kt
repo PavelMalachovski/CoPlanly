@@ -187,7 +187,7 @@ fun DayWeekView(
             ) {
                 // Week number for 3 days and week views (absolutely positioned, doesn't affect layout)
                 if (daysCount >= 3) {
-                    val weekFields = WeekFields.of(Locale.getDefault())
+                    val weekFields = WeekFields.ISO // Always use Monday-first week
                     val firstDate = currentDates.firstOrNull() ?: currentDate
                     val weekNumber = firstDate.get(weekFields.weekOfWeekBasedYear())
 
@@ -354,10 +354,18 @@ fun DayWeekView(
                                 currentDates.forEachIndexed { dayIndex, date ->
                                     val isToday = date == LocalDate.now()
                                     val custody = CustodyHelper.getCustodyForDate(date, custodySchedules)
+                                    val isWeekend = CustodyHelper.isWeekend(date)
+                                    val isDarkTheme = androidx.compose.foundation.isSystemInDarkTheme()
+                                    val weekendColor = if (isDarkTheme) {
+                                        CoParentlyColors.WeekendBackgroundDark.copy(alpha = 0.5f)
+                                    } else {
+                                        CoParentlyColors.WeekendBackgroundLight.copy(alpha = 0.3f)
+                                    }
                                     val backgroundColor = when {
                                         isToday -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.05f)
                                         custody == "mom" -> CoParentlyColors.MomPink.copy(alpha = 0.03f)
                                         custody == "dad" -> CoParentlyColors.DadBlue.copy(alpha = 0.03f)
+                                        isWeekend -> weekendColor
                                         else -> MaterialTheme.colorScheme.surface
                                     }
 

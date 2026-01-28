@@ -47,5 +47,9 @@ object CoParentlyColors {
     // Custody indicator colors - improved contrast
     val CustodyIndicatorActive = Color(0xFFF59E0B) // Amber 500 - contrast 5.09:1 on white
     val CustodyIndicatorInactive = Color(0xFF616161) // Gray 700 - contrast 7.31:1 on white
+
+    // Weekend background colors - subtle distinction for Saturday/Sunday
+    val WeekendBackgroundLight = Color(0xFFFFF8E1) // Warm cream/amber tint
+    val WeekendBackgroundDark = Color(0xFF2D2D1E) // Dark warm tone
 }
 

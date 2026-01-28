@@ -93,8 +93,9 @@ fun MonthView(
     onDateChange: ((LocalDate) -> Unit)? = null,
     onEventDragDrop: ((String, LocalDate) -> Unit)? = null
 ) {
-    val weekFields = remember { WeekFields.of(Locale.getDefault()) }
-    val firstDayOfWeek = remember { weekFields.firstDayOfWeek }
+    // Always use ISO week (Monday first) regardless of locale
+    val weekFields = remember { WeekFields.ISO }
+    val firstDayOfWeek = remember { java.time.DayOfWeek.MONDAY }
     val density = LocalDensity.current
 
     val referenceDate = selectedDate ?: selectedMonth.atDay(1)
@@ -391,11 +392,20 @@ private fun RowScope.DayCell(
     val dims = dimensions()
     val isToday = CustodyHelper.isToday(date)
     val custody = CustodyHelper.getCustodyForDate(date, custodySchedules)
+    val isWeekend = CustodyHelper.isWeekend(date)
+    val isDarkTheme = androidx.compose.foundation.isSystemInDarkTheme()
+
+    val weekendColor = if (isDarkTheme) {
+        CoParentlyColors.WeekendBackgroundDark
+    } else {
+        CoParentlyColors.WeekendBackgroundLight.copy(alpha = 0.5f)
+    }
 
     val backgroundColor = when {
         !isCurrentMonth -> MaterialTheme.colorScheme.surface
         custody == "mom" -> CoParentlyColors.MomPink.copy(alpha = 0.08f)
         custody == "dad" -> CoParentlyColors.DadBlue.copy(alpha = 0.08f)
+        isWeekend -> weekendColor
         else -> MaterialTheme.colorScheme.surface
     }
 

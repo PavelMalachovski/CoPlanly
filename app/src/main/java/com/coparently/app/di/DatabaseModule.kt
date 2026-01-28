@@ -39,7 +39,8 @@ object DatabaseModule {
         )
             .addMigrations(
                 com.coparently.app.data.local.DatabaseMigrations.MIGRATION_5_6,
-                com.coparently.app.data.local.DatabaseMigrations.MIGRATION_6_7
+                com.coparently.app.data.local.DatabaseMigrations.MIGRATION_6_7,
+                com.coparently.app.data.local.DatabaseMigrations.MIGRATION_7_8
             )
             .fallbackToDestructiveMigration() // Allow destructive migration for missing migration paths (e.g., 3->6)
             .fallbackToDestructiveMigrationOnDowngrade() // Allow destructive migration when downgrading database version
@@ -100,6 +101,14 @@ object DatabaseModule {
     @Provides
     fun provideBudgetDao(database: CoParentlyDatabase): BudgetDao {
         return database.budgetDao()
+    }
+
+    /**
+     * Provides CustodyModelDao.
+     */
+    @Provides
+    fun provideCustodyModelDao(database: CoParentlyDatabase): com.coparently.app.data.local.dao.CustodyModelDao {
+        return database.custodyModelDao()
     }
 }
 

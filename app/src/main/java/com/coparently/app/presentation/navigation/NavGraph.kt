@@ -208,6 +208,9 @@ fun NavGraph(
                 onNavigateToPairing = {
                     navController.navigate(Screen.Pairing.route)
                 },
+                onNavigateToCustodySetup = {
+                    navController.navigate(Screen.CustodySetup.route)
+                },
                 onStartGoogleSignIn = googleSignInCallback,
                 onSignOut = {
                     navController.navigate(Screen.Auth.route) {
@@ -264,6 +267,20 @@ fun NavGraph(
             popExitTransition = { slideOutToRight() }
         ) {
             PairingScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        composable(
+            route = Screen.CustodySetup.route,
+            enterTransition = { slideInFromRight() },
+            exitTransition = { slideOutToLeft() },
+            popEnterTransition = { slideInFromLeft() },
+            popExitTransition = { slideOutToRight() }
+        ) {
+            com.coparently.app.presentation.custody.CustodySetupScreen(
                 onNavigateBack = {
                     navController.popBackStack()
                 }
@@ -391,6 +408,7 @@ sealed class Screen(val route: String) {
     data object Settings : Screen("settings")
     data object ChildInfo : Screen("child_info")
     data object Pairing : Screen("pairing")
+    data object CustodySetup : Screen("custody_setup")
 
     data object EditEvent : Screen("edit_event/{eventId}") {
         const val ARG_EVENT_ID = "eventId"

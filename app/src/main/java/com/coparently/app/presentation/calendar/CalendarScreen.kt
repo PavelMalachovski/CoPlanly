@@ -118,7 +118,8 @@ fun CalendarScreen(
         }
     }
 
-    val firstDayOfWeek = remember { firstDayOfWeekFromLocale() }
+    // Always use Monday as first day of week
+    val firstDayOfWeek = remember { java.time.DayOfWeek.MONDAY }
     val now = remember { YearMonth.now() }
     val startMonth = remember { now.minusMonths(12) }
     val endMonth = remember { now.plusMonths(12) }
@@ -171,8 +172,8 @@ fun CalendarScreen(
             CalendarViewMode.MONTH -> {
                 // Load events for extended range to support MonthView buffer (6 weeks before/after)
                 val visibleMonth = YearMonth.from(selectedDate)
-                val weekFields = java.time.temporal.WeekFields.of(java.util.Locale.getDefault())
-                val firstDayOfWeek = weekFields.firstDayOfWeek
+                val weekFields = java.time.temporal.WeekFields.ISO
+                val firstDayOfWeek = java.time.DayOfWeek.MONDAY
 
                 // Calculate the start of the week 6 weeks before the first day of month
                 var startDate = visibleMonth.atDay(1)
@@ -197,8 +198,8 @@ fun CalendarScreen(
                         CalendarViewMode.MONTH -> {
                             // Load events for extended range to support MonthView buffer (6 weeks before/after)
                             val visibleMonth = YearMonth.from(selectedDate)
-                            val weekFields = java.time.temporal.WeekFields.of(java.util.Locale.getDefault())
-                            val firstDayOfWeek = weekFields.firstDayOfWeek
+                            val weekFields = java.time.temporal.WeekFields.ISO
+                            val firstDayOfWeek = java.time.DayOfWeek.MONDAY
 
                             // Calculate the end of the week 6 weeks after the last day of month
                             var endDate = visibleMonth.atEndOfMonth()
@@ -337,8 +338,8 @@ fun CalendarScreen(
                         CalendarViewMode.MONTH -> {
                             // Load events for extended range to support MonthView buffer (6 weeks before/after)
                             val visibleMonth = YearMonth.from(selectedDate)
-                            val weekFields = java.time.temporal.WeekFields.of(java.util.Locale.getDefault())
-                            val firstDayOfWeek = weekFields.firstDayOfWeek
+                            val weekFields = java.time.temporal.WeekFields.ISO
+                            val firstDayOfWeek = java.time.DayOfWeek.MONDAY
 
                             // Calculate the start of the week 6 weeks before the first day of month
                             var startDate = visibleMonth.atDay(1)
@@ -363,8 +364,8 @@ fun CalendarScreen(
                         CalendarViewMode.MONTH -> {
                             // Load events for extended range to support MonthView buffer (6 weeks before/after)
                             val visibleMonth = YearMonth.from(selectedDate)
-                            val weekFields = java.time.temporal.WeekFields.of(java.util.Locale.getDefault())
-                            val firstDayOfWeek = weekFields.firstDayOfWeek
+                            val weekFields = java.time.temporal.WeekFields.ISO
+                            val firstDayOfWeek = java.time.DayOfWeek.MONDAY
 
                             // Calculate the end of the week 6 weeks after the last day of month
                             var endDate = visibleMonth.atEndOfMonth()

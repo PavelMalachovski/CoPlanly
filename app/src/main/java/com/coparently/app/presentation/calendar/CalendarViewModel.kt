@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.coparently.app.data.local.dao.CustodyScheduleDao
 import com.coparently.app.data.local.entity.CustodyScheduleEntity
+import com.coparently.app.data.repository.CustodyModelRepository
+import com.coparently.app.domain.model.CustodyModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -14,15 +16,19 @@ import javax.inject.Inject
 
 /**
  * ViewModel for calendar screen.
- * Handles custody schedule data and view mode.
+ * Handles custody schedule data, custody model, and view mode.
  */
 @HiltViewModel
 class CalendarViewModel @Inject constructor(
-    private val custodyScheduleDao: CustodyScheduleDao
+    private val custodyScheduleDao: CustodyScheduleDao,
+    private val custodyModelRepository: CustodyModelRepository
 ) : ViewModel() {
 
     private val _custodySchedules = MutableStateFlow<List<CustodyScheduleEntity>>(emptyList())
     val custodySchedules: StateFlow<List<CustodyScheduleEntity>> = _custodySchedules.asStateFlow()
+
+    private val _custodyModel = MutableStateFlow<CustodyModel?>(null)
+    val custodyModel: StateFlow<CustodyModel?> = _custodyModel.asStateFlow()
 
     private val _viewMode = MutableStateFlow<CalendarViewMode>(CalendarViewMode.MONTH)
     val viewMode: StateFlow<CalendarViewMode> = _viewMode.asStateFlow()
@@ -32,10 +38,12 @@ class CalendarViewModel @Inject constructor(
 
     init {
         loadCustodySchedules()
+        loadCustodyModel()
     }
 
     /**
      * Loads all active custody schedules.
+     * Legacy method - used when no CustodyModel is available.
      */
     fun loadCustodySchedules() {
         viewModelScope.launch {
@@ -43,6 +51,36 @@ class CalendarViewModel @Inject constructor(
                 _custodySchedules.value = schedules
             }
         }
+    }
+
+    /**
+     * Loads the active custody model.
+     * This is the preferred method for determining custody.
+     */
+    private fun loadCustodyModel() {
+        viewModelScope.launch {
+            custodyModelRepository.getActiveModel().collect { model ->
+                _custodyModel.value = model
+            }
+        }
+    }
+
+    /**
+     * Gets custody for a specific date.
+     * Uses CustodyModel if available, falls back to legacy schedules.
+     *
+     * @param date The date to check
+     * @return "mom", "dad", or null
+     */
+    fun getCustodyForDate(date: LocalDate): String? {
+        // Prefer CustodyModel if available
+        _custodyModel.value?.let { model ->
+            return model.getCustodyFor(date)
+        }
+
+        // Fall back to legacy schedules
+        val schedules = _custodySchedules.value
+        return CustodyHelper.getCustodyForDate(date, schedules)
     }
 
     /**
@@ -59,4 +97,3 @@ class CalendarViewModel @Inject constructor(
         _selectedDate.value = date
     }
 }
-
