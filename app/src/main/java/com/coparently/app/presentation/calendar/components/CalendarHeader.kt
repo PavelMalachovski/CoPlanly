@@ -19,15 +19,19 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.coparently.app.R
+import com.coparently.app.presentation.calendar.CalendarViewMode
 import com.coparently.app.utils.LightDarkPreviews
 import com.coparently.app.utils.PreviewWrapper
 import java.time.LocalDate
 import java.time.YearMonth
 
 /**
- * Calendar screen header with month/year title and action buttons.
+ * Calendar screen header with view mode selector, month/year title and action buttons.
+ * This component is static and does not animate with page swipes.
  *
  * @param selectedDate Currently selected date to display month/year
+ * @param viewMode Current calendar view mode
+ * @param onViewModeChange Callback when view mode changes
  * @param onNavigateToToday Callback when user clicks "Today" button
  * @param onSettingsClick Optional callback for settings button, null to hide button
  */
@@ -35,10 +39,20 @@ import java.time.YearMonth
 @Composable
 fun CalendarHeader(
     selectedDate: LocalDate,
+    viewMode: CalendarViewMode = CalendarViewMode.MONTH,
+    onViewModeChange: (CalendarViewMode) -> Unit = {},
     onNavigateToToday: () -> Unit,
     onSettingsClick: (() -> Unit)? = null
 ) {
     TopAppBar(
+        navigationIcon = {
+            // View mode dropdown in navigation icon position (left side)
+            ViewModeDropdown(
+                selectedMode = viewMode,
+                onModeSelected = onViewModeChange,
+                modifier = Modifier.padding(start = 8.dp)
+            )
+        },
         title = {
             Text(
                 text = "${
@@ -118,6 +132,8 @@ private fun CalendarHeaderWithSettingsPreview() {
     PreviewWrapper {
         CalendarHeader(
             selectedDate = LocalDate.now(),
+            viewMode = CalendarViewMode.MONTH,
+            onViewModeChange = {},
             onNavigateToToday = {},
             onSettingsClick = {}
         )
@@ -133,6 +149,8 @@ private fun CalendarHeaderNoSettingsPreview() {
     PreviewWrapper {
         CalendarHeader(
             selectedDate = LocalDate.now(),
+            viewMode = CalendarViewMode.WEEK,
+            onViewModeChange = {},
             onNavigateToToday = {},
             onSettingsClick = null
         )
@@ -148,9 +166,10 @@ private fun CalendarHeaderDifferentDatePreview() {
     PreviewWrapper {
         CalendarHeader(
             selectedDate = LocalDate.of(2025, 12, 25),
+            viewMode = CalendarViewMode.DAY,
+            onViewModeChange = {},
             onNavigateToToday = {},
             onSettingsClick = {}
         )
     }
 }
-

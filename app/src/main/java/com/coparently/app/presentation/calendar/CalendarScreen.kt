@@ -68,9 +68,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.data.local.entity.CustodyScheduleEntity
 import com.coparently.app.presentation.calendar.components.CalendarHeader
-import com.coparently.app.presentation.calendar.components.ViewModeSelector
 import com.coparently.app.presentation.calendar.components.CustodyIndicatorToday
-import com.coparently.app.presentation.calendar.navigation.CalendarNavigation
 import com.coparently.app.presentation.common.QuickActionsBottomSheet
 import androidx.compose.material3.rememberModalBottomSheetState
 import com.coparently.app.presentation.event.EventViewModel
@@ -254,19 +252,14 @@ fun CalendarScreen(
 
     Scaffold(
         topBar = {
-            CalendarNavigation(
-                currentDate = selectedDate,
+            // Static header - does not animate with swipes
+            CalendarHeader(
+                selectedDate = selectedDate,
                 viewMode = viewMode,
-                onDateChange = { newDate ->
-                    calendarViewModel.setSelectedDate(newDate)
-                }
-            ) { date ->
-                CalendarHeader(
-                    selectedDate = date,
-                    onNavigateToToday = { calendarViewModel.setSelectedDate(LocalDate.now()) },
-                    onSettingsClick = onSettingsClick
-                )
-            }
+                onViewModeChange = { mode -> calendarViewModel.setViewMode(mode) },
+                onNavigateToToday = { calendarViewModel.setSelectedDate(LocalDate.now()) },
+                onSettingsClick = onSettingsClick
+            )
         },
         snackbarHost = {
             SnackbarHost(hostState = snackbarHostState)
@@ -398,13 +391,7 @@ fun CalendarScreen(
             Column(
                 modifier = Modifier.fillMaxSize()
             ) {
-                // Animated view mode selector with sliding indicator
-                ViewModeSelector(
-                    selectedMode = viewMode,
-                    onModeSelected = { mode ->
-                        calendarViewModel.setViewMode(mode)
-                    }
-                )
+                // ViewModeSelector removed - now using dropdown in CalendarHeader
 
             // Today's custody indicator (only for month view)
             // Optimization 3.1: Use key() to prevent unnecessary recompositions
