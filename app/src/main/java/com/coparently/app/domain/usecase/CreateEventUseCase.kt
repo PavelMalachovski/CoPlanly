@@ -17,7 +17,8 @@ class CreateEventUseCase @Inject constructor(
     private val eventRepository: EventRepository,
     private val eventValidator: EventValidator,
     private val analyticsManager: AnalyticsManager,
-    private val crashlyticsManager: CrashlyticsManager
+    private val crashlyticsManager: CrashlyticsManager,
+    private val reminderScheduler: com.coparently.app.domain.notification.ReminderScheduler
 ) {
     /**
      * Creates a new event.
@@ -47,6 +48,9 @@ class CreateEventUseCase @Inject constructor(
 
             // Create event
             eventRepository.insertEvent(finalEvent)
+
+            // Schedule reminder notification if requested
+            reminderScheduler.schedule(finalEvent)
 
             // Log analytics
             analyticsManager.logEventCreated(finalEvent.eventType)

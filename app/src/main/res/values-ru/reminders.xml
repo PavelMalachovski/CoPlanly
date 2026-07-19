@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reminder_channel_name">Напоминания о событиях</string>
+    <string name="reminder_channel_description">Уведомления перед предстоящими событиями и передачей ребёнка</string>
+    <string name="reminder_notification_text">Начало в %1$s</string>
+</resources>

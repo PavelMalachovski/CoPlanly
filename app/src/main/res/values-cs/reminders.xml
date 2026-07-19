@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reminder_channel_name">Připomenutí událostí</string>
+    <string name="reminder_channel_description">Upozornění před nadcházejícími událostmi a vyzvednutími</string>
+    <string name="reminder_notification_text">Začíná v %1$s</string>
+</resources>

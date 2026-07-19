@@ -32,7 +32,7 @@ import kotlin.math.abs
  * - Smooth animated transitions
  *
  * @param currentDate Currently displayed date
- * @param viewMode Current calendar view mode (DAY, THREE_DAYS, WEEK, MONTH)
+ * @param viewMode Current calendar view mode (MONTH, WEEK, DAY)
  * @param onDateChange Callback when date should change
  * @param modifier Modifier for the navigation container
  * @param content Content to display (typically CalendarHeader)
@@ -73,7 +73,6 @@ fun CalendarNavigation(
                             // Calculate new date based on view mode
                             val newDate = when (viewMode) {
                                 CalendarViewMode.DAY -> currentDate.plusDays(direction.toLong())
-                                CalendarViewMode.THREE_DAYS -> currentDate.plusDays((direction * 3).toLong())
                                 CalendarViewMode.WEEK -> currentDate.plusWeeks(direction.toLong())
                                 CalendarViewMode.MONTH -> currentDate.plusMonths(direction.toLong())
                             }

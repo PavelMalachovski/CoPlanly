@@ -208,6 +208,7 @@ dependencies {
 
     // Testing - Updated to latest stable
     testImplementation("junit:junit:4.13.2")
+    testImplementation(kotlin("test"))
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
     androidTestImplementation(platform("androidx.compose:compose-bom:2024.11.00"))

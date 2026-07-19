@@ -66,6 +66,7 @@ import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale as JavaLocale
 import com.coparently.app.data.local.entity.CustodyScheduleEntity
+import com.coparently.app.domain.holidays.Holiday
 import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.theme.CoParentlyColors
 import com.coparently.app.presentation.theme.dimensions
@@ -91,7 +92,8 @@ fun MonthView(
     onDayClick: (LocalDate) -> Unit,
     onMonthChange: (YearMonth) -> Unit,
     onDateChange: ((LocalDate) -> Unit)? = null,
-    onEventDragDrop: ((String, LocalDate) -> Unit)? = null
+    onEventDragDrop: ((String, LocalDate) -> Unit)? = null,
+    holidays: Map<LocalDate, Holiday> = emptyMap()
 ) {
     // Always use ISO week (Monday first) regardless of locale
     val weekFields = remember { WeekFields.ISO }
@@ -220,7 +222,8 @@ fun MonthView(
                         isSwipeInProgress = isSwipeInProgress,
                         showWeekNumber = showWeekNumber,
                         onEventDragDrop = onEventDragDrop,
-                        weekRowHeightPx = weekRowHeightPx
+                        weekRowHeightPx = weekRowHeightPx,
+                        holidays = holidays
                     )
                 }
             }
@@ -327,7 +330,8 @@ private fun WeekRow(
     isSwipeInProgress: Boolean = false,
     showWeekNumber: Boolean = true,
     onEventDragDrop: ((String, LocalDate) -> Unit)? = null,
-    weekRowHeightPx: Float
+    weekRowHeightPx: Float,
+    holidays: Map<LocalDate, Holiday> = emptyMap()
 ) {
     val dims = dimensions()
     val weekNumber = remember(week) {
@@ -369,7 +373,8 @@ private fun WeekRow(
                 onDayClick = onDayClick,
                 isSwipeInProgress = isSwipeInProgress,
                 onEventDragDrop = onEventDragDrop,
-                weekRowHeightPx = weekRowHeightPx
+                weekRowHeightPx = weekRowHeightPx,
+                holiday = holidays[date]
             )
         }
     }
@@ -387,7 +392,8 @@ private fun RowScope.DayCell(
     onDayClick: (LocalDate) -> Unit,
     isSwipeInProgress: Boolean = false,
     onEventDragDrop: ((String, LocalDate) -> Unit)? = null,
-    weekRowHeightPx: Float
+    weekRowHeightPx: Float,
+    holiday: Holiday? = null
 ) {
     val dims = dimensions()
     val isToday = CustodyHelper.isToday(date)
@@ -401,10 +407,14 @@ private fun RowScope.DayCell(
         CoParentlyColors.WeekendBackgroundLight.copy(alpha = 0.5f)
     }
 
+    val isPublicHoliday = holiday != null && !holiday.isSchoolVacation
+
     val backgroundColor = when {
         !isCurrentMonth -> MaterialTheme.colorScheme.surface
         custody == "mom" -> CoParentlyColors.MomPink.copy(alpha = 0.08f)
         custody == "dad" -> CoParentlyColors.DadBlue.copy(alpha = 0.08f)
+        isPublicHoliday -> CoParentlyColors.HolidayRed.copy(alpha = 0.10f)
+        holiday?.isSchoolVacation == true -> CoParentlyColors.VacationTint.copy(alpha = 0.16f)
         isWeekend -> weekendColor
         else -> MaterialTheme.colorScheme.surface
     }
@@ -422,6 +432,12 @@ private fun RowScope.DayCell(
         // Month context
         if (!isCurrentMonth) {
             append(", Outside current month")
+        }
+
+        // Holiday information
+        holiday?.let {
+            append(", ")
+            append(it.nameEn)
         }
 
         // Custody information
@@ -500,10 +516,11 @@ private fun RowScope.DayCell(
                     text = date.dayOfMonth.toString(),
                     style = MaterialTheme.typography.bodyMedium,
                     fontSize = 13.sp,
-                    fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
+                    fontWeight = if (isToday || isPublicHoliday) FontWeight.Bold else FontWeight.Normal,
                     color = when {
                         isToday -> MaterialTheme.colorScheme.onPrimary
                         !isCurrentMonth -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+                        isPublicHoliday -> CoParentlyColors.HolidayRed
                         else -> MaterialTheme.colorScheme.onSurface
                     }
                 )

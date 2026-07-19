@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.coparently.app.data.local.dao.CustodyScheduleDao
 import com.coparently.app.data.local.entity.CustodyScheduleEntity
+import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.domain.model.CustodyModel
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -16,12 +17,14 @@ import javax.inject.Inject
 
 /**
  * ViewModel for calendar screen.
- * Handles custody schedule data, custody model, and view mode.
+ * Handles custody schedule data, custody model, view mode,
+ * parent filtering (You / Both / Co-parent) and event type filters.
  */
 @HiltViewModel
 class CalendarViewModel @Inject constructor(
     private val custodyScheduleDao: CustodyScheduleDao,
-    private val custodyModelRepository: CustodyModelRepository
+    private val custodyModelRepository: CustodyModelRepository,
+    private val encryptedPreferences: EncryptedPreferences
 ) : ViewModel() {
 
     private val _custodySchedules = MutableStateFlow<List<CustodyScheduleEntity>>(emptyList())
@@ -30,15 +33,28 @@ class CalendarViewModel @Inject constructor(
     private val _custodyModel = MutableStateFlow<CustodyModel?>(null)
     val custodyModel: StateFlow<CustodyModel?> = _custodyModel.asStateFlow()
 
-    private val _viewMode = MutableStateFlow<CalendarViewMode>(CalendarViewMode.MONTH)
+    private val _viewMode = MutableStateFlow(CalendarViewMode.MONTH)
     val viewMode: StateFlow<CalendarViewMode> = _viewMode.asStateFlow()
 
     private val _selectedDate = MutableStateFlow<LocalDate>(LocalDate.now())
     val selectedDate: StateFlow<LocalDate> = _selectedDate.asStateFlow()
 
+    private val _parentFilter = MutableStateFlow(ParentFilter.BOTH)
+    val parentFilter: StateFlow<ParentFilter> = _parentFilter.asStateFlow()
+
+    private val _hiddenEventTypes = MutableStateFlow<Set<String>>(emptySet())
+    val hiddenEventTypes: StateFlow<Set<String>> = _hiddenEventTypes.asStateFlow()
+
+    private val _customEventTypes = MutableStateFlow<List<String>>(emptyList())
+    val customEventTypes: StateFlow<List<String>> = _customEventTypes.asStateFlow()
+
+    private val _showHolidays = MutableStateFlow(true)
+    val showHolidays: StateFlow<Boolean> = _showHolidays.asStateFlow()
+
     init {
         loadCustodySchedules()
         loadCustodyModel()
+        loadFilterPreferences()
     }
 
     /**
@@ -66,6 +82,22 @@ class CalendarViewModel @Inject constructor(
     }
 
     /**
+     * Restores persisted filter state (hidden types, custom types, holiday toggle).
+     */
+    private fun loadFilterPreferences() {
+        _hiddenEventTypes.value = encryptedPreferences.getString(KEY_HIDDEN_EVENT_TYPES)
+            ?.split(SEPARATOR)
+            ?.filter { it.isNotBlank() }
+            ?.toSet()
+            ?: emptySet()
+        _customEventTypes.value = encryptedPreferences.getString(KEY_CUSTOM_EVENT_TYPES)
+            ?.split(SEPARATOR)
+            ?.filter { it.isNotBlank() }
+            ?: emptyList()
+        _showHolidays.value = encryptedPreferences.getBoolean(KEY_SHOW_HOLIDAYS, true)
+    }
+
+    /**
      * Gets custody for a specific date.
      * Uses CustodyModel if available, falls back to legacy schedules.
      *
@@ -73,12 +105,10 @@ class CalendarViewModel @Inject constructor(
      * @return "mom", "dad", or null
      */
     fun getCustodyForDate(date: LocalDate): String? {
-        // Prefer CustodyModel if available
         _custodyModel.value?.let { model ->
             return model.getCustodyFor(date)
         }
 
-        // Fall back to legacy schedules
         val schedules = _custodySchedules.value
         return CustodyHelper.getCustodyForDate(date, schedules)
     }
@@ -95,5 +125,61 @@ class CalendarViewModel @Inject constructor(
      */
     fun setSelectedDate(date: LocalDate) {
         _selectedDate.value = date
+    }
+
+    /**
+     * Sets which parent's events are visible (You / Both / Co-parent view).
+     */
+    fun setParentFilter(filter: ParentFilter) {
+        _parentFilter.value = filter
+    }
+
+    /**
+     * Toggles visibility of an event type in the calendar (e.g. hide "school" in December).
+     */
+    fun toggleEventTypeVisibility(eventType: String) {
+        val updated = _hiddenEventTypes.value.toMutableSet().apply {
+            if (!add(eventType)) remove(eventType)
+        }
+        _hiddenEventTypes.value = updated
+        encryptedPreferences.putString(KEY_HIDDEN_EVENT_TYPES, updated.joinToString(SEPARATOR))
+    }
+
+    /**
+     * Adds a user-defined event type. No-op for blank or duplicate names.
+     */
+    fun addCustomEventType(name: String) {
+        val normalized = name.trim().lowercase()
+        if (normalized.isBlank() || normalized in DEFAULT_EVENT_TYPES || normalized in _customEventTypes.value) {
+            return
+        }
+        val updated = _customEventTypes.value + normalized
+        _customEventTypes.value = updated
+        encryptedPreferences.putString(KEY_CUSTOM_EVENT_TYPES, updated.joinToString(SEPARATOR))
+    }
+
+    /**
+     * Toggles whether Czech public holidays and school vacations are shown.
+     */
+    fun setShowHolidays(show: Boolean) {
+        _showHolidays.value = show
+        encryptedPreferences.putBoolean(KEY_SHOW_HOLIDAYS, show)
+    }
+
+    /**
+     * All event types available for filtering: defaults + user-defined.
+     */
+    fun allEventTypes(): List<String> = DEFAULT_EVENT_TYPES + _customEventTypes.value
+
+    companion object {
+        val DEFAULT_EVENT_TYPES = listOf("general", "medical", "school", "sports", "birthday")
+        private const val KEY_HIDDEN_EVENT_TYPES =
+            com.coparently.app.data.local.preferences.PreferenceKeys.HIDDEN_EVENT_TYPES
+        private const val KEY_CUSTOM_EVENT_TYPES =
+            com.coparently.app.data.local.preferences.PreferenceKeys.CUSTOM_EVENT_TYPES
+        private const val KEY_SHOW_HOLIDAYS =
+            com.coparently.app.data.local.preferences.PreferenceKeys.SHOW_HOLIDAYS
+        private const val SEPARATOR =
+            com.coparently.app.data.local.preferences.PreferenceKeys.LIST_SEPARATOR
     }
 }

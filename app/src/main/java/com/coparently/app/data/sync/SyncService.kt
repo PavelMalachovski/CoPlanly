@@ -76,8 +76,8 @@ class SyncService @Inject constructor(
      * Syncs events between local database and Firestore.
      */
     private suspend fun syncEvents(userId: String) {
-        // Upload unsynced local events
-        val unsyncedEvents = eventDao.getUnsyncedEvents()
+        // Upload unsynced local events; private events never leave the device
+        val unsyncedEvents = eventDao.getUnsyncedEvents().filterNot { it.isPrivate }
 
         for (entity in unsyncedEvents) {
             val eventData = mapOf(
@@ -90,6 +90,9 @@ class SyncService @Inject constructor(
                 "parentOwner" to entity.parentOwner,
                 "isRecurring" to entity.isRecurring,
                 "recurrencePattern" to entity.recurrencePattern,
+                "recurrenceEndDate" to entity.recurrenceEndDate?.toString(),
+                "pickupConfirmedBy" to entity.pickupConfirmedBy,
+                "pickupConfirmedAt" to entity.pickupConfirmedAt?.format(formatter),
                 "createdAt" to entity.createdAt.format(formatter),
                 "updatedAt" to entity.updatedAt.format(formatter),
                 "createdByFirebaseUid" to entity.createdByFirebaseUid,
@@ -143,6 +146,9 @@ class SyncService @Inject constructor(
                                     "parentOwner" to localEntity.parentOwner,
                                     "isRecurring" to localEntity.isRecurring,
                                     "recurrencePattern" to localEntity.recurrencePattern,
+                                    "recurrenceEndDate" to localEntity.recurrenceEndDate?.toString(),
+                                    "pickupConfirmedBy" to localEntity.pickupConfirmedBy,
+                                    "pickupConfirmedAt" to localEntity.pickupConfirmedAt?.format(formatter),
                                     "createdAt" to localEntity.createdAt.format(formatter),
                                     "updatedAt" to LocalDateTime.now().format(formatter),
                                     "createdByFirebaseUid" to localEntity.createdByFirebaseUid,
@@ -339,7 +345,12 @@ class SyncService @Inject constructor(
             eventType = this["eventType"] as String,
             parentOwner = this["parentOwner"] as String,
             isRecurring = this["isRecurring"] as? Boolean ?: false,
-            recurrencePattern = this["recurrencePattern"] as? String,
+            recurrencePattern = (this["recurrencePattern"] as? String)?.ifBlank { null },
+            recurrenceEndDate = (this["recurrenceEndDate"] as? String)?.ifBlank { null }
+                ?.let { java.time.LocalDate.parse(it) },
+            pickupConfirmedBy = (this["pickupConfirmedBy"] as? String)?.ifBlank { null },
+            pickupConfirmedAt = (this["pickupConfirmedAt"] as? String)?.ifBlank { null }
+                ?.let { LocalDateTime.parse(it, formatter) },
             createdAt = LocalDateTime.parse(this["createdAt"] as String, formatter),
             updatedAt = LocalDateTime.parse(this["updatedAt"] as String, formatter),
             syncedToFirestore = true,

@@ -29,20 +29,22 @@ object CoParentlyColors {
 
     // Brand colors for app theme - improved contrast
     val BrandPrimary = Color(0xFF4F46E5) // Indigo 600 - contrast 7.04:1 on white
+    val BrandPrimaryContainer = Color(0xFFE2E0FF) // Soft indigo container
+    val BrandOnPrimaryContainer = Color(0xFF1A1650) // Deep indigo for container text
     val BrandSecondary = Color(0xFF7C3AED) // Purple 600 - contrast 5.55:1 on white
     val BrandAccent = Color(0xFF059669) // Green 600 - contrast 4.54:1 on white
 
-    // Light theme colors
-    val LightBackground = Color(0xFFFAFAFA)
+    // Light theme colors - subtle indigo-tinted neutrals for a modern tonal look
+    val LightBackground = Color(0xFFFCFBFF)
     val LightSurface = Color(0xFFFFFFFF)
-    val LightOnSurface = Color(0xFF1F1F1F) // contrast 16.1:1 on white
-    val LightOnBackground = Color(0xFF1F1F1F) // contrast 16.1:1 on white
+    val LightOnSurface = Color(0xFF1B1B21) // contrast 15.9:1 on white
+    val LightOnBackground = Color(0xFF1B1B21)
 
-    // Dark theme colors
-    val DarkBackground = Color(0xFF121212)
-    val DarkSurface = Color(0xFF1E1E1E)
-    val DarkOnSurface = Color(0xFFE0E0E0) // contrast 11.6:1 on dark background
-    val DarkOnBackground = Color(0xFFE0E0E0) // contrast 11.6:1 on dark background
+    // Dark theme colors - tinted dark neutrals instead of pure gray
+    val DarkBackground = Color(0xFF131318)
+    val DarkSurface = Color(0xFF1B1B21)
+    val DarkOnSurface = Color(0xFFE4E1E9) // contrast 12.1:1 on dark background
+    val DarkOnBackground = Color(0xFFE4E1E9)
 
     // Custody indicator colors - improved contrast
     val CustodyIndicatorActive = Color(0xFFF59E0B) // Amber 500 - contrast 5.09:1 on white
@@ -51,5 +53,9 @@ object CoParentlyColors {
     // Weekend background colors - subtle distinction for Saturday/Sunday
     val WeekendBackgroundLight = Color(0xFFFFF8E1) // Warm cream/amber tint
     val WeekendBackgroundDark = Color(0xFF2D2D1E) // Dark warm tone
+
+    // Holiday colors - public holidays and school vacations (Czech calendar)
+    val HolidayRed = Color(0xFFD32F2F) // Red 700 - public holiday day numbers, contrast 5.9:1 on white
+    val VacationTint = Color(0xFF26A69A) // Teal 400 - school vacation background tint
 }
 

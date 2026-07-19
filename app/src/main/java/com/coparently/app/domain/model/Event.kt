@@ -22,6 +22,11 @@ import java.time.LocalDateTime
  * @property sharedWith List of Firebase UIDs that this event is shared with
  * @property lastModifiedBy Firebase UID of the user who last modified this event
  * @property permissions Permission level for the event (read_only, read_write)
+ * @property isPrivate Whether the event is visible only to its creator (never synced to the co-parent)
+ * @property recurrenceEndDate Optional last date (inclusive) for recurring event expansion
+ * @property pickupConfirmedBy Parent who confirmed the pickup ("mom" or "dad"), null if not confirmed
+ * @property pickupConfirmedAt Timestamp when the pickup was confirmed
+ * @property reminderMinutes Minutes before start to show a reminder notification (null = no reminder)
  */
 data class Event(
     val id: String,
@@ -39,6 +44,11 @@ data class Event(
     val createdByFirebaseUid: String? = null,
     val sharedWith: List<String> = emptyList(), // Firebase UIDs
     val lastModifiedBy: String? = null,
-    val permissions: String = "read_write" // "read_only" or "read_write"
+    val permissions: String = "read_write", // "read_only" or "read_write"
+    val isPrivate: Boolean = false,
+    val recurrenceEndDate: java.time.LocalDate? = null,
+    val pickupConfirmedBy: String? = null,
+    val pickupConfirmedAt: LocalDateTime? = null,
+    val reminderMinutes: Int? = null
 )
 
