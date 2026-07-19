@@ -44,7 +44,8 @@ class EventViewModel @Inject constructor(
     private val eventUseCases: com.coparently.app.domain.usecase.EventUseCases,
     private val errorHandler: com.coparently.app.domain.error.ErrorHandler,
     private val encryptedPreferences: EncryptedPreferences,
-    private val gson: Gson
+    private val gson: Gson,
+    private val userRepository: com.coparently.app.domain.repository.UserRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<EventUiState>(EventUiState.Loading)
@@ -320,6 +321,54 @@ class EventViewModel @Inject constructor(
     }
 
     /**
+     * Confirms the pickup for an event on behalf of the current user.
+     * The other parent sees the confirmation through the regular event sync.
+     */
+    fun confirmPickup(eventId: String) {
+        viewModelScope.launch {
+            try {
+                val event = eventUseCases.getEvents.getById(eventId) ?: return@launch
+                val role = userRepository.getCurrentUser()?.role ?: event.parentOwner
+                val updated = event.copy(
+                    pickupConfirmedBy = role,
+                    pickupConfirmedAt = LocalDateTime.now()
+                )
+                val result = eventUseCases.updateEvent(updated)
+                result.onSuccess {
+                    _uiState.value = EventUiState.OperationSuccess("Pickup confirmed")
+                    kotlinx.coroutines.delay(1500)
+                    _uiState.value = EventUiState.Success(_events.value)
+                }.onFailure { error ->
+                    val appError = errorHandler.handleError(error)
+                    _uiState.value = EventUiState.Error(appError.userMessage)
+                }
+            } catch (e: Exception) {
+                val appError = errorHandler.handleError(e)
+                _uiState.value = EventUiState.Error(appError.userMessage)
+            }
+        }
+    }
+
+    /**
+     * Removes an existing pickup confirmation from an event.
+     */
+    fun undoPickupConfirmation(eventId: String) {
+        viewModelScope.launch {
+            try {
+                val event = eventUseCases.getEvents.getById(eventId) ?: return@launch
+                val updated = event.copy(
+                    pickupConfirmedBy = null,
+                    pickupConfirmedAt = null
+                )
+                eventUseCases.updateEvent(updated)
+            } catch (e: Exception) {
+                val appError = errorHandler.handleError(e)
+                _uiState.value = EventUiState.Error(appError.userMessage)
+            }
+        }
+    }
+
+    /**
      * Saves event draft to local storage.
      * Issue 1.3: Draft saving functionality.
      */
@@ -370,6 +419,17 @@ class EventViewModel @Inject constructor(
      */
     fun clearEventDraft() {
         encryptedPreferences.clearEventDraft()
+    }
+
+    /**
+     * User-defined event types created via the calendar filter sheet.
+     */
+    fun customEventTypes(): List<String> {
+        return encryptedPreferences
+            .getString(com.coparently.app.data.local.preferences.PreferenceKeys.CUSTOM_EVENT_TYPES)
+            ?.split(com.coparently.app.data.local.preferences.PreferenceKeys.LIST_SEPARATOR)
+            ?.filter { it.isNotBlank() }
+            ?: emptyList()
     }
 }
 

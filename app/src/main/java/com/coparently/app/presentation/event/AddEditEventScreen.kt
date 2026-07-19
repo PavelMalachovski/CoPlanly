@@ -23,8 +23,10 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Face
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Title
@@ -44,6 +46,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.AlertDialog
@@ -96,7 +99,7 @@ import javax.inject.Inject
  * Modernized with Material 3 design, date/time pickers, and validation.
  * Based on Design Roadmap Day 3: Forms & Input.
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun AddEditEventScreen(
     eventId: String?,
@@ -112,6 +115,15 @@ fun AddEditEventScreen(
     var description by remember { mutableStateOf("") }
     var parentOwner by remember { mutableStateOf("mom") }
     var eventType by remember { mutableStateOf("general") }
+    // Snapshot of the loaded event so saving preserves sync/sharing fields
+    var existingEvent by remember { mutableStateOf<Event?>(null) }
+    // MVP1 fields: recurrence, reminder, privacy
+    var recurrencePattern by remember { mutableStateOf<String?>(null) }
+    var recurrenceEndDate by remember { mutableStateOf<LocalDate?>(null) }
+    var showRecurrenceEndPicker by remember { mutableStateOf(false) }
+    var reminderMinutes by remember { mutableStateOf<Int?>(null) }
+    var isPrivate by remember { mutableStateOf(false) }
+    val customEventTypes = remember { viewModel.customEventTypes() }
     var startDate by remember { mutableStateOf(initialDate ?: LocalDate.now()) }
     var startTime by remember(initialHour, initialDate) {
         mutableStateOf(
@@ -184,6 +196,7 @@ fun AddEditEventScreen(
             scope.launch {
                 val event = viewModel.getEventById(eventId)
                 event?.let {
+                    existingEvent = it
                     title = it.title
                     description = it.description ?: ""
                     parentOwner = it.parentOwner
@@ -191,6 +204,10 @@ fun AddEditEventScreen(
                     startDate = it.startDateTime.toLocalDate()
                     startTime = it.startDateTime.toLocalTime()
                     endTime = it.endDateTime?.toLocalTime() ?: startTime.plusHours(1)
+                    recurrencePattern = if (it.isRecurring) it.recurrencePattern else null
+                    recurrenceEndDate = it.recurrenceEndDate
+                    reminderMinutes = it.reminderMinutes
+                    isPrivate = it.isPrivate
                 }
             }
         } else {
@@ -285,17 +302,29 @@ fun AddEditEventScreen(
                                 isSaving = true
                                 scope.launch {
                                     try {
-                                        val event = Event(
+                                        // Preserve sync/sharing fields of the loaded event when editing;
+                                        // rebuilding from defaults would wipe sharedWith/permissions
+                                        val base = existingEvent
+                                        val event = (base ?: Event(
                                             id = eventId ?: UUID.randomUUID().toString(),
+                                            title = "",
+                                            startDateTime = LocalDateTime.now(),
+                                            eventType = "general",
+                                            parentOwner = "mom",
+                                            createdAt = LocalDateTime.now(),
+                                            updatedAt = LocalDateTime.now()
+                                        )).copy(
                                             title = title,
                                             description = description.ifEmpty { null },
                                             startDateTime = LocalDateTime.of(startDate, startTime),
                                             endDateTime = LocalDateTime.of(startDate, endTime),
                                             eventType = eventType,
                                             parentOwner = parentOwner,
-                                            isRecurring = false,
-                                            recurrencePattern = null,
-                                            createdAt = LocalDateTime.now(),
+                                            isRecurring = recurrencePattern != null,
+                                            recurrencePattern = recurrencePattern,
+                                            recurrenceEndDate = recurrenceEndDate,
+                                            reminderMinutes = reminderMinutes,
+                                            isPrivate = isPrivate,
                                             updatedAt = LocalDateTime.now()
                                         )
 
@@ -538,71 +567,40 @@ fun AddEditEventScreen(
                 fontWeight = FontWeight.SemiBold
             )
 
-            // Using Column and Row for chips layout instead of FlowRow
-            Column(
+            // Default types plus user-defined types created in the calendar filter sheet
+            androidx.compose.foundation.layout.FlowRow(
                 modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    listOf(
-                        "general" to "General",
-                        "medical" to "Medical",
-                        "school" to "School"
-                    ).forEach { (value, label) ->
-                        FilterChip(
-                            selected = eventType == value,
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                eventType = value
-                            },
-                            label = { Text(label) },
-                            leadingIcon = {
-                                if (eventType == value) {
-                                    Icon(
-                                        imageVector = Icons.Default.Check,
-                                        contentDescription = "Selected",
-                                        modifier = Modifier.size(dims.iconSize * 0.75f) // ~18dp for compact
-                                    )
-                                }
-                            },
-                            modifier = Modifier.semantics {
-                                contentDescription = "$label event type, ${if (eventType == value) "selected" else "not selected"}"
+                val allTypes = listOf(
+                    "general" to "General",
+                    "medical" to "Medical",
+                    "school" to "School",
+                    "sports" to "Sports",
+                    "birthday" to "Birthday"
+                ) + customEventTypes.map { it to it.replaceFirstChar { c -> c.uppercase() } }
+
+                allTypes.forEach { (value, label) ->
+                    FilterChip(
+                        selected = eventType == value,
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            eventType = value
+                        },
+                        label = { Text(label) },
+                        leadingIcon = {
+                            if (eventType == value) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = "Selected",
+                                    modifier = Modifier.size(dims.iconSize * 0.75f) // ~18dp for compact
+                                )
                             }
-                        )
-                    }
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    listOf(
-                        "sports" to "Sports",
-                        "birthday" to "Birthday"
-                    ).forEach { (value, label) ->
-                        FilterChip(
-                            selected = eventType == value,
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                eventType = value
-                            },
-                            label = { Text(label) },
-                            leadingIcon = {
-                                if (eventType == value) {
-                                    Icon(
-                                        imageVector = Icons.Default.Check,
-                                        contentDescription = "Selected",
-                                        modifier = Modifier.size(dims.iconSize * 0.75f) // ~18dp for compact
-                                    )
-                                }
-                            },
-                            modifier = Modifier.semantics {
-                                contentDescription = "$label event type, ${if (eventType == value) "selected" else "not selected"}"
-                            }
-                        )
-                    }
+                        },
+                        modifier = Modifier.semantics {
+                            contentDescription = "$label event type, ${if (eventType == value) "selected" else "not selected"}"
+                        }
+                    )
                 }
             }
 
@@ -778,6 +776,277 @@ fun AddEditEventScreen(
                     }
                 }
             }
+
+            // Repeat Section
+            Text(
+                text = "Repeat",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+
+            androidx.compose.foundation.layout.FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                listOf(
+                    null to "None",
+                    "daily" to "Daily",
+                    "weekly" to "Weekly",
+                    "biweekly" to "Every 2 weeks",
+                    "monthly" to "Monthly"
+                ).forEach { (value, label) ->
+                    FilterChip(
+                        selected = recurrencePattern == value,
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            recurrencePattern = value
+                            if (value == null) recurrenceEndDate = null
+                        },
+                        label = { Text(label) },
+                        leadingIcon = {
+                            if (recurrencePattern == value) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = "Selected",
+                                    modifier = Modifier.size(dims.iconSize * 0.75f)
+                                )
+                            }
+                        }
+                    )
+                }
+            }
+
+            // Recurrence end date (optional, only for recurring events)
+            if (recurrencePattern != null) {
+                OutlinedCard(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .defaultMinSize(minHeight = 48.dp),
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        showRecurrenceEndPicker = true
+                    }
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(dims.paddingMedium),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text(
+                                text = "Repeat until",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = recurrenceEndDate?.format(
+                                    DateTimeFormatter.ofPattern("EEEE, MMM dd, yyyy")
+                                ) ?: "Forever",
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                        }
+                        if (recurrenceEndDate != null) {
+                            TextButton(onClick = { recurrenceEndDate = null }) {
+                                Text("Clear")
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Reminder Section
+            Text(
+                text = "Reminder",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                listOf(
+                    null to "None",
+                    30 to "30 min before",
+                    60 to "1 hour before"
+                ).forEach { (value, label) ->
+                    FilterChip(
+                        selected = reminderMinutes == value,
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            reminderMinutes = value
+                        },
+                        label = { Text(label) },
+                        leadingIcon = {
+                            if (reminderMinutes == value) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = "Selected",
+                                    modifier = Modifier.size(dims.iconSize * 0.75f)
+                                )
+                            }
+                        }
+                    )
+                }
+            }
+
+            // Privacy Section
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                )
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(dims.paddingMedium),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(dims.paddingSmall * 1.5f),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Lock,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Column {
+                            Text(
+                                text = "Private event",
+                                style = MaterialTheme.typography.titleSmall
+                            )
+                            Text(
+                                text = "Only you can see this event",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    Switch(
+                        checked = isPrivate,
+                        onCheckedChange = {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            isPrivate = it
+                        }
+                    )
+                }
+            }
+
+            // Pickup Confirmation Section (existing events only)
+            if (eventId != null) {
+                val confirmedBy = existingEvent?.pickupConfirmedBy
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (confirmedBy != null) {
+                            MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f)
+                        } else {
+                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                        }
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(dims.paddingMedium),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(dims.paddingSmall * 1.5f),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = null,
+                                tint = if (confirmedBy != null) {
+                                    MaterialTheme.colorScheme.tertiary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                }
+                            )
+                            Column {
+                                Text(
+                                    text = "Pickup",
+                                    style = MaterialTheme.typography.titleSmall
+                                )
+                                Text(
+                                    text = if (confirmedBy != null) {
+                                        "Confirmed by ${confirmedBy.replaceFirstChar { it.uppercase() }}"
+                                    } else {
+                                        "Not confirmed yet"
+                                    },
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        TextButton(
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                if (confirmedBy != null) {
+                                    viewModel.undoPickupConfirmation(eventId)
+                                    existingEvent = existingEvent?.copy(
+                                        pickupConfirmedBy = null,
+                                        pickupConfirmedAt = null
+                                    )
+                                } else {
+                                    viewModel.confirmPickup(eventId)
+                                    existingEvent = existingEvent?.copy(
+                                        pickupConfirmedBy = parentOwner,
+                                        pickupConfirmedAt = LocalDateTime.now()
+                                    )
+                                }
+                            }
+                        ) {
+                            Text(if (confirmedBy != null) "Undo" else "Confirm pickup")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Recurrence end date picker
+    if (showRecurrenceEndPicker) {
+        val recurrenceEndPickerState = rememberDatePickerState(
+            initialSelectedDateMillis = (recurrenceEndDate ?: startDate.plusMonths(3))
+                .atStartOfDay(ZoneId.systemDefault())
+                .toInstant()
+                .toEpochMilli()
+        )
+
+        DatePickerDialog(
+            onDismissRequest = { showRecurrenceEndPicker = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        recurrenceEndPickerState.selectedDateMillis?.let { millis ->
+                            // LocalDate.ofInstant requires API 34; atZone works from minSdk 26
+                            recurrenceEndDate = Instant.ofEpochMilli(millis)
+                                .atZone(ZoneId.systemDefault())
+                                .toLocalDate()
+                        }
+                        showRecurrenceEndPicker = false
+                    }
+                ) {
+                    Text("OK")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRecurrenceEndPicker = false }) {
+                    Text("Cancel")
+                }
+            }
+        ) {
+            DatePicker(state = recurrenceEndPickerState)
         }
     }
 
@@ -795,10 +1064,10 @@ fun AddEditEventScreen(
                 TextButton(
                     onClick = {
                         datePickerState.selectedDateMillis?.let { millis ->
-                            startDate = LocalDate.ofInstant(
-                                Instant.ofEpochMilli(millis),
-                                ZoneId.systemDefault()
-                            )
+                            // LocalDate.ofInstant requires API 34; atZone works from minSdk 26
+                            startDate = Instant.ofEpochMilli(millis)
+                                .atZone(ZoneId.systemDefault())
+                                .toLocalDate()
                         }
                         showDatePicker = false
                     }

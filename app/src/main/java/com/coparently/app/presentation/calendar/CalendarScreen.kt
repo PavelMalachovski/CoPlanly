@@ -4,15 +4,10 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.Crossfade
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
@@ -20,20 +15,12 @@ import androidx.compose.runtime.key
 import android.os.Build
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -51,14 +38,13 @@ import androidx.compose.material3.SnackbarDuration
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -66,30 +52,67 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
-import com.coparently.app.data.local.entity.CustodyScheduleEntity
+import com.coparently.app.domain.holidays.CzechHolidays
+import com.coparently.app.domain.holidays.Holiday
 import com.coparently.app.presentation.calendar.components.CalendarHeader
 import com.coparently.app.presentation.calendar.components.CustodyIndicatorToday
+import com.coparently.app.presentation.calendar.components.EventTypeFilterSheet
+import com.coparently.app.presentation.calendar.components.ParentFilterBar
 import com.coparently.app.presentation.common.QuickActionsBottomSheet
 import androidx.compose.material3.rememberModalBottomSheetState
 import com.coparently.app.presentation.event.EventViewModel
 import com.coparently.app.presentation.event.EventUiState
-import com.coparently.app.presentation.theme.CoParentlyColors
 import com.coparently.app.presentation.theme.dimensions
 import com.kizitonwose.calendar.compose.rememberCalendarState
-import com.kizitonwose.calendar.core.CalendarDay
-import com.kizitonwose.calendar.core.DayPosition
-import com.kizitonwose.calendar.core.firstDayOfWeekFromLocale
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.YearMonth
 import java.time.ZoneId
 import kotlinx.coroutines.launch
 
 /**
+ * Computes the event query range for a view mode and selected date.
+ * Single source of truth used by both the initial load and pull-to-refresh.
+ */
+internal fun queryRangeFor(
+    viewMode: CalendarViewMode,
+    selectedDate: LocalDate
+): Pair<LocalDateTime, LocalDateTime> {
+    return when (viewMode) {
+        CalendarViewMode.DAY -> {
+            selectedDate.atStartOfDay() to selectedDate.atTime(23, 59, 59)
+        }
+        CalendarViewMode.WEEK -> {
+            val firstDay = selectedDate.minusDays((selectedDate.dayOfWeek.value - 1).toLong())
+            firstDay.atStartOfDay() to firstDay.plusDays(6).atTime(23, 59, 59)
+        }
+        CalendarViewMode.MONTH -> {
+            // Extended range to cover the MonthView week buffer (6 weeks before/after)
+            val visibleMonth = YearMonth.from(selectedDate)
+            var startDate = visibleMonth.atDay(1)
+            while (startDate.dayOfWeek != java.time.DayOfWeek.MONDAY) {
+                startDate = startDate.minusDays(1)
+            }
+            startDate = startDate.minusWeeks(6)
+
+            var endDate = visibleMonth.atEndOfMonth()
+            while (endDate.dayOfWeek != java.time.DayOfWeek.SUNDAY) {
+                endDate = endDate.plusDays(1)
+            }
+            endDate = endDate.plusWeeks(6)
+
+            startDate.atStartOfDay() to endDate.atTime(23, 59, 59)
+        }
+    }
+}
+
+/**
  * Main calendar screen showing calendar view with events.
- * Supports multiple view modes: Day, 3 Days, Week, Month.
+ * Supports Month, Week and Day view modes with parent and event type filters,
+ * Czech holidays and custody indication.
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -100,35 +123,28 @@ fun CalendarScreen(
     eventViewModel: EventViewModel = hiltViewModel(),
     calendarViewModel: CalendarViewModel = hiltViewModel()
 ) {
-    // Get responsive dimensions and haptic feedback
     val dims = dimensions()
     val haptic = LocalHapticFeedback.current
     val events by eventViewModel.events.collectAsState()
     val custodySchedules by calendarViewModel.custodySchedules.collectAsState()
     val viewMode by calendarViewModel.viewMode.collectAsState()
     val selectedDate by calendarViewModel.selectedDate.collectAsState()
+    val parentFilter by calendarViewModel.parentFilter.collectAsState()
+    val hiddenEventTypes by calendarViewModel.hiddenEventTypes.collectAsState()
+    val customEventTypes by calendarViewModel.customEventTypes.collectAsState()
+    val showHolidays by calendarViewModel.showHolidays.collectAsState()
 
-    // Animation optimization: Check device capabilities (3.2)
     // Reduce animation duration on older devices for better performance
     val animationDuration = remember {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
-            150 // Faster animations on older devices (API < 28)
-        } else {
-            200 // Normal animations on modern devices
-        }
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) 150 else 200
     }
 
-    // Always use Monday as first day of week
-    val firstDayOfWeek = remember { java.time.DayOfWeek.MONDAY }
     val now = remember { YearMonth.now() }
-    val startMonth = remember { now.minusMonths(12) }
-    val endMonth = remember { now.plusMonths(12) }
-
     val calendarState = rememberCalendarState(
-        startMonth = startMonth,
-        endMonth = endMonth,
+        startMonth = remember { now.minusMonths(12) },
+        endMonth = remember { now.plusMonths(12) },
         firstVisibleMonth = YearMonth.from(selectedDate),
-        firstDayOfWeek = firstDayOfWeek
+        firstDayOfWeek = remember { java.time.DayOfWeek.MONDAY }
     )
 
     var showDatePicker by remember { mutableStateOf(false) }
@@ -148,6 +164,10 @@ fun CalendarScreen(
     var showQuickActions by remember { mutableStateOf(false) }
     val quickActionsSheetState = rememberModalBottomSheetState()
 
+    // Event type filter sheet state
+    var showTypeFilters by remember { mutableStateOf(false) }
+    val typeFilterSheetState = rememberModalBottomSheetState()
+
     // Snackbar state for undo functionality
     val snackbarHostState = remember { SnackbarHostState() }
     val uiState by eventViewModel.uiState.collectAsState()
@@ -157,61 +177,32 @@ fun CalendarScreen(
     var eventToDelete by remember { mutableStateOf<String?>(null) }
     var isDragOverDeleteButton by remember { mutableStateOf(false) }
 
+    // Events filtered by parent view and hidden event types
+    val filteredEvents = remember(events, parentFilter, hiddenEventTypes) {
+        events
+            .filter { event ->
+                when (parentFilter) {
+                    ParentFilter.BOTH -> true
+                    ParentFilter.MOM -> event.parentOwner == "mom"
+                    ParentFilter.DAD -> event.parentOwner == "dad"
+                }
+            }
+            .filterNot { it.eventType in hiddenEventTypes }
+    }
+
+    // Czech public holidays and school vacations for the visible range
+    val holidays: Map<LocalDate, Holiday> = remember(viewMode, selectedDate, showHolidays) {
+        if (!showHolidays) {
+            emptyMap()
+        } else {
+            val (start, end) = queryRangeFor(viewMode, selectedDate)
+            CzechHolidays.holidaysInRange(start.toLocalDate(), end.toLocalDate())
+        }
+    }
+
     // Load events based on view mode
     LaunchedEffect(viewMode, selectedDate) {
-        val start = when (viewMode) {
-            CalendarViewMode.DAY -> selectedDate.atStartOfDay()
-            CalendarViewMode.THREE_DAYS -> selectedDate.atStartOfDay()
-            CalendarViewMode.WEEK -> {
-                // Calculate first day of week (Monday = 1, Sunday = 7)
-                val dayOfWeek = selectedDate.dayOfWeek.value
-                val daysToSubtract = (dayOfWeek - 1).toLong()
-                val firstDay = selectedDate.minusDays(daysToSubtract)
-                firstDay.atStartOfDay()
-            }
-            CalendarViewMode.MONTH -> {
-                // Load events for extended range to support MonthView buffer (6 weeks before/after)
-                val visibleMonth = YearMonth.from(selectedDate)
-                val weekFields = java.time.temporal.WeekFields.ISO
-                val firstDayOfWeek = java.time.DayOfWeek.MONDAY
-
-                // Calculate the start of the week 6 weeks before the first day of month
-                var startDate = visibleMonth.atDay(1)
-                while (startDate.dayOfWeek != firstDayOfWeek) {
-                    startDate = startDate.minusDays(1)
-                }
-                startDate = startDate.minusWeeks(6)
-
-                startDate.atStartOfDay()
-            }
-        }
-
-        val end = when (viewMode) {
-            CalendarViewMode.DAY -> selectedDate.atTime(23, 59, 59)
-            CalendarViewMode.THREE_DAYS -> selectedDate.plusDays(2).atTime(23, 59, 59)
-            CalendarViewMode.WEEK -> {
-                val dayOfWeek = selectedDate.dayOfWeek.value
-                val daysToAdd = (7 - dayOfWeek).toLong()
-                val lastDay = selectedDate.plusDays(daysToAdd)
-                lastDay.atTime(23, 59, 59)
-            }
-                        CalendarViewMode.MONTH -> {
-                            // Load events for extended range to support MonthView buffer (6 weeks before/after)
-                            val visibleMonth = YearMonth.from(selectedDate)
-                            val weekFields = java.time.temporal.WeekFields.ISO
-                            val firstDayOfWeek = java.time.DayOfWeek.MONDAY
-
-                            // Calculate the end of the week 6 weeks after the last day of month
-                            var endDate = visibleMonth.atEndOfMonth()
-                            while (endDate.dayOfWeek != firstDayOfWeek.plus(6)) { // Last day of week
-                                endDate = endDate.plusDays(1)
-                            }
-                            endDate = endDate.plusWeeks(6)
-
-                            endDate.atTime(23, 59, 59)
-                        }
-        }
-
+        val (start, end) = queryRangeFor(viewMode, selectedDate)
         eventViewModel.loadEventsForDateRange(start, end)
     }
 
@@ -219,8 +210,7 @@ fun CalendarScreen(
     LaunchedEffect(selectedDate, viewMode) {
         if (viewMode == CalendarViewMode.MONTH) {
             val newMonth = YearMonth.from(selectedDate)
-            val currentMonth = calendarState.firstVisibleMonth.yearMonth
-            if (newMonth != currentMonth) {
+            if (newMonth != calendarState.firstVisibleMonth.yearMonth) {
                 scope.launch {
                     try {
                         calendarState.animateScrollToMonth(newMonth)
@@ -253,7 +243,6 @@ fun CalendarScreen(
 
     Scaffold(
         topBar = {
-            // Static header - does not animate with swipes
             CalendarHeader(
                 selectedDate = selectedDate,
                 viewMode = viewMode,
@@ -286,9 +275,8 @@ fun CalendarScreen(
                         contentColor = MaterialTheme.colorScheme.onError,
                         shape = RoundedCornerShape(dims.cornerRadius),
                         modifier = Modifier
-                            .offset(y = (-64).dp) // Position above the "+" button
+                            .offset(y = (-64).dp)
                             .graphicsLayer {
-                                // Scale up when dragging over it
                                 scaleX = if (isDragOverDeleteButton) 1.2f else 1f
                                 scaleY = if (isDragOverDeleteButton) 1.2f else 1f
                             }
@@ -325,62 +313,10 @@ fun CalendarScreen(
             onRefresh = {
                 isRefreshing = true
                 scope.launch {
-                    // Refresh events for current view
-                    val start = when (viewMode) {
-                        CalendarViewMode.DAY -> selectedDate.atStartOfDay()
-                        CalendarViewMode.THREE_DAYS -> selectedDate.atStartOfDay()
-                        CalendarViewMode.WEEK -> {
-                            val dayOfWeek = selectedDate.dayOfWeek.value
-                            val daysToSubtract = (dayOfWeek - 1).toLong()
-                            val firstDay = selectedDate.minusDays(daysToSubtract)
-                            firstDay.atStartOfDay()
-                        }
-                        CalendarViewMode.MONTH -> {
-                            // Load events for extended range to support MonthView buffer (6 weeks before/after)
-                            val visibleMonth = YearMonth.from(selectedDate)
-                            val weekFields = java.time.temporal.WeekFields.ISO
-                            val firstDayOfWeek = java.time.DayOfWeek.MONDAY
-
-                            // Calculate the start of the week 6 weeks before the first day of month
-                            var startDate = visibleMonth.atDay(1)
-                            while (startDate.dayOfWeek != firstDayOfWeek) {
-                                startDate = startDate.minusDays(1)
-                            }
-                            startDate = startDate.minusWeeks(6)
-
-                            startDate.atStartOfDay()
-                        }
-                    }
-
-                    val end = when (viewMode) {
-                        CalendarViewMode.DAY -> selectedDate.atTime(23, 59, 59)
-                        CalendarViewMode.THREE_DAYS -> selectedDate.plusDays(2).atTime(23, 59, 59)
-                        CalendarViewMode.WEEK -> {
-                            val dayOfWeek = selectedDate.dayOfWeek.value
-                            val daysToAdd = (7 - dayOfWeek).toLong()
-                            val lastDay = selectedDate.plusDays(daysToAdd)
-                            lastDay.atTime(23, 59, 59)
-                        }
-                        CalendarViewMode.MONTH -> {
-                            // Load events for extended range to support MonthView buffer (6 weeks before/after)
-                            val visibleMonth = YearMonth.from(selectedDate)
-                            val weekFields = java.time.temporal.WeekFields.ISO
-                            val firstDayOfWeek = java.time.DayOfWeek.MONDAY
-
-                            // Calculate the end of the week 6 weeks after the last day of month
-                            var endDate = visibleMonth.atEndOfMonth()
-                            while (endDate.dayOfWeek != firstDayOfWeek.plus(6)) { // Last day of week
-                                endDate = endDate.plusDays(1)
-                            }
-                            endDate = endDate.plusWeeks(6)
-
-                            endDate.atTime(23, 59, 59)
-                        }
-                    }
-
+                    val (start, end) = queryRangeFor(viewMode, selectedDate)
                     eventViewModel.loadEventsForDateRange(start, end)
                     calendarViewModel.loadCustodySchedules()
-                    kotlinx.coroutines.delay(500) // Small delay for better UX
+                    kotlinx.coroutines.delay(500)
                     isRefreshing = false
                 }
             },
@@ -392,171 +328,111 @@ fun CalendarScreen(
             Column(
                 modifier = Modifier.fillMaxSize()
             ) {
-                // ViewModeSelector removed - now using dropdown in CalendarHeader
+                // Parent view switcher: Mom / Both / Dad + event type filter entry point
+                ParentFilterBar(
+                    selected = parentFilter,
+                    onSelected = { calendarViewModel.setParentFilter(it) },
+                    onFilterClick = { showTypeFilters = true }
+                )
 
-            // Today's custody indicator (only for month view)
-            // Optimization 3.1: Use key() to prevent unnecessary recompositions
-            if (viewMode == CalendarViewMode.MONTH && custodySchedules.isNotEmpty()) {
-                val today = LocalDate.now()
-                val todayCustody = CustodyHelper.getCustodyForDate(today, custodySchedules)
-                if (todayCustody != null) {
-                    key(todayCustody) {
-                        AnimatedContent(
-                            targetState = todayCustody,
-                            transitionSpec = {
-                                slideInVertically(
-                                    animationSpec = tween(animationDuration),
-                                    initialOffsetY = { -it }
-                                ) + fadeIn() togetherWith slideOutVertically(
-                                    animationSpec = tween(animationDuration),
-                                    targetOffsetY = { it }
-                                ) + fadeOut()
-                            },
-                            modifier = Modifier.padding(horizontal = dims.paddingMedium, vertical = dims.paddingSmall)
-                        ) { custody ->
-                            CustodyIndicatorToday(custody = custody)
+                // Today's custody indicator (only for month view)
+                if (viewMode == CalendarViewMode.MONTH && custodySchedules.isNotEmpty()) {
+                    val today = LocalDate.now()
+                    val todayCustody = CustodyHelper.getCustodyForDate(today, custodySchedules)
+                    if (todayCustody != null) {
+                        key(todayCustody) {
+                            AnimatedContent(
+                                targetState = todayCustody,
+                                transitionSpec = {
+                                    slideInVertically(
+                                        animationSpec = tween(animationDuration),
+                                        initialOffsetY = { -it }
+                                    ) + fadeIn() togetherWith slideOutVertically(
+                                        animationSpec = tween(animationDuration),
+                                        targetOffsetY = { it }
+                                    ) + fadeOut()
+                                },
+                                modifier = Modifier.padding(
+                                    horizontal = dims.paddingMedium,
+                                    vertical = dims.paddingSmall
+                                )
+                            ) { custody ->
+                                CustodyIndicatorToday(custody = custody)
+                            }
                         }
                     }
                 }
-            }
 
-            // Calendar content based on view mode - optimized with Crossfade
-            // Optimization 3.1: Use key() to prevent unnecessary recompositions
-            Crossfade(
-                targetState = viewMode,
-                animationSpec = tween(
-                    durationMillis = animationDuration,
-                    easing = FastOutSlowInEasing
-                ),
-                modifier = Modifier.weight(1f)
-            ) { mode ->
-                key(mode) {
-                    when (mode) {
-                        CalendarViewMode.DAY -> {
-                            DayWeekView(
-                                selectedDate = selectedDate,
-                                daysCount = 1,
-                                events = events,
-                                custodySchedules = custodySchedules,
-                                onDateChange = { calendarViewModel.setSelectedDate(it) },
-                                onEventClick = onEventClick,
-                                onAddEventClick = { date, hour ->
-                                    onAddEventClick(date, hour)
-                                },
-                                onEventDragDrop = { eventId, targetDate, targetHour ->
-                                    eventViewModel.moveEvent(eventId, targetDate, targetHour)
-                                },
-                                onEventResize = { eventId: String, newStartTime: java.time.LocalDateTime?, newEndTime: java.time.LocalDateTime? ->
-                                    eventViewModel.resizeEvent(eventId, newStartTime, newEndTime)
-                                },
-                                onEventDelete = { eventId ->
-                                    eventViewModel.deleteEventById(eventId)
-                                },
-                                onEventLongPressStart = { eventId ->
-                                    showDeleteButton = true
-                                    eventToDelete = eventId
-                                },
-                                onEventLongPressEnd = {
-                                    showDeleteButton = false
-                                    eventToDelete = null
-                                },
-                                onDragOverDeleteButton = { isOver ->
-                                    isDragOverDeleteButton = isOver
-                                }
-                            )
-                        }
-                        CalendarViewMode.THREE_DAYS -> {
-                            DayWeekView(
-                                selectedDate = selectedDate,
-                                daysCount = 3,
-                                events = events,
-                                custodySchedules = custodySchedules,
-                                onDateChange = { calendarViewModel.setSelectedDate(it) },
-                                onEventClick = onEventClick,
-                                onAddEventClick = { date, hour ->
-                                    onAddEventClick(date, hour)
-                                },
-                                onEventDragDrop = { eventId, targetDate, targetHour ->
-                                    eventViewModel.moveEvent(eventId, targetDate, targetHour)
-                                },
-                                onEventResize = { eventId: String, newStartTime: java.time.LocalDateTime?, newEndTime: java.time.LocalDateTime? ->
-                                    eventViewModel.resizeEvent(eventId, newStartTime, newEndTime)
-                                },
-                                onEventDelete = { eventId ->
-                                    eventViewModel.deleteEventById(eventId)
-                                },
-                                onEventLongPressStart = { eventId ->
-                                    showDeleteButton = true
-                                    eventToDelete = eventId
-                                },
-                                onEventLongPressEnd = {
-                                    showDeleteButton = false
-                                    eventToDelete = null
-                                },
-                                onDragOverDeleteButton = { isOver ->
-                                    isDragOverDeleteButton = isOver
-                                }
-                            )
-                        }
-                        CalendarViewMode.WEEK -> {
-                            DayWeekView(
-                                selectedDate = selectedDate,
-                                daysCount = 7,
-                                events = events,
-                                custodySchedules = custodySchedules,
-                                onDateChange = { calendarViewModel.setSelectedDate(it) },
-                                onEventClick = onEventClick,
-                                onAddEventClick = { date, hour ->
-                                    onAddEventClick(date, hour)
-                                },
-                                onEventDragDrop = { eventId, targetDate, targetHour ->
-                                    eventViewModel.moveEvent(eventId, targetDate, targetHour)
-                                },
-                                onEventResize = { eventId: String, newStartTime: java.time.LocalDateTime?, newEndTime: java.time.LocalDateTime? ->
-                                    eventViewModel.resizeEvent(eventId, newStartTime, newEndTime)
-                                },
-                                onEventDelete = { eventId ->
-                                    eventViewModel.deleteEventById(eventId)
-                                },
-                                onEventLongPressStart = { eventId ->
-                                    showDeleteButton = true
-                                    eventToDelete = eventId
-                                },
-                                onEventLongPressEnd = {
-                                    showDeleteButton = false
-                                    eventToDelete = null
-                                },
-                                onDragOverDeleteButton = { isOver ->
-                                    isDragOverDeleteButton = isOver
-                                }
-                            )
-                        }
-                        CalendarViewMode.MONTH -> {
-                            val visibleMonthYear = YearMonth.from(selectedDate)
-
-                            MonthView(
-                                selectedMonth = visibleMonthYear,
-                                selectedDate = selectedDate,
-                                events = events,
-                                custodySchedules = custodySchedules,
-                                onDayClick = { clickedDate ->
-                                    calendarViewModel.setSelectedDate(clickedDate)
-                                    calendarViewModel.setViewMode(CalendarViewMode.DAY)
-                                },
-                                onMonthChange = { newMonth ->
-                                    calendarViewModel.setSelectedDate(newMonth.atDay(1))
-                                },
-                                onDateChange = { newDate ->
-                                    calendarViewModel.setSelectedDate(newDate)
-                                },
-                                onEventDragDrop = { eventId, targetDate ->
-                                    eventViewModel.moveEvent(eventId, targetDate)
-                                }
-                            )
+                // Calendar content based on view mode
+                Crossfade(
+                    targetState = viewMode,
+                    animationSpec = tween(
+                        durationMillis = animationDuration,
+                        easing = FastOutSlowInEasing
+                    ),
+                    modifier = Modifier.weight(1f)
+                ) { mode ->
+                    key(mode) {
+                        when (mode) {
+                            CalendarViewMode.DAY, CalendarViewMode.WEEK -> {
+                                DayWeekView(
+                                    selectedDate = selectedDate,
+                                    daysCount = if (mode == CalendarViewMode.DAY) 1 else 7,
+                                    events = filteredEvents,
+                                    custodySchedules = custodySchedules,
+                                    onDateChange = { calendarViewModel.setSelectedDate(it) },
+                                    onEventClick = onEventClick,
+                                    onAddEventClick = { date, hour ->
+                                        onAddEventClick(date, hour)
+                                    },
+                                    onEventDragDrop = { eventId, targetDate, targetHour ->
+                                        eventViewModel.moveEvent(eventId, targetDate, targetHour)
+                                    },
+                                    onEventResize = { eventId: String, newStartTime: LocalDateTime?, newEndTime: LocalDateTime? ->
+                                        eventViewModel.resizeEvent(eventId, newStartTime, newEndTime)
+                                    },
+                                    onEventDelete = { eventId ->
+                                        eventViewModel.deleteEventById(eventId)
+                                    },
+                                    onEventLongPressStart = { eventId ->
+                                        showDeleteButton = true
+                                        eventToDelete = eventId
+                                    },
+                                    onEventLongPressEnd = {
+                                        showDeleteButton = false
+                                        eventToDelete = null
+                                    },
+                                    onDragOverDeleteButton = { isOver ->
+                                        isDragOverDeleteButton = isOver
+                                    },
+                                    holidays = holidays
+                                )
+                            }
+                            CalendarViewMode.MONTH -> {
+                                MonthView(
+                                    selectedMonth = YearMonth.from(selectedDate),
+                                    selectedDate = selectedDate,
+                                    events = filteredEvents,
+                                    custodySchedules = custodySchedules,
+                                    onDayClick = { clickedDate ->
+                                        calendarViewModel.setSelectedDate(clickedDate)
+                                        calendarViewModel.setViewMode(CalendarViewMode.DAY)
+                                    },
+                                    onMonthChange = { newMonth ->
+                                        calendarViewModel.setSelectedDate(newMonth.atDay(1))
+                                    },
+                                    onDateChange = { newDate ->
+                                        calendarViewModel.setSelectedDate(newDate)
+                                    },
+                                    onEventDragDrop = { eventId, targetDate ->
+                                        eventViewModel.moveEvent(eventId, targetDate)
+                                    },
+                                    holidays = holidays
+                                )
+                            }
                         }
                     }
                 }
-            }
             }
         }
     }
@@ -569,10 +445,10 @@ fun CalendarScreen(
                 Button(
                     onClick = {
                         datePickerState.selectedDateMillis?.let { millis ->
-                            val pickedDate = LocalDate.ofInstant(
-                                java.time.Instant.ofEpochMilli(millis),
-                                ZoneId.systemDefault()
-                            )
+                            // LocalDate.ofInstant requires API 34; atZone works from minSdk 26
+                            val pickedDate = java.time.Instant.ofEpochMilli(millis)
+                                .atZone(ZoneId.systemDefault())
+                                .toLocalDate()
                             val selectedYearMonth = YearMonth.from(pickedDate)
 
                             calendarViewModel.setSelectedDate(pickedDate)
@@ -616,152 +492,18 @@ fun CalendarScreen(
             sheetState = quickActionsSheetState
         )
     }
-}
 
-
-@Composable
-private fun CalendarDayContent(
-    day: CalendarDay,
-    events: List<com.coparently.app.domain.model.Event>,
-    custodySchedules: List<CustodyScheduleEntity>,
-    onClick: (CalendarDay) -> Unit,
-    haptic: androidx.compose.ui.hapticfeedback.HapticFeedback = LocalHapticFeedback.current
-) {
-    val isToday = CustodyHelper.isToday(day.date)
-    val custody = CustodyHelper.getCustodyForDate(day.date, custodySchedules)
-
-    // Animate scale for today - optimized with graphicsLayer
-    val scale by animateFloatAsState(
-        targetValue = if (isToday) 1.1f else 1f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessMedium
-        ),
-        label = "dayScale"
-    )
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            }
-            .clickable {
-                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                onClick(day)
-            },
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(4.dp)
-        ) {
-            // Day number
-            AnimatedContent(
-                targetState = day.date.dayOfMonth,
-                transitionSpec = {
-                    scaleIn(tween(200)) + fadeIn() togetherWith scaleOut(tween(200)) + fadeOut()
-                }
-            ) { dayNumber ->
-                Box(
-                    modifier = Modifier
-                        .background(
-                            color = if (isToday) {
-                                MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
-                            } else {
-                                Color.Transparent
-                            },
-                            shape = CircleShape
-                        )
-                        .size(if (isToday) 32.dp else 28.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = dayNumber.toString(),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = when {
-                            day.position == DayPosition.MonthDate -> {
-                                if (isToday) MaterialTheme.colorScheme.primary
-                                else MaterialTheme.colorScheme.onSurface
-                            }
-                            else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
-                        }
-                    )
-                }
-            }
-
-            // Custody indicator for the day
-            if (custody != null && day.position == DayPosition.MonthDate) {
-                val custodyColor = when (custody) {
-                    "mom" -> CoParentlyColors.MomPink
-                    "dad" -> CoParentlyColors.DadBlue
-                    else -> Color.Transparent
-                }
-
-                Box(
-                    modifier = Modifier
-                        .size(if (isToday) 8.dp else 6.dp)
-                        .background(color = custodyColor, shape = CircleShape)
-                        .padding(top = 2.dp)
-                )
-            }
-
-            // Event indicators
-            if (events.isNotEmpty()) {
-                val momEvents = events.filter { it.parentOwner == "mom" }
-                val dadEvents = events.filter { it.parentOwner == "dad" }
-
-                Row(
-                    modifier = Modifier.padding(top = 2.dp),
-                    horizontalArrangement = Arrangement.spacedBy(2.dp)
-                ) {
-                    if (momEvents.isNotEmpty()) {
-                        EventIndicatorDot(
-                            color = CoParentlyColors.MomPink,
-                            isToday = isToday
-                        )
-                    }
-                    if (dadEvents.isNotEmpty()) {
-                        EventIndicatorDot(
-                            color = CoParentlyColors.DadBlue,
-                            isToday = isToday
-                        )
-                    }
-                    if (momEvents.isEmpty() && dadEvents.isEmpty() && events.isNotEmpty()) {
-                        EventIndicatorDot(
-                            color = MaterialTheme.colorScheme.tertiary,
-                            isToday = isToday
-                        )
-                    }
-                }
-            }
-        }
+    // Event type filter sheet
+    if (showTypeFilters) {
+        EventTypeFilterSheet(
+            allEventTypes = CalendarViewModel.DEFAULT_EVENT_TYPES + customEventTypes,
+            hiddenEventTypes = hiddenEventTypes,
+            showHolidays = showHolidays,
+            onToggleType = { calendarViewModel.toggleEventTypeVisibility(it) },
+            onAddCustomType = { calendarViewModel.addCustomEventType(it) },
+            onShowHolidaysChange = { calendarViewModel.setShowHolidays(it) },
+            onDismiss = { showTypeFilters = false },
+            sheetState = typeFilterSheetState
+        )
     }
 }
-
-@Composable
-private fun EventIndicatorDot(
-    color: Color,
-    isToday: Boolean = false
-) {
-    val scale by animateFloatAsState(
-        targetValue = if (isToday) 1.33f else 1f, // 8dp / 6dp = 1.33
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessMedium
-        ),
-        label = "dotScale"
-    )
-
-    Box(
-        modifier = Modifier
-            .size(6.dp) // Base size
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            }
-            .background(color = color, shape = CircleShape)
-    )
-}
-

@@ -26,8 +26,8 @@ import androidx.core.view.WindowCompat
 private val LightColorScheme = lightColorScheme(
     primary = CoParentlyColors.BrandPrimary,
     onPrimary = Color.White,
-    primaryContainer = CoParentlyColors.DadBlueLight,
-    onPrimaryContainer = CoParentlyColors.DadBlueDark,
+    primaryContainer = CoParentlyColors.BrandPrimaryContainer,
+    onPrimaryContainer = CoParentlyColors.BrandOnPrimaryContainer,
     secondary = CoParentlyColors.MomPink,
     onSecondary = Color.White,
     secondaryContainer = CoParentlyColors.MomPinkLight,
@@ -38,25 +38,25 @@ private val LightColorScheme = lightColorScheme(
     onBackground = CoParentlyColors.LightOnBackground,
     surface = CoParentlyColors.LightSurface,
     onSurface = CoParentlyColors.LightOnSurface,
-    surfaceVariant = Color(0xFFF5F5F5),
-    onSurfaceVariant = Color(0xFF616161),
+    surfaceVariant = Color(0xFFE4E1EC),
+    onSurfaceVariant = Color(0xFF47464F),
     error = Color(0xFFBA1A1A),
     onError = Color.White,
     errorContainer = Color(0xFFFFDAD6),
     onErrorContainer = Color(0xFF410002),
-    outline = Color(0xFF757575),
-    outlineVariant = Color(0xFFBDBDBD),
+    outline = Color(0xFF777680),
+    outlineVariant = Color(0xFFC8C5D0),
     scrim = Color.Black,
     inverseSurface = CoParentlyColors.DarkSurface,
     inverseOnSurface = CoParentlyColors.DarkOnSurface,
-    inversePrimary = CoParentlyColors.DadBlueLight,
-    surfaceDim = Color(0xFFD9D9D9),
-    surfaceBright = CoParentlyColors.LightSurface,
+    inversePrimary = Color(0xFFC2C1FF),
+    surfaceDim = Color(0xFFDCD9E0),
+    surfaceBright = CoParentlyColors.LightBackground,
     surfaceContainerLowest = Color.White,
-    surfaceContainerLow = Color(0xFFF5F5F5),
-    surfaceContainer = Color(0xFFEFEFEF),
-    surfaceContainerHigh = Color(0xFFE9E9E9),
-    surfaceContainerHighest = Color(0xFFE3E3E3)
+    surfaceContainerLow = Color(0xFFF6F4FA),
+    surfaceContainer = Color(0xFFF0EEF5),
+    surfaceContainerHigh = Color(0xFFEBE8F0),
+    surfaceContainerHighest = Color(0xFFE5E2EA)
 )
 
 /**
@@ -64,39 +64,39 @@ private val LightColorScheme = lightColorScheme(
  * Enhanced with better contrast and brand colors.
  */
 private val DarkColorScheme = darkColorScheme(
-    primary = CoParentlyColors.DadBlueLight,
-    onPrimary = CoParentlyColors.DadBlueDark,
-    primaryContainer = CoParentlyColors.DadBlueDark,
-    onPrimaryContainer = CoParentlyColors.DadBlueLight,
+    primary = Color(0xFFC2C1FF),
+    onPrimary = Color(0xFF201F60),
+    primaryContainer = Color(0xFF373678),
+    onPrimaryContainer = CoParentlyColors.BrandPrimaryContainer,
     secondary = CoParentlyColors.MomPinkLight,
     onSecondary = CoParentlyColors.MomPinkDark,
     secondaryContainer = CoParentlyColors.MomPinkDark,
     onSecondaryContainer = CoParentlyColors.MomPinkLight,
-    tertiary = Color(0xFF66FF99),
-    onTertiary = Color(0xFF003314),
+    tertiary = Color(0xFF6EE7B7),
+    onTertiary = Color(0xFF003824),
     background = CoParentlyColors.DarkBackground,
     onBackground = CoParentlyColors.DarkOnBackground,
     surface = CoParentlyColors.DarkSurface,
     onSurface = CoParentlyColors.DarkOnSurface,
-    surfaceVariant = Color(0xFF424242),
-    onSurfaceVariant = Color(0xFFC2C2C2),
+    surfaceVariant = Color(0xFF47464F),
+    onSurfaceVariant = Color(0xFFC8C5D0),
     error = Color(0xFFFFB4AB),
     onError = Color(0xFF690005),
     errorContainer = Color(0xFF93000A),
     onErrorContainer = Color(0xFFFFDAD6),
-    outline = Color(0xFF909090),
-    outlineVariant = Color(0xFF424242),
+    outline = Color(0xFF918F9A),
+    outlineVariant = Color(0xFF47464F),
     scrim = Color.Black,
     inverseSurface = CoParentlyColors.LightSurface,
     inverseOnSurface = CoParentlyColors.LightOnSurface,
-    inversePrimary = CoParentlyColors.DadBlueDark,
-    surfaceDim = Color(0xFF121212),
-    surfaceBright = Color(0xFF383838),
-    surfaceContainerLowest = Color.Black,
-    surfaceContainerLow = Color(0xFF1E1E1E),
-    surfaceContainer = Color(0xFF242424),
-    surfaceContainerHigh = Color(0xFF2E2E2E),
-    surfaceContainerHighest = Color(0xFF383838)
+    inversePrimary = CoParentlyColors.BrandPrimary,
+    surfaceDim = CoParentlyColors.DarkBackground,
+    surfaceBright = Color(0xFF39383F),
+    surfaceContainerLowest = Color(0xFF0E0E13),
+    surfaceContainerLow = CoParentlyColors.DarkSurface,
+    surfaceContainer = Color(0xFF1F1F25),
+    surfaceContainerHigh = Color(0xFF29292F),
+    surfaceContainerHighest = Color(0xFF34333A)
 )
 
 /**
@@ -164,6 +164,7 @@ fun CoParentlyTheme(
         MaterialTheme(
             colorScheme = colorScheme,
             typography = Typography,
+            shapes = CoParentlyShapes,
             content = content
         )
     }

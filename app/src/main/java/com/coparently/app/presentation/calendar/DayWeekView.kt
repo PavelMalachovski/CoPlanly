@@ -41,7 +41,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -98,7 +100,8 @@ fun DayWeekView(
     onEventDelete: ((String) -> Unit)? = null,
     onEventLongPressStart: ((String) -> Unit)? = null,
     onEventLongPressEnd: (() -> Unit)? = null,
-    onDragOverDeleteButton: ((Boolean) -> Unit)? = null
+    onDragOverDeleteButton: ((Boolean) -> Unit)? = null,
+    holidays: Map<LocalDate, com.coparently.app.domain.holidays.Holiday> = emptyMap()
 ) {
     val dims = dimensions()
     val hours = (0..23).toList()
@@ -225,6 +228,8 @@ fun DayWeekView(
 
                     currentDates.forEach { date ->
                         val isToday = date == LocalDate.now()
+                        val holiday = holidays[date]
+                        val isPublicHoliday = holiday != null && !holiday.isSchoolVacation
 
                         Box(
                             modifier = Modifier
@@ -261,12 +266,32 @@ fun DayWeekView(
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = if (isToday) {
-                                        MaterialTheme.colorScheme.primary
-                                    } else {
-                                        MaterialTheme.colorScheme.onSurface
+                                    color = when {
+                                        isToday -> MaterialTheme.colorScheme.primary
+                                        isPublicHoliday -> CoParentlyColors.HolidayRed
+                                        else -> MaterialTheme.colorScheme.onSurface
                                     }
                                 )
+                                // Holiday name shown in single-day view where there is room
+                                if (holiday != null && daysCount == 1) {
+                                    val holidayName = if (Locale.getDefault().language == "cs") {
+                                        holiday.nameCs
+                                    } else {
+                                        holiday.nameEn
+                                    }
+                                    Text(
+                                        text = holidayName,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontSize = 9.sp,
+                                        maxLines = 1,
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                        color = if (isPublicHoliday) {
+                                            CoParentlyColors.HolidayRed
+                                        } else {
+                                            CoParentlyColors.VacationTint
+                                        }
+                                    )
+                                }
                             }
                         }
                     }
@@ -759,15 +784,36 @@ private fun EventChip(
                 },
             verticalArrangement = Arrangement.Center
         ) {
-            Text(
-                text = event.title,
-                style = MaterialTheme.typography.labelSmall,
-                color = textColor,
-                maxLines = if (totalMinutes >= 60) 2 else 1,
-                fontWeight = FontWeight.SemiBold,
-                textAlign = TextAlign.Start,
-                modifier = Modifier.fillMaxWidth()
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (event.isPrivate) {
+                    Icon(
+                        imageVector = Icons.Default.Lock,
+                        contentDescription = "Private event",
+                        tint = textColor,
+                        modifier = Modifier.size(10.dp)
+                    )
+                }
+                if (event.pickupConfirmedBy != null) {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = "Pickup confirmed by ${event.pickupConfirmedBy}",
+                        tint = textColor,
+                        modifier = Modifier.size(10.dp)
+                    )
+                }
+                Text(
+                    text = event.title,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = textColor,
+                    maxLines = if (totalMinutes >= 60) 2 else 1,
+                    fontWeight = FontWeight.SemiBold,
+                    textAlign = TextAlign.Start,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
             // Always show time if enough space, or if resizing (to give feedback)
             if (totalMinutes >= 45 || isResizingStart || isResizingEnd) {
                 Text(

@@ -146,10 +146,9 @@ fun ViewModeDropdown(
  * Gets display label for calendar view mode.
  */
 private fun getModeLabel(mode: CalendarViewMode): String = when (mode) {
-    CalendarViewMode.DAY -> "Day"
-    CalendarViewMode.THREE_DAYS -> "3 Days"
-    CalendarViewMode.WEEK -> "Week"
     CalendarViewMode.MONTH -> "Month"
+    CalendarViewMode.WEEK -> "Week"
+    CalendarViewMode.DAY -> "Day"
 }
 
 // ==================== Previews ====================

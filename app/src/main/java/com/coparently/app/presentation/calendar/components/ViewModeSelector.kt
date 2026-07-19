@@ -79,10 +79,9 @@ fun ViewModeSelector(
             .semantics {
                 contentDescription = "Calendar view mode selector. Currently selected: ${
                     when (selectedMode) {
-                        CalendarViewMode.DAY -> "Day view"
-                        CalendarViewMode.THREE_DAYS -> "3 Days view"
-                        CalendarViewMode.WEEK -> "Week view"
                         CalendarViewMode.MONTH -> "Month view"
+                        CalendarViewMode.WEEK -> "Week view"
+                        CalendarViewMode.DAY -> "Day view"
                     }
                 }"
             }
@@ -112,10 +111,9 @@ fun ViewModeSelector(
             modes.forEach { mode ->
                 val isSelected = mode == selectedMode
                 val modeLabel = when (mode) {
-                    CalendarViewMode.DAY -> "Day"
-                    CalendarViewMode.THREE_DAYS -> "3 Days"
-                    CalendarViewMode.WEEK -> "Week"
                     CalendarViewMode.MONTH -> "Month"
+                    CalendarViewMode.WEEK -> "Week"
+                    CalendarViewMode.DAY -> "Day"
                 }
 
                 Box(

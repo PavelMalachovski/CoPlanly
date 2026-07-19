@@ -54,14 +54,16 @@ fun CalendarHeader(
             )
         },
         title = {
+            val yearMonth = YearMonth.from(selectedDate)
             Text(
                 text = "${
-                    YearMonth.from(selectedDate).month.getDisplayName(
-                        java.time.format.TextStyle.SHORT,
+                    yearMonth.month.getDisplayName(
+                        java.time.format.TextStyle.FULL_STANDALONE,
                         java.util.Locale.getDefault()
-                    ).take(3).uppercase()
-                } ${YearMonth.from(selectedDate).year}",
-                style = MaterialTheme.typography.headlineMedium,
+                    ).replaceFirstChar { it.uppercase() }
+                } ${yearMonth.year}",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
