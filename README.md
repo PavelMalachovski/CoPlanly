@@ -2,7 +2,7 @@
 
 <div align="center">
 
-**Современное Android-приложение для совместного календаря родителей**
+**A modern Android app that helps separated parents coordinate childcare — together.**
 
 [![Android](https://img.shields.io/badge/Android-8.0%2B-green.svg)](https://www.android.com)
 [![Kotlin](https://img.shields.io/badge/Kotlin-1.9-blue.svg)](https://kotlinlang.org)
@@ -13,436 +13,165 @@
 
 ---
 
-## 📖 Описание
+## Overview
 
-**CoParently** — это минималистичное и интуитивно понятное Android-приложение, которое помогает разведённым или отдельно проживающим родителям эффективно координировать уход за детьми (или домашними животными 🐶). Приложение синхронизируется с Google Calendar и предоставляет удобные инструменты для управления расписанием и событиями.
+**CoParently** is a shared-calendar app for divorced or separately living parents. Both parents
+see one custody calendar, coordinate events around the child, confirm pickups, track expenses,
+chat, and keep medical/school records in one place — with offline-first local storage and
+Firebase sync between the two households.
 
-### ✨ Ключевые особенности
+### Key features
 
-- 📱 **Современный UI** с Jetpack Compose и Material 3
-- 🔄 **Синхронизация** с Google Calendar
-- 👥 **Совместный доступ** для обоих родителей
-- 🎨 **Цветовая индикация** опеки (розовый/синий)
-- 📊 **4 режима просмотра**: День, 3 дня, Неделя, Месяц
-- 🌐 **Мультиязычность**: Английский, Чешский, Русский
-- 🌓 **Темная/светлая темы**
-- ⚡ **Быстрая навигация** с помощью свайпов и стрелок
-
----
-
-## 🎯 Основные функции
-
-### 📅 Гибкое отображение календаря
-
-#### Режимы просмотра
-- **День** — детальный почасовой view с событиями
-- **3 дня** — краткосрочное планирование
-- **Неделя** — недельный обзор расписания
-- **Месяц** — полный месячный календарь с 7 неделями
-
-#### Навигация
-- ⬅️➡️ **Стрелки в топ-баре** для быстрого переключения
-- 👆 **Свайп-жесты** (влево/вправо) для смены периодов
-- 🎬 **Плавные анимации** переходов между датами
-- 📆 **Клик по дате** для выбора конкретного дня
-
-### 🎨 Визуальная индикация
-
-- **Цветовая схема родителей:**
-  - 💗 Розовый — дни с мамой
-  - 💙 Синий — дни с папой
-- **Номера недель** в месячном представлении
-- **Индикаторы событий** с компактными метками
-- **Выделение текущего дня** с анимацией
-
-### 🔄 Синхронизация
-
-- ✅ Двусторонняя синхронизация с Google Calendar
-- 🔐 Безопасное хранение токенов (EncryptedSharedPreferences)
-- 📡 Offline-first подход с локальным кэшированием
-- 🔕 Возможность отключения синхронизации
-
-### 👨‍👩‍👧 Совместное использование
-
-- 👥 Приглашение второго родителя по email
-- 🔒 Разграничение прав доступа
-- 🔔 Push-уведомления о изменениях
-- 📊 Общий календарь с real-time обновлениями
+- 🗓 **Custody calendar** — Month / Week / Day views, custody model setup (including %-based
+  splits), pink/blue color coding for Mom/Dad days
+- 👥 **Parent views** — switch between "Mom", "Dad" and the mutual "Both" view
+- 🏷 **Event types & filters** — default types (general, medical, school, sports, birthday),
+  user-defined types, and per-type visibility filters (e.g. hide school events in July)
+- 🔁 **Recurring events** — daily / weekly / biweekly / monthly with an optional end date
+- ✅ **Pickup confirmation** — one parent confirms the pickup, the other side sees it
+- ⏰ **Reminders** — local notifications 30 min or 1 h before an event
+- 🇨🇿 **Czech holidays** — public holidays (computed for any year) and national school
+  vacations shown directly in the calendar, with a toggle
+- 🔒 **Private events** — events only you can see; they never leave your device
+- 🔄 **Sync** — two-way Google Calendar sync + Firestore sync between parents
+- 💬 **Chat**, 💰 **expense tracking**, 🏥 **medical records**, 🎓 **school module**,
+  🤖 **AI assistance** (Gemini): natural-language event entry, conflict monitoring, suggestions
+- 🌍 **Localization** — English, Czech, Russian; light & dark themes
 
 ---
 
-## 🏗️ Технологии и архитектура
+## Tech stack
 
-### Технологический стек
-
-| Категория | Технология |
+| Category | Technology |
 |-----------|------------|
-| **Язык** | Kotlin 1.9+ |
-| **UI Framework** | Jetpack Compose |
-| **Design System** | Material 3 |
-| **Архитектура** | Clean Architecture (MVVM) |
-| **DI** | Hilt |
-| **Локальная БД** | Room |
-| **Backend** | Firebase (Auth, Firestore, FCM) |
-| **API** | Google Calendar API |
-| **Минимальный SDK** | 26 (Android 8.0 Oreo) |
+| Language | Kotlin 1.9+ |
+| UI | Jetpack Compose, Material 3 (expressive theme, Poppins) |
+| Architecture | Clean Architecture (domain / data / presentation), MVVM |
+| DI | Hilt |
+| Local DB | Room (schema v9, exported schemas in `app/schemas`) |
+| Background work | WorkManager (+ HiltWorkerFactory) |
+| Backend | Firebase: Auth, Firestore, Cloud Messaging, Crashlytics, Analytics, Remote Config |
+| Cloud Functions | `functions/` (Node.js) — notification fan-out |
+| APIs | Google Calendar API, Gemini (generative AI) |
+| Min / target SDK | 26 / 34 |
 
-### Структура проекта
+### Project structure
 
 ```
-app/
+app/src/main/java/com/coparently/app/
 ├── data/
-│   ├── local/           # Room database, DAOs
-│   ├── remote/          # API clients (Google Calendar, Firebase)
-│   ├── repository/      # Repository implementations
-│   └── sync/            # Synchronization logic
+│   ├── local/            # Room database, DAOs, entities, migrations, encrypted prefs
+│   ├── remote/           # Firebase (auth, Firestore, FCM, pairing), Google, AI clients
+│   ├── repository/       # Repository implementations
+│   ├── notification/     # FCM setup + event reminder scheduling (WorkManager)
+│   └── sync/             # Google Calendar & Firestore sync, conflict resolution
 ├── domain/
-│   ├── model/           # Domain entities
-│   ├── repository/      # Repository interfaces
-│   └── usecase/         # Business logic use cases
+│   ├── model/            # Domain entities (Event, User, CustodyModel, …)
+│   ├── holidays/         # Czech public holidays & school vacations provider
+│   ├── notification/     # ReminderScheduler abstraction
+│   ├── repository/       # Repository interfaces
+│   └── usecase/          # Business logic (event CRUD, recurrence expansion, AI, …)
 ├── presentation/
-│   ├── calendar/        # Calendar screens (Day, Week, Month views)
-│   ├── event/           # Event management screens
-│   ├── settings/        # Settings and configuration
-│   └── theme/           # Material3 theming
-└── di/                  # Hilt dependency injection modules
+│   ├── calendar/         # Calendar screens, views, filters, custody helpers
+│   ├── event/            # Event list + add/edit screens
+│   ├── chat/ expenses/ childinfo/ custody/ pairing/ settings/ ai/ auth/ sync/
+│   └── theme/            # Material 3 theme: colors, typography, shapes, dimensions
+└── di/                   # Hilt modules
 ```
-
-### Архитектурные принципы
-
-✅ **Clean Architecture** — четкое разделение слоёв
-✅ **SOLID принципы** — расширяемый и поддерживаемый код
-✅ **Stateless UI** — все Compose компоненты не хранят состояние
-✅ **Single Source of Truth** — ViewModel как единственный источник истины
-✅ **Unidirectional Data Flow** — предсказуемый поток данных
 
 ---
 
-## 🚀 Быстрый старт
+## Getting started
 
-### Предварительные требования
+### Prerequisites
 
-- Android Studio Hedgehog (2023.1.1) или новее
+- Android Studio Hedgehog (2023.1.1) or newer
 - JDK 17+
-- Android SDK 26+
-- Google Services JSON (для Firebase и Google Calendar)
+- A Firebase project with `google-services.json`
 
-### Установка
+### Setup
 
-1. **Клонируйте репозиторий:**
-```bash
-git clone https://github.com/your-username/CoParently.git
-cd CoParently
-```
-
-2. **Настройте Google Services:**
-   - Создайте проект в [Firebase Console](https://console.firebase.google.com)
-   - Скачайте `google-services.json`
-   - Поместите файл в `app/google-services.json`
-   - См. подробную инструкцию: [docs/google-oauth-setup.md](docs/google-oauth-setup.md)
-
-3. **Откройте проект в Android Studio:**
-```bash
-studio .
-# или откройте через File > Open
-```
-
-4. **Синхронизируйте зависимости:**
-   - Android Studio автоматически предложит синхронизацию
-   - Или выполните: `File > Sync Project with Gradle Files`
-
-5. **Запустите приложение:**
-   - Выберите эмулятор или подключенное устройство
-   - Нажмите Run (▶️) или `Shift+F10`
-
----
-
-## 🔨 Сборка
-
-### Debug сборка
-
-```bash
-./gradlew clean assembleDebug
-```
-
-APK будет находиться в:
-`app/build/outputs/apk/debug/app-debug.apk`
-
-### Release сборка
-
-```bash
-./gradlew clean assembleRelease
-```
-
-⚠️ Для release-сборки необходимо настроить подпись в `app/build.gradle.kts`
-
----
-
-## 🧪 Тестирование
-
-### Unit тесты
-
-```bash
-./gradlew test
-```
-
-### Instrumented тесты
-
-```bash
-./gradlew connectedAndroidTest
-```
-
-### Lint проверка
-
-```bash
-./gradlew lint
-```
-
-### Покрытие кода
-
-```bash
-./gradlew jacocoTestReport
-```
-
----
-
-## 📚 Документация
-
-### Основная документация
-
-- [📋 Roadmap](.cursor/roadmap.md) — план развития проекта
-- [🎨 UI/UX Improvements (v1)](docs/ui-improvements-nov-2025.md) — первая волна улучшений
-- [🎨 UI/UX Improvements (v2)](docs/ui-improvements-nov-2025-v2.md) — навигация и анимации
-- [🔧 Google OAuth Setup](docs/google-oauth-setup.md) — настройка OAuth
-- [🐛 Troubleshooting](docs/troubleshoot-access-token.md) — решение проблем
-
-### Правила разработки
-
-- [📜 Project Rules](.cursorrules) — правила кодирования проекта
-
----
-
-## 🎨 Последние улучшения (Ноябрь 2025)
-
-### v2.0 — Навигация и UX
-
-#### ✨ Новые возможности:
-1. **Горизонтальные свайпы** 👆
-   - Свайп влево → следующий период
-   - Свайп вправо → предыдущий период
-   - Работает во всех режимах просмотра
-
-2. **Навигационные стрелки** ⬅️➡️
-   - Стрелки в топ-баре для точного контроля
-   - Разная логика для каждого режима
-   - Material Icons с поддержкой RTL
-
-3. **Плавные анимации** 🎬
-   - `slideInHorizontally` / `slideOutHorizontally`
-   - Направление зависит от движения
-   - Fade-эффекты для плавности
-
-4. **Расширенный месячный view** 📅
-   - 7 недель вместо 5 (полное использование экрана)
-   - Номера недель слева от календаря
-   - Компактные метки событий
-   - Дни из соседних месяцев для контекста
-
-5. **Исправлена проблема с текстом** ✂️
-   - Дата больше не обрезается
-   - Центрированный текст
-   - Адаптивная ширина
-
-#### 📊 Результаты:
-- ⚡ **На 50% быстрее** навигация по календарю
-- 🎯 **100% использование** экрана в месячном view
-- 📱 **3 способа** навигации (свайпы, стрелки, выбор даты)
-- ✨ **Плавные анимации** во всех переходах
-
----
-
-## 🗺️ Roadmap
-
-### ✅ Завершено (v1.0 - v2.0)
-
-- [x] Базовый календарь с Room
-- [x] Интеграция с Google Calendar
-- [x] Firebase Authentication
-- [x] Совместный доступ между родителями
-- [x] Push-уведомления (FCM)
-- [x] 4 режима просмотра (День, 3 дня, Неделя, Месяц)
-- [x] Темная/светлая темы
-- [x] Мультиязычность (EN, CS, RU)
-- [x] Свайп-навигация
-- [x] Анимированные переходы
-- [x] Месячный view с 7 неделями
-
-### 🚧 В разработке (v2.1)
-
-- [ ] **Beta-релиз в Google Play Console**
-  - [ ] Закрытое тестирование
-  - [ ] Firebase Crashlytics и Analytics
-  - [ ] Сбор обратной связи
-
-### 🔮 Запланировано (v3.0+)
-
-#### Краткосрочные (1-2 месяца)
-- [ ] **Виджет для домашнего экрана**
-  - Быстрый просмотр расписания
-  - Показ ближайших событий
-  - Индикация опеки на сегодня
-
-- [ ] **Улучшенное добавление событий**
-  - Drag-and-drop в календаре
-  - Быстрое добавление по long press
-  - Шаблоны событий (школа, тренировка, врач)
-
-- [ ] **Offline режим**
-  - Полная функциональность без интернета
-  - Sync queue для отложенных операций
-  - Индикатор статуса синхронизации
-
-#### Среднесрочные (3-6 месяцев)
-- [ ] **Трекер расходов** 💰
-  - Учет расходов на ребенка
-  - Категории (одежда, образование, медицина)
-  - Распределение между родителями
-  - Экспорт отчетов
-
-- [ ] **Встроенный чат** 💬
-  - Обмен сообщениями между родителями
-  - Прикрепление файлов и фото
-  - Push-уведомления о новых сообщениях
-  - История переписки
-
-- [ ] **Документы и файлы** 📎
-  - Хранение важных документов
-  - Медицинские справки
-  - Школьные отчеты
-  - Фотографии
-
-#### Долгосрочные (6-12 месяцев)
-- [ ] **iOS версия** 🍎
-  - Kotlin Multiplatform Mobile (KMM)
-  - Общая бизнес-логика
-  - Native UI для iOS (SwiftUI)
-
-- [ ] **Модуль для питомцев** 🐶
-  - Расписание выгула
-  - Ветеринарные визиты
-  - Кормление и уход
-
-- [ ] **CoParent Tips** 💡
-  - Советы по совместному воспитанию
-  - Психологическая поддержка
-  - Статьи и ресурсы
-  - Сообщество родителей
-
-- [ ] **Голосовые заметки** 🎤
-  - Быстрые голосовые напоминания
-  - Транскрипция в текст
-  - Прикрепление к событиям
-
----
-
-## 🤝 Вклад в проект
-
-Мы приветствуем вклад в развитие CoParently! Пожалуйста, следуйте этим рекомендациям:
-
-### Как внести вклад
-
-1. **Fork репозитория**
-2. **Создайте feature branch:**
+1. **Clone the repository**
    ```bash
-   git checkout -b feature/amazing-feature
-   ```
-3. **Следуйте правилам проекта:**
-   - Используйте только Jetpack Compose (без XML)
-   - Все UI компоненты должны быть stateless
-   - Придерживайтесь Material 3
-   - Добавляйте KDoc комментарии
-   - Пишите тесты для новой функциональности
-
-4. **Commit изменений:**
-   ```bash
-   git commit -m 'feat: Add amazing feature'
+   git clone https://github.com/your-username/CoParently.git
+   cd CoParently
    ```
 
-5. **Push в branch:**
+2. **Configure Firebase / Google services**
+   - Create a project in the [Firebase Console](https://console.firebase.google.com)
+   - Download `google-services.json` into `app/`
+   - Follow [docs/google-oauth-setup.md](docs/google-oauth-setup.md) for Google Calendar OAuth
+
+3. **(Optional) Gemini AI** — put `GEMINI_API_KEY=…` into `gradle.properties`
+   or export it as an environment variable.
+
+4. **Build & run**
    ```bash
-   git push origin feature/amazing-feature
+   ./gradlew assembleDebug
    ```
+   The APK lands in `app/build/outputs/apk/debug/`.
 
-6. **Откройте Pull Request**
+### Tests & quality
 
-### Соглашения о коммитах
-
-Используйте [Conventional Commits](https://www.conventionalcommits.org/):
-
-- `feat:` — новая функция
-- `fix:` — исправление бага
-- `docs:` — обновление документации
-- `style:` — форматирование кода
-- `refactor:` — рефакторинг
-- `test:` — добавление тестов
-- `chore:` — технические изменения
+```bash
+./gradlew test                   # JVM unit tests
+./gradlew connectedAndroidTest   # instrumented tests (device/emulator)
+./gradlew lint detekt            # static analysis
+```
 
 ---
 
-## 🐛 Сообщения об ошибках
+## Documentation
 
-Нашли баг? Пожалуйста, создайте [Issue](https://github.com/your-username/CoParently/issues) с:
-
-- Описанием проблемы
-- Шагами воспроизведения
-- Ожидаемым поведением
-- Скриншотами (если применимо)
-- Версией Android и устройством
-
----
-
-## 📄 Лицензия
-
-Этот проект распространяется под лицензией MIT. См. файл [LICENSE](LICENSE) для подробностей.
+| Document | Purpose |
+|---|---|
+| [Roadmap (MVP phases)](docs/CoPlanly/MVP_phases.md) | **Authoritative roadmap** — MVP 1 done, MVP 2 next |
+| [Project audit (July 2026)](docs/AUDIT-2026-07.md) | Full architecture/security/quality audit |
+| [CLAUDE.md](CLAUDE.md) | Guide for AI-assisted development in this repo |
+| [Firebase setup](docs/firebase-setup.md) · [quick start](docs/firebase-quick-start.md) | Backend configuration |
+| [Google OAuth setup](docs/google-oauth-setup.md) | Calendar API auth |
+| [Data structure](docs/data-structure.md) | Firestore/Room data model |
+| [Deployment guide](docs/deployment-guide.md) | Release process |
+| [Contributing](docs/CONTRIBUTING.md) | How to contribute |
+| `docs/archive/` | Historical one-off fix notes and stage reports |
 
 ---
 
-## 👥 Команда
+## Roadmap status
 
-- **Product Manager & Developer** — [Your Name]
-- **UI/UX Designer** — [Designer Name]
+**✅ MVP 1 — Foundation & Core Calendar (complete)**
+Custody model setup, Month→Week→Day views, Mom/Both/Dad view switch, custom event types
+with filters, recurrence, pickup confirmation, event reminders, Czech holidays & school
+vacations, private events, weekend colors.
 
----
+**🚧 MVP 2 — Communication, Receipts & Dashboards (next)**
+Receipts, change requests on events, weekly summary dashboard, first-screen feed of the
+last 5 changes, structured chat change-requests, image attachments.
 
-## 📞 Контакты
+**🔮 MVP 3 — Automation & Integrations**
+Bakaláři/Edupage import, payments, CSV/PDF exports, intelligent suggestions,
+minute-precision drag resizing.
 
-- 🌐 Website: [coparently.app](https://coparently.app)
-- 📧 Email: support@coparently.app
-- 🐦 Twitter: [@CoParentlyApp](https://twitter.com/CoParentlyApp)
-- 💬 Discord: [CoParently Community](https://discord.gg/coparently)
-
----
-
-## 🙏 Благодарности
-
-- [Jetpack Compose](https://developer.android.com/jetpack/compose) — за потрясающий UI toolkit
-- [Firebase](https://firebase.google.com) — за надежный backend
-- [Material Design](https://m3.material.io) — за дизайн-систему
-- [Kizitonwose Calendar](https://github.com/kizitonwose/Calendar) — за библиотеку календаря
-- Всем разработчикам open-source библиотек, использованных в проекте
+See [MVP_phases.md](docs/CoPlanly/MVP_phases.md) for the full feature matrix.
 
 ---
 
-## ⭐ Star History
+## Contributing
 
-Если вам нравится проект, поставьте ⭐ на GitHub!
+1. Fork and create a feature branch (`feature/amazing-feature`)
+2. Follow the project rules (see [CLAUDE.md](CLAUDE.md) / [.cursorrules](.cursorrules)):
+   Compose-only UI, stateless components, Hilt DI, KDoc comments, tests for repositories
+3. Use [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `docs:`, …)
+4. Open a Pull Request
 
 ---
+
+## License
+
+MIT — see [LICENSE](LICENSE).
 
 <div align="center">
 
-**Сделано с ❤️ для родителей и детей**
-
-[⬆ Наверх](#-coparently)
+**Made with ❤️ for parents and kids**
 
 </div>
