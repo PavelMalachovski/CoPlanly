@@ -12,7 +12,8 @@ import javax.inject.Inject
 class DeleteEventUseCase @Inject constructor(
     private val eventRepository: EventRepository,
     private val analyticsManager: AnalyticsManager,
-    private val crashlyticsManager: CrashlyticsManager
+    private val crashlyticsManager: CrashlyticsManager,
+    private val reminderScheduler: com.coparently.app.domain.notification.ReminderScheduler
 ) {
     /**
      * Deletes an event.
@@ -21,6 +22,7 @@ class DeleteEventUseCase @Inject constructor(
     suspend operator fun invoke(event: Event): Result<Unit> {
         return try {
             eventRepository.deleteEvent(event)
+            reminderScheduler.cancel(event.id)
 
             // Log analytics
             analyticsManager.logEventDeleted(event.eventType)
@@ -38,6 +40,7 @@ class DeleteEventUseCase @Inject constructor(
     suspend fun deleteById(eventId: String): Result<Unit> {
         return try {
             eventRepository.deleteEventById(eventId)
+            reminderScheduler.cancel(eventId)
             Result.success(Unit)
         } catch (e: Exception) {
             crashlyticsManager.recordException(e)

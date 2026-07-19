@@ -7,10 +7,10 @@ import com.coparently.app.data.remote.firebase.FirestoreEventDataSource
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.repository.EventRepository
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
-import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -18,6 +18,9 @@ import javax.inject.Singleton
  * Implementation of EventRepository.
  * Maps between domain models (Event) and data layer entities (EventEntity).
  * Integrates Firebase Firestore for multi-user sync.
+ *
+ * Private events (isPrivate = true) are never pushed to Firestore, so they
+ * stay visible only on the creator's device.
  */
 @Singleton
 class EventRepositoryImpl @Inject constructor(
@@ -27,6 +30,7 @@ class EventRepositoryImpl @Inject constructor(
 ) : EventRepository {
 
     private val dateFormatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
+    private val dateOnlyFormatter = DateTimeFormatter.ISO_LOCAL_DATE
 
     override fun getAllEvents(): Flow<List<Event>> {
         return eventDao.getAllEvents().map { entities ->
@@ -35,8 +39,19 @@ class EventRepositoryImpl @Inject constructor(
     }
 
     override fun getEventsByDateRange(start: LocalDateTime, end: LocalDateTime): Flow<List<Event>> {
-        return eventDao.getEventsByDateRange(start, end).map { entities ->
-            entities.map { it.toDomain() }
+        // Non-recurring events matched by the query + recurring events expanded
+        // into their occurrences within the range.
+        return kotlinx.coroutines.flow.combine(
+            eventDao.getSingleEventsByDateRange(start, end),
+            eventDao.getRecurringEventsStartedBefore(end)
+        ) { single, recurring ->
+            val singleEvents = single.map { it.toDomain() }
+            val occurrences = com.coparently.app.domain.usecase.RecurrenceExpander.expandAll(
+                recurring.map { it.toDomain() },
+                start,
+                end
+            )
+            (singleEvents + occurrences).sortedBy { it.startDateTime }
         }
     }
 
@@ -57,64 +72,36 @@ class EventRepositoryImpl @Inject constructor(
     }
 
     override suspend fun insertEvent(event: Event) {
-        val entity = event.toEntity()
-        eventDao.insertEvent(entity)
+        eventDao.insertEvent(event.toEntity())
 
-        // Sync to Firestore if authenticated
         val firebaseUser = firebaseAuthService.getCurrentUser()
-        if (firebaseUser != null && !event.syncedToFirestore) {
-            val eventData = mapOf(
-                "id" to event.id,
-                "title" to event.title,
-                "description" to (event.description ?: ""),
-                "startDateTime" to event.startDateTime.format(dateFormatter),
-                "endDateTime" to (event.endDateTime?.format(dateFormatter) ?: ""),
-                "eventType" to event.eventType,
-                "parentOwner" to event.parentOwner,
-                "isRecurring" to event.isRecurring,
-                "recurrencePattern" to (event.recurrencePattern ?: ""),
-                "createdAt" to event.createdAt.format(dateFormatter),
-                "updatedAt" to event.updatedAt.format(dateFormatter),
-                "createdByFirebaseUid" to firebaseUser.uid
-            )
-            firestoreEventDataSource.insertEvent(event.id, eventData)
+        if (firebaseUser != null && !event.syncedToFirestore && !event.isPrivate) {
+            firestoreEventDataSource.insertEvent(event.id, event.toFirestoreMap(firebaseUser.uid))
 
-            // Mark as synced
             val syncedEvent = event.copy(syncedToFirestore = true, createdByFirebaseUid = firebaseUser.uid)
             eventDao.updateEvent(syncedEvent.toEntity())
         }
     }
 
     override suspend fun updateEvent(event: Event) {
-        val entity = event.toEntity()
-        eventDao.updateEvent(entity)
+        eventDao.updateEvent(event.toEntity())
 
-        // Sync to Firestore if authenticated
-        val firebaseUser = firebaseAuthService.getCurrentUser()
-        if (firebaseUser != null) {
-            val eventData = mapOf(
-                "id" to event.id,
-                "title" to event.title,
-                "description" to (event.description ?: ""),
-                "startDateTime" to event.startDateTime.format(dateFormatter),
-                "endDateTime" to (event.endDateTime?.format(dateFormatter) ?: ""),
-                "eventType" to event.eventType,
-                "parentOwner" to event.parentOwner,
-                "isRecurring" to event.isRecurring,
-                "recurrencePattern" to (event.recurrencePattern ?: ""),
-                "createdAt" to event.createdAt.format(dateFormatter),
-                "updatedAt" to event.updatedAt.format(dateFormatter),
-                "createdByFirebaseUid" to (event.createdByFirebaseUid ?: firebaseUser.uid)
-            )
-            firestoreEventDataSource.updateEvent(event.id, eventData)
+        val firebaseUser = firebaseAuthService.getCurrentUser() ?: return
+        if (event.isPrivate) {
+            // Event turned private after being shared: remove the remote copy
+            if (event.syncedToFirestore) {
+                firestoreEventDataSource.deleteEvent(event.id)
+                eventDao.updateEvent(event.copy(syncedToFirestore = false).toEntity())
+            }
+        } else {
+            val uid = event.createdByFirebaseUid ?: firebaseUser.uid
+            firestoreEventDataSource.updateEvent(event.id, event.toFirestoreMap(uid))
         }
     }
 
     override suspend fun deleteEvent(event: Event) {
-        val entity = event.toEntity()
-        eventDao.deleteEvent(entity)
+        eventDao.deleteEvent(event.toEntity())
 
-        // Delete from Firestore if authenticated
         val firebaseUser = firebaseAuthService.getCurrentUser()
         if (firebaseUser != null && event.syncedToFirestore) {
             firestoreEventDataSource.deleteEvent(event.id)
@@ -129,34 +116,44 @@ class EventRepositoryImpl @Inject constructor(
     override suspend fun syncWithFirestore() {
         val firebaseUser = firebaseAuthService.getCurrentUser() ?: return
 
-        // Fetch unsynced events from local database
-        val allEvents = eventDao.getAllEvents()
-        allEvents.collect { entities ->
-            entities.forEach { entity ->
-                if (!entity.syncedToFirestore) {
-                    val event = entity.toDomain()
-                    val eventData = mapOf(
-                        "id" to event.id,
-                        "title" to event.title,
-                        "description" to (event.description ?: ""),
-                        "startDateTime" to event.startDateTime.format(dateFormatter),
-                        "endDateTime" to (event.endDateTime?.format(dateFormatter) ?: ""),
-                        "eventType" to event.eventType,
-                        "parentOwner" to event.parentOwner,
-                        "isRecurring" to event.isRecurring,
-                        "recurrencePattern" to (event.recurrencePattern ?: ""),
-                        "createdAt" to event.createdAt.format(dateFormatter),
-                        "updatedAt" to event.updatedAt.format(dateFormatter),
-                        "createdByFirebaseUid" to firebaseUser.uid
-                    )
-                    firestoreEventDataSource.insertEvent(event.id, eventData)
+        // Take a single snapshot; collecting the flow here would never complete
+        val entities = eventDao.getAllEvents().first()
+        entities.forEach { entity ->
+            if (!entity.syncedToFirestore && !entity.isPrivate) {
+                val event = entity.toDomain()
+                firestoreEventDataSource.insertEvent(event.id, event.toFirestoreMap(firebaseUser.uid))
 
-                    // Mark as synced
-                    val syncedEvent = event.copy(syncedToFirestore = true, createdByFirebaseUid = firebaseUser.uid)
-                    eventDao.updateEvent(syncedEvent.toEntity())
-                }
+                val syncedEvent = event.copy(syncedToFirestore = true, createdByFirebaseUid = firebaseUser.uid)
+                eventDao.updateEvent(syncedEvent.toEntity())
             }
         }
+    }
+
+    /**
+     * Builds the Firestore document map for this event.
+     * Single source of truth for the remote schema.
+     */
+    private fun Event.toFirestoreMap(creatorUid: String): Map<String, Any?> {
+        return mapOf(
+            "id" to id,
+            "title" to title,
+            "description" to (description ?: ""),
+            "startDateTime" to startDateTime.format(dateFormatter),
+            "endDateTime" to (endDateTime?.format(dateFormatter) ?: ""),
+            "eventType" to eventType,
+            "parentOwner" to parentOwner,
+            "isRecurring" to isRecurring,
+            "recurrencePattern" to (recurrencePattern ?: ""),
+            "recurrenceEndDate" to (recurrenceEndDate?.format(dateOnlyFormatter) ?: ""),
+            "pickupConfirmedBy" to (pickupConfirmedBy ?: ""),
+            "pickupConfirmedAt" to (pickupConfirmedAt?.format(dateFormatter) ?: ""),
+            "createdAt" to createdAt.format(dateFormatter),
+            "updatedAt" to updatedAt.format(dateFormatter),
+            "createdByFirebaseUid" to creatorUid,
+            "sharedWith" to sharedWith,
+            "lastModifiedBy" to (lastModifiedBy ?: creatorUid),
+            "permissions" to permissions
+        )
     }
 
     /**
@@ -176,7 +173,12 @@ class EventRepositoryImpl @Inject constructor(
             createdAt = createdAt,
             updatedAt = updatedAt,
             syncedToFirestore = syncedToFirestore,
-            createdByFirebaseUid = createdByFirebaseUid
+            createdByFirebaseUid = createdByFirebaseUid,
+            isPrivate = isPrivate,
+            recurrenceEndDate = recurrenceEndDate,
+            pickupConfirmedBy = pickupConfirmedBy,
+            pickupConfirmedAt = pickupConfirmedAt,
+            reminderMinutes = reminderMinutes
         )
     }
 
@@ -197,8 +199,12 @@ class EventRepositoryImpl @Inject constructor(
             createdAt = createdAt,
             updatedAt = updatedAt,
             syncedToFirestore = syncedToFirestore,
-            createdByFirebaseUid = createdByFirebaseUid
+            createdByFirebaseUid = createdByFirebaseUid,
+            isPrivate = isPrivate,
+            recurrenceEndDate = recurrenceEndDate,
+            pickupConfirmedBy = pickupConfirmedBy,
+            pickupConfirmedAt = pickupConfirmedAt,
+            reminderMinutes = reminderMinutes
         )
     }
 }
-

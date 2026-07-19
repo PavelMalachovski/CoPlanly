@@ -74,11 +74,37 @@ object DatabaseMigrations {
     }
 
     /**
+     * Migration from version 8 to 9.
+     * Adds MVP1 fields to events: private events, pickup confirmation,
+     * reminder offset and recurrence end date.
+     */
+    val MIGRATION_8_9 = object : Migration(8, 9) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL(
+                "ALTER TABLE events ADD COLUMN isPrivate INTEGER NOT NULL DEFAULT 0"
+            )
+            database.execSQL(
+                "ALTER TABLE events ADD COLUMN recurrenceEndDate TEXT"
+            )
+            database.execSQL(
+                "ALTER TABLE events ADD COLUMN pickupConfirmedBy TEXT"
+            )
+            database.execSQL(
+                "ALTER TABLE events ADD COLUMN pickupConfirmedAt TEXT"
+            )
+            database.execSQL(
+                "ALTER TABLE events ADD COLUMN reminderMinutes INTEGER"
+            )
+        }
+    }
+
+    /**
      * List of all migrations in order.
      */
     val ALL_MIGRATIONS = arrayOf(
         MIGRATION_5_6,
         MIGRATION_6_7,
-        MIGRATION_7_8
+        MIGRATION_7_8,
+        MIGRATION_8_9
     )
 }

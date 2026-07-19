@@ -15,7 +15,8 @@ class UpdateEventUseCase @Inject constructor(
     private val eventRepository: EventRepository,
     private val eventValidator: EventValidator,
     private val analyticsManager: AnalyticsManager,
-    private val crashlyticsManager: CrashlyticsManager
+    private val crashlyticsManager: CrashlyticsManager,
+    private val reminderScheduler: com.coparently.app.domain.notification.ReminderScheduler
 ) {
     /**
      * Updates an existing event.
@@ -34,6 +35,9 @@ class UpdateEventUseCase @Inject constructor(
 
             // Update event
             eventRepository.updateEvent(updatedEvent)
+
+            // Reschedule (or cancel) the reminder to match the new state
+            reminderScheduler.schedule(updatedEvent)
 
             // Log analytics
             analyticsManager.logEventUpdated(updatedEvent.eventType)

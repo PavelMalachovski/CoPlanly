@@ -239,6 +239,29 @@ class EncryptedPreferences @Inject constructor(
     }
 
     /**
+     * Stores a string value.
+     *
+     * @param key The key name
+     * @param value The string value
+     */
+    fun putString(key: String, value: String) {
+        encryptedPreferences.edit()
+            .putString(key, value)
+            .apply()
+    }
+
+    /**
+     * Retrieves a string value.
+     *
+     * @param key The key name
+     * @param defaultValue The default value if not found
+     * @return The string value
+     */
+    fun getString(key: String, defaultValue: String? = null): String? {
+        return encryptedPreferences.getString(key, defaultValue)
+    }
+
+    /**
      * Stores event draft data as JSON string.
      * Issue 1.3: Draft saving functionality.
      */
