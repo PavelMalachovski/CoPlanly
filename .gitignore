@@ -77,9 +77,9 @@ captures/
 # Google Services (e.g. APIs or Firebase)
 google-services.json
 
-# Strings file (contains API keys, client secrets, etc.)
-app/src/main/res/values/strings.xml
-app/src/main/res/values-*/strings.xml
+# Note: strings.xml files are tracked. Secrets are NOT stored in them —
+# the OAuth client secret is injected via BuildConfig (GOOGLE_CLIENT_SECRET
+# gradle property / env var); the public web client ID is a normal resource.
 
 # Freeline
 freeline.py
