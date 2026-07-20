@@ -7,6 +7,12 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.CAMERA" />
 
+    <!-- Camera is used for QR pairing only; keep it optional so devices without a
+         camera (e.g. some ChromeOS/tablets) can still install the app. -->
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="false" />
+
     <application
         android:name=".CoParentlyApplication"
         android:allowBackup="true"
@@ -53,6 +59,23 @@
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
             </intent-filter>
         </service>
+
+        <!--
+          WorkManager is initialized on-demand via Hilt (CoParentlyApplication implements
+          Configuration.Provider). Remove the default WorkManagerInitializer that the
+          work-runtime library merges in, so it does not conflict with the custom
+          configuration. Required by the RemoveWorkManagerInitializer lint check.
+        -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.work.WorkManagerInitializer"
+                android:value="androidx.startup"
+                tools:node="remove" />
+        </provider>
 
         <!-- Default notification channel ID for FCM -->
         <meta-data

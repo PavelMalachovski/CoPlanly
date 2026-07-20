@@ -324,22 +324,22 @@ class CredentialManagerService @Inject constructor(
     }
 
     /**
-     * Получает Client Secret из ресурсов или конфигурации.
-     * Client Secret должен быть получен из Google Cloud Console для Web Client ID
-     * и добавлен в strings.xml как google_client_secret
+     * Reads the Google OAuth client secret from BuildConfig.
+     * The value is injected at build time from the GOOGLE_CLIENT_SECRET gradle property
+     * or environment variable (see app/build.gradle.kts). It is intentionally not a string
+     * resource so it never ends up committed or shipped in a tracked file.
      */
     private fun getClientSecret(): String {
-        return try {
-            // Попытка получить из strings.xml
-            val clientSecret = context.getString(R.string.google_client_secret)
-            if (clientSecret.contains("YOUR_CLIENT_SECRET") || clientSecret.contains("PASTE_YOUR_CLIENT_SECRET")) {
-                throw IllegalStateException("Client Secret not configured. Please:\n1. Go to Google Cloud Console\n2. Find your Web Client ID\n3. Copy the Client Secret\n4. Update google_client_secret in strings.xml")
-            }
-            clientSecret
-        } catch (e: Exception) {
-            Log.e(TAG, "Client Secret not configured: ${e.message}")
-            throw IllegalStateException("Google OAuth client secret not configured. Please update google_client_secret in strings.xml with the client secret from Google Cloud Console")
+        val clientSecret = com.coparently.app.BuildConfig.GOOGLE_CLIENT_SECRET
+        if (clientSecret.isBlank()) {
+            Log.e(TAG, "Client Secret not configured")
+            throw IllegalStateException(
+                "Google OAuth client secret not configured. Set GOOGLE_CLIENT_SECRET in " +
+                    "~/.gradle/gradle.properties (or as an environment variable) with the client " +
+                    "secret from Google Cloud Console."
+            )
         }
+        return clientSecret
     }
 }
 

@@ -2,12 +2,17 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("com.google.dagger.hilt.android")
-    id("com.google.firebase.crashlytics")
     id("io.gitlab.arturbosch.detekt")
     kotlin("kapt")
 }
 
-// Apply Google Services plugin only if a google-services.json is present
+// The Google Services and Firebase Crashlytics Gradle plugins both require a
+// google-services.json. It is gitignored, so on CI (and any fresh clone without it)
+// applying them would fail — the Crashlytics plugin's release mapping-upload task
+// errors with "Google-Services plugin not configured properly".
+// Apply both plugins only when the file is present. Runtime Crashlytics still works
+// everywhere via the firebase-crashlytics-ktx SDK dependency; only build-time mapping
+// upload is skipped when the config is absent.
 val hasGoogleServicesJson =
     file("google-services.json").exists() ||
     file("src/google-services.json").exists() ||
@@ -16,6 +21,7 @@ val hasGoogleServicesJson =
 
 if (hasGoogleServicesJson) {
     apply(plugin = "com.google.gms.google-services")
+    apply(plugin = "com.google.firebase.crashlytics")
 }
 
 android {
@@ -42,6 +48,8 @@ android {
             buildConfigField("Boolean", "ENABLE_ANALYTICS", "false")
             // Gemini API key from gradle.properties or environment variable
             buildConfigField("String", "GEMINI_API_KEY", "\"${project.findProperty("GEMINI_API_KEY") ?: System.getenv("GEMINI_API_KEY") ?: ""}\"")
+            // Google OAuth client secret — never committed; supplied via ~/.gradle/gradle.properties or env
+            buildConfigField("String", "GOOGLE_CLIENT_SECRET", "\"${project.findProperty("GOOGLE_CLIENT_SECRET") ?: System.getenv("GOOGLE_CLIENT_SECRET") ?: ""}\"")
         }
 
         release {
@@ -54,6 +62,8 @@ android {
             buildConfigField("Boolean", "ENABLE_ANALYTICS", "true")
             // Gemini API key from gradle.properties or environment variable
             buildConfigField("String", "GEMINI_API_KEY", "\"${project.findProperty("GEMINI_API_KEY") ?: System.getenv("GEMINI_API_KEY") ?: ""}\"")
+            // Google OAuth client secret — never committed; supplied via ~/.gradle/gradle.properties or env
+            buildConfigField("String", "GOOGLE_CLIENT_SECRET", "\"${project.findProperty("GOOGLE_CLIENT_SECRET") ?: System.getenv("GOOGLE_CLIENT_SECRET") ?: ""}\"")
         }
     }
 
@@ -80,6 +90,13 @@ android {
         compose = true
         // Keep BuildConfig enabled for feature flags
         buildConfig = true
+    }
+
+    lint {
+        // Localization is intentionally partial: strings missing from a locale fall back
+        // to the base (English) resources at runtime. Don't fail the build over it — this
+        // stays a warning. Completing translations is tracked separately.
+        disable += "MissingTranslation"
     }
 
     composeOptions {
