@@ -1,6 +1,6 @@
-# Инструкция по запуску и сборке CoParently в Android Studio
+# Инструкция по запуску и сборке CoPlanly в Android Studio
 
-Полное руководство по настройке, запуску и сборке Android-приложения CoParently.
+Полное руководство по настройке, запуску и сборке Android-приложения CoPlanly.
 
 ## Содержание
 
@@ -80,7 +80,7 @@
 
 1. Запустите Android Studio
 2. Выберите **File** → **Open**
-3. Перейдите в папку проекта `CoParently` (где находится файл `settings.gradle.kts`)
+3. Перейдите в папку проекта `CoPlanly` (где находится файл `settings.gradle.kts`)
 4. Нажмите **OK**
 
 ### Шаг 2: Синхронизация Gradle
@@ -368,7 +368,7 @@ adb install app-debug.apk
 
 Или укажите полный путь:
 ```bash
-adb install "C:\Git\CoParently\app\build\outputs\apk\debug\app-debug.apk"
+adb install "C:\Git\CoPlanly\app\build\outputs\apk\debug\app-debug.apk"
 ```
 
 ### Метод 2: Через файловый менеджер устройства
@@ -392,7 +392,7 @@ adb install "C:\Git\CoParently\app\build\outputs\apk\debug\app-debug.apk"
 
 ### Проверка установки
 
-1. На устройстве найдите приложение **CoParently** в списке приложений
+1. На устройстве найдите приложение **CoPlanly** в списке приложений
 2. Откройте приложение
 3. Проверьте работу основных функций
 

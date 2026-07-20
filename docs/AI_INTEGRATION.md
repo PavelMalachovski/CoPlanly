@@ -1,7 +1,7 @@
-# CoParently AI Integration
+# CoPlanly AI Integration
 
 ## Overview
-This document describes the AI integration implemented in CoParently using Google Gemini API.
+This document describes the AI integration implemented in CoPlanly using Google Gemini API.
 
 ## Features Implemented
 

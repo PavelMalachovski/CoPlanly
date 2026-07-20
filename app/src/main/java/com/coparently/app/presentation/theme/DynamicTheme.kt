@@ -17,7 +17,7 @@ import com.coparently.app.data.preferences.CustomColorScheme
 import com.coparently.app.data.preferences.ThemePreferences
 
 /**
- * Dynamic theme for CoParently app with support for:
+ * Dynamic theme for CoPlanly app with support for:
  * - Dark/Light mode
  * - Dynamic colors (Android 12+)
  * - Custom color schemes
@@ -27,7 +27,7 @@ import com.coparently.app.data.preferences.ThemePreferences
  * @param content The composable content to display with this theme
  */
 @Composable
-fun CoParentlyDynamicTheme(
+fun CoPlanlyDynamicTheme(
     themePrefs: ThemePreferences,
     content: @Composable () -> Unit
 ) {
@@ -46,38 +46,38 @@ fun CoParentlyDynamicTheme(
         }
         themePrefs.isDarkMode -> {
             darkColorScheme(
-                primary = CoParentlyColors.DadBlueLight,
-                onPrimary = CoParentlyColors.DadBlueDark,
-                primaryContainer = CoParentlyColors.DadBlueDark,
-                onPrimaryContainer = CoParentlyColors.DadBlueLight,
-                secondary = CoParentlyColors.MomPinkLight,
-                onSecondary = CoParentlyColors.MomPinkDark,
-                secondaryContainer = CoParentlyColors.MomPinkDark,
-                onSecondaryContainer = CoParentlyColors.MomPinkLight,
+                primary = CoPlanlyColors.DadBlueLight,
+                onPrimary = CoPlanlyColors.DadBlueDark,
+                primaryContainer = CoPlanlyColors.DadBlueDark,
+                onPrimaryContainer = CoPlanlyColors.DadBlueLight,
+                secondary = CoPlanlyColors.MomPinkLight,
+                onSecondary = CoPlanlyColors.MomPinkDark,
+                secondaryContainer = CoPlanlyColors.MomPinkDark,
+                onSecondaryContainer = CoPlanlyColors.MomPinkLight,
                 tertiary = Color(0xFF66FF99),
                 onTertiary = Color(0xFF003314),
-                background = CoParentlyColors.DarkBackground,
-                onBackground = CoParentlyColors.DarkOnBackground,
-                surface = CoParentlyColors.DarkSurface,
-                onSurface = CoParentlyColors.DarkOnSurface
+                background = CoPlanlyColors.DarkBackground,
+                onBackground = CoPlanlyColors.DarkOnBackground,
+                surface = CoPlanlyColors.DarkSurface,
+                onSurface = CoPlanlyColors.DarkOnSurface
             )
         }
         else -> {
             lightColorScheme(
-                primary = CoParentlyColors.BrandPrimary,
+                primary = CoPlanlyColors.BrandPrimary,
                 onPrimary = Color.White,
-                primaryContainer = CoParentlyColors.DadBlueLight,
-                onPrimaryContainer = CoParentlyColors.DadBlueDark,
-                secondary = CoParentlyColors.MomPink,
+                primaryContainer = CoPlanlyColors.DadBlueLight,
+                onPrimaryContainer = CoPlanlyColors.DadBlueDark,
+                secondary = CoPlanlyColors.MomPink,
                 onSecondary = Color.White,
-                secondaryContainer = CoParentlyColors.MomPinkLight,
-                onSecondaryContainer = CoParentlyColors.MomPinkDark,
-                tertiary = CoParentlyColors.BrandAccent,
+                secondaryContainer = CoPlanlyColors.MomPinkLight,
+                onSecondaryContainer = CoPlanlyColors.MomPinkDark,
+                tertiary = CoPlanlyColors.BrandAccent,
                 onTertiary = Color.White,
-                background = CoParentlyColors.LightBackground,
-                onBackground = CoParentlyColors.LightOnBackground,
-                surface = CoParentlyColors.LightSurface,
-                onSurface = CoParentlyColors.LightOnSurface
+                background = CoPlanlyColors.LightBackground,
+                onBackground = CoPlanlyColors.LightOnBackground,
+                surface = CoPlanlyColors.LightSurface,
+                onSurface = CoPlanlyColors.LightOnSurface
             )
         }
     }
@@ -110,20 +110,20 @@ private fun createCustomColorScheme(
             primary = customColors.primary,
             secondary = customColors.secondary,
             tertiary = customColors.tertiary,
-            background = CoParentlyColors.DarkBackground,
-            surface = CoParentlyColors.DarkSurface,
-            onBackground = CoParentlyColors.DarkOnBackground,
-            onSurface = CoParentlyColors.DarkOnSurface
+            background = CoPlanlyColors.DarkBackground,
+            surface = CoPlanlyColors.DarkSurface,
+            onBackground = CoPlanlyColors.DarkOnBackground,
+            onSurface = CoPlanlyColors.DarkOnSurface
         )
     } else {
         lightColorScheme(
             primary = customColors.primary,
             secondary = customColors.secondary,
             tertiary = customColors.tertiary,
-            background = CoParentlyColors.LightBackground,
-            surface = CoParentlyColors.LightSurface,
-            onBackground = CoParentlyColors.LightOnBackground,
-            onSurface = CoParentlyColors.LightOnSurface
+            background = CoPlanlyColors.LightBackground,
+            surface = CoPlanlyColors.LightSurface,
+            onBackground = CoPlanlyColors.LightOnBackground,
+            onSurface = CoPlanlyColors.LightOnSurface
         )
     }
 }

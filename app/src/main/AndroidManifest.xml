@@ -14,18 +14,18 @@
         android:required="false" />
 
     <application
-        android:name=".CoParentlyApplication"
+        android:name=".CoPlanlyApplication"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.CoParently.Starting"
+        android:theme="@style/Theme.CoPlanly.Starting"
         tools:targetApi="31">
         <activity
             android:name=".presentation.MainActivity"
             android:exported="true"
-            android:theme="@style/Theme.CoParently.Starting"
+            android:theme="@style/Theme.CoPlanly.Starting"
             android:launchMode="singleTop">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -37,7 +37,7 @@
         <activity
             android:name=".presentation.pairing.QRScannerActivity"
             android:exported="true"
-            android:theme="@style/Theme.CoParently"
+            android:theme="@style/Theme.CoPlanly"
             android:screenOrientation="portrait">
             <!-- Deeplink handling for QR invitation URLs -->
             <intent-filter android:autoVerify="true">
@@ -53,7 +53,7 @@
 
         <!-- Firebase Cloud Messaging Service -->
         <service
-            android:name=".data.remote.firebase.CoParentlyMessagingService"
+            android:name=".data.remote.firebase.CoPlanlyMessagingService"
             android:exported="false">
             <intent-filter>
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
@@ -61,7 +61,7 @@
         </service>
 
         <!--
-          WorkManager is initialized on-demand via Hilt (CoParentlyApplication implements
+          WorkManager is initialized on-demand via Hilt (CoPlanlyApplication implements
           Configuration.Provider). Remove the default WorkManagerInitializer that the
           work-runtime library merges in, so it does not conflict with the custom
           configuration. Required by the RemoveWorkManagerInitializer lint check.

@@ -39,7 +39,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.coparently.app.presentation.theme.CoParentlyColors
+import com.coparently.app.presentation.theme.CoPlanlyColors
 import com.coparently.app.presentation.theme.dimensions
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -68,9 +68,9 @@ fun AuthScreen(
             .background(
                 brush = Brush.verticalGradient(
                     colors = listOf(
-                        CoParentlyColors.BrandPrimary.copy(alpha = 0.1f),
+                        CoPlanlyColors.BrandPrimary.copy(alpha = 0.1f),
                         Color.Transparent,
-                        CoParentlyColors.BrandSecondary.copy(alpha = 0.05f)
+                        CoPlanlyColors.BrandSecondary.copy(alpha = 0.05f)
                     )
                 )
             )
@@ -103,20 +103,20 @@ fun AuthScreen(
 
                 Icon(
                     imageVector = Icons.Default.ChildCare,
-                    contentDescription = "CoParently Logo",
+                    contentDescription = "CoPlanly Logo",
                     modifier = Modifier
                         .size(dims.iconSize * 3.33f) // ~80dp for compact
                         .graphicsLayer {
                             scaleX = pulse
                             scaleY = pulse
                         },
-                    tint = CoParentlyColors.BrandPrimary
+                    tint = CoPlanlyColors.BrandPrimary
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
-                    text = "CoParently",
+                    text = "CoPlanly",
                     style = MaterialTheme.typography.headlineLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground
@@ -329,7 +329,7 @@ fun AuthScreen(
                                   uiState.password.isNotBlank(),
                         shape = RoundedCornerShape(16.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = CoParentlyColors.BrandPrimary
+                            containerColor = CoPlanlyColors.BrandPrimary
                         )
                     ) {
                         if (uiState.isLoading) {
@@ -370,7 +370,7 @@ fun AuthScreen(
                     Text(
                         text = if (uiState.isSignInMode) "Sign Up" else "Sign In",
                         fontWeight = FontWeight.Bold,
-                        color = CoParentlyColors.BrandPrimary
+                        color = CoPlanlyColors.BrandPrimary
                     )
                 }
             }

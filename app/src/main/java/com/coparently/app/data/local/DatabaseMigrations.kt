@@ -4,7 +4,7 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 /**
- * Database migrations for CoParently database.
+ * Database migrations for CoPlanly database.
  * Each migration handles schema changes between versions.
  */
 object DatabaseMigrations {

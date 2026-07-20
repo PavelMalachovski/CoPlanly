@@ -30,7 +30,7 @@ import com.coparently.app.data.local.entity.SchoolEventEntity
 import com.coparently.app.data.local.entity.UserEntity
 
 /**
- * Room database for CoParently app.
+ * Room database for CoPlanly app.
  * Contains all entities and DAOs for local data storage.
  *
  * @see RoomDatabase
@@ -55,7 +55,7 @@ import com.coparently.app.data.local.entity.UserEntity
     exportSchema = true
 )
 @TypeConverters(Converters::class)
-abstract class CoParentlyDatabase : RoomDatabase() {
+abstract class CoPlanlyDatabase : RoomDatabase() {
     /**
      * Provides access to EventDao.
      */

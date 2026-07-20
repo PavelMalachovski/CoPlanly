@@ -24,7 +24,7 @@ fun AnimatedTheme(
     content: @Composable () -> Unit
 ) {
     // Use the dynamic theme as base
-    CoParentlyDynamicTheme(themePrefs = themePrefs) {
+    CoPlanlyDynamicTheme(themePrefs = themePrefs) {
         // Get the current color scheme from MaterialTheme
         val colorScheme = MaterialTheme.colorScheme
 

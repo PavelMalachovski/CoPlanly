@@ -1,5 +1,5 @@
 # === PROJECT RULES ===
-name: CoParently
+name: CoPlanly
 language: Kotlin
 framework: Jetpack Compose
 style: Clean Architecture

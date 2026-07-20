@@ -1,11 +1,11 @@
-# Анализ кодовой базы: CoParently
+# Анализ кодовой базы: CoPlanly
 
 ## 📁 Структура проекта
 
 ### Дерево директорий (до 3-го уровня)
 
 ```
-CoParently/
+CoPlanly/
 ├── app/
 │   ├── build.gradle.kts              # Конфигурация модуля приложения
 │   ├── proguard-rules.pro            # Правила ProGuard
@@ -13,10 +13,10 @@ CoParently/
 │       └── main/
 │           ├── AndroidManifest.xml   # Манифест приложения
 │           ├── java/com/coparently/app/
-│           │   ├── CoParentlyApplication.kt  # Application класс с Hilt
+│           │   ├── CoPlanlyApplication.kt  # Application класс с Hilt
 │           │   ├── data/              # Слой данных (Clean Architecture)
 │           │   │   ├── local/        # Локальное хранилище (Room)
-│           │   │   │   ├── CoParentlyDatabase.kt
+│           │   │   │   ├── CoPlanlyDatabase.kt
 │           │   │   │   ├── Converters.kt
 │           │   │   │   ├── dao/       # Data Access Objects
 │           │   │   │   ├── entity/   # Entity модели для БД
@@ -301,9 +301,9 @@ NavHost(navController = navController, startDestination = Screen.Calendar.route)
 
 ```kotlin
 private val LightColorScheme = lightColorScheme(
-    primary = CoParentlyColors.BrandPrimary,
-    secondary = CoParentlyColors.MomPink,
-    tertiary = CoParentlyColors.BrandAccent,
+    primary = CoPlanlyColors.BrandPrimary,
+    secondary = CoPlanlyColors.MomPink,
+    tertiary = CoPlanlyColors.BrandAccent,
     // ...
 )
 ```
@@ -326,7 +326,7 @@ private val LightColorScheme = lightColorScheme(
 
 ```kotlin
 @Composable
-fun CoParentlyTheme(
+fun CoPlanlyTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
@@ -555,7 +555,7 @@ class EventRepositoryImpl @Inject constructor(
 
 ---
 
-### 4. CoParentlyDatabase
+### 4. CoPlanlyDatabase
 
 **Назначение:** Room Database для локального хранения данных.
 
@@ -566,7 +566,7 @@ class EventRepositoryImpl @Inject constructor(
 
 **Пример:**
 
-```19:44:app/src/main/java/com/coparently/app/data/local/CoParentlyDatabase.kt
+```19:44:app/src/main/java/com/coparently/app/data/local/CoPlanlyDatabase.kt
 @Database(
     entities = [
         EventEntity::class,
@@ -577,7 +577,7 @@ class EventRepositoryImpl @Inject constructor(
     exportSchema = true
 )
 @TypeConverters(Converters::class)
-abstract class CoParentlyDatabase : RoomDatabase() {
+abstract class CoPlanlyDatabase : RoomDatabase() {
     abstract fun eventDao(): EventDao
     abstract fun userDao(): UserDao
     abstract fun custodyScheduleDao(): CustodyScheduleDao
@@ -817,7 +817,7 @@ fun loadEvents() {
 
 ## Заключение
 
-CoParently — хорошо структурированное Android приложение, следующее современным практикам разработки. Проект демонстрирует понимание Clean Architecture, использование актуального технологического стека и внимание к деталям UX.
+CoPlanly — хорошо структурированное Android приложение, следующее современным практикам разработки. Проект демонстрирует понимание Clean Architecture, использование актуального технологического стека и внимание к деталям UX.
 
 Основные рекомендации для улучшения:
 1. Добавить тестовое покрытие

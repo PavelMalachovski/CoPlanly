@@ -1,4 +1,4 @@
-# 🚀 CoParently Roadmap: Новые функции и возможности
+# 🚀 CoPlanly Roadmap: Новые функции и возможности
 
 **Цель**: Расширить функциональность приложения, добавив востребованные возможности для улучшения управления совместным воспитанием
 
@@ -963,7 +963,7 @@ fun TodayEventsWidgetContent() {
 
             // Tap to open app
             ActionButton(
-                text = "Open CoParently",
+                text = "Open CoPlanly",
                 onClick = actionStartActivity(context, MainActivity::class.java)
             )
         }

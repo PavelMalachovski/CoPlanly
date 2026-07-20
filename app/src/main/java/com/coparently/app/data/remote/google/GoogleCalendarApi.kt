@@ -26,7 +26,7 @@ import javax.inject.Singleton
 class GoogleCalendarApi @Inject constructor() {
     companion object {
         private val SCOPES = listOf(CalendarScopes.CALENDAR)
-        private val APPLICATION_NAME = "CoParently"
+        private val APPLICATION_NAME = "CoPlanly"
         private val JSON_FACTORY = GsonFactory.getDefaultInstance()
         private val HTTP_TRANSPORT = NetHttpTransport()
     }

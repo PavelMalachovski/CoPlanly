@@ -35,7 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.coparently.app.presentation.calendar.ParentFilter
-import com.coparently.app.presentation.theme.CoParentlyColors
+import com.coparently.app.presentation.theme.CoPlanlyColors
 import com.coparently.app.presentation.theme.dimensions
 
 /**
@@ -63,9 +63,9 @@ fun ParentFilterBar(
             modifier = Modifier.weight(1f)
         ) {
             val options = listOf(
-                Triple(ParentFilter.MOM, "Mom", CoParentlyColors.MomPink),
+                Triple(ParentFilter.MOM, "Mom", CoPlanlyColors.MomPink),
                 Triple(ParentFilter.BOTH, "Both", MaterialTheme.colorScheme.primary),
-                Triple(ParentFilter.DAD, "Dad", CoParentlyColors.DadBlue)
+                Triple(ParentFilter.DAD, "Dad", CoPlanlyColors.DadBlue)
             )
             options.forEachIndexed { index, (filter, label, color) ->
                 SegmentedButton(

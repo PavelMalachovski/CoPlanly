@@ -1,4 +1,4 @@
-# 📅 CoParently
+# 📅 CoPlanly
 
 <div align="center">
 
@@ -15,7 +15,7 @@
 
 ## Overview
 
-**CoParently** is a shared-calendar app for divorced or separately living parents. Both parents
+**CoPlanly** is a shared-calendar app for divorced or separately living parents. Both parents
 see one custody calendar, coordinate events around the child, confirm pickups, track expenses,
 chat, and keep medical/school records in one place — with offline-first local storage and
 Firebase sync between the two households.
@@ -93,8 +93,8 @@ app/src/main/java/com/coparently/app/
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/your-username/CoParently.git
-   cd CoParently
+   git clone https://github.com/your-username/CoPlanly.git
+   cd CoPlanly
    ```
 
 2. **Configure Firebase / Google services**

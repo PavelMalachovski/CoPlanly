@@ -10,7 +10,7 @@
 2. Нажмите **➕ Add another app** → выберите **🟢 Android**
 3. Заполните:
    - **Android package name:** `com.coparently.app`
-   - **App nickname:** `CoParently` (опционально)
+   - **App nickname:** `CoPlanly` (опционально)
    - **SHA-1:** (см. ниже - опционально, но рекомендуется)
 
 ### 3. Получите SHA-1 (для Google Sign-In)
@@ -18,7 +18,7 @@
 Откройте PowerShell в проекте и выполните:
 
 ```powershell
-cd C:\Git\CoParently
+cd C:\Git\CoPlanly
 keytool -list -v -keystore "$env:USERPROFILE\.android\debug.keystore" -alias androiddebugkey -storepass android -keypass android
 ```
 
@@ -34,7 +34,7 @@ keytool -list -v -keystore "$env:USERPROFILE\.android\debug.keystore" -alias and
 
 Переместите `google-services.json` в:
 ```
-C:\Git\CoParently\app\google-services.json
+C:\Git\CoPlanly\app\google-services.json
 ```
 
 **Важно:** Файл должен быть в папке `app/`, на том же уровне, что и `build.gradle.kts`

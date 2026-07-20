@@ -28,7 +28,7 @@ private val PoppinsFontFamily = FontFamily(
 )
 
 /**
- * Enhanced Typography for CoParently app.
+ * Enhanced Typography for CoPlanly app.
  * Uses full Material 3 type scale with customizations.
  *
  * Material 3 Typography Scale:

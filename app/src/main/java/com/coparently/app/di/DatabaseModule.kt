@@ -2,7 +2,7 @@ package com.coparently.app.di
 
 import android.content.Context
 import androidx.room.Room
-import com.coparently.app.data.local.CoParentlyDatabase
+import com.coparently.app.data.local.CoPlanlyDatabase
 import com.coparently.app.data.local.dao.BudgetDao
 import com.coparently.app.data.local.dao.ChildInfoDao
 import com.coparently.app.data.local.dao.CustodyScheduleDao
@@ -31,10 +31,10 @@ object DatabaseModule {
     @Singleton
     fun provideDatabase(
         @ApplicationContext context: Context
-    ): CoParentlyDatabase {
+    ): CoPlanlyDatabase {
         return Room.databaseBuilder(
             context,
-            CoParentlyDatabase::class.java,
+            CoPlanlyDatabase::class.java,
             "coparently_database"
         )
             .addMigrations(*com.coparently.app.data.local.DatabaseMigrations.ALL_MIGRATIONS)
@@ -47,7 +47,7 @@ object DatabaseModule {
      * Provides EventDao.
      */
     @Provides
-    fun provideEventDao(database: CoParentlyDatabase): EventDao {
+    fun provideEventDao(database: CoPlanlyDatabase): EventDao {
         return database.eventDao()
     }
 
@@ -55,7 +55,7 @@ object DatabaseModule {
      * Provides UserDao.
      */
     @Provides
-    fun provideUserDao(database: CoParentlyDatabase): UserDao {
+    fun provideUserDao(database: CoPlanlyDatabase): UserDao {
         return database.userDao()
     }
 
@@ -63,7 +63,7 @@ object DatabaseModule {
      * Provides CustodyScheduleDao.
      */
     @Provides
-    fun provideCustodyScheduleDao(database: CoParentlyDatabase): CustodyScheduleDao {
+    fun provideCustodyScheduleDao(database: CoPlanlyDatabase): CustodyScheduleDao {
         return database.custodyScheduleDao()
     }
 
@@ -71,7 +71,7 @@ object DatabaseModule {
      * Provides ChildInfoDao.
      */
     @Provides
-    fun provideChildInfoDao(database: CoParentlyDatabase): ChildInfoDao {
+    fun provideChildInfoDao(database: CoPlanlyDatabase): ChildInfoDao {
         return database.childInfoDao()
     }
 
@@ -79,7 +79,7 @@ object DatabaseModule {
      * Provides MessageDao.
      */
     @Provides
-    fun provideMessageDao(database: CoParentlyDatabase): MessageDao {
+    fun provideMessageDao(database: CoPlanlyDatabase): MessageDao {
         return database.messageDao()
     }
 
@@ -87,7 +87,7 @@ object DatabaseModule {
      * Provides ExpenseDao.
      */
     @Provides
-    fun provideExpenseDao(database: CoParentlyDatabase): ExpenseDao {
+    fun provideExpenseDao(database: CoPlanlyDatabase): ExpenseDao {
         return database.expenseDao()
     }
 
@@ -95,7 +95,7 @@ object DatabaseModule {
      * Provides BudgetDao.
      */
     @Provides
-    fun provideBudgetDao(database: CoParentlyDatabase): BudgetDao {
+    fun provideBudgetDao(database: CoPlanlyDatabase): BudgetDao {
         return database.budgetDao()
     }
 
@@ -103,7 +103,7 @@ object DatabaseModule {
      * Provides CustodyModelDao.
      */
     @Provides
-    fun provideCustodyModelDao(database: CoParentlyDatabase): com.coparently.app.data.local.dao.CustodyModelDao {
+    fun provideCustodyModelDao(database: CoPlanlyDatabase): com.coparently.app.data.local.dao.CustodyModelDao {
         return database.custodyModelDao()
     }
 }

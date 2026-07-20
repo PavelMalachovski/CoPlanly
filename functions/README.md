@@ -1,6 +1,6 @@
-# CoParently Cloud Functions
+# CoPlanly Cloud Functions
 
-Firebase Cloud Functions для обработки push-уведомлений и автоматизации в приложении CoParently.
+Firebase Cloud Functions для обработки push-уведомлений и автоматизации в приложении CoPlanly.
 
 ## Функции
 
@@ -122,7 +122,7 @@ private fun createNotificationChannel() {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
         val channel = NotificationChannel(
             "coparently_notifications",
-            "CoParently Notifications",
+            "CoPlanly Notifications",
             NotificationManager.IMPORTANCE_HIGH
         ).apply {
             description = "Notifications about co-parenting events"
@@ -241,5 +241,5 @@ Cloud Functions для Firebase использует модель оплаты p
 
 ## Лицензия
 
-© 2025 CoParently. All rights reserved.
+© 2025 CoPlanly. All rights reserved.
 

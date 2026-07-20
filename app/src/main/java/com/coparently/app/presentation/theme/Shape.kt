@@ -5,7 +5,7 @@ import androidx.compose.material3.Shapes
 import androidx.compose.ui.unit.dp
 
 /**
- * Expressive shape system for CoParently.
+ * Expressive shape system for CoPlanly.
  * Generous corner radii give the app a soft, modern look consistent with
  * current Material 3 expressive styling.
  *
@@ -15,7 +15,7 @@ import androidx.compose.ui.unit.dp
  * - large: dialogs, bottom sheets, FAB
  * - extraLarge: hero surfaces, full-screen sheets
  */
-val CoParentlyShapes = Shapes(
+val CoPlanlyShapes = Shapes(
     extraSmall = RoundedCornerShape(8.dp),
     small = RoundedCornerShape(12.dp),
     medium = RoundedCornerShape(16.dp),

@@ -1,7 +1,7 @@
 # Режим тестирования OAuth (Testing Mode)
 
 Если вы видите сообщение:
-> "CoParently has not completed the google verification process. The app is currently being tested, and can only be accessed by developer-approved testers."
+> "CoPlanly has not completed the google verification process. The app is currently being tested, and can only be accessed by developer-approved testers."
 
 Это означает, что ваше приложение находится в **Testing** режиме OAuth consent screen.
 
@@ -109,7 +109,7 @@ https://coparently.app/privacy-policy
 3. Это доступно только для Google Workspace организаций
 4. В этом случае верификация не требуется
 
-## Текущая рекомендация для CoParently
+## Текущая рекомендация для CoPlanly
 
 ### Для разработки и тестирования:
 

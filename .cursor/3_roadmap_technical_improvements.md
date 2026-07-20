@@ -1,4 +1,4 @@
-# 🚀 CoParently Roadmap: Технические улучшения
+# 🚀 CoPlanly Roadmap: Технические улучшения
 
 **Цель**: Улучшить производительность, надежность и поддерживаемость кода
 
@@ -158,7 +158,7 @@ interface OptimizedEventDao {
     suspend fun deleteEventsBatch(events: List<EventEntity>)
 }
 
-// data/local/CoParentlyDatabase.kt - добавление индексов
+// data/local/CoPlanlyDatabase.kt - добавление индексов
 @Database(
     entities = [EventEntity::class, /* ... */],
     version = 2,
@@ -167,17 +167,17 @@ interface OptimizedEventDao {
     ]
 )
 @TypeConverters(Converters::class)
-abstract class CoParentlyDatabase : RoomDatabase() {
+abstract class CoPlanlyDatabase : RoomDatabase() {
 
     companion object {
         @Volatile
-        private var INSTANCE: CoParentlyDatabase? = null
+        private var INSTANCE: CoPlanlyDatabase? = null
 
-        fun getDatabase(context: Context): CoParentlyDatabase {
+        fun getDatabase(context: Context): CoPlanlyDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
                     context.applicationContext,
-                    CoParentlyDatabase::class.java,
+                    CoPlanlyDatabase::class.java,
                     "coparently.db"
                 )
                 .addMigrations(MIGRATION_1_2)
@@ -1009,7 +1009,7 @@ class EncryptionManager @Inject constructor(
         load(null)
     }
 
-    private val keyAlias = "CoParentlyKey"
+    private val keyAlias = "CoPlanlyKey"
 
     private fun getOrCreateKey(): SecretKey {
         return if (keyStore.containsAlias(keyAlias)) {

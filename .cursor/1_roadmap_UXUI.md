@@ -1,4 +1,4 @@
-# 🚀 CoParently Roadmap: UX/UI Улучшения
+# 🚀 CoPlanly Roadmap: UX/UI Улучшения
 
 **Цель**: Создать интуитивный, красивый и современный интерфейс для управления совместным календарем
 
@@ -281,7 +281,7 @@ data class CustomColorScheme(
 
 // presentation/theme/DynamicTheme.kt
 @Composable
-fun CoParentlyDynamicTheme(
+fun CoPlanlyDynamicTheme(
     themePrefs: ThemePreferences,
     content: @Composable () -> Unit
 ) {
@@ -462,7 +462,7 @@ fun adaptiveDimensions(): Dimensions {
 ```kotlin
 // presentation/common/SnackbarHost.kt
 @Composable
-fun CoParentlySnackbarHost(
+fun CoPlanlySnackbarHost(
     snackbarHostState: SnackbarHostState,
     modifier: Modifier = Modifier
 ) {

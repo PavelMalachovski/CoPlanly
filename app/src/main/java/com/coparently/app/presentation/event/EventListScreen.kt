@@ -35,7 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.domain.model.Event
-import com.coparently.app.presentation.theme.CoParentlyColors
+import com.coparently.app.presentation.theme.CoPlanlyColors
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -269,8 +269,8 @@ private fun SwipeableEventCard(
                     text = "Parent: ${event.parentOwner}",
                     style = MaterialTheme.typography.bodySmall,
                     color = when (event.parentOwner) {
-                        "mom" -> CoParentlyColors.MomPink
-                        "dad" -> CoParentlyColors.DadBlue
+                        "mom" -> CoPlanlyColors.MomPink
+                        "dad" -> CoPlanlyColors.DadBlue
                         else -> MaterialTheme.colorScheme.onSurface
                     }
                 )

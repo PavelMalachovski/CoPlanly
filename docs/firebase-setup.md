@@ -1,4 +1,4 @@
-# Настройка Firebase для Android-приложения CoParently
+# Настройка Firebase для Android-приложения CoPlanly
 
 Подробная инструкция по добавлению Android-приложения в Firebase Console и настройке проекта.
 
@@ -33,7 +33,7 @@ com.coparently.app
 
 #### **App nickname** (необязательно)
 ```
-CoParently
+CoPlanly
 ```
 или любое другое удобное имя для идентификации
 
@@ -48,7 +48,7 @@ CoParently
 1. Откройте PowerShell или командную строку
 2. Перейдите в директорию проекта:
    ```powershell
-   cd C:\Git\CoParently
+   cd C:\Git\CoPlanly
    ```
 3. Выполните команду для получения debug keystore SHA-1:
 
@@ -73,8 +73,8 @@ keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -sto
 **Способ 2: Через Android Studio**
 
 1. Откройте Android Studio
-2. Откройте проект CoParently
-3. В правой панели откройте **Gradle** → **CoParently** → **app** → **Tasks** → **android** → **signingReport**
+2. Откройте проект CoPlanly
+3. В правой панели откройте **Gradle** → **CoPlanly** → **app** → **Tasks** → **android** → **signingReport**
 4. Дважды кликните на `signingReport`
 5. В нижней панели **Run** найдите значение **SHA1** и скопируйте его
 
@@ -109,19 +109,19 @@ keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -sto
 2. Переместите файл в следующую директорию проекта:
 
 ```
-CoParently/
+CoPlanly/
 └── app/
     └── google-services.json  ← Сюда!
 ```
 
 **Полный путь (пример для Windows):**
 ```
-C:\Git\CoParently\app\google-services.json
+C:\Git\CoPlanly\app\google-services.json
 ```
 
 **Правильная структура:**
 ```
-CoParently/
+CoPlanly/
 ├── app/
 │   ├── build.gradle.kts
 │   ├── google-services.json  ← Файл должен быть здесь

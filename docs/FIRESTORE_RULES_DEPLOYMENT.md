@@ -87,7 +87,7 @@ firebase deploy --only firestore:rules
 
 6. **Очистите кэш приложения:**
    - Удалите приложение с устройства
-   - Или очистите данные: Settings → Apps → CoParently → Storage → Clear Data
+   - Или очистите данные: Settings → Apps → CoPlanly → Storage → Clear Data
    - Переустановите и войдите заново
 
 ## Ссылки

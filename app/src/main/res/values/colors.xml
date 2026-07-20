@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Brand colors for CoParently app -->
+    <!-- Brand colors for CoPlanly app -->
     <color name="brand_primary">#6750A4</color>
     <color name="brand_secondary">#958DA5</color>
 
