@@ -119,7 +119,8 @@ fun DayWeekView(
     // Using single scrollState shared across all dates preserves scroll position
     // The key is that scrollState is created once and reused across AnimatedContent transitions
     val scrollState = rememberLazyListState(
-        initialFirstVisibleItemIndex = 6 // Start at 6 AM for better UX
+        // Start near the current hour (one hour of context above) so "now" is in view
+        initialFirstVisibleItemIndex = (java.time.LocalTime.now().hour - 1).coerceIn(0, 23)
     )
 
     // State for swipe direction
@@ -449,57 +450,80 @@ fun DayWeekView(
                         }
                 ) {
                     if (containerWidthPx > 0f) {
-                        // Render all events with absolute positioning
+                        val spacingPx = with(density) { daySpacing.toPx() }
+                        val totalSpacingPx = spacingPx * (currentDates.size - 1)
+                        val columnWidth = (containerWidthPx - totalSpacingPx) / currentDates.size
+                        val totalScroll = firstVisibleHour * hourCellHeightPx + scrollOffset
+                        val firstHour = hours.first()
+
+                        // Vertical pixel offset (from the top of the visible grid) for a time
+                        fun yOffsetFor(time: LocalDateTime): Float {
+                            val minutesFromTop = (time.hour - firstHour) * 60f + time.minute + time.second / 60f
+                            return minutesFromTop / 60f * hourCellHeightPx - totalScroll
+                        }
+
                         currentDates.forEachIndexed { dayIndex, date ->
-                            events.filter { event ->
-                                event.startDateTime.toLocalDate() == date
-                            }.forEach { event ->
-                                val eventStart = event.startDateTime
-                                val eventEnd = event.endDateTime ?: event.startDateTime.plusHours(1)
+                            val dayColumnX = dayIndex * (columnWidth + spacingPx)
 
-                                // Calculate vertical position
-                                val startHour = eventStart.hour
-                                val startMinute = eventStart.minute
-                                val startSecond = eventStart.second
-
-                                // Offset from top = (hour - firstHour) * hourHeight + minute offset - total scroll
-                                val hourOffset = (startHour - hours.first()) * hourCellHeightPx
-                                val minuteOffset = (startMinute + startSecond / 60f) / 60f * hourCellHeightPx
-                                val totalScroll = firstVisibleHour * hourCellHeightPx + scrollOffset
-                                val totalVerticalOffset = hourOffset + minuteOffset - totalScroll
-
-                                // Calculate horizontal position
-                                val spacingPx = with(density) { daySpacing.toPx() }
-                                val totalSpacingPx = spacingPx * (currentDates.size - 1)
-                                val columnWidth = (containerWidthPx - totalSpacingPx) / currentDates.size
-                                val horizontalOffset = dayIndex * (columnWidth + spacingPx)
-
-                                // Only render if event is in visible area (with some buffer)
-                                val eventDuration = java.time.Duration.between(eventStart, eventEnd)
-                                val eventHeightPx = (eventDuration.toMinutes() / 60f) * hourCellHeightPx
+                            // Multi-day/overnight events are clamped to this day and laid out
+                            // in side-by-side lanes when they overlap in time.
+                            layoutDayEvents(events, date).forEach { seg ->
+                                val laneWidth = columnWidth / seg.laneCount
+                                val x = dayColumnX + seg.lane * laneWidth
+                                val y = yOffsetFor(seg.segStart)
 
                                 Box(
                                     modifier = Modifier
                                         .offset(
-                                            x = with(density) { horizontalOffset.toDp() },
-                                            y = with(density) { totalVerticalOffset.toDp() }
+                                            x = with(density) { x.toDp() },
+                                            y = with(density) { y.toDp() }
                                         )
-                                        .width(with(density) { columnWidth.toDp() })
-                                        .padding(horizontal = 2.dp)
+                                        .width(with(density) { laneWidth.toDp() })
+                                        .padding(horizontal = 1.dp)
                                 ) {
                                     EventChip(
-                                        event = event,
-                                        onClick = { onEventClick(event.id) },
-                                        columnWidthPx = columnWidth,
+                                        event = seg.event,
+                                        onClick = { onEventClick(seg.event.id) },
+                                        columnWidthPx = laneWidth,
                                         hourHeightPx = hourCellHeightPx,
                                         baseDate = date,
-                                        baseHour = startHour,
+                                        baseHour = seg.segStart.hour,
                                         onDragDrop = onEventDragDrop,
                                         onResize = onEventResize,
                                         onDelete = onEventDelete,
                                         onLongPressStart = onEventLongPressStart,
                                         onLongPressEnd = onEventLongPressEnd,
-                                        onDragOverDeleteButton = onDragOverDeleteButton
+                                        onDragOverDeleteButton = onDragOverDeleteButton,
+                                        displayStart = seg.segStart,
+                                        displayEnd = seg.segEnd,
+                                        resizable = !seg.clamped,
+                                        draggable = !seg.clamped
+                                    )
+                                }
+                            }
+
+                            // Current-time indicator (red line + dot) on today's column
+                            if (date == LocalDate.now()) {
+                                val nowY = yOffsetFor(LocalDateTime.now())
+                                Row(
+                                    modifier = Modifier
+                                        .offset(
+                                            x = with(density) { dayColumnX.toDp() },
+                                            y = with(density) { nowY.toDp() } - 4.dp
+                                        )
+                                        .width(with(density) { columnWidth.toDp() }),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(8.dp)
+                                            .background(NowIndicatorColor, CircleShape)
+                                    )
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .height(2.dp)
+                                            .background(NowIndicatorColor)
                                     )
                                 }
                             }
@@ -525,15 +549,22 @@ private fun EventChip(
     onDelete: ((String) -> Unit)? = null,
     onLongPressStart: ((String) -> Unit)? = null,
     onLongPressEnd: (() -> Unit)? = null,
-    onDragOverDeleteButton: ((Boolean) -> Unit)? = null
+    onDragOverDeleteButton: ((Boolean) -> Unit)? = null,
+    // Visible segment of the event within the current day (differs from the real event
+    // times for multi-day / overnight events, which are clamped to each day).
+    displayStart: LocalDateTime = event.startDateTime,
+    displayEnd: LocalDateTime = event.endDateTime ?: event.startDateTime.plusHours(1),
+    // Continuation segments of multi-day events are not resizable/movable (ambiguous).
+    resizable: Boolean = true,
+    draggable: Boolean = true
 ) {
     val density = LocalDensity.current
     val hapticFeedback = LocalHapticFeedback.current
     val configuration = LocalConfiguration.current
 
-    // Calculate event position and height based on actual start/end times
-    val eventStart = event.startDateTime
-    val eventEnd = event.endDateTime ?: event.startDateTime.plusHours(1)
+    // Sizing/temp times follow the visible segment; edits still act on the real event.
+    val eventStart = displayStart
+    val eventEnd = displayEnd
 
     // Calculate total event duration in minutes
     val totalDuration = java.time.Duration.between(eventStart, eventEnd)
@@ -573,18 +604,16 @@ private fun EventChip(
 
     // Long press state - track when user is holding the event
     var isLongPressing by remember { mutableStateOf(false) }
-    // Calculate temporary times for display during resize
+    // Calculate temporary times for display during resize, snapped to a 15-minute grid
     val tempStartTime = remember(isResizingStart, resizeDragAmountStart, eventStart) {
         if (isResizingStart) {
-            val minutesChange = (resizeDragAmountStart / hourHeightPx * 60f).roundToInt()
-            eventStart.plusMinutes(minutesChange.toLong())
+            resizedTime(eventStart, resizeDragAmountStart, hourHeightPx)
         } else eventStart
     }
 
     val tempEndTime = remember(isResizingEnd, resizeDragAmountEnd, eventEnd) {
         if (isResizingEnd) {
-            val minutesChange = (resizeDragAmountEnd / hourHeightPx * 60f).roundToInt()
-            eventEnd.plusMinutes(minutesChange.toLong())
+            resizedTime(eventEnd, resizeDragAmountEnd, hourHeightPx)
         } else eventEnd
     }
 
@@ -705,9 +734,9 @@ private fun EventChip(
                 .fillMaxSize()
                 .padding(horizontal = 8.dp, vertical = 4.dp)
                 .padding(start = 12.dp, end = 12.dp) // Padding to avoid resize handles
-                .pointerInput(columnWidthPx, hourHeightPx, onDragDrop, onDelete, onDragOverDeleteButton, configuration, eventGlobalPosition) {
+                .pointerInput(columnWidthPx, hourHeightPx, onDragDrop, onDelete, onDragOverDeleteButton, configuration, eventGlobalPosition, draggable) {
                     // Center drag for moving event
-                    if (onDragDrop != null && columnWidthPx > 0f && hourHeightPx > 0f) {
+                    if (onDragDrop != null && draggable && columnWidthPx > 0f && hourHeightPx > 0f) {
                         val screenWidth = with(density) { configuration.screenWidthDp.dp.toPx() }
                         val screenHeight = with(density) { configuration.screenHeightDp.dp.toPx() }
 
@@ -739,13 +768,18 @@ private fun EventChip(
                                         isOverDeleteButton = false
                                         onDragOverDeleteButton?.invoke(false)
                                     } else {
-                                        // Normal drag & drop
+                                        // Normal drag & drop: snap the vertical move to a 15-minute grid
                                         val dayOffset = (totalDrag.x / columnWidthPx).roundToInt()
-                                        val hourOffset = (totalDrag.y / hourHeightPx).roundToInt()
-                                        if (dayOffset != 0 || hourOffset != 0) {
-                                            val targetDate = baseDate.plusDays(dayOffset.toLong())
-                                            val targetHour = (baseHour + hourOffset).coerceIn(0, 23)
-                                            onDragDrop(event.id, targetDate, targetHour)
+                                        val rawMinuteShift = (totalDrag.y / hourHeightPx * 60f).roundToInt()
+                                        val minuteShift = (rawMinuteShift / RESIZE_SNAP_MINUTES.toFloat()).roundToInt() * RESIZE_SNAP_MINUTES
+                                        if (dayOffset != 0 || minuteShift != 0) {
+                                            val newStart = resizedTime(
+                                                event.startDateTime.plusDays(dayOffset.toLong()),
+                                                minuteShift.toFloat() / 60f * hourHeightPx,
+                                                hourHeightPx
+                                            )
+                                            val targetMinuteOfDay = newStart.hour * 60 + newStart.minute
+                                            onDragDrop(event.id, newStart.toLocalDate(), targetMinuteOfDay)
                                             hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
                                         }
                                     }
@@ -846,16 +880,15 @@ private fun EventChip(
             }
         }
 
-        // Top-left resize handle (for start time)
-        if (onResize != null) {
+        // Top resize handle (start time) - centered pill, drag up to start earlier, down to start later
+        if (onResize != null && resizable) {
             Box(
                 modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .size(20.dp)
-                    .background(
-                        color = borderColor,
-                        shape = CircleShape
-                    )
+                    .align(Alignment.TopCenter)
+                    .width(40.dp)
+                    .height(14.dp)
+                    .background(color = borderColor, shape = RoundedCornerShape(7.dp))
+                    .semantics { contentDescription = "Resize start time. Drag up or down (15-minute steps)." }
                     .pointerInput(hourHeightPx, onResize) {
                         detectDragGestures(
                             onDragStart = { startOffset ->
@@ -866,12 +899,9 @@ private fun EventChip(
                             },
                             onDragEnd = {
                                 if (isResizingStart && onResize != null) {
-                                    // Calculate new start time directly from drag amount (same as bottom-right logic)
-                                    val minutesChange = (resizeDragAmountStart / hourHeightPx * 60f).roundToInt()
-                                    val newStartTime = eventStart.plusMinutes(minutesChange.toLong())
-
-                                    // Ensure new start time is before end time
-                                    if (newStartTime.isBefore(eventEnd) && newStartTime.isAfter(eventStart.minusDays(1))) {
+                                    val newStartTime = resizedTime(eventStart, resizeDragAmountStart, hourHeightPx)
+                                    // Keep at least one 15-minute slot before the end
+                                    if (newStartTime.isBefore(eventEnd)) {
                                         onResize(event.id, newStartTime, null)
                                     }
                                     hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -891,16 +921,15 @@ private fun EventChip(
             )
         }
 
-        // Bottom-right resize handle (for end time)
-        if (onResize != null) {
+        // Bottom resize handle (end time) - centered pill, drag down to end later, up to end earlier
+        if (onResize != null && resizable) {
             Box(
                 modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .size(20.dp)
-                    .background(
-                        color = borderColor,
-                        shape = CircleShape
-                    )
+                    .align(Alignment.BottomCenter)
+                    .width(40.dp)
+                    .height(14.dp)
+                    .background(color = borderColor, shape = RoundedCornerShape(7.dp))
+                    .semantics { contentDescription = "Resize end time. Drag up or down (15-minute steps)." }
                     .pointerInput(hourHeightPx, onResize) {
                         detectDragGestures(
                             onDragStart = { startOffset ->
@@ -911,12 +940,9 @@ private fun EventChip(
                             },
                             onDragEnd = {
                                 if (isResizingEnd && onResize != null) {
-                                    // Calculate new end time directly from drag amount
-                                    val minutesChange = (resizeDragAmountEnd / hourHeightPx * 60f).roundToInt()
-                                    val newEndTime = eventEnd.plusMinutes(minutesChange.toLong())
-
-                                    // Ensure new end time is after start time
-                                    if (newEndTime.isAfter(eventStart) && newEndTime.isBefore(eventEnd.plusDays(1))) {
+                                    val newEndTime = resizedTime(eventEnd, resizeDragAmountEnd, hourHeightPx)
+                                    // Keep at least one 15-minute slot after the start
+                                    if (newEndTime.isAfter(eventStart)) {
                                         onResize(event.id, null, newEndTime)
                                     }
                                     hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -937,4 +963,109 @@ private fun EventChip(
         }
 
     }
+}
+
+/** Minutes the resize handles snap to. */
+private const val RESIZE_SNAP_MINUTES = 15
+
+/** Google-Calendar-style red "now" indicator. */
+private val NowIndicatorColor = Color(0xFFEA4335)
+
+/**
+ * A single event's visible slice within one day, with its lane assignment for
+ * side-by-side layout of overlapping events.
+ *
+ * @property segStart start of the visible slice (clamped to the day)
+ * @property segEnd end of the visible slice (clamped to the day)
+ * @property clamped true when the event extends beyond this day (multi-day/overnight)
+ * @property lane 0-based column index within its overlap cluster
+ * @property laneCount number of columns in that cluster
+ */
+private data class EventSegment(
+    val event: Event,
+    val segStart: LocalDateTime,
+    val segEnd: LocalDateTime,
+    val clamped: Boolean,
+    val lane: Int,
+    val laneCount: Int
+)
+
+/**
+ * Computes the drawable event slices for [date]: events that overlap the day are
+ * clamped to it (so multi-day/overnight events appear on every day they cover), then
+ * grouped into overlap clusters and assigned side-by-side lanes (greedy first-fit,
+ * optimal for intervals) so concurrent events don't stack on top of each other.
+ */
+private fun layoutDayEvents(events: List<Event>, date: LocalDate): List<EventSegment> {
+    val dayStart = date.atStartOfDay()
+    val dayEnd = date.plusDays(1).atStartOfDay()
+
+    data class Slice(val event: Event, val start: LocalDateTime, val end: LocalDateTime, val clamped: Boolean)
+
+    val slices = events.mapNotNull { e ->
+        val s = e.startDateTime
+        val en = e.endDateTime ?: e.startDateTime.plusHours(1)
+        if (s.isBefore(dayEnd) && en.isAfter(dayStart)) {
+            val cs = if (s.isBefore(dayStart)) dayStart else s
+            val ce = if (en.isAfter(dayEnd)) dayEnd else en
+            Slice(e, cs, ce, s.isBefore(dayStart) || en.isAfter(dayEnd))
+        } else null
+    }.sortedWith(compareBy({ it.start }, { it.end }))
+
+    val result = mutableListOf<EventSegment>()
+    val cluster = mutableListOf<Slice>()
+    var clusterEnd: LocalDateTime? = null
+
+    fun flushCluster() {
+        if (cluster.isEmpty()) return
+        val laneEnds = mutableListOf<LocalDateTime>()
+        val lanes = IntArray(cluster.size)
+        cluster.forEachIndexed { i, slice ->
+            var lane = laneEnds.indexOfFirst { !slice.start.isBefore(it) }
+            if (lane == -1) {
+                laneEnds.add(slice.end)
+                lane = laneEnds.size - 1
+            } else {
+                laneEnds[lane] = slice.end
+            }
+            lanes[i] = lane
+        }
+        val laneCount = laneEnds.size
+        cluster.forEachIndexed { i, slice ->
+            result.add(EventSegment(slice.event, slice.start, slice.end, slice.clamped, lanes[i], laneCount))
+        }
+        cluster.clear()
+        clusterEnd = null
+    }
+
+    for (slice in slices) {
+        val currentEnd = clusterEnd
+        if (currentEnd == null || slice.start.isBefore(currentEnd)) {
+            cluster.add(slice)
+            clusterEnd = if (currentEnd == null || slice.end.isAfter(currentEnd)) slice.end else currentEnd
+        } else {
+            flushCluster()
+            cluster.add(slice)
+            clusterEnd = slice.end
+        }
+    }
+    flushCluster()
+    return result
+}
+
+/**
+ * Applies a vertical drag (in pixels) to a base time and snaps the result to the
+ * nearest [RESIZE_SNAP_MINUTES] grid, so resizing moves in clean 15-minute steps.
+ */
+private fun resizedTime(
+    base: LocalDateTime,
+    dragPx: Float,
+    hourHeightPx: Float
+): LocalDateTime {
+    val deltaMinutes = (dragPx / hourHeightPx * 60f).roundToInt()
+    val moved = base.plusMinutes(deltaMinutes.toLong()).withSecond(0).withNano(0)
+    val minutesOfDay = moved.hour * 60 + moved.minute
+    val snapped = ((minutesOfDay + RESIZE_SNAP_MINUTES / 2) / RESIZE_SNAP_MINUTES) * RESIZE_SNAP_MINUTES
+    val clamped = snapped.coerceIn(0, 24 * 60 - RESIZE_SNAP_MINUTES)
+    return moved.toLocalDate().atStartOfDay().plusMinutes(clamped.toLong())
 }
