@@ -10,16 +10,23 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
+import com.coparently.app.presentation.splash.SplashScreen
 import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.lifecycleScope
@@ -160,14 +167,28 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
+                    // Branded splash overlays the app on launch, then fades out to
+                    // reveal it (auth state resolves underneath while it plays).
+                    var showSplash by remember { mutableStateOf(true) }
                     val navController = rememberNavController()
-                    CompositionLocalProvider(
-                        LocalGoogleSignInCallback provides googleSignInCallback
-                    ) {
-                        NavGraph(
-                            navController = navController,
-                            syncViewModel = syncViewModel
-                        )
+
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        CompositionLocalProvider(
+                            LocalGoogleSignInCallback provides googleSignInCallback
+                        ) {
+                            NavGraph(
+                                navController = navController,
+                                syncViewModel = syncViewModel
+                            )
+                        }
+
+                        AnimatedVisibility(
+                            visible = showSplash,
+                            enter = androidx.compose.animation.EnterTransition.None,
+                            exit = fadeOut(animationSpec = tween(500))
+                        ) {
+                            SplashScreen(onFinished = { showSplash = false })
+                        }
                     }
                 }
             }
