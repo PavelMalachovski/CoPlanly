@@ -24,7 +24,10 @@ dashboards) is next. The latest full audit lives in `docs/AUDIT-2026-07.md`.
 - Windows dev machine; Gradle wrapper works from Git Bash and PowerShell.
 - `google-services.json` is required for the Google Services plugin, but the build
   degrades gracefully if it is missing (see the conditional apply in `app/build.gradle.kts`).
-- CI: `.github/workflows/build.yml` (build + test + assembleDebug).
+- No GitHub CI: builds and tests are run locally
+  (`./gradlew clean assembleDebug testDebugUnitTest`). After switching branches,
+  prefer `clean` — stale Hilt/kapt stubs from another branch cause errors like
+  "Could not find class file for '…Application'".
 
 ## Hard project rules
 
