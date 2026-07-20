@@ -9,13 +9,13 @@ import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
 
 /**
- * Application class for CoParently.
+ * Application class for CoPlanly.
  * Marks the application for Hilt dependency injection and initializes Firebase services.
  *
  * @see HiltAndroidApp
  */
 @HiltAndroidApp
-class CoParentlyApplication : Application(), Configuration.Provider {
+class CoPlanlyApplication : Application(), Configuration.Provider {
 
     @Inject
     lateinit var workerFactory: HiltWorkerFactory
@@ -35,11 +35,11 @@ class CoParentlyApplication : Application(), Configuration.Provider {
         // Initialize Firebase
         val firebaseApp = FirebaseApp.initializeApp(this)
         if (firebaseApp != null) {
-            android.util.Log.d("CoParentlyApplication", "Firebase initialized successfully")
-            android.util.Log.d("CoParentlyApplication", "Project ID: ${firebaseApp.options.projectId}")
-            android.util.Log.d("CoParentlyApplication", "API Key: ${firebaseApp.options.apiKey?.take(10)}...")
+            android.util.Log.d("CoPlanlyApplication", "Firebase initialized successfully")
+            android.util.Log.d("CoPlanlyApplication", "Project ID: ${firebaseApp.options.projectId}")
+            android.util.Log.d("CoPlanlyApplication", "API Key: ${firebaseApp.options.apiKey?.take(10)}...")
         } else {
-            android.util.Log.e("CoParentlyApplication", "Firebase initialization failed")
+            android.util.Log.e("CoPlanlyApplication", "Firebase initialization failed")
         }
 
         // Enable Crashlytics collection

@@ -27,7 +27,7 @@ import androidx.navigation.compose.rememberNavController
 import com.coparently.app.data.notification.NotificationManager
 import com.coparently.app.domain.repository.PreferencesRepository
 import com.coparently.app.presentation.navigation.NavGraph
-import com.coparently.app.presentation.theme.CoParentlyTheme
+import com.coparently.app.presentation.theme.CoPlanlyTheme
 import com.coparently.app.presentation.sync.SyncViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -44,7 +44,7 @@ val LocalGoogleSignInCallback = staticCompositionLocalOf<((android.content.Inten
 
 
 /**
- * Main Activity for CoParently app.
+ * Main Activity for CoPlanly app.
  * Entry point of the application.
  * Handles Google Sign-In result, Push Notifications, and Splash Screen (Android 12+).
  */
@@ -155,7 +155,7 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            CoParentlyTheme(darkTheme = useDarkTheme) {
+            CoPlanlyTheme(darkTheme = useDarkTheme) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background

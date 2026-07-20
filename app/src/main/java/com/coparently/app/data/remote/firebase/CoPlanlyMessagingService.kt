@@ -21,7 +21,7 @@ import javax.inject.Inject
  * Extends FirebaseMessagingService to receive and process FCM messages.
  */
 @AndroidEntryPoint
-class CoParentlyMessagingService : FirebaseMessagingService() {
+class CoPlanlyMessagingService : FirebaseMessagingService() {
 
     @Inject
     lateinit var fcmService: FcmService
@@ -36,7 +36,7 @@ class CoParentlyMessagingService : FirebaseMessagingService() {
 
         // Handle data payload
         remoteMessage.data.let { data ->
-            val title = data["title"] ?: "CoParently"
+            val title = data["title"] ?: "CoPlanly"
             val body = data["body"] ?: "You have a new notification"
             val type = data["type"] // e.g., "event_created", "invitation_received"
 
@@ -46,7 +46,7 @@ class CoParentlyMessagingService : FirebaseMessagingService() {
         // Handle notification payload
         remoteMessage.notification?.let { notification ->
             showNotification(
-                notification.title ?: "CoParently",
+                notification.title ?: "CoPlanly",
                 notification.body ?: "You have a new notification",
                 null
             )
@@ -114,7 +114,7 @@ class CoParentlyMessagingService : FirebaseMessagingService() {
 
     companion object {
         private const val CHANNEL_ID = "coparently_notifications"
-        private const val CHANNEL_NAME = "CoParently Notifications"
+        private const val CHANNEL_NAME = "CoPlanly Notifications"
         private const val CHANNEL_DESCRIPTION = "Notifications for events and invitations"
     }
 }

@@ -1,6 +1,6 @@
-# 🤝 Contributing to CoParently
+# 🤝 Contributing to CoPlanly
 
-Спасибо за интерес к проекту CoParently! Мы ценим любой вклад — от исправления опечаток до новых функций.
+Спасибо за интерес к проекту CoPlanly! Мы ценим любой вклад — от исправления опечаток до новых функций.
 
 ---
 
@@ -47,11 +47,11 @@
 ```bash
 # Fork через GitHub UI
 # Затем клонируйте свой fork
-git clone https://github.com/YOUR-USERNAME/CoParently.git
-cd CoParently
+git clone https://github.com/YOUR-USERNAME/CoPlanly.git
+cd CoPlanly
 
 # Добавьте upstream remote
-git remote add upstream https://github.com/original-owner/CoParently.git
+git remote add upstream https://github.com/original-owner/CoPlanly.git
 ```
 
 ### 4. Настройте окружение
@@ -389,7 +389,7 @@ fun `generateWeeksForMonth returns exactly 7 weeks`() {
 @Test
 fun calendarDisplaysCurrentMonth() {
     composeTestRule.setContent {
-        CoParentlyTheme {
+        CoPlanlyTheme {
             CalendarScreen(
                 onEventClick = {},
                 onAddEventClick = {}
@@ -522,14 +522,14 @@ Mockups, примеры, ссылки
 Есть вопросы? Мы здесь, чтобы помочь!
 
 - 📧 Email: support@coparently.app
-- 💬 Discord: [CoParently Community](https://discord.gg/coparently)
-- 🐦 Twitter: [@CoParentlyApp](https://twitter.com/CoParentlyApp)
+- 💬 Discord: [CoPlanly Community](https://discord.gg/coparently)
+- 🐦 Twitter: [@CoPlanlyApp](https://twitter.com/CoPlanlyApp)
 
 ---
 
 ## 🙏 Спасибо!
 
-Ваш вклад делает CoParently лучше для тысяч родителей по всему миру! ❤️
+Ваш вклад делает CoPlanly лучше для тысяч родителей по всему миру! ❤️
 
 ---
 

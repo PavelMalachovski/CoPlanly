@@ -184,12 +184,12 @@ dependencies {
 // В DatabaseModule.kt
 @Provides
 @Singleton
-fun provideCoParentlyDatabase(
+fun provideCoPlanlyDatabase(
     @ApplicationContext context: Context
-): CoParentlyDatabase {
+): CoPlanlyDatabase {
     return Room.databaseBuilder(
         context,
-        CoParentlyDatabase::class.java,
+        CoPlanlyDatabase::class.java,
         "coparently_database"
     )
     .addMigrations(MIGRATION_2_3)
@@ -241,7 +241,7 @@ val MIGRATION_2_3 = object : Migration(2, 3) {
 
     <!-- FCM Service -->
     <service
-        android:name=".data.remote.firebase.CoParentlyMessagingService"
+        android:name=".data.remote.firebase.CoPlanlyMessagingService"
         android:exported="false">
         <intent-filter>
             <action android:name="com.google.firebase.MESSAGING_EVENT" />
@@ -300,7 +300,7 @@ val MIGRATION_2_3 = object : Migration(2, 3) {
 
 Фильтры для отладки:
 ```
-CoParentlyMessagingService  # FCM уведомления
+CoPlanlyMessagingService  # FCM уведомления
 SyncService                 # Синхронизация
 FirestoreEventDataSource   # Firestore операции
 ```

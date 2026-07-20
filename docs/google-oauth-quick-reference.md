@@ -6,7 +6,7 @@
 
 ```bash
 # Windows PowerShell
-cd C:\Git\CoParently
+cd C:\Git\CoPlanly
 .\gradlew signingReport
 ```
 
@@ -23,7 +23,7 @@ SHA1: XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX
 keytool -list -v -keystore "путь_к_вашему_keystore.jks" -alias ваш_alias
 ```
 
-## Ключевые параметры для CoParently
+## Ключевые параметры для CoPlanly
 
 - **Package name**: `com.coparently.app`
 - **Project ID**: `coparently-a39c9`

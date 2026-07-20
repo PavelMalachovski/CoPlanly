@@ -1,6 +1,6 @@
 # Настройка OAuth 2.0 Client ID для Google Calendar API
 
-Эта инструкция поможет настроить OAuth 2.0 Client ID для работы Google Calendar API синхронизации в приложении CoParently.
+Эта инструкция поможет настроить OAuth 2.0 Client ID для работы Google Calendar API синхронизации в приложении CoPlanly.
 
 ## Предварительные требования
 
@@ -32,7 +32,7 @@
 1. Нажмите **CONFIGURE CONSENT SCREEN**
 2. Выберите **External** (внешний) и нажмите **CREATE**
 3. Заполните обязательные поля:
-   - **App name**: `CoParently`
+   - **App name**: `CoPlanly`
    - **User support email**: ваш email
    - **Developer contact information**: ваш email
 4. Нажмите **SAVE AND CONTINUE**
@@ -54,14 +54,14 @@
 1. Вернитесь в **APIs & Services** → **Credentials**
 2. Нажмите **+ CREATE CREDENTIALS** → **OAuth client ID**
 3. Выберите тип приложения: **Android**
-4. Введите **Name** (имя): `CoParently Android Client`
+4. Введите **Name** (имя): `CoPlanly Android Client`
 5. В поле **Package name** введите: `com.coparently.app`
 6. Для получения **SHA-1 certificate fingerprint**:
 
    **Вариант A: Через Gradle (рекомендуется для debug)**
    ```bash
    # Windows PowerShell
-   cd C:\Git\CoParently
+   cd C:\Git\CoPlanly
    .\gradlew signingReport
    ```
 
@@ -99,7 +99,7 @@
 5. Найдите ваше Android приложение с package name `com.coparently.app`
 6. Если приложения нет, нажмите **Add app** → **Android** и добавьте:
    - **Android package name**: `com.coparently.app`
-   - **App nickname** (опционально): `CoParently`
+   - **App nickname** (опционально): `CoPlanly`
    - **Debug signing certificate SHA-1**: вставьте тот же SHA-1, что использовали выше
 
 ### 3.2. Добавление OAuth Client ID

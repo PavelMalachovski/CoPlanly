@@ -30,7 +30,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-import com.coparently.app.presentation.theme.CoParentlyTheme
+import com.coparently.app.presentation.theme.CoPlanlyTheme
 import com.google.mlkit.vision.barcode.BarcodeScanner
 import com.google.mlkit.vision.barcode.BarcodeScannerOptions
 import com.google.mlkit.vision.barcode.BarcodeScanning
@@ -70,7 +70,7 @@ class QRScannerActivity : ComponentActivity() {
         barcodeScanner = BarcodeScanning.getClient(options)
 
         setContent {
-            CoParentlyTheme {
+            CoPlanlyTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background

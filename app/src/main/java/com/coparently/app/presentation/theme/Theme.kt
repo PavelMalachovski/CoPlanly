@@ -20,24 +20,24 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
 /**
- * Light color scheme for CoParently app.
+ * Light color scheme for CoPlanly app.
  * Enhanced with better contrast and brand colors.
  */
 private val LightColorScheme = lightColorScheme(
-    primary = CoParentlyColors.BrandPrimary,
+    primary = CoPlanlyColors.BrandPrimary,
     onPrimary = Color.White,
-    primaryContainer = CoParentlyColors.BrandPrimaryContainer,
-    onPrimaryContainer = CoParentlyColors.BrandOnPrimaryContainer,
-    secondary = CoParentlyColors.MomPink,
+    primaryContainer = CoPlanlyColors.BrandPrimaryContainer,
+    onPrimaryContainer = CoPlanlyColors.BrandOnPrimaryContainer,
+    secondary = CoPlanlyColors.MomPink,
     onSecondary = Color.White,
-    secondaryContainer = CoParentlyColors.MomPinkLight,
-    onSecondaryContainer = CoParentlyColors.MomPinkDark,
-    tertiary = CoParentlyColors.BrandAccent,
+    secondaryContainer = CoPlanlyColors.MomPinkLight,
+    onSecondaryContainer = CoPlanlyColors.MomPinkDark,
+    tertiary = CoPlanlyColors.BrandAccent,
     onTertiary = Color.White,
-    background = CoParentlyColors.LightBackground,
-    onBackground = CoParentlyColors.LightOnBackground,
-    surface = CoParentlyColors.LightSurface,
-    onSurface = CoParentlyColors.LightOnSurface,
+    background = CoPlanlyColors.LightBackground,
+    onBackground = CoPlanlyColors.LightOnBackground,
+    surface = CoPlanlyColors.LightSurface,
+    onSurface = CoPlanlyColors.LightOnSurface,
     surfaceVariant = Color(0xFFE4E1EC),
     onSurfaceVariant = Color(0xFF47464F),
     error = Color(0xFFBA1A1A),
@@ -47,11 +47,11 @@ private val LightColorScheme = lightColorScheme(
     outline = Color(0xFF777680),
     outlineVariant = Color(0xFFC8C5D0),
     scrim = Color.Black,
-    inverseSurface = CoParentlyColors.DarkSurface,
-    inverseOnSurface = CoParentlyColors.DarkOnSurface,
+    inverseSurface = CoPlanlyColors.DarkSurface,
+    inverseOnSurface = CoPlanlyColors.DarkOnSurface,
     inversePrimary = Color(0xFFC2C1FF),
     surfaceDim = Color(0xFFDCD9E0),
-    surfaceBright = CoParentlyColors.LightBackground,
+    surfaceBright = CoPlanlyColors.LightBackground,
     surfaceContainerLowest = Color.White,
     surfaceContainerLow = Color(0xFFF6F4FA),
     surfaceContainer = Color(0xFFF0EEF5),
@@ -60,24 +60,24 @@ private val LightColorScheme = lightColorScheme(
 )
 
 /**
- * Dark color scheme for CoParently app.
+ * Dark color scheme for CoPlanly app.
  * Enhanced with better contrast and brand colors.
  */
 private val DarkColorScheme = darkColorScheme(
     primary = Color(0xFFC2C1FF),
     onPrimary = Color(0xFF201F60),
     primaryContainer = Color(0xFF373678),
-    onPrimaryContainer = CoParentlyColors.BrandPrimaryContainer,
-    secondary = CoParentlyColors.MomPinkLight,
-    onSecondary = CoParentlyColors.MomPinkDark,
-    secondaryContainer = CoParentlyColors.MomPinkDark,
-    onSecondaryContainer = CoParentlyColors.MomPinkLight,
+    onPrimaryContainer = CoPlanlyColors.BrandPrimaryContainer,
+    secondary = CoPlanlyColors.MomPinkLight,
+    onSecondary = CoPlanlyColors.MomPinkDark,
+    secondaryContainer = CoPlanlyColors.MomPinkDark,
+    onSecondaryContainer = CoPlanlyColors.MomPinkLight,
     tertiary = Color(0xFF6EE7B7),
     onTertiary = Color(0xFF003824),
-    background = CoParentlyColors.DarkBackground,
-    onBackground = CoParentlyColors.DarkOnBackground,
-    surface = CoParentlyColors.DarkSurface,
-    onSurface = CoParentlyColors.DarkOnSurface,
+    background = CoPlanlyColors.DarkBackground,
+    onBackground = CoPlanlyColors.DarkOnBackground,
+    surface = CoPlanlyColors.DarkSurface,
+    onSurface = CoPlanlyColors.DarkOnSurface,
     surfaceVariant = Color(0xFF47464F),
     onSurfaceVariant = Color(0xFFC8C5D0),
     error = Color(0xFFFFB4AB),
@@ -87,13 +87,13 @@ private val DarkColorScheme = darkColorScheme(
     outline = Color(0xFF918F9A),
     outlineVariant = Color(0xFF47464F),
     scrim = Color.Black,
-    inverseSurface = CoParentlyColors.LightSurface,
-    inverseOnSurface = CoParentlyColors.LightOnSurface,
-    inversePrimary = CoParentlyColors.BrandPrimary,
-    surfaceDim = CoParentlyColors.DarkBackground,
+    inverseSurface = CoPlanlyColors.LightSurface,
+    inverseOnSurface = CoPlanlyColors.LightOnSurface,
+    inversePrimary = CoPlanlyColors.BrandPrimary,
+    surfaceDim = CoPlanlyColors.DarkBackground,
     surfaceBright = Color(0xFF39383F),
     surfaceContainerLowest = Color(0xFF0E0E13),
-    surfaceContainerLow = CoParentlyColors.DarkSurface,
+    surfaceContainerLow = CoPlanlyColors.DarkSurface,
     surfaceContainer = Color(0xFF1F1F25),
     surfaceContainerHigh = Color(0xFF29292F),
     surfaceContainerHighest = Color(0xFF34333A)
@@ -105,7 +105,7 @@ private val DarkColorScheme = darkColorScheme(
 val LocalThemeState = staticCompositionLocalOf { false }
 
 /**
- * Material 3 theme for CoParently app.
+ * Material 3 theme for CoPlanly app.
  * Supports both light and dark themes with enhanced color schemes,
  * and responsive design based on window size.
  *
@@ -115,7 +115,7 @@ val LocalThemeState = staticCompositionLocalOf { false }
  * @param content The composable content to display with this theme
  */
 @Composable
-fun CoParentlyTheme(
+fun CoPlanlyTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     dynamicColor: Boolean = false, // Disabled by default for brand consistency
     windowSizeClass: WindowSizeClass? = null,
@@ -164,7 +164,7 @@ fun CoParentlyTheme(
         MaterialTheme(
             colorScheme = colorScheme,
             typography = Typography,
-            shapes = CoParentlyShapes,
+            shapes = CoPlanlyShapes,
             content = content
         )
     }

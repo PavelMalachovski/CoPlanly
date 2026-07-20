@@ -3,7 +3,7 @@ package com.coparently.app.presentation.theme
 import androidx.compose.ui.graphics.Color
 
 /**
- * Color palette for CoParently app.
+ * Color palette for CoPlanly app.
  * Defines colors for parents (mom = pink, dad = blue) and app theme.
  * Enhanced with brand colors and improved contrast ratios for WCAG AA compliance (4.5:1 minimum).
  *
@@ -13,7 +13,7 @@ import androidx.compose.ui.graphics.Color
  * - MomPinkDark on white: 7.0:1 ✓
  * - DadBlueDark on white: 8.59:1 ✓
  */
-object CoParentlyColors {
+object CoPlanlyColors {
     // Parent colors - Improved contrast for accessibility (WCAG AA compliant)
     val MomPink = Color(0xFFE91E63) // Material Pink 700 - contrast 7.0:1 on white
     val DadBlue = Color(0xFF1976D2) // Material Blue 700 - contrast 8.59:1 on white

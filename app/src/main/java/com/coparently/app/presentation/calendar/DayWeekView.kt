@@ -73,7 +73,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import com.coparently.app.data.local.entity.CustodyScheduleEntity
 import com.coparently.app.domain.model.Event
-import com.coparently.app.presentation.theme.CoParentlyColors
+import com.coparently.app.presentation.theme.CoPlanlyColors
 import com.coparently.app.presentation.theme.dimensions
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -268,7 +268,7 @@ fun DayWeekView(
                                     fontWeight = FontWeight.Bold,
                                     color = when {
                                         isToday -> MaterialTheme.colorScheme.primary
-                                        isPublicHoliday -> CoParentlyColors.HolidayRed
+                                        isPublicHoliday -> CoPlanlyColors.HolidayRed
                                         else -> MaterialTheme.colorScheme.onSurface
                                     }
                                 )
@@ -286,9 +286,9 @@ fun DayWeekView(
                                         maxLines = 1,
                                         overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                                         color = if (isPublicHoliday) {
-                                            CoParentlyColors.HolidayRed
+                                            CoPlanlyColors.HolidayRed
                                         } else {
-                                            CoParentlyColors.VacationTint
+                                            CoPlanlyColors.VacationTint
                                         }
                                     )
                                 }
@@ -382,14 +382,14 @@ fun DayWeekView(
                                     val isWeekend = CustodyHelper.isWeekend(date)
                                     val isDarkTheme = androidx.compose.foundation.isSystemInDarkTheme()
                                     val weekendColor = if (isDarkTheme) {
-                                        CoParentlyColors.WeekendBackgroundDark.copy(alpha = 0.5f)
+                                        CoPlanlyColors.WeekendBackgroundDark.copy(alpha = 0.5f)
                                     } else {
-                                        CoParentlyColors.WeekendBackgroundLight.copy(alpha = 0.3f)
+                                        CoPlanlyColors.WeekendBackgroundLight.copy(alpha = 0.3f)
                                     }
                                     val backgroundColor = when {
                                         isToday -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.05f)
-                                        custody == "mom" -> CoParentlyColors.MomPink.copy(alpha = 0.03f)
-                                        custody == "dad" -> CoParentlyColors.DadBlue.copy(alpha = 0.03f)
+                                        custody == "mom" -> CoPlanlyColors.MomPink.copy(alpha = 0.03f)
+                                        custody == "dad" -> CoPlanlyColors.DadBlue.copy(alpha = 0.03f)
                                         isWeekend -> weekendColor
                                         else -> MaterialTheme.colorScheme.surface
                                     }
@@ -542,20 +542,20 @@ private fun EventChip(
 
     // Transparent background colors (more transparent)
     val backgroundColor = when (event.parentOwner) {
-        "mom" -> CoParentlyColors.MomPink.copy(alpha = 0.3f)
-        "dad" -> CoParentlyColors.DadBlue.copy(alpha = 0.3f)
+        "mom" -> CoPlanlyColors.MomPink.copy(alpha = 0.3f)
+        "dad" -> CoPlanlyColors.DadBlue.copy(alpha = 0.3f)
         else -> MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.3f)
     }
 
     val borderColor = when (event.parentOwner) {
-        "mom" -> CoParentlyColors.MomPink.copy(alpha = 0.8f)
-        "dad" -> CoParentlyColors.DadBlue.copy(alpha = 0.8f)
+        "mom" -> CoPlanlyColors.MomPink.copy(alpha = 0.8f)
+        "dad" -> CoPlanlyColors.DadBlue.copy(alpha = 0.8f)
         else -> MaterialTheme.colorScheme.tertiary.copy(alpha = 0.8f)
     }
 
     val textColor = when (event.parentOwner) {
-        "mom" -> CoParentlyColors.MomPink
-        "dad" -> CoParentlyColors.DadBlue
+        "mom" -> CoPlanlyColors.MomPink
+        "dad" -> CoPlanlyColors.DadBlue
         else -> MaterialTheme.colorScheme.onTertiaryContainer
     }
 

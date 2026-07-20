@@ -3,7 +3,7 @@ package com.coparently.app.data.preferences
 import androidx.compose.ui.graphics.Color
 
 /**
- * Theme preferences for the CoParently app.
+ * Theme preferences for the CoPlanly app.
  * Supports dark mode, dynamic colors, custom color schemes, and font scaling.
  */
 data class ThemePreferences(

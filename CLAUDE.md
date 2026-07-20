@@ -4,7 +4,7 @@ Guidance for Claude Code (and other AI assistants) working in this repository.
 
 ## What this project is
 
-CoParently — an Android shared-calendar app for separated parents. Kotlin + Jetpack Compose
+CoPlanly — an Android shared-calendar app for separated parents. Kotlin + Jetpack Compose
 (Material 3), Clean Architecture with Hilt, Room as the offline-first source of truth,
 Firebase (Auth/Firestore/FCM) for sync between the two parents, Google Calendar integration,
 Gemini for AI features.
@@ -36,7 +36,7 @@ dashboards) is next. The latest full audit lives in `docs/AUDIT-2026-07.md`.
   (e.g. `LocalDate.ofInstant` is API 34+; use `Instant.atZone(...).toLocalDate()`).
 - **KDoc** on public classes/functions; code and comments in **English**.
 - Material 3 components; theme tokens from `presentation/theme/`
-  (`CoParentlyColors`, `Typography`, `CoParentlyShapes`, `dimensions()`).
+  (`CoPlanlyColors`, `Typography`, `CoPlanlyShapes`, `dimensions()`).
 - Parent color semantics are product-level: **Mom = pink, Dad = blue** — do not repurpose.
 - Conventional Commits (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`).
 
@@ -53,7 +53,7 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
 
 ### Things that are easy to get wrong
 
-1. **Room schema changes** require: entity change → version bump in `CoParentlyDatabase` →
+1. **Room schema changes** require: entity change → version bump in `CoPlanlyDatabase` →
    migration in `DatabaseMigrations` (it is auto-registered via `ALL_MIGRATIONS`).
    Exported schemas live in `app/schemas/`.
 2. **Event editing must preserve fields.** `AddEditEventScreen` keeps a snapshot of the

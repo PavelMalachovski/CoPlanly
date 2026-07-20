@@ -32,7 +32,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.coparently.app.R
-import com.coparently.app.presentation.theme.CoParentlyColors
+import com.coparently.app.presentation.theme.CoPlanlyColors
 import com.coparently.app.presentation.theme.dimensions
 import com.coparently.app.utils.LightDarkPreviews
 import com.coparently.app.utils.PreviewWrapper
@@ -46,20 +46,20 @@ import com.coparently.app.utils.PreviewWrapper
 @Composable
 fun CustodyIndicatorToday(custody: String) {
     val backgroundColor = when (custody) {
-        "mom" -> CoParentlyColors.MomPink.copy(alpha = 0.2f)
-        "dad" -> CoParentlyColors.DadBlue.copy(alpha = 0.2f)
+        "mom" -> CoPlanlyColors.MomPink.copy(alpha = 0.2f)
+        "dad" -> CoPlanlyColors.DadBlue.copy(alpha = 0.2f)
         else -> MaterialTheme.colorScheme.surfaceVariant
     }
 
     val borderColor = when (custody) {
-        "mom" -> CoParentlyColors.MomPink
-        "dad" -> CoParentlyColors.DadBlue
+        "mom" -> CoPlanlyColors.MomPink
+        "dad" -> CoPlanlyColors.DadBlue
         else -> MaterialTheme.colorScheme.outline
     }
 
     val textColor = when (custody) {
-        "mom" -> CoParentlyColors.MomPinkDark
-        "dad" -> CoParentlyColors.DadBlueDark
+        "mom" -> CoPlanlyColors.MomPinkDark
+        "dad" -> CoPlanlyColors.DadBlueDark
         else -> MaterialTheme.colorScheme.onSurface
     }
 

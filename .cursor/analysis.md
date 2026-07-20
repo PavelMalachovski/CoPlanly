@@ -1,4 +1,4 @@
-# Анализ кодовой базы мобильного приложения: CoParently
+# Анализ кодовой базы мобильного приложения: CoPlanly
 
 > **Дата анализа:** 16 ноября 2025
 > **Версия проекта:** 1.0.0 (v2.0 - Навигация и UX)
@@ -11,21 +11,21 @@
 ### Дерево директорий (до 3-го уровня)
 
 ```
-CoParently/
+CoPlanly/
 ├── app/
 │   ├── build.gradle.kts              # Конфигурация модуля приложения
 │   ├── proguard-rules.pro            # Правила ProGuard (стандартные)
 │   ├── schemas/                      # Схемы базы данных Room (версии 2, 3)
-│   │   └── com.coparently.app.data.local.CoParentlyDatabase/
+│   │   └── com.coparently.app.data.local.CoPlanlyDatabase/
 │   │       ├── 2.json
 │   │       └── 3.json
 │   └── src/main/
 │       ├── AndroidManifest.xml       # Манифест приложения
 │       ├── java/com/coparently/app/
-│       │   ├── CoParentlyApplication.kt    # Application класс с @HiltAndroidApp
+│       │   ├── CoPlanlyApplication.kt    # Application класс с @HiltAndroidApp
 │       │   ├── data/                       # Слой данных (Clean Architecture)
 │       │   │   ├── local/                  # Локальное хранилище
-│       │   │   │   ├── CoParentlyDatabase.kt
+│       │   │   │   ├── CoPlanlyDatabase.kt
 │       │   │   │   ├── Converters.kt       # TypeConverters для Room
 │       │   │   │   ├── dao/                # Data Access Objects (4 DAO)
 │       │   │   │   ├── entity/             # Entity модели для БД (4 entity)
@@ -377,7 +377,7 @@ fun EventListScreen(viewModel: EventViewModel = hiltViewModel()) {
 
 ```kotlin
 @Composable
-fun CoParentlyTheme(
+fun CoPlanlyTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     dynamicColor: Boolean = false,  // Отключено для брендированности
     content: @Composable () -> Unit
@@ -404,7 +404,7 @@ fun CoParentlyTheme(
 **Брендированная цветовая схема с WCAG AA соответствием**:
 
 ```kotlin
-object CoParentlyColors {
+object CoPlanlyColors {
     // Parent colors - контраст 7.0:1+ на белом (WCAG AA)
     val MomPink = Color(0xFFE91E63)      // Material Pink 700
     val DadBlue = Color(0xFF1976D2)      // Material Blue 700
@@ -733,7 +733,7 @@ fun EventListScreen(viewModel: EventViewModel) {
 
 ---
 
-### 4. CoParentlyDatabase - Room Database
+### 4. CoPlanlyDatabase - Room Database
 
 **Назначение**: Offline-first локальное хранилище с 4 таблицами и TypeConverters для сложных типов.
 
@@ -751,7 +751,7 @@ fun EventListScreen(viewModel: EventViewModel) {
     exportSchema = true
 )
 @TypeConverters(Converters::class)
-abstract class CoParentlyDatabase : RoomDatabase() {
+abstract class CoPlanlyDatabase : RoomDatabase() {
     abstract fun eventDao(): EventDao
     abstract fun userDao(): UserDao
     abstract fun custodyScheduleDao(): CustodyScheduleDao
@@ -865,7 +865,7 @@ class EventViewModel @Inject constructor(
 class MainActivity : ComponentActivity()
 
 @HiltAndroidApp
-class CoParentlyApplication : Application()
+class CoPlanlyApplication : Application()
 ```
 
 ### Оптимизация производительности
@@ -947,15 +947,15 @@ fun createEvent(title: String, date: LocalDateTime) {
 
 ```xml
 <!-- values/strings.xml -->
-<string name="calendar_title">CoParently</string>
+<string name="calendar_title">CoPlanly</string>
 <string name="event_add">Add Event</string>
 
 <!-- values-cs/strings.xml -->
-<string name="calendar_title">CoParently</string>
+<string name="calendar_title">CoPlanly</string>
 <string name="event_add">Přidat událost</string>
 
 <!-- values-ru/strings.xml -->
-<string name="calendar_title">CoParently</string>
+<string name="calendar_title">CoPlanly</string>
 <string name="event_add">Добавить событие</string>
 ```
 
@@ -1255,7 +1255,7 @@ try {
 
 ## 📞 Контакты и ресурсы
 
-**Репозиторий**: CoParently
+**Репозиторий**: CoPlanly
 **Минимальный SDK**: 26 (Android 8.0 Oreo)
 **Целевой SDK**: 34 (Android 14)
 

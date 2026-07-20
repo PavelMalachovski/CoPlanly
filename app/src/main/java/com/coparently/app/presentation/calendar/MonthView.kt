@@ -68,7 +68,7 @@ import java.util.Locale as JavaLocale
 import com.coparently.app.data.local.entity.CustodyScheduleEntity
 import com.coparently.app.domain.holidays.Holiday
 import com.coparently.app.domain.model.Event
-import com.coparently.app.presentation.theme.CoParentlyColors
+import com.coparently.app.presentation.theme.CoPlanlyColors
 import com.coparently.app.presentation.theme.dimensions
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -402,19 +402,19 @@ private fun RowScope.DayCell(
     val isDarkTheme = androidx.compose.foundation.isSystemInDarkTheme()
 
     val weekendColor = if (isDarkTheme) {
-        CoParentlyColors.WeekendBackgroundDark
+        CoPlanlyColors.WeekendBackgroundDark
     } else {
-        CoParentlyColors.WeekendBackgroundLight.copy(alpha = 0.5f)
+        CoPlanlyColors.WeekendBackgroundLight.copy(alpha = 0.5f)
     }
 
     val isPublicHoliday = holiday != null && !holiday.isSchoolVacation
 
     val backgroundColor = when {
         !isCurrentMonth -> MaterialTheme.colorScheme.surface
-        custody == "mom" -> CoParentlyColors.MomPink.copy(alpha = 0.08f)
-        custody == "dad" -> CoParentlyColors.DadBlue.copy(alpha = 0.08f)
-        isPublicHoliday -> CoParentlyColors.HolidayRed.copy(alpha = 0.10f)
-        holiday?.isSchoolVacation == true -> CoParentlyColors.VacationTint.copy(alpha = 0.16f)
+        custody == "mom" -> CoPlanlyColors.MomPink.copy(alpha = 0.08f)
+        custody == "dad" -> CoPlanlyColors.DadBlue.copy(alpha = 0.08f)
+        isPublicHoliday -> CoPlanlyColors.HolidayRed.copy(alpha = 0.10f)
+        holiday?.isSchoolVacation == true -> CoPlanlyColors.VacationTint.copy(alpha = 0.16f)
         isWeekend -> weekendColor
         else -> MaterialTheme.colorScheme.surface
     }
@@ -520,7 +520,7 @@ private fun RowScope.DayCell(
                     color = when {
                         isToday -> MaterialTheme.colorScheme.onPrimary
                         !isCurrentMonth -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
-                        isPublicHoliday -> CoParentlyColors.HolidayRed
+                        isPublicHoliday -> CoPlanlyColors.HolidayRed
                         else -> MaterialTheme.colorScheme.onSurface
                     }
                 )
@@ -530,8 +530,8 @@ private fun RowScope.DayCell(
                 val eventToShow = events.firstOrNull()
                 eventToShow?.let { event ->
                     val eventColor = when (event.parentOwner) {
-                        "mom" -> CoParentlyColors.MomPink
-                        "dad" -> CoParentlyColors.DadBlue
+                        "mom" -> CoPlanlyColors.MomPink
+                        "dad" -> CoPlanlyColors.DadBlue
                         else -> MaterialTheme.colorScheme.tertiary
                     }
 

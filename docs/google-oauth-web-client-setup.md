@@ -1,6 +1,6 @@
 # Настройка OAuth 2.0 Web Client ID для Credential Manager API
 
-Эта инструкция поможет настроить **Web Client ID** для использования Credential Manager API в приложении CoParently.
+Эта инструкция поможет настроить **Web Client ID** для использования Credential Manager API в приложении CoPlanly.
 
 ## Важно: Разница между Android и Web Client ID
 
@@ -41,7 +41,7 @@
 1. Нажмите **CONFIGURE CONSENT SCREEN**
 2. Выберите **External** (внешний) и нажмите **CREATE**
 3. Заполните обязательные поля:
-   - **App name**: `CoParently`
+   - **App name**: `CoPlanly`
    - **User support email**: ваш email
    - **Developer contact information**: ваш email
 4. Нажмите **SAVE AND CONTINUE**
@@ -63,7 +63,7 @@
 1. Вернитесь в **APIs & Services** → **Credentials**
 2. Нажмите **+ CREATE CREDENTIALS** → **OAuth client ID**
 3. В поле **Application type** выберите: **Web application** ⚠️ **НЕ Android!**
-4. Введите **Name** (имя): `CoParently Web Client` (или любое другое имя)
+4. Введите **Name** (имя): `CoPlanly Web Client` (или любое другое имя)
 5. Поле **Authorized JavaScript origins** оставьте пустым (не требуется для мобильных приложений)
 6. Поле **Authorized redirect URIs** оставьте пустым (не требуется для Credential Manager API)
 7. Нажмите **CREATE**

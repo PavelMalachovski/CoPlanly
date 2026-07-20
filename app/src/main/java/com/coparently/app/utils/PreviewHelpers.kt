@@ -9,7 +9,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import com.coparently.app.domain.model.Event
-import com.coparently.app.presentation.theme.CoParentlyTheme
+import com.coparently.app.presentation.theme.CoPlanlyTheme
 import java.time.LocalDateTime
 import java.util.UUID
 
@@ -180,7 +180,7 @@ class SampleEventProvider : PreviewParameterProvider<Event> {
 // ==================== Preview Wrappers ====================
 
 /**
- * Preview wrapper that applies CoParently theme and surface.
+ * Preview wrapper that applies CoPlanly theme and surface.
  * Use this to wrap all composable previews for consistent styling.
  *
  * @param darkTheme Whether to use dark theme, default false (light theme)
@@ -202,7 +202,7 @@ fun PreviewWrapper(
     darkTheme: Boolean = false,
     content: @Composable () -> Unit
 ) {
-    CoParentlyTheme(darkTheme = darkTheme) {
+    CoPlanlyTheme(darkTheme = darkTheme) {
         Surface(
             modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background

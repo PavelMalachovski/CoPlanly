@@ -1,4 +1,4 @@
-# 🎨 Design & Performance Optimization Roadmap — CoParently
+# 🎨 Design & Performance Optimization Roadmap — CoPlanly
 
 > **Комплексное ревью UI/UX дизайна и оптимизации производительности**
 >
@@ -279,8 +279,8 @@ val currentDates = DateRangeHelper.rememberDateRange(currentDate, daysCount)
         bounded = true,
         radius = 24.dp,
         color = when (custody) {
-            "mom" -> CoParentlyColors.MomPink
-            "dad" -> CoParentlyColors.DadBlue
+            "mom" -> CoPlanlyColors.MomPink
+            "dad" -> CoPlanlyColors.DadBlue
             else -> MaterialTheme.colorScheme.primary
         }
     ),
@@ -756,8 +756,8 @@ fun AddEditEventScreen(
                         colors = CardDefaults.cardColors(
                             containerColor = if (isSelected) {
                                 when (value) {
-                                    "mom" -> CoParentlyColors.MomPink.copy(alpha = 0.2f)
-                                    "dad" -> CoParentlyColors.DadBlue.copy(alpha = 0.2f)
+                                    "mom" -> CoPlanlyColors.MomPink.copy(alpha = 0.2f)
+                                    "dad" -> CoPlanlyColors.DadBlue.copy(alpha = 0.2f)
                                     else -> MaterialTheme.colorScheme.surfaceVariant
                                 }
                             } else {
@@ -768,8 +768,8 @@ fun AddEditEventScreen(
                             BorderStroke(
                                 2.dp,
                                 when (value) {
-                                    "mom" -> CoParentlyColors.MomPink
-                                    "dad" -> CoParentlyColors.DadBlue
+                                    "mom" -> CoPlanlyColors.MomPink
+                                    "dad" -> CoPlanlyColors.DadBlue
                                     else -> MaterialTheme.colorScheme.primary
                                 }
                             )
@@ -793,8 +793,8 @@ fun AddEditEventScreen(
                                 },
                                 contentDescription = null,
                                 tint = when (value) {
-                                    "mom" -> CoParentlyColors.MomPink
-                                    "dad" -> CoParentlyColors.DadBlue
+                                    "mom" -> CoPlanlyColors.MomPink
+                                    "dad" -> CoPlanlyColors.DadBlue
                                     else -> MaterialTheme.colorScheme.primary
                                 },
                                 modifier = Modifier.size(28.dp)
@@ -1100,9 +1100,9 @@ fun AuthScreen(
             .background(
                 brush = Brush.verticalGradient(
                     colors = listOf(
-                        CoParentlyColors.BrandPrimary.copy(alpha = 0.1f),
+                        CoPlanlyColors.BrandPrimary.copy(alpha = 0.1f),
                         Color.Transparent,
-                        CoParentlyColors.BrandSecondary.copy(alpha = 0.05f)
+                        CoPlanlyColors.BrandSecondary.copy(alpha = 0.05f)
                     )
                 )
             )
@@ -1134,20 +1134,20 @@ fun AuthScreen(
 
                 Icon(
                     imageVector = Icons.Default.ChildCare,
-                    contentDescription = "CoParently Logo",
+                    contentDescription = "CoPlanly Logo",
                     modifier = Modifier
                         .size(80.dp)
                         .graphicsLayer {
                             scaleX = pulse
                             scaleY = pulse
                         },
-                    tint = CoParentlyColors.BrandPrimary
+                    tint = CoPlanlyColors.BrandPrimary
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
-                    text = "CoParently",
+                    text = "CoPlanly",
                     style = MaterialTheme.typography.headlineLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground
@@ -1313,7 +1313,7 @@ fun AuthScreen(
                                   uiState.password.isNotBlank(),
                         shape = RoundedCornerShape(16.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = CoParentlyColors.BrandPrimary
+                            containerColor = CoPlanlyColors.BrandPrimary
                         )
                     ) {
                         if (uiState.isLoading) {
@@ -1354,7 +1354,7 @@ fun AuthScreen(
                     Text(
                         text = if (uiState.isSignInMode) "Sign Up" else "Sign In",
                         fontWeight = FontWeight.Bold,
-                        color = CoParentlyColors.BrandPrimary
+                        color = CoPlanlyColors.BrandPrimary
                     )
                 }
             }
@@ -1422,7 +1422,7 @@ import androidx.compose.ui.unit.sp
 import com.coparently.app.R
 
 /**
- * Custom font families for CoParently
+ * Custom font families for CoPlanly
  * Consider using Google Fonts: Poppins, Montserrat, or Inter
  */
 // TODO: Add font resources to res/font/
@@ -1434,7 +1434,7 @@ import com.coparently.app.R
 // )
 
 /**
- * Enhanced Typography for CoParently app.
+ * Enhanced Typography for CoPlanly app.
  * Uses full Material 3 type scale with customizations.
  */
 val Typography = Typography(
@@ -1667,9 +1667,9 @@ fun dimensions(): Dimensions = LocalDimensions.current
 import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 
-// Обновить CoParentlyTheme:
+// Обновить CoPlanlyTheme:
 @Composable
-fun CoParentlyTheme(
+fun CoPlanlyTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     dynamicColor: Boolean = false,
     windowSizeClass: WindowSizeClass? = null,  // NEW
@@ -1803,7 +1803,7 @@ Box(
 **Решение** (проверить и улучшить):
 
 ```kotlin
-object CoParentlyColors {
+object CoPlanlyColors {
     // Parent colors - проверить контраст с фонами
     val MomPink = Color(0xFFE91E63)  // Was: 0xFFFF4081 - улучшен контраст
     val DadBlue = Color(0xFF1976D2)  // Was: 0xFF2196F3 - улучшен контраст
@@ -2138,10 +2138,10 @@ text = date.format(DateTimeFormatter.ofPattern("EEEE, MMMM d, yyyy"))
 text = date.formatLong()
 
 // Было:
-CoParentlyColors.MomPink.copy(alpha = 0.2f)
+CoPlanlyColors.MomPink.copy(alpha = 0.2f)
 
 // Стало:
-CoParentlyColors.MomPink.withAlpha(0.2f)
+CoPlanlyColors.MomPink.withAlpha(0.2f)
 ```
 
 ---
@@ -2203,7 +2203,7 @@ fun PreviewWrapper(
     darkTheme: Boolean = false,
     content: @Composable () -> Unit
 ) {
-    CoParentlyTheme(darkTheme = darkTheme) {
+    CoPlanlyTheme(darkTheme = darkTheme) {
         Surface(
             modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background
@@ -2327,7 +2327,7 @@ dependencies {
 
     <activity
         android:name=".presentation.MainActivity"
-        android:theme="@style/Theme.CoParently">
+        android:theme="@style/Theme.CoPlanly">
         <!-- ... -->
     </activity>
 </application>
@@ -2342,7 +2342,7 @@ dependencies {
         <item name="windowSplashScreenBackground">@color/brand_primary</item>
         <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
         <item name="windowSplashScreenAnimationDuration">300</item>
-        <item name="postSplashScreenTheme">@style/Theme.CoParently</item>
+        <item name="postSplashScreenTheme">@style/Theme.CoPlanly</item>
     </style>
 </resources>
 ```
@@ -2606,7 +2606,7 @@ fun CalendarScreen(...) {
 **Roadmap создан**: 16 ноября 2025
 **Версия**: 1.0
 **Автор**: Senior UI/UX Designer & Senior Kotlin Developer
-**Для проекта**: CoParently v1.1.0
+**Для проекта**: CoPlanly v1.1.0
 
 ---
 

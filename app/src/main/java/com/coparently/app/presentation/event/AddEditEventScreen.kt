@@ -80,7 +80,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.components.TimePickerDialog
-import com.coparently.app.presentation.theme.CoParentlyColors
+import com.coparently.app.presentation.theme.CoPlanlyColors
 import com.coparently.app.presentation.theme.dimensions
 import com.coparently.app.utils.ValidationResult
 import com.coparently.app.utils.ValidationUtils
@@ -506,8 +506,8 @@ fun AddEditEventScreen(
                         colors = CardDefaults.cardColors(
                             containerColor = if (isSelected) {
                                 when (value) {
-                                    "mom" -> CoParentlyColors.MomPink.copy(alpha = 0.2f)
-                                    "dad" -> CoParentlyColors.DadBlue.copy(alpha = 0.2f)
+                                    "mom" -> CoPlanlyColors.MomPink.copy(alpha = 0.2f)
+                                    "dad" -> CoPlanlyColors.DadBlue.copy(alpha = 0.2f)
                                     else -> MaterialTheme.colorScheme.surfaceVariant
                                 }
                             } else {
@@ -518,8 +518,8 @@ fun AddEditEventScreen(
                             BorderStroke(
                                 2.dp,
                                 when (value) {
-                                    "mom" -> CoParentlyColors.MomPink
-                                    "dad" -> CoParentlyColors.DadBlue
+                                    "mom" -> CoPlanlyColors.MomPink
+                                    "dad" -> CoPlanlyColors.DadBlue
                                     else -> MaterialTheme.colorScheme.primary
                                 }
                             )
@@ -543,8 +543,8 @@ fun AddEditEventScreen(
                                 },
                                 contentDescription = "$label icon",
                                 tint = when (value) {
-                                    "mom" -> CoParentlyColors.MomPink
-                                    "dad" -> CoParentlyColors.DadBlue
+                                    "mom" -> CoPlanlyColors.MomPink
+                                    "dad" -> CoPlanlyColors.DadBlue
                                     else -> MaterialTheme.colorScheme.primary
                                 },
                                 modifier = Modifier.size(dims.iconSize * 1.17f) // ~28dp for compact

@@ -25,7 +25,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 
 /**
- * Custom SnackbarHost for CoParently app with enhanced visual feedback.
+ * Custom SnackbarHost for CoPlanly app with enhanced visual feedback.
  * Automatically detects notification type based on message content and displays
  * appropriate icon and color.
  *
@@ -39,7 +39,7 @@ import androidx.compose.ui.unit.dp
  * @param modifier Modifier for the host
  */
 @Composable
-fun CoParentlySnackbarHost(
+fun CoPlanlySnackbarHost(
     snackbarHostState: SnackbarHostState,
     modifier: Modifier = Modifier
 ) {

@@ -14,6 +14,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "CoParently"
+rootProject.name = "CoPlanly"
 include(":app")
 
