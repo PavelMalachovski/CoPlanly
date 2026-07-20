@@ -1,5 +1,7 @@
 package com.coparently.app.presentation.calendar.components
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
@@ -11,6 +13,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -45,28 +48,32 @@ fun CalendarHeader(
     onSettingsClick: (() -> Unit)? = null
 ) {
     TopAppBar(
-        navigationIcon = {
-            // View mode dropdown in navigation icon position (left side)
-            ViewModeDropdown(
-                selectedMode = viewMode,
-                onModeSelected = onViewModeChange,
-                modifier = Modifier.padding(start = 8.dp)
-            )
-        },
         title = {
-            val yearMonth = YearMonth.from(selectedDate)
-            Text(
-                text = "${
-                    yearMonth.month.getDisplayName(
-                        java.time.format.TextStyle.FULL_STANDALONE,
-                        java.util.Locale.getDefault()
-                    ).replaceFirstChar { it.uppercase() }
-                } ${yearMonth.year}",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+            // Month/year title with the view-mode selector placed right next to it,
+            // so the current view is chosen from within the "July 2026" header.
+            // This title stays fixed while the calendar body swipes underneath.
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                val yearMonth = YearMonth.from(selectedDate)
+                Text(
+                    text = "${
+                        yearMonth.month.getDisplayName(
+                            java.time.format.TextStyle.FULL_STANDALONE,
+                            java.util.Locale.getDefault()
+                        ).replaceFirstChar { it.uppercase() }
+                    } ${yearMonth.year}",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                ViewModeDropdown(
+                    selectedMode = viewMode,
+                    onModeSelected = onViewModeChange
+                )
+            }
         },
         actions = {
             // Today button

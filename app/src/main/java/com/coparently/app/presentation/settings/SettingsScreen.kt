@@ -475,7 +475,7 @@ fun SettingsScreen(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Version 1.1.0",
+                        text = "Version ${com.coparently.app.BuildConfig.VERSION_NAME}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
