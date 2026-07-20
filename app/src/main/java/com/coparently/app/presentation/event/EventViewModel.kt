@@ -194,9 +194,12 @@ class EventViewModel @Inject constructor(
 
     /**
      * Moves event to a new date/time (drag & drop support).
+     * @param targetStartMinuteOfDay New start time as minute-of-day (0..1439), already
+     *   snapped to 15 minutes by the caller; null keeps the original time of day
+     *   (used by the month view, which only changes the date).
      * Stores previous position for undo functionality.
      */
-    fun moveEvent(eventId: String, targetDate: LocalDate, targetHour: Int? = null) {
+    fun moveEvent(eventId: String, targetDate: LocalDate, targetStartMinuteOfDay: Int? = null) {
         viewModelScope.launch {
             try {
                 val event = eventUseCases.getEvents.getById(eventId) ?: return@launch
@@ -207,9 +210,11 @@ class EventViewModel @Inject constructor(
                 lastMoveUndoInfo = PreviousEventPosition(eventId, previousDate, previousHour)
 
                 val duration = Duration.between(event.startDateTime, event.endDateTime)
-                val originalTime = event.startDateTime.toLocalTime()
-                val adjustedTime = targetHour?.let { originalTime.withHour(it) } ?: originalTime
-                val newStart = targetDate.atTime(adjustedTime)
+                val newTime = targetStartMinuteOfDay
+                    ?.coerceIn(0, 24 * 60 - 1)
+                    ?.let { LocalTime.of(it / 60, it % 60) }
+                    ?: event.startDateTime.toLocalTime()
+                val newStart = targetDate.atTime(newTime)
                 val newEnd = newStart.plus(duration)
                 val updatedEvent = event.copy(
                     startDateTime = newStart,
@@ -381,7 +386,7 @@ class EventViewModel @Inject constructor(
         startTime: LocalTime,
         endTime: LocalTime
     ) {
-        viewModelScope.launch {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             try {
                 val draft = EventDraft(
                     title = title,
@@ -393,6 +398,7 @@ class EventViewModel @Inject constructor(
                     endTime = endTime.toString()
                 )
                 val draftJson = gson.toJson(draft)
+                // EncryptedSharedPreferences does crypto on the calling thread; keep it off Main.
                 encryptedPreferences.putEventDraft(draftJson)
             } catch (e: Exception) {
                 // Silently fail - draft saving is not critical

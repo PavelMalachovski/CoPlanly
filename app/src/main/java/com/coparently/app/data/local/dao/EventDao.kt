@@ -29,10 +29,20 @@ interface EventDao {
     fun getEventsByDateRange(start: LocalDateTime, end: LocalDateTime): Flow<List<EventEntity>>
 
     /**
-     * Gets non-recurring events for a specific date range.
+     * Gets non-recurring events overlapping a date range (start before range end and
+     * end — or start, for events without an end — after range start). This includes
+     * multi-day and overnight events that begin before the range but reach into it.
      * Recurring events are fetched separately and expanded into occurrences.
      */
-    @Query("SELECT * FROM events WHERE isRecurring = 0 AND startDateTime >= :start AND startDateTime <= :end ORDER BY startDateTime ASC")
+    @Query(
+        """
+        SELECT * FROM events
+        WHERE isRecurring = 0
+        AND startDateTime <= :end
+        AND (endDateTime IS NULL OR endDateTime >= :start)
+        ORDER BY startDateTime ASC
+        """
+    )
     fun getSingleEventsByDateRange(start: LocalDateTime, end: LocalDateTime): Flow<List<EventEntity>>
 
     /**

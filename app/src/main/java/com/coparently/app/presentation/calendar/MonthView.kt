@@ -365,10 +365,16 @@ private fun WeekRow(
 
         // Day cells
         week.forEach { date ->
+            val dayStart = date.atStartOfDay()
+            val dayEnd = date.plusDays(1).atStartOfDay()
             DayCell(
                 date = date,
                 isCurrentMonth = YearMonth.from(date) == selectedMonth,
-                events = events.filter { it.startDateTime.toLocalDate() == date },
+                // Include multi-day/overnight events on every day they cover, not just their start day
+                events = events.filter { e ->
+                    val end = e.endDateTime ?: e.startDateTime
+                    e.startDateTime.isBefore(dayEnd) && !end.isBefore(dayStart)
+                },
                 custodySchedules = custodySchedules,
                 onDayClick = onDayClick,
                 isSwipeInProgress = isSwipeInProgress,

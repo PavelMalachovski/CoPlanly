@@ -84,7 +84,9 @@ import com.coparently.app.presentation.theme.CoPlanlyColors
 import com.coparently.app.presentation.theme.dimensions
 import com.coparently.app.utils.ValidationResult
 import com.coparently.app.utils.ValidationUtils
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -123,7 +125,9 @@ fun AddEditEventScreen(
     var showRecurrenceEndPicker by remember { mutableStateOf(false) }
     var reminderMinutes by remember { mutableStateOf<Int?>(null) }
     var isPrivate by remember { mutableStateOf(false) }
-    val customEventTypes = remember { viewModel.customEventTypes() }
+    // Custom event types are read from encrypted prefs; load them off the main thread
+    // so opening the screen isn't blocked by the (synchronous) decrypt on first composition.
+    var customEventTypes by remember { mutableStateOf<List<String>>(emptyList()) }
     var startDate by remember { mutableStateOf(initialDate ?: LocalDate.now()) }
     var startTime by remember(initialHour, initialDate) {
         mutableStateOf(
@@ -189,6 +193,11 @@ fun AddEditEventScreen(
     val isTitleValid = title.isNotBlank() && titleError == null
     val isFormValid = isTitleValid && descriptionError == null && !showTimeValidationError
 
+    // Load user-defined event types asynchronously (encrypted-prefs read off Main)
+    LaunchedEffect(Unit) {
+        customEventTypes = withContext(Dispatchers.IO) { viewModel.customEventTypes() }
+    }
+
     // Load event if editing, or load draft if creating new event
     // Issue 1.3: Draft saving functionality
     LaunchedEffect(eventId) {
@@ -210,10 +219,12 @@ fun AddEditEventScreen(
                     isPrivate = it.isPrivate
                 }
             }
-        } else {
-            // Load draft for new event
+        } else if (initialDate == null && initialHour == null) {
+            // Restore a saved draft only for a blank new event (opened via the "+" button).
+            // When the user taps a specific time slot, that slot must be respected — the
+            // draft's date/time must not override it (this was the "tap 15:00 -> 09:00" bug).
             scope.launch {
-                val draft = viewModel.loadEventDraft()
+                val draft = withContext(Dispatchers.IO) { viewModel.loadEventDraft() }
                 draft?.let {
                     title = it.title
                     description = it.description
