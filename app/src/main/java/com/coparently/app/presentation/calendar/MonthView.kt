@@ -378,7 +378,8 @@ private fun DayCell(
                     .fillMaxWidth(VACATION_STRIP_WIDTH_FRACTION)
                     .height(3.dp)
                     .background(
-                        color = CoPlanlyColors.VacationTint.copy(alpha = 0.8f),
+                        // Full opacity so the teal strip stays legible in dark theme
+                        color = CoPlanlyColors.VacationTint,
                         shape = RoundedCornerShape(2.dp)
                     )
             )

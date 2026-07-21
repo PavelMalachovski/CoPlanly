@@ -21,7 +21,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.coparently.app.R
 
 @Composable
 fun MessageInput(
@@ -40,7 +42,7 @@ fun MessageInput(
         IconButton(onClick = onAttachClick) {
             Icon(
                 imageVector = Icons.Default.Add,
-                contentDescription = "Attach",
+                contentDescription = stringResource(R.string.chat_attach),
                 tint = MaterialTheme.colorScheme.primary
             )
         }
@@ -51,7 +53,7 @@ fun MessageInput(
             modifier = Modifier
                 .weight(1f)
                 .padding(horizontal = 8.dp),
-            placeholder = { Text("Type a message...") },
+            placeholder = { Text(stringResource(R.string.chat_type_message)) },
             shape = RoundedCornerShape(24.dp),
             colors = TextFieldDefaults.colors(
                 focusedIndicatorColor = Color.Transparent,
@@ -71,7 +73,7 @@ fun MessageInput(
         ) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.Send,
-                contentDescription = "Send",
+                contentDescription = stringResource(R.string.chat_send),
                 tint = if (text.isNotBlank()) MaterialTheme.colorScheme.primary else Color.Gray
             )
         }

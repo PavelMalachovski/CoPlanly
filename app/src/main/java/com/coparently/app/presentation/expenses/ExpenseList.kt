@@ -20,10 +20,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
+import com.coparently.app.R
 import com.coparently.app.domain.model.Expense
 import java.text.NumberFormat
 import java.time.format.DateTimeFormatter
@@ -85,7 +87,7 @@ fun ExpenseItem(
             {
                 AsyncImage(
                     model = url,
-                    contentDescription = "Receipt photo",
+                    contentDescription = stringResource(R.string.expenses_receipt_photo),
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
                         .size(48.dp)
@@ -119,7 +121,7 @@ private fun ReceiptViewerDialog(
     ) {
         AsyncImage(
             model = receiptUrl,
-            contentDescription = "Receipt photo",
+            contentDescription = stringResource(R.string.expenses_receipt_photo),
             contentScale = ContentScale.Fit,
             modifier = Modifier
                 .fillMaxWidth()

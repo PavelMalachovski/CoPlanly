@@ -164,6 +164,9 @@ Based on a full design review of the live app:
   more reminder options (10 min → 1 day), contextual notification-permission request
 - **Color semantics**: neutral (indigo) selected chips; Mom-pink/Dad-blue reserved for
   parent identity only
+- **Settings polish**: destructive "Sign out" moved to the bottom, push toggle reflects
+  the real OS permission, hardcoded chat/expense/settings strings moved into tracked
+  resource files, clearer dark-theme vacation marker
 - **Fixes surfaced by the review**: Room destructive fallback for pre-v5 installs
   (v3 → v9 crash)
 

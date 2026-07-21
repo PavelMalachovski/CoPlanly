@@ -7,26 +7,27 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Error
-import androidx.compose.material.icons.filled.Schedule
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.Message
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -38,9 +39,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.material.icons.filled.Message
+import com.coparently.app.R
 import com.coparently.app.domain.model.Message
 import com.coparently.app.domain.model.MessageSendStatus
 import com.coparently.app.presentation.common.animations.AnimatedEmptyState
@@ -100,8 +102,8 @@ fun MessagesList(
             // Issue 8.2: Empty state for messages
             AnimatedEmptyState(
                 icon = Icons.Default.Message,
-                title = "No messages yet",
-                description = "Start the conversation by sending a message to your co-parent.",
+                title = stringResource(R.string.chat_messages_empty_title),
+                description = stringResource(R.string.chat_messages_empty_description),
                 actionText = null,
                 onActionClick = null
             )
@@ -184,12 +186,12 @@ fun MessageItem(
                     MessageSendStatus.SENDING -> {
                         Icon(
                             imageVector = Icons.Default.Schedule,
-                            contentDescription = "Sending",
+                            contentDescription = stringResource(R.string.chat_status_sending),
                             modifier = Modifier.size(12.dp),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                         )
                         Text(
-                            text = "Sending...",
+                            text = stringResource(R.string.chat_sending_ellipsis),
                             style = MaterialTheme.typography.labelSmall,
                             fontSize = 10.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
@@ -198,12 +200,12 @@ fun MessageItem(
                     MessageSendStatus.ERROR -> {
                         Icon(
                             imageVector = Icons.Default.Error,
-                            contentDescription = "Error",
+                            contentDescription = stringResource(R.string.chat_status_error),
                             modifier = Modifier.size(12.dp),
                             tint = MaterialTheme.colorScheme.error
                         )
                         Text(
-                            text = "Failed to send",
+                            text = stringResource(R.string.chat_failed_to_send),
                             style = MaterialTheme.typography.labelSmall,
                             fontSize = 10.sp,
                             color = MaterialTheme.colorScheme.error
@@ -212,7 +214,7 @@ fun MessageItem(
                     MessageSendStatus.SENT -> {
                         Icon(
                             imageVector = Icons.Default.Check,
-                            contentDescription = "Sent",
+                            contentDescription = stringResource(R.string.chat_status_sent),
                             modifier = Modifier.size(12.dp),
                             tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
                         )

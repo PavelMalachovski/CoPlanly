@@ -45,6 +45,13 @@ When touching the UI, keep these invariants:
    cold start.
 8. **Destructive list actions** use M3 `SwipeToDismissBox` with an Undo snackbar
    (see `EventListScreen`); Undo re-creates the captured event (id is preserved).
+   Danger actions (e.g. "Sign out of app") live at the bottom of their screen, not
+   mid-list.
+9. **User-facing strings** live in tracked, feature-named `res/values/*_strings.xml`
+   files (`chat_strings.xml`, `expenses_strings.xml`, `settings_account_strings.xml`,
+   `navigation.xml`, `event_preview.xml`), never in the gitignored `strings.xml`.
+   Some keys already exist in the local `strings.xml`; pick distinct names in the
+   tracked files (e.g. `settings_gcal_enable_sync`) so a fresh clone still builds.
 
 DB note: installs older than the migration chain (schema < v5) are wiped via
 `fallbackToDestructiveMigrationFrom(1,2,3,4)` in `DatabaseModule` — a v3 install used to

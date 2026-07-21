@@ -194,14 +194,14 @@ fun SettingsScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Co-Parent Sync",
+                            text = stringResource(R.string.settings_co_parent_sync),
                             style = MaterialTheme.typography.titleLarge
                         )
                         IconButton(onClick = {
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             syncViewModel.performFirestoreSync()
                         }) {
-                            Icon(Icons.Default.Refresh, contentDescription = "Sync")
+                            Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.settings_sync))
                         }
                     }
 
@@ -215,7 +215,7 @@ fun SettingsScreen(
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Text(
-                        text = "Automatically syncs events and child information with your co-parent",
+                        text = stringResource(R.string.settings_co_parent_sync_description),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -230,7 +230,7 @@ fun SettingsScreen(
                     modifier = Modifier.padding(16.dp)
                 ) {
                     Text(
-                        text = "Google Calendar Sync",
+                        text = stringResource(R.string.settings_google_sync),
                         style = MaterialTheme.typography.titleLarge,
                         modifier = Modifier.padding(bottom = 8.dp)
                     )
@@ -243,7 +243,7 @@ fun SettingsScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Enable Sync",
+                            text = stringResource(R.string.settings_gcal_enable_sync),
                             style = MaterialTheme.typography.bodyLarge,
                             modifier = Modifier.weight(1f)
                         )
@@ -259,7 +259,14 @@ fun SettingsScreen(
 
                     // Sign-in status
                     Text(
-                        text = if (isSignedIn) "Signed in as: ${userEmail ?: "Unknown"}" else "Not signed in",
+                        text = if (isSignedIn) {
+                            stringResource(
+                                R.string.settings_signed_in_as,
+                                userEmail ?: stringResource(R.string.settings_unknown)
+                            )
+                        } else {
+                            stringResource(R.string.settings_gcal_not_signed_in)
+                        },
                         style = MaterialTheme.typography.bodyMedium,
                         color = if (isSignedIn) {
                             MaterialTheme.colorScheme.primary
@@ -311,8 +318,6 @@ fun SettingsScreen(
                         Button(
                             onClick = {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                println("DEBUG: Sign in button clicked")
-
                                 val signInIntent = syncViewModel.createGoogleSignInIntent()
                                 if (signInIntent != null) {
                                     if (onStartGoogleSignIn != null) {
@@ -373,50 +378,8 @@ fun SettingsScreen(
                                 .padding(top = 8.dp),
                             enabled = googleSyncState !is GoogleCalendarSyncState.Syncing
                         ) {
-                            Text("Sign Out from Calendar Sync")
+                            Text(stringResource(R.string.settings_calendar_sign_out))
                         }
-                    }
-                }
-            }
-
-            // Account Management
-            Card(
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp)
-                ) {
-                    Text(
-                        text = "Account",
-                        style = MaterialTheme.typography.titleLarge,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
-
-                    Text(
-                        text = "Sign out of the app completely. This will require you to sign in again to access your account.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(bottom = 16.dp)
-                    )
-
-                    Button(
-                        onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            // First sign out from Google Calendar sync
-                            coroutineScope.launch {
-                                syncViewModel.signOut()
-                            }
-                            // Then sign out from Firebase authentication
-                            authStateViewModel.signOut()
-                            // Navigate back to auth screen
-                            onSignOut?.invoke()
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.error
-                        )
-                    ) {
-                        Text("Sign Out of App")
                     }
                 }
             }
@@ -424,8 +387,8 @@ fun SettingsScreen(
             // Co-Parent Pairing
             onNavigateToPairing?.let { navigate ->
                 SettingsNavigationCard(
-                    title = "Co-Parent Pairing",
-                    description = "Invite or manage your co-parent",
+                    title = stringResource(R.string.settings_pairing_title),
+                    description = stringResource(R.string.settings_pairing_description),
                     icon = Icons.Default.Group,
                     onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -437,8 +400,8 @@ fun SettingsScreen(
             // Child Information
             onNavigateToChildInfo?.let { navigate ->
                 SettingsNavigationCard(
-                    title = "Child Information",
-                    description = "Medications, activities, allergies",
+                    title = stringResource(R.string.settings_child_info_title),
+                    description = stringResource(R.string.settings_child_info_description),
                     icon = Icons.Default.ChildCare,
                     onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -450,8 +413,8 @@ fun SettingsScreen(
             // Custody Schedule Setup
             onNavigateToCustodySetup?.let { navigate ->
                 SettingsNavigationCard(
-                    title = "Custody Schedule",
-                    description = "Set up your custody pattern (week-on/week-off, 2-2-3, etc.)",
+                    title = stringResource(R.string.settings_custody_title),
+                    description = stringResource(R.string.settings_custody_description),
                     icon = Icons.Default.DateRange,
                     onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -491,20 +454,66 @@ fun SettingsScreen(
                     modifier = Modifier.padding(16.dp)
                 ) {
                     Text(
-                        text = "About CoPlanly",
+                        text = stringResource(R.string.settings_about),
                         style = MaterialTheme.typography.titleMedium
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Version ${com.coparently.app.BuildConfig.VERSION_NAME}",
+                        text = stringResource(
+                            R.string.settings_version,
+                            com.coparently.app.BuildConfig.VERSION_NAME
+                        ),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = "Shared calendar for co-parenting",
+                        text = stringResource(R.string.settings_about_tagline),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                }
+            }
+
+            // Account Management — danger action lives at the very bottom so the
+            // destructive "Sign out of app" isn't mid-list where it's easy to hit
+            Card(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.settings_account),
+                        style = MaterialTheme.typography.titleLarge,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+
+                    Text(
+                        text = stringResource(R.string.settings_account_description),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+
+                    Button(
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            // First sign out from Google Calendar sync
+                            coroutineScope.launch {
+                                syncViewModel.signOut()
+                            }
+                            // Then sign out from Firebase authentication
+                            authStateViewModel.signOut()
+                            // Navigate back to auth screen
+                            onSignOut?.invoke()
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error
+                        )
+                    ) {
+                        Text(stringResource(R.string.settings_account_sign_out))
+                    }
                 }
             }
         }
