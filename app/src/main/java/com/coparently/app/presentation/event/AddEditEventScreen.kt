@@ -99,6 +99,19 @@ import java.time.format.DateTimeFormatter
 import java.util.UUID
 
 /**
+ * Reminder lead-time options offered in the event form, in minutes before the
+ * event start (null = no reminder). Stored as [Event.reminderMinutes].
+ */
+private val REMINDER_OPTIONS: List<Pair<Int?, String>> = listOf(
+    null to "None",
+    10 to "10 min",
+    30 to "30 min",
+    60 to "1 hour",
+    120 to "2 hours",
+    1440 to "1 day"
+)
+
+/**
  * Screen for adding or editing an event.
  * Modernized with Material 3 design, date/time pickers, and validation.
  * Based on Design Roadmap Day 3: Forms & Input.
@@ -927,15 +940,11 @@ fun AddEditEventScreen(
             // request POST_NOTIFICATIONS here (not on app start)
             val reminderPermissionRequester =
                 com.coparently.app.presentation.common.rememberNotificationPermissionRequester()
-            Row(
+            androidx.compose.foundation.layout.FlowRow(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                listOf(
-                    null to "None",
-                    30 to "30 min before",
-                    60 to "1 hour before"
-                ).forEach { (value, label) ->
+                REMINDER_OPTIONS.forEach { (value, label) ->
                     FilterChip(
                         selected = reminderMinutes == value,
                         onClick = {

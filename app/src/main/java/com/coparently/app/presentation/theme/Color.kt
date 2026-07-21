@@ -27,6 +27,17 @@ object CoPlanlyColors {
     // Neutral colors - improved contrast
     val EventGray = Color(0xFF616161) // Gray 700 - contrast 7.31:1 on white
 
+    // Secondary (neutral) tonal family — used by generic Material components such as
+    // the selected state of FilterChips. Deliberately an indigo-tinted neutral, NOT
+    // Mom-pink: pink/blue are reserved for parent identity and are applied via the
+    // MomPink/DadBlue values above, never through the theme's `secondary` slot.
+    val NeutralSecondary = Color(0xFF5B5D72) // muted indigo-gray
+    val NeutralSecondaryContainer = Color(0xFFE1E0F7) // light indigo tint
+    val NeutralOnSecondaryContainer = Color(0xFF191A2C) // deep indigo for container text
+    val NeutralSecondaryDark = Color(0xFFC5C4DD) // light tone for dark theme
+    val NeutralOnSecondaryDark = Color(0xFF2E2F42) // container text on dark
+    val NeutralSecondaryContainerDark = Color(0xFF434559) // dark indigo container
+
     // Brand colors for app theme - improved contrast
     val BrandPrimary = Color(0xFF4F46E5) // Indigo 600 - contrast 7.04:1 on white
     val BrandPrimaryContainer = Color(0xFFE2E0FF) // Soft indigo container

@@ -1,51 +1,54 @@
 package com.coparently.app.presentation.event
 
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Event
 import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.coparently.app.R
 import com.coparently.app.domain.model.Event
-import com.coparently.app.presentation.theme.CoPlanlyColors
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Event
 import com.coparently.app.presentation.common.animations.AnimatedEmptyState
-import kotlin.math.roundToInt
+import com.coparently.app.presentation.theme.CoPlanlyColors
+import kotlinx.coroutines.launch
 
 /**
- * Screen displaying a list of all events.
+ * Screen displaying a list of all events. Each row swipes left to delete with an
+ * Undo snackbar.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -57,6 +60,24 @@ fun EventListScreen(
 ) {
     val events by viewModel.events.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+
+    // Delete now, offer Undo. The full event is captured here, so Undo simply
+    // re-creates it (the id is preserved on the domain model).
+    val deleteWithUndo: (Event) -> Unit = { event ->
+        viewModel.deleteEventById(event.id)
+        scope.launch {
+            val result = snackbarHostState.showSnackbar(
+                message = "Event deleted",
+                actionLabel = "Undo",
+                duration = SnackbarDuration.Short
+            )
+            if (result == SnackbarResult.ActionPerformed) {
+                viewModel.createEvent(event)
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -72,6 +93,7 @@ fun EventListScreen(
                 }
             )
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
             FloatingActionButton(
                 onClick = onAddEventClick,
@@ -84,7 +106,7 @@ fun EventListScreen(
             }
         }
     ) { paddingValues ->
-        when (uiState) {
+        when (val state = uiState) {
             is EventUiState.Loading -> {
                 Box(
                     modifier = Modifier
@@ -100,14 +122,13 @@ fun EventListScreen(
             }
 
             is EventUiState.Error -> {
-                val errorState = uiState as EventUiState.Error
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(paddingValues)
                 ) {
                     Text(
-                        text = "Error: ${errorState.message}",
+                        text = "Error: ${state.message}",
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.error,
                         modifier = Modifier.padding(16.dp)
@@ -115,40 +136,11 @@ fun EventListScreen(
                 }
             }
 
-            is EventUiState.OperationSuccess -> {
-                // After operation success, show the current events list
-                // The state will automatically transition to Success after delay
-                if (events.isEmpty()) {
-                    // Issue 8.2: Empty state for events
-                    AnimatedEmptyState(
-                        icon = Icons.Default.Event,
-                        title = "No events yet",
-                        description = "Create your first event to start organizing your co-parenting schedule.",
-                        actionText = "Add Event",
-                        onActionClick = onAddEventClick
-                    )
-                } else {
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(paddingValues)
-                            .padding(horizontal = 16.dp)
-                    ) {
-                        items(events) { event ->
-                            SwipeableEventCard(
-                                event = event,
-                                onClick = { onEventClick(event.id) },
-                                onDelete = { viewModel.deleteEventById(event.id) },
-                                modifier = Modifier.padding(vertical = 4.dp)
-                            )
-                        }
-                    }
-                }
-            }
-
+            // Both the settled list (Success) and the transient post-op state show
+            // the current events, or an empty state.
+            is EventUiState.OperationSuccess,
             is EventUiState.Success -> {
                 if (events.isEmpty()) {
-                    // Issue 8.2: Empty state for events
                     AnimatedEmptyState(
                         icon = Icons.Default.Event,
                         title = "No events yet",
@@ -163,11 +155,11 @@ fun EventListScreen(
                             .padding(paddingValues)
                             .padding(horizontal = 16.dp)
                     ) {
-                        items(events) { event ->
+                        items(events, key = { it.id }) { event ->
                             SwipeableEventCard(
                                 event = event,
                                 onClick = { onEventClick(event.id) },
-                                onDelete = { viewModel.deleteEventById(event.id) },
+                                onDelete = { deleteWithUndo(event) },
                                 modifier = Modifier.padding(vertical = 4.dp)
                             )
                         }
@@ -179,8 +171,10 @@ fun EventListScreen(
 }
 
 /**
- * Swipeable event card with delete action on swipe.
+ * Event row that swipes end-to-start to delete, using the Material 3
+ * [SwipeToDismissBox] (with its built-in resistance and fling handling).
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SwipeableEventCard(
     event: Event,
@@ -188,94 +182,82 @@ private fun SwipeableEventCard(
     onDelete: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var offsetX by remember { mutableFloatStateOf(0f) }
-    val animatedOffsetX by animateFloatAsState(
-        targetValue = offsetX,
-        label = "swipeOffset"
+    val dismissState = rememberSwipeToDismissBoxState(
+        confirmValueChange = { value ->
+            if (value == SwipeToDismissBoxValue.EndToStart) {
+                onDelete()
+                true
+            } else {
+                false
+            }
+        }
     )
 
-    Box(modifier = modifier) {
-        // Delete action background
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(start = 16.dp)
-                .offset(x = animatedOffsetX.dp)
-        ) {
-            Card(
-                modifier = Modifier.fillMaxSize(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.error
-                )
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp),
-                    horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
-                    verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = "Delete",
-                        tint = MaterialTheme.colorScheme.onError
+    SwipeToDismissBox(
+        state = dismissState,
+        modifier = modifier,
+        enableDismissFromStartToEnd = false,
+        backgroundContent = {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        color = MaterialTheme.colorScheme.error,
+                        shape = RoundedCornerShape(12.dp)
                     )
-                }
-            }
-        }
-
-        // Event card
-        Card(
-            modifier = Modifier
-                .fillMaxSize()
-                .offset(x = animatedOffsetX.dp)
-                .pointerInput(event.id) {
-                    detectHorizontalDragGestures(
-                        onDragEnd = {
-                            if (offsetX < -200f) {
-                                // Trigger delete if swiped enough
-                                onDelete()
-                            }
-                            offsetX = 0f
-                        }
-                    ) { _, dragAmount ->
-                        // Allow swipe left (negative drag)
-                        val newOffset = (offsetX + dragAmount).coerceAtMost(0f)
-                        offsetX = newOffset
-                    }
-                }
-                .clickable(onClick = onClick)
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp)
+                    .padding(horizontal = 20.dp),
+                contentAlignment = Alignment.CenterEnd
             ) {
-                Text(
-                    text = event.title,
-                    style = MaterialTheme.typography.titleLarge
-                )
-                if (event.description != null) {
-                    Text(
-                        text = event.description,
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(top = 8.dp)
-                    )
-                }
-                Text(
-                    text = "Date: ${event.startDateTime}",
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(top = 4.dp)
-                )
-                Text(
-                    text = "Parent: ${event.parentOwner}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = when (event.parentOwner) {
-                        "mom" -> CoPlanlyColors.MomPink
-                        "dad" -> CoPlanlyColors.DadBlue
-                        else -> MaterialTheme.colorScheme.onSurface
-                    }
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = "Delete",
+                    tint = MaterialTheme.colorScheme.onError
                 )
             }
         }
+    ) {
+        EventCardContent(event = event, onClick = onClick)
     }
 }
 
+/** Foreground card of a swipeable event row: title, description, date and owner. */
+@Composable
+private fun EventCardContent(
+    event: Event,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                text = event.title,
+                style = MaterialTheme.typography.titleLarge
+            )
+            event.description?.let { description ->
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+            Text(
+                text = "Date: ${event.startDateTime}",
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                text = "Parent: ${event.parentOwner}",
+                style = MaterialTheme.typography.bodySmall,
+                color = when (event.parentOwner) {
+                    "mom" -> CoPlanlyColors.MomPink
+                    "dad" -> CoPlanlyColors.DadBlue
+                    else -> MaterialTheme.colorScheme.onSurface
+                }
+            )
+        }
+    }
+}
