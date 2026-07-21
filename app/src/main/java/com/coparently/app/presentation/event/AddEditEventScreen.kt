@@ -3,6 +3,7 @@ package com.coparently.app.presentation.event
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,7 +15,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -24,15 +24,18 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Title
-import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -43,15 +46,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -63,11 +65,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
@@ -78,6 +80,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.coparently.app.R
 import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.components.TimePickerDialog
 import com.coparently.app.presentation.theme.CoPlanlyColors
@@ -94,7 +97,6 @@ import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.UUID
-import javax.inject.Inject
 
 /**
  * Screen for adding or editing an event.
@@ -131,14 +133,20 @@ fun AddEditEventScreen(
     var startDate by remember { mutableStateOf(initialDate ?: LocalDate.now()) }
     var startTime by remember(initialHour, initialDate) {
         mutableStateOf(
-            if (initialHour != null) LocalTime.of(initialHour, 0)
-            else LocalTime.now()
+            if (initialHour != null) {
+                LocalTime.of(initialHour, 0)
+            } else {
+                LocalTime.now()
+            }
         )
     }
     var endTime by remember(initialHour) {
         mutableStateOf(
-            if (initialHour != null) LocalTime.of(initialHour, 0).plusHours(1)
-            else LocalTime.now().plusHours(1)
+            if (initialHour != null) {
+                LocalTime.of(initialHour, 0).plusHours(1)
+            } else {
+                LocalTime.now().plusHours(1)
+            }
         )
     }
 
@@ -255,6 +263,76 @@ fun AddEditEventScreen(
         }
     }
 
+    // Shared save routine for the top-bar check and the sticky bottom Save button
+    val performSave: () -> Unit = performSave@{
+        // Run both validations (no short-circuit) so each field shows its error
+        val isTitleValidated = validateTitle()
+        val isDescriptionValidated = validateDescription()
+        val isValidated = isTitleValidated && isDescriptionValidated
+        if (!isFormValid || !isValidated || isSaving) {
+            return@performSave
+        }
+        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+        isSaving = true
+        scope.launch {
+            try {
+                // Preserve sync/sharing fields of the loaded event when editing;
+                // rebuilding from defaults would wipe sharedWith/permissions
+                val base = existingEvent
+                val event = (
+                    base ?: Event(
+                        id = eventId ?: UUID.randomUUID().toString(),
+                        title = "",
+                        startDateTime = LocalDateTime.now(),
+                        eventType = "general",
+                        parentOwner = "mom",
+                        createdAt = LocalDateTime.now(),
+                        updatedAt = LocalDateTime.now()
+                    )
+                    ).copy(
+                    title = title,
+                    description = description.ifEmpty { null },
+                    startDateTime = LocalDateTime.of(startDate, startTime),
+                    endDateTime = LocalDateTime.of(startDate, endTime),
+                    eventType = eventType,
+                    parentOwner = parentOwner,
+                    isRecurring = recurrencePattern != null,
+                    recurrencePattern = recurrencePattern,
+                    recurrenceEndDate = recurrenceEndDate,
+                    reminderMinutes = reminderMinutes,
+                    isPrivate = isPrivate,
+                    updatedAt = LocalDateTime.now()
+                )
+
+                if (eventId == null) {
+                    viewModel.createEvent(event)
+                } else {
+                    viewModel.updateEvent(event)
+                }
+
+                // Clear draft after successful save
+                if (eventId == null) {
+                    viewModel.clearEventDraft()
+                }
+
+                snackbarHostState.showSnackbar(
+                    message = if (eventId == null) "Event created successfully" else "Event updated successfully",
+                    duration = SnackbarDuration.Short
+                )
+
+                // Navigate after a short delay
+                kotlinx.coroutines.delay(500)
+                onSave()
+            } catch (e: Exception) {
+                snackbarHostState.showSnackbar(
+                    message = "Failed to save event: ${e.message}",
+                    duration = SnackbarDuration.Long
+                )
+                isSaving = false
+            }
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -303,73 +381,7 @@ fun AddEditEventScreen(
 
                     // Save button in app bar
                     IconButton(
-                        onClick = {
-                            // Выполняем валидацию
-                            val isTitleValidated = validateTitle()
-                            val isDescriptionValidated = validateDescription()
-
-                            if (isFormValid && isTitleValidated && isDescriptionValidated && !isSaving) {
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                isSaving = true
-                                scope.launch {
-                                    try {
-                                        // Preserve sync/sharing fields of the loaded event when editing;
-                                        // rebuilding from defaults would wipe sharedWith/permissions
-                                        val base = existingEvent
-                                        val event = (base ?: Event(
-                                            id = eventId ?: UUID.randomUUID().toString(),
-                                            title = "",
-                                            startDateTime = LocalDateTime.now(),
-                                            eventType = "general",
-                                            parentOwner = "mom",
-                                            createdAt = LocalDateTime.now(),
-                                            updatedAt = LocalDateTime.now()
-                                        )).copy(
-                                            title = title,
-                                            description = description.ifEmpty { null },
-                                            startDateTime = LocalDateTime.of(startDate, startTime),
-                                            endDateTime = LocalDateTime.of(startDate, endTime),
-                                            eventType = eventType,
-                                            parentOwner = parentOwner,
-                                            isRecurring = recurrencePattern != null,
-                                            recurrencePattern = recurrencePattern,
-                                            recurrenceEndDate = recurrenceEndDate,
-                                            reminderMinutes = reminderMinutes,
-                                            isPrivate = isPrivate,
-                                            updatedAt = LocalDateTime.now()
-                                        )
-
-                                        if (eventId == null) {
-                                            viewModel.createEvent(event)
-                                        } else {
-                                            viewModel.updateEvent(event)
-                                        }
-
-                                        // Clear draft after successful save
-                                        // Issue 1.3: Draft saving functionality
-                                        if (eventId == null) {
-                                            viewModel.clearEventDraft()
-                                        }
-
-                                        // Show success snackbar
-                                        snackbarHostState.showSnackbar(
-                                            message = if (eventId == null) "Event created successfully" else "Event updated successfully",
-                                            duration = SnackbarDuration.Short
-                                        )
-
-                                        // Navigate after a short delay
-                                        kotlinx.coroutines.delay(500)
-                                        onSave()
-                                    } catch (e: Exception) {
-                                        snackbarHostState.showSnackbar(
-                                            message = "Failed to save event: ${e.message}",
-                                            duration = SnackbarDuration.Long
-                                        )
-                                        isSaving = false
-                                    }
-                                }
-                            }
-                        },
+                        onClick = performSave,
                         enabled = isFormValid && !isSaving && !isDeleting
                     ) {
                         if (isSaving) {
@@ -395,6 +407,30 @@ fun AddEditEventScreen(
         },
         snackbarHost = {
             SnackbarHost(hostState = snackbarHostState)
+        },
+        bottomBar = {
+            // Sticky Save: the primary action stays reachable without scrolling
+            // back to the top-bar check icon on this long form
+            Surface(shadowElevation = 8.dp) {
+                Button(
+                    onClick = performSave,
+                    enabled = isFormValid && !isSaving && !isDeleting,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = dims.paddingMedium, vertical = dims.paddingSmall)
+                        .height(52.dp)
+                ) {
+                    if (isSaving) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Text(stringResource(R.string.event_form_save))
+                    }
+                }
+            }
         }
     ) { paddingValues ->
         Column(
@@ -410,8 +446,11 @@ fun AddEditEventScreen(
                 value = title,
                 onValueChange = {
                     title = it
-                    if (it.isNotEmpty()) validateTitle()
-                    else titleError = null
+                    if (it.isNotEmpty()) {
+                        validateTitle()
+                    } else {
+                        titleError = null
+                    }
                 },
                 label = { Text("Event Title") },
                 placeholder = { Text("e.g., Soccer Practice") },
@@ -423,11 +462,15 @@ fun AddEditEventScreen(
                 },
                 isError = titleError != null,
                 supportingText = if (titleError != null) {
-                    { Text(
-                        text = titleError ?: "",
-                        color = MaterialTheme.colorScheme.error
-                    ) }
-                } else null,
+                    {
+                        Text(
+                            text = titleError ?: "",
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                } else {
+                    null
+                },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(
@@ -456,11 +499,15 @@ fun AddEditEventScreen(
                 },
                 isError = descriptionError != null,
                 supportingText = if (descriptionError != null) {
-                    { Text(
-                        text = descriptionError ?: "",
-                        color = MaterialTheme.colorScheme.error
-                    ) }
-                } else null,
+                    {
+                        Text(
+                            text = descriptionError ?: "",
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                } else {
+                    null
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(dims.buttonHeight * 2.14f), // ~120dp for compact
@@ -534,7 +581,9 @@ fun AddEditEventScreen(
                                     else -> MaterialTheme.colorScheme.primary
                                 }
                             )
-                        } else null,
+                        } else {
+                            null
+                        },
                         elevation = CardDefaults.cardElevation(
                             defaultElevation = if (isSelected) 4.dp else 0.dp
                         )
@@ -874,6 +923,10 @@ fun AddEditEventScreen(
                 fontWeight = FontWeight.SemiBold
             )
 
+            // Picking a reminder is the moment notifications become relevant —
+            // request POST_NOTIFICATIONS here (not on app start)
+            val reminderPermissionRequester =
+                com.coparently.app.presentation.common.rememberNotificationPermissionRequester()
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -887,7 +940,11 @@ fun AddEditEventScreen(
                         selected = reminderMinutes == value,
                         onClick = {
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            reminderMinutes = value
+                            if (value == null) {
+                                reminderMinutes = null
+                            } else {
+                                reminderPermissionRequester.request { reminderMinutes = value }
+                            }
                         },
                         label = { Text(label) },
                         leadingIcon = {
@@ -1187,4 +1244,3 @@ fun AddEditEventScreen(
         )
     }
 }
-

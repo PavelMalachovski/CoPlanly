@@ -24,6 +24,9 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
 
+    /** Schema versions older than the start of the migration chain (5->6). */
+    private val PRE_MIGRATION_CHAIN_SCHEMAS = intArrayOf(1, 2, 3, 4)
+
     /**
      * Provides the Room database instance.
      */
@@ -38,7 +41,11 @@ object DatabaseModule {
             "coparently_database"
         )
             .addMigrations(*com.coparently.app.data.local.DatabaseMigrations.ALL_MIGRATIONS)
-            .fallbackToDestructiveMigration() // Allow destructive migration for missing migration paths (e.g., 3->6)
+            // The migration chain starts at 5->6; installs older than schema v5 have no
+            // upgrade path (a v3 install crashed with "migration from 3 to 9 required but
+            // not found" during the 2026-07 review), so wipe them explicitly.
+            .fallbackToDestructiveMigrationFrom(*PRE_MIGRATION_CHAIN_SCHEMAS)
+            .fallbackToDestructiveMigration() // Allow destructive migration for missing migration paths
             .fallbackToDestructiveMigrationOnDowngrade() // Allow destructive migration when downgrading database version
             .build()
     }
@@ -107,4 +114,3 @@ object DatabaseModule {
         return database.custodyModelDao()
     }
 }
-

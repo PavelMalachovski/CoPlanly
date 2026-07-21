@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Bottom navigation labels. Kept out of strings.xml because strings.xml is
+     gitignored in this project (it holds local OAuth values). -->
+<resources>
+    <string name="nav_calendar">Calendar</string>
+    <string name="nav_chat">Chat</string>
+    <string name="nav_expenses">Expenses</string>
+    <string name="nav_settings">Settings</string>
+    <string name="expenses_title">Expenses</string>
+    <string name="expenses_open_budgets">Budgets</string>
+    <string name="budgets_title">Budgets</string>
+    <string name="budgets_back">Back</string>
+    <string name="conversations_title">Messages</string>
+</resources>

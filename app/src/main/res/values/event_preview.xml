@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Event preview bottom-sheet strings. Kept out of strings.xml because
+     strings.xml is gitignored in this project (it holds local OAuth values). -->
+<resources>
+    <string name="event_preview_edit">Edit</string>
+    <string name="event_preview_delete">Delete</string>
+    <string name="event_preview_private">Private event — only you can see it</string>
+    <string name="event_preview_mom">Mom</string>
+    <string name="event_preview_dad">Dad</string>
+    <string name="event_form_save">Save event</string>
+</resources>
