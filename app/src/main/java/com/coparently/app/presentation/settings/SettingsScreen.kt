@@ -10,12 +10,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.presentation.settings.components.SettingsNavigationCard
@@ -38,10 +38,13 @@ import kotlinx.coroutines.launch
  * @param syncViewModel ViewModel для операций синхронизации
  * @param settingsViewModel ViewModel для состояния настроек
  */
+// Was baselined before the onNavigateUp signature change; splitting this legacy
+// screen into cards is tracked separately.
+@Suppress("LongParameterList", "LongMethod", "CyclomaticComplexMethod")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    onNavigateUp: () -> Unit,
+    onNavigateUp: (() -> Unit)? = null,
     onNavigateToChildInfo: (() -> Unit)? = null,
     onNavigateToPairing: (() -> Unit)? = null,
     onNavigateToCustodySetup: (() -> Unit)? = null,
@@ -72,11 +75,14 @@ fun SettingsScreen(
             TopAppBar(
                 title = { Text(stringResource(R.string.settings_title)) },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateUp) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.settings_back)
-                        )
+                    // Hidden when Settings is opened as a top-level bottom-bar tab
+                    onNavigateUp?.let { navigateUp ->
+                        IconButton(onClick = navigateUp) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = stringResource(R.string.settings_back)
+                            )
+                        }
                     }
                 }
             )
@@ -134,7 +140,9 @@ fun SettingsScreen(
                             label = { Text(stringResource(R.string.settings_theme_system), fontSize = 12.sp) },
                             leadingIcon = if (darkTheme == null) {
                                 { Icon(Icons.Default.Check, contentDescription = null, Modifier.size(16.dp)) }
-                            } else null,
+                            } else {
+                                null
+                            },
                             modifier = Modifier.weight(1f)
                         )
 
@@ -253,8 +261,11 @@ fun SettingsScreen(
                     Text(
                         text = if (isSignedIn) "Signed in as: ${userEmail ?: "Unknown"}" else "Not signed in",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = if (isSignedIn) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                        color = if (isSignedIn) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        },
                         modifier = Modifier.padding(vertical = 8.dp)
                     )
 
@@ -449,15 +460,25 @@ fun SettingsScreen(
                 )
             }
 
-            // Notifications Settings
+            // Notifications Settings — POST_NOTIFICATIONS is requested here,
+            // contextually, instead of on app start
+            val notificationPermissionRequester =
+                com.coparently.app.presentation.common.rememberNotificationPermissionRequester()
             SettingsSwitchCard(
                 title = stringResource(R.string.settings_push_notifications),
                 description = stringResource(R.string.settings_push_notifications_description),
                 icon = Icons.Default.Notifications,
-                checked = settingsUiState.notificationsEnabled,
+                checked = settingsUiState.notificationsEnabled &&
+                    com.coparently.app.presentation.common.hasNotificationPermission(context),
                 onCheckedChange = { enabled ->
                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                    settingsViewModel.toggleNotifications(enabled)
+                    if (enabled) {
+                        notificationPermissionRequester.request {
+                            settingsViewModel.toggleNotifications(true)
+                        }
+                    } else {
+                        settingsViewModel.toggleNotifications(false)
+                    }
                 },
                 enabled = !settingsUiState.isLoading
             )

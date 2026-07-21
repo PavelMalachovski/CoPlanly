@@ -13,6 +13,34 @@ Gemini for AI features.
 which is the historical original plan). MVP 1 is complete; MVP 2 (receipts, change requests,
 dashboards) is next. The latest full audit lives in `docs/AUDIT-2026-07.md`.
 
+## Agreed UX/UI direction (July 2026 design review)
+
+Decisions locked in with the product owner after a live walkthrough — follow these when
+touching the UI:
+
+1. **Bottom navigation bar** (Calendar / Chat / Expenses / Settings) is the target
+   top-level navigation. Until it lands, `Screen.Conversations/Chat/Expenses/AddExpense/
+   Budgets/EventList` are registered in `NavGraph` but unreachable from the UI;
+   `QuickActionsBottomSheet` is dead code — wire it up or remove it with the nav work.
+2. **Toolchain upgrade approved**: compileSdk/targetSdk 34 → 36, Compose BOM
+   2024.11 → 2025.x, Material 3 1.4+ (M3 Expressive), predictive back
+   (`android:enableOnBackInvokedCallback="true"`).
+3. **Calendar**: replace the hand-rolled threshold swipes in `DayWeekView`/`MonthView`
+   with `HorizontalPager` physics; month view becomes a classic grid starting at the 1st
+   with horizontal month paging (not the current selected-week vertical buffer).
+4. **Event tap opens a preview bottom sheet** (details + Edit/Delete); the editor is the
+   second step. Event form gets a sticky bottom Save button (not only the top-right ✓).
+5. **Color semantics**: Mom-pink/Dad-blue are reserved for parent identity only. Neutral
+   selected states (chips, toggles) must use `primary`, not the pink `secondary` —
+   today `secondary = MomPink` leaks into every selected FilterChip.
+6. **Notification permission** must be requested contextually (first reminder/sync
+   enable), not via the system dialog on every cold start in `MainActivity`.
+
+Known crash found during the review: upgrading an install with a very old DB
+(schema v3) throws "A migration from 3 to 9 was required but not found" — the migration
+chain in `DatabaseMigrations` starts later; add the missing path or a guarded
+destructive fallback for pre-chain versions.
+
 ## Build & verify
 
 ```bash

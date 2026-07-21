@@ -1,6 +1,7 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.dagger.hilt.android")
     id("io.gitlab.arturbosch.detekt")
     kotlin("kapt")
@@ -26,12 +27,12 @@ if (hasGoogleServicesJson) {
 
 android {
     namespace = "com.coparently.app"
-    compileSdk = 34
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.coparently.app"
         minSdk = 26
-        targetSdk = 34
+        targetSdk = 36
         versionCode = 2
         versionName = "1.1.0"
 
@@ -74,16 +75,6 @@ android {
 
     kotlinOptions {
         jvmTarget = "17"
-
-        // Compose Compiler Metrics for performance analysis
-        // After build, check build/compose_metrics/ for unstable composables
-        // and build/compose_reports/ for detailed reports
-        freeCompilerArgs += listOf(
-            "-P",
-            "plugin:androidx.compose.compiler.plugins.kotlin:metricsDestination=${project.layout.buildDirectory.get().asFile.absolutePath}/compose_metrics",
-            "-P",
-            "plugin:androidx.compose.compiler.plugins.kotlin:reportsDestination=${project.layout.buildDirectory.get().asFile.absolutePath}/compose_reports"
-        )
     }
 
     buildFeatures {
@@ -99,9 +90,8 @@ android {
         disable += "MissingTranslation"
     }
 
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.14"
-    }
+    // Compose compiler is applied via the org.jetbrains.kotlin.plugin.compose plugin
+    // (its version follows the Kotlin version; composeOptions is no longer needed).
 
     // Test optimizations
     testOptions {
@@ -126,8 +116,8 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
     implementation("androidx.activity:activity-compose:1.9.3")
 
-    // Compose - Updated to latest BOM (2024.11.00)
-    val composeBom = platform("androidx.compose:compose-bom:2024.11.00")
+    // Compose - BOM 2025.10 (Compose 1.9.x, Material 3 1.4.x / M3 Expressive)
+    val composeBom = platform("androidx.compose:compose-bom:2025.10.00")
     implementation(composeBom)
     androidTestImplementation(composeBom)
 
@@ -138,8 +128,8 @@ dependencies {
     implementation("androidx.compose.material3:material3-window-size-class")
     implementation("androidx.compose.material:material-icons-extended")
 
-    // Navigation - Updated to latest stable
-    implementation("androidx.navigation:navigation-compose:2.8.5")
+    // Navigation - 2.9.x (predictive-back aware transitions)
+    implementation("androidx.navigation:navigation-compose:2.9.3")
 
     // Splash Screen API for Android 12+
     implementation("androidx.core:core-splashscreen:1.0.1")
@@ -149,14 +139,14 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
 
     // Hilt - Updated to latest stable
-    implementation("com.google.dagger:hilt-android:2.52")
-    kapt("com.google.dagger:hilt-compiler:2.52")
+    implementation("com.google.dagger:hilt-android:2.56.2")
+    kapt("com.google.dagger:hilt-compiler:2.56.2")
     implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
     implementation("androidx.hilt:hilt-work:1.2.0")
     kapt("androidx.hilt:hilt-compiler:1.2.0")
 
-    // Room - Already at latest stable
-    val roomVersion = "2.6.1"
+    // Room - 2.7.x is required for Kotlin 2.x metadata (2.6.x kapt fails on it)
+    val roomVersion = "2.7.2"
     implementation("androidx.room:room-runtime:$roomVersion")
     implementation("androidx.room:room-ktx:$roomVersion")
     kapt("androidx.room:room-compiler:$roomVersion")
@@ -232,7 +222,7 @@ dependencies {
     testImplementation(kotlin("test"))
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
-    androidTestImplementation(platform("androidx.compose:compose-bom:2024.11.00"))
+    androidTestImplementation(platform("androidx.compose:compose-bom:2025.10.00"))
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
@@ -253,13 +243,13 @@ dependencies {
     testImplementation("androidx.arch.core:core-testing:2.2.0")
 
     // Hilt testing - Updated to match Hilt version
-    testImplementation("com.google.dagger:hilt-android-testing:2.52")
-    kaptTest("com.google.dagger:hilt-compiler:2.52")
-    androidTestImplementation("com.google.dagger:hilt-android-testing:2.52")
-    kaptAndroidTest("com.google.dagger:hilt-compiler:2.52")
+    testImplementation("com.google.dagger:hilt-android-testing:2.56.2")
+    kaptTest("com.google.dagger:hilt-compiler:2.56.2")
+    androidTestImplementation("com.google.dagger:hilt-android-testing:2.56.2")
+    kaptAndroidTest("com.google.dagger:hilt-compiler:2.56.2")
 
     // Navigation Testing
-    androidTestImplementation("androidx.navigation:navigation-testing:2.8.5")
+    androidTestImplementation("androidx.navigation:navigation-testing:2.9.3")
 }
 
 kapt {

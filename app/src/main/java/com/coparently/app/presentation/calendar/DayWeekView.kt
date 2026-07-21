@@ -1,9 +1,9 @@
 package com.coparently.app.presentation.calendar
 
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
@@ -12,66 +12,65 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
-import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Lock
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.input.pointer.PointerEventPass
-import kotlinx.coroutines.launch
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import com.coparently.app.data.local.entity.CustodyScheduleEntity
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.theme.CoPlanlyColors
 import com.coparently.app.presentation.theme.dimensions
@@ -82,17 +81,114 @@ import java.time.temporal.WeekFields
 import java.util.Locale
 import kotlin.math.roundToInt
 
+/** Virtual center page of the day/week pager (allows ~3 years of swiping each way). */
+private const val PAGER_BASE_PAGE = 1200
+
 /**
  * Hourly view for day/week calendar views.
- * Shows activities scheduled by hour with the child.
+ * Horizontal swiping between days/weeks uses a [HorizontalPager], so the content
+ * follows the finger with fling physics instead of a fixed swipe threshold.
  */
+@Suppress("LongParameterList", "LongMethod") // screen-level composable: callbacks are its API surface
 @Composable
 fun DayWeekView(
     selectedDate: LocalDate,
     daysCount: Int,
     events: List<Event>,
-    custodySchedules: List<CustodyScheduleEntity>,
+    getCustody: (LocalDate) -> String?,
     onDateChange: (LocalDate) -> Unit,
+    onEventClick: (String) -> Unit,
+    onAddEventClick: (LocalDate, Int) -> Unit = { _, _ -> },
+    onEventDragDrop: ((String, LocalDate, Int) -> Unit)? = null,
+    onEventResize: ((String, LocalDateTime?, LocalDateTime?) -> Unit)? = null,
+    onEventDelete: ((String) -> Unit)? = null,
+    onEventLongPressStart: ((String) -> Unit)? = null,
+    onEventLongPressEnd: (() -> Unit)? = null,
+    onDragOverDeleteButton: ((Boolean) -> Unit)? = null,
+    holidays: Map<LocalDate, com.coparently.app.domain.holidays.Holiday> = emptyMap()
+) {
+    // The pager is anchored at a fixed date; each page offsets it by daysCount.
+    // External date changes (Today button, month picker) re-anchor the pager.
+    var anchorDate by remember { mutableStateOf(selectedDate) }
+    var lastPagerDate by remember { mutableStateOf(selectedDate) }
+    val pagerState = rememberPagerState(initialPage = PAGER_BASE_PAGE) { PAGER_BASE_PAGE * 2 + 1 }
+
+    LaunchedEffect(selectedDate, daysCount) {
+        if (selectedDate != lastPagerDate) {
+            anchorDate = selectedDate
+            lastPagerDate = selectedDate
+            pagerState.scrollToPage(PAGER_BASE_PAGE)
+        }
+    }
+
+    LaunchedEffect(pagerState, daysCount) {
+        snapshotFlow { pagerState.settledPage }.collect { page ->
+            val newDate = anchorDate.plusDays((page - PAGER_BASE_PAGE).toLong() * daysCount)
+            if (newDate != lastPagerDate) {
+                lastPagerDate = newDate
+                onDateChange(newDate)
+            }
+        }
+    }
+
+    // Hour scroll position shared between pages so swiping keeps the time window
+    var savedHourIndex by remember {
+        mutableIntStateOf((java.time.LocalTime.now().hour - 1).coerceIn(0, 23))
+    }
+    var savedHourOffset by remember { mutableIntStateOf(0) }
+
+    HorizontalPager(
+        state = pagerState,
+        modifier = Modifier.fillMaxSize(),
+        beyondViewportPageCount = 1
+    ) { page ->
+        val pageDate = remember(page, anchorDate, daysCount) {
+            anchorDate.plusDays((page - PAGER_BASE_PAGE).toLong() * daysCount)
+        }
+        val scrollState = rememberLazyListState(savedHourIndex, savedHourOffset)
+        if (page == pagerState.settledPage) {
+            LaunchedEffect(scrollState) {
+                snapshotFlow {
+                    scrollState.firstVisibleItemIndex to scrollState.firstVisibleItemScrollOffset
+                }.collect { (index, offset) ->
+                    savedHourIndex = index
+                    savedHourOffset = offset
+                }
+            }
+        }
+        DayWeekPage(
+            selectedDate = pageDate,
+            daysCount = daysCount,
+            events = events,
+            getCustody = getCustody,
+            scrollState = scrollState,
+            onEventClick = onEventClick,
+            onAddEventClick = onAddEventClick,
+            onEventDragDrop = onEventDragDrop,
+            onEventResize = onEventResize,
+            onEventDelete = onEventDelete,
+            onEventLongPressStart = onEventLongPressStart,
+            onEventLongPressEnd = onEventLongPressEnd,
+            onDragOverDeleteButton = onDragOverDeleteButton,
+            holidays = holidays
+        )
+    }
+}
+
+/**
+ * One pager page: the fixed hour grid plus day columns and event overlay for
+ * [selectedDate] (day view) or the week containing it (week view).
+ */
+// Pre-existing hour-grid body moved out of DayWeekView unchanged; splitting it
+// further is tracked separately (was baselined under the old function name).
+@Suppress("LongParameterList", "LongMethod", "CyclomaticComplexMethod")
+@Composable
+private fun DayWeekPage(
+    selectedDate: LocalDate,
+    daysCount: Int,
+    events: List<Event>,
+    getCustody: (LocalDate) -> String?,
+    scrollState: LazyListState,
     onEventClick: (String) -> Unit,
     onAddEventClick: (LocalDate, Int) -> Unit = { _, _ -> },
     onEventDragDrop: ((String, LocalDate, Int) -> Unit)? = null,
@@ -111,39 +207,12 @@ fun DayWeekView(
         with(density) { hourCellHeight.toPx() }
     }
 
-    // Handle swipe to change dates
-    val totalDragState = remember { mutableFloatStateOf(0f) }
-    var totalDrag by totalDragState
-
-    // Save scroll state to preserve position when dates change
-    // Using single scrollState shared across all dates preserves scroll position
-    // The key is that scrollState is created once and reused across AnimatedContent transitions
-    val scrollState = rememberLazyListState(
-        // Start near the current hour (one hour of context above) so "now" is in view
-        initialFirstVisibleItemIndex = (java.time.LocalTime.now().hour - 1).coerceIn(0, 23)
-    )
-
-    // State for swipe direction
-    var swipeDirection by remember { mutableStateOf(0) } // -1 for left, 1 for right
+    // The AnimatedContent wrappers below no longer animate (the pager provides the
+    // motion); a static direction keeps their transitionSpec inert.
+    val swipeDirection = 0
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .pointerInput(selectedDate) {
-                detectHorizontalDragGestures(
-                    onDragEnd = {
-                        val dragValue = totalDrag
-                        if (kotlin.math.abs(dragValue) > 200f) {
-                            swipeDirection = if (dragValue > 0) -1 else 1
-                            val daysToAdd = if (dragValue > 0) -daysCount else daysCount
-                            onDateChange(selectedDate.plusDays(daysToAdd.toLong()))
-                        }
-                        totalDrag = 0f
-                    }
-                ) { _, dragAmount ->
-                    totalDrag = totalDrag + dragAmount
-                }
-            }
+        modifier = Modifier.fillMaxSize()
     ) {
         // Fixed header row with modern design - 1.5x larger
         // Animated header with optimized animation (200ms slide + 150ms fade)
@@ -151,30 +220,34 @@ fun DayWeekView(
             targetState = selectedDate,
             transitionSpec = {
                 val direction = swipeDirection
-                (slideInHorizontally(
-                    animationSpec = tween(
-                        durationMillis = 200,
-                        easing = FastOutSlowInEasing
-                    ),
-                    initialOffsetX = { fullWidth -> fullWidth * direction }
-                ) + fadeIn(
-                    animationSpec = tween(
-                        durationMillis = 150,
-                        easing = LinearEasing
+                (
+                    slideInHorizontally(
+                        animationSpec = tween(
+                            durationMillis = 200,
+                            easing = FastOutSlowInEasing
+                        ),
+                        initialOffsetX = { fullWidth -> fullWidth * direction }
+                    ) + fadeIn(
+                        animationSpec = tween(
+                            durationMillis = 150,
+                            easing = LinearEasing
+                        )
                     )
-                )) togetherWith
-                (slideOutHorizontally(
-                    animationSpec = tween(
-                        durationMillis = 200,
-                        easing = FastOutSlowInEasing
-                    ),
-                    targetOffsetX = { fullWidth -> -fullWidth * direction }
-                ) + fadeOut(
-                    animationSpec = tween(
-                        durationMillis = 150,
-                        easing = LinearEasing
-                    )
-                ))
+                    ) togetherWith
+                    (
+                        slideOutHorizontally(
+                            animationSpec = tween(
+                                durationMillis = 200,
+                                easing = FastOutSlowInEasing
+                            ),
+                            targetOffsetX = { fullWidth -> -fullWidth * direction }
+                        ) + fadeOut(
+                            animationSpec = tween(
+                                durationMillis = 150,
+                                easing = LinearEasing
+                            )
+                        )
+                        )
             },
             modifier = Modifier
                 .fillMaxWidth()
@@ -342,30 +415,34 @@ fun DayWeekView(
                             targetState = selectedDate,
                             transitionSpec = {
                                 val direction = swipeDirection
-                                (slideInHorizontally(
-                                    animationSpec = tween(
-                                        durationMillis = 200,
-                                        easing = FastOutSlowInEasing
-                                    ),
-                                    initialOffsetX = { fullWidth -> fullWidth * direction }
-                                ) + fadeIn(
-                                    animationSpec = tween(
-                                        durationMillis = 150,
-                                        easing = LinearEasing
+                                (
+                                    slideInHorizontally(
+                                        animationSpec = tween(
+                                            durationMillis = 200,
+                                            easing = FastOutSlowInEasing
+                                        ),
+                                        initialOffsetX = { fullWidth -> fullWidth * direction }
+                                    ) + fadeIn(
+                                        animationSpec = tween(
+                                            durationMillis = 150,
+                                            easing = LinearEasing
+                                        )
                                     )
-                                )) togetherWith
-                                (slideOutHorizontally(
-                                    animationSpec = tween(
-                                        durationMillis = 200,
-                                        easing = FastOutSlowInEasing
-                                    ),
-                                    targetOffsetX = { fullWidth -> -fullWidth * direction }
-                                ) + fadeOut(
-                                    animationSpec = tween(
-                                        durationMillis = 150,
-                                        easing = LinearEasing
-                                    )
-                                ))
+                                    ) togetherWith
+                                    (
+                                        slideOutHorizontally(
+                                            animationSpec = tween(
+                                                durationMillis = 200,
+                                                easing = FastOutSlowInEasing
+                                            ),
+                                            targetOffsetX = { fullWidth -> -fullWidth * direction }
+                                        ) + fadeOut(
+                                            animationSpec = tween(
+                                                durationMillis = 150,
+                                                easing = LinearEasing
+                                            )
+                                        )
+                                        )
                             },
                             modifier = Modifier.weight(1f)
                         ) { currentDate ->
@@ -379,7 +456,7 @@ fun DayWeekView(
                             ) {
                                 currentDates.forEachIndexed { dayIndex, date ->
                                     val isToday = date == LocalDate.now()
-                                    val custody = CustodyHelper.getCustodyForDate(date, custodySchedules)
+                                    val custody = getCustody(date)
                                     val isWeekend = CustodyHelper.isWeekend(date)
                                     val isDarkTheme = androidx.compose.foundation.isSystemInDarkTheme()
                                     val weekendColor = if (isDarkTheme) {
@@ -417,7 +494,6 @@ fun DayWeekView(
                 }
             }
 
-
             // Events overlay layer - positioned absolutely above the grid
             val currentDates = DateRangeHelper.rememberDateRange(selectedDate, daysCount)
             val scrollOffset = scrollState.firstVisibleItemScrollOffset.toFloat()
@@ -427,11 +503,11 @@ fun DayWeekView(
             val hourLabelWidth = dims.iconSize * 2.17f
             val horizontalPadding = 8.dp
             val daySpacing = 4.dp
-            val headerHeight = dims.buttonHeight * 1.6f  // Match header height
+            val headerHeight = dims.buttonHeight * 1.6f // Match header height
 
             Box(
                 modifier = Modifier
-                    .matchParentSize()  // Match parent Box size (same as LazyColumn)
+                    .matchParentSize() // Match parent Box size (same as LazyColumn)
                     .padding(
                         start = horizontalPadding + hourLabelWidth,
                         end = horizontalPadding
@@ -535,7 +611,6 @@ fun DayWeekView(
     }
 }
 
-
 @Composable
 private fun EventChip(
     event: Event,
@@ -608,13 +683,17 @@ private fun EventChip(
     val tempStartTime = remember(isResizingStart, resizeDragAmountStart, eventStart) {
         if (isResizingStart) {
             resizedTime(eventStart, resizeDragAmountStart, hourHeightPx)
-        } else eventStart
+        } else {
+            eventStart
+        }
     }
 
     val tempEndTime = remember(isResizingEnd, resizeDragAmountEnd, eventEnd) {
         if (isResizingEnd) {
             resizedTime(eventEnd, resizeDragAmountEnd, hourHeightPx)
-        } else eventEnd
+        } else {
+            eventEnd
+        }
     }
 
     // Calculate dynamic height based on resize state
@@ -734,7 +813,16 @@ private fun EventChip(
                 .fillMaxSize()
                 .padding(horizontal = 8.dp, vertical = 4.dp)
                 .padding(start = 12.dp, end = 12.dp) // Padding to avoid resize handles
-                .pointerInput(columnWidthPx, hourHeightPx, onDragDrop, onDelete, onDragOverDeleteButton, configuration, eventGlobalPosition, draggable) {
+                .pointerInput(
+                    columnWidthPx,
+                    hourHeightPx,
+                    onDragDrop,
+                    onDelete,
+                    onDragOverDeleteButton,
+                    configuration,
+                    eventGlobalPosition,
+                    draggable
+                ) {
                     // Center drag for moving event
                     if (onDragDrop != null && draggable && columnWidthPx > 0f && hourHeightPx > 0f) {
                         val screenWidth = with(density) { configuration.screenWidthDp.dp.toPx() }
@@ -804,7 +892,7 @@ private fun EventChip(
                             val deleteAreaWidth = screenWidth * 0.25f
                             val deleteAreaHeight = screenHeight * 0.25f
                             val isInDeleteArea = currentPositionInWindow.x >= (screenWidth - deleteAreaWidth) &&
-                                    currentPositionInWindow.y >= (screenHeight - deleteAreaHeight)
+                                currentPositionInWindow.y >= (screenHeight - deleteAreaHeight)
 
                             if (isInDeleteArea != isOverDeleteButton) {
                                 isOverDeleteButton = isInDeleteArea
@@ -842,7 +930,11 @@ private fun EventChip(
                     text = event.title,
                     style = MaterialTheme.typography.labelSmall,
                     color = textColor,
-                    maxLines = if (totalMinutes >= 60) 2 else 1,
+                    maxLines = 1,
+                    // Never wrap character-by-character in narrow week columns —
+                    // a clipped-but-horizontal title beats an unreadable vertical one
+                    softWrap = false,
+                    overflow = TextOverflow.Ellipsis,
                     fontWeight = FontWeight.SemiBold,
                     textAlign = TextAlign.Start,
                     modifier = Modifier.fillMaxWidth()
@@ -851,9 +943,14 @@ private fun EventChip(
             // Always show time if enough space, or if resizing (to give feedback)
             if (totalMinutes >= 45 || isResizingStart || isResizingEnd) {
                 Text(
-                    text = "${tempStartTime.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))} - ${tempEndTime.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))}",
+                    text = "${tempStartTime.format(
+                        java.time.format.DateTimeFormatter.ofPattern("HH:mm")
+                    )} - ${tempEndTime.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))}",
                     style = MaterialTheme.typography.labelSmall,
                     fontSize = 10.sp,
+                    maxLines = 1,
+                    softWrap = false,
+                    overflow = TextOverflow.Ellipsis,
                     color = textColor.copy(alpha = 0.8f),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -871,7 +968,9 @@ private fun EventChip(
                 shadowElevation = 4.dp
             ) {
                 Text(
-                    text = "${tempStartTime.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))} - ${tempEndTime.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))}",
+                    text = "${tempStartTime.format(
+                        java.time.format.DateTimeFormatter.ofPattern("HH:mm")
+                    )} - ${tempEndTime.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))}",
                     color = MaterialTheme.colorScheme.inverseOnSurface,
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
@@ -961,7 +1060,6 @@ private fun EventChip(
                     }
             )
         }
-
     }
 }
 
@@ -1009,7 +1107,9 @@ private fun layoutDayEvents(events: List<Event>, date: LocalDate): List<EventSeg
             val cs = if (s.isBefore(dayStart)) dayStart else s
             val ce = if (en.isAfter(dayEnd)) dayEnd else en
             Slice(e, cs, ce, s.isBefore(dayStart) || en.isAfter(dayEnd))
-        } else null
+        } else {
+            null
+        }
     }.sortedWith(compareBy({ it.start }, { it.end }))
 
     val result = mutableListOf<EventSegment>()

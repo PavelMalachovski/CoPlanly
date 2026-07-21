@@ -1,7 +1,5 @@
 package com.coparently.app.presentation
 
-import android.Manifest
-import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
@@ -11,31 +9,30 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeOut
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
-import com.coparently.app.presentation.splash.SplashScreen
-import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.rememberNavController
 import com.coparently.app.data.notification.NotificationManager
 import com.coparently.app.domain.repository.PreferencesRepository
 import com.coparently.app.presentation.navigation.NavGraph
-import com.coparently.app.presentation.theme.CoPlanlyTheme
+import com.coparently.app.presentation.splash.SplashScreen
 import com.coparently.app.presentation.sync.SyncViewModel
+import com.coparently.app.presentation.theme.CoPlanlyTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -48,7 +45,6 @@ import javax.inject.Inject
 val LocalGoogleSignInCallback = staticCompositionLocalOf<((android.content.Intent) -> Unit)?> {
     null
 }
-
 
 /**
  * Main Activity for CoPlanly app.
@@ -68,16 +64,6 @@ class MainActivity : ComponentActivity() {
     private val darkThemeState: StateFlow<Boolean?> = _darkThemeState
 
     private val syncViewModel: SyncViewModel by viewModels()
-
-    // Notification permission launcher for Android 13+
-    private val notificationPermissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        if (isGranted) {
-            // Permission granted, initialize notifications
-            notificationManager.registerToken()
-        }
-    }
 
     // Google Sign-In Activity Result launcher for sync
     private val googleSignInLauncher = registerForActivityResult(
@@ -101,7 +87,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-
     override fun onCreate(savedInstanceState: Bundle?) {
         // Install splash screen before calling super.onCreate()
         // This ensures the splash screen is displayed on Android 12+
@@ -113,12 +98,9 @@ class MainActivity : ComponentActivity() {
         // This makes the app draw behind the system bars
         enableEdgeToEdge()
 
-        // Request notification permission on Android 13+
-        try {
-            requestNotificationPermissionIfNeeded()
-        } catch (e: Exception) {
-            Log.e("MainActivity", "Error requesting notification permission", e)
-        }
+        // Notification permission is requested contextually (Settings push toggle,
+        // event reminder selection) instead of on every cold start — see
+        // NotificationPermission.kt.
 
         // Initialize notifications
         try {
@@ -157,7 +139,8 @@ class MainActivity : ComponentActivity() {
 
             // Provide Google Sign-In callback through CompositionLocal
             val googleSignInCallback: (android.content.Intent) -> Unit = remember(googleSignInLauncher) {
-                { intent ->
+                {
+                        intent ->
                     googleSignInLauncher.launch(intent)
                 }
             }
@@ -194,22 +177,4 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-
-    /**
-     * Requests notification permission on Android 13+ (API 33+).
-     * For older versions, permission is granted by default.
-     */
-    private fun requestNotificationPermissionIfNeeded() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            val hasPermission = ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.POST_NOTIFICATIONS
-            ) == PackageManager.PERMISSION_GRANTED
-
-            if (!hasPermission) {
-                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-            }
-        }
-    }
 }
-

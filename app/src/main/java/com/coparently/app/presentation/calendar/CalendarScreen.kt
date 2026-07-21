@@ -1,20 +1,16 @@
 package com.coparently.app.presentation.calendar
 
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.foundation.ExperimentalFoundationApi
+import android.os.Build
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.Crossfade
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
-import androidx.compose.runtime.key
-import android.os.Build
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -22,34 +18,41 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.Button
+import androidx.compose.material3.DatePickerDefaults
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.DatePickerDialog
-import androidx.compose.material3.rememberDatePickerState
-import androidx.compose.material3.Button
-import androidx.compose.material3.DatePickerDefaults
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
-import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.domain.holidays.CzechHolidays
@@ -58,20 +61,14 @@ import com.coparently.app.presentation.calendar.components.CalendarHeader
 import com.coparently.app.presentation.calendar.components.CustodyIndicatorToday
 import com.coparently.app.presentation.calendar.components.EventTypeFilterSheet
 import com.coparently.app.presentation.calendar.components.ParentFilterBar
-import com.coparently.app.presentation.common.QuickActionsBottomSheet
-import androidx.compose.material3.rememberModalBottomSheetState
-import com.coparently.app.presentation.event.EventViewModel
 import com.coparently.app.presentation.event.EventUiState
+import com.coparently.app.presentation.event.EventViewModel
 import com.coparently.app.presentation.theme.dimensions
-import com.kizitonwose.calendar.compose.rememberCalendarState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Close
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.YearMonth
 import java.time.ZoneId
-import kotlinx.coroutines.launch
 
 /**
  * Computes the event query range for a view mode and selected date.
@@ -127,6 +124,7 @@ fun CalendarScreen(
     val haptic = LocalHapticFeedback.current
     val events by eventViewModel.events.collectAsState()
     val custodySchedules by calendarViewModel.custodySchedules.collectAsState()
+    val custodyModel by calendarViewModel.custodyModel.collectAsState()
     val viewMode by calendarViewModel.viewMode.collectAsState()
     val selectedDate by calendarViewModel.selectedDate.collectAsState()
     val parentFilter by calendarViewModel.parentFilter.collectAsState()
@@ -140,15 +138,9 @@ fun CalendarScreen(
     }
 
     val now = remember { YearMonth.now() }
-    val calendarState = rememberCalendarState(
-        startMonth = remember { now.minusMonths(12) },
-        endMonth = remember { now.plusMonths(12) },
-        firstVisibleMonth = YearMonth.from(selectedDate),
-        firstDayOfWeek = remember { java.time.DayOfWeek.MONDAY }
-    )
 
     var showDatePicker by remember { mutableStateOf(false) }
-    val currentYearMonth = calendarState.firstVisibleMonth.yearMonth
+    val currentYearMonth = YearMonth.from(selectedDate)
     val datePickerState = rememberDatePickerState(
         initialSelectedDateMillis = currentYearMonth.atDay(1).atStartOfDay(ZoneId.systemDefault())
             .toInstant().toEpochMilli(),
@@ -159,10 +151,6 @@ fun CalendarScreen(
     // Pull-to-Refresh state
     var isRefreshing by remember { mutableStateOf(false) }
     val pullToRefreshState = rememberPullToRefreshState()
-
-    // Quick Actions Bottom Sheet state
-    var showQuickActions by remember { mutableStateOf(false) }
-    val quickActionsSheetState = rememberModalBottomSheetState()
 
     // Event type filter sheet state
     var showTypeFilters by remember { mutableStateOf(false) }
@@ -176,6 +164,20 @@ fun CalendarScreen(
     var showDeleteButton by remember { mutableStateOf(false) }
     var eventToDelete by remember { mutableStateOf<String?>(null) }
     var isDragOverDeleteButton by remember { mutableStateOf(false) }
+
+    // Event preview sheet: a tap opens the read-only preview, Edit goes to the editor
+    var previewEventId by remember { mutableStateOf<String?>(null) }
+
+    // Unified custody lookup: prefers the active CustodyModel (Custody Setup),
+    // falls back to legacy CustodyScheduleEntity rows. Views must use this —
+    // reading only the legacy schedules left model-based custody invisible.
+    val getCustody: (LocalDate) -> String? = remember(custodyModel, custodySchedules) {
+        {
+                date ->
+            custodyModel?.getCustodyFor(date)
+                ?: CustodyHelper.getCustodyForDate(date, custodySchedules)
+        }
+    }
 
     // Events filtered by parent view and hidden event types
     val filteredEvents = remember(events, parentFilter, hiddenEventTypes) {
@@ -204,22 +206,6 @@ fun CalendarScreen(
     LaunchedEffect(viewMode, selectedDate) {
         val (start, end) = queryRangeFor(viewMode, selectedDate)
         eventViewModel.loadEventsForDateRange(start, end)
-    }
-
-    // Update calendar state when selected date changes (for month view)
-    LaunchedEffect(selectedDate, viewMode) {
-        if (viewMode == CalendarViewMode.MONTH) {
-            val newMonth = YearMonth.from(selectedDate)
-            if (newMonth != calendarState.firstVisibleMonth.yearMonth) {
-                scope.launch {
-                    try {
-                        calendarState.animateScrollToMonth(newMonth)
-                    } catch (e: Exception) {
-                        // Handle scroll error gracefully
-                    }
-                }
-            }
-        }
     }
 
     // Show snackbar with undo when event is moved
@@ -336,9 +322,9 @@ fun CalendarScreen(
                 )
 
                 // Today's custody indicator (only for month view)
-                if (viewMode == CalendarViewMode.MONTH && custodySchedules.isNotEmpty()) {
+                if (viewMode == CalendarViewMode.MONTH) {
                     val today = LocalDate.now()
-                    val todayCustody = CustodyHelper.getCustodyForDate(today, custodySchedules)
+                    val todayCustody = getCustody(today)
                     if (todayCustody != null) {
                         key(todayCustody) {
                             AnimatedContent(
@@ -379,9 +365,9 @@ fun CalendarScreen(
                                     selectedDate = selectedDate,
                                     daysCount = if (mode == CalendarViewMode.DAY) 1 else 7,
                                     events = filteredEvents,
-                                    custodySchedules = custodySchedules,
+                                    getCustody = getCustody,
                                     onDateChange = { calendarViewModel.setSelectedDate(it) },
-                                    onEventClick = onEventClick,
+                                    onEventClick = { eventId -> previewEventId = eventId },
                                     onAddEventClick = { date, hour ->
                                         onAddEventClick(date, hour)
                                     },
@@ -413,19 +399,13 @@ fun CalendarScreen(
                                     selectedMonth = YearMonth.from(selectedDate),
                                     selectedDate = selectedDate,
                                     events = filteredEvents,
-                                    custodySchedules = custodySchedules,
+                                    getCustody = getCustody,
                                     onDayClick = { clickedDate ->
                                         calendarViewModel.setSelectedDate(clickedDate)
                                         calendarViewModel.setViewMode(CalendarViewMode.DAY)
                                     },
                                     onMonthChange = { newMonth ->
                                         calendarViewModel.setSelectedDate(newMonth.atDay(1))
-                                    },
-                                    onDateChange = { newDate ->
-                                        calendarViewModel.setSelectedDate(newDate)
-                                    },
-                                    onEventDragDrop = { eventId, targetDate ->
-                                        eventViewModel.moveEvent(eventId, targetDate)
                                     },
                                     holidays = holidays
                                 )
@@ -449,16 +429,12 @@ fun CalendarScreen(
                             val pickedDate = java.time.Instant.ofEpochMilli(millis)
                                 .atZone(ZoneId.systemDefault())
                                 .toLocalDate()
-                            val selectedYearMonth = YearMonth.from(pickedDate)
 
                             calendarViewModel.setSelectedDate(pickedDate)
                             if (viewMode != CalendarViewMode.MONTH) {
                                 calendarViewModel.setViewMode(CalendarViewMode.MONTH)
-                            } else {
-                                scope.launch {
-                                    calendarState.animateScrollToMonth(selectedYearMonth)
-                                }
                             }
+                            // MonthView follows selectedMonth on its own
                         }
                         showDatePicker = false
                     }
@@ -482,15 +458,26 @@ fun CalendarScreen(
         }
     }
 
-    // Quick Actions Bottom Sheet
-    if (showQuickActions) {
-        QuickActionsBottomSheet(
-            onEventCreate = { onAddEventClick(null, null) },
-            onNavigateToToday = { calendarViewModel.setSelectedDate(LocalDate.now()) },
-            onShowSettings = { onSettingsClick?.invoke() },
-            onDismiss = { showQuickActions = false },
-            sheetState = quickActionsSheetState
-        )
+    // Event preview bottom sheet
+    previewEventId?.let { eventId ->
+        val previewEvent = events.firstOrNull { it.id == eventId }
+        if (previewEvent != null) {
+            com.coparently.app.presentation.event.EventPreviewSheet(
+                event = previewEvent,
+                onEdit = {
+                    previewEventId = null
+                    onEventClick(eventId)
+                },
+                onDelete = {
+                    previewEventId = null
+                    eventViewModel.deleteEventById(eventId)
+                },
+                onDismiss = { previewEventId = null }
+            )
+        } else {
+            // Event disappeared (deleted/synced away) — close the sheet
+            previewEventId = null
+        }
     }
 
     // Event type filter sheet
