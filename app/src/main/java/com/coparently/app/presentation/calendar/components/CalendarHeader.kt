@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ViewList
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.Badge
@@ -52,7 +53,8 @@ fun CalendarHeader(
     onNavigateToToday: () -> Unit,
     onSettingsClick: (() -> Unit)? = null,
     onChangeRequestsClick: (() -> Unit)? = null,
-    pendingChangeRequests: Int = 0
+    pendingChangeRequests: Int = 0,
+    onWeeklySummaryClick: (() -> Unit)? = null
 ) {
     TopAppBar(
         title = {
@@ -88,6 +90,16 @@ fun CalendarHeader(
                 currentDay = LocalDate.now().dayOfMonth,
                 onClick = onNavigateToToday
             )
+
+            onWeeklySummaryClick?.let { onClick ->
+                IconButton(onClick = onClick) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ViewList,
+                        contentDescription = "Weekly summary",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
 
             onChangeRequestsClick?.let { onClick ->
                 ChangeRequestsButton(

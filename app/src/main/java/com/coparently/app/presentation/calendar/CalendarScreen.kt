@@ -121,6 +121,7 @@ fun CalendarScreen(
     onAddEventClick: (LocalDate?, Int?) -> Unit,
     onSettingsClick: (() -> Unit)? = null,
     onChangeRequestsClick: (() -> Unit)? = null,
+    onWeeklySummaryClick: (() -> Unit)? = null,
     eventViewModel: EventViewModel = hiltViewModel(),
     calendarViewModel: CalendarViewModel = hiltViewModel(),
     changeRequestViewModel: com.coparently.app.presentation.changerequests.ChangeRequestViewModel = hiltViewModel()
@@ -254,7 +255,8 @@ fun CalendarScreen(
                 onNavigateToToday = { calendarViewModel.setSelectedDate(LocalDate.now()) },
                 onSettingsClick = onSettingsClick,
                 onChangeRequestsClick = onChangeRequestsClick,
-                pendingChangeRequests = pendingChangeRequests
+                pendingChangeRequests = pendingChangeRequests,
+                onWeeklySummaryClick = onWeeklySummaryClick
             )
         },
         snackbarHost = {
