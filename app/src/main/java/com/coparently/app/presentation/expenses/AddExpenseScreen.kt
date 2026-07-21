@@ -1,40 +1,58 @@
 package com.coparently.app.presentation.expenses
 
+import android.net.Uri
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AddAPhoto
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import coil.compose.AsyncImage
 import com.coparently.app.domain.model.ExpenseCategory
-import java.time.LocalDate
+import com.coparently.app.presentation.theme.CoPlanlyShapes
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -47,13 +65,31 @@ fun AddExpenseScreen(
     var category by remember { mutableStateOf(ExpenseCategory.OTHER) }
     var notes by remember { mutableStateOf("") }
     var expanded by remember { mutableStateOf(false) }
+    var receiptUri by remember { mutableStateOf<Uri?>(null) }
+
+    val saveState by viewModel.saveState.collectAsState()
+    val isSaving = saveState is ExpenseSaveState.Saving
+    val context = LocalContext.current
+
+    val photoPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickVisualMedia()
+    ) { uri -> if (uri != null) receiptUri = uri }
+
+    LaunchedEffect(saveState) {
+        val state = saveState
+        if (state is ExpenseSaveState.Saved) {
+            state.warning?.let { Toast.makeText(context, it, Toast.LENGTH_LONG).show() }
+            viewModel.resetSaveState()
+            onBack()
+        }
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Add Expense") },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(onClick = onBack, enabled = !isSaving) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
                     }
                 }
@@ -122,6 +158,17 @@ fun AddExpenseScreen(
                 minLines = 3
             )
 
+            ReceiptPicker(
+                receiptUri = receiptUri,
+                enabled = !isSaving,
+                onPickPhoto = {
+                    photoPicker.launch(
+                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                    )
+                },
+                onRemovePhoto = { receiptUri = null }
+            )
+
             Spacer(modifier = Modifier.height(16.dp))
 
             Button(
@@ -132,15 +179,67 @@ fun AddExpenseScreen(
                             title = title,
                             amount = amountValue,
                             category = category,
-                            notes = notes.takeIf { it.isNotBlank() }
+                            notes = notes.takeIf { it.isNotBlank() },
+                            receiptImageUri = receiptUri?.toString()
                         )
-                        onBack()
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = title.isNotBlank() && amount.toDoubleOrNull() != null
+                enabled = !isSaving && title.isNotBlank() && amount.toDoubleOrNull() != null
             ) {
-                Text("Save Expense")
+                if (isSaving) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Text("Save Expense")
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Receipt photo section of the form: a button to attach a photo, or a preview
+ * of the picked image with a remove control.
+ */
+@Composable
+private fun ReceiptPicker(
+    receiptUri: Uri?,
+    enabled: Boolean,
+    onPickPhoto: () -> Unit,
+    onRemovePhoto: () -> Unit
+) {
+    if (receiptUri == null) {
+        OutlinedButton(
+            onClick = onPickPhoto,
+            enabled = enabled,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(Icons.Default.AddAPhoto, contentDescription = null)
+            Spacer(modifier = Modifier.size(8.dp))
+            Text("Attach Receipt Photo")
+        }
+    } else {
+        Box(modifier = Modifier.fillMaxWidth()) {
+            AsyncImage(
+                model = receiptUri,
+                contentDescription = "Receipt photo",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(180.dp)
+                    .clip(CoPlanlyShapes.medium)
+            )
+            FilledTonalIconButton(
+                onClick = onRemovePhoto,
+                enabled = enabled,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(8.dp)
+            ) {
+                Icon(Icons.Default.Close, contentDescription = "Remove receipt photo")
             }
         }
     }

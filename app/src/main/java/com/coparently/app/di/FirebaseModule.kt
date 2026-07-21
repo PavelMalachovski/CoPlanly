@@ -52,6 +52,15 @@ object FirebaseModule {
     }
 
     /**
+     * Provides Firebase Cloud Storage instance (receipt photos and other attachments).
+     */
+    @Provides
+    @Singleton
+    fun provideFirebaseStorage(): com.google.firebase.storage.FirebaseStorage {
+        return com.google.firebase.storage.FirebaseStorage.getInstance()
+    }
+
+    /**
      * Provides Firebase Messaging instance.
      */
     @Provides
