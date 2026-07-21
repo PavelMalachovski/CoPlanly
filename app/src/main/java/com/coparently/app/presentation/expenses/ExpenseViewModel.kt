@@ -87,6 +87,7 @@ class ExpenseViewModel @Inject constructor(
      * other parent sees the receipt too. An upload failure does not lose the expense —
      * it is saved without the receipt and a warning is surfaced via [saveState].
      */
+    @Suppress("LongParameterList") // mirrors the Expense domain model fields
     fun addExpense(
         title: String,
         amount: Double,
@@ -109,7 +110,10 @@ class ExpenseViewModel @Inject constructor(
             if (receiptImageUri != null) {
                 receiptUrl = try {
                     receiptStorage.uploadReceipt(expenseId, receiptImageUri)
-                } catch (e: Exception) {
+                } catch (
+                    // Any upload failure (IO, storage, decode) must not lose the expense
+                    @Suppress("TooGenericExceptionCaught") e: Exception
+                ) {
                     warning = "Receipt upload failed — expense saved without receipt"
                     null
                 }
