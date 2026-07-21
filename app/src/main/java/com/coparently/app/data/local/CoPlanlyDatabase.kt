@@ -5,6 +5,7 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import com.coparently.app.data.local.dao.AllergyDao
 import com.coparently.app.data.local.dao.BudgetDao
+import com.coparently.app.data.local.dao.ChangeRequestDao
 import com.coparently.app.data.local.dao.ChildInfoDao
 import com.coparently.app.data.local.dao.CustodyModelDao
 import com.coparently.app.data.local.dao.CustodyScheduleDao
@@ -17,6 +18,7 @@ import com.coparently.app.data.local.dao.SchoolEventDao
 import com.coparently.app.data.local.dao.UserDao
 import com.coparently.app.data.local.entity.AllergyEntity
 import com.coparently.app.data.local.entity.BudgetEntity
+import com.coparently.app.data.local.entity.ChangeRequestEntity
 import com.coparently.app.data.local.entity.ChildInfoEntity
 import com.coparently.app.data.local.entity.ConversationEntity
 import com.coparently.app.data.local.entity.CustodyModelEntity
@@ -49,9 +51,10 @@ import com.coparently.app.data.local.entity.UserEntity
         MedicalRecordEntity::class,
         AllergyEntity::class,
         GradeEntity::class,
-        SchoolEventEntity::class
+        SchoolEventEntity::class,
+        ChangeRequestEntity::class
     ],
-    version = 9,
+    version = 10,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -115,5 +118,10 @@ abstract class CoPlanlyDatabase : RoomDatabase() {
      * Provides access to SchoolEventDao.
      */
     abstract fun schoolEventDao(): SchoolEventDao
+
+    /**
+     * Provides access to ChangeRequestDao.
+     */
+    abstract fun changeRequestDao(): ChangeRequestDao
 }
 

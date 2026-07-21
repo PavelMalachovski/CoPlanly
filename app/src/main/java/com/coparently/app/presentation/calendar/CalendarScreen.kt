@@ -120,8 +120,10 @@ fun CalendarScreen(
     onEventClick: (String) -> Unit = {},
     onAddEventClick: (LocalDate?, Int?) -> Unit,
     onSettingsClick: (() -> Unit)? = null,
+    onChangeRequestsClick: (() -> Unit)? = null,
     eventViewModel: EventViewModel = hiltViewModel(),
-    calendarViewModel: CalendarViewModel = hiltViewModel()
+    calendarViewModel: CalendarViewModel = hiltViewModel(),
+    changeRequestViewModel: com.coparently.app.presentation.changerequests.ChangeRequestViewModel = hiltViewModel()
 ) {
     val dims = dimensions()
     val haptic = LocalHapticFeedback.current
@@ -241,6 +243,8 @@ fun CalendarScreen(
         }
     }
 
+    val pendingChangeRequests by changeRequestViewModel.pendingIncomingCount.collectAsState()
+
     Scaffold(
         topBar = {
             CalendarHeader(
@@ -248,7 +252,9 @@ fun CalendarScreen(
                 viewMode = viewMode,
                 onViewModeChange = { mode -> calendarViewModel.setViewMode(mode) },
                 onNavigateToToday = { calendarViewModel.setSelectedDate(LocalDate.now()) },
-                onSettingsClick = onSettingsClick
+                onSettingsClick = onSettingsClick,
+                onChangeRequestsClick = onChangeRequestsClick,
+                pendingChangeRequests = pendingChangeRequests
             )
         },
         snackbarHost = {

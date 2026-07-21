@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.Title
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Card
@@ -107,6 +108,7 @@ fun AddEditEventScreen(
     initialHour: Int? = null,
     onSave: () -> Unit,
     onCancel: () -> Unit,
+    onRequestChange: ((String) -> Unit)? = null,
     viewModel: EventViewModel = hiltViewModel()
 ) {
     val haptic = LocalHapticFeedback.current
@@ -265,6 +267,22 @@ fun AddEditEventScreen(
                     }
                 },
                 actions = {
+                    // Propose a time change to the co-parent (only for existing shared events)
+                    if (eventId != null && onRequestChange != null && existingEvent?.isPrivate == false) {
+                        IconButton(
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                onRequestChange(eventId)
+                            },
+                            enabled = !isDeleting && !isSaving
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.SwapHoriz,
+                                contentDescription = "Request change"
+                            )
+                        }
+                    }
+
                     // Delete button (only when editing existing event)
                     if (eventId != null) {
                         IconButton(

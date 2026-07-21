@@ -106,6 +106,9 @@ fun NavGraph(
                 },
                 onSettingsClick = {
                     navController.navigate(Screen.Settings.route)
+                },
+                onChangeRequestsClick = {
+                    navController.navigate(Screen.ChangeRequests.route)
                 }
             )
         }
@@ -185,6 +188,48 @@ fun NavGraph(
                     navController.popBackStack()
                 },
                 onCancel = {
+                    navController.popBackStack()
+                },
+                onRequestChange = { id ->
+                    navController.navigate(Screen.RequestChange.createRoute(id))
+                }
+            )
+        }
+
+        // Event change requests (MVP 2)
+        composable(
+            route = Screen.ChangeRequests.route,
+            enterTransition = { slideInFromRight() },
+            exitTransition = { slideOutToLeft() },
+            popEnterTransition = { slideInFromLeft() },
+            popExitTransition = { slideOutToRight() }
+        ) {
+            com.coparently.app.presentation.changerequests.ChangeRequestsScreen(
+                onBack = {
+                    navController.popBackStack()
+                },
+                onOpenEvent = { eventId ->
+                    navController.navigate(Screen.EditEvent.createRoute(eventId))
+                }
+            )
+        }
+
+        composable(
+            route = Screen.RequestChange.route,
+            arguments = listOf(
+                navArgument(Screen.RequestChange.ARG_EVENT_ID) {
+                    type = NavType.StringType
+                }
+            ),
+            enterTransition = { fadeInScaleUp() },
+            exitTransition = { fadeOutScaleDown() },
+            popEnterTransition = { fadeInScaleUp() },
+            popExitTransition = { fadeOutScaleDown() }
+        ) { backStackEntry ->
+            val eventId = backStackEntry.arguments?.getString(Screen.RequestChange.ARG_EVENT_ID) ?: return@composable
+            com.coparently.app.presentation.changerequests.RequestChangeScreen(
+                eventId = eventId,
+                onBack = {
                     navController.popBackStack()
                 }
             )
@@ -437,5 +482,14 @@ sealed class Screen(val route: String) {
     data object Expenses : Screen("expenses")
     data object AddExpense : Screen("add_expense")
     data object Budgets : Screen("budgets")
+
+    data object ChangeRequests : Screen("change_requests")
+    data object RequestChange : Screen("request_change/{eventId}") {
+        const val ARG_EVENT_ID = "eventId"
+
+        fun createRoute(eventId: String): String {
+            return "request_change/$eventId"
+        }
+    }
 }
 

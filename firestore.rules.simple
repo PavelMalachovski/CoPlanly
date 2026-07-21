@@ -33,6 +33,30 @@ service cloud.firestore {
       allow read, write: if request.auth != null;
     }
 
+    // Allow authenticated users to work with expenses (receipts sync)
+    match /expenses/{expenseId} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Event change requests: only the two involved parents may read/write
+    match /change_requests/{requestId} {
+      allow read, write: if request.auth != null && (
+        request.auth.uid == resource.data.requestedBy ||
+        request.auth.uid == resource.data.requestedTo ||
+        // Creation: the document does not exist yet, validate the incoming data
+        (resource == null && (
+          request.auth.uid == request.resource.data.requestedBy ||
+          request.auth.uid == request.resource.data.requestedTo
+        ))
+      );
+    }
+
+    // Notification queue processed by Cloud Functions
+    match /notification_queue/{notificationId} {
+      allow create: if request.auth != null;
+      allow read, update, delete: if false;
+    }
+
     // Deny everything else for now
     match /{document=**} {
       allow read, write: if false;
