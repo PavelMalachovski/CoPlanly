@@ -40,6 +40,12 @@ import com.coparently.app.presentation.theme.CoPlanlyColors
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
+/** Days shown in the summary; must match [WeeklySummaryViewModel]'s window. */
+private const val DAYS_IN_SUMMARY = 7L
+
+/** How many pending requests are previewed inside the banner card. */
+private const val MAX_PREVIEWED_REQUESTS = 3
+
 private val dayHeaderFormatter = DateTimeFormatter.ofPattern("EEEE, MMM d")
 private val weekRangeFormatter = DateTimeFormatter.ofPattern("MMM d")
 private val eventTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
@@ -49,6 +55,7 @@ private val requestTimeFormatter = DateTimeFormatter.ofPattern("EEE, MMM d · HH
  * Weekly summary dashboard: mutual activities of both parents for the next
  * seven days, with pending change requests surfaced at the top.
  */
+@Suppress("LongMethod") // Compose screen: banner + seven day sections
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WeeklySummaryScreen(
@@ -61,7 +68,7 @@ fun WeeklySummaryScreen(
     val pendingRequests by viewModel.pendingChangeRequests.collectAsState()
     val currentUserId by viewModel.currentUserId.collectAsState()
 
-    val days = (0 until 7L).map { viewModel.weekStart.plusDays(it) }
+    val days = (0 until DAYS_IN_SUMMARY).map { viewModel.weekStart.plusDays(it) }
 
     Scaffold(
         topBar = {
@@ -169,7 +176,7 @@ private fun PendingRequestsCard(
                     fontWeight = FontWeight.SemiBold
                 )
             }
-            requests.take(3).forEach { request ->
+            requests.take(MAX_PREVIEWED_REQUESTS).forEach { request ->
                 Text(
                     text = "${request.eventTitle} → " +
                         request.proposedStartDateTime.format(requestTimeFormatter),
