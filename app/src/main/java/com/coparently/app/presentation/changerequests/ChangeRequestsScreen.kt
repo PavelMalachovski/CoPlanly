@@ -45,6 +45,7 @@ private val requestDateFormatter = DateTimeFormatter.ofPattern("EEE, MMM d · HH
  * Inbox of event change requests: incoming ones the user must respond to,
  * and outgoing ones the user sent to the co-parent.
  */
+@Suppress("LongMethod") // Compose screen: empty state + two list sections
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChangeRequestsScreen(
@@ -152,6 +153,7 @@ private fun SectionHeader(title: String) {
  * One change request: event title, current -> proposed time, optional note,
  * status chip and the actions available for it.
  */
+@Suppress("LongMethod", "LongParameterList") // card layout + one callback per action
 @Composable
 fun ChangeRequestCard(
     request: ChangeRequest,

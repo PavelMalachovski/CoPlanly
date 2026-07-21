@@ -44,15 +44,14 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.components.TimePickerDialog
 import java.time.Instant
-import java.time.LocalDate
 import java.time.LocalDateTime
-import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 /**
  * Form for proposing a new date/time for [eventId] to the co-parent.
  */
+@Suppress("LongMethod") // Compose screen: state wiring + Scaffold in one place
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RequestChangeScreen(
@@ -131,6 +130,7 @@ fun RequestChangeScreen(
     }
 }
 
+@Suppress("LongMethod") // Compose form: fields + three picker dialogs
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun RequestChangeForm(

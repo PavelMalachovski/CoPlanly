@@ -97,7 +97,10 @@ class RequestChangeViewModel @Inject constructor(
                     )
                 )
                 _uiState.value = RequestChangeUiState.Sent
-            } catch (e: Exception) {
+            } catch (
+                // Firestore/network failures surface as a form error, not a crash
+                @Suppress("TooGenericExceptionCaught") e: Exception
+            ) {
                 _uiState.value =
                     RequestChangeUiState.Error(e.message ?: "Failed to send the change request")
             }
