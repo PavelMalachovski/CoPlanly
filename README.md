@@ -148,23 +148,27 @@ vacations, private events, weekend colors.
 Receipts, change requests on events, weekly summary dashboard, first-screen feed of the
 last 5 changes, structured chat change-requests, image attachments.
 
-**🎨 UX/UI overhaul — agreed July 2026 (in progress)**
-Based on a full design review of the live app (see below), the next UI iteration includes:
+**🎨 UX/UI overhaul — July 2026 (shipped on `feature/ux-overhaul`)**
+Based on a full design review of the live app:
 
-- **Bottom navigation bar** (Calendar / Chat / Expenses / Settings) — today the chat,
-  expense and budget screens exist but have no entry point in the UI
-- **Toolchain upgrade**: compile/target SDK 34 → 36, Compose BOM 2024.11 → 2025.x,
-  Material 3 1.4+ (M3 Expressive), predictive back
-- **Calendar core**: `HorizontalPager`-based swipes with follow-the-finger physics,
-  classic month grid starting at the 1st (horizontal month paging), readable event chips
-  in the week view, visible Mom/Dad custody coloring in the month grid, subtler
-  holiday/vacation markers
+- **Bottom navigation bar** (Calendar / Chat / Expenses / Settings) — the chat, expense
+  and budget screens previously had no entry point in the UI
+- **Toolchain upgrade**: compile/target SDK 36, Kotlin 2.1, Compose BOM 2025.10,
+  Material 3 1.4 (M3 Expressive), Room 2.7.2, predictive back
+- **Calendar core**: `HorizontalPager` swipes with follow-the-finger physics, classic
+  month grid starting at the 1st (horizontal month paging), single-line event chips,
+  visible Mom/Dad custody coloring (unified `CustodyModel`-first lookup), subtle
+  vacation strip
 - **Event interactions**: tap opens a preview bottom sheet (details + Edit/Delete),
-  sticky Save button in the event form, contextual notification-permission request
-  (instead of the on-every-launch system dialog)
-- **Fixes surfaced by the review**: missing Room migration path from very old installs
-  (v3 → v9 crash), pink "Mom" accent leaking into neutral selected chips, hardcoded
-  strings in chat/expense screens, sign-out button placement
+  sticky Save button in the event form, `SwipeToDismissBox` + Undo in the event list,
+  more reminder options (10 min → 1 day), contextual notification-permission request
+- **Color semantics**: neutral (indigo) selected chips; Mom-pink/Dad-blue reserved for
+  parent identity only
+- **Settings polish**: destructive "Sign out" moved to the bottom, push toggle reflects
+  the real OS permission, hardcoded chat/expense/settings strings moved into tracked
+  resource files, clearer dark-theme vacation marker
+- **Fixes surfaced by the review**: Room destructive fallback for pre-v5 installs
+  (v3 → v9 crash)
 
 **🔮 MVP 3 — Automation & Integrations**
 Bakaláři/Edupage import, payments, CSV/PDF exports, intelligent suggestions,

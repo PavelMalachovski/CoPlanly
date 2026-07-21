@@ -64,7 +64,7 @@ fun BudgetScreen(
         },
         floatingActionButton = {
             FloatingActionButton(onClick = { /* TODO: Add budget dialog */ }) {
-                Icon(Icons.Default.Add, contentDescription = "Add Budget")
+                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.budget_add))
             }
         }
     ) { padding ->

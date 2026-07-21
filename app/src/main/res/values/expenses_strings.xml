@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Expenses & budget feature strings. Kept out of strings.xml because
+     strings.xml is gitignored in this project (it holds local OAuth values). -->
+<resources>
+    <string name="expenses_add">Add expense</string>
+    <string name="expenses_summary_this_month">Summary (this month)</string>
+    <string name="expenses_summary_total">Total</string>
+    <string name="expenses_receipt_photo">Receipt photo</string>
+    <string name="expense_add_title">Add expense</string>
+    <string name="expense_field_title">Title</string>
+    <string name="expense_field_amount">Amount</string>
+    <string name="expense_field_category">Category</string>
+    <string name="expense_field_notes">Notes (optional)</string>
+    <string name="expense_save">Save expense</string>
+    <string name="expense_attach_receipt">Attach receipt photo</string>
+    <string name="expense_remove_receipt">Remove receipt photo</string>
+    <string name="budget_add">Add budget</string>
+</resources>

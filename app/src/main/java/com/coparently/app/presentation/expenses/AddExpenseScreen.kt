@@ -47,10 +47,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
+import com.coparently.app.R
 import com.coparently.app.domain.model.ExpenseCategory
 import com.coparently.app.presentation.theme.CoPlanlyShapes
 
@@ -87,10 +89,10 @@ fun AddExpenseScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Add Expense") },
+                title = { Text(stringResource(R.string.expense_add_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack, enabled = !isSaving) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.budgets_back))
                     }
                 }
             )
@@ -107,14 +109,14 @@ fun AddExpenseScreen(
             OutlinedTextField(
                 value = title,
                 onValueChange = { title = it },
-                label = { Text("Title") },
+                label = { Text(stringResource(R.string.expense_field_title)) },
                 modifier = Modifier.fillMaxWidth()
             )
 
             OutlinedTextField(
                 value = amount,
                 onValueChange = { amount = it },
-                label = { Text("Amount") },
+                label = { Text(stringResource(R.string.expense_field_amount)) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 modifier = Modifier.fillMaxWidth()
             )
@@ -128,7 +130,7 @@ fun AddExpenseScreen(
                     value = category.displayName,
                     onValueChange = {},
                     readOnly = true,
-                    label = { Text("Category") },
+                    label = { Text(stringResource(R.string.expense_field_category)) },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                     colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
                     modifier = Modifier.menuAnchor().fillMaxWidth()
@@ -153,7 +155,7 @@ fun AddExpenseScreen(
             OutlinedTextField(
                 value = notes,
                 onValueChange = { notes = it },
-                label = { Text("Notes (Optional)") },
+                label = { Text(stringResource(R.string.expense_field_notes)) },
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 3
             )
@@ -193,7 +195,7 @@ fun AddExpenseScreen(
                         strokeWidth = 2.dp
                     )
                 } else {
-                    Text("Save Expense")
+                    Text(stringResource(R.string.expense_save))
                 }
             }
         }
@@ -219,13 +221,13 @@ private fun ReceiptPicker(
         ) {
             Icon(Icons.Default.AddAPhoto, contentDescription = null)
             Spacer(modifier = Modifier.size(8.dp))
-            Text("Attach Receipt Photo")
+            Text(stringResource(R.string.expense_attach_receipt))
         }
     } else {
         Box(modifier = Modifier.fillMaxWidth()) {
             AsyncImage(
                 model = receiptUri,
-                contentDescription = "Receipt photo",
+                contentDescription = stringResource(R.string.expenses_receipt_photo),
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -239,7 +241,7 @@ private fun ReceiptPicker(
                     .align(Alignment.TopEnd)
                     .padding(8.dp)
             ) {
-                Icon(Icons.Default.Close, contentDescription = "Remove receipt photo")
+                Icon(Icons.Default.Close, contentDescription = stringResource(R.string.expense_remove_receipt))
             }
         }
     }

@@ -13,33 +13,49 @@ Gemini for AI features.
 which is the historical original plan). MVP 1 is complete; MVP 2 (receipts, change requests,
 dashboards) is next. The latest full audit lives in `docs/AUDIT-2026-07.md`.
 
-## Agreed UX/UI direction (July 2026 design review)
+## UX/UI overhaul (July 2026 design review) — implemented, keep consistent
 
-Decisions locked in with the product owner after a live walkthrough — follow these when
-touching the UI:
+Direction agreed after a live walkthrough and shipped on `feature/ux-overhaul`.
+When touching the UI, keep these invariants:
 
-1. **Bottom navigation bar** (Calendar / Chat / Expenses / Settings) is the target
-   top-level navigation. Until it lands, `Screen.Conversations/Chat/Expenses/AddExpense/
-   Budgets/EventList` are registered in `NavGraph` but unreachable from the UI;
-   `QuickActionsBottomSheet` is dead code — wire it up or remove it with the nav work.
-2. **Toolchain upgrade approved**: compileSdk/targetSdk 34 → 36, Compose BOM
-   2024.11 → 2025.x, Material 3 1.4+ (M3 Expressive), predictive back
-   (`android:enableOnBackInvokedCallback="true"`).
-3. **Calendar**: replace the hand-rolled threshold swipes in `DayWeekView`/`MonthView`
-   with `HorizontalPager` physics; month view becomes a classic grid starting at the 1st
-   with horizontal month paging (not the current selected-week vertical buffer).
-4. **Event tap opens a preview bottom sheet** (details + Edit/Delete); the editor is the
-   second step. Event form gets a sticky bottom Save button (not only the top-right ✓).
-5. **Color semantics**: Mom-pink/Dad-blue are reserved for parent identity only. Neutral
-   selected states (chips, toggles) must use `primary`, not the pink `secondary` —
-   today `secondary = MomPink` leaks into every selected FilterChip.
-6. **Notification permission** must be requested contextually (first reminder/sync
-   enable), not via the system dialog on every cold start in `MainActivity`.
+1. **Bottom navigation bar** (Calendar / Chat / Expenses / Settings) is the top-level
+   navigation — see `presentation/navigation/BottomNavDestination.kt`. It shows only on
+   those four routes (`BottomNavDestination.topLevelRoutes`); detail screens hide it and
+   keep an up-arrow. Budgets open from an Expenses top-bar action. Settings, reached as a
+   tab, passes `onNavigateUp = null` (no back arrow). `QuickActionsBottomSheet` was dead
+   code and is gone.
+2. **Toolchain**: compileSdk/targetSdk 36, Kotlin 2.1 (+ `kotlin.plugin.compose`),
+   Compose BOM 2025.10 (Material 3 1.4 / M3 Expressive), Room 2.7.2 (2.6.x kapt breaks on
+   Kotlin 2.x metadata), Navigation 2.9.3, Hilt 2.56.2, predictive back on.
+3. **Calendar**: month view is a classic grid from the 1st with horizontal month paging
+   (kizitonwose `HorizontalCalendar`); day/week use `HorizontalPager` with fling physics.
+   Event chips are single-line (`softWrap = false` + ellipsis). School vacation is a thin
+   bottom strip, never a full-cell fill (it used to drown custody colors).
+4. **Custody coloring** must go through the unified lookup in `CalendarScreen`
+   (`getCustody`): active `CustodyModel` first, legacy `CustodyScheduleEntity` as fallback.
+   Don't read the legacy schedules directly in a view — model-based custody would vanish.
+5. **Event tap opens a preview bottom sheet** (`EventPreviewSheet`, details + Edit/Delete);
+   the editor is the second step. The event form has a sticky bottom Save button.
+6. **Color semantics**: Mom-pink/Dad-blue are parent identity ONLY, applied via
+   `CoPlanlyColors.MomPink/DadBlue` directly. The theme's `secondary` slot is a neutral
+   indigo (`CoPlanlyColors.Neutral*`), so generic Material selected states (FilterChips)
+   are neutral — never wire pink through `colorScheme.secondary`.
+7. **Notification permission** is requested contextually via
+   `rememberNotificationPermissionRequester()` (push toggle, reminder selection), never on
+   cold start.
+8. **Destructive list actions** use M3 `SwipeToDismissBox` with an Undo snackbar
+   (see `EventListScreen`); Undo re-creates the captured event (id is preserved).
+   Danger actions (e.g. "Sign out of app") live at the bottom of their screen, not
+   mid-list.
+9. **User-facing strings** live in tracked, feature-named `res/values/*_strings.xml`
+   files (`chat_strings.xml`, `expenses_strings.xml`, `settings_account_strings.xml`,
+   `navigation.xml`, `event_preview.xml`), never in the gitignored `strings.xml`.
+   Some keys already exist in the local `strings.xml`; pick distinct names in the
+   tracked files (e.g. `settings_gcal_enable_sync`) so a fresh clone still builds.
 
-Known crash found during the review: upgrading an install with a very old DB
-(schema v3) throws "A migration from 3 to 9 was required but not found" — the migration
-chain in `DatabaseMigrations` starts later; add the missing path or a guarded
-destructive fallback for pre-chain versions.
+DB note: installs older than the migration chain (schema < v5) are wiped via
+`fallbackToDestructiveMigrationFrom(1,2,3,4)` in `DatabaseModule` — a v3 install used to
+crash with "migration from 3 to 9 required but not found".
 
 ## Build & verify
 

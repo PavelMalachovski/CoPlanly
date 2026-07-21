@@ -28,9 +28,11 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.coparently.app.R
 import com.coparently.app.domain.model.Conversation
 import com.coparently.app.presentation.common.animations.AnimatedEmptyState
 import java.time.format.DateTimeFormatter
@@ -45,11 +47,11 @@ fun ConversationsScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("Messages") })
+            TopAppBar(title = { Text(stringResource(R.string.conversations_title)) })
         },
         floatingActionButton = {
             FloatingActionButton(onClick = { /* TODO: Implement new conversation dialog */ }) {
-                Icon(Icons.Default.Add, contentDescription = "New Conversation")
+                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.chat_new_conversation))
             }
         }
     ) { padding ->
@@ -57,9 +59,9 @@ fun ConversationsScreen(
             // Issue 8.2: Empty state for conversations
             AnimatedEmptyState(
                 icon = Icons.Default.Chat,
-                title = "No conversations yet",
-                description = "Start a conversation with your co-parent to coordinate schedules and share updates.",
-                actionText = "New Conversation",
+                title = stringResource(R.string.chat_empty_title),
+                description = stringResource(R.string.chat_empty_description),
+                actionText = stringResource(R.string.chat_new_conversation),
                 onActionClick = { /* TODO: Implement new conversation dialog */ }
             )
         } else {
@@ -116,7 +118,7 @@ fun ConversationItem(
         },
         supportingContent = {
             Text(
-                text = conversation.lastMessage?.content ?: "No messages yet",
+                text = conversation.lastMessage?.content ?: stringResource(R.string.chat_no_messages),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 style = if (conversation.unreadCount > 0) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.bodySmall,

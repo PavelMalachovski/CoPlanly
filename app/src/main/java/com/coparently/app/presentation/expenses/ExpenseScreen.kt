@@ -53,7 +53,7 @@ fun ExpenseScreen(
         },
         floatingActionButton = {
             FloatingActionButton(onClick = onAddExpense) {
-                Icon(Icons.Default.Add, contentDescription = "Add Expense")
+                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.expenses_add))
             }
         }
     ) { padding ->
