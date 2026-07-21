@@ -222,6 +222,10 @@ dependencies {
     implementation("com.google.firebase:firebase-analytics-ktx")
     implementation("com.google.firebase:firebase-crashlytics-ktx")
     implementation("com.google.firebase:firebase-config-ktx")
+    implementation("com.google.firebase:firebase-storage-ktx")
+
+    // Coil for async image loading in Compose (receipt photos)
+    implementation("io.coil-kt:coil-compose:2.7.0")
 
     // Testing - Updated to latest stable
     testImplementation("junit:junit:4.13.2")
