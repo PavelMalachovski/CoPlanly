@@ -124,6 +124,7 @@
     <ID>LongMethod:ErrorDisplay.kt$@Composable fun ErrorDisplay( error: UiError, modifier: Modifier = Modifier, onDismiss: (() -&gt; Unit)? = null )</ID>
     <ID>LongMethod:EventListScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun EventListScreen( onEventClick: (String) -&gt; Unit, onAddEventClick: () -&gt; Unit, onNavigateUp: () -&gt; Unit, viewModel: EventViewModel = hiltViewModel() )</ID>
     <ID>LongMethod:EventSuggestionsScreen.kt$@Composable fun SuggestionCard( suggestion: EventSuggestion, onAccept: () -&gt; Unit, onReject: () -&gt; Unit, onModify: () -&gt; Unit, modifier: Modifier = Modifier )</ID>
+    <ID>LongMethod:HomeScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun HomeScreen( onOpenEvent: (String) -&gt; Unit, onOpenChangeRequests: () -&gt; Unit, onOpenWeeklySummary: () -&gt; Unit, onOpenSettings: () -&gt; Unit, viewModel: HomeViewModel = hiltViewModel() )</ID>
     <ID>LongMethod:MainActivity.kt$MainActivity$override fun onCreate(savedInstanceState: Bundle?)</ID>
     <ID>LongMethod:MedicationEditor.kt$@Composable private fun MedicationForm( medication: Medication? = null, onSave: (Medication) -&gt; Unit, onCancel: () -&gt; Unit )</ID>
     <ID>LongMethod:MessagesList.kt$@Composable fun MessageItem( message: Message, isCurrentUser: Boolean )</ID>
@@ -568,6 +569,7 @@
     <ID>NoUnusedImports:FirestoreEventDataSource.kt$com.coparently.app.data.remote.firebase.FirestoreEventDataSource.kt</ID>
     <ID>NoUnusedImports:GoogleCalendarApi.kt$com.coparently.app.data.remote.google.GoogleCalendarApi.kt</ID>
     <ID>NoUnusedImports:GoogleModule.kt$com.coparently.app.di.GoogleModule.kt</ID>
+    <ID>NoUnusedImports:HomeScreen.kt$com.coparently.app.presentation.home.HomeScreen.kt</ID>
     <ID>NoUnusedImports:LoadingButton.kt$com.coparently.app.presentation.common.LoadingButton.kt</ID>
     <ID>NoUnusedImports:LoadingSkeleton.kt$com.coparently.app.presentation.common.animations.LoadingSkeleton.kt</ID>
     <ID>NoUnusedImports:MedicalRepositoryImpl.kt$com.coparently.app.data.repository.MedicalRepositoryImpl.kt</ID>
