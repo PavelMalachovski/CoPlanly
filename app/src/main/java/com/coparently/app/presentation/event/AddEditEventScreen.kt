@@ -1,10 +1,15 @@
 package com.coparently.app.presentation.event
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -21,9 +26,11 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.AddAPhoto
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Face
@@ -40,10 +47,12 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -65,9 +74,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
@@ -81,6 +93,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import coil.compose.AsyncImage
 import com.coparently.app.R
 import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.components.TimePickerDialog
@@ -142,6 +155,10 @@ fun AddEditEventScreen(
     var showRecurrenceEndPicker by remember { mutableStateOf(false) }
     var reminderMinutes by remember { mutableStateOf<Int?>(null) }
     var isPrivate by remember { mutableStateOf(false) }
+    // Event photo: URL of an already-attached image, and a freshly picked local image
+    // (not yet uploaded). Picking a new one supersedes the existing image on save.
+    var existingImageUrl by remember { mutableStateOf<String?>(null) }
+    var pickedImageUri by remember { mutableStateOf<Uri?>(null) }
     // Custom event types are read from encrypted prefs; load them off the main thread
     // so opening the screen isn't blocked by the (synchronous) decrypt on first composition.
     var customEventTypes by remember { mutableStateOf<List<String>>(emptyList()) }
@@ -173,6 +190,10 @@ fun AddEditEventScreen(
     val scrollState = rememberScrollState()
     val focusManager = LocalFocusManager.current
     val dims = dimensions()
+    val context = LocalContext.current
+    val photoPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickVisualMedia()
+    ) { uri -> if (uri != null) pickedImageUri = uri }
     val snackbarHostState = remember { SnackbarHostState() }
     var isSaving by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
@@ -240,6 +261,7 @@ fun AddEditEventScreen(
                     recurrenceEndDate = it.recurrenceEndDate
                     reminderMinutes = it.reminderMinutes
                     isPrivate = it.isPrivate
+                    existingImageUrl = it.imageUrl
                 }
             }
         } else if (initialDate == null && initialHour == null) {
@@ -294,9 +316,32 @@ fun AddEditEventScreen(
                 // Preserve sync/sharing fields of the loaded event when editing;
                 // rebuilding from defaults would wipe sharedWith/permissions
                 val base = existingEvent
+                // Resolve the id up front so a newly picked image can be uploaded under
+                // the same event id before the event is persisted.
+                val resolvedId = base?.id ?: eventId ?: UUID.randomUUID().toString()
+
+                // Resolve the final image URL: a freshly picked image is uploaded (best
+                // effort — a failure keeps the previous image and still saves the event);
+                // clearing the image removes it from storage.
+                val originalImageUrl = base?.imageUrl
+                var imageUploadFailed = false
+                val finalImageUrl = if (pickedImageUri != null) {
+                    try {
+                        viewModel.uploadEventImage(resolvedId, pickedImageUri.toString())
+                    } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
+                        imageUploadFailed = true
+                        existingImageUrl
+                    }
+                } else {
+                    existingImageUrl
+                }
+                if (originalImageUrl != null && finalImageUrl == null) {
+                    viewModel.deleteEventImage(resolvedId)
+                }
+
                 val event = (
                     base ?: Event(
-                        id = eventId ?: UUID.randomUUID().toString(),
+                        id = resolvedId,
                         title = "",
                         startDateTime = LocalDateTime.now(),
                         eventType = "general",
@@ -316,6 +361,7 @@ fun AddEditEventScreen(
                     recurrenceEndDate = recurrenceEndDate,
                     reminderMinutes = reminderMinutes,
                     isPrivate = isPrivate,
+                    imageUrl = finalImageUrl,
                     updatedAt = LocalDateTime.now()
                 )
 
@@ -323,6 +369,13 @@ fun AddEditEventScreen(
                     viewModel.createEvent(event)
                 } else {
                     viewModel.updateEvent(event)
+                }
+
+                if (imageUploadFailed) {
+                    snackbarHostState.showSnackbar(
+                        message = "Photo upload failed — event saved without the new photo",
+                        duration = SnackbarDuration.Long
+                    )
                 }
 
                 // Clear draft after successful save
@@ -1033,6 +1086,21 @@ fun AddEditEventScreen(
                 }
             }
 
+            // Event Photo Section
+            EventPhotoSection(
+                displayImage = pickedImageUri ?: existingImageUrl,
+                enabled = !isSaving && !isDeleting,
+                onPickPhoto = {
+                    photoPicker.launch(
+                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                    )
+                },
+                onRemovePhoto = {
+                    pickedImageUri = null
+                    existingImageUrl = null
+                }
+            )
+
             // Pickup Confirmation Section (existing events only)
             if (eventId != null) {
                 val confirmedBy = existingEvent?.pickupConfirmedBy
@@ -1269,5 +1337,76 @@ fun AddEditEventScreen(
                 }
             }
         )
+    }
+}
+
+/**
+ * Event photo picker/preview. [displayImage] may be a [Uri] (freshly picked) or a
+ * String download URL (already attached) — Coil renders both. Shows an attach button
+ * when empty, or a preview with change/remove controls when a photo is present.
+ */
+@Composable
+private fun EventPhotoSection(
+    displayImage: Any?,
+    enabled: Boolean,
+    onPickPhoto: () -> Unit,
+    onRemovePhoto: () -> Unit
+) {
+    val dims = dimensions()
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(dims.paddingMedium),
+            verticalArrangement = Arrangement.spacedBy(dims.paddingSmall)
+        ) {
+            Text(
+                text = "Event photo",
+                style = MaterialTheme.typography.titleSmall
+            )
+            if (displayImage == null) {
+                OutlinedButton(
+                    onClick = onPickPhoto,
+                    enabled = enabled,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.AddAPhoto, contentDescription = null)
+                    Spacer(modifier = Modifier.size(dims.paddingSmall))
+                    Text("Attach photo")
+                }
+            } else {
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    AsyncImage(
+                        model = displayImage,
+                        contentDescription = "Event photo",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(180.dp)
+                            .clip(MaterialTheme.shapes.medium)
+                    )
+                    FilledTonalIconButton(
+                        onClick = onRemovePhoto,
+                        enabled = enabled,
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(dims.paddingSmall)
+                    ) {
+                        Icon(Icons.Default.Close, contentDescription = "Remove photo")
+                    }
+                }
+                TextButton(
+                    onClick = onPickPhoto,
+                    enabled = enabled
+                ) {
+                    Text("Change photo")
+                }
+            }
+        }
     }
 }

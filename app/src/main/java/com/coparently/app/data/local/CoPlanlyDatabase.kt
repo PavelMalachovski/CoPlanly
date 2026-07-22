@@ -54,7 +54,7 @@ import com.coparently.app.data.local.entity.UserEntity
         SchoolEventEntity::class,
         ChangeRequestEntity::class
     ],
-    version = 10,
+    version = 11,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
