@@ -135,8 +135,14 @@ fun NavGraph(
                     },
                     onAddEventClick = { date, hour ->
                         navController.navigate(Screen.AddEvent.createRoute(date, hour))
-                    }
+                    },
                     // Settings moved to the bottom navigation bar — no gear in the header
+                    onChangeRequestsClick = {
+                        navController.navigate(Screen.ChangeRequests.route)
+                    },
+                    onWeeklySummaryClick = {
+                        navController.navigate(Screen.WeeklySummary.route)
+                    }
                 )
             }
 
@@ -215,6 +221,70 @@ fun NavGraph(
                         navController.popBackStack()
                     },
                     onCancel = {
+                        navController.popBackStack()
+                    },
+                    onRequestChange = { id ->
+                        navController.navigate(Screen.RequestChange.createRoute(id))
+                    }
+                )
+            }
+
+            // Weekly summary dashboard (MVP 2)
+            composable(
+                route = Screen.WeeklySummary.route,
+                enterTransition = { slideInFromRight() },
+                exitTransition = { slideOutToLeft() },
+                popEnterTransition = { slideInFromLeft() },
+                popExitTransition = { slideOutToRight() }
+            ) {
+                com.coparently.app.presentation.summary.WeeklySummaryScreen(
+                    onBack = {
+                        navController.popBackStack()
+                    },
+                    onEventClick = { eventId ->
+                        navController.navigate(Screen.EditEvent.createRoute(eventId))
+                    },
+                    onOpenChangeRequests = {
+                        navController.navigate(Screen.ChangeRequests.route)
+                    }
+                )
+            }
+
+            // Event change requests inbox (MVP 2)
+            composable(
+                route = Screen.ChangeRequests.route,
+                enterTransition = { slideInFromRight() },
+                exitTransition = { slideOutToLeft() },
+                popEnterTransition = { slideInFromLeft() },
+                popExitTransition = { slideOutToRight() }
+            ) {
+                com.coparently.app.presentation.changerequests.ChangeRequestsScreen(
+                    onBack = {
+                        navController.popBackStack()
+                    },
+                    onOpenEvent = { eventId ->
+                        navController.navigate(Screen.EditEvent.createRoute(eventId))
+                    }
+                )
+            }
+
+            // Propose a new time for an event (MVP 2)
+            composable(
+                route = Screen.RequestChange.route,
+                arguments = listOf(
+                    navArgument(Screen.RequestChange.ARG_EVENT_ID) {
+                        type = NavType.StringType
+                    }
+                ),
+                enterTransition = { fadeInScaleUp() },
+                exitTransition = { fadeOutScaleDown() },
+                popEnterTransition = { fadeInScaleUp() },
+                popExitTransition = { fadeOutScaleDown() }
+            ) { backStackEntry ->
+                val eventId = backStackEntry.arguments?.getString(Screen.RequestChange.ARG_EVENT_ID) ?: return@composable
+                com.coparently.app.presentation.changerequests.RequestChangeScreen(
+                    eventId = eventId,
+                    onBack = {
                         navController.popBackStack()
                     }
                 )
@@ -474,4 +544,14 @@ sealed class Screen(val route: String) {
     data object Expenses : Screen("expenses")
     data object AddExpense : Screen("add_expense")
     data object Budgets : Screen("budgets")
+
+    data object WeeklySummary : Screen("weekly_summary")
+    data object ChangeRequests : Screen("change_requests")
+    data object RequestChange : Screen("request_change/{eventId}") {
+        const val ARG_EVENT_ID = "eventId"
+
+        fun createRoute(eventId: String): String {
+            return "request_change/$eventId"
+        }
+    }
 }

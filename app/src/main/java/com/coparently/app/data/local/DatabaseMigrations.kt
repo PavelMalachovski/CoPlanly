@@ -99,12 +99,48 @@ object DatabaseMigrations {
     }
 
     /**
+     * Migration from version 9 to 10.
+     * Creates the change_requests table (MVP 2 — event change requests).
+     */
+    val MIGRATION_9_10 = object : Migration(9, 10) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS change_requests (
+                    id TEXT PRIMARY KEY NOT NULL,
+                    eventId TEXT NOT NULL,
+                    eventTitle TEXT NOT NULL,
+                    requestedBy TEXT NOT NULL,
+                    requestedTo TEXT NOT NULL,
+                    currentStartDateTime TEXT NOT NULL,
+                    currentEndDateTime TEXT,
+                    proposedStartDateTime TEXT NOT NULL,
+                    proposedEndDateTime TEXT,
+                    note TEXT,
+                    status TEXT NOT NULL,
+                    createdAt TEXT NOT NULL,
+                    respondedAt TEXT,
+                    syncedToFirestore INTEGER NOT NULL DEFAULT 0
+                )
+                """.trimIndent()
+            )
+            database.execSQL(
+                "CREATE INDEX IF NOT EXISTS index_change_requests_eventId ON change_requests(eventId)"
+            )
+            database.execSQL(
+                "CREATE INDEX IF NOT EXISTS index_change_requests_status ON change_requests(status)"
+            )
+        }
+    }
+
+    /**
      * List of all migrations in order.
      */
     val ALL_MIGRATIONS = arrayOf(
         MIGRATION_5_6,
         MIGRATION_6_7,
         MIGRATION_7_8,
-        MIGRATION_8_9
+        MIGRATION_8_9,
+        MIGRATION_9_10
     )
 }

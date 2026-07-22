@@ -2,12 +2,14 @@ package com.coparently.app.di
 
 import com.coparently.app.data.remote.firebase.FirebaseReceiptStorage
 import com.coparently.app.data.repository.BudgetRepositoryImpl
+import com.coparently.app.data.repository.ChangeRequestRepositoryImpl
 import com.coparently.app.data.repository.ChildInfoRepositoryImpl
 import com.coparently.app.data.repository.EventRepositoryImpl
 import com.coparently.app.data.repository.ExpenseRepositoryImpl
 import com.coparently.app.data.repository.MessageRepositoryImpl
 import com.coparently.app.data.repository.PreferencesRepositoryImpl
 import com.coparently.app.domain.repository.BudgetRepository
+import com.coparently.app.domain.repository.ChangeRequestRepository
 import com.coparently.app.domain.repository.ChildInfoRepository
 import com.coparently.app.domain.repository.EventRepository
 import com.coparently.app.domain.repository.ExpenseRepository
@@ -80,6 +82,15 @@ abstract class RepositoryModule {
     abstract fun bindBudgetRepository(
         budgetRepositoryImpl: BudgetRepositoryImpl
     ): BudgetRepository
+
+    /**
+     * Provides ChangeRequestRepository implementation.
+     */
+    @Binds
+    @Singleton
+    abstract fun bindChangeRequestRepository(
+        changeRequestRepositoryImpl: ChangeRequestRepositoryImpl
+    ): ChangeRequestRepository
 
     /**
      * Provides ReceiptStorage implementation (Firebase Cloud Storage).
