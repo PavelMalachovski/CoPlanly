@@ -268,12 +268,18 @@ fun NavGraph(
                 )
             }
 
-            // Propose a new time for an event (MVP 2)
+            // Propose a new time for an event (MVP 2). Optional conversationId means the
+            // request was started from a chat, so a message is posted back to that thread.
             composable(
                 route = Screen.RequestChange.route,
                 arguments = listOf(
                     navArgument(Screen.RequestChange.ARG_EVENT_ID) {
                         type = NavType.StringType
+                    },
+                    navArgument(Screen.RequestChange.ARG_CONVERSATION_ID) {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
                     }
                 ),
                 enterTransition = { fadeInScaleUp() },
@@ -282,11 +288,15 @@ fun NavGraph(
                 popExitTransition = { fadeOutScaleDown() }
             ) { backStackEntry ->
                 val eventId = backStackEntry.arguments?.getString(Screen.RequestChange.ARG_EVENT_ID) ?: return@composable
+                val conversationId = backStackEntry.arguments
+                    ?.getString(Screen.RequestChange.ARG_CONVERSATION_ID)
+                    ?.takeIf { it != "null" }
                 com.coparently.app.presentation.changerequests.RequestChangeScreen(
                     eventId = eventId,
                     onBack = {
                         navController.popBackStack()
-                    }
+                    },
+                    conversationId = conversationId
                 )
             }
 
@@ -418,6 +428,11 @@ fun NavGraph(
                     conversationId = conversationId,
                     onBack = {
                         navController.popBackStack()
+                    },
+                    onRequestChangeForEvent = { eventId ->
+                        navController.navigate(
+                            Screen.RequestChange.createRoute(eventId, conversationId)
+                        )
                     }
                 )
             }
@@ -547,11 +562,13 @@ sealed class Screen(val route: String) {
 
     data object WeeklySummary : Screen("weekly_summary")
     data object ChangeRequests : Screen("change_requests")
-    data object RequestChange : Screen("request_change/{eventId}") {
+    data object RequestChange : Screen("request_change/{eventId}?conversationId={conversationId}") {
         const val ARG_EVENT_ID = "eventId"
+        const val ARG_CONVERSATION_ID = "conversationId"
 
-        fun createRoute(eventId: String): String {
-            return "request_change/$eventId"
+        fun createRoute(eventId: String, conversationId: String? = null): String {
+            val convParam = conversationId ?: "null"
+            return "request_change/$eventId?conversationId=$convParam"
         }
     }
 }

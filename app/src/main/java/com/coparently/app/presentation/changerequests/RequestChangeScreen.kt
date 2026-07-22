@@ -57,6 +57,7 @@ import java.time.format.DateTimeFormatter
 fun RequestChangeScreen(
     eventId: String,
     onBack: () -> Unit,
+    conversationId: String? = null,
     viewModel: RequestChangeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -119,7 +120,7 @@ fun RequestChangeScreen(
                     event = event,
                     isSending = state is RequestChangeUiState.Sending,
                     onSubmit = { start, end, note ->
-                        viewModel.submit(event, start, end, note)
+                        viewModel.submit(event, start, end, note, conversationId)
                     },
                     modifier = Modifier.padding(padding)
                 )
