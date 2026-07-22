@@ -8,8 +8,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ViewList
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.SwapHoriz
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -56,6 +60,8 @@ import java.time.YearMonth
  * @param onViewModeChange Callback when view mode changes
  * @param onNavigateToToday Callback when user clicks "Today" button
  * @param onSettingsClick Optional callback for settings button, null to hide button
+ * @param onChangeRequestsClick Optional callback for the change-requests inbox, null to hide button
+ * @param pendingChangeRequests Number of pending incoming change requests (badge on the inbox icon)
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -64,7 +70,10 @@ fun CalendarHeader(
     viewMode: CalendarViewMode = CalendarViewMode.MONTH,
     onViewModeChange: (CalendarViewMode) -> Unit = {},
     onNavigateToToday: () -> Unit,
-    onSettingsClick: (() -> Unit)? = null
+    onSettingsClick: (() -> Unit)? = null,
+    onChangeRequestsClick: (() -> Unit)? = null,
+    pendingChangeRequests: Int = 0,
+    onWeeklySummaryClick: (() -> Unit)? = null
 ) {
     TopAppBar(
         title = {
@@ -79,6 +88,24 @@ fun CalendarHeader(
                 currentDay = LocalDate.now().dayOfMonth,
                 onClick = onNavigateToToday
             )
+
+            onWeeklySummaryClick?.let { onClick ->
+                IconButton(onClick = onClick) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ViewList,
+                        contentDescription = "Weekly summary",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            onChangeRequestsClick?.let { onClick ->
+                ChangeRequestsButton(
+                    pendingCount = pendingChangeRequests,
+                    onClick = onClick
+                )
+            }
+
             onSettingsClick?.let { onClick ->
                 SettingsButton(onClick = onClick)
             }
@@ -187,6 +214,34 @@ private fun TodayButton(
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary
         )
+    }
+}
+
+/**
+ * Change-requests inbox button with a badge for pending incoming requests.
+ *
+ * @param pendingCount Number of pending incoming requests; badge hidden when zero
+ * @param onClick Callback when button is clicked
+ */
+@Composable
+private fun ChangeRequestsButton(
+    pendingCount: Int,
+    onClick: () -> Unit
+) {
+    IconButton(onClick = onClick) {
+        BadgedBox(
+            badge = {
+                if (pendingCount > 0) {
+                    Badge { Text(pendingCount.toString()) }
+                }
+            }
+        ) {
+            Icon(
+                imageVector = Icons.Default.SwapHoriz,
+                contentDescription = "Change requests",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
 

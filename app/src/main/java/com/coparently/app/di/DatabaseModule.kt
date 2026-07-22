@@ -113,4 +113,12 @@ object DatabaseModule {
     fun provideCustodyModelDao(database: CoPlanlyDatabase): com.coparently.app.data.local.dao.CustodyModelDao {
         return database.custodyModelDao()
     }
+
+    /**
+     * Provides ChangeRequestDao.
+     */
+    @Provides
+    fun provideChangeRequestDao(database: CoPlanlyDatabase): com.coparently.app.data.local.dao.ChangeRequestDao {
+        return database.changeRequestDao()
+    }
 }
