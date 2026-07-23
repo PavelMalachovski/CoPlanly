@@ -134,6 +134,18 @@ object DatabaseMigrations {
     }
 
     /**
+     * Migration from version 10 to 11.
+     * Adds an optional attached-photo URL to events (MVP 2 — attach image to event).
+     */
+    val MIGRATION_10_11 = object : Migration(10, 11) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL(
+                "ALTER TABLE events ADD COLUMN imageUrl TEXT"
+            )
+        }
+    }
+
+    /**
      * List of all migrations in order.
      */
     val ALL_MIGRATIONS = arrayOf(
@@ -141,6 +153,7 @@ object DatabaseMigrations {
         MIGRATION_6_7,
         MIGRATION_7_8,
         MIGRATION_8_9,
-        MIGRATION_9_10
+        MIGRATION_9_10,
+        MIGRATION_10_11
     )
 }

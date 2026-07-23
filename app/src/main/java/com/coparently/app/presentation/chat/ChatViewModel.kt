@@ -7,6 +7,8 @@ import com.coparently.app.domain.model.Message
 import com.coparently.app.domain.model.MessageSendStatus
 import com.coparently.app.domain.model.MessageTemplate
 import com.coparently.app.domain.model.MessageType
+import com.coparently.app.domain.model.Event
+import com.coparently.app.domain.repository.EventRepository
 import com.coparently.app.domain.repository.MessageRepository
 import com.coparently.app.domain.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -15,6 +17,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime
@@ -24,7 +27,8 @@ import javax.inject.Inject
 @HiltViewModel
 class ChatViewModel @Inject constructor(
     private val messageRepository: MessageRepository,
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
+    private val eventRepository: EventRepository
 ) : ViewModel() {
 
     private val _currentConversationId = MutableStateFlow<String?>(null)
@@ -54,6 +58,25 @@ class ChatViewModel @Inject constructor(
     val messages: StateFlow<List<Message>> = _currentConversationId
         .combine(messageRepository.getMessages(_currentConversationId.value ?: "")) { conversationId, messages ->
             if (conversationId != null) messages else emptyList()
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    /**
+     * Upcoming non-private events (next [UPCOMING_DAYS] days) offered when the user
+     * starts a change request from the chat. Private events are excluded — a change
+     * request is a conversation with the co-parent about a shared event.
+     */
+    val upcomingEvents: StateFlow<List<Event>> = eventRepository
+        .getEventsByDateRange(
+            LocalDateTime.now(),
+            LocalDateTime.now().plusDays(UPCOMING_DAYS)
+        )
+        .map { events ->
+            events.filter { !it.isPrivate }.sortedBy { it.startDateTime }
         }
         .stateIn(
             scope = viewModelScope,
@@ -125,5 +148,9 @@ class ChatViewModel @Inject constructor(
                 messageRepository.syncWithFirestore()
             }
         }
+    }
+
+    private companion object {
+        const val UPCOMING_DAYS = 30L
     }
 }

@@ -4,9 +4,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.automirrored.outlined.Chat
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Payments
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Icon
@@ -32,6 +34,12 @@ enum class BottomNavDestination(
     val selectedIcon: ImageVector,
     val unselectedIcon: ImageVector
 ) {
+    HOME(
+        route = Screen.Home.route,
+        labelRes = R.string.nav_home,
+        selectedIcon = Icons.Filled.Home,
+        unselectedIcon = Icons.Outlined.Home
+    ),
     CALENDAR(
         route = Screen.Calendar.route,
         labelRes = R.string.nav_calendar,
