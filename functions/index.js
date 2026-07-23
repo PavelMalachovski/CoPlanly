@@ -284,7 +284,7 @@ exports.acceptQRInvitation = functions.https.onCall(async (data, context) => {
     throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
   }
 
-  const { invitationId } = data;
+  const {invitationId} = data;
 
   if (!invitationId) {
     throw new functions.https.HttpsError('invalid-argument', 'Invitation ID is required');
@@ -320,18 +320,18 @@ exports.acceptQRInvitation = functions.https.onCall(async (data, context) => {
     await admin.firestore()
         .collection('users')
         .doc(fromUserId)
-        .update({ partnerId: acceptingUserId });
+        .update({partnerId: acceptingUserId});
 
     await admin.firestore()
         .collection('users')
         .doc(acceptingUserId)
-        .update({ partnerId: fromUserId });
+        .update({partnerId: fromUserId});
 
     // Update invitation status
     await admin.firestore()
         .collection('invitations')
         .doc(invitationId)
-        .update({ status: 'accepted' });
+        .update({status: 'accepted'});
 
     // Send notification to the inviting user
     const acceptingUserDoc = await admin.firestore()
@@ -357,8 +357,7 @@ exports.acceptQRInvitation = functions.https.onCall(async (data, context) => {
     }
 
     console.log(`QR invitation ${invitationId} accepted by user ${acceptingUserId}`);
-    return { success: true };
-
+    return {success: true};
   } catch (error) {
     console.error('Error accepting QR invitation:', error);
     throw new functions.https.HttpsError('internal', 'Failed to accept invitation');
@@ -407,7 +406,8 @@ exports.sendEmailInvitation = functions.firestore
 
               <div style="text-align: center; margin: 30px 0;">
                 <a href="${acceptUrl}"
-                   style="background-color: #4CAF50; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">
+                   style="background-color: #4CAF50; color: white; padding: 12px 24px;
+                          text-decoration: none; border-radius: 4px; display: inline-block;">
                   Accept Invitation
                 </a>
               </div>
@@ -423,7 +423,7 @@ exports.sendEmailInvitation = functions.firestore
                 CoParently - Making co-parenting easier
               </p>
             </div>
-          `
+          `,
         };
 
         // In production, integrate with email service (SendGrid, Mailgun, etc.)
@@ -431,7 +431,7 @@ exports.sendEmailInvitation = functions.firestore
         console.log('Email invitation prepared:', {
           to: emailContent.to,
           subject: emailContent.subject,
-          acceptUrl: acceptUrl
+          acceptUrl: acceptUrl,
         });
 
         // TODO: Replace with actual email sending service
@@ -442,7 +442,6 @@ exports.sendEmailInvitation = functions.firestore
 
         console.log(`Email invitation sent to ${invitation.toEmail}`);
         return null;
-
       } catch (error) {
         console.error('Error sending email invitation:', error);
 
@@ -450,7 +449,7 @@ exports.sendEmailInvitation = functions.firestore
         await snap.ref.update({
           status: 'failed',
           error: error.message,
-          sentAt: admin.firestore.FieldValue.serverTimestamp()
+          sentAt: admin.firestore.FieldValue.serverTimestamp(),
         });
 
         throw error;
