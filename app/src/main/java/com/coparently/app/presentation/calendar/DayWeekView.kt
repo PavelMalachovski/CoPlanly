@@ -56,6 +56,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.PointerEventPass
@@ -458,7 +459,9 @@ private fun DayWeekPage(
                                     val isToday = date == LocalDate.now()
                                     val custody = getCustody(date)
                                     val isWeekend = CustodyHelper.isWeekend(date)
-                                    val isDarkTheme = androidx.compose.foundation.isSystemInDarkTheme()
+                                    // Match the actually-rendered theme, not the system one
+                                    // (the app can force light while the system is dark).
+                                    val isDarkTheme = MaterialTheme.colorScheme.surface.luminance() < 0.5f
                                     val weekendColor = if (isDarkTheme) {
                                         CoPlanlyColors.WeekendBackgroundDark.copy(alpha = 0.5f)
                                     } else {
