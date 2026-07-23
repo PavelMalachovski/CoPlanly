@@ -125,15 +125,19 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
 
 ## Known issues / do not "fix" silently
 
-- `firestore.rules` (strict) currently **rejects the app's own event writes** (exact-key
-  validation + timestamp type vs ISO strings). `firestore.rules.simple` is the permissive
-  variant. Aligning the strict rules with the real schema is an open task — see audit §2.3.
+- `firestore.rules` (strict) was realigned with the real document schema (ISO **string**
+  dates, presence-based key validation, `change_requests`/`expenses` collections added,
+  over-strict `lastModifiedBy`/`canModify` gates dropped) so it no longer rejects the app's
+  own writes. `firebase.json` deploys this file; it still needs an actual
+  `firebase deploy --only firestore:rules,storage` — until then the live project runs
+  whatever was last deployed and `change_requests` returns `PERMISSION_DENIED`.
+  `firestore.rules.simple` remains as the permissive fallback.
 - **All `strings.xml` files are gitignored** (they hold OAuth values locally), so a fresh
   clone has no string resources and cannot build — see audit §2.1. New string resources
   must go into separately named, tracked files (e.g. `reminders.xml`), never into
   `strings.xml`. Real secrets belong in `gradle.properties`/env vars like `GEMINI_API_KEY`.
-- Multi-day events are only matched by their start date in `EventDao` range queries
-  (audit §3.5).
+- Calendar range/day queries now match multi-day & overnight events by overlap
+  (`getSingleEventsByDateRange` / `getEventsByDate`), not start date only.
 - Unit tests for ChildInfo/Pairing/Settings/Sync ViewModels were removed as stale
   (they targeted long-gone APIs); rewrite them against the current constructors when
   touching those features.

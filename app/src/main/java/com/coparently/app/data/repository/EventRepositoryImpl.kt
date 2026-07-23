@@ -6,6 +6,7 @@ import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestoreEventDataSource
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.repository.EventRepository
+import com.google.gson.Gson
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -31,6 +32,7 @@ class EventRepositoryImpl @Inject constructor(
 
     private val dateFormatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
     private val dateOnlyFormatter = DateTimeFormatter.ISO_LOCAL_DATE
+    private val gson = Gson()
 
     override fun getAllEvents(): Flow<List<Event>> {
         return eventDao.getAllEvents().map { entities ->
@@ -175,6 +177,11 @@ class EventRepositoryImpl @Inject constructor(
             updatedAt = updatedAt,
             syncedToFirestore = syncedToFirestore,
             createdByFirebaseUid = createdByFirebaseUid,
+            sharedWith = runCatching {
+                gson.fromJson(sharedWithJson, Array<String>::class.java)?.toList()
+            }.getOrNull() ?: emptyList(),
+            lastModifiedBy = lastModifiedBy,
+            permissions = permissions,
             isPrivate = isPrivate,
             recurrenceEndDate = recurrenceEndDate,
             pickupConfirmedBy = pickupConfirmedBy,
@@ -202,6 +209,9 @@ class EventRepositoryImpl @Inject constructor(
             updatedAt = updatedAt,
             syncedToFirestore = syncedToFirestore,
             createdByFirebaseUid = createdByFirebaseUid,
+            sharedWithJson = gson.toJson(sharedWith),
+            lastModifiedBy = lastModifiedBy,
+            permissions = permissions,
             isPrivate = isPrivate,
             recurrenceEndDate = recurrenceEndDate,
             pickupConfirmedBy = pickupConfirmedBy,

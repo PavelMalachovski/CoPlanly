@@ -41,12 +41,19 @@ object DatabaseModule {
             "coparently_database"
         )
             .addMigrations(*com.coparently.app.data.local.DatabaseMigrations.ALL_MIGRATIONS)
-            // The migration chain starts at 5->6; installs older than schema v5 have no
-            // upgrade path (a v3 install crashed with "migration from 3 to 9 required but
-            // not found" during the 2026-07 review), so wipe them explicitly.
-            .fallbackToDestructiveMigrationFrom(*PRE_MIGRATION_CHAIN_SCHEMAS)
-            .fallbackToDestructiveMigration() // Allow destructive migration for missing migration paths
-            .fallbackToDestructiveMigrationOnDowngrade() // Allow destructive migration when downgrading database version
+            // The migration chain starts at 5->6 and is complete up to the current version;
+            // installs older than schema v5 have no upgrade path (a v3 install crashed with
+            // "migration from 3 to 9 required but not found" during the 2026-07 review), so
+            // wipe ONLY those pre-chain schemas explicitly.
+            //
+            // Deliberately NOT using the blanket fallbackToDestructiveMigration()/
+            // ...OnDowngrade(): with real family data on the device, a missing migration or a
+            // downgrade must fail loudly (and be fixed with a proper migration) rather than
+            // silently wiping the user's calendar, expenses and messages.
+            .fallbackToDestructiveMigrationFrom(
+                dropAllTables = true,
+                *PRE_MIGRATION_CHAIN_SCHEMAS
+            )
             .build()
     }
 

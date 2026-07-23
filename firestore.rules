@@ -1,9 +1,19 @@
 rules_version = '2';
 
+// Production Firestore rules for CoPlanly.
+//
+// These rules are aligned with the ACTUAL document schema the app writes
+// (EventRepositoryImpl.toFirestoreMap / SyncService): date fields are ISO
+// *strings*, not Firestore timestamps, and documents carry the full field set
+// (~18 keys for events), not a fixed minimal subset. Earlier versions of this
+// file validated `is timestamp` and an exact key set, which rejected every
+// real write — that is why the permissive `firestore.rules.simple` had to be
+// deployed instead. Keep these in sync with `toFirestoreMap()`.
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions
+    // ---- Helpers -------------------------------------------------------
+
     function isAuthenticated() {
       return request.auth != null;
     }
@@ -18,118 +28,123 @@ service cloud.firestore {
              get(/databases/$(database)/documents/users/$(userId)).data.partnerId == request.auth.uid;
     }
 
-    function isSharedWith(sharedList) {
-      return isAuthenticated() && request.auth.uid in sharedList;
-    }
-
-    // Validate that required fields exist in data
-    function hasRequiredFields(data, fields) {
-      return fields.hasAll(data.keys()) && data.keys().hasAll(fields);
-    }
-
-    // Validate string field length
+    // Validate string field length (inclusive bounds).
     function isValidLength(str, minLen, maxLen) {
-      return str.size() >= minLen && str.size() <= maxLen;
+      return str is string && str.size() >= minLen && str.size() <= maxLen;
     }
 
-    // Check if user can modify resource (rate limiting)
-    function canModify() {
-      return request.time > resource.data.updatedAt + duration.value(1, 's');
-    }
-
-    // Users collection - users can read/write their own profile and read partner's profile
+    // ---- Users ---------------------------------------------------------
+    // Users can read/write their own profile and read their partner's profile.
     match /users/{userId} {
-      // Allow read if user owns the profile or is the partner
       allow read: if isOwner(userId) || isPartnerOf(userId);
 
-      // Allow create if user owns the profile
-      // Require email and name fields (check existence, not exact match)
-      // firebaseUid is optional but if present must match auth.uid
       allow create: if isOwner(userId) &&
                       'email' in request.resource.data &&
                       'name' in request.resource.data &&
                       isValidLength(request.resource.data.name, 1, 100) &&
-                      (request.resource.data.firebaseUid == null ||
+                      (!('firebaseUid' in request.resource.data) ||
+                       request.resource.data.firebaseUid == null ||
                        request.resource.data.firebaseUid == request.auth.uid);
 
-      // Allow update if user owns the profile
-      // Allow updating any field - firebaseUid (if present) must match auth.uid
-      // This also handles .set() operations on empty/partial documents
       allow update: if isOwner(userId) &&
-                      (request.resource.data.firebaseUid == null ||
+                      (!('firebaseUid' in request.resource.data) ||
+                       request.resource.data.firebaseUid == null ||
                        request.resource.data.firebaseUid == request.auth.uid);
 
-      // Allow delete if user owns the profile
       allow delete: if isOwner(userId);
     }
 
-    // Events collection - read/write access for owners and shared partners
+    // ---- Events --------------------------------------------------------
+    // Owners and shared partners have access. Date fields are ISO strings, so
+    // no timestamp-type or ordering checks here (that is enforced app-side).
     match /events/{eventId} {
-      // Anyone can read their own events or events shared with them
       allow read: if isAuthenticated() && (
         resource.data.createdByFirebaseUid == request.auth.uid ||
         request.auth.uid in resource.data.sharedWith
       );
 
-      // Users can create events with validation
+      // Presence-based validation only — the real document carries the full
+      // schema, so an exact key-set match must NOT be required.
       allow create: if isAuthenticated() &&
                       request.resource.data.createdByFirebaseUid == request.auth.uid &&
-                      hasRequiredFields(request.resource.data, ['title', 'startDateTime', 'endDateTime', 'eventType']) &&
-                      isValidLength(request.resource.data.title, 1, 200) &&
-                      request.resource.data.startDateTime is timestamp &&
-                      request.resource.data.endDateTime is timestamp &&
-                      request.resource.data.startDateTime <= request.resource.data.endDateTime;
+                      request.resource.data.keys().hasAll(['title', 'startDateTime', 'eventType', 'parentOwner']) &&
+                      isValidLength(request.resource.data.title, 1, 200);
 
-      // Users can update events they created or have write permissions
+      // Creator, or a partner with read_write permission, may update. The creator
+      // field is immutable. lastModifiedBy is intentionally NOT required to equal
+      // the caller: the client doesn't reliably stamp the editor on every write
+      // path, and forcing it here silently denied legitimate partner edits.
       allow update: if isAuthenticated() && (
         resource.data.createdByFirebaseUid == request.auth.uid ||
         (request.auth.uid in resource.data.sharedWith &&
          resource.data.permissions == 'read_write')
-      ) && request.resource.data.lastModifiedBy == request.auth.uid &&
-           request.resource.data.createdByFirebaseUid == resource.data.createdByFirebaseUid &&
-           canModify();
+      ) && request.resource.data.createdByFirebaseUid == resource.data.createdByFirebaseUid;
 
-      // Users can delete events they created
       allow delete: if isAuthenticated() &&
                       resource.data.createdByFirebaseUid == request.auth.uid;
     }
 
-    // Child info collection - shared between parent pairs
+    // ---- Child info ----------------------------------------------------
+    // Shared between a parent pair via the sharedWith list.
     match /child_info/{childInfoId} {
-      // Users can read child info they're associated with
       allow read: if isAuthenticated() &&
                     request.auth.uid in resource.data.sharedWith;
 
-      // Users can create child info with validation
       allow create: if isAuthenticated() &&
                       request.resource.data.createdByFirebaseUid == request.auth.uid &&
                       request.auth.uid in request.resource.data.sharedWith &&
-                      hasRequiredFields(request.resource.data, ['childName', 'createdByFirebaseUid', 'sharedWith']) &&
+                      request.resource.data.keys().hasAll(['childName', 'createdByFirebaseUid', 'sharedWith']) &&
                       isValidLength(request.resource.data.childName, 1, 100);
 
-      // Users can update child info they have access to
       allow update: if isAuthenticated() &&
                       request.auth.uid in resource.data.sharedWith &&
-                      request.resource.data.lastModifiedBy == request.auth.uid &&
-                      request.resource.data.createdByFirebaseUid == resource.data.createdByFirebaseUid &&
-                      canModify();
+                      request.resource.data.createdByFirebaseUid == resource.data.createdByFirebaseUid;
 
-      // Users can delete child info they created
       allow delete: if isAuthenticated() &&
                       resource.data.createdByFirebaseUid == request.auth.uid;
     }
 
-    // Invitations collection - for co-parent pairing
+    // ---- Expenses (receipt sync) --------------------------------------
+    // Only the two paired parents involved may read/write.
+    match /expenses/{expenseId} {
+      allow read: if isAuthenticated() && (
+        resource.data.createdByFirebaseUid == request.auth.uid ||
+        request.auth.uid in resource.data.sharedWith
+      );
+
+      allow create: if isAuthenticated() &&
+                      request.resource.data.createdByFirebaseUid == request.auth.uid;
+
+      allow update: if isAuthenticated() && (
+        resource.data.createdByFirebaseUid == request.auth.uid ||
+        request.auth.uid in resource.data.sharedWith
+      ) && request.resource.data.createdByFirebaseUid == resource.data.createdByFirebaseUid;
+
+      allow delete: if isAuthenticated() &&
+                      resource.data.createdByFirebaseUid == request.auth.uid;
+    }
+
+    // ---- Change requests ----------------------------------------------
+    // Event change requests: only the requester or the addressee may access.
+    match /change_requests/{requestId} {
+      allow read, update, delete: if isAuthenticated() && (
+        request.auth.uid == resource.data.requestedBy ||
+        request.auth.uid == resource.data.requestedTo
+      );
+
+      allow create: if isAuthenticated() && (
+        request.auth.uid == request.resource.data.requestedBy ||
+        request.auth.uid == request.resource.data.requestedTo
+      );
+    }
+
+    // ---- Invitations ---------------------------------------------------
     match /invitations/{invitationId} {
-      // Users can read invitations sent to them or by them
-      // Allow reading if: sent by them (fromUserId) OR sent to their email (if email exists in token)
       allow read: if isAuthenticated() && (
         resource.data.fromUserId == request.auth.uid ||
         (request.auth.token.email != null && resource.data.toEmail == request.auth.token.email)
       );
 
-      // Users can create invitations with validation
-      // Check that required fields exist and fromUserId matches authenticated user
       allow create: if isAuthenticated() &&
                       request.resource.data.fromUserId == request.auth.uid &&
                       'toEmail' in request.resource.data &&
@@ -137,8 +152,6 @@ service cloud.firestore {
                       'createdAt' in request.resource.data &&
                       request.resource.data.status == 'pending';
 
-      // Users can update invitation status (for accepting/rejecting)
-      // Allow update if: invitation sent to user's email (if email exists) OR invitation sent by user
       allow update: if isAuthenticated() && (
         (request.auth.token.email != null && resource.data.toEmail == request.auth.token.email &&
          request.resource.data.status in ['accepted', 'rejected']) ||
@@ -146,49 +159,29 @@ service cloud.firestore {
          request.resource.data.status == 'cancelled')
       ) && resource.data.status == 'pending';
 
-      // Users can delete invitations they sent
       allow delete: if isAuthenticated() &&
                       resource.data.fromUserId == request.auth.uid;
     }
 
-    // Notification queue - for Cloud Functions to process
+    // ---- Notification queue -------------------------------------------
+    // Drained by a Cloud Function; clients may only enqueue.
     match /notification_queue/{notificationId} {
-      // Users cannot read the notification queue directly
       allow read: if false;
-
-      // Users can add notifications to the queue
       allow create: if isAuthenticated();
-
-      // Only Cloud Functions can update/delete (no auth check)
       allow update, delete: if false;
     }
 
-    // Custody schedules - shared between parent pairs
+    // ---- Custody schedules --------------------------------------------
     match /custody_schedules/{scheduleId} {
-      // Users can read schedules they're associated with
-      allow read: if isAuthenticated() && (
+      allow read, update, delete: if isAuthenticated() && (
         resource.data.momUserId == request.auth.uid ||
         resource.data.dadUserId == request.auth.uid
       );
 
-      // Users can create schedules
       allow create: if isAuthenticated() && (
         request.resource.data.momUserId == request.auth.uid ||
         request.resource.data.dadUserId == request.auth.uid
       );
-
-      // Both parents can update schedules
-      allow update: if isAuthenticated() && (
-        resource.data.momUserId == request.auth.uid ||
-        resource.data.dadUserId == request.auth.uid
-      );
-
-      // Either parent can delete schedules
-      allow delete: if isAuthenticated() && (
-        resource.data.momUserId == request.auth.uid ||
-        resource.data.dadUserId == request.auth.uid
-      );
     }
   }
 }
-

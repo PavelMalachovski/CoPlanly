@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Backup / device-to-device transfer rules for CoPlanly.
+
+  The app stores sensitive family data (calendar, expenses, messages, child info)
+  in the Room database and encrypted preferences. Cloud backup is disabled entirely
+  via android:allowBackup="false"; these rules additionally exclude the local data
+  from Android 12+ device-to-device transfer so it never leaves the device through
+  the transfer path either. The encryption keys live in the Android Keystore and are
+  not transferable, so a transferred copy would be undecryptable regardless.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="database" path="." />
+        <exclude domain="sharedpref" path="." />
+        <exclude domain="file" path="." />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="database" path="." />
+        <exclude domain="sharedpref" path="." />
+        <exclude domain="file" path="." />
+    </device-transfer>
+</data-extraction-rules>
