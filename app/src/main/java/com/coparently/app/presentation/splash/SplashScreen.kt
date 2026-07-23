@@ -8,16 +8,15 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -30,6 +29,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -92,7 +92,8 @@ fun SplashScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            // Rounded app-icon badge with a calendar glyph
+            // The actual app launcher icon, shown on a rounded purple badge so the
+            // splash and the home-screen icon are one and the same.
             Box(
                 modifier = Modifier
                     .size(96.dp)
@@ -106,11 +107,15 @@ fun SplashScreen(
                     .background(Color.White.copy(alpha = 0.16f)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Default.CalendarMonth,
+                // The same white calendar as the launcher icon (its day cells knocked
+                // out), so the splash badge and the home-screen icon share one shape
+                // and the whole thing stays in the single violet-and-white palette.
+                Image(
+                    painter = painterResource(com.coparently.app.R.drawable.ic_calendar_splash),
                     contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(52.dp)
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(18.dp)
                 )
             }
 

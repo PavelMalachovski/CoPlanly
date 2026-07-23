@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Diagonal brand-purple gradient for the adaptive launcher-icon background. -->
+<!-- Violet launcher-icon background, matching the splash gradient (#6750A4 -> #4F46E5)
+     so the icon and the startup screen share one violet colour. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp"
@@ -14,8 +15,8 @@
                 android:endX="108"
                 android:endY="108"
                 android:type="linear">
-                <item android:offset="0.0" android:color="#FF7B68C9" />
-                <item android:offset="1.0" android:color="#FF5A43A0" />
+                <item android:offset="0.0" android:color="#FF6750A4" />
+                <item android:offset="1.0" android:color="#FF4F46E5" />
             </gradient>
         </aapt:attr>
     </path>
