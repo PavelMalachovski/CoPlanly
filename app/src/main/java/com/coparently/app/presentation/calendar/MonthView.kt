@@ -19,7 +19,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,6 +49,7 @@ import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 import java.time.format.TextStyle
 import java.util.Locale
 
@@ -80,26 +84,49 @@ fun MonthView(
     holidays: Map<LocalDate, Holiday> = emptyMap()
 ) {
     val firstDayOfWeek = remember { DayOfWeek.MONDAY }
+
+    // The pager's loaded month range is anchored to a stable month and only
+    // re-anchors on a far jump (Today button / date picker). Keeping it fixed while
+    // paging is what makes swipes symmetric: previously the range was keyed on
+    // selectedMonth, so every settle shifted it and one direction visibly jumped.
+    var anchorMonth by remember { mutableStateOf(selectedMonth) }
+    LaunchedEffect(selectedMonth) {
+        val distance = ChronoUnit.MONTHS.between(anchorMonth, selectedMonth)
+        if (distance <= -MONTH_PAGER_RANGE || distance >= MONTH_PAGER_RANGE) {
+            anchorMonth = selectedMonth
+        }
+    }
+
     val calendarState = rememberCalendarState(
-        startMonth = remember(selectedMonth) { selectedMonth.minusMonths(MONTH_PAGER_RANGE) },
-        endMonth = remember(selectedMonth) { selectedMonth.plusMonths(MONTH_PAGER_RANGE) },
+        startMonth = remember(anchorMonth) { anchorMonth.minusMonths(MONTH_PAGER_RANGE) },
+        endMonth = remember(anchorMonth) { anchorMonth.plusMonths(MONTH_PAGER_RANGE) },
         firstVisibleMonth = selectedMonth,
         firstDayOfWeek = firstDayOfWeek
     )
 
-    // Pager settled on another month -> propagate to the ViewModel
+    // Propagate to the ViewModel only once the pager has fully settled. Reacting to
+    // mid-fling month flips fed selectedMonth back into the effect below and kicked
+    // off a programmatic scroll on top of the in-flight fling — which is what made
+    // swiping one way animate differently from the other.
     LaunchedEffect(calendarState) {
-        snapshotFlow { calendarState.firstVisibleMonth.yearMonth }
-            .collect { visibleMonth ->
-                if (visibleMonth != selectedMonth) {
-                    onMonthChange(visibleMonth)
+        snapshotFlow { calendarState.isScrollInProgress }
+            .collect { scrolling ->
+                if (!scrolling) {
+                    val visibleMonth = calendarState.firstVisibleMonth.yearMonth
+                    if (visibleMonth != selectedMonth) {
+                        onMonthChange(visibleMonth)
+                    }
                 }
             }
     }
 
-    // External month change (Today button, day tap elsewhere) -> animate the pager
+    // External month change (Today button, date picker) -> animate the pager to it.
+    // Never do this while the user is mid-swipe: a programmatic scroll fighting the
+    // fling is exactly what made left/right swipes look different.
     LaunchedEffect(selectedMonth) {
-        if (calendarState.firstVisibleMonth.yearMonth != selectedMonth) {
+        if (!calendarState.isScrollInProgress &&
+            calendarState.firstVisibleMonth.yearMonth != selectedMonth
+        ) {
             calendarState.animateScrollToMonth(selectedMonth)
         }
     }
