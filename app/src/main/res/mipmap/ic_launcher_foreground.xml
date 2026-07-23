@@ -1,52 +1,48 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  CoPlanly adaptive-icon foreground: a calendar. The two "day" dots highlighted in
-  Mom-pink (#E91E63) and Dad-blue (#1976D2) echo the app's shared co-parent calendar.
-  Content is kept inside the central safe zone of the 108x108 canvas.
+  CoPlanly adaptive-icon foreground: a white calendar (outlined body + header bar,
+  binder rings and a 3x3 grid of solid white "day" dots) on the violet background.
+  The whole glyph is wrapped in a 0.667 scale group so it renders ~1.5x smaller inside
+  the launcher mask, leaving a comfortable margin.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+    <group
+        android:pivotX="54"
+        android:pivotY="56"
+        android:scaleX="0.667"
+        android:scaleY="0.667">
 
-    <!-- Binder rings (behind the body, poking out at the top) -->
-    <path
-        android:fillColor="#4A3C7A"
-        android:pathData="M41.5,30 A2.5,2.5 0 0 1 44,32.5 V39.5 A2.5,2.5 0 0 1 39,39.5 V32.5 A2.5,2.5 0 0 1 41.5,30 Z" />
-    <path
-        android:fillColor="#4A3C7A"
-        android:pathData="M66.5,30 A2.5,2.5 0 0 1 69,32.5 V39.5 A2.5,2.5 0 0 1 64,39.5 V32.5 A2.5,2.5 0 0 1 66.5,30 Z" />
+        <!-- Binder rings -->
+        <path android:fillColor="#FFFFFF"
+            android:pathData="M40,28 A3,3 0 0 1 43,31 V39 A3,3 0 0 1 37,39 V31 A3,3 0 0 1 40,28 Z" />
+        <path android:fillColor="#FFFFFF"
+            android:pathData="M68,28 A3,3 0 0 1 71,31 V39 A3,3 0 0 1 65,39 V31 A3,3 0 0 1 68,28 Z" />
 
-    <!-- Calendar body (white, rounded) -->
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M35,36 H73 A7,7 0 0 1 80,43 V75 A7,7 0 0 1 73,82 H35 A7,7 0 0 1 28,75 V43 A7,7 0 0 1 35,36 Z" />
+        <!-- Calendar body outline (white frame, violet interior) -->
+        <path android:fillColor="#FFFFFF" android:fillType="evenOdd"
+            android:pathData="M35,34 H73 A9,9 0 0 1 82,43 V75 A9,9 0 0 1 73,84 H35 A9,9 0 0 1 26,75 V43 A9,9 0 0 1 35,34 Z M35,38 H73 A5,5 0 0 1 78,43 V75 A5,5 0 0 1 73,80 H35 A5,5 0 0 1 30,75 V43 A5,5 0 0 1 35,38 Z" />
 
-    <!-- Header strip (brand purple, rounded top only) -->
-    <path
-        android:fillColor="#6750A4"
-        android:pathData="M35,36 H73 A7,7 0 0 1 80,43 V48 H28 V43 A7,7 0 0 1 35,36 Z" />
+        <!-- Header bar -->
+        <path android:fillColor="#FFFFFF"
+            android:pathData="M35,38 H73 A5,5 0 0 1 78,43 V49 H30 V43 A5,5 0 0 1 35,38 Z" />
 
-    <!-- Day grid: row 1 -->
-    <path
-        android:fillColor="#1976D2"
-        android:pathData="M39,55 H42 A2,2 0 0 1 44,57 V60 A2,2 0 0 1 42,62 H39 A2,2 0 0 1 37,60 V57 A2,2 0 0 1 39,55 Z" />
-    <path
-        android:fillColor="#C9BFE8"
-        android:pathData="M53,55 H56 A2,2 0 0 1 58,57 V60 A2,2 0 0 1 56,62 H53 A2,2 0 0 1 51,60 V57 A2,2 0 0 1 53,55 Z" />
-    <path
-        android:fillColor="#C9BFE8"
-        android:pathData="M67,55 H70 A2,2 0 0 1 72,57 V60 A2,2 0 0 1 70,62 H67 A2,2 0 0 1 65,60 V57 A2,2 0 0 1 67,55 Z" />
+        <!-- Day dots: row 1 -->
+        <path android:fillColor="#FFFFFF" android:pathData="M38.5,54 H41.5 A1.5,1.5 0 0 1 43,55.5 V58.5 A1.5,1.5 0 0 1 41.5,60 H38.5 A1.5,1.5 0 0 1 37,58.5 V55.5 A1.5,1.5 0 0 1 38.5,54 Z" />
+        <path android:fillColor="#FFFFFF" android:pathData="M52.5,54 H55.5 A1.5,1.5 0 0 1 57,55.5 V58.5 A1.5,1.5 0 0 1 55.5,60 H52.5 A1.5,1.5 0 0 1 51,58.5 V55.5 A1.5,1.5 0 0 1 52.5,54 Z" />
+        <path android:fillColor="#FFFFFF" android:pathData="M66.5,54 H69.5 A1.5,1.5 0 0 1 71,55.5 V58.5 A1.5,1.5 0 0 1 69.5,60 H66.5 A1.5,1.5 0 0 1 65,58.5 V55.5 A1.5,1.5 0 0 1 66.5,54 Z" />
 
-    <!-- Day grid: row 2 -->
-    <path
-        android:fillColor="#C9BFE8"
-        android:pathData="M39,66 H42 A2,2 0 0 1 44,68 V71 A2,2 0 0 1 42,73 H39 A2,2 0 0 1 37,71 V68 A2,2 0 0 1 39,66 Z" />
-    <path
-        android:fillColor="#E91E63"
-        android:pathData="M53,66 H56 A2,2 0 0 1 58,68 V71 A2,2 0 0 1 56,73 H53 A2,2 0 0 1 51,71 V68 A2,2 0 0 1 53,66 Z" />
-    <path
-        android:fillColor="#C9BFE8"
-        android:pathData="M67,66 H70 A2,2 0 0 1 72,68 V71 A2,2 0 0 1 70,73 H67 A2,2 0 0 1 65,71 V68 A2,2 0 0 1 67,66 Z" />
+        <!-- Day dots: row 2 -->
+        <path android:fillColor="#FFFFFF" android:pathData="M38.5,63 H41.5 A1.5,1.5 0 0 1 43,64.5 V67.5 A1.5,1.5 0 0 1 41.5,69 H38.5 A1.5,1.5 0 0 1 37,67.5 V64.5 A1.5,1.5 0 0 1 38.5,63 Z" />
+        <path android:fillColor="#FFFFFF" android:pathData="M52.5,63 H55.5 A1.5,1.5 0 0 1 57,64.5 V67.5 A1.5,1.5 0 0 1 55.5,69 H52.5 A1.5,1.5 0 0 1 51,67.5 V64.5 A1.5,1.5 0 0 1 52.5,63 Z" />
+        <path android:fillColor="#FFFFFF" android:pathData="M66.5,63 H69.5 A1.5,1.5 0 0 1 71,64.5 V67.5 A1.5,1.5 0 0 1 69.5,69 H66.5 A1.5,1.5 0 0 1 65,67.5 V64.5 A1.5,1.5 0 0 1 66.5,63 Z" />
+
+        <!-- Day dots: row 3 -->
+        <path android:fillColor="#FFFFFF" android:pathData="M38.5,72 H41.5 A1.5,1.5 0 0 1 43,73.5 V76.5 A1.5,1.5 0 0 1 41.5,78 H38.5 A1.5,1.5 0 0 1 37,76.5 V73.5 A1.5,1.5 0 0 1 38.5,72 Z" />
+        <path android:fillColor="#FFFFFF" android:pathData="M52.5,72 H55.5 A1.5,1.5 0 0 1 57,73.5 V76.5 A1.5,1.5 0 0 1 55.5,78 H52.5 A1.5,1.5 0 0 1 51,76.5 V73.5 A1.5,1.5 0 0 1 52.5,72 Z" />
+        <path android:fillColor="#FFFFFF" android:pathData="M66.5,72 H69.5 A1.5,1.5 0 0 1 71,73.5 V76.5 A1.5,1.5 0 0 1 69.5,78 H66.5 A1.5,1.5 0 0 1 65,76.5 V73.5 A1.5,1.5 0 0 1 66.5,72 Z" />
+    </group>
 </vector>
