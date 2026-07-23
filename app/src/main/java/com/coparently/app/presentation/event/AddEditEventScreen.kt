@@ -59,6 +59,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -198,6 +199,9 @@ fun AddEditEventScreen(
     var isSaving by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var isDeleting by remember { mutableStateOf(false) }
+    // Set when a saved draft was auto-restored into a blank "New Event", so the user
+    // gets a subtle, dismissible hint (with a Clear action) instead of a silent prefill.
+    var draftRestored by remember { mutableStateOf(false) }
 
     // Validation states
     var titleError by remember { mutableStateOf<String?>(null) }
@@ -278,8 +282,39 @@ fun AddEditEventScreen(
                     startDate = LocalDate.parse(it.startDate)
                     startTime = LocalTime.parse(it.startTime)
                     endTime = LocalTime.parse(it.endTime)
+                    // Only surface the hint when the draft actually carried content the
+                    // user would recognise, not for an empty auto-saved shell.
+                    if (it.title.isNotBlank() || it.description.isNotBlank()) {
+                        draftRestored = true
+                    }
                 }
             }
+        }
+    }
+
+    // Notify the user that an unsaved draft was restored, and offer to discard it.
+    LaunchedEffect(draftRestored) {
+        if (draftRestored) {
+            val result = snackbarHostState.showSnackbar(
+                message = "Draft restored",
+                actionLabel = "Clear",
+                duration = SnackbarDuration.Long
+            )
+            if (result == SnackbarResult.ActionPerformed) {
+                title = ""
+                description = ""
+                parentOwner = "mom"
+                eventType = "general"
+                startDate = initialDate ?: LocalDate.now()
+                startTime = LocalTime.now()
+                endTime = LocalTime.now().plusHours(1)
+                recurrencePattern = null
+                recurrenceEndDate = null
+                reminderMinutes = null
+                isPrivate = false
+                viewModel.clearEventDraft()
+            }
+            draftRestored = false
         }
     }
 
@@ -656,9 +691,14 @@ fun AddEditEventScreen(
                                 MaterialTheme.colorScheme.surfaceVariant
                             }
                         ),
+                        // Unified selected state for both parents: a thin 1.5dp accent
+                        // outline over a tonal fill, no drop shadow. Previously the
+                        // selected chip used a 2dp border + 4dp elevation, which — with
+                        // the more saturated DadBlue — read as a heavy, un-Material box
+                        // that didn't match the MomPink chip.
                         border = if (isSelected) {
                             BorderStroke(
-                                2.dp,
+                                1.5.dp,
                                 when (value) {
                                     "mom" -> CoPlanlyColors.MomPink
                                     "dad" -> CoPlanlyColors.DadBlue
@@ -668,9 +708,7 @@ fun AddEditEventScreen(
                         } else {
                             null
                         },
-                        elevation = CardDefaults.cardElevation(
-                            defaultElevation = if (isSelected) 4.dp else 0.dp
-                        )
+                        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                     ) {
                         Column(
                             modifier = Modifier

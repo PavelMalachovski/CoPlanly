@@ -1,16 +1,52 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  CoPlanly adaptive-icon foreground: a calendar. The two "day" dots highlighted in
+  Mom-pink (#E91E63) and Dad-blue (#1976D2) echo the app's shared co-parent calendar.
+  Content is kept inside the central safe zone of the 108x108 canvas.
+-->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <group android:scaleX="0.5"
-        android:scaleY="0.5"
-        android:translateX="27"
-        android:translateY="27">
-        <path
-            android:fillColor="#FFFFFF"
-            android:pathData="M54,54L54,45L45,45L45,54L36,54L36,63L45,63L45,72L54,72L54,63L63,63L63,54L54,54ZM54,27C41.85,27 32,36.85 32,49C32,61.15 41.85,71 54,71C66.15,71 76,61.15 76,49C76,36.85 66.15,27 54,27Z"/>
-    </group>
-</vector>
 
+    <!-- Binder rings (behind the body, poking out at the top) -->
+    <path
+        android:fillColor="#4A3C7A"
+        android:pathData="M41.5,30 A2.5,2.5 0 0 1 44,32.5 V39.5 A2.5,2.5 0 0 1 39,39.5 V32.5 A2.5,2.5 0 0 1 41.5,30 Z" />
+    <path
+        android:fillColor="#4A3C7A"
+        android:pathData="M66.5,30 A2.5,2.5 0 0 1 69,32.5 V39.5 A2.5,2.5 0 0 1 64,39.5 V32.5 A2.5,2.5 0 0 1 66.5,30 Z" />
+
+    <!-- Calendar body (white, rounded) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M35,36 H73 A7,7 0 0 1 80,43 V75 A7,7 0 0 1 73,82 H35 A7,7 0 0 1 28,75 V43 A7,7 0 0 1 35,36 Z" />
+
+    <!-- Header strip (brand purple, rounded top only) -->
+    <path
+        android:fillColor="#6750A4"
+        android:pathData="M35,36 H73 A7,7 0 0 1 80,43 V48 H28 V43 A7,7 0 0 1 35,36 Z" />
+
+    <!-- Day grid: row 1 -->
+    <path
+        android:fillColor="#1976D2"
+        android:pathData="M39,55 H42 A2,2 0 0 1 44,57 V60 A2,2 0 0 1 42,62 H39 A2,2 0 0 1 37,60 V57 A2,2 0 0 1 39,55 Z" />
+    <path
+        android:fillColor="#C9BFE8"
+        android:pathData="M53,55 H56 A2,2 0 0 1 58,57 V60 A2,2 0 0 1 56,62 H53 A2,2 0 0 1 51,60 V57 A2,2 0 0 1 53,55 Z" />
+    <path
+        android:fillColor="#C9BFE8"
+        android:pathData="M67,55 H70 A2,2 0 0 1 72,57 V60 A2,2 0 0 1 70,62 H67 A2,2 0 0 1 65,60 V57 A2,2 0 0 1 67,55 Z" />
+
+    <!-- Day grid: row 2 -->
+    <path
+        android:fillColor="#C9BFE8"
+        android:pathData="M39,66 H42 A2,2 0 0 1 44,68 V71 A2,2 0 0 1 42,73 H39 A2,2 0 0 1 37,71 V68 A2,2 0 0 1 39,66 Z" />
+    <path
+        android:fillColor="#E91E63"
+        android:pathData="M53,66 H56 A2,2 0 0 1 58,68 V71 A2,2 0 0 1 56,73 H53 A2,2 0 0 1 51,71 V68 A2,2 0 0 1 53,66 Z" />
+    <path
+        android:fillColor="#C9BFE8"
+        android:pathData="M67,66 H70 A2,2 0 0 1 72,68 V71 A2,2 0 0 1 70,73 H67 A2,2 0 0 1 65,71 V68 A2,2 0 0 1 67,66 Z" />
+</vector>
