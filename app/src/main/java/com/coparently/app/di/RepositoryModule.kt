@@ -1,6 +1,6 @@
 package com.coparently.app.di
 
-import com.coparently.app.data.remote.firebase.FirebaseReceiptStorage
+import com.coparently.app.data.remote.firebase.FirebaseImageStorage
 import com.coparently.app.data.repository.BudgetRepositoryImpl
 import com.coparently.app.data.repository.ChangeRequestRepositoryImpl
 import com.coparently.app.data.repository.ChildInfoRepositoryImpl
@@ -15,6 +15,7 @@ import com.coparently.app.domain.repository.EventRepository
 import com.coparently.app.domain.repository.ExpenseRepository
 import com.coparently.app.domain.repository.MessageRepository
 import com.coparently.app.domain.repository.PreferencesRepository
+import com.coparently.app.domain.repository.EventImageStorage
 import com.coparently.app.domain.repository.ReceiptStorage
 import dagger.Binds
 import dagger.Module
@@ -98,7 +99,16 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindReceiptStorage(
-        firebaseReceiptStorage: FirebaseReceiptStorage
+        firebaseImageStorage: FirebaseImageStorage
     ): ReceiptStorage
+
+    /**
+     * Provides EventImageStorage implementation (Firebase Cloud Storage).
+     */
+    @Binds
+    @Singleton
+    abstract fun bindEventImageStorage(
+        firebaseImageStorage: FirebaseImageStorage
+    ): EventImageStorage
 }
 

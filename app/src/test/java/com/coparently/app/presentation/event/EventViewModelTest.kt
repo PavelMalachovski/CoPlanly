@@ -87,7 +87,8 @@ class EventViewModelTest {
             errorHandler,
             encryptedPreferences,
             Gson(),
-            userRepository
+            userRepository,
+            eventImageStorage = mockk(relaxed = true)
         )
     }
 

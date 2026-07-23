@@ -6,6 +6,7 @@ import com.coparently.app.data.analytics.AnalyticsManager
 import com.coparently.app.data.crashlytics.CrashlyticsManager
 import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.domain.model.Event
+import com.coparently.app.domain.repository.EventImageStorage
 import com.coparently.app.domain.repository.EventRepository
 import com.google.gson.Gson
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -45,7 +46,8 @@ class EventViewModel @Inject constructor(
     private val errorHandler: com.coparently.app.domain.error.ErrorHandler,
     private val encryptedPreferences: EncryptedPreferences,
     private val gson: Gson,
-    private val userRepository: com.coparently.app.domain.repository.UserRepository
+    private val userRepository: com.coparently.app.domain.repository.UserRepository,
+    private val eventImageStorage: EventImageStorage
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<EventUiState>(EventUiState.Loading)
@@ -113,6 +115,21 @@ class EventViewModel @Inject constructor(
     }
 
     /**
+     * Uploads a picked image as the photo for [eventId] and returns its download URL.
+     * Callers should upload before saving the event so the URL can be stored on it.
+     */
+    suspend fun uploadEventImage(eventId: String, localUri: String): String =
+        eventImageStorage.uploadEventImage(eventId, localUri)
+
+    /**
+     * Best-effort deletion of an event's remote photo; failures are swallowed so an
+     * orphaned image never blocks the event save/delete.
+     */
+    suspend fun deleteEventImage(eventId: String) {
+        runCatching { eventImageStorage.deleteEventImage(eventId) }
+    }
+
+    /**
      * Creates a new event.
      */
     fun createEvent(event: Event) {
@@ -154,6 +171,7 @@ class EventViewModel @Inject constructor(
         viewModelScope.launch {
             val result = eventUseCases.deleteEvent(event)
             result.onSuccess {
+                if (event.imageUrl != null) deleteEventImage(event.id)
                 _uiState.value = EventUiState.OperationSuccess("Event deleted successfully")
                 kotlinx.coroutines.delay(2000)
                 _uiState.value = EventUiState.Success(_events.value)

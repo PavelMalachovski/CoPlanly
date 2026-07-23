@@ -98,7 +98,8 @@ class SyncService @Inject constructor(
                 "createdByFirebaseUid" to entity.createdByFirebaseUid,
                 "sharedWith" to gson.fromJson(entity.sharedWithJson, List::class.java),
                 "lastModifiedBy" to entity.lastModifiedBy,
-                "permissions" to entity.permissions
+                "permissions" to entity.permissions,
+                "imageUrl" to entity.imageUrl
             )
 
             val result = firestoreEventDataSource.insertEvent(entity.id, eventData)
@@ -152,7 +153,8 @@ class SyncService @Inject constructor(
                                     "createdAt" to localEntity.createdAt.format(formatter),
                                     "updatedAt" to LocalDateTime.now().format(formatter),
                                     "createdByFirebaseUid" to localEntity.createdByFirebaseUid,
-                                    "lastModifiedBy" to userId
+                                    "lastModifiedBy" to userId,
+                                    "imageUrl" to localEntity.imageUrl
                                 )
                                 firestoreEventDataSource.updateEvent(localEntity.id, localData)
                                 eventDao.markAsSynced(localEntity.id)
@@ -357,7 +359,8 @@ class SyncService @Inject constructor(
             createdByFirebaseUid = this["createdByFirebaseUid"] as? String,
             sharedWithJson = gson.toJson(this["sharedWith"] ?: emptyList<String>()),
             lastModifiedBy = this["lastModifiedBy"] as? String,
-            permissions = this["permissions"] as? String ?: "read_write"
+            permissions = this["permissions"] as? String ?: "read_write",
+            imageUrl = (this["imageUrl"] as? String)?.ifBlank { null }
         )
     }
 

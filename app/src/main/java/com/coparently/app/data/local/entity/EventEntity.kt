@@ -52,6 +52,7 @@ data class EventEntity(
     val recurrenceEndDate: java.time.LocalDate? = null,
     val pickupConfirmedBy: String? = null,
     val pickupConfirmedAt: LocalDateTime? = null,
-    val reminderMinutes: Int? = null
+    val reminderMinutes: Int? = null,
+    val imageUrl: String? = null
 )
 

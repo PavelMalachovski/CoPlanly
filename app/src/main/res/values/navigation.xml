@@ -2,6 +2,7 @@
 <!-- Bottom navigation labels. Kept out of strings.xml because strings.xml is
      gitignored in this project (it holds local OAuth values). -->
 <resources>
+    <string name="nav_home">Home</string>
     <string name="nav_calendar">Calendar</string>
     <string name="nav_chat">Chat</string>
     <string name="nav_expenses">Expenses</string>

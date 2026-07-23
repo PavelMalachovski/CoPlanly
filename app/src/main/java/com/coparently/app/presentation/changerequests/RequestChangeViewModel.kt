@@ -38,7 +38,8 @@ sealed interface RequestChangeUiState {
 class RequestChangeViewModel @Inject constructor(
     private val eventRepository: EventRepository,
     private val changeRequestRepository: ChangeRequestRepository,
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
+    private val messageRepository: com.coparently.app.domain.repository.MessageRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<RequestChangeUiState>(RequestChangeUiState.Loading)
@@ -57,12 +58,17 @@ class RequestChangeViewModel @Inject constructor(
 
     /**
      * Creates and sends the change request to the paired co-parent.
+     *
+     * When [conversationId] is provided (the request was started from a chat),
+     * a structured message summarising the proposal is also posted to that
+     * conversation so it appears in the thread.
      */
     fun submit(
         event: Event,
         proposedStart: LocalDateTime,
         proposedEnd: LocalDateTime?,
-        note: String?
+        note: String?,
+        conversationId: String? = null
     ) {
         if (_uiState.value is RequestChangeUiState.Sending) return
 
@@ -96,6 +102,9 @@ class RequestChangeViewModel @Inject constructor(
                         createdAt = LocalDateTime.now()
                     )
                 )
+                if (conversationId != null) {
+                    postChatMessage(conversationId, user.id, user.name, event, proposedStart, proposedEnd, note)
+                }
                 _uiState.value = RequestChangeUiState.Sent
             } catch (
                 // Firestore/network failures surface as a form error, not a crash
@@ -105,5 +114,44 @@ class RequestChangeViewModel @Inject constructor(
                     RequestChangeUiState.Error(e.message ?: "Failed to send the change request")
             }
         }
+    }
+
+    @Suppress("LongParameterList") // one message built from the request's fields
+    private suspend fun postChatMessage(
+        conversationId: String,
+        senderId: String,
+        senderName: String,
+        event: Event,
+        proposedStart: LocalDateTime,
+        proposedEnd: LocalDateTime?,
+        note: String?
+    ) {
+        val whenText = proposedStart.format(chatDateTimeFormatter) +
+            (proposedEnd?.let { " – " + it.format(chatTimeFormatter) } ?: "")
+        val content = buildString {
+            append("🔁 Change requested for \"${event.title}\" → ")
+            append(whenText)
+            if (!note.isNullOrBlank()) append("\n“$note”")
+        }
+        messageRepository.sendMessage(
+            com.coparently.app.domain.model.Message(
+                id = UUID.randomUUID().toString(),
+                conversationId = conversationId,
+                senderId = senderId,
+                senderName = senderName,
+                content = content,
+                timestamp = LocalDateTime.now(),
+                messageType = com.coparently.app.domain.model.MessageType.EVENT_LINK,
+                attachments = listOf(event.id),
+                status = com.coparently.app.domain.model.MessageSendStatus.SENDING
+            )
+        )
+    }
+
+    private companion object {
+        val chatDateTimeFormatter: java.time.format.DateTimeFormatter =
+            java.time.format.DateTimeFormatter.ofPattern("EEE, MMM d · HH:mm")
+        val chatTimeFormatter: java.time.format.DateTimeFormatter =
+            java.time.format.DateTimeFormatter.ofPattern("HH:mm")
     }
 }

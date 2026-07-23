@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
+import com.coparently.app.domain.repository.EventImageStorage
 import com.coparently.app.domain.repository.ReceiptStorage
 import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.StorageException
@@ -18,35 +19,47 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * [ReceiptStorage] backed by Firebase Cloud Storage.
+ * [ReceiptStorage] and [EventImageStorage] backed by Firebase Cloud Storage.
  *
- * Images are downscaled and recompressed before upload to keep uploads fast and
- * storage usage low; the resulting download URL (with access token) is what gets
+ * Images are downscaled and recompressed to JPEG before upload to keep uploads fast
+ * and storage usage low; the resulting download URL (with access token) is what gets
  * stored in Firestore, so the other parent can load the photo directly.
  */
 @Singleton
-class FirebaseReceiptStorage @Inject constructor(
+class FirebaseImageStorage @Inject constructor(
     @ApplicationContext private val context: Context,
     private val storage: FirebaseStorage
-) : ReceiptStorage {
+) : ReceiptStorage, EventImageStorage {
 
-    override suspend fun uploadReceipt(expenseId: String, localUri: String): String {
+    override suspend fun uploadReceipt(expenseId: String, localUri: String): String =
+        upload(receiptPath(expenseId), localUri)
+
+    override suspend fun deleteReceipt(expenseId: String) = delete(receiptPath(expenseId))
+
+    override suspend fun uploadEventImage(eventId: String, localUri: String): String =
+        upload(eventImagePath(eventId), localUri)
+
+    override suspend fun deleteEventImage(eventId: String) = delete(eventImagePath(eventId))
+
+    private suspend fun upload(path: String, localUri: String): String {
         val bytes = withContext(Dispatchers.IO) { compressImage(Uri.parse(localUri)) }
-        val ref = storage.reference.child(receiptPath(expenseId))
+        val ref = storage.reference.child(path)
         val metadata = storageMetadata { contentType = "image/jpeg" }
         ref.putBytes(bytes, metadata).await()
         return ref.downloadUrl.await().toString()
     }
 
-    override suspend fun deleteReceipt(expenseId: String) {
+    private suspend fun delete(path: String) {
         try {
-            storage.reference.child(receiptPath(expenseId)).delete().await()
+            storage.reference.child(path).delete().await()
         } catch (e: StorageException) {
             if (e.errorCode != StorageException.ERROR_OBJECT_NOT_FOUND) throw e
         }
     }
 
     private fun receiptPath(expenseId: String) = "receipts/$expenseId.jpg"
+
+    private fun eventImagePath(eventId: String) = "event_images/$eventId.jpg"
 
     /**
      * Decodes the picked image with subsampling so full-resolution camera photos
@@ -57,14 +70,14 @@ class FirebaseReceiptStorage @Inject constructor(
 
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
-            ?: throw IOException("Cannot open receipt image: $uri")
+            ?: throw IOException("Cannot open image: $uri")
 
         val options = BitmapFactory.Options().apply {
             inSampleSize = calculateInSampleSize(bounds.outWidth, bounds.outHeight)
         }
         val bitmap = resolver.openInputStream(uri)?.use {
             BitmapFactory.decodeStream(it, null, options)
-        } ?: throw IOException("Cannot decode receipt image: $uri")
+        } ?: throw IOException("Cannot decode image: $uri")
 
         return try {
             ByteArrayOutputStream().use { out ->

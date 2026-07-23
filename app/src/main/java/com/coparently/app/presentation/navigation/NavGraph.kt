@@ -59,7 +59,7 @@ fun NavGraph(
     // Determine start destination based on authentication state
     val startDestination = when {
         isLoading -> Screen.Loading.route
-        isAuthenticated == true -> Screen.Calendar.route
+        isAuthenticated == true -> Screen.Home.route
         else -> Screen.Auth.route
     }
 
@@ -78,7 +78,7 @@ fun NavGraph(
                     onNavigate = { destination ->
                         navController.navigate(destination.route) {
                             // Keep one instance per tab, preserve each tab's state
-                            popUpTo(Screen.Calendar.route) { saveState = true }
+                            popUpTo(Screen.Home.route) { saveState = true }
                             launchSingleTop = true
                             restoreState = true
                         }
@@ -111,7 +111,7 @@ fun NavGraph(
                     onAuthSuccess = {
                         // Refresh auth state and navigate to main app
                         authStateViewModel.refreshAuthState()
-                        navController.navigate(Screen.Calendar.route) {
+                        navController.navigate(Screen.Home.route) {
                             popUpTo(Screen.Auth.route) { inclusive = true }
                         }
                     },
@@ -120,6 +120,28 @@ fun NavGraph(
                         authViewModel.onAuthStateChanged = {
                             authStateViewModel.refreshAuthState()
                         }
+                    }
+                )
+            }
+
+            // Home / overview dashboard — first screen (MVP 2)
+            composable(
+                route = Screen.Home.route,
+                enterTransition = { fadeInSlideUp() },
+                exitTransition = { fadeOutSlideDown() }
+            ) {
+                com.coparently.app.presentation.home.HomeScreen(
+                    onOpenEvent = { eventId ->
+                        navController.navigate(Screen.EditEvent.createRoute(eventId))
+                    },
+                    onOpenChangeRequests = {
+                        navController.navigate(Screen.ChangeRequests.route)
+                    },
+                    onOpenWeeklySummary = {
+                        navController.navigate(Screen.WeeklySummary.route)
+                    },
+                    onOpenSettings = {
+                        navController.navigate(Screen.Settings.route)
                     }
                 )
             }
@@ -268,12 +290,18 @@ fun NavGraph(
                 )
             }
 
-            // Propose a new time for an event (MVP 2)
+            // Propose a new time for an event (MVP 2). Optional conversationId means the
+            // request was started from a chat, so a message is posted back to that thread.
             composable(
                 route = Screen.RequestChange.route,
                 arguments = listOf(
                     navArgument(Screen.RequestChange.ARG_EVENT_ID) {
                         type = NavType.StringType
+                    },
+                    navArgument(Screen.RequestChange.ARG_CONVERSATION_ID) {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
                     }
                 ),
                 enterTransition = { fadeInScaleUp() },
@@ -282,11 +310,15 @@ fun NavGraph(
                 popExitTransition = { fadeOutScaleDown() }
             ) { backStackEntry ->
                 val eventId = backStackEntry.arguments?.getString(Screen.RequestChange.ARG_EVENT_ID) ?: return@composable
+                val conversationId = backStackEntry.arguments
+                    ?.getString(Screen.RequestChange.ARG_CONVERSATION_ID)
+                    ?.takeIf { it != "null" }
                 com.coparently.app.presentation.changerequests.RequestChangeScreen(
                     eventId = eventId,
                     onBack = {
                         navController.popBackStack()
-                    }
+                    },
+                    conversationId = conversationId
                 )
             }
 
@@ -313,7 +345,7 @@ fun NavGraph(
                     onStartGoogleSignIn = googleSignInCallback,
                     onSignOut = {
                         navController.navigate(Screen.Auth.route) {
-                            popUpTo(Screen.Calendar.route) { inclusive = true }
+                            popUpTo(Screen.Home.route) { inclusive = true }
                         }
                     },
                     syncViewModel = syncViewModel
@@ -418,6 +450,11 @@ fun NavGraph(
                     conversationId = conversationId,
                     onBack = {
                         navController.popBackStack()
+                    },
+                    onRequestChangeForEvent = { eventId ->
+                        navController.navigate(
+                            Screen.RequestChange.createRoute(eventId, conversationId)
+                        )
                     }
                 )
             }
@@ -500,6 +537,7 @@ private fun LoadingScreen() {
 sealed class Screen(val route: String) {
     data object Loading : Screen("loading")
     data object Auth : Screen("auth")
+    data object Home : Screen("home")
     data object Calendar : Screen("calendar")
     data object EventList : Screen("event_list")
     data object AddEvent : Screen("add_event?date={date}&hour={hour}") {
@@ -547,11 +585,13 @@ sealed class Screen(val route: String) {
 
     data object WeeklySummary : Screen("weekly_summary")
     data object ChangeRequests : Screen("change_requests")
-    data object RequestChange : Screen("request_change/{eventId}") {
+    data object RequestChange : Screen("request_change/{eventId}?conversationId={conversationId}") {
         const val ARG_EVENT_ID = "eventId"
+        const val ARG_CONVERSATION_ID = "conversationId"
 
-        fun createRoute(eventId: String): String {
-            return "request_change/$eventId"
+        fun createRoute(eventId: String, conversationId: String? = null): String {
+            val convParam = conversationId ?: "null"
+            return "request_change/$eventId?conversationId=$convParam"
         }
     }
 }

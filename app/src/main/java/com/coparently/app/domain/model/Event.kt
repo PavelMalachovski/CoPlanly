@@ -27,6 +27,7 @@ import java.time.LocalDateTime
  * @property pickupConfirmedBy Parent who confirmed the pickup ("mom" or "dad"), null if not confirmed
  * @property pickupConfirmedAt Timestamp when the pickup was confirmed
  * @property reminderMinutes Minutes before start to show a reminder notification (null = no reminder)
+ * @property imageUrl Optional download URL of a photo attached to the event (shared with the co-parent)
  */
 data class Event(
     val id: String,
@@ -49,6 +50,7 @@ data class Event(
     val recurrenceEndDate: java.time.LocalDate? = null,
     val pickupConfirmedBy: String? = null,
     val pickupConfirmedAt: LocalDateTime? = null,
-    val reminderMinutes: Int? = null
+    val reminderMinutes: Int? = null,
+    val imageUrl: String? = null
 )
 

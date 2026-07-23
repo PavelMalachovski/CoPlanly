@@ -1,7 +1,6 @@
 package com.coparently.app.data.remote.firebase
 
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.Query
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -35,9 +34,10 @@ class FirestoreChangeRequestDataSource @Inject constructor(
         }
 
         val registrations = listOf("requestedBy", "requestedTo").map { field ->
+            // Single-field equality only — no orderBy, so no composite index is required.
+            // Consumers (Room DAO / dashboards) sort by createdAt themselves.
             collection
                 .whereEqualTo(field, userId)
-                .orderBy("createdAt", Query.Direction.DESCENDING)
                 .addSnapshotListener { snapshot, error ->
                     if (error != null) {
                         close(error)

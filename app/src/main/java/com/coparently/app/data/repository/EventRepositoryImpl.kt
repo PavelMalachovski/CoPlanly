@@ -152,7 +152,8 @@ class EventRepositoryImpl @Inject constructor(
             "createdByFirebaseUid" to creatorUid,
             "sharedWith" to sharedWith,
             "lastModifiedBy" to (lastModifiedBy ?: creatorUid),
-            "permissions" to permissions
+            "permissions" to permissions,
+            "imageUrl" to (imageUrl ?: "")
         )
     }
 
@@ -178,7 +179,8 @@ class EventRepositoryImpl @Inject constructor(
             recurrenceEndDate = recurrenceEndDate,
             pickupConfirmedBy = pickupConfirmedBy,
             pickupConfirmedAt = pickupConfirmedAt,
-            reminderMinutes = reminderMinutes
+            reminderMinutes = reminderMinutes,
+            imageUrl = imageUrl
         )
     }
 
@@ -204,7 +206,8 @@ class EventRepositoryImpl @Inject constructor(
             recurrenceEndDate = recurrenceEndDate,
             pickupConfirmedBy = pickupConfirmedBy,
             pickupConfirmedAt = pickupConfirmedAt,
-            reminderMinutes = reminderMinutes
+            reminderMinutes = reminderMinutes,
+            imageUrl = imageUrl
         )
     }
 }
