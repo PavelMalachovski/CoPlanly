@@ -13,6 +13,7 @@ import com.coparently.app.domain.repository.MessageRepository
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import java.time.LocalDateTime
 import java.time.ZoneOffset
@@ -134,23 +135,26 @@ class MessageRepositoryImpl @Inject constructor(
     override suspend fun syncWithFirestore() {
         val firebaseUser = firebaseAuthService.getCurrentUser() ?: return
 
-        // Sync conversations
-        firestoreMessageDataSource.getConversations(firebaseUser.uid).collect { conversations ->
-            conversations.forEach { data ->
-                val conversation = Conversation(
-                    id = data["id"] as String,
-                    participants = (data["participants"] as? List<String>) ?: emptyList(),
-                    title = data["title"] as String,
-                    unreadCount = (data["unreadCount"] as? Long)?.toInt() ?: 0,
-                    createdAt = LocalDateTime.parse(data["createdAt"] as String, dateFormatter),
-                    syncedToFirestore = true
-                )
-                messageDao.insertConversation(conversation.toEntity())
+        // Sync conversations. Offline-first: a Firestore failure (denied read, missing
+        // index, no network) must not crash the app — Room stays the source of truth.
+        firestoreMessageDataSource.getConversations(firebaseUser.uid)
+            .catch { e -> android.util.Log.w("MessageRepo", "Message sync failed", e) }
+            .collect { conversations ->
+                conversations.forEach { data ->
+                    val conversation = Conversation(
+                        id = data["id"] as String,
+                        participants = (data["participants"] as? List<String>) ?: emptyList(),
+                        title = data["title"] as String,
+                        unreadCount = (data["unreadCount"] as? Long)?.toInt() ?: 0,
+                        createdAt = LocalDateTime.parse(data["createdAt"] as String, dateFormatter),
+                        syncedToFirestore = true
+                    )
+                    messageDao.insertConversation(conversation.toEntity())
 
-                // Sync messages for this conversation
-                syncMessagesForConversation(conversation.id)
+                    // Sync messages for this conversation
+                    syncMessagesForConversation(conversation.id)
+                }
             }
-        }
     }
 
     private suspend fun syncMessagesForConversation(conversationId: String) {

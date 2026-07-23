@@ -9,6 +9,7 @@ import com.coparently.app.domain.model.ChangeRequest
 import com.coparently.app.domain.model.ChangeRequestStatus
 import com.coparently.app.domain.repository.ChangeRequestRepository
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -79,15 +80,21 @@ class ChangeRequestRepositoryImpl @Inject constructor(
 
     override suspend fun syncWithFirestore() {
         val userId = firebaseAuthService.getCurrentUser()?.uid ?: return
-        firestoreDataSource.observeChangeRequestsForUser(userId).collect { documents ->
-            documents.forEach { data ->
-                runCatching { data.toDomain() }.getOrNull()?.let { remote ->
-                    changeRequestDao.insertChangeRequest(
-                        remote.copy(syncedToFirestore = true).toEntity()
-                    )
+        firestoreDataSource.observeChangeRequestsForUser(userId)
+            // Offline-first: a Firestore failure (missing index, denied read, no network)
+            // must not crash the app — Room stays the source of truth. Swallow and log.
+            .catch { e ->
+                android.util.Log.w("ChangeRequestRepo", "Change request sync failed", e)
+            }
+            .collect { documents ->
+                documents.forEach { data ->
+                    runCatching { data.toDomain() }.getOrNull()?.let { remote ->
+                        changeRequestDao.insertChangeRequest(
+                            remote.copy(syncedToFirestore = true).toEntity()
+                        )
+                    }
                 }
             }
-        }
     }
 
     private suspend fun notifyCounterparty(

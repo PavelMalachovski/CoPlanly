@@ -8,6 +8,7 @@ import com.coparently.app.domain.model.ChildInfo
 import com.coparently.app.domain.repository.ChildInfoRepository
 import com.google.gson.Gson
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -86,13 +87,15 @@ class ChildInfoRepositoryImpl @Inject constructor(
         }
 
         // Download from Firestore
-        firestoreChildInfoDataSource.getChildInfoForParent(firebaseUser.uid).collect { firestoreList ->
-            for (firestoreData in firestoreList) {
-                val childInfo = firestoreData.toChildInfo()
-                val entity = childInfo.toEntity().copy(syncedToFirestore = true)
-                childInfoDao.insertChildInfo(entity)
+        firestoreChildInfoDataSource.getChildInfoForParent(firebaseUser.uid)
+            .catch { e -> android.util.Log.w("ChildInfoRepo", "Child info sync failed", e) }
+            .collect { firestoreList ->
+                for (firestoreData in firestoreList) {
+                    val childInfo = firestoreData.toChildInfo()
+                    val entity = childInfo.toEntity().copy(syncedToFirestore = true)
+                    childInfoDao.insertChildInfo(entity)
+                }
             }
-        }
     }
 
     /**

@@ -11,6 +11,7 @@ import com.coparently.app.domain.repository.ExpenseRepository
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import java.time.LocalDate
@@ -116,26 +117,28 @@ class ExpenseRepositoryImpl @Inject constructor(
     }
 
     override suspend fun syncWithFirestore() {
-        firestoreExpenseDataSource.getAllExpenses().collect { expenses ->
-            expenses.forEach { data ->
-                val expense = Expense(
-                    id = data["id"] as String,
-                    childId = (data["childId"] as? String)?.takeIf { it.isNotEmpty() },
-                    title = data["title"] as String,
-                    amount = (data["amount"] as Number).toDouble(),
-                    currency = data["currency"] as String,
-                    category = ExpenseCategory.valueOf(data["category"] as String),
-                    paidBy = data["paidBy"] as String,
-                    splitBetween = (data["splitBetween"] as? List<String>) ?: emptyList(),
-                    date = LocalDate.parse(data["date"] as String, dateFormatter),
-                    receiptUrl = (data["receiptUrl"] as? String)?.takeIf { it.isNotEmpty() },
-                    notes = (data["notes"] as? String)?.takeIf { it.isNotEmpty() },
-                    createdAt = LocalDateTime.parse(data["createdAt"] as String, dateTimeFormatter),
-                    syncedToFirestore = true
-                )
-                expenseDao.insertExpense(expense.toEntity())
+        firestoreExpenseDataSource.getAllExpenses()
+            .catch { e -> android.util.Log.w("ExpenseRepo", "Expense sync failed", e) }
+            .collect { expenses ->
+                expenses.forEach { data ->
+                    val expense = Expense(
+                        id = data["id"] as String,
+                        childId = (data["childId"] as? String)?.takeIf { it.isNotEmpty() },
+                        title = data["title"] as String,
+                        amount = (data["amount"] as Number).toDouble(),
+                        currency = data["currency"] as String,
+                        category = ExpenseCategory.valueOf(data["category"] as String),
+                        paidBy = data["paidBy"] as String,
+                        splitBetween = (data["splitBetween"] as? List<String>) ?: emptyList(),
+                        date = LocalDate.parse(data["date"] as String, dateFormatter),
+                        receiptUrl = (data["receiptUrl"] as? String)?.takeIf { it.isNotEmpty() },
+                        notes = (data["notes"] as? String)?.takeIf { it.isNotEmpty() },
+                        createdAt = LocalDateTime.parse(data["createdAt"] as String, dateTimeFormatter),
+                        syncedToFirestore = true
+                    )
+                    expenseDao.insertExpense(expense.toEntity())
+                }
             }
-        }
     }
 
     private fun ExpenseEntity.toDomain(): Expense {

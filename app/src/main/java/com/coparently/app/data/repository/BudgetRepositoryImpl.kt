@@ -10,6 +10,7 @@ import com.coparently.app.domain.model.BudgetAlert
 import com.coparently.app.domain.model.ExpenseCategory
 import com.coparently.app.domain.repository.BudgetRepository
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import java.time.LocalDate
@@ -125,22 +126,24 @@ class BudgetRepositoryImpl @Inject constructor(
     }
 
     override suspend fun syncWithFirestore() {
-        firestoreBudgetDataSource.getAllBudgets().collect { budgets ->
-            budgets.forEach { data ->
-                val budget = Budget(
-                    id = data["id"] as String,
-                    childId = (data["childId"] as? String)?.takeIf { it.isNotEmpty() },
-                    category = ExpenseCategory.valueOf(data["category"] as String),
-                    monthlyLimit = (data["monthlyLimit"] as Number).toDouble(),
-                    currency = data["currency"] as String,
-                    alertThreshold = (data["alertThreshold"] as Number).toDouble(),
-                    isActive = (data["isActive"] as? Boolean) ?: true,
-                    createdAt = LocalDateTime.parse(data["createdAt"] as String, dateTimeFormatter),
-                    syncedToFirestore = true
-                )
-                budgetDao.insertBudget(budget.toEntity())
+        firestoreBudgetDataSource.getAllBudgets()
+            .catch { e -> android.util.Log.w("BudgetRepo", "Budget sync failed", e) }
+            .collect { budgets ->
+                budgets.forEach { data ->
+                    val budget = Budget(
+                        id = data["id"] as String,
+                        childId = (data["childId"] as? String)?.takeIf { it.isNotEmpty() },
+                        category = ExpenseCategory.valueOf(data["category"] as String),
+                        monthlyLimit = (data["monthlyLimit"] as Number).toDouble(),
+                        currency = data["currency"] as String,
+                        alertThreshold = (data["alertThreshold"] as Number).toDouble(),
+                        isActive = (data["isActive"] as? Boolean) ?: true,
+                        createdAt = LocalDateTime.parse(data["createdAt"] as String, dateTimeFormatter),
+                        syncedToFirestore = true
+                    )
+                    budgetDao.insertBudget(budget.toEntity())
+                }
             }
-        }
     }
 
     private fun BudgetEntity.toDomain(): Budget {
