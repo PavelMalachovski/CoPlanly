@@ -2,7 +2,6 @@ package com.coparently.app.presentation.calendar
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -25,6 +24,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
@@ -57,6 +57,9 @@ private const val DAYS_PER_WEEK = 7L
 
 /** Width of the school-vacation strip relative to the day cell. */
 private const val VACATION_STRIP_WIDTH_FRACTION = 0.6f
+
+/** Surface luminance below this is treated as a dark theme (picks dark weekend fill). */
+private const val DARK_LUMINANCE_THRESHOLD = 0.5f
 
 /**
  * Classic month grid: always starts at the 1st of the month, pages horizontally
@@ -226,7 +229,9 @@ private fun DayCell(
     val isToday = CustodyHelper.isToday(date)
     val custody = getCustody(date)
     val isWeekend = CustodyHelper.isWeekend(date)
-    val isDarkTheme = isSystemInDarkTheme()
+    // Use the actually-rendered theme (the app can force light while the system is
+    // dark); isSystemInDarkTheme() would pick the dark weekend fill on a light grid.
+    val isDarkTheme = MaterialTheme.colorScheme.surface.luminance() < DARK_LUMINANCE_THRESHOLD
 
     val weekendColor = if (isDarkTheme) {
         CoPlanlyColors.WeekendBackgroundDark
