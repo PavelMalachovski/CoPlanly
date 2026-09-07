@@ -217,3 +217,39 @@ describe('family_settings', () => {
     await assertSucceeds(env.authenticatedContext(DAD).firestore().doc(PATH).delete());
   });
 });
+
+describe('family_settings: a proposal is the caller\'s own', () => {
+  let env;
+
+  before(async () => {
+    env = await testEnv(PROJECT, CURRENT_RULES);
+  });
+
+  beforeEach(async () => {
+    await env.clearFirestore();
+    await seed(env, PAIRED_USERS);
+    await seed(env, {[PATH]: settingsDoc({})});
+  });
+
+  it('refuses a proposal credited to the co-parent', async () => {
+    // The two-write exploit: write a proposal in the co-parent's name, then accept it yourself.
+    // `ratioAcceptance` only asks that the acceptor not be the proposer, so pinning the
+    // proposer on the first write is what keeps money moving by agreement.
+    const mom = env.authenticatedContext(MOM).firestore();
+    await assertFails(mom.doc(PATH).update({proposal: proposal(DAD, 10000)}));
+  });
+
+  it('still lets a parent put their own proposal forward', async () => {
+    const mom = env.authenticatedContext(MOM).firestore();
+    await assertSucceeds(mom.doc(PATH).update({proposal: proposal(MOM, 7000)}));
+  });
+
+  it('still lets the co-parent accept a genuine proposal', async () => {
+    await seed(env, {[PATH]: settingsDoc({proposal: proposal(MOM, 7000)})});
+    const dad = env.authenticatedContext(DAD).firestore();
+    await assertSucceeds(dad.doc(PATH).update({
+      momShareBasisPoints: 7000, lastModifiedBy: DAD, lastModifiedAtMillis: 1756000200000,
+      proposal: null,
+    }));
+  });
+});

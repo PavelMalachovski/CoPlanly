@@ -283,6 +283,43 @@ describe('deleteAccountDataImpl', () => {
     assert.deepStrictEqual(db._store.events.map((e) => e.id), ['ev-bob']);
   });
 
+  it('deletes the parenting plan and the OAuth fingerprint', async () => {
+    // Both were missed: the plan holds this parent's answers under their uid, keyed by the
+    // pair, and `google_oauth/{uid}` is the fingerprint of a refresh token issued to an account
+    // that is about to stop existing.
+    const seed = family();
+    seed.parenting_plans = [{id: `${ALICE}__${BOB}`, answers: {[ALICE]: {}, [BOB]: {}}}];
+    seed.google_oauth = [{id: ALICE, fingerprint: 'abc'}, {id: BOB, fingerprint: 'def'}];
+    const db = fakeDb(seed);
+
+    await myFunctions.deleteAccountDataImpl(db, ALICE);
+
+    assert.deepStrictEqual(db._store.parenting_plans, []);
+    assert.deepStrictEqual(db._store.google_oauth.map((d) => d.id), [BOB]);
+  });
+
+  it('tears down every co-parent link of a parent with two families', async () => {
+    // A bare `unpairCoParentImpl(db, uid)` is refused as ambiguous for a parent with two
+    // co-parents, so the erasure used to run with both pairings intact: each co-parent kept a
+    // `partnerIds` entry naming a uid nobody could sign in as.
+    const seed = family();
+    seed.users = [
+      {id: ALICE, name: 'Alice', partnerId: BOB, partnerIds: [BOB, 'carol']},
+      {id: BOB, name: 'Bob', partnerId: ALICE, partnerIds: [ALICE]},
+      {id: 'carol', name: 'Carol', partnerId: ALICE, partnerIds: [ALICE]},
+    ];
+    const db = fakeDb(seed);
+
+    await myFunctions.deleteAccountDataImpl(db, ALICE);
+
+    const bob = db._store.users.find((u) => u.id === BOB);
+    const carol = db._store.users.find((u) => u.id === 'carol');
+    assert.deepStrictEqual(bob.partnerIds || [], []);
+    assert.deepStrictEqual(carol.partnerIds || [], []);
+    assert.ok(!bob.partnerId, 'Bob must no longer name Alice');
+    assert.ok(!carol.partnerId, 'Carol must no longer name Alice');
+  });
+
   it('removes the friend grant in both directions', async () => {
     const withFriend = family();
     withFriend.calendar_friends = [

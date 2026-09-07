@@ -3,6 +3,7 @@ package com.coparently.app.data.session
 import android.util.Log
 import com.coparently.app.data.local.CoPlanlyDatabase
 import com.coparently.app.data.local.preferences.EncryptedPreferences
+import com.coparently.app.data.remote.firebase.FcmService
 import com.google.firebase.functions.FirebaseFunctions
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -33,7 +34,8 @@ import javax.inject.Singleton
 class AccountDeletionService @Inject constructor(
     private val functions: FirebaseFunctions,
     private val database: CoPlanlyDatabase,
-    private val encryptedPreferences: EncryptedPreferences
+    private val encryptedPreferences: EncryptedPreferences,
+    private val fcmService: FcmService
 ) {
 
     /**
@@ -66,6 +68,9 @@ class AccountDeletionService @Inject constructor(
      * left alone rather than given a special path.
      */
     private suspend fun wipeLocalData() {
+        // The profile document is already gone, so only the local half of this can succeed —
+        // and that half is the one that stops this device receiving pushes for a dead uid.
+        fcmService.unregisterToken()
         withContext(Dispatchers.IO) { database.clearAllTables() }
         encryptedPreferences.clear()
     }

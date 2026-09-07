@@ -283,15 +283,22 @@ class CredentialManagerService @Inject constructor(
      * Выполняет выход из аккаунта, очищая все сохраненные токены и завершая Google Sign-In сессию.
      */
     suspend fun signOut(): Pair<Boolean, String?> {
+        // The local credential goes first, unconditionally. `revokeAccess()` is a network call,
+        // and while it sat *before* the clear, an offline sign-out threw past it and left the
+        // refresh token, the access token and the calendar id on disk — for the next account to
+        // sign in on this phone and find its Settings saying "connected as" the previous one,
+        // and its import pulling that person's calendar into this family.
+        encryptedPreferences.clear()
         return try {
             _googleSignInClient?.signOut()?.await()
             _googleSignInClient?.revokeAccess()?.await()
-            encryptedPreferences.clear()
             Log.d(TAG, "User signed out successfully")
             Pair(true, null)
         } catch (e: Exception) {
-            Log.e(TAG, "Error during sign out: ${e.message}", e)
-            Pair(false, "Error during sign out: ${e.message}")
+            // The credential is already gone from this device; the revocation on Google's side
+            // is best-effort and the token expires on its own.
+            Log.e(TAG, "Google revoke failed after the local credential was cleared", e)
+            Pair(true, null)
         }
     }
 

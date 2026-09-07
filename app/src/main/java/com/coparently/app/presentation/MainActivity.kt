@@ -178,13 +178,12 @@ class MainActivity : AppCompatActivity() {
             Log.e("MainActivity", "Error initializing notifications", e)
         }
 
-        // Setup app shortcuts (Android 7.1+)
-        try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1) {
-                com.coparently.app.utils.AppShortcuts.setupShortcuts(this)
-            }
-        } catch (e: Exception) {
-            Log.e("MainActivity", "Error setting up app shortcuts", e)
+        // The recents thumbnail is a screenshot the system keeps of whatever was on screen —
+        // a child's medical profile, the chat — and shows to anyone who opens the app switcher.
+        // Blank it. `FLAG_SECURE` is deliberately not set: a parent needs to be able to
+        // screenshot a message or a schedule as a record (docs/DESIGN-court-record.md).
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            setRecentsScreenshotEnabled(false)
         }
 
         // Load theme preference

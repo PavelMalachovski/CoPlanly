@@ -76,4 +76,25 @@ class ChatUriTest {
         val link = ChatUri.build("alice__bob")
         assertEquals("alice__bob", ChatUri.extractConversationId(link))
     }
+
+    @Test
+    fun `extractConversationId accepts a canonical pair id`() {
+        assertEquals(
+            "alice28charsuidxxxxxxxxxxxxx__bob28charsuidyyyyyyyyyyyyyyy",
+            ChatUri.extractConversationId(
+                "coplanly://chat?conversationId=alice28charsuidxxxxxxxxxxxxx__bob28charsuidyyyyyyyyyyyyyyy"
+            )
+        )
+    }
+
+    @Test
+    fun `extractConversationId refuses anything that is not two uids`() {
+        // A crafted link is one `am start` away: an id with a path separator used to throw
+        // inside the navigation call, and an arbitrary string opened an empty thread.
+        assertNull(ChatUri.extractConversationId("coplanly://chat?conversationId=a/b"))
+        assertNull(ChatUri.extractConversationId("coplanly://chat?conversationId=single-uid"))
+        assertNull(ChatUri.extractConversationId("coplanly://chat?conversationId=alice__"))
+        assertNull(ChatUri.extractConversationId("coplanly://chat?conversationId=alice__bob__carol"))
+        assertNull(ChatUri.extractConversationId("coplanly://chat?conversationId=al ice__bob"))
+    }
 }

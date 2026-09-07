@@ -188,6 +188,35 @@ describe('acceptPairingInvitation', () => {
     assert.strictEqual(db._docs.users.bob.role, 'dad');
   });
 
+  it('refuses a code that was spent between the lookup and the transaction', async () => {
+    // Two accounts redeeming one code at the same moment both passed the plain read at the
+    // top of the function; only the transaction can see that the first commit has already
+    // marked the invitation accepted. Without the re-read the inviter ended up with a second
+    // co-parent, holding a parent's access, on the strength of a code that had been spent.
+    const db = fakeDb({
+      invitations: {
+        inv1: {id: 'inv1', status: 'pending', fromUserId: 'alice', toEmail: ''},
+      },
+      users: {
+        alice: {id: 'alice', name: 'Alice', role: 'mom'},
+        bob: {id: 'bob', name: 'Bob'},
+      },
+    });
+    const plainTransaction = db.runTransaction.bind(db);
+    db.runTransaction = (fn) => plainTransaction((tx) => {
+      // The other redeemer's commit lands before this transaction reads.
+      db._docs.invitations.inv1.status = 'accepted';
+      return fn(tx);
+    });
+
+    await assert.rejects(
+        () => myFunctions.acceptPairingInvitationImpl(
+            db, 'bob', 'bob@example.com', {code: null, invitationId: 'inv1'}),
+        (err) => err.details && err.details.reason === 'invitation-not-pending',
+    );
+    assert.strictEqual(db._docs.users.bob.partnerId, undefined, 'nothing may be paired');
+  });
+
   it('records the relationship as a family document naming both adults', async () => {
     // `families/{id}.members` is what the security rules read to decide who may see the
     // records a pair shares. It is written here, as admin, and by no client ever — the

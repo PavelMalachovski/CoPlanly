@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Cleartext is off on every API level. The manifest's default only forbids it from API 28, and
+  minSdk is 26: on the two levels below, an `http://` URL — a co-parent's profile photo, say,
+  which is a field the *other* parent writes — would have been fetched in the clear.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+</network-security-config>

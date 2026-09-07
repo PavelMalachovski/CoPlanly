@@ -214,6 +214,27 @@ describe('Part 1d: messages', () => {
     })));
   });
 
+  it('denies sending once the pairing behind the thread has ended', async () => {
+    // Unpair keeps the thread for its history; it must not keep the writing. An ex-partner
+    // who could still post had exactly the channel the notification_queue rule closed,
+    // reopened through chat — and the server pushed it to the other parent's lock screen.
+    await seed(env, {
+      'users/alice-uid': {name: 'Alice', email: 'a@x.test', partnerId: ''},
+      'users/bob-uid': {name: 'Bob', email: 'b@x.test', partnerId: ''},
+    });
+    const db = env.authenticatedContext(ALICE).firestore();
+    await assertFails(db.doc('messages/msg-2').set(messageDoc({id: 'msg-2'})));
+  });
+
+  it('still lets a participant read the history after the pairing has ended', async () => {
+    await seed(env, {
+      'messages/msg-1': messageDoc({}),
+      'users/alice-uid': {name: 'Alice', email: 'a@x.test', partnerId: ''},
+      'users/bob-uid': {name: 'Bob', email: 'b@x.test', partnerId: ''},
+    });
+    await assertSucceeds(env.authenticatedContext(ALICE).firestore().doc('messages/msg-1').get());
+  });
+
   it('denies sending into a conversation that does not exist', async () => {
     const db = env.authenticatedContext(ALICE).firestore();
     await assertFails(db.doc('messages/msg-1').set(messageDoc({conversationId: 'nope'})));

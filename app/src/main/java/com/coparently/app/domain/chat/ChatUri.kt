@@ -1,5 +1,7 @@
 package com.coparently.app.domain.chat
 
+import com.coparently.app.domain.family.FamilyKey
+
 /**
  * The `coplanly://chat` link a chat-message push notification opens.
  *
@@ -51,9 +53,28 @@ object ChatUri {
      * with no Android dependency.
      */
     fun extractConversationId(input: String): String? =
-        CONVERSATION_ID_PATTERN.find(input)?.groupValues?.get(1)?.takeIf { it.isNotBlank() }
+        CONVERSATION_ID_PATTERN.find(input)?.groupValues?.get(1)?.takeIf { isConversationId(it) }
+
+    /**
+     * Whether [id] has the one shape a conversation id can have: two uids joined by `__`, as
+     * `ConversationKey.of` builds it.
+     *
+     * The link is a custom scheme any app on the device may open, and the id used to pass
+     * straight into a navigation route: a `/` in it threw inside `NavController.navigate` —
+     * a crash of the exported activity on demand — and an arbitrary string opened an empty
+     * thread that the read marks and a typed draft were then filed under. Refusing anything
+     * that is not a pair id costs nothing legitimate: the only producer of these links is
+     * `notifyOfChatMessage`, which copies the id off a real conversation.
+     */
+    fun isConversationId(id: String): Boolean {
+        val members = FamilyKey.membersOf(id) ?: return false
+        return UID.matches(members.first) && UID.matches(members.second)
+    }
 
     private const val CONVERSATION_ID_PARAM = "conversationId"
 
     private val CONVERSATION_ID_PATTERN = Regex("$CONVERSATION_ID_PARAM=([^&]+)")
+
+    /** A Firebase uid: letters and digits, 28 in practice; bounded rather than exact. */
+    private val UID = Regex("[A-Za-z0-9]{1,128}")
 }

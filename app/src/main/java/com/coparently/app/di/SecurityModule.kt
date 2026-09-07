@@ -1,9 +1,7 @@
 package com.coparently.app.di
 
 import android.content.Context
-import com.coparently.app.data.crashlytics.CrashlyticsManager
 import com.coparently.app.data.security.EncryptionManager
-import com.coparently.app.utils.security.SecurityAudit
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -13,6 +11,11 @@ import javax.inject.Singleton
 
 /**
  * Hilt module for providing security-related dependencies.
+ *
+ * `SecurityAudit` used to be provided here too. It was injected nowhere, half its checks were
+ * `TODO` stubs, and `isCertificatePinningEnabled()` returned a hard-coded `true` — a
+ * self-assessment that would have reported the app as pinned. Deleted rather than kept as a
+ * reminder (September 2026).
  */
 @Module
 @InstallIn(SingletonComponent::class)
@@ -24,15 +27,5 @@ object SecurityModule {
         @ApplicationContext context: Context
     ): EncryptionManager {
         return EncryptionManager(context)
-    }
-
-    @Provides
-    @Singleton
-    fun provideSecurityAudit(
-        @ApplicationContext context: Context,
-        crashlyticsManager: CrashlyticsManager,
-        encryptionManager: EncryptionManager
-    ): SecurityAudit {
-        return SecurityAudit(context, crashlyticsManager, encryptionManager)
     }
 }

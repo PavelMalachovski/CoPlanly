@@ -142,6 +142,43 @@ describe('Part 1d: budgets', () => {
   });
 });
 
+describe('a stranger cannot file into another family\'s ledger', () => {
+  let env;
+
+  before(async () => {
+    env = await testEnv(PROJECT, CURRENT_RULES);
+  });
+
+  beforeEach(async () => {
+    await env.clearFirestore();
+    await seed(env, PAIRED_USERS);
+  });
+
+  it('refuses an expense stamped with a family the writer is not in', async () => {
+    // The create rule bound only the author. Carol, paired with nobody, could file an expense
+    // into Alice and Bob's family: their family-filtered query returned it, the balance
+    // counted it, and neither of them could delete a document Carol created.
+    const carol = env.authenticatedContext(CAROL).firestore();
+    await assertFails(carol.doc('expenses/planted').set(expenseDoc({
+      id: 'planted', createdByFirebaseUid: CAROL, familyId: FAMILY,
+    })));
+  });
+
+  it('refuses a budget stamped with a family the writer is not in', async () => {
+    const carol = env.authenticatedContext(CAROL).firestore();
+    await assertFails(carol.doc('budgets/planted').set(budgetDoc({
+      id: 'planted', createdByFirebaseUid: CAROL, familyId: FAMILY,
+    })));
+  });
+
+  it('still lets an unpaired parent record an expense of their own, unstamped', async () => {
+    const carol = env.authenticatedContext(CAROL).firestore();
+    await assertSucceeds(carol.doc('expenses/own').set(expenseDoc({
+      id: 'own', createdByFirebaseUid: CAROL, familyId: '',
+    })));
+  });
+});
+
 describe('Part 1d: expenses (read, create, update)', () => {
   let env;
 
@@ -225,6 +262,44 @@ describe('Part 1d: change_requests', () => {
   it('denies creating a request between two other people', async () => {
     const db = env.authenticatedContext(CAROL).firestore();
     await assertFails(db.doc('change_requests/cr-1').set(changeRequestDoc({})));
+  });
+
+  it('refuses the addressee rewriting what the request asked for while answering it', async () => {
+    // An update is a decision, never a rewrite: the requester's device overwrites its copy with
+    // whatever comes back marked ACCEPTED, in a product whose records settle disputes.
+    await seed(env, {'change_requests/cr-1': changeRequestDoc({})});
+    const bob = env.authenticatedContext(BOB).firestore();
+    await assertFails(bob.doc('change_requests/cr-1').update({
+      status: 'ACCEPTED', respondedAt: '2026-08-02T10:00:00', reason: 'Changed my mind',
+    }));
+  });
+
+  it('lets the addressee answer, and the requester withdraw', async () => {
+    await seed(env, {'change_requests/cr-1': changeRequestDoc({})});
+    const bob = env.authenticatedContext(BOB).firestore();
+    await assertSucceeds(bob.doc('change_requests/cr-1').update({
+      status: 'ACCEPTED', respondedAt: '2026-08-02T10:00:00',
+    }));
+    await seed(env, {'change_requests/cr-2': changeRequestDoc({id: 'cr-2'})});
+    const alice = env.authenticatedContext(ALICE).firestore();
+    await assertSucceeds(alice.doc('change_requests/cr-2').update({
+      status: 'CANCELLED', respondedAt: '2026-08-02T10:00:00',
+    }));
+  });
+
+  it('refuses re-addressing a request to a third uid', async () => {
+    await seed(env, {'change_requests/cr-1': changeRequestDoc({})});
+    const bob = env.authenticatedContext(BOB).firestore();
+    await assertFails(bob.doc('change_requests/cr-1').update({requestedTo: CAROL}));
+  });
+
+  it('refuses a stranger stamping this family on a request', async () => {
+    // Carol is nobody's co-parent here, so the create is refused on that ground already; the
+    // family stamp is the second lock, for a co-parent of the author who is not in *this* family.
+    const carol = env.authenticatedContext(CAROL).firestore();
+    await assertFails(carol.doc('change_requests/cr-9').set(changeRequestDoc({
+      id: 'cr-9', requestedBy: CAROL, requestedTo: ALICE, familyId: FAMILY,
+    })));
   });
 
   it('serves the requestedTo query the inbox runs', async () => {

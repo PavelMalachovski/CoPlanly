@@ -30,9 +30,11 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.coparently.app.R
 
 /**
  * Branded startup splash: a violet background with the CoPlanly wordmark and a
@@ -111,7 +113,7 @@ fun SplashScreen(
                 // out), so the splash badge and the home-screen icon share one shape
                 // and the whole thing stays in the single violet-and-white palette.
                 Image(
-                    painter = painterResource(com.coparently.app.R.drawable.ic_calendar_splash),
+                    painter = painterResource(R.drawable.ic_calendar_splash),
                     contentDescription = null,
                     modifier = Modifier
                         .fillMaxSize()
@@ -121,7 +123,7 @@ fun SplashScreen(
 
             // Wordmark
             Text(
-                text = "CoPlanly",
+                text = stringResource(R.string.app_name),
                 color = Color.White,
                 fontSize = 34.sp,
                 fontWeight = FontWeight.Bold,
@@ -132,7 +134,7 @@ fun SplashScreen(
 
             // Tagline
             Text(
-                text = "Shared calendar for co-parents",
+                text = stringResource(R.string.common_splash_tagline),
                 color = Color.White.copy(alpha = 0.85f),
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium,

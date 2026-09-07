@@ -359,6 +359,34 @@ describe('unpairCoParentImpl', () => {
     });
   });
 
+  describe('a co-parent whose partner also has another co-parent', () => {
+    it('tears the link down from the side the singular partnerId does not name', async () => {
+      // Alice paired with Bob first, so her singular `partnerId` still says Bob; Carol is only
+      // in `partnerIds`. Comparing the singular field alone treated Carol's unpair as a
+      // half-torn link: it cleared Carol's side, queued no notice, and left Alice's
+      // `partnerIds` naming Carol — so `isPartnerOf(alice)` stayed true for Carol after the app
+      // had told her the link was over.
+      const db = fakeDb({
+        users: {
+          alice: {id: 'alice', name: 'Alice', partnerId: 'bob', partnerIds: ['bob', 'carol']},
+          bob: {id: 'bob', name: 'Bob', partnerId: 'alice', partnerIds: ['alice']},
+          carol: {id: 'carol', name: 'Carol', partnerId: 'alice', partnerIds: ['alice']},
+        },
+        events: {},
+        child_info: {},
+      });
+
+      const result = await unpairCoParentImpl(db, 'carol', 'alice');
+
+      assert.strictEqual(result.unpairedFrom, 'alice');
+      assert.deepStrictEqual(db._docs.users.alice.partnerIds, ['bob']);
+      assert.strictEqual(db._docs.users.alice.partnerId, 'bob', 'the first pairing is untouched');
+      assert.deepStrictEqual(db._docs.users.carol.partnerIds || [], []);
+      assert.strictEqual(queuedNotifications(db).length, 1);
+      assert.strictEqual(queuedNotifications(db)[0].data.targetUserId, 'alice');
+    });
+  });
+
   describe('the pairing_removed notification', () => {
     it('is queued even when the sweep behind it then fails', async () => {
       const db = fakeDb(pairedSeed(), {failSweepFor: 'alice'});

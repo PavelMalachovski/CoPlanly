@@ -118,7 +118,12 @@ exports.sendNotification = functions.firestore
           return null;
         }
 
-        const message = buildFcmMessage(fcmToken, notificationData.data);
+        // The addressee rides along in the data. A token identifies a *device*, and the device
+        // may since have signed in as somebody else: the receiving service compares this with
+        // the signed-in uid and drops a push meant for the previous user rather than showing
+        // their co-parent's chat on the lock screen of whoever holds the phone now.
+        const message = buildFcmMessage(fcmToken, Object.assign(
+            {}, notificationData.data, {targetUserId: notificationData.targetUserId}));
 
         // Отправка уведомления
         const response = await admin.messaging().send(message);
@@ -172,10 +177,17 @@ exports.cleanupOldNotifications = functions.pubsub
 
       console.log(`Cleaning up notifications older than ${thirtyDaysAgo.toISOString()}`);
 
-      const oldNotificationsQuery = await admin.firestore()
-          .collection('notification_queue')
-          .where('createdAt', '<', admin.firestore.Timestamp.fromDate(thirtyDaysAgo))
-          .get();
+      // Two shapes of `createdAt`, so two queries: the Cloud Functions in this file stamp a
+      // server `Timestamp`, while a client enqueue (`FcmService.queueNotificationForUser`)
+      // writes epoch millis. A `<` on a Timestamp matches only Timestamps, so the millis rows —
+      // every client-sent push, which is most of them — were never cleaned and the queue grew
+      // without bound.
+      const queue = admin.firestore().collection('notification_queue');
+      const [byTimestamp, byMillis] = await Promise.all([
+        queue.where('createdAt', '<', admin.firestore.Timestamp.fromDate(thirtyDaysAgo)).get(),
+        queue.where('createdAt', '<', thirtyDaysAgo.getTime()).get(),
+      ]);
+      const oldNotificationsQuery = {docs: byTimestamp.docs.concat(byMillis.docs)};
 
       // Chunk the deletes: Firestore rejects a batch of more than 500 operations, so a single
       // batch over every stale notification threw INVALID_ARGUMENT once the backlog crossed
@@ -410,12 +422,22 @@ async function acceptPairingInvitationImpl(db, acceptingUserId, acceptingEmail, 
   let slots;
 
   await db.runTransaction(async (tx) => {
-    const [inviterSnap, accepterSnap] = await Promise.all([
-      tx.get(inviterRef), tx.get(accepterRef),
+    const [inviterSnap, accepterSnap, inviteSnap] = await Promise.all([
+      tx.get(inviterRef), tx.get(accepterRef), tx.get(inviteRef),
     ]);
     if (!inviterSnap.exists || !accepterSnap.exists) {
       throw new functions.https.HttpsError(
           'not-found', 'User profile missing', {reason: 'not-found'});
+    }
+    // Re-checked under the transaction, as the guest and friend paths already do: the read at
+    // the top of this function is a plain `get()`, and two accounts redeeming the same code at
+    // once both passed it. The second commit would then pair the inviter with a second person
+    // on the strength of a code that had already been spent — an extra co-parent, with a
+    // parent's access, that surviving the first one's unpair.
+    if (!inviteSnap.exists || inviteSnap.data().status !== 'pending') {
+      throw new functions.https.HttpsError(
+          'failed-precondition', 'Invitation is no longer pending',
+          {reason: 'invitation-not-pending'});
     }
     // Being paired is no longer a reason to refuse: a person may co-parent with more than one
     // other adult, and the second relationship is created exactly here. What is still refused
@@ -1471,7 +1493,13 @@ async function unpairCoParentImpl(db, callerUid, requestedPartnerId) {
     // Returning without doing so left anyone whose ex deleted their account
     // permanently "paired", with no way out: the unpair button would keep
     // succeeding and keep changing nothing.
-    if (!partnerSnap.exists || partnerSnap.data().partnerId !== callerUid) {
+    //
+    // Mutual means *either* shape of the partner's document names the caller. Comparing the
+    // singular `partnerId` alone treated every multi-family link as half-torn from the second
+    // co-parent's side — Alice, paired with Bob and then Carol, keeps `partnerId: bob`, so Carol
+    // unpairing from her cleared only Carol's half, left Alice's `partnerIds` naming Carol, and
+    // `isPartnerOf(alice)` stayed true for Carol after the app had reported the link ended.
+    if (!partnerSnap.exists || !partnersOf(partnerSnap.data()).includes(callerUid)) {
       tx.update(callerRef, withPartnerRemoved(callerData, partnerId, {
         pendingRevocationOf: revokeFrom,
       }));
@@ -2419,6 +2447,15 @@ async function notifyOfChatMessage(db, message) {
   const recipient = participants.find((uid) => uid !== message.senderId);
   if (!recipient) return;
 
+  // The pairing behind the thread must still be live, and the name on the push is the one the
+  // sender's own profile carries — never the `senderName` the message document was written
+  // with. `firestore.rules` now refuses a message once the pair has unpaired, but a document
+  // that predates that rule, or a rules deploy that lags this function, must not become a way
+  // for an ex-partner to put text on the other parent's lock screen under any name they like.
+  const senderSnap = await db.collection('users').doc(message.senderId).get();
+  const sender = senderSnap.exists ? (senderSnap.data() || {}) : null;
+  if (!sender || !partnersOf(sender).includes(recipient)) return;
+
   const readMark = (conversation.lastReadAt || {})[recipient] || 0;
   const parsedTimestamp = sentAtMillisOf(message.timestamp);
   const sentAt = Number.isFinite(parsedTimestamp) ? parsedTimestamp : Date.now();
@@ -2435,7 +2472,7 @@ async function notifyOfChatMessage(db, message) {
       // title *is* the sender and its body *is* the message — but only this function has seen
       // the message, and the rule refuses `chat_message` from a client, so relaying it here is
       // not the hole that relaying the others was.
-      actorName: message.senderName || '',
+      actorName: sender.name || '',
       preview: String(message.content || '').slice(0, CHAT_MESSAGE_PREVIEW_LENGTH),
     },
     status: 'pending',
@@ -2593,18 +2630,41 @@ exports.scrubFromAudiences = scrubFromAudiences;
 async function deleteAccountDataImpl(db, uid) {
   const removed = {};
 
-  // Tear the co-parent link down first, while both accounts still exist. This also runs the
+  // Every co-parent, read before any of the links come down: unpairing clears the list this
+  // is read from, and the parenting plans below are keyed by the pair.
+  const profileSnap = await db.collection('users').doc(uid).get();
+  const partners = partnersOf(profileSnap.exists ? profileSnap.data() : null);
+
+  // Tear each co-parent link down first, while both accounts still exist. This also runs the
   // shared-audience revocation unpair already owns, so the ex-partner is out of this user's
-  // documents before those documents are removed.
+  // documents before those documents are removed. One call per relationship: with two
+  // co-parents an unnamed unpair is refused as ambiguous, and an account erased with its
+  // pairings intact left every co-parent's `partnerIds` naming a uid nobody could sign in as.
   let unpairedFrom = null;
-  try {
-    const unpair = await unpairCoParentImpl(db, uid);
-    unpairedFrom = unpair.unpairedFrom;
-  } catch (err) {
-    // An account with no partner, or a sweep that could not finish, must not stop an erasure
-    // request. The deletions below remove the same documents the sweep would have narrowed.
-    console.error(`Unpair during account deletion failed for ${uid}`, err);
+  for (const partnerId of partners.length > 0 ? partners : [null]) {
+    try {
+      const unpair = await unpairCoParentImpl(db, uid, partnerId);
+      unpairedFrom = unpairedFrom || unpair.unpairedFrom;
+    } catch (err) {
+      // An account with no partner, or a sweep that could not finish, must not stop an erasure
+      // request. The deletions below remove the same documents the sweep would have narrowed.
+      console.error(`Unpair during account deletion failed for ${uid}`, err);
+    }
   }
+
+  // The parenting plan is keyed by the pair and holds this parent's own answers under their
+  // uid — personal data the erasure has to reach. The co-parent's half goes with it: a plan is
+  // two halves and a derived agreement (CLAUDE.md item 21), and half a plan with nobody to
+  // agree it with is the same "answering nothing" a half-deleted chat would be.
+  removed.parenting_plans = 0;
+  for (const partnerId of partners) {
+    await db.collection('parenting_plans').doc(custodyModelKey(uid, partnerId)).delete();
+    removed.parenting_plans += 1;
+  }
+
+  // The Google OAuth fingerprint (SEC-1 §2). Nothing else deletes it, and a fingerprint of a
+  // refresh token issued to an account that no longer exists has no reason to remain.
+  await db.collection('google_oauth').doc(uid).delete();
 
   for (const collection of AUTHORED_COLLECTIONS) {
     removed[collection] = await deleteQueryInBatches(

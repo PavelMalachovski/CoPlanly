@@ -64,27 +64,6 @@ class FirestoreUserDataSource @Inject constructor(
     }
 
     /**
-     * Gets a user by email.
-     * Uses DEFAULT source which tries server first, falls back to cache automatically if offline.
-     */
-    suspend fun getUserByEmail(email: String): Map<String, Any?>? {
-        return try {
-            // Use DEFAULT source - tries server first, automatically falls back to cache if offline
-            val snapshot = firestore.collection(usersCollection)
-                .whereEqualTo("email", email)
-                .limit(1)
-                .get()
-                .await()
-
-            android.util.Log.d("FirestoreUserDataSource", "Got user by email from ${if (snapshot.metadata.isFromCache) "cache" else "server"}: $email")
-            snapshot.documents.firstOrNull()?.data
-        } catch (e: Exception) {
-            android.util.Log.e("FirestoreUserDataSource", "Failed to get user by email: $email", e)
-            null
-        }
-    }
-
-    /**
      * Creates an invitation.
      */
     @Suppress("UNUSED_PARAMETER")
@@ -123,33 +102,6 @@ class FirestoreUserDataSource @Inject constructor(
         } catch (e: Exception) {
             android.util.Log.e("FirestoreUserDataSource", "Failed to get invitation: $invitationId", e)
             null
-        }
-    }
-
-    /**
-     * Gets invitations for a specific email.
-     * Uses DEFAULT source which tries server first, falls back to cache automatically if offline.
-     */
-    suspend fun getInvitationsForEmail(email: String): List<Map<String, Any?>> {
-        // Validate email before making request
-        if (email.isBlank()) {
-            android.util.Log.w("FirestoreUserDataSource", "Attempted to get invitations with blank email")
-            return emptyList()
-        }
-
-        return try {
-            // Use DEFAULT source - tries server first, automatically falls back to cache if offline
-            val snapshot = firestore.collection(invitationsCollection)
-                .whereEqualTo("toEmail", email)
-                .whereEqualTo("status", "pending")
-                .get()
-                .await()
-
-            android.util.Log.d("FirestoreUserDataSource", "Got invitations from ${if (snapshot.metadata.isFromCache) "cache" else "server"}: $email")
-            snapshot.documents.map { it.data!! }
-        } catch (e: Exception) {
-            android.util.Log.e("FirestoreUserDataSource", "Failed to get invitations: $email", e)
-            emptyList()
         }
     }
 

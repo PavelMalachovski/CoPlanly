@@ -2,6 +2,7 @@ package com.coparently.app.presentation.sync
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.domain.onboarding.OnboardingState
 import com.coparently.app.domain.repository.ChildInfoRepository
@@ -30,7 +31,8 @@ class AuthStateViewModel @Inject constructor(
     private val firebaseAuthService: FirebaseAuthService,
     private val userRepository: UserRepository,
     private val childInfoRepository: ChildInfoRepository,
-    private val petRepository: PetRepository
+    private val petRepository: PetRepository,
+    private val fcmService: FcmService
 ) : ViewModel() {
 
     private val _isAuthenticated = MutableStateFlow<Boolean?>(null)
@@ -88,10 +90,15 @@ class AuthStateViewModel @Inject constructor(
     private suspend fun resolveOnboarding(uid: String): Boolean = try {
         withTimeoutOrNull(ONBOARDING_LOAD_TIMEOUT_MILLIS) {
             val account = userRepository.observeUserById(uid).first { it != null }
-            val hasChildInfo = childInfoRepository.getAllChildInfo().first().isNotEmpty()
+            // Only records this account created are evidence that it has been through the
+            // wizard. The wizard links the co-parent first, so a second parent's phone holds the
+            // first one's children within seconds of pairing — see `OnboardingState.isOwnRecord`.
+            val hasChildInfo = childInfoRepository.getAllChildInfo().first()
+                .any { OnboardingState.isOwnRecord(uid, it.createdByFirebaseUid) }
             // A pet counts as evidence too. Counting children alone handed the questionnaire to
             // a pets-only family on every launch.
-            val hasPets = petRepository.getAllPets().first().isNotEmpty()
+            val hasPets = petRepository.getAllPets().first()
+                .any { OnboardingState.isOwnRecord(uid, it.createdByFirebaseUid) }
             OnboardingState.isNeeded(account, hasChildInfo, hasPets)
         } ?: false
     } catch (e: CancellationException) {
@@ -117,6 +124,10 @@ class AuthStateViewModel @Inject constructor(
      */
     fun signOut() {
         viewModelScope.launch {
+            // Before the session ends, while the account can still write its own document: a
+            // token that stays on the profile keeps this phone receiving the account's pushes —
+            // the co-parent's chat included — for whoever signs in next.
+            fcmService.unregisterToken()
             firebaseAuthService.signOutCompletely()
             refreshAuthState()
         }

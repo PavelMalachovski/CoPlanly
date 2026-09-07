@@ -822,10 +822,14 @@ fun SettingsScreen(
             onConfirm = {
                 showSignOutConfirm = false
                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                // Google Calendar sync first, then Firebase auth, then leave the screen.
-                coroutineScope.launch { syncViewModel.signOut() }
-                authStateViewModel.signOut()
-                onSignOut?.invoke()
+                // Google Calendar sync first, then Firebase auth, then leave the screen — in
+                // that order, on one coroutine. Launching the Google half detached let the
+                // Firebase sign-out (and the screen change behind it) run ahead of it.
+                coroutineScope.launch {
+                    syncViewModel.signOut()
+                    authStateViewModel.signOut()
+                    onSignOut?.invoke()
+                }
             }
         )
     }

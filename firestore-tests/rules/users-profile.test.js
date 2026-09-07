@@ -108,23 +108,46 @@ describe('users profile: the identity write ensureProfile performs', () => {
     if (stored.email !== 'alice@example.com') throw new Error('email was not written');
   });
 
-  it('would have lost that state under a full set, which the rules do not prevent', async () => {
-    // The hazard the removed `upsertUser` carried: the rules happily allow an owner to
-    // replace their own document, so nothing server-side would have caught the deletion
-    // of `pendingRevocationOf` — the marker the unpair sweep leaves behind to remember
-    // whose shared access it has not finished revoking. Merge is the only safeguard.
+  it('refuses a full set that would drop the server-owned pairing state', async () => {
+    // The hazard the removed `upsertUser` carried: a full replace erased `partnerId` along
+    // with `pendingRevocationOf`. The rules used to allow it — merge was the only safeguard.
+    // `partnerId`, `partnerIds` and `role` are server-owned now, so a write that moves any of
+    // them is refused whatever shape it takes.
     await seed(env, {
       [`users/${ALICE}`]: {partnerId: BOB, pendingRevocationOf: [BOB]},
     });
 
-    await assertSucceeds(
+    await assertFails(
         env.authenticatedContext(ALICE).firestore()
             .doc(`users/${ALICE}`).set(IDENTITY_PATCH));
+  });
 
-    const stored = await readRaw(env, `users/${ALICE}`);
-    if (stored.pendingRevocationOf !== undefined) {
-      throw new Error('expected the full set to have erased pendingRevocationOf');
-    }
+  it('refuses the owner moving their own slot or pairing', async () => {
+    // A parent who could set their own slot would take the co-parent's colour and re-point
+    // what `parentOwner` means across the calendar; both in one slot switches the split off.
+    await seed(env, {
+      [`users/${ALICE}`]: {name: 'Alice', email: 'alice@example.com', role: 'mom', partnerId: BOB, partnerIds: [BOB]},
+    });
+    const alice = env.authenticatedContext(ALICE).firestore();
+    await assertFails(alice.doc(`users/${ALICE}`).update({role: 'dad'}));
+    await assertFails(alice.doc(`users/${ALICE}`).update({partnerIds: [BOB, STRANGER]}));
+    await assertFails(alice.doc(`users/${ALICE}`).update({partnerId: ''}));
+  });
+
+  it('still accepts a write that repeats the stored slot unchanged', async () => {
+    await seed(env, {
+      [`users/${ALICE}`]: {name: 'Alice', email: 'alice@example.com', role: 'mom', partnerId: BOB},
+    });
+    const alice = env.authenticatedContext(ALICE).firestore();
+    await assertSucceeds(alice.doc(`users/${ALICE}`).set({role: 'mom', name: 'Alice N'}, {merge: true}));
+  });
+
+  it('bounds the name on update as it does on create', async () => {
+    await seed(env, {
+      [`users/${ALICE}`]: {name: 'Alice', email: 'alice@example.com', role: 'mom'},
+    });
+    const alice = env.authenticatedContext(ALICE).firestore();
+    await assertFails(alice.doc(`users/${ALICE}`).update({name: 'x'.repeat(5000)}));
   });
 
   it('rejects a create that carries no name', async () => {
