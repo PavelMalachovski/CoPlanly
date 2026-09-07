@@ -3,22 +3,28 @@ package com.coparently.app.presentation.onboarding
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.FamilySettingsRepository
+import com.coparently.app.data.sync.SyncRequester
 import com.coparently.app.domain.expenses.SplitRatio
 import com.coparently.app.domain.expenses.WHOLE_PERCENT
 import com.coparently.app.domain.holidays.HolidayCountry
 import com.coparently.app.domain.model.ChildInfo
+import com.coparently.app.domain.model.CustodyModelType
 import com.coparently.app.domain.model.EmergencyContact
 import com.coparently.app.domain.model.FamilyKind
-import com.coparently.app.presentation.theme.ParentColorChoice
 import com.coparently.app.domain.model.MedicalProfile
+import com.coparently.app.domain.model.PairingState
 import com.coparently.app.domain.model.Pet
 import com.coparently.app.domain.model.PetSpecies
 import com.coparently.app.domain.repository.ChildInfoRepository
+import com.coparently.app.domain.repository.PairingRepository
 import com.coparently.app.domain.repository.PetRepository
 import com.coparently.app.domain.repository.UserRepository
+import com.coparently.app.presentation.theme.ParentColorChoice
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -27,6 +33,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeoutOrNull
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.UUID
@@ -45,6 +52,9 @@ private val DEFAULT_CARES_FOR = FamilyKind.DEFAULT
 
 /** Half each, which is what a family splits by until they agree otherwise. */
 private const val EVEN_SPLIT_PERCENT = 50
+
+/** The second parent slot. Slot 1's share is what the split is stored as; slot 2's is the rest. */
+private const val SLOT_TWO = "dad"
 
 /**
  * One child the wizard is setting up.
@@ -71,6 +81,9 @@ private const val EVEN_SPLIT_PERCENT = 50
  * @property relatives Emergency contacts for **this** child. They live on the draft rather than
  *   beside it because that is where they live in the data model — `ChildInfo.emergencyContacts`
  *   — and a single flat list landed every contact on whichever child happened to be first.
+ * @property byCoParent True when the record this draft was filled from was created by the
+ *   co-parent. The step says so, because a form that opens full of somebody else's answers
+ *   without saying whose reads as a glitch rather than as help.
  */
 data class ChildDraft(
     val id: String,
@@ -78,7 +91,8 @@ data class ChildDraft(
     val dateOfBirth: LocalDate? = null,
     val allergies: List<String> = emptyList(),
     val medicalProfile: MedicalProfile = MedicalProfile(),
-    val relatives: List<EmergencyContact> = emptyList()
+    val relatives: List<EmergencyContact> = emptyList(),
+    val byCoParent: Boolean = false
 ) {
     /** True while nothing has been entered, which is what makes a draft safe to replace. */
     val isBlank: Boolean
@@ -94,14 +108,83 @@ data class ChildDraft(
  * @property id The id the [Pet] record will have, generated when the draft is created
  * @property name The pet's name; blank means this draft is never written
  * @property species What kind of animal this is
+ * @property byCoParent True when the record was created by the co-parent. See [ChildDraft].
  */
 data class PetDraft(
     val id: String,
     val name: String = "",
-    val species: PetSpecies = PetSpecies.DOG
+    val species: PetSpecies = PetSpecies.DOG,
+    val byCoParent: Boolean = false
 ) {
     /** True while nothing has been entered. See [ChildDraft.isBlank]. */
     val isBlank: Boolean get() = name.isBlank() && species == PetSpecies.DOG
+}
+
+/**
+ * What the wizard knows about the co-parent link.
+ *
+ * Three answers rather than a boolean, because "not yet known" and "nobody" call for different
+ * screens: the first must not claim the parent is alone, and the second must offer them a way
+ * to stop being.
+ */
+sealed interface CoParentLink {
+    /** The pairing listener has not answered yet. */
+    data object Unknown : CoParentLink
+
+    /** No co-parent linked. */
+    data object None : CoParentLink
+
+    /**
+     * Linked.
+     *
+     * @property name The co-parent's display name, possibly blank — an email/password account
+     *   that never set one. The screen substitutes its translated fallback for a blank.
+     */
+    data class Linked(val name: String) : CoParentLink
+}
+
+/**
+ * What the link brought back from the co-parent's side.
+ *
+ * Counts and flags rather than the records themselves: the records land in Room and reach the
+ * steps that show them through the same flows every other screen reads. This is only what the
+ * first step says about them.
+ *
+ * @property children Child records the co-parent created
+ * @property pets Pet records the co-parent created
+ * @property hasCustodySchedule Whether an active custody pattern exists — the pair's, or one
+ *   this device already had
+ * @property hasSplitAgreement Whether the pair has an agreed expense split
+ */
+data class CoParentData(
+    val children: Int = 0,
+    val pets: Int = 0,
+    val hasCustodySchedule: Boolean = false,
+    val hasSplitAgreement: Boolean = false
+) {
+    /** True when nothing has arrived yet. */
+    val isEmpty: Boolean
+        get() = children == 0 && pets == 0 && !hasCustodySchedule && !hasSplitAgreement
+}
+
+/**
+ * Where the fetch of the co-parent's records stands.
+ *
+ * The fetch is bounded: it asks for a sync, watches Room for anything the co-parent created, and
+ * gives up after a while with whatever it found — including nothing, which is a real answer
+ * ("their phone has not synced yet") rather than an error.
+ */
+sealed interface CoParentFetch {
+    /** Not linked, or not started. */
+    data object Idle : CoParentFetch
+
+    /** A sync has been requested and Room is being watched. */
+    data object Running : CoParentFetch
+
+    /**
+     * Finished, with what was found. [found] may be empty: nothing had arrived within the wait.
+     */
+    data class Done(val found: CoParentData) : CoParentFetch
 }
 
 /**
@@ -125,11 +208,26 @@ data class PetDraft(
  * @property pets The pets, on the same terms as [children]
  * @property relativesForId Which child the relatives step is collecting contacts for, or null
  *   to let [relativesChild] fall back to the first named one
+ * @property chosenCaresFor The family answer given on this run, or null while untouched
+ * @property storedCaresFor The answer this account already holds; empty when never answered
+ * @property coParentCaresFor The co-parent's answer, once linked; empty when unknown
+ * @property splitMyPercent **This parent's** share of a shared expense, as a whole percent. The
+ *   slider shows this parent's share because that is the number a person has an opinion about;
+ *   the stored form is slot 1's, and the two coincide only while this device holds slot 1 —
+ *   which pairing can change. The conversion happens on the save path, from a fresh read.
+ * @property splitTouched Whether the slider was moved on this run. Only a moved slider is
+ *   written: an untouched step on a linked account must not create the pair's agreement out
+ *   of a default, ahead of the ratio the co-parent chose before pairing.
+ * @property agreedSplitMyPercent The pair's agreed ratio as this parent's share, or null while
+ *   the pair has none (or there is no pair)
+ * @property coParent What is known about the link
+ * @property fetch Where the fetch of the co-parent's records stands
+ * @property custodyType The active custody pattern's type, or null while there is none
  * @property isSaving True while [OnboardingViewModel.finish]'s write is in flight
  * @property isFinished True once onboarding is recorded as complete and the host may leave
  */
 data class OnboardingUiState(
-    val step: OnboardingStep = OnboardingStep.Intro,
+    val step: OnboardingStep = OnboardingStep.CoParent,
     val name: String = "",
     val dateOfBirth: LocalDate? = null,
     val phone: String = "",
@@ -155,12 +253,35 @@ data class OnboardingUiState(
     val children: List<ChildDraft> = emptyList(),
     val pets: List<PetDraft> = emptyList(),
     val relativesForId: String? = null,
-    val caresFor: Set<FamilyKind> = DEFAULT_CARES_FOR,
-    /** Slot 1's share of a shared expense, as a whole percent. Half each until changed. */
-    val splitMomPercent: Int = EVEN_SPLIT_PERCENT,
+    val chosenCaresFor: Set<FamilyKind>? = null,
+    val storedCaresFor: Set<FamilyKind> = emptySet(),
+    val coParentCaresFor: Set<FamilyKind> = emptySet(),
+    val splitMyPercent: Int = EVEN_SPLIT_PERCENT,
+    val splitTouched: Boolean = false,
+    val agreedSplitMyPercent: Int? = null,
+    val coParent: CoParentLink = CoParentLink.Unknown,
+    val fetch: CoParentFetch = CoParentFetch.Idle,
+    val custodyType: CustodyModelType? = null,
     val isSaving: Boolean = false,
     val isFinished: Boolean = false
 ) {
+    /**
+     * The family answer in force: this run's, else the stored one, else the co-parent's, else
+     * the default.
+     *
+     * The co-parent's answer stands in for an unanswered parent here and nowhere else. The
+     * Settings dialog deliberately refuses to seed from it (see `FamilyKindSource.observeMine`),
+     * because a dialog whose Save writes this parent's row must not put the other parent's words
+     * in their mouth. The wizard is different in kind: a second parent who linked first did so
+     * precisely to inherit what the first one set up, the step shows the answer as ticked chips
+     * they can change, and Next is what turns it into their own. An untouched default of
+     * "children" offered to a family that has already said "pets" would be the wrong guess made
+     * with the right answer in hand.
+     */
+    val caresFor: Set<FamilyKind>
+        get() = chosenCaresFor
+            ?: storedCaresFor.ifEmpty { coParentCaresFor }.ifEmpty { DEFAULT_CARES_FOR }
+
     /**
      * The steps this run will walk, given the family answer.
      *
@@ -175,6 +296,9 @@ data class OnboardingUiState(
 
     /** How many steps this run has. Never `OnboardingStep.entries.size` — most runs are shorter. */
     val stepCount: Int get() = steps.size
+
+    /** True on the first step, which has nowhere to go back to. */
+    val isFirstStep: Boolean get() = step == steps.firstOrNull()
 
     /** True on the step that ends the wizard; leaving it, by any button, finishes onboarding. */
     val isLastStep: Boolean get() = step == steps.lastOrNull()
@@ -195,8 +319,15 @@ data class OnboardingUiState(
             else -> true
         }
 
-    /** Whether this step offers a Skip. */
-    val canSkip: Boolean get() = step.isSkippable
+    /**
+     * Whether this step offers a Skip.
+     *
+     * The co-parent step loses its Skip once there is a co-parent: "Not now" would be declining
+     * a link that already exists, and the only honest button left is the one that moves on.
+     */
+    val canSkip: Boolean
+        get() = step.isSkippable &&
+            !(step == OnboardingStep.CoParent && coParent is CoParentLink.Linked)
 
     /**
      * Whether the relatives step can accept contacts yet.
@@ -220,11 +351,31 @@ data class OnboardingUiState(
      */
     val relativesChild: ChildDraft?
         get() = namedChildren.firstOrNull { it.id == relativesForId } ?: namedChildren.firstOrNull()
+
+    /** The co-parent's name once linked, or null. May be blank — see [CoParentLink.Linked]. */
+    val coParentName: String? get() = (coParent as? CoParentLink.Linked)?.name
+
+    /** True when at least one child on screen came from the co-parent's records. */
+    val childrenFromCoParent: Boolean get() = children.any { it.byCoParent }
+
+    /** True when at least one pet on screen came from the co-parent's records. */
+    val petsFromCoParent: Boolean get() = pets.any { it.byCoParent }
+
+    /** True when the pair already has an agreed split, which the slider opened on. */
+    val splitAgreed: Boolean get() = agreedSplitMyPercent != null
 }
 
 /**
  * Drives the first-run questionnaire: which step is showing, what has been typed into it, and
  * when that reaches Room and Firestore.
+ *
+ * **The co-parent link comes first**, and the rest of the wizard is written to open on whatever
+ * the link brought back. When the pairing listener reports a co-parent, [startFetch] asks for a
+ * sync and watches Room for a bounded while; the child and pet steps fill their untouched drafts
+ * from the records that land, the split step opens on the pair's agreement, and the custody step
+ * reports the shared schedule. None of that is a separate code path: the steps read the same Room
+ * flows whether the records are the parent's own or the co-parent's, and only *say* whose they
+ * are.
  *
  * **Saving happens per step, on Next.** A parent who is interrupted after step 2 and force-stops
  * the app finds their answers already stored, and [prefill] puts them back into the form on the
@@ -236,12 +387,17 @@ data class OnboardingUiState(
  * `users/{uid}` holds right now, and the child's four onto whatever `child_info` holds right now,
  * for the reason `ProfileViewModel.save` documents: a held snapshot carries `partnerId`,
  * `createdByFirebaseUid` and sync flags that belong to whoever last wrote them, not to this form.
+ * A record nothing on the step changed is **not** written again: with the co-parent's children on
+ * screen, an unconditional re-write on Next would re-upload their records under this parent's
+ * name and announce an edit that never happened.
  *
- * **The children are read once, not observed.** [prefill] takes the first emission of
- * [ChildInfoRepository.getAllChildInfo] and lets go. A screen-lifetime subscription to the whole
- * list is the exact shape of the `ChildInfoViewModel` defect CLAUDE.md records under "Known
- * issues", where a background sync tick re-emits the list and overwrites the form the user is
- * mid-edit on.
+ * **The children and pets are observed, with one guard.** Every emission of
+ * [ChildInfoRepository.getAllChildInfo] is offered to the drafts, and the drafts take it **only
+ * while every one of them is blank**. That guard is what separates this from the
+ * `ChildInfoViewModel` defect CLAUDE.md records under "Known issues", where a background sync tick
+ * re-emitted the list and overwrote a form mid-edit: here a list with anything typed into it is
+ * never touched. Observing rather than reading once is what pairing-first needs — the records a
+ * second parent came for arrive *after* the wizard is constructed.
  *
  * **Children and pets are lists, and how many there are is never asked.** The steps collect
  * names and the count falls out of them — see [ChildDraft] for why a stored "one or several"
@@ -249,13 +405,24 @@ data class OnboardingUiState(
  *
  * @param userRepository Reads and writes the signed-in parent's own record
  * @param childInfoRepository Reads and writes the child records the wizard fills in
+ * @param petRepository Reads and writes the pet records
+ * @param familySettingsRepository The expense split, agreed or cached
+ * @param pairingRepository Whether there is a co-parent, and who
+ * @param custodyModelRepository The active custody pattern; collecting it mirrors the pair's
+ * @param syncRequester Asks for the sync that brings a new co-parent's records across
  */
 @HiltViewModel
+// Seven collaborators, all injected: a Hilt graph edge list, not a call signature anybody writes
+// by hand, and a wrapper type would only hide which dependencies this screen actually has.
+@Suppress("LongParameterList", "TooManyFunctions")
 class OnboardingViewModel @Inject constructor(
     private val userRepository: UserRepository,
     private val childInfoRepository: ChildInfoRepository,
     private val petRepository: PetRepository,
-    private val familySettingsRepository: FamilySettingsRepository
+    private val familySettingsRepository: FamilySettingsRepository,
+    private val pairingRepository: PairingRepository,
+    private val custodyModelRepository: CustodyModelRepository,
+    private val syncRequester: SyncRequester
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
@@ -283,6 +450,9 @@ class OnboardingViewModel @Inject constructor(
 
     init {
         prefill()
+        observeRecords()
+        observeCustody()
+        observeCoParent()
     }
 
     /**
@@ -293,17 +463,18 @@ class OnboardingViewModel @Inject constructor(
      *
      * Every field is filled **only while it is still untouched**, and a blank stored value is
      * never applied. Both halves of that matter: this runs asynchronously against a Room read,
-     * so a parent who starts typing on the intro's Next before it lands must not have their
-     * answer replaced by the row it finds, and an account whose stored name is the empty string
-     * — every email/password sign-up before the profile screen is opened — must not have that
-     * emptiness written over what they just typed.
+     * so a parent who starts typing before it lands must not have their answer replaced by the
+     * row it finds, and an account whose stored name is the empty string — every email/password
+     * sign-up before the profile screen is opened — must not have that emptiness written over
+     * what they just typed.
      */
     private fun prefill() {
         viewModelScope.launch {
             try {
                 val user = userRepository.getCurrentUser()
-                val storedChildren = childInfoRepository.getAllChildInfo().first()
-                val storedPets = petRepository.getAllPets().first()
+                // The cached ratio is slot 1's share; the slider shows this parent's.
+                val cachedMyPercent = familySettingsRepository.agreedRatioOrDefault()
+                    .myPercent(slotOne = user?.role != SLOT_TWO)
                 _uiState.update { state ->
                     state.copy(
                         name = state.name.orStored(user?.name),
@@ -315,20 +486,8 @@ class OnboardingViewModel @Inject constructor(
                         phone = state.phone.orStored(user?.phone),
                         allergies = state.allergies.orStored(user?.allergies),
                         medicalProfile = state.medicalProfile.orStored(user?.medicalProfile),
-                        // A stored answer wins over the default, but never over one the parent
-                        // has already changed on the step itself.
-                        caresFor = state.caresFor.takeIf { it != DEFAULT_CARES_FOR }
-                            ?: user?.caresFor?.takeIf { it.isNotEmpty() }
-                            ?: DEFAULT_CARES_FOR,
-                        splitMomPercent = state.splitMomPercent.takeIf { it != EVEN_SPLIT_PERCENT }
-                            ?: familySettingsRepository.agreedRatioOrDefault().momPercent,
-                        // Whole-list, not field-by-field: with several drafts there is no
-                        // honest way to merge a stored record into a form the parent may have
-                        // started, so a touched list is left alone entirely. The race is
-                        // theoretical — this runs at construction, while the intro step, which
-                        // collects nothing, is what the parent is looking at.
-                        children = state.children.orStoredChildren(storedChildren),
-                        pets = state.pets.orStoredPets(storedPets)
+                        storedCaresFor = user?.caresFor.orEmpty(),
+                        splitMyPercent = if (state.splitTouched) state.splitMyPercent else cachedMyPercent
                     )
                 }
             } catch (e: CancellationException) {
@@ -339,6 +498,198 @@ class OnboardingViewModel @Inject constructor(
                 // An empty form is a survivable outcome; a crashed wizard on first launch is not.
                 Log.e(TAG, "Failed to prefill the wizard from the existing account", e)
             }
+        }
+    }
+
+    /**
+     * Keeps the child and pet drafts abreast of Room, for as long as every draft is blank.
+     *
+     * See the class doc for why this observes rather than reads once, and for the guard that
+     * makes observing safe. The signed-in uid is read once, up front, to tell this parent's
+     * records from the co-parent's — a record with no creator recorded counts as this parent's.
+     */
+    private fun observeRecords() {
+        viewModelScope.launch {
+            try {
+                val uid = userRepository.getCurrentUserId()
+                childInfoRepository.getAllChildInfo().collect { stored ->
+                    _uiState.update { state ->
+                        state.copy(children = state.children.orStoredChildren(stored, uid))
+                    }
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (
+                @Suppress("TooGenericExceptionCaught") e: Exception
+            ) {
+                Log.e(TAG, "The wizard stopped following the child records", e)
+            }
+        }
+        viewModelScope.launch {
+            try {
+                val uid = userRepository.getCurrentUserId()
+                petRepository.getAllPets().collect { stored ->
+                    _uiState.update { state ->
+                        state.copy(pets = state.pets.orStoredPets(stored, uid))
+                    }
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (
+                @Suppress("TooGenericExceptionCaught") e: Exception
+            ) {
+                Log.e(TAG, "The wizard stopped following the pet records", e)
+            }
+        }
+    }
+
+    /**
+     * Follows the active custody pattern, so the custody step can say whether one exists.
+     *
+     * Collecting [CustodyModelRepository.getActiveModel] is also what folds the pair's shared
+     * document into Room — no other screen is open during the wizard, so without this collector
+     * a second parent would reach the custody step with the co-parent's schedule sitting
+     * unread in Firestore.
+     */
+    private fun observeCustody() {
+        viewModelScope.launch {
+            try {
+                custodyModelRepository.getActiveModel().collect { model ->
+                    _uiState.update { it.copy(custodyType = model?.modelType) }
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (
+                @Suppress("TooGenericExceptionCaught") e: Exception
+            ) {
+                Log.e(TAG, "The wizard stopped following the custody pattern", e)
+            }
+        }
+    }
+
+    /**
+     * Follows the pairing state and starts the fetch the moment a co-parent appears.
+     *
+     * The co-parent's family answer is seeded from here as well — see
+     * [OnboardingUiState.caresFor] for the one place in the app where that is the right seed.
+     */
+    private fun observeCoParent() {
+        viewModelScope.launch {
+            try {
+                pairingRepository.observePairingState().collect { pairing ->
+                    val link = when (pairing) {
+                        PairingState.Loading -> CoParentLink.Unknown
+                        is PairingState.NotPaired -> CoParentLink.None
+                        is PairingState.Paired -> CoParentLink.Linked(pairing.partner.name.trim())
+                    }
+                    _uiState.update { state ->
+                        state.copy(
+                            coParent = link,
+                            coParentCaresFor = (pairing as? PairingState.Paired)
+                                ?.partner?.caresFor.orEmpty()
+                        )
+                    }
+                    if (link is CoParentLink.Linked) startFetch()
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (
+                @Suppress("TooGenericExceptionCaught") e: Exception
+            ) {
+                Log.e(TAG, "The wizard stopped following the pairing state", e)
+            }
+        }
+    }
+
+    /**
+     * Asks for a sync and watches, for a bounded while, for anything the co-parent created.
+     *
+     * Runs once per wizard: the pairing state re-emits on every invite-list change, and a fetch
+     * that restarted on each of them would never report. The wait is a poll over Room rather than
+     * a subscription because three of the four answers are already kept current by the
+     * collectors above; the fourth — the pair's split — is a Firestore document read through
+     * [refreshSplitFromPair], which the poll repeats until it appears or the wait ends.
+     *
+     * Ending with nothing found is a real answer, not a failure: the co-parent's phone widens the
+     * audience of its records on *its* next sync, and until then there is nothing this phone may
+     * read. The step says so, and the collectors above keep listening after the fetch has
+     * reported, so a record that lands later still fills an untouched step.
+     */
+    private fun startFetch() {
+        if (_uiState.value.fetch != CoParentFetch.Idle) return
+        _uiState.update { it.copy(fetch = CoParentFetch.Running) }
+        syncRequester.requestSyncNow()
+        viewModelScope.launch {
+            val found = try {
+                withTimeoutOrNull(FETCH_TIMEOUT_MS) { awaitCoParentData() } ?: coParentData()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (
+                @Suppress("TooGenericExceptionCaught") e: Exception
+            ) {
+                Log.e(TAG, "The fetch of the co-parent's records failed; reporting what is local", e)
+                coParentData()
+            }
+            _uiState.update { it.copy(fetch = CoParentFetch.Done(found)) }
+        }
+    }
+
+    /** Polls until something from the co-parent is on this phone. Bounded by the caller. */
+    private suspend fun awaitCoParentData(): CoParentData {
+        var waited = 0L
+        var nudged = false
+        while (true) {
+            val data = coParentData()
+            if (!data.isEmpty) return data
+            delay(FETCH_POLL_MS)
+            waited += FETCH_POLL_MS
+            // One more request part-way through: the first one may have run before the
+            // co-parent's phone widened its audience, and a run that finds nothing new is cheap.
+            if (!nudged && waited >= FETCH_NUDGE_AFTER_MS) {
+                nudged = true
+                syncRequester.requestSyncNow()
+            }
+        }
+    }
+
+    /** What is on this phone from the co-parent's side, right now. */
+    private suspend fun coParentData(): CoParentData {
+        refreshSplitFromPair()
+        val state = _uiState.value
+        return CoParentData(
+            children = state.children.count { it.byCoParent },
+            pets = state.pets.count { it.byCoParent },
+            hasCustodySchedule = state.custodyType != null,
+            hasSplitAgreement = state.splitAgreed
+        )
+    }
+
+    /**
+     * Reads the pair's agreed split, if there is one, and opens the slider on it.
+     *
+     * Only an untouched slider is moved: a parent who has already chosen must not have their
+     * choice replaced by a document that happened to land. The agreement is remembered either
+     * way, so the step can say it exists and Next can tell "moved back to the agreed value" from
+     * "moved".
+     */
+    private suspend fun refreshSplitFromPair() {
+        if (_uiState.value.coParent !is CoParentLink.Linked) return
+        val settings = try {
+            familySettingsRepository.observeSettings().first()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (
+            @Suppress("TooGenericExceptionCaught") e: Exception
+        ) {
+            Log.w(TAG, "Could not read the pair's expense split", e)
+            null
+        } ?: return
+        val agreed = settings.ratio.myPercent(slotOne = mySlotIsOne())
+        _uiState.update { state ->
+            state.copy(
+                agreedSplitMyPercent = agreed,
+                splitMyPercent = if (state.splitTouched) state.splitMyPercent else agreed
+            )
         }
     }
 
@@ -394,11 +745,8 @@ class OnboardingViewModel @Inject constructor(
      * the child list — the step saves on Next, so a draft removed after one is a record. The
      * delete is a no-op for a draft that never reached Room.
      *
-     * It goes through [ChildInfoRepository.deleteChildInfo], which removes the Firestore document
-     * outright instead of writing a tombstone. That is the defect CLAUDE.md records under "Known
-     * issues" for the child editor's own Delete action, and this is the same call, not a new one:
-     * fixing it there fixes it here. It is also the least harmful place for it — the record is
-     * seconds old and the co-parent has almost certainly never seen it.
+     * It goes through [ChildInfoRepository.deleteChildInfo], which writes a tombstone the
+     * co-parent's phone collects (CQ-19) — the same call the child editor's own Delete makes.
      */
     fun removeChild(id: String) {
         val removed = _uiState.value.children.firstOrNull { it.id == id } ?: return
@@ -434,11 +782,7 @@ class OnboardingViewModel @Inject constructor(
             OnboardingStep.Child -> persist { saveChildren(state) }
             OnboardingStep.Relatives -> persist { saveChildren(state) }
             OnboardingStep.Pet -> persist { savePets(state) }
-            OnboardingStep.Split -> persist {
-                familySettingsRepository.submitRatio(
-                    SplitRatio.ofMomPercent(state.splitMomPercent)
-                )
-            }
+            OnboardingStep.Split -> persist { saveSplit(state) }
             else -> Unit
         }
         leaveStep(state.step)
@@ -474,7 +818,7 @@ class OnboardingViewModel @Inject constructor(
      * profile write as the rest.
      */
     fun setCaresFor(kinds: Set<FamilyKind>) {
-        _uiState.update { it.copy(caresFor = kinds) }
+        _uiState.update { it.copy(chosenCaresFor = kinds) }
     }
 
     /** One pet's name. */
@@ -510,9 +854,11 @@ class OnboardingViewModel @Inject constructor(
             state.copy(pets = state.pets.map { if (it.id == id) transform(it) else it })
         }
 
-    /** The split step's share for slot 1, as a whole percent. */
-    fun setSplitMomPercent(value: Int) {
-        _uiState.update { it.copy(splitMomPercent = value.coerceIn(0, WHOLE_PERCENT)) }
+    /** The split step's slider: this parent's share, as a whole percent. */
+    fun setSplitMyPercent(value: Int) {
+        _uiState.update {
+            it.copy(splitMyPercent = value.coerceIn(0, WHOLE_PERCENT), splitTouched = true)
+        }
     }
 
     /**
@@ -553,9 +899,11 @@ class OnboardingViewModel @Inject constructor(
      * Moves on from [step] — to the next one, or out of the wizard when there is no next one.
      *
      * Both Next and Skip come through here, because on the last step they mean the same thing.
-     * Skipping the co-parent invitation is a supported outcome, not a dead end: it leaves the
-     * parent unpaired on Home, where the app's own "connect your co-parent" prompt lives. An
-     * earlier version advanced blindly and left Skip on that step doing nothing at all.
+     * Skipping the co-parent link is a supported outcome, not a dead end: it leaves the parent
+     * unpaired on Home, where the app's own "connect your co-parent" prompt lives.
+     *
+     * Arriving on the split step re-reads the pair's agreement, so a second parent who got there
+     * after the fetch gave up still opens on the ratio the first one set.
      */
     private fun leaveStep(step: OnboardingStep) {
         if (_uiState.value.isLastStep) {
@@ -564,8 +912,11 @@ class OnboardingViewModel @Inject constructor(
         }
         _uiState.update { state ->
             val steps = state.steps
-            val following = steps.getOrNull(steps.indexOf(state.step) + 1)
+            val following = steps.getOrNull(steps.indexOf(step) + 1)
             following?.let { state.copy(step = it) } ?: state
+        }
+        if (_uiState.value.step == OnboardingStep.Split) {
+            viewModelScope.launch { refreshSplitFromPair() }
         }
     }
 
@@ -596,6 +947,29 @@ class OnboardingViewModel @Inject constructor(
         userRepository.updateUser(fresh.copy(caresFor = state.caresFor))
     }
 
+    /**
+     * Submits the split, if the slider was moved to a value the pair has not already agreed.
+     *
+     * An untouched slider writes nothing. Before the link came first that was harmless either
+     * way; now a second parent reaches this step paired, and an unconditional write of the
+     * default would create the pair's agreement out of "half each" — ahead of, and instead of,
+     * the ratio the first parent chose in their own wizard, which their phone publishes on its
+     * next sync only if no agreement exists yet.
+     *
+     * The slider holds this parent's share and the repository speaks slot 1's, so the number is
+     * converted through a fresh read of the slot — pairing may have moved this device to slot 2
+     * since the step opened (CLAUDE.md item 17: a save path reads, never a stream's `.value`).
+     */
+    private suspend fun saveSplit(state: OnboardingUiState) {
+        if (!state.splitTouched || state.splitMyPercent == state.agreedSplitMyPercent) return
+        val slotOne = mySlotIsOne()
+        val momPercent = if (slotOne) state.splitMyPercent else WHOLE_PERCENT - state.splitMyPercent
+        familySettingsRepository.submitRatio(SplitRatio.ofMomPercent(momPercent))
+    }
+
+    /** Whether this device holds slot 1, from a fresh read. An unknown slot reads as slot 1. */
+    private suspend fun mySlotIsOne(): Boolean = userRepository.getCurrentUser()?.role != SLOT_TWO
+
     /** Writes every named pet. See [saveChildren]. */
     private suspend fun savePets(state: OnboardingUiState) {
         state.pets.forEach { savePetDraft(it) }
@@ -606,7 +980,8 @@ class OnboardingViewModel @Inject constructor(
      *
      * Same shape as [saveChildDraft]: the draft's id **is** the record's id, so a second Next
      * updates rather than duplicating. Nothing is written for a blank name — a nameless pet is
-     * not creatable anywhere else in the app, and would show as an unidentifiable row.
+     * not creatable anywhere else in the app, and would show as an unidentifiable row — and
+     * nothing is written for a record the step left as it found it.
      */
     private suspend fun savePetDraft(draft: PetDraft) {
         val name = draft.name.trim()
@@ -615,6 +990,7 @@ class OnboardingViewModel @Inject constructor(
         val uid = userRepository.getCurrentUserId()
         val now = LocalDateTime.now()
         val existing = petRepository.getPetById(draft.id)
+        if (existing != null && existing.name == name && existing.species == draft.species) return
 
         // `copy()` onto whatever is stored, never a fresh object: the same field-preserving rule
         // the event and child editors follow, so ownership and sync stamps survive.
@@ -668,7 +1044,9 @@ class OnboardingViewModel @Inject constructor(
      *
      * Nothing is written for a blank name: a nameless child is not creatable anywhere else in
      * the app — `AddEditChildInfoScreen` refuses to save one — and it would appear in the child
-     * list as an empty row nobody could identify.
+     * list as an empty row nobody could identify. Nothing is written for a record the step left
+     * exactly as it found it either: re-uploading the co-parent's child under this parent's name
+     * would announce an edit that never happened.
      */
     private suspend fun saveChildDraft(draft: ChildDraft) {
         val name = draft.name.trim()
@@ -677,18 +1055,20 @@ class OnboardingViewModel @Inject constructor(
         val uid = userRepository.getCurrentUserId()
         val now = LocalDateTime.now()
         val existing = childInfoRepository.getChildInfoById(draft.id)
+        val dateOfBirth = draft.dateOfBirth?.atStartOfDay()
+        if (existing != null && existing.isUnchangedBy(draft, name, dateOfBirth)) return
 
         val base = existing ?: ChildInfo(
             id = draft.id,
             childName = name,
-            dateOfBirth = draft.dateOfBirth?.atStartOfDay(),
+            dateOfBirth = dateOfBirth,
             createdAt = now,
             updatedAt = now
         )
         childInfoRepository.upsertChildInfo(
             base.copy(
                 childName = name,
-                dateOfBirth = draft.dateOfBirth?.atStartOfDay(),
+                dateOfBirth = dateOfBirth,
                 allergies = draft.allergies,
                 medicalProfile = draft.medicalProfile,
                 emergencyContacts = draft.relatives,
@@ -703,8 +1083,28 @@ class OnboardingViewModel @Inject constructor(
     private companion object {
         const val TAG = "OnboardingViewModel"
 
+        /** How long the first step watches for the co-parent's records before reporting. */
+        const val FETCH_TIMEOUT_MS = 30_000L
+
+        /** How often the fetch re-reads what has landed. */
+        const val FETCH_POLL_MS = 2_500L
+
+        /** When the fetch asks for its one further sync. */
+        const val FETCH_NUDGE_AFTER_MS = 10_000L
+
         /** A fresh record id for a draft the parent has just opened. */
         fun newDraftId(): String = UUID.randomUUID().toString()
+
+        /** This ratio as the share of whichever slot this device holds. */
+        fun SplitRatio.myPercent(slotOne: Boolean): Int = if (slotOne) momPercent else dadPercent
+
+        /** True when the four fields the wizard edits read exactly as [draft] has them. */
+        fun ChildInfo.isUnchangedBy(draft: ChildDraft, name: String, dateOfBirth: LocalDateTime?): Boolean =
+            childName == name &&
+                this.dateOfBirth == dateOfBirth &&
+                allergies == draft.allergies &&
+                medicalProfile == draft.medicalProfile &&
+                emergencyContacts == draft.relatives
 
         /**
          * The drafts already on screen, unless none has been touched — then the stored records.
@@ -712,8 +1112,10 @@ class OnboardingViewModel @Inject constructor(
          * Whole-list rather than field-by-field: with several drafts there is no honest way to
          * merge a stored record into a form the parent may have started typing into, so a list
          * with anything in it is left entirely alone.
+         *
+         * @param myUid The signed-in account, to tell its own records from the co-parent's
          */
-        fun List<ChildDraft>.orStoredChildren(stored: List<ChildInfo>): List<ChildDraft> =
+        fun List<ChildDraft>.orStoredChildren(stored: List<ChildInfo>, myUid: String?): List<ChildDraft> =
             if (stored.isEmpty() || any { !it.isBlank }) {
                 this
             } else {
@@ -724,18 +1126,30 @@ class OnboardingViewModel @Inject constructor(
                         dateOfBirth = child.dateOfBirth?.toLocalDate(),
                         allergies = child.allergies,
                         medicalProfile = child.medicalProfile,
-                        relatives = child.emergencyContacts
+                        relatives = child.emergencyContacts,
+                        byCoParent = isByCoParent(child.createdByFirebaseUid, myUid)
                     )
                 }
             }
 
         /** The pet drafts on screen, unless none has been touched. See [orStoredChildren]. */
-        fun List<PetDraft>.orStoredPets(stored: List<Pet>): List<PetDraft> =
+        fun List<PetDraft>.orStoredPets(stored: List<Pet>, myUid: String?): List<PetDraft> =
             if (stored.isEmpty() || any { !it.isBlank }) {
                 this
             } else {
-                stored.map { PetDraft(id = it.id, name = it.name, species = it.species) }
+                stored.map {
+                    PetDraft(
+                        id = it.id,
+                        name = it.name,
+                        species = it.species,
+                        byCoParent = isByCoParent(it.createdByFirebaseUid, myUid)
+                    )
+                }
             }
+
+        /** A record stamped with somebody else's uid. An unstamped record is this parent's. */
+        fun isByCoParent(createdBy: String?, myUid: String?): Boolean =
+            !createdBy.isNullOrBlank() && createdBy != myUid
 
         /** This text unless it is blank, in which case [stored] — but never a blank [stored]. */
         fun String.orStored(stored: String?): String =

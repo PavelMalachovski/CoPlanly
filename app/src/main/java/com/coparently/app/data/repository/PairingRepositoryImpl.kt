@@ -8,6 +8,7 @@ import com.coparently.app.data.local.dao.UserDao
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.PairingException
 import com.coparently.app.data.remote.firebase.PairingFunctions
+import com.coparently.app.data.sync.SyncRequester
 import com.coparently.app.domain.model.FamilyKind
 import com.coparently.app.domain.model.PairingError
 import com.coparently.app.domain.model.PairingInvite
@@ -51,6 +52,7 @@ class PairingRepositoryImpl @Inject constructor(
     private val postPairingConversationSetup: PostPairingConversationSetup,
     private val userDao: UserDao,
     private val selectedFamilySource: SelectedFamilySource,
+    private val syncRequester: SyncRequester,
     // Application context only, for the localized conversation-title fallback. This is a
     // repository, not a ViewModel, so it is allowed to resolve resources directly.
     @ApplicationContext private val context: Context
@@ -205,6 +207,18 @@ class PairingRepositoryImpl @Inject constructor(
      * Best-effort by design: the pairing itself is already durable in Firestore, so a local
      * write failure must never turn into a failed pairing. It is logged and swallowed, and
      * the next emission (or the `SyncWorker`) retries.
+     *
+     * **A co-parent this device did not know about a moment ago also asks for a sync.** The
+     * mirror above tells the app *that* it is paired; it does not fetch anything the pairing
+     * entitles the two phones to. On the inviter's phone the next `performFullSync` is what
+     * widens the audience of every child, pet and event created while unpaired
+     * (`SyncService.backfillChildInfoAudienceForPartner` and its siblings), and on the
+     * accepter's phone it is what downloads them. Both used to wait for the fifteen-minute tick
+     * — or for a push to happen along — which the onboarding wizard made visible the day it
+     * started pairing *first*: a second parent who linked in order to inherit the first one's
+     * records was standing on an empty child step, waiting for a worker that had no reason to
+     * run. The request is keyed on the transition, not on every emission, and coalesces with
+     * the cold-start run when the two land together.
      */
     private suspend fun onPairingStateObserved(state: PairingState) {
         val uid = authService.getCurrentUser()?.uid ?: return
@@ -218,7 +232,15 @@ class PairingRepositoryImpl @Inject constructor(
         // NotPaired also re-emits whenever an invite list changes, so skip the work unless
         // the link itself moved. Keyed by uid as well, so a different account signing in is
         // never mistaken for "already applied".
-        if (appliedPairing.getAndSet(uid to partnerId) == uid to partnerId) return
+        val previous = appliedPairing.getAndSet(uid to partnerId)
+        if (previous == uid to partnerId) return
+
+        // Before the Room work below, and outside its try: the request is a WorkManager
+        // enqueue that cannot fail the mirror, and a mirror that fails must not stop the sync
+        // that would repair what it could not.
+        if (partnerId != null && previous?.second != partnerId) {
+            syncRequester.requestSyncNow()
+        }
 
         try {
             val local = userDao.getUserById(uid)

@@ -182,6 +182,25 @@ class FamilySettingsRepositoryTest {
     }
 
     @Test
+    fun `the pair's first agreement is announced whichever screen writes it`() = runTest {
+        // `submitRatio` used to announce only a *proposal*; the first write of a pair that had
+        // no document yet applied outright and told nobody. With the co-parent link made first,
+        // a second parent's wizard reaches that branch routinely, so the co-parent learned of
+        // the split that prices every expense only by opening Settings.
+        val fcmService = mockk<FcmService>(relaxed = true)
+        coEvery { dataSource.getSettings(any()) } returns null
+        coEvery { dataSource.setSettings(any(), any()) } returns Unit
+
+        val outcome = repositoryWith(fcmService, cachedBasisPoints = null)
+            .submitRatio(SplitRatio.ofMomPercent(60))
+
+        assertEquals(RatioSubmission.APPLIED, outcome.getOrThrow())
+        val queued = slot<Map<String, String>>()
+        coVerify { fcmService.queueNotificationForUser(PARTNER, capture(queued)) }
+        assertEquals("split_ratio_agreed", queued.captured["type"])
+    }
+
+    @Test
     fun `the announcement carries a type and no figure`() = runTest {
         // SEC-3's shape, and `PushPayload` states the reason for this family of types: a push
         // saying "the split is now 70/30" puts a number a reader may act on onto a lock screen,

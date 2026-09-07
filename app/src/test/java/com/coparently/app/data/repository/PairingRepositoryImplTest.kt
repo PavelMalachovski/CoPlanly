@@ -9,6 +9,7 @@ import com.coparently.app.data.remote.firebase.AcceptInvitationResult
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.PairingException
 import com.coparently.app.data.remote.firebase.PairingFunctions
+import com.coparently.app.data.sync.SyncRequester
 import com.coparently.app.domain.model.PairingError
 import com.coparently.app.domain.model.PairingState
 import com.coparently.app.domain.model.PartnerSummary
@@ -50,6 +51,7 @@ class PairingRepositoryImplTest {
     private lateinit var userDao: UserDao
     private lateinit var context: Context
     private lateinit var selectedFamilySource: SelectedFamilySource
+    private lateinit var syncRequester: SyncRequester
     private lateinit var repository: PairingRepositoryImpl
 
     private lateinit var usersCollection: CollectionReference
@@ -99,6 +101,7 @@ class PairingRepositoryImplTest {
         // Relaxed: reconciling the shown family needs Firebase Auth and a real row, and what
         // these tests pin is that the mirror *delegates* the decision rather than making it.
         selectedFamilySource = mockk(relaxed = true)
+        syncRequester = mockk(relaxed = true)
 
         repository = PairingRepositoryImpl(
             firestore = firestore,
@@ -107,6 +110,7 @@ class PairingRepositoryImplTest {
             postPairingConversationSetup = PostPairingConversationSetup(messageRepository, conversationMigrator),
             userDao = userDao,
             selectedFamilySource = selectedFamilySource,
+            syncRequester = syncRequester,
             context = context
         )
     }
@@ -200,6 +204,45 @@ class PairingRepositoryImplTest {
         // failed pairing.
         coVerify { messageRepository.ensureConversation("user-a", "u2", any()) }
         coVerify { conversationMigrator.mergeLegacyConversations("user-a", "u2") }
+    }
+
+    @Test
+    fun `a newly observed co-parent asks for an immediate sync`() = runTest {
+        // The mirror above says *that* the phone is paired; the sync is what fetches anything
+        // the pairing entitles it to. On the inviter's phone that run widens the audience of
+        // every record created while unpaired; on the accepter's it downloads them. Waiting
+        // for the fifteen-minute tick left the onboarding wizard — which pairs first precisely
+        // so the second parent inherits the first one's records — on an empty child step.
+        coEvery { userDao.getUserById("user-a") } returns userEntity(partnerId = null)
+        val listeners = stubRealtimeListeners()
+
+        repository.observePairingState().test {
+            assertEquals(PairingState.Loading, awaitItem())
+            runCurrent()
+            listeners.emitInvites()
+            listeners.emitUser(userDoc(partnerId = "u2", pairedAt = 123L))
+            awaitItem()
+            cancelAndIgnoreRemainingEvents()
+        }
+
+        verify(exactly = 1) { syncRequester.requestSyncNow() }
+    }
+
+    @Test
+    fun `an ended link asks for no sync, because there is nothing new to fetch`() = runTest {
+        coEvery { userDao.getUserById("user-a") } returns userEntity(partnerId = "u2")
+        val listeners = stubRealtimeListeners()
+
+        repository.observePairingState().test {
+            assertEquals(PairingState.Loading, awaitItem())
+            runCurrent()
+            listeners.emitInvites()
+            listeners.emitUser(userDoc(partnerId = ""))
+            awaitItem()
+            cancelAndIgnoreRemainingEvents()
+        }
+
+        verify(exactly = 0) { syncRequester.requestSyncNow() }
     }
 
     @Test

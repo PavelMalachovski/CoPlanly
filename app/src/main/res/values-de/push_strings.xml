@@ -54,4 +54,6 @@
     <string name="push_split_ratio_declined_body">Dein Co-Elternteil hat die neue Aufteilung abgelehnt. Es hat sich nichts geändert.</string>
     <string name="push_split_ratio_agreed_title">Kostenaufteilung vereinbart</string>
     <string name="push_split_ratio_agreed_body">Die Aufteilung wurde festgelegt, bevor Sie verbunden waren. Öffnen Sie die Einstellungen.</string>
+    <string name="push_records_shared_title">Freigegebene Einträge</string>
+    <string name="push_records_shared_body">%1$s hat den Kalender und die Familieneinträge mit dir geteilt</string>
 </resources>

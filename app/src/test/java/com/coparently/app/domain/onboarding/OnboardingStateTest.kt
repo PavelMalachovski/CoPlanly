@@ -84,4 +84,20 @@ class OnboardingStateTest {
     fun `neither a child nor a pet still means the wizard runs`() {
         assertTrue(OnboardingState.isNeeded(user(), hasChildInfo = false, hasPets = false))
     }
+
+    @Test
+    fun `only a record this account created is evidence of having been through the wizard`() {
+        // The wizard links the co-parent first, so a second parent's phone holds the first one's
+        // children within seconds of pairing — and a Google sign-in arrives with a name. Counting
+        // those records used to hide the questionnaire from exactly the parent it exists for.
+        assertTrue(OnboardingState.isOwnRecord("u1", createdByUid = "u1"))
+        assertFalse(OnboardingState.isOwnRecord("u1", createdByUid = "bob"))
+    }
+
+    @Test
+    fun `a record with no creator recorded counts as this account's`() {
+        // It predates the stamp and was written by the only device that could have written it.
+        assertTrue(OnboardingState.isOwnRecord("u1", createdByUid = null))
+        assertTrue(OnboardingState.isOwnRecord("u1", createdByUid = ""))
+    }
 }

@@ -776,15 +776,7 @@ private val WEEKDAYS = listOf(
 )
 
 @Composable
-private fun modelTypeLabel(modelType: CustodyModelType): String = stringResource(
-    when (modelType) {
-        CustodyModelType.WEEK_ON_WEEK_OFF -> R.string.custody_model_week_on_week_off
-        CustodyModelType.EVERY_OTHER_WEEKEND -> R.string.custody_model_every_other_weekend
-        CustodyModelType.TWO_TWO_THREE -> R.string.custody_model_two_two_three
-        CustodyModelType.THREE_FOUR_FOUR_THREE -> R.string.custody_model_three_four_four_three
-        CustodyModelType.CUSTOM -> R.string.custody_model_custom
-    }
-)
+private fun modelTypeLabel(modelType: CustodyModelType): String = stringResource(modelType.labelRes())
 
 /**
  * Which question the switch above the preview is actually asking, for the selected pattern.

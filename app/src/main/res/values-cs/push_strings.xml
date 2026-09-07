@@ -60,4 +60,6 @@
     <string name="push_split_ratio_declined_body">Druhý rodič nové rozdělení odmítl. Nic se nezměnilo.</string>
     <string name="push_split_ratio_agreed_title">Rozdělení výdajů dohodnuto</string>
     <string name="push_split_ratio_agreed_body">Poměr, kterým se výdaje dělí, byl nastaven ještě před spárováním. Otevřete Nastavení.</string>
+    <string name="push_records_shared_title">Sdílené záznamy</string>
+    <string name="push_records_shared_body">%1$s s vámi sdílí kalendář a rodinné záznamy</string>
 </resources>
