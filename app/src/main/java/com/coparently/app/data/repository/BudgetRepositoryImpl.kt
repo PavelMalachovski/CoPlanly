@@ -228,17 +228,17 @@ class BudgetRepositoryImpl @Inject constructor(
                     // not crash the reader.
                     val budget = runCatching {
                         Budget(
-                        id = data["id"] as String,
-                        familyId = (data["familyId"] as? String)?.takeIf { it.isNotEmpty() },
-                        forMembers = FamilyMemberRef.parse(data["forMembers"])
-                            .ifEmpty { FamilyMemberRef.fromLegacyChildId(data["childId"] as? String) },
-                        category = ExpenseCategory.valueOf(data["category"] as String),
-                        monthlyLimit = (data["monthlyLimit"] as Number).toDouble(),
-                        currency = data["currency"] as String,
-                        alertThreshold = (data["alertThreshold"] as Number).toDouble(),
-                        isActive = (data["isActive"] as? Boolean) ?: true,
-                        createdAt = LocalDateTime.parse(data["createdAt"] as String, dateTimeFormatter),
-                        syncedToFirestore = true
+                            id = data["id"] as String,
+                            familyId = (data["familyId"] as? String)?.takeIf { it.isNotEmpty() },
+                            forMembers = FamilyMemberRef.parse(data["forMembers"])
+                                .ifEmpty { FamilyMemberRef.fromLegacyChildId(data["childId"] as? String) },
+                            category = ExpenseCategory.valueOf(data["category"] as String),
+                            monthlyLimit = (data["monthlyLimit"] as Number).toDouble(),
+                            currency = data["currency"] as String,
+                            alertThreshold = (data["alertThreshold"] as Number).toDouble(),
+                            isActive = (data["isActive"] as? Boolean) ?: true,
+                            createdAt = LocalDateTime.parse(data["createdAt"] as String, dateTimeFormatter),
+                            syncedToFirestore = true
                         )
                     }.getOrElse { e ->
                         android.util.Log.w("BudgetRepo", "Skipping a budget document that does not parse", e)

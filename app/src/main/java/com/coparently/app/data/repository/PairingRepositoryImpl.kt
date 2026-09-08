@@ -243,27 +243,7 @@ class PairingRepositoryImpl @Inject constructor(
         }
 
         try {
-            val local = userDao.getUserById(uid)
-            if (local != null) {
-                // The **list** is what a pairing transition changes. `partnerId` is no longer
-                // "my co-parent" but "the family this device is showing", and only
-                // `SelectedFamilySource` writes it — mirroring the observed partner onto it
-                // here would drag a parent looking at one family into another the moment the
-                // other one's pairing state re-emitted.
-                val partners = (
-                    gson.fromJson(local.partnerIdsJson, Array<String>::class.java)
-                        ?.toList().orEmpty()
-                    ).toMutableList()
-                if (partnerId != null && partnerId !in partners) partners += partnerId
-                val nextJson = gson.toJson(partners)
-                if (nextJson != local.partnerIdsJson) {
-                    userDao.updateUser(local.copy(partnerIdsJson = nextJson))
-                }
-                // Re-point the projection only when what it names has actually gone: an unpair
-                // observed from the other side leaves this device showing an ex-partner
-                // otherwise, and nothing else would notice until the switcher was opened.
-                selectedFamilySource.reconcile()
-            }
+            mirrorPartnerIntoRoom(uid, partnerId)
             if (partnerId != null) ensureConversationWith(partnerId)
         } catch (e: CancellationException) {
             // Reset before rethrowing, for the same reason the generic branch below does. This
@@ -280,6 +260,32 @@ class PairingRepositoryImpl @Inject constructor(
             appliedPairing.set(null)
             Log.w(TAG, "Failed to mirror the pairing transition into Room", e)
         }
+    }
+
+    /**
+     * Adds [partnerId] to this account's Room `partnerIds` list and re-points the family
+     * projection.
+     *
+     * The **list** is what a pairing transition changes. `partnerId` is no longer "my
+     * co-parent" but "the family this device is showing", and only `SelectedFamilySource`
+     * writes it — mirroring the observed partner onto it here would drag a parent looking at
+     * one family into another the moment the other one's pairing state re-emitted.
+     */
+    private suspend fun mirrorPartnerIntoRoom(uid: String, partnerId: String?) {
+        val local = userDao.getUserById(uid) ?: return
+        val partners = (
+            gson.fromJson(local.partnerIdsJson, Array<String>::class.java)
+                ?.toList().orEmpty()
+            ).toMutableList()
+        if (partnerId != null && partnerId !in partners) partners += partnerId
+        val nextJson = gson.toJson(partners)
+        if (nextJson != local.partnerIdsJson) {
+            userDao.updateUser(local.copy(partnerIdsJson = nextJson))
+        }
+        // Re-point the projection only when what it names has actually gone: an unpair
+        // observed from the other side leaves this device showing an ex-partner otherwise,
+        // and nothing else would notice until the switcher was opened.
+        selectedFamilySource.reconcile()
     }
 
     // ---- Firestore plumbing -------------------------------------------

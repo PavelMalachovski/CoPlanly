@@ -261,6 +261,9 @@ class OnboardingViewModelTest {
     fun `linking asks for a sync and reports what came across`() = runTest(dispatcher) {
         val children = MutableStateFlow<List<ChildInfo>>(emptyList())
         every { childInfoRepository.getAllChildInfo() } returns children
+        // The ViewModel from setUp keeps observing the same pairing flow and would ask for a
+        // sync of its own; a fresh requester counts only this instance's.
+        syncRequester = mockk(relaxed = true)
         viewModel = newViewModel()
         advanceUntilIdle()
         assertEquals(CoParentFetch.Idle, viewModel.uiState.value.fetch)
@@ -436,7 +439,10 @@ class OnboardingViewModelTest {
         viewModel.next()
         advanceUntilIdle()
 
-        coVerify(exactly = 0) { familySettingsRepository.submitRatio(any()) }
+        // The value an unconditional write would have sent: the untouched slider's half each.
+        // A concrete value rather than `any()`, because MockK builds a matcher's signature for
+        // a value class from a random Int and `SplitRatio` refuses one outside 0..10000.
+        coVerify(exactly = 0) { familySettingsRepository.submitRatio(SplitRatio.EVEN) }
     }
 
     @Test
@@ -481,13 +487,14 @@ class OnboardingViewModelTest {
             val fetch = assertIs<CoParentFetch.Done>(state.fetch)
             assertTrue(fetch.found.hasSplitAgreement)
 
-            // Moving the slider back to the agreed value is not a proposal.
+            // Moving the slider back to the agreed value is not a proposal. (A concrete value
+            // rather than `any()` — see the untouched-slider test for why.)
             walkTo(OnboardingStep.Split)
             viewModel.setSplitMyPercent(60)
             viewModel.setSplitMyPercent(70)
             viewModel.next()
             advanceUntilIdle()
-            coVerify(exactly = 0) { familySettingsRepository.submitRatio(any()) }
+            coVerify(exactly = 0) { familySettingsRepository.submitRatio(SplitRatio.ofMomPercent(70)) }
 
             viewModel.back()
             viewModel.setSplitMyPercent(60)
@@ -683,11 +690,16 @@ class OnboardingViewModelTest {
     @Test
     fun `the relatives land on the child they were entered for, not the first`() =
         runTest(dispatcher) {
+            // `stored` stands in for Room and outlives `written`, which the test clears to look
+            // at the second step's writes alone — a record must not vanish with the list.
+            val stored = mutableMapOf<String, ChildInfo>()
             val written = mutableListOf<ChildInfo>()
-            coEvery { childInfoRepository.upsertChildInfo(capture(written)) } returns Unit
-            coEvery { childInfoRepository.getChildInfoById(any()) } answers {
-                written.lastOrNull { it.id == firstArg<String>() }
+            coEvery { childInfoRepository.upsertChildInfo(any()) } answers {
+                val child = firstArg<ChildInfo>()
+                stored[child.id] = child
+                written += child
             }
+            coEvery { childInfoRepository.getChildInfoById(any()) } answers { stored[firstArg()] }
 
             walkTo(OnboardingStep.Child)
             viewModel.updateChildName(firstChildId(), "Anya")

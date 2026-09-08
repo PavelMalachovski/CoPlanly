@@ -1,12 +1,8 @@
 package com.coparently.app.presentation.pairing
 
 import android.app.Activity
-import android.content.ClipData
-import android.content.ClipDescription
 import android.content.Context
 import android.content.Intent
-import android.os.Build
-import android.os.PersistableBundle
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
@@ -73,6 +69,7 @@ import com.coparently.app.presentation.common.ConfirmationDialog
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.SignedInAsRow
+import com.coparently.app.presentation.common.copySensitive
 import com.coparently.app.presentation.pairing.components.CodeEntryField
 import com.coparently.app.presentation.pairing.components.IncomingInviteCard
 import com.coparently.app.presentation.pairing.components.InviteCodeCard
@@ -344,7 +341,7 @@ private fun rememberNotPairedActions(
     NotPairedActions(
         onShareInvite = { invite -> context.startActivity(shareIntent(context, invite)) },
         onCopyCode = { code ->
-            copySensitive(context, code)
+            copySensitive(context, "invite code", code)
             onCodeCopied()
         },
         onScanQr = onScanQr
@@ -362,23 +359,6 @@ private fun rememberNotPairedActions(
  * rather than pasted.
  */
 private const val PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=app.coplanly"
-
-/**
- * Puts the invite code on the clipboard, marked sensitive.
- *
- * The code is a bearer credential for the whole family's calendar, chat and money. Android 13+
- * previews clipboard contents in an overlay and lets other apps read them; the sensitive flag
- * keeps the preview blank, which is the only defence the platform offers.
- */
-private fun copySensitive(context: Context, code: String) {
-    val clip = ClipData.newPlainText("invite code", code)
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        clip.description.extras = PersistableBundle().apply {
-            putBoolean(ClipDescription.EXTRA_IS_SENSITIVE, true)
-        }
-    }
-    context.getSystemService(android.content.ClipboardManager::class.java)?.setPrimaryClip(clip)
-}
 
 /** Builds the share-sheet intent for an outstanding invite. */
 private fun shareIntent(context: Context, invite: PairingInvite): Intent {

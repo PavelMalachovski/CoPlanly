@@ -65,6 +65,9 @@ import kotlin.test.assertTrue
  *    in the same pass, with no error and no log, and the slot marker had already advanced so
  *    nothing ever retried it.
  */
+// One class because every test needs the same eleven-collaborator fixture; splitting it by
+// theme would copy that fixture, not shrink it.
+@Suppress("LargeClass")
 @OptIn(ExperimentalCoroutinesApi::class)
 class SyncServiceTest {
 

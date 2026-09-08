@@ -258,7 +258,9 @@ private fun LinkedCoParent(name: String, fetch: CoParentFetch) {
     )
 
     when (fetch) {
-        CoParentFetch.Idle, CoParentFetch.Running -> StatusRow(text = stringResource(R.string.onboarding_coparent_fetching, name)) {
+        CoParentFetch.Idle, CoParentFetch.Running -> StatusRow(
+            text = stringResource(R.string.onboarding_coparent_fetching, name)
+        ) {
             CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
         }
         is CoParentFetch.Done -> if (fetch.found.isEmpty) {
@@ -293,7 +295,13 @@ private fun FoundRecords(name: String, found: CoParentData) {
     SectionGroup {
         val rows = buildList {
             if (found.children > 0) {
-                add(Triple(Icons.Default.ChildCare, R.string.onboarding_coparent_found_children, found.children.toString()))
+                add(
+                    Triple(
+                        Icons.Default.ChildCare,
+                        R.string.onboarding_coparent_found_children,
+                        found.children.toString()
+                    )
+                )
             }
             if (found.pets > 0) {
                 add(Triple(Icons.Default.Pets, R.string.onboarding_coparent_found_pets, found.pets.toString()))

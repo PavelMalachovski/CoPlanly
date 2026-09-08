@@ -153,6 +153,5 @@ class CrashlyticsManager @Inject constructor(
         }
         crashlytics.recordException(throwable)
     }
-
 }
 
