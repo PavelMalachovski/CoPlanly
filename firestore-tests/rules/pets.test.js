@@ -145,3 +145,38 @@ describe('pets', () => {
         .doc('pets/pet-2').update({feedingNotes: 'Once a day'}));
   });
 });
+
+describe('pets: the audience is bound to the writer', () => {
+  let env;
+
+  before(async () => {
+    env = await testEnv(PROJECT, CURRENT_RULES);
+  });
+
+  beforeEach(async () => {
+    await env.clearFirestore();
+    await seed(env, {
+      'users/alice-uid': {name: 'Alice', email: 'a@x.test', partnerId: BOB},
+      'users/bob-uid': {name: 'Bob', email: 'b@x.test', partnerId: ALICE},
+      'users/carol-uid': {name: 'Carol', email: 'c@x.test', partnerId: ''},
+      'pets/pet-1': petDoc({}),
+    });
+  });
+
+  it('refuses a stranger creating a pet into somebody else\'s family', async () => {
+    const carol = env.authenticatedContext(CAROL).firestore();
+    await assertFails(carol.doc('pets/planted').set(petDoc({
+      id: 'planted', createdByFirebaseUid: CAROL, sharedWith: [CAROL, ALICE, BOB],
+    })));
+  });
+
+  it('refuses a co-parent writing the creator out of the record', async () => {
+    const bob = env.authenticatedContext(BOB).firestore();
+    await assertFails(bob.doc('pets/pet-1').update({sharedWith: [BOB]}));
+  });
+
+  it('refuses a co-parent handing the record to a stranger', async () => {
+    const bob = env.authenticatedContext(BOB).firestore();
+    await assertFails(bob.doc('pets/pet-1').update({sharedWith: [ALICE, BOB, CAROL]}));
+  });
+});

@@ -185,6 +185,25 @@ class CustodyModelRepository(
     }
 
     /**
+     * Publishes this device's active pattern to the pair, if the pair has none yet.
+     *
+     * A schedule saved before pairing never left the phone: [saveAndActivate] pushes only when
+     * there is a pair, the mirror re-publishes only *over* a document that exists, and the
+     * accepter's reconciliation writes only when the accepter has a pattern. The parent who set
+     * the schedule first — the ordinary first parent — therefore paired and watched the other
+     * phone's calendar stay blank. Runs on every sync, like `publishCachedRatioIfMissing`, and
+     * writes only on a read that *proved* the document absent: an unreadable document
+     * ([SharedCustodyRead.Unavailable]) is not an absent one, and publishing on its strength is
+     * how a co-parent's schedule gets replaced by a device that merely failed to read it.
+     */
+    suspend fun publishLocalIfMissing() {
+        val entity = custodyModelDao.getActiveModelSync() ?: return
+        if (readShared() != SharedCustodyRead.Absent) return
+        Log.i(TAG, "Publishing the custody pattern this device held before the pair had one")
+        pushToFirestore(entity.toDomainModel(), entity)
+    }
+
+    /**
      * Gets all custody models.
      */
     fun getAllModels(): Flow<List<CustodyModel>> {

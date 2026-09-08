@@ -1,9 +1,28 @@
 # `web/` — the pages that have to exist outside the app
 
 Two things Google Play requires of CoPlanly are URLs, not screens: a privacy policy and a route to
-delete an account that works **without the app installed**. This directory holds the second one.
-The first is `docs/legal/PRIVACY-POLICY.md`, which still needs a lawyer (REL-4) before it is worth
-hosting.
+delete an account that works **without the app installed**. This directory holds both, plus the
+terms of service: `delete-account/`, `privacy/` and `terms/`, one self-contained `index.html`
+each. The legal texts are still drafts (REL-4) — every page carries a banner saying so until the
+last `{{PLACEHOLDER}}` is gone — but the pages exist so that hosting them is one command once a
+lawyer has been through the markdown.
+
+## `privacy/index.html` and `terms/index.html`
+
+**Generated — do not edit.** The source of truth is `docs/legal/PRIVACY-POLICY.md` and
+`docs/legal/TERMS-OF-SERVICE.md`; `tools/wrap-legal-page.js` wraps the rendered markdown in the
+same one-file style as the deletion page (no external CSS, fonts, scripts or images), and adds the
+draft banner automatically when a placeholder is still in the body. Regenerate both in the same
+commit as any edit to the markdown, from the repository root:
+
+```bash
+npx marked docs/legal/PRIVACY-POLICY.md   | node tools/wrap-legal-page.js privacy > web/privacy/index.html
+npx marked docs/legal/TERMS-OF-SERVICE.md | node tools/wrap-legal-page.js terms   > web/terms/index.html
+```
+
+`marked` is fetched by `npx` on first use; the wrapper itself has no dependencies. The three
+pages link to each other from their footers, by relative path, so they work under any host and
+any base path.
 
 ## `delete-account/index.html`
 
@@ -50,19 +69,20 @@ it there leaves data behind that the page promises is gone.
 
 ### Hosting
 
-Anything that serves a static file. Firebase Hosting is already in the project's orbit:
+Anything that serves a static file. `firebase.json` now carries a `hosting` block that serves
+this directory (`README.md` excluded, clean URLs, trailing slashes), so once a Hosting site
+exists in the Firebase project:
 
-```jsonc
-// firebase.json — "hosting" does not exist there yet; this is the shape it would take
-"hosting": {
-  "public": "web",
-  "ignore": ["README.md"]
-}
+```bash
+firebase deploy --only hosting
 ```
 
-Then `firebase deploy --only hosting`, and the page is at `https://<site>/delete-account/`. Whatever
-you choose, the URL goes in **two** places: the Play Console's data-deletion field, and
-`{{WEB_DELETION_URL}}` in the privacy policy.
+puts the three pages at `https://<site>/delete-account/`, `https://<site>/privacy/` and
+`https://<site>/terms/`. **Nothing has been deployed yet**, and deploying is a decision, not a
+build step: the privacy policy in particular must not go live with a draft banner on it. The
+URLs then go in **three** places: the Play Console's data-deletion and privacy-policy fields,
+`{{WEB_DELETION_URL}}` and `{{PRIVACY_POLICY_URL}}` in the legal documents, and the Settings rows
+the next paragraph describes.
 
 **Not wired into the app yet, on purpose.** Settings has no row linking to these URLs because they
 do not resolve yet, and a row pointing at a dead link is exactly the affordance-promising-nothing

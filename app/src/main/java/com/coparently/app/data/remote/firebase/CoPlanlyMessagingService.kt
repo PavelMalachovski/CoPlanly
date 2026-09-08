@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import android.util.Log
 import androidx.annotation.StringRes
 import androidx.core.app.NotificationCompat
 import com.coparently.app.R
@@ -14,6 +15,7 @@ import com.coparently.app.data.crashlytics.CrashlyticsManager
 import com.coparently.app.data.sync.SyncWorker
 import com.coparently.app.domain.chat.ChatUri
 import com.coparently.app.domain.pairing.PairingUri
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import dagger.hilt.android.AndroidEntryPoint
@@ -79,6 +81,20 @@ class CoPlanlyMessagingService : FirebaseMessagingService() {
 
         val data = remoteMessage.data
         val type = data[PushPayload.TYPE]
+
+        // A push addressed to somebody else is dropped whole — no sync, no notification. The
+        // token identifies this *device*, and the device may since have signed in as a
+        // different person: until `FcmService.unregisterToken` ran on sign-out, and on any
+        // sign-out that could not reach the network, the previous account's pushes still
+        // arrived here. `sendNotification` stamps the addressee into the data for exactly this
+        // check; a push with none is an older queue entry and is treated as addressed to
+        // whoever is signed in, as it always was.
+        val signedIn = FirebaseAuth.getInstance().currentUser?.uid
+        val addressee = data[PushPayload.TARGET_USER_ID]?.takeIf { it.isNotBlank() }
+        if (signedIn == null || (addressee != null && addressee != signedIn)) {
+            Log.i(TAG, "Dropping a push addressed to an account that is not signed in here")
+            return
+        }
 
         // Pull whatever the push is about *before* deciding whether it is renderable. A push
         // announced a change the device could not yet see: events, child records and pets are
@@ -151,7 +167,7 @@ class CoPlanlyMessagingService : FirebaseMessagingService() {
             } catch (e: Exception) {
                 // A token that never reaches Firestore means the co-parent's pushes go nowhere,
                 // and nothing on either device says so.
-                android.util.Log.e("CoPlanlyMessaging", "Storing the refreshed FCM token failed", e)
+                Log.e(TAG, "Storing the refreshed FCM token failed", e)
                 crashlyticsManager.recordException(e)
             }
         }
@@ -261,6 +277,7 @@ class CoPlanlyMessagingService : FirebaseMessagingService() {
     )
 
     companion object {
+        private const val TAG = "CoPlanlyMessaging"
         private const val CHANNEL_ID = "coparently_notifications"
         private const val CHANNEL_NAME = "CoPlanly Notifications"
         private const val CHANNEL_DESCRIPTION = "Notifications for events and invitations"
@@ -419,6 +436,11 @@ class CoPlanlyMessagingService : FirebaseMessagingService() {
                 R.string.push_split_ratio_agreed_title,
                 R.string.push_split_ratio_agreed_body,
                 BodyArgs.NONE
+            ),
+            PushPayload.RECORDS_SHARED to PushTextSpec(
+                R.string.push_records_shared_title,
+                R.string.push_records_shared_body,
+                BodyArgs.ACTOR
             ),
             PushPayload.PAIRING_ACCEPTED to PushTextSpec(
                 R.string.push_pairing_accepted_title,

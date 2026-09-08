@@ -105,6 +105,30 @@ describe('Part 1d: events', () => {
   });
 
   describe('create', () => {
+    it('refuses a stranger creating an event into somebody else\'s calendar', async () => {
+      // Carol is paired with nobody. An event she creates naming Alice and Bob would land in
+      // both their syncs — and could not be deleted by either, delete being creator-only.
+      const carol = env.authenticatedContext(CAROL).firestore();
+      await assertFails(carol.doc('events/planted').set(eventDoc({
+        id: 'planted', createdByFirebaseUid: CAROL, sharedWith: [CAROL, ALICE, BOB],
+      })));
+    });
+
+    it('refuses a stranger stamping somebody else\'s family id', async () => {
+      const carol = env.authenticatedContext(CAROL).firestore();
+      await assertFails(carol.doc('events/planted').set(eventDoc({
+        id: 'planted', createdByFirebaseUid: CAROL, sharedWith: [CAROL],
+        familyId: [ALICE, BOB].sort().join('__'),
+      })));
+    });
+
+    it('lets the creator share with their co-parent and stamp their own family', async () => {
+      const alice = env.authenticatedContext(ALICE).firestore();
+      await assertSucceeds(alice.doc('events/event-2').set(eventDoc({
+        id: 'event-2', sharedWith: [ALICE, BOB], familyId: [ALICE, BOB].sort().join('__'),
+      })));
+    });
+
     it('allows the creator stamping their own uid', async () => {
       const db = env.authenticatedContext(ALICE).firestore();
       await assertSucceeds(db.doc('events/event-1').set(eventDoc({})));

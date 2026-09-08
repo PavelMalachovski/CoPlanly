@@ -75,6 +75,15 @@ object PushPayload {
     const val CHANGE_REQUEST_ID = "changeRequestId"
     const val CONVERSATION_ID = "conversationId"
 
+    /**
+     * The uid a push was queued for, stamped by `sendNotification` into the data it sends.
+     *
+     * Read by `CoPlanlyMessagingService` and compared with the signed-in account: a token names a
+     * device, not a person, and a device that has changed hands must not show the previous
+     * account's co-parent chat to whoever holds it now.
+     */
+    const val TARGET_USER_ID = "targetUserId"
+
     /** The first line or so of a chat message, written by the Cloud Function that saw it. */
     const val PREVIEW = "preview"
 
@@ -135,6 +144,18 @@ object PushPayload {
      */
     const val SPLIT_RATIO_AGREED = "split_ratio_agreed"
 
+    /**
+     * Everything this parent entered before pairing has just been shared with the co-parent.
+     *
+     * Sent **once** by `SyncService`, after the audience backfills have re-uploaded this
+     * parent's events, children and pets with the new co-parent in `sharedWith`. Before it
+     * existed each re-uploaded event announced itself as "created" — a tray full of years-old
+     * events on the co-parent's phone the moment they paired — and the pets, which announce
+     * nothing, arrived whenever the next sync happened to run. One push says what happened,
+     * and it is also the wake-up the receiving phone needs to download what it can now read.
+     */
+    const val RECORDS_SHARED = "records_shared"
+
     // ---- types only a Cloud Function may produce -------------------------------
 
     /** Queued by `acceptPairingInvitation`. */
@@ -177,7 +198,8 @@ object PushPayload {
         SPLIT_RATIO_PROPOSED,
         SPLIT_RATIO_ACCEPTED,
         SPLIT_RATIO_DECLINED,
-        SPLIT_RATIO_AGREED
+        SPLIT_RATIO_AGREED,
+        RECORDS_SHARED
     )
 
     /**

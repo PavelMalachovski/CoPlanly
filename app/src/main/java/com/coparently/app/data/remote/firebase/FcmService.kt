@@ -168,21 +168,27 @@ class FcmService @Inject constructor(
     }
 
     /**
-     * Gets the partner's FCM token for direct notification.
+     * Detaches this device's token from the signed-in account, for sign-out and deletion.
      *
-     * @param partnerId Firebase UID of the partner
-     * @return The partner's FCM token or null
+     * A token identifies a *device*, and nothing used to take it back: [updateUserToken] wrote
+     * the same token under whichever uid was signed in, so after a sign-out the previous
+     * account's document still named this phone, and every push addressed to that account — a
+     * co-parent's chat, with its text — kept arriving on it, to be shown to whoever signed in
+     * next. Both halves matter: the field on the document stops the queue addressing this
+     * device, and deleting the token invalidates it wherever else it may still be stored.
+     *
+     * Best-effort, like every other network step of a sign-out: the account is leaving whether
+     * or not the network is there, and `CoPlanlyMessagingService` refuses a push addressed to
+     * anybody but the signed-in uid regardless.
      */
-    suspend fun getPartnerToken(partnerId: String): String? {
-        return try {
-            val userDoc = firestore.collection("users")
-                .document(partnerId)
-                .get()
+    suspend fun unregisterToken() {
+        val uid = firebaseAuthService.getCurrentUser()?.uid ?: return
+        runCatching {
+            firestore.collection("users").document(uid)
+                .update("fcmToken", com.google.firebase.firestore.FieldValue.delete())
                 .await()
-
-            userDoc.getString("fcmToken")
-        } catch (e: Exception) {
-            null
-        }
+        }.onFailure { android.util.Log.w("FcmService", "Could not detach the FCM token", it) }
+        runCatching { firebaseMessaging.deleteToken().await() }
+            .onFailure { android.util.Log.w("FcmService", "Could not delete the FCM token", it) }
     }
 }

@@ -41,10 +41,18 @@ class SyncWorker @AssistedInject constructor(
      */
     override suspend fun doWork(): Result {
         return try {
+            requestedSinceRunStarted.set(false)
             val result = syncService.performFullSync()
             result.exceptionOrNull()?.let { cause ->
                 Log.w(TAG, "Periodic sync reported a failure; will retry.", cause)
                 crashlyticsManager.recordException(cause)
+            }
+            // A request that arrived while this run was in flight was dropped by KEEP. It is
+            // evidence that something changed *after* this run read it — the co-parent's phone
+            // widening its audience a second after this one pulled, say — so one more run is
+            // appended rather than the request being lost until the next quarter-hour tick.
+            if (requestedSinceRunStarted.getAndSet(false)) {
+                enqueueFollowUp(applicationContext)
             }
             if (result.isSuccess) Result.success() else Result.retry()
         } catch (e: CancellationException) {
@@ -62,6 +70,17 @@ class SyncWorker @AssistedInject constructor(
         private const val WORK_NAME = "periodic_data_sync"
         private const val ONE_SHOT_WORK_NAME = "immediate_data_sync"
         private const val SYNC_INTERVAL_MINUTES = 15L
+
+        /**
+         * Set by every [syncNow], cleared as a run starts, read as it ends.
+         *
+         * `ExistingWorkPolicy.KEEP` drops a request that lands while the one-shot is already
+         * running — which during pairing is the normal case: the accepter's phone starts a sync
+         * on the transition, and the inviter's `child_info_updated` push arrives while it runs.
+         * Process-wide state rather than a worker field, because the request and the run are
+         * two different objects.
+         */
+        private val requestedSinceRunStarted = java.util.concurrent.atomic.AtomicBoolean(false)
 
         /**
          * Schedules periodic sync work.
@@ -105,17 +124,30 @@ class SyncWorker @AssistedInject constructor(
          * @param context Any context; WorkManager is resolved from the application one.
          */
         fun syncNow(context: Context) {
-            val request = OneTimeWorkRequestBuilder<SyncWorker>()
-                .setConstraints(
-                    Constraints.Builder()
-                        .setRequiredNetworkType(NetworkType.CONNECTED)
-                        .build()
-                )
-                .build()
-
+            requestedSinceRunStarted.set(true)
             WorkManager.getInstance(context)
-                .enqueueUniqueWork(ONE_SHOT_WORK_NAME, ExistingWorkPolicy.KEEP, request)
+                .enqueueUniqueWork(ONE_SHOT_WORK_NAME, ExistingWorkPolicy.KEEP, oneShotRequest())
         }
+
+        /**
+         * One further run after the current one, for a request KEEP dropped mid-run.
+         *
+         * `APPEND_OR_REPLACE` rather than KEEP: the worker enqueuing this is still running under
+         * the same unique name, so KEEP would drop it exactly as it dropped the request.
+         * At most one is ever appended, because the flag is consumed when it is read.
+         */
+        private fun enqueueFollowUp(context: Context) {
+            WorkManager.getInstance(context)
+                .enqueueUniqueWork(ONE_SHOT_WORK_NAME, ExistingWorkPolicy.APPEND_OR_REPLACE, oneShotRequest())
+        }
+
+        private fun oneShotRequest() = OneTimeWorkRequestBuilder<SyncWorker>()
+            .setConstraints(
+                Constraints.Builder()
+                    .setRequiredNetworkType(NetworkType.CONNECTED)
+                    .build()
+            )
+            .build()
 
         /**
          * Cancels periodic sync work.

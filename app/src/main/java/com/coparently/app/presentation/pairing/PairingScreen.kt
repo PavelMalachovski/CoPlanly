@@ -55,11 +55,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.ClipboardManager
-import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -72,6 +69,7 @@ import com.coparently.app.presentation.common.ConfirmationDialog
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.SignedInAsRow
+import com.coparently.app.presentation.common.copySensitive
 import com.coparently.app.presentation.pairing.components.CodeEntryField
 import com.coparently.app.presentation.pairing.components.IncomingInviteCard
 import com.coparently.app.presentation.pairing.components.InviteCodeCard
@@ -95,6 +93,9 @@ private enum class PairingMode { SHARE, ENTER }
  * @param onCustodyConflict Opens the conflict screen when an accepted pairing found two
  *   custody patterns that disagree. Nothing is written until the user chooses there.
  * @param prefilledCode Code carried by a `coplanly://pair` deep link, if any.
+ * @param startOnCodeEntry Open on "enter a code" rather than "share my code". The onboarding
+ *   wizard sets it for a parent who said they are holding the other one's code — showing that
+ *   parent their own code first is exactly the mix-up the two modes exist to prevent.
  * @param viewModel Pairing state and actions.
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -103,26 +104,28 @@ fun PairingScreen(
     onNavigateBack: () -> Unit,
     onCustodyConflict: () -> Unit,
     prefilledCode: String? = null,
+    startOnCodeEntry: Boolean = false,
     viewModel: PairingViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
     val form by viewModel.form.collectAsState()
     val account by viewModel.account.collectAsState()
     val context = LocalContext.current
-    val clipboard = LocalClipboardManager.current
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val codeCopiedMessage = stringResource(R.string.pairing_code_copied)
     val qrScannerLauncher = rememberQrScannerLauncher(viewModel)
 
-    // A deep-linked code means the user is redeeming someone else's, so open on that mode.
-    val mode = rememberSaveable(prefilledCode) {
-        mutableStateOf(if (prefilledCode.isNullOrEmpty()) PairingMode.SHARE else PairingMode.ENTER)
+    // A deep-linked code means the user is redeeming someone else's, so open on that mode — as
+    // does a caller that said so outright.
+    val mode = rememberSaveable(prefilledCode, startOnCodeEntry) {
+        mutableStateOf(
+            if (prefilledCode.isNullOrEmpty() && !startOnCodeEntry) PairingMode.SHARE else PairingMode.ENTER
+        )
     }
 
     val actions = rememberNotPairedActions(
         context = context,
-        clipboard = clipboard,
         onCodeCopied = { scope.launch { snackbarHostState.showSnackbar(codeCopiedMessage) } },
         onScanQr = { qrScannerLauncher.launch(Intent(context, QRScannerActivity::class.java)) }
     )
@@ -330,17 +333,15 @@ private data class NotPairedActions(
 )
 
 @Composable
-@Suppress("LongParameterList") // one parameter per side effect the form cannot perform itself
 private fun rememberNotPairedActions(
     context: Context,
-    clipboard: ClipboardManager,
     onCodeCopied: () -> Unit,
     onScanQr: () -> Unit
-): NotPairedActions = remember(context, clipboard, onCodeCopied, onScanQr) {
+): NotPairedActions = remember(context, onCodeCopied, onScanQr) {
     NotPairedActions(
         onShareInvite = { invite -> context.startActivity(shareIntent(context, invite)) },
         onCopyCode = { code ->
-            clipboard.setText(AnnotatedString(code))
+            copySensitive(context, "invite code", code)
             onCodeCopied()
         },
         onScanQr = onScanQr

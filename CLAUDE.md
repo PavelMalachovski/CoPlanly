@@ -60,8 +60,10 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
    by `MonthView`'s own nestedScroll settle — one 500 ms tween, identical in both
    directions — with `calendarScrollPaged = false`; don't hand snapping back to the library,
    whose spring read differently per direction.)*
-6. **Weekly summary has exactly one entry point** — the button at the bottom of Home. The
-   unlabelled `view_list` action is gone from the calendar header; don't add a second route.
+6. **There is no weekly-summary screen any more** (commit `340af30` removed the screen, its
+   ViewModel, the route and the strings; this line used to say it had "exactly one entry point").
+   Home's seven-day card is the surviving surface — don't add a summary route back, and don't
+   resurrect the unlabelled `view_list` action in the calendar header either.
 7. **The Chat tab renders the thread in place** when there is exactly one conversation
    (`ConversationsScreen` composes `ChatScreen` with `onBack = null`). Do not "fix" this by
    navigating instead: that drops the tab route, hides the bottom bar, and makes Back bounce
@@ -174,7 +176,8 @@ cd firestore-tests && npm test              # firestore.rules + storage.rules on
   degrades gracefully if it is missing (see the conditional apply in `app/build.gradle.kts`).
 - **GitHub CI runs on every pull request, and on every push to `main`** — a push to a
   feature branch with no PR open is not built (`.github/workflows/ci.yml`, added
-  August 2026 — this line used to say there was none). Seven jobs: `changes` (a cheap gate,
+  August 2026 — this line used to say there was none). Eight jobs (this line used to say
+  seven, before `instrumented` was added): `changes` (a cheap gate,
   below), three Android ones — `build-test` (`assembleDebug` + `testDebugUnitTest` in a
   single invocation), `static` (`lint`, then `detekt`), `release` (`assembleRelease`, where
   R8 runs, and where `node tools/check-r8-mapping.js` then reads R8's own `mapping.txt` and
@@ -367,7 +370,7 @@ cd firestore-tests && npm test              # firestore.rules + storage.rules on
 
 ```
 domain/    — models, repository interfaces, use cases, holidays, ReminderScheduler
-data/      — Room (v33 + migrations), Firestore/Google clients, repository impls, sync
+data/      — Room (v34 + migrations), Firestore/Google clients, repository impls, sync
 presentation/ — Compose screens per feature + ViewModels + theme
 di/        — Hilt modules (Database, Firebase, Google, UseCase, Notification, …)
 ```
@@ -444,7 +447,7 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     the conversation as `{uid: epochMillis}` maps — one write per event — and the ticks and
     unread badge are derived from them by `ChatReadState`, never stored per message.
     Message times are stored the same way: `Message.sentAtMillis`, epoch millis (Room
-    schema v13, since superseded — the database is at v33), not a naive `LocalDateTime`, so two
+    schema v13, since superseded — the database is at v34), not a naive `LocalDateTime`, so two
     parents in different time zones agree
     on what a mark means and on when a message was sent. The Firestore field keeps its name
     (`timestamp`) and the read path still accepts a legacy ISO string, so a co-parent on an
@@ -591,6 +594,73 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     `PlanStringsTest` fails the build if the ids and the wording drift apart. Until that happens
     the disclaimer stays — see ROADMAP MON-5 for why the form could not be fetched.
 
+22. **Onboarding links the co-parent first, and everything after that step is written to open on
+    what the link brought back** (September 2026, owner decision). `OnboardingStep.stepsFor` walks
+    `CoParent → Intro → Family → Profile → …`; the wizard used to end with the invitation, which
+    made the second parent retype everything the first one had entered. Six things hold it up,
+    and each closes a defect that was found by trying the flow end to end:
+    - **`SyncRequester` asks for a sync on the Paired transition** (`PairingRepositoryImpl.
+      onPairingStateObserved`), on both phones. The mirror there says *that* the phone is paired;
+      the sync is what widens the inviter's audiences and downloads them on the accepter's side.
+      Before it both waited on the fifteen-minute tick. `SyncWorker.syncNow` also remembers a
+      request that lands mid-run and appends one more run — `ExistingWorkPolicy.KEEP` used to drop
+      it, and during pairing that was the normal case.
+    - **The wizard observes Room rather than reading once**, and the drafts take an emission only
+      while every one of them is blank (`orStoredChildren`). That guard is the whole difference
+      from the `ChildInfoViewModel` defect below: a form with anything typed into it is never
+      touched. `ChildDraft.byCoParent` is what lets the step say whose records it opened on.
+    - **Only records this account created are evidence that it has been through the wizard**
+      (`OnboardingState.isOwnRecord`). A second parent's phone holds the first one's children
+      within seconds of pairing, and a Google sign-in arrives with a name, so "named, and there
+      is a child" was true of an account that had answered nothing.
+    - **The split step writes only a slider that was moved**, and converts this parent's share to
+      slot 1's on save from a fresh read of the slot. An untouched Next on a paired account would
+      otherwise create the pair's agreement out of "half each" ahead of the ratio the first parent
+      chose. `submitRatio`'s first-write branch now announces `SPLIT_RATIO_AGREED` like
+      `publishCachedRatioIfMissing` does.
+    - **`CustodyModelRepository.publishLocalIfMissing` runs on every sync.** A schedule saved
+      before pairing never left the phone: the save pushes only when paired, the mirror only over
+      a document that exists, and the accepter reconciles only when the accepter has a pattern.
+      It writes only on a read that *proved* the document absent — never on `Unavailable`.
+    - **A backfill announces itself once.** The audience backfills' re-uploads are silent per
+      record and `SyncService.announceSharedRecords` queues one `RECORDS_SHARED` push at the end
+      of the pass; before that every re-uploaded event arrived on the co-parent's phone as
+      "created", years-old ones included. The push is also the wake-up the other phone needs.
+    Still open, and recorded in `docs/ROADMAP.md` rather than hidden: expenses and budgets
+    recorded before pairing are uploaded with `familyId: ""` and nothing re-stamps the *remote*
+    copy (`FamilyIdBackfill` is Room-only by design, item 18), so under the family-keyed rules the
+    co-parent will not see them until each is edited.
+23. **A per-document audience is bound to the writer, server-side** (September 2026 audit).
+    `firestore.rules` `isMyAudience` requires every uid in `sharedWith` (guests excepted, on
+    `child_info`) to be the caller or one of their live co-parents, and `familyIsMineOrBlank`
+    requires a stamped `familyId` to name a family the caller is in — on `events`, `child_info`,
+    `pets`, `expenses`, `budgets` and `change_requests`. Any signed-in account could otherwise
+    write a document *into* somebody's calendar or ledger, have both phones' sync pull it in, and
+    leave them unable to delete it. Three consequences for a writer: a **stale audience is
+    refused on create** (the client's own intersecting `shareTargets` already produced the right
+    one; the widen-only shape the unpair tests keep as a mirror is now refused by the rules too),
+    a non-creator may add nothing but the guests it names, and the creator can never be written
+    out of `sharedWith`. On an **update** the bound is on what the write *adds*
+    (`onlyFamilyAdded`, `onlyFamilyOrGuestsAdded`), not on the whole list — deliberately: a uid
+    already there came through `create`, the server or an older rule, and a parent editing the
+    title of a record whose audience still names a swept ex-partner must not be locked out of
+    their own record until some other write tidies the list. `myAudience()` reads the caller's
+    profile and treats a missing one as a family of one rather than as an error, because an
+    erroring rule denies and the first upload can race `ensureProfile`.
+    `messages` create additionally requires the pairing behind the thread to be
+    live, and `notifyOfChatMessage` re-checks it and takes the sender's name from their profile
+    — an unpaired ex could otherwise keep posting under any name and have it pushed. Client
+    writes to `users/{uid}` may no longer move `role`, `partnerId` or `partnerIds` (repeating the
+    stored value is fine: `diff().affectedKeys()`). Three things not to undo on the client:
+    `CoPlanlyMessagingService` drops a push whose `targetUserId` is not the signed-in uid, and
+    `FcmService.unregisterToken` runs on sign-out and deletion — a token names a *device*, and a
+    device that changed hands used to show the previous account's chat; `EncryptedDatabase.
+    fallBackTo` **throws** when an encrypted file is on disk rather than handing it to the
+    framework helper, whose `onCorruption` deletes a file it cannot parse; and
+    `CredentialManagerService.signOut` clears the Google credential *before* the network revoke,
+    because an offline sign-out used to leave the previous account's calendar token for the next
+    one.
+
 ## Known issues / do not "fix" silently
 
 **Check an entry against the code before acting on it.** Two entries in this section, and one
@@ -613,36 +683,22 @@ whatever you were doing; a stale "known issue" costs more than a missing one.
   were removed rather than left beside the tombstone writers, since neither had a caller left —
   unlike `FirestoreEventDataSource.deleteEvent`, which keeps one (an event turned private).
 
-- **A change request says "Sent" whether or not it left the phone.**
-  `ChangeRequestRepositoryImpl.publish` catches everything and returns, leaving
-  `syncedToFirestore = false`, and `RequestChangeViewModel` sets `Sent` unconditionally before
-  the screen pops. `ChangeRequest.syncedToFirestore` reaches the domain model and **no** screen
-  reads it, so there is no queued badge and no way to tell a request the co-parent has from one
-  sitting in Room. The August 2026 outbox (`flushOutbox`, drained on every sync) means it does
-  eventually go — this is a wording and visibility gap, not a loss — but "sent" is still a claim
-  the app cannot make. `MessagesList` already renders the honest version for a message; a request
-  should say "queued" the same way, with a string in all five locales.
+- ~~**A change request says "Sent" whether or not it left the phone.**~~ **Fixed (CQ-20)**, and
+  this entry outlived the fix by a while: `ChangeRequestsScreen` shows a Queued chip on
+  `!syncedToFirestore` and the ViewModel's state is `Saved`, not `Sent`. Kept for the rule it
+  states — "sent" is a claim the app can only make once the write landed, and `MessagesList`'s
+  honest tick is the model for any new outbox.
 
-- **A proposed split ratio cannot be withdrawn, and the proposer is told nothing.**
-  `SplitRatioTransition.withdraw` exists and is unit-tested; nothing calls it.
-  `FamilySettingsRepository` exposes `submitRatio`/`acceptProposal`/`declineProposal` only, and
-  Settings renders the agreed ratio with no sign that a proposal of your own is pending — the
-  banner is the *co-parent's* view. The sibling feature wires the whole shape
-  (`CustodyModelRepository.withdrawProposal`, plus a Withdraw button on the inbox card); the split
-  ratio wants the same. Until then do not delete `withdraw`: the gap is the missing UI, not the
-  transition.
+- ~~**A proposed split ratio cannot be withdrawn, and the proposer is told nothing.**~~ **Fixed
+  (UX-17)**: `FamilySettingsRepository.withdrawProposal` is called from `ExpenseViewModel`, and the
+  Expenses screen carries the "waiting for your co-parent" banner with its Withdraw action.
 
-- **A ratio agreed before pairing reaches the pair silently.**
-  `FamilySettingsRepository.publishCachedRatioIfMissing` writes `family_settings/{pairId}` with no
-  `notifyPartner`, where `submitRatio`'s propose branch sends `PushPayload.SPLIT_RATIO_PROPOSED`.
-  Deliberate as far as it goes — this is the *first* agreement, so there is no proposal to confirm
-  and nothing for the co-parent to answer — but the effect is that a parent who set 70/30 in the
-  wizard has it become the pair's agreement of record, priced onto every expense from that moment,
-  and the co-parent learns of it only by opening Settings. The honest fix is a push type of its own
-  — an agreement, not a proposal: "the split is now X/Y, set before you paired" — which is four
-  places per CLAUDE.md item 15 and five locales. Do not "fix" it
-  by routing the publish through `propose` instead: an unanswered proposal would leave the pair
-  splitting evenly, which is the exact bug `publishCachedRatioIfMissing` was written to end.
+- ~~**A ratio agreed before pairing reaches the pair silently.**~~ **Fixed (UX-18)** with the push
+  type this entry asked for, `PushPayload.SPLIT_RATIO_AGREED`, sent by `publishCachedRatioIfMissing`
+  **and** (September 2026) by `submitRatio`'s first-write branch — a pair that has no document yet
+  gets its agreement from whichever screen writes first, and with the co-parent link now made
+  *first* in onboarding that branch is the second parent's ordinary path, not a corner. The rule
+  the entry gave still holds: never route the first agreement through `propose`.
 
 - **`storage.rules` has never been deployed past its July 2026 state, and that is why attaching a
   photo to a pet fails.** The file in this repo covers `receipts/`, `event_images/`,
@@ -690,9 +746,12 @@ whatever you were doing; a stale "known issue" costs more than a missing one.
   eight attempts, capped at a minute apart — before reaching the `.catch` that ends the mirror.
   That covers the case seen in production: on the first launch after install both listeners were
   denied ~0.5 s before `ensureConversation` created the conversation document, and the whole
-  session then ran on local data while looking entirely healthy. **What is still open (CQ-8 in
-  `docs/ROADMAP.md`):** an outage longer than the backoff still ends in that degraded state, and
-  still lasts until the process restarts. `catch` *completes* the mirror flow, so
+  session then ran on local data while looking entirely healthy. **CQ-8 is closed** (this
+  paragraph used to say it was open): `data/chat/ChatMirror` awaits `ensureConversation` before
+  it subscribes and restarts the mirrors itself, so an outage longer than the backoff no longer
+  ends in a degraded state that lasts until the process restarts. What the rest of this entry
+  describes is the mechanism that made the old defect permanent, kept because it is the shape to
+  avoid: `catch` *completes* the mirror flow, so
   `merge(mirror, local)` runs on Room alone afterwards, and `SharingStarted.WhileSubscribed`
   cannot restart it — `rememberChatUnreadCount()` in `NavGraph` holds an Activity-scoped
   `ChatViewModel` collecting `unreadCount` for the whole process lifetime, so the subscriber count

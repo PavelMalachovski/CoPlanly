@@ -52,8 +52,20 @@ class DatabaseKey @Inject constructor(
         return try {
             encryptionManager.decrypt(wrapped)
         } catch (e: EncryptionException) {
-            // The Keystore key that wrapped it is gone: Keystore corruption, or a lock-screen
-            // change on the OEM builds where that invalidates keys. Nothing here can undo it.
+            // Two very different failures arrive here, and only one of them is final.
+            //
+            // The key is still under its alias: the Keystore daemon refused *this* call — it does
+            // that transiently right after an OS update or a cold boot before the user unlocks —
+            // and the passphrase is recoverable on the next launch. Answering null would tell
+            // `SqlCipherMigration` the passphrase is lost, and its answer to that is to discard
+            // the database. So this throws, the open fails, and the launch is retried; see
+            // `EncryptedDatabase.fallBackTo` for why a failed open is the recoverable outcome.
+            //
+            // The alias is gone: Keystore corruption, or a lock-screen change on the OEM builds
+            // where that invalidates keys. Nothing here can undo it, and null is the truth.
+            if (encryptionManager.hasKey()) {
+                throw IllegalStateException("The Keystore refused to unwrap the passphrase", e)
+            }
             Log.e(TAG, "Database passphrase could not be unwrapped; the database is unreadable", e)
             null
         }
@@ -72,9 +84,13 @@ class DatabaseKey @Inject constructor(
         val material = ByteArray(PASSPHRASE_BYTES)
         SecureRandom().nextBytes(material)
         val passphrase = material.joinToString("") { byte -> "%02x".format(byte) }
-        preferences.edit()
+        val written = preferences.edit()
             .putString(KEY_WRAPPED_PASSPHRASE, encryptionManager.encrypt(passphrase))
             .commit()
+        // `commit` reports a write that did not reach disk — a full partition, an I/O error —
+        // and a passphrase that is not on disk must not be used to encrypt anything: the next
+        // launch would find a database it cannot open and nothing to open it with.
+        check(written) { "The database passphrase could not be persisted" }
         return passphrase
     }
 

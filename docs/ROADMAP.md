@@ -52,8 +52,9 @@ Android SDK**: Gradle cannot be invoked here at all, so nothing Android is compi
 locally. What *is* verifiable in the session is the Firestore rules suite against the emulator
 (`firestore-tests/`, needs a JDK 21+) and the Cloud Functions suite (`functions/`, mocha + eslint).
 Everything Kotlin is proved by **CI** — `assembleDebug`, `testDebugUnitTest`, `lint`, `detekt`
-(a gate again since **CQ-12**) and `assembleRelease` so R8 runs. CI has an Android SDK but **no
-emulator job**, so nothing instrumented runs anywhere today (**CQ-1**). And no session holds
+(a gate again since **CQ-12**), `assembleRelease` so R8 runs, and — since September 2026 — the
+`instrumented` job, an API 30 emulator running `connectedDebugAndroidTest` with Firebase replaced
+in the graph and Room left real (this sentence used to say no emulator job existed). And no session holds
 Firebase or Play credentials: every `firebase deploy`, every console change and every callable
 invocation is yours.
 
@@ -68,7 +69,7 @@ invocation is yours.
 | **M-5** | Multi-family cleanup: delete `partnerId`, `User.role`, `Event.sharedWith`, `isPartnerOf` — **after** the ops steps in REL-3 | P2 | M |
 | **M-8** | M-4's leftovers: badges that count across families, `familyId` on pushes, a switcher chip in the top bar | P2 | M |
 | **CQ-11** | The declared error model is not the one in use | P3 | S |
-| **CQ-13** | Seventeen of twenty-five ViewModels have no tests | P2 | M |
+| **CQ-13** | Fourteen of twenty-four ViewModels have no tests | P2 | M |
 | **CQ-14** | User-facing strings produced inside ViewModels and services | P2 | M |
 | **CQ-15** | The last of the dead code, and one decision about it | P3 | S |
 | **CQ-17** | Six dependencies worth moving | P3 | S |
@@ -172,7 +173,7 @@ shipped, and a plan that describes work already done is worse than no plan.
 | --- | --- | --- | --- | --- |
 | Receipts | Extra section | L | High | **Done.** On-device OCR (ML Kit → `ReceiptParser`); no receipt text or photo leaves the device |
 | Change requests | Shown as notification and in the dashboard | M | High | **Done**, and the honesty gap that outlived it is closed too — a request that has not left the phone says Queued (**CQ-20**) |
-| Weekly summary | Dashboard of next week's mutual activities | M | High | **Done.** Exactly one entry point, at the bottom of Home |
+| Weekly summary | Dashboard of next week's mutual activities | M | High | **Removed** (commit `340af30`). Home's seven-day card is what survives of it; whether that satisfies this row or the row reopens is an owner call |
 | First screen updates | Last 5 changes both parents can see | L | Medium | **Done.** The recent-changes feed on Home |
 | Structured chat → change request | Button, new date, notification | M | Medium | **Done** |
 | Attach image to the event | Clear | L | Medium | **Done.** `Event.imageUrl` into `event_images/` — which is one of the two Storage prefixes the **live** bucket still covers; `pet_photos/` and `medical_photos/` are refused until REL-3's storage deploy runs |
@@ -257,8 +258,15 @@ enrolment rule in the console rather than on this sentence; Play's requirements 
       and comes out unsigned — CI runs `assembleRelease` on every pull request and must keep doing
       so without a key. `docs/LAUNCH-PLAYBOOK.md` §2.3 has the `keytool` line.
 - [ ] Generate the upload keystore, set those four properties, and back it up in two places.
-- [ ] `./gradlew bundleRelease` — Play takes an AAB, not an APK. Keep each release's mapping file,
-      or Crashlytics stack traces are unreadable.
+- [x] `./gradlew bundleRelease` is scripted: `.github/workflows/release.yml` (September 2026) is a
+      manual `workflow_dispatch` that decodes the keystore and `google-services.json` from
+      repository secrets (`COPLANLY_UPLOAD_KEYSTORE_BASE64`, the three `COPLANLY_RELEASE_*`
+      passwords, `GOOGLE_SERVICES_JSON_BASE64`), builds the AAB, runs `check-r8-mapping.js`, and
+      uploads the bundle and R8's `mapping.txt` as artifacts — the mapping kept, or Crashlytics
+      stack traces from that build are unreadable. It says in its summary whether the bundle came
+      out signed. **Never run**: the secrets do not exist until the keystore does.
+- [ ] Put the five secrets in the repository, run the workflow once, and install what it built on
+      a phone before anything is uploaded (REL-7).
 
 ### REL-3 · P0 · Deploy the rules, the functions, and the storage rules
 
@@ -284,19 +292,18 @@ is lost, since Room is the source of truth, but it is alarming to watch.
 - [ ] `firebase deploy --only storage`. The bucket still runs its July 2026 rules, which cover
       `receipts/` and `event_images/` only, so `pet_photos/**` and `medical_photos/**` fall through
       to the catch-all `allow read, write: if false` and **every pet and medical photo upload is
-      refused today**. The client path is sound and was ruled out end to end. Nothing catches this:
-      `firebase.json` configures a Firestore emulator only, and Storage rules have no test coverage
-      at all. This also closes the unchecked box at `docs/REVIEW-2026-07-23.md:65`.
+      refused today**. The client path is sound and was ruled out end to end. The ruleset *in the
+      repository* is covered by `firestore-tests/rules/storage.test.js` (this line used to say
+      Storage had no coverage); only the deploy settles what the bucket enforces. This also closes
+      the unchecked box at `docs/REVIEW-2026-07-23.md:65`.
 
 **And the accounts:**
 
-- [ ] Set `functions/.env`: `SENDGRID_API_KEY`, `INVITE_FROM_EMAIL`, `INVITE_FROM_NAME`. Until they
-      are set, invitations record `emailDelivery: 'not_configured'` and are not sent.
-- [ ] Set `GOOGLE_OAUTH_CLIENT_ID` and `GOOGLE_OAUTH_CLIENT_SECRET` in the same file (SEC-1 §2).
+- [ ] Set `GOOGLE_OAUTH_CLIENT_ID` and `GOOGLE_OAUTH_CLIENT_SECRET` in `functions/.env` (SEC-1 §2).
       **Google Calendar sign-in does not work until these are set and the functions deployed** —
       the client secret is no longer in the APK, so the app has no other way to redeem a code.
-- [ ] Verify the sending domain (SPF/DKIM), or invitations land in spam — which looks identical to
-      not being sent.
+      *(The SendGrid bullets that used to sit here are gone with email invitations — owner
+      decision, August 2026; sharing a code is the whole invitation story.)*
 - [ ] **Decide the Firestore region.** An EU region makes the whole GDPR story simpler and cannot
       be changed once data exists. Check what `coparently-a39c9` uses today.
 - [ ] Sign a DPA with Google covering Firebase.
@@ -312,7 +319,14 @@ template survives that unread.
 - [ ] Fill every `{{PLACEHOLDER}}` in `PRIVACY-POLICY.md` and `TERMS-OF-SERVICE.md`: controller
       identity, address, contact. *(cloud, once you supply the identity)*
 - [ ] Legal review. *(yours)*
-- [ ] Host both at stable URLs. Play requires the privacy-policy URL in the listing. *(yours)*
+- [x] Both are **pages already**: `web/privacy/index.html` and `web/terms/index.html`, generated
+      from the markdown by `tools/wrap-legal-page.js` in the deletion page's self-contained style
+      (September 2026), each with a draft banner that lists the placeholders still in it and
+      disappears only when the last one is filled. `firebase.json` carries the `hosting` block that
+      serves `web/`. Regenerate the pages in the same commit as any edit to the markdown —
+      `web/README.md` has the two commands.
+- [ ] `firebase deploy --only hosting`, once the banner is gone. Play requires the privacy-policy
+      URL in the listing. *(yours)*
 - [x] The **web account-deletion page** is written: `web/delete-account/index.html`, one
       self-contained file in Czech and English, with `web/README.md` covering the placeholders,
       the hosting, and the two sentences that are the lawyer's to confirm rather than a
@@ -480,9 +494,10 @@ invitation.
   launch — deliberately, because crashing makes the app unusable and wiping trades data the user
   has for a property they did not have a moment ago.
 
-**The caveat, stated plainly: none of the SQLCipher calls have ever run.** There is no instrumented
-job (**CQ-1**) and the sessions that wrote this have no Android SDK, so the decision layer is unit
-tested and the export, the verification and the swap are not exercised at all. Nothing is published,
+**The caveat, restated (September 2026): the SQLCipher *open* path has now run** — the
+`instrumented` CI job keeps Room real and passed on `main` on 2026-09-01 — but the export, the
+verification and the swap of an existing plaintext file have not: the emulator starts from an
+empty database, so the conversion is still exercised nowhere. Nothing is published,
 so no install but the developer's own is at stake — but *the first launch on a device that already
 has data is an acceptance step somebody has to perform*, and it belongs in **REL-7**'s list. What to
 watch for: the app opens, the calendar and chat are still there, and
@@ -493,6 +508,55 @@ is encrypted on the device, and `DATA-SAFETY.md` records what backs the claim. N
 hosted yet (**REL-4**), so nothing false is published — but if the acceptance run fails, the
 sentence comes out of the policy in the same commit as whatever fixes it. A privacy policy is the
 last place to leave a claim the code does not keep.
+
+### SEC-6 · **PARTLY DONE** · P1 · What the September 2026 audit closed, and what it left
+
+**Where:** ☁️ the closed half is on `claude/parent-sync-onboarding-p1e84p`; the open half is
+listed so it is not lost. Full evidence in that branch's commit messages and CLAUDE.md items 22–23.
+
+Closed, each with a regression test on the emulator or in `functions/test`:
+
+- [x] Any signed-in account could write an expense, budget, event, child or pet *into* somebody
+      else's family (`familyId`/`sharedWith` were unbound on create) — and a malformed one crashed
+      both parents' Expenses screen on every open. Bound to the writer (`isMyAudience`,
+      `familyIsMineOrBlank`); the expense and budget readers skip a document that does not parse.
+- [x] A parent could forge a split-ratio proposal in the co-parent's name and accept it alone.
+- [x] An ex-partner could keep posting chat after unpair, and the server pushed it under any name.
+- [x] `unpairCoParent` did not revoke when the caller was the second co-parent of a multi-family
+      parent; `deleteAccount` skipped every pairing of such a parent, the parenting plan and the
+      OAuth fingerprint.
+- [x] A co-parent could strip the creator out of a child's record or hand it to a stranger.
+- [x] A change request could be rewritten while being "accepted", or re-addressed.
+- [x] Client writes could move `role`/`partnerId`/`partnerIds`; an invitation could be minted that
+      never expired; two accounts could redeem one code at once.
+- [x] Client: an encrypted database was handed to the framework helper on a SQLCipher failure,
+      which deletes it; a transient Keystore refusal read as "key lost"; pushes were shown to
+      whoever was signed in on the device, and the token never detached on sign-out; an offline
+      sign-out kept the previous account's Google Calendar credential; the advertising-id
+      permission was merged in; cleartext was allowed on API 26–27; a chat deep link with a `/`
+      crashed the exported activity; the invite code went to the clipboard unmarked.
+
+Open, in the order they matter:
+
+- [ ] **Expenses and budgets recorded before pairing never reach the co-parent under the
+      family-keyed rules.** They upload with `familyId: ""` and nothing re-stamps the remote copy
+      (`FamilyIdBackfill` is Room-only, CLAUDE.md item 18). Needs an own-rows re-queue keyed on
+      the partner uid and an upload pass in `performFullSync` — the shape `markOwnEventsUnsynced`
+      has. Live only once REL-3 step 4 deploys, which is why it is here and not in a hotfix.
+- [ ] Cloud Storage: any signed-in user can still overwrite or delete any object (audit §3.1,
+      SEC-1 §1). The cross-service rule is drafted in the audit report; the emulator cannot
+      evaluate `firestore.get()` from Storage rules, so it needs a staging bucket.
+- [ ] Invite-code redemption has no rate limit and no App Check. Space is 31⁶ and codes expire in
+      24 h, so this is a growing risk, not a live one; `enforceAppCheck` needs the client wired
+      to Play Integrity first.
+- [ ] `onEventCreated`/`onChildInfoUpdated` still compose English `title`/`body` server-side and
+      notify only the first co-parent; `guest_accepted`/`calendar_friend_accepted` have no client
+      wording and are dropped on arrival (item 15's four-way rule).
+- [ ] The Firebase SDK's offline cache, WorkManager's input data (reminder titles) and Coil's
+      image cache are plaintext files under Android's file-based encryption only; the privacy
+      policy now says so rather than claiming otherwise.
+- [ ] Messages accept any `timestamp`; a bound would break the offline outbox, so a back-dated
+      message stays possible. Bound it server-side in `onChatMessageCreated` if it ever matters.
 
 ### SEC-5 · P3 · S · `androidx.security:security-crypto` is on an alpha
 
@@ -537,10 +601,11 @@ commits may not build at all under today's Kotlin and AGP and the result would b
 that looks complete. The consequence is stated rather than hidden: those nineteen migrations, plus
 **SEC-4**'s timestamp conversion and **FAM-2**'s dead `childId` columns, stay unprovable.
 
-**Left:** an instrumented CI job. It buys nothing yet — with one exported schema there is no
-earlier version to migrate *from* — so it becomes worth adding at v34, together with the first
-migration test that can use it. The old **CQ-2** id, the untested migrations that shipped in
-`versionCode 2`, is folded in here and dies with the same reasoning.
+**Left:** nothing on the CI side — the `instrumented` job exists (September 2026) and runs the
+six migration tests that have schemas plus 33→34; the eight tests for the missing schemas stay
+`@Ignore`d, as `CLAUDE.md` explains, until somebody restores a schema. The old **CQ-2** id, the
+untested migrations that shipped in `versionCode 2`, is folded in here and dies with the same
+reasoning.
 
 ### CQ-5 · **DONE** · P1 · M · Sync downloads the entire event collection every 15 minutes
 
@@ -700,10 +765,12 @@ The debt the baseline records is still there to work down; the baseline is what 
 
 **Where:** ☁️ cloud — JVM unit tests are exactly what CI runs.
 
-**Seventeen of twenty-five ViewModels have no tests** — including `ChildInfoViewModel`, whose
-overwrite-the-wrong-child defect (**CQ-9**) has no regression test guarding it. `SettingsViewModel`
-and `SyncViewModel` were removed as stale and never rewritten; `ChildInfoViewModelTest`,
-`PairingViewModelTest` and `SyncServiceTest` are back.
+**Fourteen of twenty-four ViewModels have no tests** (counted September 2026; this used to say
+seventeen of twenty-five): ChangeRequest, RequestChange, TelemetryConsent, Contacts, CustodySetup,
+Budget, Friend, GuestAccept, CustodyConflict, ParentingPlan, Pets, Settings, AuthState and Sync.
+`SettingsViewModel` and `SyncViewModel` were removed as stale and never rewritten;
+`ChildInfoViewModelTest`, `PairingViewModelTest`, `OnboardingViewModelTest` and `SyncServiceTest`
+exist.
 
 The first four CI runs are the argument: 30 unit tests were failing because their mocks had gone
 stale against collaborators added months earlier, and nobody knew. Tests that do not run are not
@@ -1373,6 +1440,16 @@ job that runs the one thing it cannot.
 
 Kept rather than deleted, because the reasoning is what stops each one coming back. Full arguments
 in `docs/AUDIT-2026-08.md` under the § numbers cited.
+
+### September 2026
+
+- **Onboarding links the co-parent first.** The wizard used to end with the invitation, so the
+  second parent retyped everything the first had entered. `CoParent` is now the first step; the
+  steps after it open on what the link brought back (children, pets, the agreed split, the shared
+  schedule), the pairing transition asks for a sync on both phones (`SyncRequester`), the
+  backfill announces itself once (`RECORDS_SHARED`), and a schedule saved before pairing is
+  published to a pair that has none. CLAUDE.md item 22 has the six rules that hold it up.
+- **SEC-6's closed half** — see that entry.
 
 ### Security
 

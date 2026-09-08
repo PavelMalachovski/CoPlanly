@@ -112,22 +112,6 @@ class EncryptedPreferences @Inject constructor(
     }
 
     /**
-     * Stores sync enabled status.
-     */
-    fun putSyncEnabled(enabled: Boolean) {
-        encryptedPreferences.edit()
-            .putBoolean(KEY_SYNC_ENABLED, enabled)
-            .apply()
-    }
-
-    /**
-     * Retrieves sync enabled status.
-     */
-    fun isSyncEnabled(): Boolean {
-        return encryptedPreferences.getBoolean(KEY_SYNC_ENABLED, false)
-    }
-
-    /**
      * Stores Google ID token (from Credential Manager).
      */
     fun putGoogleIdToken(token: String) {
@@ -362,7 +346,7 @@ class EncryptedPreferences @Inject constructor(
      * This is no longer literally "all", and that is deliberate, not an oversight: this method
      * is reached from the app's own Sign out (`SettingsScreen`'s confirm dialog runs
      * `SyncViewModel.signOut` — which calls this via `CredentialManagerService`/
-     * `GoogleSignInService` — immediately before `AuthStateViewModel.signOut`) as well as from
+     * immediately before `AuthStateViewModel.signOut`) as well as from
      * disconnecting Google Calendar alone (`onCalendarSignOut`). Neither of those touches Room,
      * where `users`/`events` rows deliberately survive sign-out so a returning parent's history
      * is still there. Before this exemption, signing out during the window between a
@@ -468,7 +452,6 @@ class EncryptedPreferences @Inject constructor(
         private const val KEY_REFRESH_TOKEN = "refresh_token"
         private const val KEY_TOKEN_EXPIRY = "token_expiry"
         private const val KEY_CALENDAR_ID = "calendar_id"
-        private const val KEY_SYNC_ENABLED = "sync_enabled"
         private const val KEY_GOOGLE_ID_TOKEN = "google_id_token"
         private const val KEY_USER_EMAIL = "user_email"
         private const val KEY_DARK_THEME = "dark_theme"

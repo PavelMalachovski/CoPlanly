@@ -254,7 +254,12 @@ class ExpenseRepositoryImpl @Inject constructor(
                         return@forEach
                     }
 
-                    val expense = Expense(
+                    // One document that does not parse must not take the whole stream down —
+                    // `.catch` above covers the listener, not this lambda, and an unchecked
+                    // cast here used to crash both parents' Expenses screens on every open
+                    // until the document went away.
+                    val expense = runCatching {
+                        Expense(
                         id = id,
                         // A co-parent on a build that predates the reference type still writes
                         // `childId`, so it is read as a fallback. In practice it converts
@@ -277,7 +282,11 @@ class ExpenseRepositoryImpl @Inject constructor(
                             (data["createdByFirebaseUid"] as? String)?.takeIf { it.isNotEmpty() },
                         splitBasisPoints = (data["splitBasisPoints"] as? Number)?.toInt()
                             ?.takeIf { it >= 0 }
-                    )
+                        )
+                    }.getOrElse { e ->
+                        android.util.Log.w("ExpenseRepo", "Skipping an expense document that does not parse: $id", e)
+                        return@forEach
+                    }
                     expenseDao.insertExpense(expense.toEntity())
                 }
             }

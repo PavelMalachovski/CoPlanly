@@ -23,9 +23,6 @@
     <string name="onboarding_custody_title">Your custody schedule</string>
     <string name="onboarding_custody_body">Set out which days your child is with each of you. You can change it at any time, and your co-parent has to agree to a change.</string>
     <string name="onboarding_custody_open">Set up the schedule</string>
-    <string name="onboarding_coparent_title">Invite your co-parent</string>
-    <string name="onboarding_coparent_body">Send them a link or a code. Once they join, they will see everything you have filled in here and can add to it.</string>
-    <string name="onboarding_coparent_open">Send an invitation</string>
     <string name="onboarding_family_title">Who are you co-parenting?</string>
     <string name="onboarding_family_body">Pick both if that is your family. You can change this later in Settings.</string>
     <string name="onboarding_family_children">Children</string>
@@ -42,4 +39,28 @@
     <string name="onboarding_pet_add">Add another pet</string>
     <string name="onboarding_pet_unnamed">Pet %1$d</string>
     <string name="onboarding_relatives_whose">Who are these contacts for?</string>
+
+    <!-- The co-parent link, which comes first (September 2026): the link, what it brought back, and
+         the wording the split and custody steps use once there is a co-parent to name. -->
+    <string name="onboarding_coparent_title">Link with your co-parent</string>
+    <string name="onboarding_coparent_body">If your co-parent already uses CoPlanly, enter their code: the children, pets, custody schedule and cost split they set up are pulled in, so nothing is typed twice. If they don\'t yet, invite them — they will see what you fill in here.</string>
+    <string name="onboarding_coparent_enter_code">I have their code</string>
+    <string name="onboarding_coparent_invite">Invite my co-parent</string>
+    <string name="onboarding_coparent_later">Not now</string>
+    <string name="onboarding_coparent_linked_title">Linked with %1$s</string>
+    <string name="onboarding_coparent_linked_body">Whatever %1$s has already entered is pulled in for you. Check it on the next steps and add anything missing.</string>
+    <string name="onboarding_coparent_fetching">Fetching what %1$s has entered…</string>
+    <string name="onboarding_coparent_found_title">Already entered by %1$s</string>
+    <string name="onboarding_coparent_found_children">Children</string>
+    <string name="onboarding_coparent_found_pets">Pets</string>
+    <string name="onboarding_coparent_found_custody">Custody schedule</string>
+    <string name="onboarding_coparent_found_split">Cost split</string>
+    <string name="onboarding_coparent_found_set">Set up</string>
+    <string name="onboarding_coparent_nothing_yet">Nothing has arrived yet. %1$s\'s phone sends their details the next time it is online — you can continue now, and whatever they entered will appear later.</string>
+    <string name="onboarding_from_coparent">Entered by %1$s. Check the details and add anything missing.</string>
+    <string name="onboarding_split_value_named">You %1$d / %2$s %3$d</string>
+    <string name="onboarding_split_body_linked">Half each unless you agree otherwise. This becomes the split you share with %1$s; changing it later is something they confirm — and expenses already recorded keep the split they were entered under.</string>
+    <string name="onboarding_split_agreed_body">Already agreed with %1$s. Move the slider to propose a different split — they will be asked to confirm it.</string>
+    <string name="onboarding_custody_set_body">A schedule is already set up: %1$s. Check it, or finish now and change it later from Settings.</string>
+    <string name="onboarding_custody_review">Review the schedule</string>
 </resources>

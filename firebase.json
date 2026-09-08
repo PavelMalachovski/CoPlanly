@@ -12,6 +12,15 @@
   "storage": {
     "rules": "storage.rules"
   },
+  "hosting": {
+    "public": "web",
+    "ignore": [
+      "README.md",
+      "**/.*"
+    ],
+    "cleanUrls": true,
+    "trailingSlash": true
+  },
   "emulators": {
     "firestore": {
       "port": 8080

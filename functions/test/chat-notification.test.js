@@ -19,21 +19,39 @@ const sinon = require('sinon');
  */
 
 /**
+ * The two parents' profiles as `notifyOfChatMessage` reads them: a live pairing between Alice
+ * and Bob, with Carol paired to nobody. Every case below runs against these unless it says
+ * otherwise, because the push is gated on the pairing behind the thread.
+ */
+const PAIRED_USERS = {
+  alice: {name: 'Alice', partnerIds: ['bob'], partnerId: 'bob'},
+  bob: {name: 'Bob', partnerIds: ['alice'], partnerId: 'alice'},
+  carol: {name: 'Carol', partnerIds: [], partnerId: ''},
+};
+
+/**
  * Minimal in-memory Firestore covering the subset `notifyOfChatMessage` uses: a single
- * `conversations` document lookup and `add` on `notification_queue`.
+ * `conversations` document lookup, `users/{uid}` profile lookups, and `add` on
+ * `notification_queue`.
  *
  * @param {?Object} conversation The `conversations/{conversationId}` document data, or
  *     `null`/`undefined` to model a missing document.
+ * @param {!Object<string, !Object>=} users Profiles keyed by uid; defaults to [PAIRED_USERS].
  * @return {!Object} The fake, carrying `_added` for assertions.
  */
-function fakeDb(conversation) {
+function fakeDb(conversation, users) {
   const added = [];
+  const profiles = users || PAIRED_USERS;
   return {
     _added: added,
     collection(name) {
       return {
-        doc: () => ({
+        doc: (id) => ({
           async get() {
+            if (name === 'users') {
+              const profile = profiles[id];
+              return {exists: profile != null, data: () => profile};
+            }
             return {
               exists: conversation != null,
               data: () => conversation,
@@ -209,7 +227,10 @@ describe('notifyOfChatMessage', () => {
     // SEC-3 moved the wording to the receiving device, so this no longer substitutes
     // 'CoPlanly' here: the app does it, from a string resource, in the reader's language.
     // Sending an English placeholder from the server would win over that translation.
-    const db = fakeDb({participants: ['alice', 'bob']});
+    const db = fakeDb({participants: ['alice', 'bob']}, {
+      alice: {name: '', partnerIds: ['bob']},
+      bob: {name: 'Bob', partnerIds: ['alice']},
+    });
     const message = {
       conversationId: 'alice__bob', senderId: 'alice', senderName: '',
       content: 'Hi', timestamp: '2026-08-02T10:00:00',
@@ -218,6 +239,51 @@ describe('notifyOfChatMessage', () => {
     await notifyOfChatMessage(db, message);
 
     assert.strictEqual(db._added[0].data.data.actorName, '');
+  });
+
+  it('takes the name from the sender profile, never from the message', async () => {
+    // The message document is client-written and the create rule does not validate
+    // `senderName`, so relaying it would let a sender put any name on the other parent's lock
+    // screen. The profile is the name the recipient already knows them by.
+    const db = fakeDb({participants: ['alice', 'bob']});
+    const message = {
+      conversationId: 'alice__bob', senderId: 'alice', senderName: 'Police',
+      content: 'Open the door', timestamp: '2026-08-02T10:00:00',
+    };
+
+    await notifyOfChatMessage(db, message);
+
+    assert.strictEqual(db._added[0].data.data.actorName, 'Alice');
+  });
+
+  it('queues nothing once the pairing behind the thread has ended', async () => {
+    // Unpair keeps the thread for its history. It must not keep the push: an ex-partner who
+    // could still reach the other parent's notifications would have exactly the channel the
+    // `notification_queue` rule closed, reopened through chat.
+    const db = fakeDb({participants: ['alice', 'bob']}, {
+      alice: {name: 'Alice', partnerIds: [], partnerId: ''},
+      bob: {name: 'Bob', partnerIds: [], partnerId: ''},
+    });
+    const message = {
+      conversationId: 'alice__bob', senderId: 'alice', senderName: 'Alice',
+      content: 'Still here', timestamp: '2026-08-02T10:00:00',
+    };
+
+    await notifyOfChatMessage(db, message);
+
+    assert.deepStrictEqual(db._added, []);
+  });
+
+  it('queues nothing when the sender has no profile at all', async () => {
+    const db = fakeDb({participants: ['alice', 'bob']}, {bob: PAIRED_USERS.bob});
+    const message = {
+      conversationId: 'alice__bob', senderId: 'alice', senderName: 'Alice',
+      content: 'Hi', timestamp: '2026-08-02T10:00:00',
+    };
+
+    await notifyOfChatMessage(db, message);
+
+    assert.deepStrictEqual(db._added, []);
   });
 
   it('never writes a title or a body', async () => {

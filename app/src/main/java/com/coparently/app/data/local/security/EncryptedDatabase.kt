@@ -134,11 +134,18 @@ class EncryptedDatabase @Inject constructor(
      * beside it is unverified by construction — reaching here means the attempt threw — so the
      * partial copy goes and the known-good original stays.
      *
-     * The one state that must not fall back is an export with no original: there the encrypted
-     * copy is the only remaining record of the family's data, and returning null would have Room
-     * create an empty plaintext database beside it, which the *next* launch would then read as a
-     * fresh install and sweep the export as stale. Failing loudly is worse to use and the only
-     * thing that keeps the data recoverable.
+     * Two states must not fall back, and both throw instead. An export with no original: there
+     * the encrypted copy is the only remaining record of the family's data, and returning null
+     * would have Room create an empty plaintext database beside it, which the *next* launch would
+     * then read as a fresh install and sweep the export as stale. And **a database that is already
+     * encrypted** — the state every launch after the first is in. Returning null there hands the
+     * ciphertext to Room's framework helper, which cannot parse its header, reports the file as
+     * corrupt, and — through `androidx.sqlite`'s default `onCorruption`, which `RoomOpenHelper`
+     * does not override — **deletes it** and opens an empty database in its place. That was
+     * reachable from the one failure this method exists for: SQLCipher's native library missing
+     * for the device's ABI after an update. A launch that fails is recoverable; a launch that
+     * silently replaces the family's records with nothing is not. Failing loudly is worse to use
+     * and the only thing that keeps the data recoverable.
      */
     private fun fallBackTo(
         database: File,
@@ -151,7 +158,9 @@ class EncryptedDatabase @Inject constructor(
             deleteWithSidecars(export)
             return null
         }
-        if (!database.exists() && export.exists()) throw cause
+        // Ciphertext on disk, or only an export: nothing the framework helper may be given.
+        if (database.exists() || export.exists()) throw cause
+        // Nothing on disk yet: a fresh plaintext file is honest, and the next launch encrypts it.
         return null
     }
 

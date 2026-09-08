@@ -292,21 +292,22 @@ describe('Part 2: access after unpair', () => {
       await assertFails(bob.doc('events/event-1').update({title: 'Mine now'}));
     });
 
-    it('the pre-fix edit audience did re-grant it — this is the leak being closed', async () => {
-      // Pins the defect rather than the fix: nothing in the rules refuses this write, so
-      // the widen-only client handed the ex-partner read *and* read_write back for good.
+    it('the pre-fix edit audience is now refused by the rules as well', async () => {
+      // This used to pin the defect: nothing in the rules refused the widen-only client's
+      // write, so it handed the ex-partner read *and* read_write back for good, and only the
+      // client intersecting saved it. The audience is bound to the writer's live co-parents
+      // now (`isMyAudience`), so the same write is refused server-side — the second lock.
       const audience = widenOnlyAudience(STALE_LOCAL, ALICE, ALICE, null);
       if (!audience.includes(BOB)) {
         throw new Error('the pre-fix mirror no longer models the old behaviour');
       }
 
       const alice = env.authenticatedContext(ALICE).firestore();
-      await assertSucceeds(alice.doc('events/event-1')
+      await assertFails(alice.doc('events/event-1')
           .update({title: 'Moved to 18:00', sharedWith: audience}));
 
       const bob = env.authenticatedContext(BOB).firestore();
-      await assertSucceeds(bob.doc('events/event-1').get());
-      await assertSucceeds(bob.doc('events/event-1').update({title: 'Mine now'}));
+      await assertFails(bob.doc('events/event-1').get());
     });
 
     it('an unsynced event upload no longer re-grants the ex-partner (the sync entry path)',
@@ -335,17 +336,14 @@ describe('Part 2: access after unpair', () => {
           }
         });
 
-    it('the pre-fix upload audience did re-grant it', async () => {
+    it('the pre-fix upload audience is now refused by the rules as well', async () => {
       const audience = widenOnlyAudience(STALE_LOCAL, ALICE, ALICE, null);
 
       const alice = env.authenticatedContext(ALICE).firestore();
-      await assertSucceeds(alice.doc('events/unsynced-1').set(eventDoc({
+      await assertFails(alice.doc('events/unsynced-1').set(eventDoc({
         id: 'unsynced-1', title: 'Created offline before the unpair',
         sharedWith: audience,
       })));
-
-      const bob = env.authenticatedContext(BOB).firestore();
-      await assertSucceeds(bob.doc('events/unsynced-1').get());
     });
 
     it('holds on the device that never called unpair', async () => {
@@ -379,7 +377,14 @@ describe('Part 2: access after unpair', () => {
     it('still admits a new co-parent, so intersecting costs no legitimate visibility',
         async () => {
           // Alice re-pairs with Carol. Old events must reach the new co-parent on the next
-          // write, which is the only mechanism that ever shares them.
+          // write, which is the only mechanism that ever shares them. The re-pairing is
+          // recorded where the rules read it — `acceptPairingInvitation` writes both
+          // profiles — because a creator may only ever *add* a live co-parent to an
+          // audience (`onlyFamilyAdded`); a uid the profile does not vouch for is a stranger.
+          await seed(env, {
+            'users/alice-uid': {name: 'Alice', email: 'a@x.test', partnerId: CAROL},
+            'users/carol-uid': {name: 'Carol', email: 'c@x.test', partnerId: ALICE},
+          });
           const audience = editAudience(STALE_LOCAL, ALICE, ALICE, CAROL);
           if (!audience.includes(CAROL) || audience.includes(BOB)) {
             throw new Error(`wrong audience after re-pairing: ${audience}`);

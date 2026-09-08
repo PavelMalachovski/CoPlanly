@@ -12,6 +12,8 @@ import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestoreChildInfoDataSource
 import com.coparently.app.data.remote.firebase.FirestoreEventDataSource
 import com.coparently.app.data.remote.firebase.FirestoreUserDataSource
+import com.coparently.app.data.remote.firebase.PushPayload
+import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.FamilySettingsRepository
 import com.coparently.app.data.repository.LocalDateJsonAdapter
 import com.coparently.app.data.repository.ParentSlotMigrator
@@ -64,7 +66,8 @@ class SyncService @Inject constructor(
     private val familySettingsRepository: FamilySettingsRepository,
     private val familyIdBackfill: FamilyIdBackfill,
     private val selectedFamilySource: SelectedFamilySource,
-    private val accountSwitchGuard: AccountSwitchGuard
+    private val accountSwitchGuard: AccountSwitchGuard,
+    private val custodyModelRepository: CustodyModelRepository
 ) {
     // `LocalDate::class.java` needs the same adapter `ChildInfoRepositoryImpl` and
     // `UserRepositoryImpl` register: `Vaccination.date` is a `LocalDate`, and a document read
@@ -109,18 +112,26 @@ class SyncService @Inject constructor(
                 }
             )
 
-            // Step 3: Sync events
+            // Step 3: Sync events. Each of these two passes reports how many of this user's rows
+            // it re-queued for a new co-parent, so that the whole backfill is announced once
+            // at the end rather than once per record.
             _syncStatus.value = SyncStatus.Syncing(40, 100)
-            syncEvents(currentUser.uid)
+            val requeuedEvents = syncEvents(currentUser.uid)
 
             // Step 4: Sync child info
             _syncStatus.value = SyncStatus.Syncing(70, 100)
-            syncChildInfo(currentUser.uid)
+            val requeuedChildren = syncChildInfo(currentUser.uid)
 
             // Step 5: Sync pets. The repository handles upload, download and audience repair
             // itself (mirroring child info), so there is nothing to duplicate here.
             _syncStatus.value = SyncStatus.Syncing(80, 100)
             petRepository.pullOnce()
+
+            // Step 5b: the custody schedule this device set before there was a pair to share it
+            // with. Nothing else ever published it — the save pushes only when paired, the
+            // mirror only over a document that exists — so the first parent's schedule stayed
+            // on the first parent's phone. Writes only on a read that proved the pair has none.
+            custodyModelRepository.publishLocalIfMissing()
 
             // Step 6: Drain the outboxes that a live listener cannot drain for you. Chat and
             // change requests are mirrored *down* in realtime, but a write of either that was
@@ -141,6 +152,12 @@ class SyncService @Inject constructor(
             // only when the pair has no agreement yet, so a tick can never overwrite one.
             familySettingsRepository.publishCachedRatioIfMissing()
 
+            // One push for the whole backfill, after every pass that widens an audience has
+            // run: what the co-parent's phone needs is a single wake-up once there is something
+            // new for it to read, and what the co-parent needs is one sentence, not a tray full
+            // of years-old events each announcing itself as created.
+            if (requeuedEvents + requeuedChildren > 0) announceSharedRecords(currentUser.uid)
+
             // Step 7: Complete
             _syncStatus.value = SyncStatus.Success(LocalDateTime.now())
             Result.success(Unit)
@@ -153,14 +170,19 @@ class SyncService @Inject constructor(
     /**
      * Syncs events between local database and Firestore.
      */
-    private suspend fun syncEvents(userId: String) {
+    private suspend fun syncEvents(userId: String): Int {
         val partnerId = userDao.getUserById(userId)?.partnerId?.takeIf { it.isNotBlank() }
+        // What was already waiting to go up before the backfill: those rows are genuinely new
+        // or edited, and their pushes are wanted. Everything the backfill adds on top is a
+        // re-publication of an old record and is announced once, together, at the end.
+        val queuedBefore = eventDao.getUnsyncedEvents().map { it.id }.toSet()
         // Before the read below, not after: the backfill's whole effect is to clear the flag
         // `getUnsyncedEvents` selects on, so a read taken first would not see it.
-        backfillAudienceForPartner(userId, partnerId)
+        val requeued = backfillAudienceForPartner(userId, partnerId)
 
         // Upload unsynced local events; private events never leave the device
         val unsynced = eventDao.getUnsyncedEvents().filterNot { it.isPrivate }
+        val quiet: Set<String> = if (requeued > 0) unsynced.map { it.id }.toSet() - queuedBefore else emptySet()
         val (pendingDeletions, unsyncedEvents) = unsynced.partition { it.deletedAtMillis != null }
 
         // Deletions first. They are the half of this queue that used to have no path at all:
@@ -229,7 +251,9 @@ class SyncService @Inject constructor(
             if (result.isSuccess) {
                 eventDao.markAsSynced(entity.id)
 
-                // Notify everyone the event is shared with, except the uploader
+                // Notify everyone the event is shared with, except the uploader — unless this
+                // is a re-publication for a new co-parent, which `announceSharedRecords` covers.
+                if (entity.id in quiet) continue
                 for (recipientId in audience) {
                     if (recipientId != userId) {
                         notifyEventUpdate(recipientId, entity.id, entity.title, "created")
@@ -360,6 +384,7 @@ class SyncService @Inject constructor(
                 encryptedPreferences.putString(sweepKey, startedAt.toString())
             }
         }
+        return requeued
     }
 
     /**
@@ -379,7 +404,7 @@ class SyncService @Inject constructor(
      * pass uploads them, because the marker guards the flagging and not the upload. Advancing it
      * only after the uploads would instead re-flag every event on every sync.
      */
-    private suspend fun backfillAudienceForPartner(userId: String, partnerId: String?) {
+    private suspend fun backfillAudienceForPartner(userId: String, partnerId: String?): Int {
         val key = "${PreferenceKeys.EVENT_AUDIENCE_BACKFILL_PREFIX}$userId"
 
         // Unpaired: disarm the marker rather than simply doing nothing.
@@ -399,9 +424,9 @@ class SyncService @Inject constructor(
             if (!encryptedPreferences.getString(key).isNullOrBlank()) {
                 encryptedPreferences.putString(key, "")
             }
-            return
+            return 0
         }
-        if (encryptedPreferences.getString(key) == partnerId) return
+        if (encryptedPreferences.getString(key) == partnerId) return 0
 
         val requeued = eventDao.markOwnEventsUnsynced(userId)
         encryptedPreferences.putString(key, partnerId)
@@ -409,6 +434,7 @@ class SyncService @Inject constructor(
             TAG,
             "Audience backfill for $userId with partner $partnerId: re-queued $requeued event(s)"
         )
+        return requeued
     }
 
     /**
@@ -429,16 +455,16 @@ class SyncService @Inject constructor(
      *   `EncryptedPreferences` has no generic remove, and a blank value can never equal a real
      *   UID, so it re-arms exactly as an absent marker does.
      */
-    private suspend fun backfillChildInfoAudienceForPartner(userId: String, partnerId: String?) {
+    private suspend fun backfillChildInfoAudienceForPartner(userId: String, partnerId: String?): Int {
         val key = "${PreferenceKeys.CHILD_INFO_AUDIENCE_BACKFILL_PREFIX}$userId"
 
         if (partnerId == null) {
             if (!encryptedPreferences.getString(key).isNullOrBlank()) {
                 encryptedPreferences.putString(key, "")
             }
-            return
+            return 0
         }
-        if (encryptedPreferences.getString(key) == partnerId) return
+        if (encryptedPreferences.getString(key) == partnerId) return 0
 
         val requeued = childInfoDao.markOwnChildInfoUnsynced(userId)
         encryptedPreferences.putString(key, partnerId)
@@ -447,6 +473,7 @@ class SyncService @Inject constructor(
             "Child-info audience backfill for $userId with partner $partnerId: " +
                 "re-queued $requeued row(s)"
         )
+        return requeued
     }
 
     /**
@@ -491,17 +518,20 @@ class SyncService @Inject constructor(
     /**
      * Syncs child information between local database and Firestore.
      */
-    private suspend fun syncChildInfo(userId: String) {
+    private suspend fun syncChildInfo(userId: String): Int {
         val partnerId = userDao.getUserById(userId)?.partnerId?.takeIf { it.isNotBlank() }
-        backfillChildInfoAudienceForPartner(userId, partnerId)
+        // See `syncEvents`: rows already waiting are new, rows the backfill adds are not.
+        val queuedBefore = childInfoDao.getUnsyncedChildInfo().map { it.id }.toSet()
+        val requeued = backfillChildInfoAudienceForPartner(userId, partnerId)
 
         // Upload unsynced local child info. Deletions first, and they are *not* uploadable as
         // documents: `getUnsyncedChildInfo` is the outbox and carries pending tombstones, so
         // sending one through `upsertChildInfo` — a `set()` — would rewrite the document from a
         // row that only still exists to record its own deletion, wiping the tombstone and
         // resurrecting the child on both phones.
-        val (pendingDeletions, unsyncedChildInfo) =
-            childInfoDao.getUnsyncedChildInfo().partition { it.deletedAtMillis != null }
+        val allUnsynced = childInfoDao.getUnsyncedChildInfo()
+        val quiet: Set<String> = if (requeued > 0) allUnsynced.map { it.id }.toSet() - queuedBefore else emptySet()
+        val (pendingDeletions, unsyncedChildInfo) = allUnsynced.partition { it.deletedAtMillis != null }
 
         for (entity in pendingDeletions) {
             val deletedAtMillis = entity.deletedAtMillis ?: continue
@@ -556,8 +586,9 @@ class SyncService @Inject constructor(
             if (result.isSuccess) {
                 childInfoDao.markAsSynced(entity.id)
 
-                // Notify partner
-                if (partnerId != null && partnerId != userId) {
+                // Notify partner — unless this is a re-publication for a new co-parent, which
+                // `announceSharedRecords` covers once for all of them.
+                if (partnerId != null && partnerId != userId && entity.id !in quiet) {
                     notifyChildInfoUpdate(partnerId, entity.id, entity.childName)
                 }
             }
@@ -643,6 +674,7 @@ class SyncService @Inject constructor(
                 }
             }
         }
+        return requeued
     }
 
     /**
@@ -725,6 +757,21 @@ class SyncService @Inject constructor(
                 Log.e(TAG, "Failed to react to a remote slot change for $userId", e)
             }
         }
+    }
+
+    /**
+     * Tells the co-parent, once, that this parent's records have been shared with them.
+     *
+     * `RECORDS_SHARED` carries the actor's name and nothing else; the receiving device writes
+     * the sentence (SEC-3) and runs the sync that downloads what it can now read.
+     */
+    private suspend fun announceSharedRecords(userId: String) {
+        val user = userDao.getUserById(userId) ?: return
+        val partnerId = user.partnerId?.takeIf { it.isNotBlank() && it != userId } ?: return
+        fcmService.queueNotificationForUser(
+            partnerId,
+            mapOf(PushPayload.TYPE to PushPayload.RECORDS_SHARED, PushPayload.ACTOR to user.name)
+        )
     }
 
     /**

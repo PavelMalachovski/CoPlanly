@@ -3,7 +3,17 @@ package com.coparently.app.presentation.onboarding
 import com.coparently.app.domain.model.FamilyKind
 
 /**
- * The wizard's steps, in the order the product brief lists them.
+ * The wizard's steps, in the order they are walked.
+ *
+ * **The co-parent link comes first, before a single question is asked** (September 2026, an
+ * owner decision). The wizard used to end with the invitation, which made sense for the first
+ * parent to install the app and none at all for the second: they were walked through every
+ * child, every allergy and the custody schedule, typed it all in, and only then linked to the
+ * parent who had already entered the same things. Linking first lets the questionnaire open on
+ * what the co-parent has already entered — the child step with their children, the split step
+ * on the agreed ratio, the custody step on the shared schedule — so the second parent checks
+ * rather than retypes. For the first parent nothing is lost: the step offers an invitation and
+ * a "Not now", and the questionnaire that follows is the one they always had.
  *
  * [Custody] and [CoParent] do not render a form inside the wizard: they hand off to
  * `CustodySetupScreen` and `PairingScreen`, which already do those jobs and are reachable from
@@ -16,6 +26,15 @@ import com.coparently.app.domain.model.FamilyKind
  * exactly what a conditional flow cannot do — see [stepsFor], which is the list to walk instead.
  */
 enum class OnboardingStep {
+    /**
+     * Hands off to `PairingScreen`, and shows what the link brought back once there is one.
+     *
+     * First, so that everything after it can open pre-filled. Skippable — "Not now" — because
+     * the first parent to install the app has nobody to link with yet, and a link is never a
+     * gate on somebody's calendar.
+     */
+    CoParent,
+
     /** Explains what is about to be asked, and why. */
     Intro,
 
@@ -49,16 +68,14 @@ enum class OnboardingStep {
      *
      * Here rather than only in Settings because the reporter asked for it at registration, and
      * because it is genuinely easier to agree before there is a month of expenses to re-argue.
-     * Nobody has to confirm it yet: pairing is the last step, so at this point there is no
-     * co-parent, and `FamilySettingsRepository.submitRatio` applies it outright.
+     * With the link made first, a second parent opens this step on the ratio the pair already
+     * agreed, and moving the slider is a proposal the co-parent confirms — exactly what it is
+     * in Settings.
      */
     Split,
 
-    /** Hands off to `CustodySetupScreen`. */
-    Custody,
-
-    /** Hands off to `PairingScreen`. Finishing here finishes onboarding. */
-    CoParent;
+    /** Hands off to `CustodySetupScreen`. Finishing here finishes onboarding. */
+    Custody;
 
     /**
      * True when this step may be left without answering it.
@@ -71,7 +88,8 @@ enum class OnboardingStep {
      * children, so there is always something to move on with.
      *
      * Everything else the wizard asks for, medical details included, is collected for the
-     * parent's own benefit and must never become a gate on their calendar.
+     * parent's own benefit and must never become a gate on their calendar. That includes the
+     * co-parent link: a parent whose co-parent does not use the app yet still gets a calendar.
      */
     val isSkippable: Boolean get() = this != Intro && this != Profile && this != Family
 
@@ -85,6 +103,7 @@ enum class OnboardingStep {
         fun stepsFor(caresFor: Set<FamilyKind>): List<OnboardingStep> {
             val kinds = caresFor.ifEmpty { setOf(FamilyKind.CHILDREN) }
             return buildList {
+                add(CoParent)
                 add(Intro)
                 add(Family)
                 add(Profile)
@@ -95,7 +114,6 @@ enum class OnboardingStep {
                 if (FamilyKind.PETS in kinds) add(Pet)
                 add(Split)
                 add(Custody)
-                add(CoParent)
             }
         }
     }

@@ -307,6 +307,43 @@ class CustodyModelRepositoryTest {
     // ---- reading ----------------------------------------------------------
 
     @Test
+    fun `a pattern held before pairing is published once the pair has no document`() =
+        runTest(dispatcher) {
+            // The first parent sets the schedule, then pairs. The save pushed nothing (no pair),
+            // the mirror re-publishes only over a document that exists, and the accepter's
+            // reconciliation writes only when the accepter has a pattern — so the other phone's
+            // calendar stayed blank until this pass existed.
+            coEvery { custodyModelDao.getActiveModelSync() } returns mirroredEntity()
+            coEvery { firestoreCustodyDataSource.getCustody(any()) } returns null
+
+            repository.publishLocalIfMissing()
+
+            coVerify(exactly = 1) { firestoreCustodyDataSource.setCustody(any(), any(), any()) }
+        }
+
+    @Test
+    fun `nothing is published over a document the pair already has`() = runTest(dispatcher) {
+        coEvery { custodyModelDao.getActiveModelSync() } returns mirroredEntity()
+        coEvery { firestoreCustodyDataSource.getCustody(any()) } returns remoteCustody()
+
+        repository.publishLocalIfMissing()
+
+        coVerify(exactly = 0) { firestoreCustodyDataSource.setCustody(any(), any(), any()) }
+    }
+
+    @Test
+    fun `nothing is published when the pair's document could not be read`() = runTest(dispatcher) {
+        // Unavailable is not Absent: publishing on the strength of a failed read is how a
+        // co-parent's schedule gets replaced by a device that merely could not see it.
+        coEvery { custodyModelDao.getActiveModelSync() } returns mirroredEntity()
+        coEvery { firestoreCustodyDataSource.getCustody(any()) } throws permissionDenied()
+
+        repository.publishLocalIfMissing()
+
+        coVerify(exactly = 0) { firestoreCustodyDataSource.setCustody(any(), any(), any()) }
+    }
+
+    @Test
     fun `an unpaired user cannot answer whether a document exists`() = runTest(dispatcher) {
         // Unavailable, not Absent. With no pair known locally there is nothing to look in, and
         // a caller told "there is no document" would go on to create one over whatever is there

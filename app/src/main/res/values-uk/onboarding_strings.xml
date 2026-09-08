@@ -20,9 +20,6 @@
     <string name="onboarding_custody_title">Розклад опіки</string>
     <string name="onboarding_custody_body">Визначте, у які дні дитина з ким із вас. Це можна змінити будь-коли, і другий з батьків має погодитися зі зміною.</string>
     <string name="onboarding_custody_open">Скласти розклад</string>
-    <string name="onboarding_coparent_title">Запросіть другого з батьків</string>
-    <string name="onboarding_coparent_body">Надішліть посилання або код. Щойно він приєднається, він побачить усе, що ви тут заповнили, і зможе доповнити.</string>
-    <string name="onboarding_coparent_open">Надіслати запрошення</string>
     <string name="onboarding_family_title">Кого ви виховуєте разом?</string>
     <string name="onboarding_family_body">Позначте обидва варіанти, якщо це про вашу сім\'ю. Пізніше це можна змінити в Налаштуваннях.</string>
     <string name="onboarding_family_children">Діти</string>
@@ -39,4 +36,28 @@
     <string name="onboarding_pet_add">Додати ще улюбленця</string>
     <string name="onboarding_pet_unnamed">Улюбленець %1$d</string>
     <string name="onboarding_relatives_whose">До кого належать ці контакти?</string>
+
+    <!-- The co-parent link, which comes first (September 2026): the link, what it brought back, and
+         the wording the split and custody steps use once there is a co-parent to name. -->
+    <string name="onboarding_coparent_title">Зв\'яжіться з другим із батьків</string>
+    <string name="onboarding_coparent_body">Якщо другий із батьків уже користується CoPlanly, введіть код: діти, тварини, розклад опіки та поділ витрат підтягнуться самі — нічого не доведеться вводити двічі. Якщо ще ні — надішліть запрошення: другий із батьків побачить усе, що ви тут заповните.</string>
+    <string name="onboarding_coparent_enter_code">У мене є код</string>
+    <string name="onboarding_coparent_invite">Запросити другого з батьків</string>
+    <string name="onboarding_coparent_later">Не зараз</string>
+    <string name="onboarding_coparent_linked_title">Зв\'язок із %1$s встановлено</string>
+    <string name="onboarding_coparent_linked_body">Усе, що вже є у %1$s, підтягнеться до вас. Перевірте це на наступних кроках і доповніть, чого бракує.</string>
+    <string name="onboarding_coparent_fetching">Отримуємо дані від %1$s…</string>
+    <string name="onboarding_coparent_found_title">Уже внесено — %1$s</string>
+    <string name="onboarding_coparent_found_children">Діти</string>
+    <string name="onboarding_coparent_found_pets">Тварини</string>
+    <string name="onboarding_coparent_found_custody">Розклад опіки</string>
+    <string name="onboarding_coparent_found_split">Поділ витрат</string>
+    <string name="onboarding_coparent_found_set">Налаштовано</string>
+    <string name="onboarding_coparent_nothing_yet">Поки нічого не надійшло. Дані прийдуть, щойно телефон %1$s буде в мережі — можна продовжувати, а все внесене з\'явиться пізніше.</string>
+    <string name="onboarding_from_coparent">Від %1$s: перевірте дані й доповніть, чого бракує.</string>
+    <string name="onboarding_split_value_named">Ви %1$d / %2$s %3$d</string>
+    <string name="onboarding_split_body_linked">Навпіл, якщо не домовитеся інакше. Це стане вашим спільним поділом із %1$s; пізнішу зміну підтверджуватиме інша сторона — а вже внесені витрати збережуть свій поділ.</string>
+    <string name="onboarding_split_agreed_body">Уже погоджено з %1$s. Посуньте повзунок, щоб запропонувати інший поділ — іншу сторону попросять підтвердити.</string>
+    <string name="onboarding_custody_set_body">Розклад уже налаштовано: %1$s. Перевірте його або завершіть налаштування і змініть пізніше в налаштуваннях.</string>
+    <string name="onboarding_custody_review">Переглянути розклад</string>
 </resources>

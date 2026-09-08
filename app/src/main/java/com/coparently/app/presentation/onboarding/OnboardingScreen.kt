@@ -24,8 +24,14 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Balance
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ChildCare
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Pets
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
@@ -72,19 +78,21 @@ import com.coparently.app.presentation.common.MedicalProfileEditor
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.labelRes
+import com.coparently.app.presentation.custody.labelRes
 import com.coparently.app.presentation.theme.ParentColorChoice
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
 /**
- * The first-run questionnaire: the parent's own details, their child's, the people who could
- * help in an emergency, the custody schedule and the co-parent's invitation.
+ * The first-run questionnaire: the co-parent link, then the parent's own details, their
+ * children's, the people who could help in an emergency, the cost split and the custody schedule.
  *
- * Two of the six steps render no form of their own. Custody and the co-parent invitation hand
- * off to `CustodySetupScreen` and `PairingScreen`, which already do those jobs properly and are
- * reachable from Settings anyway; duplicating them here would give the app two custody editors
- * to keep in step.
+ * **The link comes first**, so that everything after it can open on what the co-parent has
+ * already entered — see [OnboardingStep]. Two steps render no form of their own: the link and the
+ * custody schedule hand off to `PairingScreen` and `CustodySetupScreen`, which already do those
+ * jobs properly and are reachable from Settings anyway; duplicating them here would give the app
+ * two custody editors to keep in step.
  *
  * Every data-collecting step carries the same one-line footnote, and the intro carries it in
  * full. It is what makes the questionnaire acceptable rather than intrusive: a parent asked for
@@ -96,7 +104,8 @@ import java.time.format.FormatStyle
  *
  * @param onFinished Leaves the wizard once onboarding has been recorded as complete
  * @param onOpenCustodySetup Opens the existing custody schedule editor
- * @param onOpenPairing Opens the existing co-parent invitation screen
+ * @param onOpenPairing Opens the existing pairing screen — on code entry when the argument is
+ *   true, on this account's own code otherwise
  * @param viewModel Wizard state and mutations
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -104,7 +113,7 @@ import java.time.format.FormatStyle
 fun OnboardingScreen(
     onFinished: () -> Unit,
     onOpenCustodySetup: () -> Unit,
-    onOpenPairing: () -> Unit,
+    onOpenPairing: (enterCode: Boolean) -> Unit,
     viewModel: OnboardingViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -115,7 +124,7 @@ fun OnboardingScreen(
 
     // The wizard is the start destination, so an unhandled back press would close the app from
     // step 4. Inside the wizard, back means "the previous question".
-    BackHandler(enabled = uiState.step != OnboardingStep.Intro) { viewModel.back() }
+    BackHandler(enabled = !uiState.isFirstStep) { viewModel.back() }
 
     Scaffold(
         topBar = { OnboardingTopBar(state = uiState) },
@@ -170,7 +179,7 @@ private fun OnboardingBody(
     state: OnboardingUiState,
     viewModel: OnboardingViewModel,
     onOpenCustodySetup: () -> Unit,
-    onOpenPairing: () -> Unit,
+    onOpenPairing: (enterCode: Boolean) -> Unit,
     padding: PaddingValues
 ) {
     Column(
@@ -182,6 +191,7 @@ private fun OnboardingBody(
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
         when (state.step) {
+            OnboardingStep.CoParent -> CoParentStep(state, onOpenPairing)
             OnboardingStep.Intro -> IntroStep()
             OnboardingStep.Family -> FamilyKindStep(state, viewModel)
             OnboardingStep.Pet -> PetStep(state, viewModel)
@@ -189,18 +199,133 @@ private fun OnboardingBody(
             OnboardingStep.Profile -> ProfileStep(state, viewModel)
             OnboardingStep.Child -> ChildStep(state, viewModel)
             OnboardingStep.Relatives -> RelativesStep(state, viewModel)
-            OnboardingStep.Custody -> HandOffStep(
-                title = R.string.onboarding_custody_title,
-                body = R.string.onboarding_custody_body,
-                action = R.string.onboarding_custody_open,
-                onOpen = onOpenCustodySetup
+            OnboardingStep.Custody -> CustodyStep(state, onOpenCustodySetup)
+        }
+    }
+}
+
+/**
+ * The first step: link with the co-parent, and see what the link brought back.
+ *
+ * Unlinked, it offers both halves of pairing as two buttons — "I have their code" and "Invite" —
+ * because the second parent to install the app is holding a code, and showing them their own code
+ * first is the mix-up the pairing screen's two modes were built to prevent. Linked, it names the
+ * co-parent and reports the fetch: running, found (as rows, one per kind of record, so no locale
+ * has to pluralise "2 children and 1 pet"), or nothing yet — which is a real answer, not an error:
+ * the co-parent's phone sends its records on its next sync, and the following steps keep listening.
+ */
+@Composable
+private fun CoParentStep(state: OnboardingUiState, onOpenPairing: (enterCode: Boolean) -> Unit) {
+    when (val link = state.coParent) {
+        is CoParentLink.Linked -> LinkedCoParent(
+            name = link.name.ifBlank { stringResource(R.string.pairing_default_partner_name) },
+            fetch = state.fetch
+        )
+        CoParentLink.None, CoParentLink.Unknown -> {
+            StepHeading(title = R.string.onboarding_coparent_title, body = R.string.onboarding_coparent_body)
+            Button(onClick = { onOpenPairing(true) }, modifier = Modifier.fillMaxWidth()) {
+                Icon(imageVector = Icons.Default.Link, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(stringResource(R.string.onboarding_coparent_enter_code))
+            }
+            OutlinedButton(onClick = { onOpenPairing(false) }, modifier = Modifier.fillMaxWidth()) {
+                Icon(imageVector = Icons.Default.PersonAdd, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(stringResource(R.string.onboarding_coparent_invite))
+            }
+        }
+    }
+}
+
+/** The linked half of [CoParentStep]: who, and what has come across so far. */
+@Composable
+private fun LinkedCoParent(name: String, fetch: CoParentFetch) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Icon(
+            imageVector = Icons.Default.CheckCircle,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary
+        )
+        Text(
+            text = stringResource(R.string.onboarding_coparent_linked_title, name),
+            style = MaterialTheme.typography.headlineSmall
+        )
+    }
+    Text(
+        text = stringResource(R.string.onboarding_coparent_linked_body, name),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+
+    when (fetch) {
+        CoParentFetch.Idle, CoParentFetch.Running -> StatusRow(
+            text = stringResource(R.string.onboarding_coparent_fetching, name)
+        ) {
+            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+        }
+        is CoParentFetch.Done -> if (fetch.found.isEmpty) {
+            StatusRow(text = stringResource(R.string.onboarding_coparent_nothing_yet, name)) {
+                Icon(
+                    imageVector = Icons.Default.Info,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        } else {
+            FoundRecords(name = name, found = fetch.found)
+        }
+    }
+}
+
+/** One line of status beside an icon or a spinner. */
+@Composable
+private fun StatusRow(text: String, leading: @Composable () -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        leading()
+        Text(text = text, style = MaterialTheme.typography.bodyMedium)
+    }
+}
+
+/** What the fetch found, one row per kind of record that came across. */
+@Composable
+private fun FoundRecords(name: String, found: CoParentData) {
+    SectionHeading(text = stringResource(R.string.onboarding_coparent_found_title, name))
+    val setUp = stringResource(R.string.onboarding_coparent_found_set)
+    SectionGroup {
+        val rows = buildList {
+            if (found.children > 0) {
+                add(
+                    Triple(
+                        Icons.Default.ChildCare,
+                        R.string.onboarding_coparent_found_children,
+                        found.children.toString()
+                    )
+                )
+            }
+            if (found.pets > 0) {
+                add(Triple(Icons.Default.Pets, R.string.onboarding_coparent_found_pets, found.pets.toString()))
+            }
+            if (found.hasCustodySchedule) {
+                add(Triple(Icons.Default.CalendarMonth, R.string.onboarding_coparent_found_custody, setUp))
+            }
+            if (found.hasSplitAgreement) {
+                add(Triple(Icons.Default.Balance, R.string.onboarding_coparent_found_split, setUp))
+            }
+        }
+        rows.forEachIndexed { index, (icon, title, value) ->
+            SectionRow(
+                icon = icon,
+                title = stringResource(title),
+                trailing = {
+                    Text(
+                        text = value,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             )
-            OnboardingStep.CoParent -> HandOffStep(
-                title = R.string.onboarding_coparent_title,
-                body = R.string.onboarding_coparent_body,
-                action = R.string.onboarding_coparent_open,
-                onOpen = onOpenPairing
-            )
+            if (index != rows.lastIndex) Divider()
         }
     }
 }
@@ -219,7 +344,6 @@ private fun IntroStep() {
     )
 }
 
-/** The parent's own details — the only step with a field that blocks progress. */
 /**
  * The four parent colours as a row of swatches.
  *
@@ -257,6 +381,7 @@ private fun ParentColorSwatches(
     }
 }
 
+/** The parent's own details — the only step with a field that blocks progress. */
 @Composable
 private fun ProfileStep(state: OnboardingUiState, viewModel: OnboardingViewModel) {
     StepHeading(title = R.string.onboarding_profile_title)
@@ -337,6 +462,9 @@ private fun ProfileStep(state: OnboardingUiState, viewModel: OnboardingViewModel
  * reads `children.size` instead, so a family with one child sees the form they saw before —
  * no heading, no remove action, nothing new but the Add button that makes a second reachable.
  *
+ * When the forms opened on the co-parent's records, the step says so: a form full of somebody
+ * else's answers without a word about whose reads as a glitch rather than as help.
+ *
  * Deliberately not the whole `AddEditChildInfoScreen`: medications, activities and school are
  * not first-run questions, and a wizard that asks for a teacher's email before the calendar has
  * been seen once will be abandoned. They stay one tap away in Settings.
@@ -344,6 +472,7 @@ private fun ProfileStep(state: OnboardingUiState, viewModel: OnboardingViewModel
 @Composable
 private fun ChildStep(state: OnboardingUiState, viewModel: OnboardingViewModel) {
     StepHeading(title = R.string.onboarding_child_title, body = R.string.onboarding_child_body)
+    if (state.childrenFromCoParent) FromCoParentNote(state)
 
     state.children.forEachIndexed { index, draft ->
         ChildDraftForm(
@@ -359,6 +488,21 @@ private fun ChildStep(state: OnboardingUiState, viewModel: OnboardingViewModel) 
     AddAnotherButton(label = R.string.onboarding_child_add, onClick = viewModel::addChild)
 
     Footnote()
+}
+
+/** "Entered by {co-parent}" — shown over forms that opened on their records. */
+@Composable
+private fun FromCoParentNote(state: OnboardingUiState) {
+    val name = state.coParentName?.ifBlank { null }
+        ?: stringResource(R.string.pairing_default_partner_name)
+    StatusRow(text = stringResource(R.string.onboarding_from_coparent, name)) {
+        Icon(
+            imageVector = Icons.Default.Info,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(20.dp)
+        )
+    }
 }
 
 /** One child's form, with the heading and remove action that only a second child needs. */
@@ -534,6 +678,7 @@ private fun FamilyKindStep(state: OnboardingUiState, viewModel: OnboardingViewMo
 @Composable
 private fun PetStep(state: OnboardingUiState, viewModel: OnboardingViewModel) {
     StepHeading(title = R.string.onboarding_pet_title, body = R.string.onboarding_pet_body)
+    if (state.petsFromCoParent) FromCoParentNote(state)
 
     state.pets.forEachIndexed { index, draft ->
         PetDraftForm(
@@ -614,31 +759,53 @@ private fun PetDraftForm(
  * How a shared expense divides between the two parents.
  *
  * Easier to agree now than after a month of expenses to re-argue, which is why it is here and
- * not only in Settings. Nobody has to confirm it at this point: pairing is the last step, so
- * there is no co-parent yet and the answer applies outright — from the moment there *is* one,
- * changing it becomes a proposal they have to accept.
+ * not only in Settings. What the step says depends on the link: with no co-parent the answer
+ * applies outright; linked with no agreement yet it becomes the pair's split; linked with one,
+ * the slider opens on it and moving it is a proposal the co-parent confirms.
+ *
+ * The slider holds **this parent's** share, whichever slot they turn out to hold — that is the
+ * number a person has an opinion about, and the ViewModel does the slot arithmetic on save.
  *
  * Skippable, like everything after the profile. Half each is what a family splits by until they
- * say otherwise, and that is what a skip leaves in place.
+ * say otherwise, and that is what a skip — or an untouched Next — leaves in place.
  */
 @Composable
 private fun SplitStep(state: OnboardingUiState, viewModel: OnboardingViewModel) {
-    StepHeading(title = R.string.onboarding_split_title, body = R.string.onboarding_split_body)
-
-    // Named, because two bare numbers do not say which half is yours — and the answer is not
-    // guessable: the stored share is slot 1's, and pairing decides which slot this device gets.
-    // "You / Co-parent" is the only honest wording here, there being no co-parent to name yet.
+    val coParent = state.coParentName?.ifBlank { null }
+        ?: stringResource(R.string.pairing_default_partner_name)
+    StepHeading(title = R.string.onboarding_split_title)
     Text(
-        text = stringResource(
-            R.string.onboarding_split_value,
-            state.splitMomPercent,
-            SPLIT_WHOLE_PERCENT - state.splitMomPercent
-        ),
+        text = when {
+            state.splitAgreed -> stringResource(R.string.onboarding_split_agreed_body, coParent)
+            state.coParent is CoParentLink.Linked ->
+                stringResource(R.string.onboarding_split_body_linked, coParent)
+            else -> stringResource(R.string.onboarding_split_body)
+        },
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+
+    // Named once there is a name: two bare numbers do not say which half is yours.
+    Text(
+        text = if (state.coParent is CoParentLink.Linked) {
+            stringResource(
+                R.string.onboarding_split_value_named,
+                state.splitMyPercent,
+                coParent,
+                SPLIT_WHOLE_PERCENT - state.splitMyPercent
+            )
+        } else {
+            stringResource(
+                R.string.onboarding_split_value,
+                state.splitMyPercent,
+                SPLIT_WHOLE_PERCENT - state.splitMyPercent
+            )
+        },
         style = MaterialTheme.typography.headlineSmall
     )
     Slider(
-        value = state.splitMomPercent.toFloat(),
-        onValueChange = { viewModel.setSplitMomPercent(it.toInt()) },
+        value = state.splitMyPercent.toFloat(),
+        onValueChange = { viewModel.setSplitMyPercent(it.toInt()) },
         valueRange = 0f..SPLIT_WHOLE_PERCENT.toFloat(),
         steps = SPLIT_SLIDER_STEPS
     )
@@ -718,19 +885,32 @@ private fun RelativesStep(state: OnboardingUiState, viewModel: OnboardingViewMod
 }
 
 /**
- * A step that explains itself and then opens an existing screen — custody and the co-parent
- * invitation. No footnote: nothing is collected here, the screen it opens owns its own copy.
+ * The last step: the custody schedule, which hands off to the existing editor.
+ *
+ * With a schedule already on the phone — the pair's, brought across by the link, or one this
+ * parent set up on an earlier run — the step names it and offers a look rather than a setup:
+ * "set up the schedule" over a schedule that exists would invite the second parent to write over
+ * what the first one agreed. No footnote: nothing is collected here, the screen it opens owns its
+ * own copy.
  */
 @Composable
-private fun HandOffStep(
-    @StringRes title: Int,
-    @StringRes body: Int,
-    @StringRes action: Int,
-    onOpen: () -> Unit
-) {
-    StepHeading(title = title, body = body)
-    Button(onClick = onOpen, modifier = Modifier.fillMaxWidth()) {
-        Text(stringResource(action))
+private fun CustodyStep(state: OnboardingUiState, onOpen: () -> Unit) {
+    val existing = state.custodyType
+    if (existing == null) {
+        StepHeading(title = R.string.onboarding_custody_title, body = R.string.onboarding_custody_body)
+        Button(onClick = onOpen, modifier = Modifier.fillMaxWidth()) {
+            Text(stringResource(R.string.onboarding_custody_open))
+        }
+    } else {
+        StepHeading(title = R.string.onboarding_custody_title)
+        Text(
+            text = stringResource(R.string.onboarding_custody_set_body, stringResource(existing.labelRes())),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        OutlinedButton(onClick = onOpen, modifier = Modifier.fillMaxWidth()) {
+            Text(stringResource(R.string.onboarding_custody_review))
+        }
     }
 }
 
@@ -755,7 +935,13 @@ private fun StepHeading(@StringRes title: Int, @StringRes body: Int? = null) {
 /** A label over an editor that brings no label of its own. */
 @Composable
 private fun SectionHeading(@StringRes title: Int) {
-    Text(text = stringResource(title), style = MaterialTheme.typography.titleSmall)
+    SectionHeading(text = stringResource(title))
+}
+
+/** [SectionHeading] for a label that carries a name and so cannot be a bare resource. */
+@Composable
+private fun SectionHeading(text: String) {
+    Text(text = text, style = MaterialTheme.typography.titleSmall)
 }
 
 /**
@@ -798,7 +984,8 @@ private fun DateOfBirthField(date: LocalDate?, onDateChange: (LocalDate?) -> Uni
  * Back, Skip and Next.
  *
  * Skip is present on every step that may be left unanswered — which is every step except the
- * intro, which asks nothing, and the profile, whose name field the app cannot work without.
+ * intro, which asks nothing, and the profile, whose name field the app cannot work without. On
+ * the co-parent step it reads "Not now", because that is what it means there.
  */
 @Composable
 private fun OnboardingBottomBar(
@@ -814,7 +1001,7 @@ private fun OnboardingBottomBar(
                 .padding(16.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            if (state.step != OnboardingStep.Intro) {
+            if (!state.isFirstStep) {
                 TextButton(onClick = onBack) {
                     Text(stringResource(R.string.onboarding_back))
                 }
@@ -822,7 +1009,15 @@ private fun OnboardingBottomBar(
             Spacer(modifier = Modifier.weight(1f))
             if (state.canSkip) {
                 TextButton(onClick = onSkip) {
-                    Text(stringResource(R.string.onboarding_skip))
+                    Text(
+                        stringResource(
+                            if (state.step == OnboardingStep.CoParent) {
+                                R.string.onboarding_coparent_later
+                            } else {
+                                R.string.onboarding_skip
+                            }
+                        )
+                    )
                 }
             }
             Button(

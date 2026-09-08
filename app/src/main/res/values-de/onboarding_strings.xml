@@ -20,9 +20,6 @@
     <string name="onboarding_custody_title">Euer Betreuungsplan</string>
     <string name="onboarding_custody_body">Lege fest, an welchen Tagen dein Kind bei wem von euch ist. Du kannst das jederzeit ändern, und dein Co-Elternteil muss der Änderung zustimmen.</string>
     <string name="onboarding_custody_open">Plan einrichten</string>
-    <string name="onboarding_coparent_title">Lade deinen Co-Elternteil ein</string>
-    <string name="onboarding_coparent_body">Schick ihm einen Link oder einen Code. Sobald er dabei ist, sieht er alles, was du hier ausgefüllt hast, und kann es ergänzen.</string>
-    <string name="onboarding_coparent_open">Einladung senden</string>
     <string name="onboarding_family_title">Wen betreut ihr gemeinsam?</string>
     <string name="onboarding_family_body">Wählt beides, wenn es auf eure Familie zutrifft. Ihr könnt das später in den Einstellungen ändern.</string>
     <string name="onboarding_family_children">Kinder</string>
@@ -39,4 +36,28 @@
     <string name="onboarding_pet_add">Weiteres Haustier hinzufügen</string>
     <string name="onboarding_pet_unnamed">Haustier %1$d</string>
     <string name="onboarding_relatives_whose">Zu wem gehören diese Kontakte?</string>
+
+    <!-- The co-parent link, which comes first (September 2026): the link, what it brought back, and
+         the wording the split and custody steps use once there is a co-parent to name. -->
+    <string name="onboarding_coparent_title">Mit deinem Co-Elternteil verknüpfen</string>
+    <string name="onboarding_coparent_body">Wenn dein Co-Elternteil CoPlanly schon nutzt, gib den Code ein: Kinder, Haustiere, Betreuungsplan und Kostenaufteilung werden übernommen — nichts muss zweimal eingegeben werden. Wenn noch nicht, schick eine Einladung: dein Co-Elternteil sieht dann alles, was du hier ausfüllst.</string>
+    <string name="onboarding_coparent_enter_code">Ich habe einen Code</string>
+    <string name="onboarding_coparent_invite">Co-Elternteil einladen</string>
+    <string name="onboarding_coparent_later">Jetzt nicht</string>
+    <string name="onboarding_coparent_linked_title">Verknüpft mit %1$s</string>
+    <string name="onboarding_coparent_linked_body">Alles, was %1$s schon eingetragen hat, wird für dich übernommen. Prüfe es in den nächsten Schritten und ergänze, was fehlt.</string>
+    <string name="onboarding_coparent_fetching">Lade, was %1$s eingetragen hat…</string>
+    <string name="onboarding_coparent_found_title">Bereits eingetragen von %1$s</string>
+    <string name="onboarding_coparent_found_children">Kinder</string>
+    <string name="onboarding_coparent_found_pets">Haustiere</string>
+    <string name="onboarding_coparent_found_custody">Betreuungsplan</string>
+    <string name="onboarding_coparent_found_split">Kostenaufteilung</string>
+    <string name="onboarding_coparent_found_set">Eingerichtet</string>
+    <string name="onboarding_coparent_nothing_yet">Bisher ist nichts angekommen. Das Telefon von %1$s schickt die Angaben, sobald es wieder online ist — du kannst jetzt weitermachen, alles Eingetragene erscheint später.</string>
+    <string name="onboarding_from_coparent">Eingetragen von %1$s. Prüfe die Angaben und ergänze, was fehlt.</string>
+    <string name="onboarding_split_value_named">Du %1$d / %2$s %3$d</string>
+    <string name="onboarding_split_body_linked">Hälfte/Hälfte, sofern ihr nichts anderes vereinbart. Das wird eure gemeinsame Aufteilung mit %1$s; eine spätere Änderung muss die andere Seite bestätigen — bereits erfasste Ausgaben behalten ihre Aufteilung.</string>
+    <string name="onboarding_split_agreed_body">Bereits mit %1$s vereinbart. Verschiebe den Regler, um eine andere Aufteilung vorzuschlagen — die andere Seite wird um Bestätigung gebeten.</string>
+    <string name="onboarding_custody_set_body">Ein Plan ist bereits eingerichtet: %1$s. Prüfe ihn, oder schließe die Einrichtung ab und ändere ihn später in den Einstellungen.</string>
+    <string name="onboarding_custody_review">Plan ansehen</string>
 </resources>

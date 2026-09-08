@@ -37,6 +37,9 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Manual runs on any branch: a session without an Android SDK can push a branch and have this
+  # workflow prove the Kotlin before a pull request exists.
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

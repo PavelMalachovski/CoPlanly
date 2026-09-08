@@ -153,81 +153,6 @@ class CalendarSyncRepository @Inject constructor(
     }
 
     /**
-     * Syncs events from local database to Google Calendar (push).
-     */
-    suspend fun syncToGoogle(event: Event): Flow<SyncResult> = flow {
-        try {
-            emit(SyncResult.Progress("Syncing event to Google Calendar..."))
-
-            val credential = credentialProvider.getCredential()
-                ?: throw IllegalStateException("Not authenticated. Please sign in to Google.")
-            // Token refresh is now handled automatically in getCredential()
-
-            // Execute API call on IO dispatcher to avoid NetworkOnMainThreadException
-            withContext(Dispatchers.IO) {
-                googleCalendarApi.createEvent(
-                    credential = credential,
-                    title = event.title,
-                    description = event.description,
-                    startDateTime = event.startDateTime,
-                    endDateTime = event.endDateTime
-                )
-            }
-
-            emit(SyncResult.Success("Event '${event.title}' synced to Google Calendar"))
-        } catch (e: IllegalStateException) {
-            android.util.Log.e("CalendarSync", "Authentication error: ${e.message}", e)
-            emit(SyncResult.Error(e.message ?: "Authentication error. Please sign in again."))
-        } catch (e: android.os.NetworkOnMainThreadException) {
-            android.util.Log.e("CalendarSync", "NetworkOnMainThreadException: API call must be on background thread", e)
-            emit(SyncResult.Error("Synchronization error: Network operation cannot run on main thread. Please try again."))
-        } catch (e: com.google.api.client.googleapis.json.GoogleJsonResponseException) {
-            // Google API specific errors
-            android.util.Log.e("CalendarSync", "Google API error: ${e.statusCode} - ${e.message}", e)
-            val errorMsg = when (e.statusCode) {
-                401 -> "Authentication failed. Please sign in again."
-                403 -> "Access denied. Please check Calendar permission in Google settings."
-                404 -> "Calendar not found. Please check your Google Calendar."
-                429 -> "Too many requests. Please try again later."
-                else -> "Google Calendar API error: ${e.statusCode} - ${e.message ?: "Unknown error"}"
-            }
-            emit(SyncResult.Error(errorMsg))
-        } catch (e: com.google.api.client.http.HttpResponseException) {
-            // HTTP response errors. This MUST precede the IOException branch below —
-            // HttpResponseException extends IOException, so the reverse order (which shipped)
-            // made every 401/403/404/500 here unreachable and surfaced as a generic
-            // "Network error". Kotlin does not flag an unreachable catch the way Java does.
-            android.util.Log.e("CalendarSync", "HTTP error: ${e.statusCode} - ${e.message}", e)
-            val errorMsg = when (e.statusCode) {
-                401 -> "Authentication failed. Please sign in again."
-                403 -> "Access denied. Please check Calendar permission."
-                404 -> "Calendar not found."
-                500, 503 -> "Google Calendar service unavailable. Please try again later."
-                else -> "HTTP error ${e.statusCode}: ${e.message ?: "Unknown error"}"
-            }
-            emit(SyncResult.Error(errorMsg))
-        } catch (e: java.io.IOException) {
-            android.util.Log.e("CalendarSync", "Network error: ${e.message}", e)
-            emit(SyncResult.Error("Network error: ${e.message ?: "Unable to connect to Google Calendar. Please check your internet connection."}"))
-        } catch (e: Exception) {
-            // Log full error for debugging
-            android.util.Log.e("CalendarSync", "Unexpected error: ${e.javaClass.simpleName} - ${e.message}", e)
-            crashlyticsManager.recordException(e)
-            val errorDetails = buildString {
-                append("Error during sync: ")
-                append(e.javaClass.simpleName)
-                if (e.message != null) {
-                    append(" - ${e.message}")
-                }
-                if (e.cause != null) {
-                    append(" (caused by: ${e.cause?.javaClass?.simpleName})")
-                }
-            }
-            emit(SyncResult.Error(errorDetails))
-        }
-    }
-
-    /**
      * Converts Google Calendar Event to EventEntity.
      *
      * @param ownerSlot This device's own slot, attributed to the import - see the call site in
@@ -304,7 +229,6 @@ class CalendarSyncRepository @Inject constructor(
             .toLocalDate()
             .atStartOfDay()
 }
-
 
 /**
  * Result of synchronization operation.

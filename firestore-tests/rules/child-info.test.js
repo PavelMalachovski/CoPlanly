@@ -146,6 +146,60 @@ describe('Part 1d: child_info', () => {
         .doc('child_info/child-1').update({createdByFirebaseUid: BOB}));
   });
 
+  describe('the audience is bound to the writer', () => {
+    beforeEach(async () => {
+      await seed(env, {'child_info/child-1': childInfoDoc({})});
+    });
+
+    it('refuses a co-parent writing the creator out of the record', async () => {
+      // Stripping the creator left a child's medical record unreadable and — since the update
+      // rule keys on membership — un-updatable by the parent who wrote it.
+      const bob = env.authenticatedContext(BOB).firestore();
+      await assertFails(bob.doc('child_info/child-1').update({sharedWith: [BOB]}));
+    });
+
+    it('refuses a co-parent handing the record to a stranger', async () => {
+      const bob = env.authenticatedContext(BOB).firestore();
+      await assertFails(bob.doc('child_info/child-1').update({sharedWith: [ALICE, BOB, CAROL]}));
+    });
+
+    it('refuses the creator naming a stranger in the audience', async () => {
+      const alice = env.authenticatedContext(ALICE).firestore();
+      await assertFails(alice.doc('child_info/child-1').update({sharedWith: [ALICE, BOB, CAROL]}));
+    });
+
+    it('refuses a stranger creating a record into somebody else\'s family', async () => {
+      // Carol is paired with nobody. A document she creates naming Alice and Bob would be
+      // pulled into both their phones by the sharedWith query, and neither could delete it.
+      const carol = env.authenticatedContext(CAROL).firestore();
+      await assertFails(carol.doc('child_info/planted').set(childInfoDoc({
+        id: 'planted', createdByFirebaseUid: CAROL, sharedWith: [CAROL, ALICE, BOB],
+      })));
+    });
+
+    it('refuses a stranger stamping somebody else\'s family id', async () => {
+      const carol = env.authenticatedContext(CAROL).firestore();
+      await assertFails(carol.doc('child_info/planted').set(childInfoDoc({
+        id: 'planted', createdByFirebaseUid: CAROL, sharedWith: [CAROL],
+        familyId: [ALICE, BOB].sort().join('__'),
+      })));
+    });
+
+    it('still lets the creator share with their co-parent and stamp their own family', async () => {
+      const alice = env.authenticatedContext(ALICE).firestore();
+      await assertSucceeds(alice.doc('child_info/child-2').set(childInfoDoc({
+        id: 'child-2', sharedWith: [ALICE, BOB], familyId: [ALICE, BOB].sort().join('__'),
+      })));
+    });
+
+    it('still lets an unpaired parent create a record of their own', async () => {
+      const carol = env.authenticatedContext(CAROL).firestore();
+      await assertSucceeds(carol.doc('child_info/own').set(childInfoDoc({
+        id: 'own', createdByFirebaseUid: CAROL, sharedWith: [CAROL],
+      })));
+    });
+  });
+
   describe('Package G2: audience membership must not imply write', () => {
     // The rule this whole package rests on. A guest is put into `sharedWith` so the *read*
     // rule works unchanged — which, under an update rule that allows any member of the

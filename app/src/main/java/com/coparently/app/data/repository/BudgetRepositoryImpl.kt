@@ -224,19 +224,26 @@ class BudgetRepositoryImpl @Inject constructor(
             .catch { e -> android.util.Log.w("BudgetRepo", "Budget sync failed", e) }
             .collect { budgets ->
                 budgets.forEach { data ->
-                    val budget = Budget(
-                        id = data["id"] as String,
-                        familyId = (data["familyId"] as? String)?.takeIf { it.isNotEmpty() },
-                        forMembers = FamilyMemberRef.parse(data["forMembers"])
-                            .ifEmpty { FamilyMemberRef.fromLegacyChildId(data["childId"] as? String) },
-                        category = ExpenseCategory.valueOf(data["category"] as String),
-                        monthlyLimit = (data["monthlyLimit"] as Number).toDouble(),
-                        currency = data["currency"] as String,
-                        alertThreshold = (data["alertThreshold"] as Number).toDouble(),
-                        isActive = (data["isActive"] as? Boolean) ?: true,
-                        createdAt = LocalDateTime.parse(data["createdAt"] as String, dateTimeFormatter),
-                        syncedToFirestore = true
-                    )
+                    // See `ExpenseRepositoryImpl.observeRemote`: one malformed document must
+                    // not crash the reader.
+                    val budget = runCatching {
+                        Budget(
+                            id = data["id"] as String,
+                            familyId = (data["familyId"] as? String)?.takeIf { it.isNotEmpty() },
+                            forMembers = FamilyMemberRef.parse(data["forMembers"])
+                                .ifEmpty { FamilyMemberRef.fromLegacyChildId(data["childId"] as? String) },
+                            category = ExpenseCategory.valueOf(data["category"] as String),
+                            monthlyLimit = (data["monthlyLimit"] as Number).toDouble(),
+                            currency = data["currency"] as String,
+                            alertThreshold = (data["alertThreshold"] as Number).toDouble(),
+                            isActive = (data["isActive"] as? Boolean) ?: true,
+                            createdAt = LocalDateTime.parse(data["createdAt"] as String, dateTimeFormatter),
+                            syncedToFirestore = true
+                        )
+                    }.getOrElse { e ->
+                        android.util.Log.w("BudgetRepo", "Skipping a budget document that does not parse", e)
+                        return@forEach
+                    }
                     budgetDao.insertBudget(budget.toEntity())
                 }
             }

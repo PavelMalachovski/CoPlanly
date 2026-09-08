@@ -61,8 +61,8 @@
     <ID>CyclomaticComplexMethod:NavGraph.kt$@Composable // A NavHost's body is one flat list of route declarations, not branching logic — splitting it // would only relocate the length into a second file without reducing what a reader has to scan // to find a given route. Same reasoning HomeScreen.kt applies to its own linear column of // dashboard sections. @Suppress("LongMethod") fun NavGraph( navController: NavHostController, syncViewModel: SyncViewModel, pendingInviteCodes: PendingInviteCodes, pendingChatOpen: PendingChatOpen )</ID>
     <ID>CyclomaticComplexMethod:PairingFunctions.kt$PairingFunctions.Companion$fun toPairingError(e: Throwable): PairingError</ID>
     <ID>CyclomaticComplexMethod:RecurrenceExpander.kt$RecurrenceExpander$fun expand(event: Event, rangeStart: LocalDateTime, rangeEnd: LocalDateTime): List&lt;Event&gt;</ID>
-    <ID>CyclomaticComplexMethod:SyncService.kt$SyncService$private suspend fun syncChildInfo(userId: String)</ID>
-    <ID>CyclomaticComplexMethod:SyncService.kt$SyncService$private suspend fun syncEvents(userId: String)</ID>
+    <ID>CyclomaticComplexMethod:SyncService.kt$SyncService$private suspend fun syncChildInfo(userId: String): Int</ID>
+    <ID>CyclomaticComplexMethod:SyncService.kt$SyncService$private suspend fun syncEvents(userId: String): Int</ID>
     <ID>Filename:Color.kt$com.coparently.app.presentation.theme.Color.kt</ID>
     <ID>ForEachOnRange:CustodySetupScreen.kt$0..6</ID>
     <ID>ForEachOnRange:CustodySetupScreen.kt$7..13.coerceAtMost(uiState.customPatternDays - 1)</ID>
@@ -129,14 +129,14 @@
     <ID>LongMethod:HomeScreen.kt$@Composable private fun TimelineRow( entry: WeekEntry, parentNames: ParentNames, isLast: Boolean, onClick: () -&gt; Unit )</ID>
     <ID>LongMethod:MainActivity.kt$MainActivity$override fun onCreate(savedInstanceState: Bundle?)</ID>
     <ID>LongMethod:MedicationEditor.kt$@Composable private fun MedicationForm( medication: Medication? = null, onSave: (Medication) -&gt; Unit, onCancel: () -&gt; Unit )</ID>
-    <ID>LongMethod:PairingScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun PairingScreen( onNavigateBack: () -&gt; Unit, onCustodyConflict: () -&gt; Unit, prefilledCode: String? = null, viewModel: PairingViewModel = hiltViewModel() )</ID>
+    <ID>LongMethod:PairingScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun PairingScreen( onNavigateBack: () -&gt; Unit, onCustodyConflict: () -&gt; Unit, prefilledCode: String? = null, startOnCodeEntry: Boolean = false, viewModel: PairingViewModel = hiltViewModel() )</ID>
     <ID>LongMethod:PetsScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun PetsScreen( onNavigateBack: () -&gt; Unit, onEditPet: (String) -&gt; Unit, viewModel: PetsViewModel = hiltViewModel() )</ID>
     <ID>LongMethod:SchoolInfoEditor.kt$@Composable fun SchoolInfoEditor( schoolInfo: SchoolInfo?, onSave: (SchoolInfo?) -&gt; Unit, modifier: Modifier = Modifier )</ID>
     <ID>LongMethod:SettingsScreen.kt$@Composable @Suppress("LongParameterList") // one call site; splitting it would only add a wrapper type private fun GoogleCalendarActions( isSignedIn: Boolean, isSyncEnabled: Boolean, onToggleSync: (Boolean) -&gt; Unit, syncState: GoogleCalendarSyncState, onSignIn: () -&gt; Unit, onSyncNow: () -&gt; Unit, onCalendarSignOut: () -&gt; Unit )</ID>
     <ID>LongMethod:SkeletonLoading.kt$@Composable fun DayWeekViewSkeleton( modifier: Modifier = Modifier, itemCount: Int = 4 )</ID>
     <ID>LongMethod:SplashScreen.kt$@Composable fun SplashScreen( onFinished: () -&gt; Unit = {} )</ID>
-    <ID>LongMethod:SyncService.kt$SyncService$private suspend fun syncChildInfo(userId: String)</ID>
-    <ID>LongMethod:SyncService.kt$SyncService$private suspend fun syncEvents(userId: String)</ID>
+    <ID>LongMethod:SyncService.kt$SyncService$private suspend fun syncChildInfo(userId: String): Int</ID>
+    <ID>LongMethod:SyncService.kt$SyncService$private suspend fun syncEvents(userId: String): Int</ID>
     <ID>LongParameterList:AddEditEventScreen.kt$( eventId: String?, initialDate: LocalDate? = null, initialHour: Int? = null, onSave: () -&gt; Unit, onCancel: () -&gt; Unit, onRequestChange: ((String) -&gt; Unit)? = null, viewModel: EventViewModel = hiltViewModel(), friendViewModel: com.coparently.app.presentation.friends.FriendViewModel = hiltViewModel() )</ID>
     <ID>LongParameterList:AddEditPetScreen.kt$( name: String, onName: (String) -&gt; Unit, species: PetSpecies, onSpecies: (PetSpecies) -&gt; Unit, breed: String, onBreed: (String) -&gt; Unit, dateOfBirth: LocalDateTime?, onPickDate: () -&gt; Unit, enabled: Boolean )</ID>
     <ID>LongParameterList:AddExpenseScreen.kt$( agreedRatio: SplitRatio, shared: Boolean, onSharedChange: (Boolean) -&gt; Unit, overrideMomPercent: Int?, onOverrideChange: (Int?) -&gt; Unit, enabled: Boolean )</ID>
@@ -154,7 +154,7 @@
     <ID>LongParameterList:HomeScreen.kt$( state: HomeUiState.Dashboard, parentNames: ParentNames, pendingProposal: com.coparently.app.domain.custody.CustodyProposal?, pendingProposalDiff: com.coparently.app.domain.custody.CustodyPatternDiff?, onAcceptSwap: (DaySwapGroup) -&gt; Unit, onDeclineSwap: (DaySwapGroup) -&gt; Unit, onAcceptProposal: () -&gt; Unit, onDeclineProposal: () -&gt; Unit, onOpenChangeRequests: () -&gt; Unit )</ID>
     <ID>LongParameterList:HomeViewModel.kt$HomeViewModel$( eventRepository: EventRepository, changeRequestRepository: ChangeRequestRepository, custodyModelRepository: CustodyModelRepository, monthSpendDependencies: MonthSpendDependencies, messageRepository: MessageRepository, familyKindSource: FamilyKindSource, homeIdentityDependencies: HomeIdentityDependencies )</ID>
     <ID>LongParameterList:MessagesList.kt$( message: Message, isCurrentUser: Boolean, startsGroup: Boolean = true, endsGroup: Boolean = true, onEventLinkClick: ((String) -&gt; Unit)? = null, onOpenInbox: (() -&gt; Unit)? = null, onRetryFailed: (() -&gt; Unit)? = null )</ID>
-    <ID>LongParameterList:PairingRepositoryImpl.kt$PairingRepositoryImpl$( private val firestore: FirebaseFirestore, private val authService: FirebaseAuthService, private val pairingFunctions: PairingFunctions, private val postPairingConversationSetup: PostPairingConversationSetup, private val userDao: UserDao, private val selectedFamilySource: SelectedFamilySource, // Application context only, for the localized conversation-title fallback. This is a // repository, not a ViewModel, so it is allowed to resolve resources directly. @ApplicationContext private val context: Context )</ID>
+    <ID>LongParameterList:PairingRepositoryImpl.kt$PairingRepositoryImpl$( private val firestore: FirebaseFirestore, private val authService: FirebaseAuthService, private val pairingFunctions: PairingFunctions, private val postPairingConversationSetup: PostPairingConversationSetup, private val userDao: UserDao, private val selectedFamilySource: SelectedFamilySource, private val syncRequester: SyncRequester, // Application context only, for the localized conversation-title fallback. This is a // repository, not a ViewModel, so it is allowed to resolve resources directly. @ApplicationContext private val context: Context )</ID>
     <ID>LongParameterList:ParentLabels.kt$( slot: String, me: NamedParent?, coParent: NamedParent?, youFallback: String, coParentFallback: String, unknownFallback: String )</ID>
     <ID>LongParameterList:PhotoStrip.kt$( photo: String, position: Int, total: Int, strings: PhotoStripStrings, onOpen: () -&gt; Unit, onRemove: ((String) -&gt; Unit)? )</ID>
     <ID>LongParameterList:PhotoStrip.kt$( photos: List&lt;String&gt;, strings: PhotoStripStrings, modifier: Modifier = Modifier, onAdd: (() -&gt; Unit)? = null, onRemove: ((String) -&gt; Unit)? = null, enabled: Boolean = true )</ID>
@@ -430,7 +430,7 @@
     <ID>MultiLineIfElse:Extensions.kt$this</ID>
     <ID>MultiLineIfElse:RecurrenceExpander.kt$RecurrenceExpander$emptyList()</ID>
     <ID>MultiLineIfElse:RecurrenceExpander.kt$RecurrenceExpander$listOf(event)</ID>
-    <ID>NestedBlockDepth:SyncService.kt$SyncService$private suspend fun syncEvents(userId: String)</ID>
+    <ID>NestedBlockDepth:SyncService.kt$SyncService$private suspend fun syncEvents(userId: String): Int</ID>
     <ID>NoBlankLineBeforeRbrace:ChangeRequestHighlightTest.kt$ChangeRequestHighlightTest$ </ID>
     <ID>NoBlankLineBeforeRbrace:ChatMappersWireFormatTest.kt$ChatMappersWireFormatTest$ </ID>
     <ID>NoBlankLineBeforeRbrace:CredentialManagerService.kt$CredentialManagerService$ </ID>

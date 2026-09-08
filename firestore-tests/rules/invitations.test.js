@@ -35,7 +35,7 @@ function inviteDoc(overrides) {
     toEmail: BOB_EMAIL,
     status: 'pending',
     createdAt: 1754000000000,
-    expiresAt: 1754600000000,
+    expiresAt: 4102444800000,
     acceptedBy: null,
   }, overrides);
 }
@@ -87,6 +87,19 @@ describe('Part 1d: invitations', () => {
     it('denies minting an invite that is already accepted', async () => {
       const db = asUser(env, ALICE, ALICE_EMAIL);
       await assertFails(db.doc('invitations/invite-1').set(inviteDoc({status: 'accepted'})));
+    });
+
+    it('denies an expiry that is not a number', async () => {
+      // The callables enforce expiry only when the field is a number, so a string here minted
+      // a code that never expired — and a six-character code that never expires is one a
+      // brute force eventually finds.
+      const db = asUser(env, ALICE, ALICE_EMAIL);
+      await assertFails(db.doc('invitations/invite-1').set(inviteDoc({expiresAt: 'never'})));
+    });
+
+    it('denies an expiry already in the past', async () => {
+      const db = asUser(env, ALICE, ALICE_EMAIL);
+      await assertFails(db.doc('invitations/invite-1').set(inviteDoc({expiresAt: 1754600000000})));
     });
 
     it('denies a document missing a required key', async () => {

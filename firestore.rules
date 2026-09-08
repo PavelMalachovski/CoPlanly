@@ -78,6 +78,67 @@ service cloud.firestore {
              request.auth.uid in familyId.split('__');
     }
 
+    // The family a caller may stamp on a record they write: one they are in, or none.
+    //
+    // `isFamilyMember` used to be the whole of the story — "a person can only put their own
+    // uid into a family id" — and that was true of *reading*, not of *writing*. Nothing bound
+    // the `familyId` a creator stamped, so any signed-in account could write an expense or a
+    // budget carrying `alice__bob` and have it served to both of them: the create rules only
+    // ever required `createdByFirebaseUid` to be the caller. The blank string stays legal —
+    // it is what an unpaired parent's records carry, and what a device whose backfill has not
+    // run writes over a stamped document (docs/DESIGN-multi-family.md, M-2).
+    function familyIsMineOrBlank(familyId) {
+      return familyId == '' || isFamilyMember(familyId);
+    }
+
+    // The uids a caller may put in a per-document audience: themselves and their live
+    // co-parents, read off their own profile, as a Set. A caller with no profile document yet
+    // — the first upload can race `ensureProfile` — is a family of one, not an error: an
+    // erroring rule denies, and here it would deny a parent narrowing their own record's
+    // audience to themselves.
+    //
+    // The blank `partnerId` an unpaired profile carries is harmless in the set: no uid is blank,
+    // so nothing in an audience ever matches it.
+    function myAudience() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid))
+          ? profileAudience(
+              get(/databases/$(database)/documents/users/$(request.auth.uid)).data)
+          : [request.auth.uid].toSet();
+    }
+
+    function profileAudience(me) {
+      return me.get('partnerIds', []).toSet()
+        .union([request.auth.uid, me.get('partnerId', '')].toSet());
+    }
+
+    // True when every uid in [audience] (a List) is the caller or one of their co-parents.
+    //
+    // This is what stops a stranger writing a document *into* somebody's calendar: `events`,
+    // `child_info` and `pets` are read purely by membership of `sharedWith`, and their create
+    // rules bound only the creator field — so any account could write a document listing a
+    // victim in its audience, have both parents' sync pull it into Room, and leave them unable
+    // to delete it (delete is creator-only). Spelled as "nothing is left once the family is
+    // taken out" with Set arithmetic, which is the one vocabulary the rules language is
+    // unambiguous about.
+    function isMyAudience(audience) {
+      return audience.toSet().difference(myAudience()).size() == 0;
+    }
+
+    // True when every uid an update *adds* to `sharedWith` is the caller or a co-parent.
+    //
+    // The bound on a creator's update is on the additions, not on the whole list, on purpose.
+    // A uid already in the audience got there through `create` (bounded above), through the
+    // server, or before this rule existed — and a creator editing the title of a record whose
+    // audience still names a swept ex-partner must not be locked out of their own record
+    // until some other write happens to tidy the list. What a creator may never do is hand
+    // the record to somebody new who is not family.
+    function onlyFamilyAdded(before, after) {
+      return after.get('sharedWith', []).toSet()
+        .difference(before.get('sharedWith', []).toSet())
+        .difference(myAudience())
+        .size() == 0;
+    }
+
     // The four maps a parenting plan document is made of, and nothing else (MON-5).
     //
     // Listed rather than left open so that a future field has to be added here on purpose: an
@@ -350,8 +411,18 @@ service cloud.firestore {
       // *rewriting* the schedule indefinitely — the app having already reported the link ended.
       // The same self-reference let an account create a `conversations` document with any
       // stranger as the second participant and post messages into it.
+      //
+      // `role`, `partnerId` and `partnerIds` are **server-owned**: `acceptPairingInvitation` and
+      // `unpairCoParent` write them as admin, and the client deliberately omits them from its
+      // profile writes (`UserRepositoryImpl.updateUser`). A client may still *repeat* the stored
+      // value — `diff().affectedKeys()` counts only what changed — but may not move any of the
+      // three. Before this pin a parent could flip their own slot and take the co-parent's
+      // colour, or put both parents in one slot and switch the expense split off for the pair.
       allow update: if isOwner(userId) &&
                       request.resource.data.get('partnerId', '') != userId &&
+                      !request.resource.data.diff(resource.data).affectedKeys()
+                        .hasAny(['role', 'partnerId', 'partnerIds']) &&
+                      isValidLength(request.resource.data.get('name', ''), 0, 100) &&
                       (!('firebaseUid' in request.resource.data) ||
                        request.resource.data.firebaseUid == null ||
                        request.resource.data.firebaseUid == request.auth.uid);
@@ -471,7 +542,10 @@ service cloud.firestore {
       allow create: if isAuthenticated() &&
                       request.resource.data.createdByFirebaseUid == request.auth.uid &&
                       request.resource.data.keys().hasAll(['title', 'startDateTime', 'eventType', 'parentOwner']) &&
-                      isValidLength(request.resource.data.title, 1, 200);
+                      isValidLength(request.resource.data.title, 1, 200) &&
+                      // Who may see it is bound to who the writer is — see `isMyAudience`.
+                      isMyAudience(request.resource.data.get('sharedWith', [])) &&
+                      familyIsMineOrBlank(request.resource.data.get('familyId', ''));
 
       // Creator, or a partner with read_write permission, may update. The creator
       // field is immutable. lastModifiedBy is intentionally NOT required to equal
@@ -490,7 +564,12 @@ service cloud.firestore {
       // written without one would otherwise make this rule *error*, and an erroring rule
       // denies — locking a legitimate editor out with no way back.
       allow update: if isAuthenticated() && (
-        resource.data.createdByFirebaseUid == request.auth.uid ||
+        (resource.data.createdByFirebaseUid == request.auth.uid &&
+         // The creator may re-shape the audience, but may only *add* their own family: an
+         // audience is a grant, and this is the bound `create` places on it, applied to
+         // what the write admits rather than to what an older write already had.
+         onlyFamilyAdded(resource.data, request.resource.data) &&
+         familyIsMineOrBlank(request.resource.data.get('familyId', ''))) ||
         (request.auth.uid in resource.data.get('sharedWith', []) &&
          resource.data.get('permissions', '') == 'read_write' &&
          request.resource.data.get('sharedWith', []) == resource.data.get('sharedWith', []) &&
@@ -541,7 +620,10 @@ service cloud.firestore {
                       request.resource.data.createdByFirebaseUid == request.auth.uid &&
                       request.auth.uid in request.resource.data.sharedWith &&
                       request.resource.data.keys().hasAll(['childName', 'createdByFirebaseUid', 'sharedWith']) &&
-                      isValidLength(request.resource.data.childName, 1, 100);
+                      isValidLength(request.resource.data.childName, 1, 100) &&
+                      // The audience minus the guests it names must be the writer's own family.
+                      isMyGuestlessAudience(request.resource.data) &&
+                      familyIsMineOrBlank(request.resource.data.get('familyId', ''));
 
       // Being in the audience is not permission to write. `sharedWith` is what makes the
       // document *readable*, and package G2 puts a guest — a grandparent, for a weekend — into
@@ -554,14 +636,58 @@ service cloud.firestore {
       // whose `sharedWith` has been stripped un-updatable rather than quietly writable by its
       // creator again. Part 3 of `child-info.test.js` pins that, and it is the state that once
       // could only be escaped by deleting the document.
+      //
+      // **The creator can never be written out of their own record, and a non-creator may only
+      // let guests in.** Both updates used to leave `sharedWith` free, so the co-parent could
+      // strip the creator from a child's medical record — leaving it unreadable and, since the
+      // update rule keys on membership, un-updatable by the parent who wrote it — or hand it to
+      // any uid at all. A parent's own edit may admit only their family and the guests it names,
+      // the bound `create` places on the whole list applied to what the edit adds; the
+      // co-parent's may add nothing but the keys of the `guests` map they are writing.
       allow update: if isAuthenticated() &&
                       request.auth.uid in resource.data.sharedWith &&
-                      (resource.data.createdByFirebaseUid == request.auth.uid ||
-                       isPartnerOf(resource.data.createdByFirebaseUid)) &&
+                      resource.data.createdByFirebaseUid in request.resource.data.sharedWith &&
+                      (
+                        (resource.data.createdByFirebaseUid == request.auth.uid &&
+                         onlyFamilyOrGuestsAdded(resource.data, request.resource.data) &&
+                         familyIsMineOrBlank(request.resource.data.get('familyId', ''))) ||
+                        (isPartnerOf(resource.data.createdByFirebaseUid) &&
+                         request.auth.uid in request.resource.data.sharedWith &&
+                         onlyGuestsAdded(resource.data, request.resource.data))
+                      ) &&
                       request.resource.data.createdByFirebaseUid == resource.data.createdByFirebaseUid;
 
       allow delete: if isAuthenticated() &&
                       resource.data.createdByFirebaseUid == request.auth.uid;
+    }
+
+    // True when the audience of a child or pet record, with its guests taken out, is the
+    // writer's own family. A guest is admitted by being a key of the `guests` map the same write
+    // carries, so a uid in `sharedWith` that is neither a guest nor family is a stranger.
+    function isMyGuestlessAudience(data) {
+      return data.get('sharedWith', []).toSet()
+        .difference(data.get('guests', {}).keys().toSet())
+        .difference(myAudience())
+        .size() == 0;
+    }
+
+    // True when every uid the write adds to `sharedWith` is a guest it names.
+    function onlyGuestsAdded(before, after) {
+      return after.get('sharedWith', []).toSet()
+        .difference(before.get('sharedWith', []).toSet())
+        .difference(after.get('guests', {}).keys().toSet())
+        .size() == 0;
+    }
+
+    // True when every uid the write adds to `sharedWith` is a guest it names or the writer's
+    // own family — the creator's bound, and `onlyFamilyAdded` with guests allowed for. On the
+    // additions rather than the whole list for the reason given there.
+    function onlyFamilyOrGuestsAdded(before, after) {
+      return after.get('sharedWith', []).toSet()
+        .difference(before.get('sharedWith', []).toSet())
+        .difference(after.get('guests', {}).keys().toSet())
+        .difference(myAudience())
+        .size() == 0;
     }
 
     // ---- Pets ------------------------------------------------------------
@@ -582,12 +708,22 @@ service cloud.firestore {
                       request.resource.data.createdByFirebaseUid == request.auth.uid &&
                       request.auth.uid in request.resource.data.sharedWith &&
                       request.resource.data.keys().hasAll(['name', 'createdByFirebaseUid', 'sharedWith']) &&
-                      isValidLength(request.resource.data.name, 1, 100);
+                      isValidLength(request.resource.data.name, 1, 100) &&
+                      isMyGuestlessAudience(request.resource.data) &&
+                      familyIsMineOrBlank(request.resource.data.get('familyId', ''));
 
+      // Same two bounds as `child_info`, and read its comment for why.
       allow update: if isAuthenticated() &&
                       request.auth.uid in resource.data.sharedWith &&
-                      (resource.data.createdByFirebaseUid == request.auth.uid ||
-                       isPartnerOf(resource.data.createdByFirebaseUid)) &&
+                      resource.data.createdByFirebaseUid in request.resource.data.sharedWith &&
+                      (
+                        (resource.data.createdByFirebaseUid == request.auth.uid &&
+                         onlyFamilyOrGuestsAdded(resource.data, request.resource.data) &&
+                         familyIsMineOrBlank(request.resource.data.get('familyId', ''))) ||
+                        (isPartnerOf(resource.data.createdByFirebaseUid) &&
+                         request.auth.uid in request.resource.data.sharedWith &&
+                         onlyGuestsAdded(resource.data, request.resource.data))
+                      ) &&
                       request.resource.data.createdByFirebaseUid == resource.data.createdByFirebaseUid;
 
       allow delete: if isAuthenticated() &&
@@ -625,14 +761,18 @@ service cloud.firestore {
         isFamilyMember(resource.data.get('familyId', ''))
       );
 
+      // The family stamped on it must be the writer's own — see `familyIsMineOrBlank`. Before
+      // that bound any account could file an expense into somebody else's ledger.
       allow create: if isAuthenticated() &&
-                      request.resource.data.createdByFirebaseUid == request.auth.uid;
+                      request.resource.data.createdByFirebaseUid == request.auth.uid &&
+                      familyIsMineOrBlank(request.resource.data.get('familyId', ''));
 
       // Creator-only, matching delete (owner decision, Aug 2026 walkthrough: a co-parent
       // must not be able to rewrite the other's recorded expense). The partner still reads.
       allow update: if isAuthenticated() &&
                       resource.data.createdByFirebaseUid == request.auth.uid &&
-                      request.resource.data.createdByFirebaseUid == resource.data.createdByFirebaseUid;
+                      request.resource.data.createdByFirebaseUid == resource.data.createdByFirebaseUid &&
+                      familyIsMineOrBlank(request.resource.data.get('familyId', ''));
 
       allow delete: if isAuthenticated() &&
                       resource.data.createdByFirebaseUid == request.auth.uid;
@@ -659,7 +799,8 @@ service cloud.firestore {
       allow create: if isAuthenticated() &&
                       request.resource.data.createdByFirebaseUid == request.auth.uid &&
                       request.resource.data.keys().hasAll(
-                        ['category', 'monthlyLimit', 'createdByFirebaseUid']);
+                        ['category', 'monthlyLimit', 'createdByFirebaseUid']) &&
+                      familyIsMineOrBlank(request.resource.data.get('familyId', ''));
 
       // Either parent of the budget's own family may edit it — budgets are a shared plan,
       // unlike an expense, which is one parent's record of what they paid. Scoped to the
@@ -678,10 +819,23 @@ service cloud.firestore {
     // ---- Change requests ----------------------------------------------
     // Event change requests: only the requester or the addressee may access.
     match /change_requests/{requestId} {
-      allow read, update, delete: if isAuthenticated() && (
+      allow read, delete: if isAuthenticated() && (
         request.auth.uid == resource.data.requestedBy ||
         request.auth.uid == resource.data.requestedTo
       );
+
+      // An update is a *decision*, never a rewrite. The two parties, the event and the proposed
+      // times are pinned, so the addressee cannot "accept" a request while changing what it
+      // asked for, and neither side can re-address it to a third uid who would then hold
+      // read/update/delete on it. What may move is the status, when it was answered, and the
+      // family stamp a backfill adds — the fields `ChangeRequestRepositoryImpl.updateStatus`
+      // actually changes; it writes the whole document, so unchanged keys do not count.
+      allow update: if isAuthenticated() && (
+        request.auth.uid == resource.data.requestedBy ||
+        request.auth.uid == resource.data.requestedTo
+      ) && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['status', 'respondedAt', 'familyId']) &&
+        familyIsMineOrBlank(request.resource.data.get('familyId', ''));
 
       // A request must be authored by the caller and addressed to their live co-parent.
       //
@@ -694,7 +848,8 @@ service cloud.firestore {
       // reachable by strangers, in an app whose users are people who may be avoiding one.
       allow create: if isAuthenticated() &&
                       request.auth.uid == request.resource.data.requestedBy &&
-                      isPartnerOf(request.resource.data.requestedTo);
+                      isPartnerOf(request.resource.data.requestedTo) &&
+                      familyIsMineOrBlank(request.resource.data.get('familyId', ''));
     }
 
     // ---- Invitations ---------------------------------------------------
@@ -763,6 +918,12 @@ service cloud.firestore {
                         ['code', 'toEmail', 'status', 'createdAt', 'expiresAt']) &&
                       isValidLength(request.resource.data.code, 6, 6) &&
                       request.resource.data.status == 'pending' &&
+                      // A number in the future, like the guest and friend expiries below. The
+                      // callables enforce expiry only when the field *is* a number, so an inviter
+                      // could mint a code that never expired by writing a string here — and a
+                      // six-character code that never expires is one a brute force eventually finds.
+                      request.resource.data.expiresAt is number &&
+                      request.resource.data.expiresAt > request.time.toMillis() &&
                       validInvitationKind(request.resource.data);
 
       // The inviter may withdraw their own invite (status -> cancelled); the
@@ -825,7 +986,14 @@ service cloud.firestore {
     function ratioProposalOnly(before, after) {
       return after.momShareBasisPoints == before.momShareBasisPoints &&
              after.get('lastModifiedBy', '') == before.get('lastModifiedBy', '') &&
-             after.get('lastModifiedAtMillis', 0) == before.get('lastModifiedAtMillis', 0);
+             after.get('lastModifiedAtMillis', 0) == before.get('lastModifiedAtMillis', 0) &&
+             // A proposal left on the document must be the caller's own. Without this pin a
+             // parent could write a proposal credited to the co-parent and then, in a second
+             // write, "accept" it themselves — `ratioAcceptance` only asks that the proposer not
+             // be the acceptor — and re-price every future expense alone. The whole point of
+             // this document is that money moves by agreement, never by announcement.
+             (!('proposal' in after) || after.proposal == null ||
+              after.proposal.get('proposedBy', '') == request.auth.uid);
     }
 
     // Whether the write is the caller taking up the **co-parent's** proposal.
@@ -863,7 +1031,8 @@ service cloud.firestore {
         'day_swap_offered', 'day_swap_accepted', 'day_swap_declined',
         'day_swap_group_offered', 'day_swap_group_accepted', 'day_swap_group_declined',
         'split_ratio_proposed', 'split_ratio_accepted', 'split_ratio_declined',
-        'split_ratio_agreed'
+        'split_ratio_agreed',
+        'records_shared'
       ];
     }
 
@@ -1255,11 +1424,19 @@ service cloud.firestore {
                       get(/databases/$(database)/documents/conversations/$(resource.data.conversationId))
                         .data.participants;
 
+      // Membership of the thread, **and the pairing behind it still live** — the same gate
+      // `conversations` create and `custody_models` get already apply. Unpair keeps the thread
+      // for its history but must end the writing: without this an ex-partner kept posting, and
+      // `onChatMessageCreated` kept pushing it to the other parent's lock screen.
       allow create: if isAuthenticated() &&
                       request.resource.data.senderId == request.auth.uid &&
                       request.auth.uid in
                         get(/databases/$(database)/documents/conversations/$(request.resource.data.conversationId))
-                          .data.participants;
+                          .data.participants &&
+                      (isPartnerOf(get(/databases/$(database)/documents/conversations/$(request.resource.data.conversationId))
+                          .data.participants[0]) ||
+                       isPartnerOf(get(/databases/$(database)/documents/conversations/$(request.resource.data.conversationId))
+                          .data.participants[1]));
 
       // Participants may flip the read flag, or — as of the legacy-conversation merge
       // (Task 5) — re-point a message to a different conversation and nothing else. The two

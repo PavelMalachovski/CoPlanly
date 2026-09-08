@@ -183,7 +183,19 @@ fun NavGraph(
                         }
                     },
                     onOpenCustodySetup = { navController.navigate(Screen.CustodySetup.route) },
-                    onOpenPairing = { navController.navigate(Screen.Pairing.routeWithCode(null)) }
+                    // The wizard's first step offers both halves of pairing as two buttons —
+                    // "I have their code" opens on code entry, "Invite" on this account's own
+                    // code — because the second parent to install the app is holding a code and
+                    // must not be shown their own first.
+                    onOpenPairing = { enterCode ->
+                        navController.navigate(
+                            if (enterCode) {
+                                Screen.Pairing.routeForCodeEntry()
+                            } else {
+                                Screen.Pairing.routeWithCode(null)
+                            }
+                        )
+                    }
                 )
             }
 
@@ -594,6 +606,10 @@ fun NavGraph(
                     navArgument(Screen.Pairing.ARG_CODE) {
                         type = NavType.StringType
                         defaultValue = ""
+                    },
+                    navArgument(Screen.Pairing.ARG_ENTER) {
+                        type = NavType.BoolType
+                        defaultValue = false
                     }
                 ),
                 enterTransition = { slideInFromRight() },
@@ -610,7 +626,9 @@ fun NavGraph(
                     },
                     prefilledCode = backStackEntry.arguments
                         ?.getString(Screen.Pairing.ARG_CODE)
-                        ?.takeIf { it.isNotEmpty() }
+                        ?.takeIf { it.isNotEmpty() },
+                    startOnCodeEntry = backStackEntry.arguments
+                        ?.getBoolean(Screen.Pairing.ARG_ENTER) ?: false
                 )
             }
 
@@ -1179,13 +1197,22 @@ sealed class Screen(val route: String) {
     data object ChildInfo : Screen("child_info")
     data object ParentingPlan : Screen("parenting_plan")
     data object Pets : Screen("pets")
-    data object Pairing : Screen("pairing?code={code}") {
+    data object Pairing : Screen("pairing?code={code}&enter={enter}") {
         /** Optional invite code carried by a `coplanly://pair` deep link. */
         const val ARG_CODE = "code"
+
+        /**
+         * Whether the screen opens on "enter a code" rather than "share my code". The onboarding
+         * wizard's first step sets it for a parent who is holding the other one's code.
+         */
+        const val ARG_ENTER = "enter"
 
         /** Builds the route, with [code] pre-filled when a deep link supplied one. */
         fun routeWithCode(code: String?): String =
             if (code.isNullOrEmpty()) "pairing" else "pairing?code=$code"
+
+        /** Builds the route that opens on code entry, with nothing pre-filled. */
+        fun routeForCodeEntry(): String = "pairing?enter=true"
     }
     /**
      * Redeeming a guest invitation — a separate route from [Pairing], mirroring the two
@@ -1290,7 +1317,10 @@ sealed class Screen(val route: String) {
 
         fun createRoute(conversationId: String, draft: String? = null): String {
             val encoded = draft?.let { Uri.encode(it) }.orEmpty()
-            return "chat/$conversationId?draft=$encoded"
+            // Encoded like the draft: an id with a `/` in it — which only a crafted deep link
+            // supplies, but a crafted deep link is one `am start` away — threw inside
+            // `navigate()` and took the activity down.
+            return "chat/${Uri.encode(conversationId)}?draft=$encoded"
         }
     }
     data object Expenses : Screen("expenses")

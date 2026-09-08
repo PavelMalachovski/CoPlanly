@@ -145,6 +145,12 @@ class FamilySettingsRepository @Inject constructor(
             )
             return write(pair, settings).map {
                 cacheAgreedRatio(ratio)
+                // The pair's first agreement, made from a screen rather than carried over from
+                // the wizard — the same announcement `publishCachedRatioIfMissing` makes, for
+                // the same reason (UX-18): it prices every expense from this moment, and the
+                // co-parent otherwise learned of it only by opening Settings. With the link now
+                // made first, a second parent's wizard reaches this branch routinely.
+                notifyPartner(pair, PushPayload.SPLIT_RATIO_AGREED)
                 RatioSubmission.APPLIED
             }
         }

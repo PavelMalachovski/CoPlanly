@@ -3,6 +3,7 @@ package com.coparently.app.data.session
 import android.content.Context
 import android.util.Log
 import com.coparently.app.data.local.CoPlanlyDatabase
+import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -39,7 +40,8 @@ import javax.inject.Singleton
 class AccountSwitchGuard @Inject constructor(
     @ApplicationContext private val context: Context,
     private val database: CoPlanlyDatabase,
-    private val authService: FirebaseAuthService
+    private val authService: FirebaseAuthService,
+    private val encryptedPreferences: EncryptedPreferences
 ) {
     private val mutex = Mutex()
 
@@ -59,6 +61,12 @@ class AccountSwitchGuard @Inject constructor(
             if (lastUid != null && lastUid != uid) {
                 Log.i(TAG, "Different account signed in; clearing local data")
                 withContext(Dispatchers.IO) { database.clearAllTables() }
+                // The Google Calendar credential, the cached expense split and the sync cursors
+                // all belong to the previous account too. Room alone used to be wiped, so the
+                // next account found Settings "connected as" the previous one's Google account
+                // and could import that person's calendar into its own family. The per-uid
+                // parent-slot markers survive `clear()` by design.
+                encryptedPreferences.clear()
             }
             if (lastUid != uid) {
                 prefs.edit().putString(KEY_LAST_UID, uid).apply()

@@ -14,6 +14,8 @@ import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestoreChildInfoDataSource
 import com.coparently.app.data.remote.firebase.FirestoreEventDataSource
 import com.coparently.app.data.remote.firebase.FirestoreUserDataSource
+import com.coparently.app.data.remote.firebase.PushPayload
+import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.ParentSlotMigrator
 import com.coparently.app.data.session.AccountSwitchGuard
 import com.coparently.app.domain.repository.PetRepository
@@ -63,6 +65,9 @@ import kotlin.test.assertTrue
  *    in the same pass, with no error and no log, and the slot marker had already advanced so
  *    nothing ever retried it.
  */
+// One class because every test needs the same eleven-collaborator fixture; splitting it by
+// theme would copy that fixture, not shrink it.
+@Suppress("LargeClass")
 @OptIn(ExperimentalCoroutinesApi::class)
 class SyncServiceTest {
 
@@ -82,6 +87,7 @@ class SyncServiceTest {
     private lateinit var encryptedPreferences: EncryptedPreferences
     private lateinit var petRepository: PetRepository
     private lateinit var accountSwitchGuard: AccountSwitchGuard
+    private lateinit var custodyModelRepository: CustodyModelRepository
     private lateinit var syncService: SyncService
 
     @Before
@@ -98,6 +104,7 @@ class SyncServiceTest {
         encryptedPreferences = mockk(relaxed = true)
         petRepository = mockk(relaxed = true)
         accountSwitchGuard = mockk(relaxed = true)
+        custodyModelRepository = mockk(relaxed = true)
 
         val firebaseUser = mockk<FirebaseUser>(relaxed = true)
         every { firebaseUser.uid } returns ALICE
@@ -147,7 +154,8 @@ class SyncServiceTest {
             // The selected-family source. Relaxed for the same reason: `reconcile()` re-points
             // a column these tests never assert on, and a real one would need Firebase Auth.
             mockk(relaxed = true),
-            accountSwitchGuard
+            accountSwitchGuard,
+            custodyModelRepository
         )
     }
 
@@ -164,6 +172,74 @@ class SyncServiceTest {
 
             coVerify(exactly = 1) { eventDao.markOwnEventsUnsynced(ALICE) }
         }
+
+    @Test
+    fun `a backfill re-upload announces itself once, not once per event`() = runTest {
+        // Every event the backfill re-queued used to go up as "created", one push each — a tray
+        // full of years-old events on the co-parent's phone the moment they paired. The
+        // re-uploads are silent now and the whole backfill is one `records_shared` push, which
+        // is also the wake-up the other phone needs to download what it can now read.
+        pairWith(partnerId = BOB)
+        // Nothing was waiting before the backfill; the one row it re-queues is old.
+        coEvery { eventDao.getUnsyncedEvents() } returns emptyList() andThen listOf(
+            eventEntity(createdByFirebaseUid = ALICE, sharedWith = listOf(ALICE))
+        )
+        coEvery { eventDao.markOwnEventsUnsynced(ALICE) } returns 1
+        coEvery { firestoreEventDataSource.insertEvent(any(), any()) } returns Result.success(Unit)
+
+        syncService.performFullSync()
+
+        val queued = mutableListOf<Map<String, String>>()
+        coVerify { fcmService.queueNotificationForUser(BOB, capture(queued)) }
+        assertEquals(
+            listOf(PushPayload.RECORDS_SHARED),
+            queued.map { it[PushPayload.TYPE] },
+            "one summary push, and no per-event 'created' push"
+        )
+    }
+
+    @Test
+    fun `an event that was already waiting still announces itself as created`() = runTest {
+        // The backfill must not silence a genuinely new event that happened to be queued when
+        // it ran: the co-parent wants to hear about that one.
+        pairWith(partnerId = BOB)
+        val fresh = eventEntity(createdByFirebaseUid = ALICE, sharedWith = listOf(ALICE))
+        coEvery { eventDao.getUnsyncedEvents() } returns listOf(fresh)
+        coEvery { eventDao.markOwnEventsUnsynced(ALICE) } returns 1
+        coEvery { firestoreEventDataSource.insertEvent(any(), any()) } returns Result.success(Unit)
+        every { fcmService.createEventNotificationPayload(any(), any(), any(), any()) } returns
+            mapOf(PushPayload.TYPE to PushPayload.EVENT_CREATED)
+
+        syncService.performFullSync()
+
+        val queued = mutableListOf<Map<String, String>>()
+        coVerify { fcmService.queueNotificationForUser(BOB, capture(queued)) }
+        assertTrue(PushPayload.EVENT_CREATED in queued.map { it[PushPayload.TYPE] })
+    }
+
+    @Test
+    fun `no summary push goes out when nothing was re-queued`() = runTest {
+        pairWith(partnerId = BOB)
+        coEvery { eventDao.markOwnEventsUnsynced(ALICE) } returns 0
+        coEvery { childInfoDao.markOwnChildInfoUnsynced(ALICE) } returns 0
+
+        syncService.performFullSync()
+
+        coVerify(exactly = 0) {
+            fcmService.queueNotificationForUser(any(), match { it[PushPayload.TYPE] == PushPayload.RECORDS_SHARED })
+        }
+    }
+
+    @Test
+    fun `every pass offers the custody schedule to a pair that has none`() = runTest {
+        // The first parent's schedule never left their phone before this: the save pushes only
+        // when paired, the mirror only over a document that exists.
+        pairWith(partnerId = BOB)
+
+        syncService.performFullSync()
+
+        coVerify(exactly = 1) { custodyModelRepository.publishLocalIfMissing() }
+    }
 
     @Test
     fun `the audience backfill does not run twice for the same partner`() = runTest {

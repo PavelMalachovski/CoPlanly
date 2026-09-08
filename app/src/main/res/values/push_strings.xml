@@ -66,4 +66,6 @@
     <string name="push_split_ratio_declined_body">Your co-parent turned down the new split. Nothing has changed.</string>
     <string name="push_split_ratio_agreed_title">Expense split agreed</string>
     <string name="push_split_ratio_agreed_body">The split you and your co-parent will share by was set before you paired. Open Settings to see it.</string>
+    <string name="push_records_shared_title">Records shared with you</string>
+    <string name="push_records_shared_body">%1$s shared their calendar and family records with you</string>
 </resources>
