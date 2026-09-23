@@ -106,13 +106,20 @@ fun EventPreviewSheet(
             }
 
             PreviewRow(icon = Icons.Default.Schedule) {
-                val dateText = event.startDateTime
-                    .format(DateTimeFormatter.ofPattern("EEE, d MMM yyyy"))
+                val dateFormat = DateTimeFormatter.ofPattern("EEE, d MMM yyyy")
+                val timeFormat = DateTimeFormatter.ofPattern("HH:mm")
+                val dateText = event.startDateTime.format(dateFormat)
                 val timeText = buildString {
-                    append(event.startDateTime.format(DateTimeFormatter.ofPattern("HH:mm")))
-                    event.endDateTime?.let {
+                    append(event.startDateTime.format(timeFormat))
+                    event.endDateTime?.let { end ->
                         append(" – ")
-                        append(it.format(DateTimeFormatter.ofPattern("HH:mm")))
+                        // An overnight or multi-day event names its end day too; "22:00 – 07:00"
+                        // under the start date read as ending before it began.
+                        if (end.toLocalDate() != event.startDateTime.toLocalDate()) {
+                            append(end.format(dateFormat))
+                            append(' ')
+                        }
+                        append(end.format(timeFormat))
                     }
                 }
                 Text(
