@@ -47,6 +47,11 @@ object ChatAttachmentCodec {
 
     /** Fields after the prefix: path, type, size, digest, name. */
     private const val FIELD_COUNT = 5
+    private const val FIELD_PATH = 0
+    private const val FIELD_TYPE = 1
+    private const val FIELD_SIZE = 2
+    private const val FIELD_SHA256 = 3
+    private const val FIELD_NAME = 4
     private const val SEPARATOR = '|'
     private const val SHA256_HEX_LENGTH = 64
     private val HEX = Regex("^[0-9a-f]+$")
@@ -67,14 +72,13 @@ object ChatAttachmentCodec {
             ?.split(SEPARATOR, limit = FIELD_COUNT)
             ?.takeIf { it.size == FIELD_COUNT }
             ?: return null
-        val (path, type, sizeText, sha, name) = parts
-        val size = sizeText.toLongOrNull() ?: return null
+        val size = parts[FIELD_SIZE].toLongOrNull() ?: return null
         return ChatAttachment(
-            storagePath = path,
-            contentType = type,
+            storagePath = parts[FIELD_PATH],
+            contentType = parts[FIELD_TYPE],
             sizeBytes = size,
-            sha256 = sha,
-            fileName = name
+            sha256 = parts[FIELD_SHA256],
+            fileName = parts[FIELD_NAME]
         ).takeIf { isWellFormed(it) }
     }
 

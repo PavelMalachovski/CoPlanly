@@ -71,8 +71,7 @@ object RecordFormat {
      */
     fun messageText(text: String, attachments: List<ChatAttachment>): String {
         val words = text.takeUnless { attachments.size == 1 && it == attachments.first().fileName }
-        return (listOfNotNull(words?.takeIf { it.isNotBlank() }) +
-            attachments.map { "${it.fileName} (SHA-256 ${it.sha256})" })
-            .joinToString("\n")
+        val files = attachments.map { "${it.fileName} (SHA-256 ${it.sha256})" }
+        return (listOfNotNull(words?.takeIf { it.isNotBlank() }) + files).joinToString("\n")
     }
 }
