@@ -6,6 +6,7 @@
 
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
+const exportReceipts = require('./export-receipts');
 
 // Инициализация Firebase Admin SDK
 admin.initializeApp();
@@ -3119,6 +3120,19 @@ async function deleteAccountDataImpl(db, uid, bucket) {
       db, db.collection('event_versions').where('editorUid', '==', uid));
   removed.event_versions_scrubbed = await scrubRevisionAudiences(db, uid);
 
+  // Export receipts (MON-16): scrubbed, never deleted once registered — the hash may already be
+  // vouching for a file in front of a court, and erasing one parent must not un-verify the other
+  // parent's evidence. Runs before the conversations go, because a surviving thread's id is one
+  // of the ways a family this account was once in can still be named.
+  const threads = await db.collection('conversations')
+      .where('participants', 'array-contains', uid)
+      .get();
+  const receipts = await exportReceipts.scrubReceipts(db, uid,
+      partners.map((partnerId) => custodyModelKey(uid, partnerId))
+          .concat(threads.docs.map((doc) => doc.id)));
+  removed.export_receipts_scrubbed = receipts.scrubbed;
+  removed.export_receipts_deleted = receipts.deleted;
+
   // Change requests name their two parties directly rather than through an audience array.
   removed.change_requests =
     await deleteQueryInBatches(db, db.collection('change_requests').where('requestedBy', '==', uid)) +
@@ -3451,3 +3465,78 @@ exports.refreshGoogleAccessToken = functions.https.onCall(async (data, context) 
       admin.firestore(), requireGoogleOAuthConfig(), postToGoogleToken,
       context.auth.uid, refreshToken);
 });
+
+// ---- Verifiable exports (MON-16) --------------------------------------------------------------
+//
+// The logic lives in `export-receipts.js`; these wrappers only authenticate, rate-limit and
+// translate its `ReceiptError` into an `HttpsError` carrying a stable `reason`.
+
+const reserveLimiter = exportReceipts.rateLimiter(
+    exportReceipts.RESERVE_RATE_LIMIT, exportReceipts.RATE_WINDOW_MS);
+const verifyLimiter = exportReceipts.rateLimiter(
+    exportReceipts.VERIFY_RATE_LIMIT, exportReceipts.RATE_WINDOW_MS);
+
+/** The receipts' server clock: the function's own, as a Firestore timestamp. */
+const receiptDeps = {now: () => admin.firestore.Timestamp.now()};
+
+/**
+ * Runs a receipt implementation and turns its refusals into `HttpsError`s.
+ *
+ * @param {function(): !Promise<*>} run The implementation call.
+ * @return {!Promise<*>} Its result.
+ */
+async function asCallable(run) {
+  try {
+    return await run();
+  } catch (err) {
+    if (err instanceof exportReceipts.ReceiptError) {
+      throw new functions.https.HttpsError(err.code, err.message, {reason: err.reason});
+    }
+    throw err;
+  }
+}
+
+/**
+ * Mints the record id an export prints on its face, before the file is rendered. Signed-in
+ * parents only. See `export-receipts.js` for why the id comes first.
+ */
+exports.reserveExportRecordId = functions
+    .runWith({maxInstances: exportReceipts.MAX_INSTANCES})
+    .https.onCall(async (data, context) => {
+      if (!context.auth) {
+        throw new functions.https.HttpsError('unauthenticated', 'Sign in first');
+      }
+      if (!reserveLimiter.allow(context.auth.uid, Date.now())) {
+        throw new functions.https.HttpsError('resource-exhausted', 'Too many exports',
+            {reason: 'rate-limited'});
+      }
+      return asCallable(() => exportReceipts.reserveImpl(
+          admin.firestore(), context.auth.uid, data, receiptDeps));
+    });
+
+/**
+ * Registers the SHA-256 of a rendered export under the id it prints. Create-once; the caller
+ * must be the parent who reserved the id.
+ */
+exports.registerExportReceipt = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'Sign in first');
+  }
+  return asCallable(() => exportReceipts.registerImpl(
+      admin.firestore(), context.auth.uid, data, receiptDeps));
+});
+
+/**
+ * Answers the verification page: was this hash (or this record id) registered, and when.
+ * **Callable without signing in** — a lawyer has no account — and therefore rate-limited per
+ * address and deployed with an instance cap, and answering with nothing that identifies anybody.
+ */
+exports.verifyExport = functions
+    .runWith({maxInstances: exportReceipts.MAX_INSTANCES})
+    .https.onCall(async (data, context) => {
+      if (!verifyLimiter.allow(exportReceipts.clientKey(context), Date.now())) {
+        throw new functions.https.HttpsError('resource-exhausted', 'Too many lookups; try again later',
+            {reason: 'rate-limited'});
+      }
+      return asCallable(() => exportReceipts.verifyImpl(admin.firestore(), data));
+    });
