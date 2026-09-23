@@ -109,6 +109,7 @@ import com.coparently.app.presentation.common.SignedInAsRow
 import com.coparently.app.presentation.common.UiState
 import com.coparently.app.presentation.common.animations.sectionEnter
 import com.coparently.app.presentation.common.animations.sectionExit
+import com.coparently.app.presentation.common.coverageNote
 import com.coparently.app.presentation.common.labelRes
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.consent.TelemetryConsentViewModel
@@ -1415,8 +1416,8 @@ private fun ParentColorDialog(
  * choice here uses — colour, language, theme, currency — and a row of seven chips inside a
  * settings list would be the second interaction model in one group.
  *
- * It carries the same honesty the picker does: the note under the list says whether the chosen
- * country's holidays are actually in the app.
+ * It carries the same honesty the picker does, through the same [coverageNote]: the line under
+ * the list says what the chosen country's calendar actually contains.
  */
 @Composable
 private fun CountryDialog(
@@ -1451,14 +1452,7 @@ private fun CountryDialog(
                     }
                 }
                 Text(
-                    text = if (country.hasHolidays) {
-                        stringResource(R.string.country_holidays_supported)
-                    } else {
-                        stringResource(
-                            R.string.country_holidays_unavailable,
-                            stringResource(country.labelRes())
-                        )
-                    },
+                    text = country.coverageNote(),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 8.dp)

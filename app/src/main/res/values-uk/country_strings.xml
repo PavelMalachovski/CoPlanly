@@ -14,4 +14,6 @@
 
     <string name="country_holidays_supported">У календарі показуються державні свята та шкільні канікули.</string>
     <string name="country_holidays_unavailable">Свят для країни «%1$s» у застосунку ще немає, тому вони не показуються.</string>
+    <string name="country_holidays_public_only">У календарі показуються загальнодержавні свята. Шкільних канікул для країни «%1$s» у застосунку немає.</string>
+    <string name="country_holidays_suspended">Під час воєнного стану свята в країні «%1$s» не є вихідними днями, тому вони не показуються.</string>
 </resources>

@@ -14,4 +14,6 @@
 
     <string name="country_holidays_supported">Public holidays and school vacations are shown on the calendar.</string>
     <string name="country_holidays_unavailable">Public holidays for %1$s are not in the app yet, so none are shown.</string>
+    <string name="country_holidays_public_only">Nationwide public holidays are shown on the calendar. School vacations for %1$s are not in the app.</string>
+    <string name="country_holidays_suspended">Public holidays in %1$s are not days off while martial law is in force, so none are shown.</string>
 </resources>

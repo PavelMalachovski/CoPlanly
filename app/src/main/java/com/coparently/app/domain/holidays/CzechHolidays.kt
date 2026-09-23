@@ -18,6 +18,8 @@ object CzechHolidays : HolidayProvider {
 
     override val localLanguage: String = "cs"
 
+    override val hasSchoolVacations: Boolean = true
+
     /**
      * Returns all public holidays for the given year.
      */
