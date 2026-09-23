@@ -3,6 +3,21 @@
 > **DRAFT. Not reviewed by a lawyer, not published.** Fill in every `{{PLACEHOLDER}}` and have
 > it reviewed. §6 in particular — what this app is and is not, in a legal dispute — is the
 > part worth a professional's time, because it is the part users will lean on.
+>
+> ### Owner must fill
+>
+> Everything else was filled from the code (September 2026). These are decisions and facts only
+> the owner — with the lawyer, for the last three — can supply:
+>
+> | Placeholder | What goes in |
+> | --- | --- |
+> | `{{DATE}}` | The publication date |
+> | `{{LEGAL_ENTITY_NAME}}`, `{{REGISTERED_ADDRESS}}`, `{{COMPANY_ID}}` | Who offers the service — the same controller the privacy policy names |
+> | `{{SUPPORT_CONTACT_EMAIL}}` | A support address; may be the privacy contact |
+> | `{{LIABILITY_CAP}}` | The cap on liability (§11) |
+> | `{{GOVERNING_LAW}}`, `{{JURISDICTION}}` | Governing law and courts (§12) |
+>
+> Delete this whole box before publishing.
 
 **Last updated:** {{DATE}}
 
@@ -50,7 +65,9 @@ Three consequences worth stating:
 - Messages cannot be edited or deleted once sent.
 - Ending the link stops future access, but does not un-see what has already been read, and
   does not remove what the other parent has already saved on their own device.
-- Deleting your account deletes what **you** entered, including from your co-parent's view.
+- Deleting your account deletes what **you** entered from our servers, including from your
+  co-parent's view of the shared calendar — but, as with ending the link, not a copy their phone
+  had already downloaded.
 
 ## 6. What CoPlanly is not
 
@@ -84,7 +101,8 @@ offline — but syncing needs a connection, and we do not guarantee it always su
 
 ## 9. Payment
 
-{{PRICING_SECTION_ONCE_BILLING_EXISTS}} — the app charges nothing today.
+CoPlanly is free of charge today. If we introduce paid features, their price and terms will
+be shown in the app before you can buy anything, and these terms will be updated first.
 
 ## 10. Ending it
 
@@ -110,8 +128,6 @@ These terms are governed by the law of {{GOVERNING_LAW}}, and disputes go to the
 {{JURISDICTION}} — without depriving a consumer of the protection of their own country's
 mandatory law.
 
-If you are an EU consumer you may also use the European Commission's online dispute
-resolution platform.
 
 ## 13. Changes
 

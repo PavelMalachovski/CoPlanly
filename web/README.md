@@ -52,10 +52,15 @@ grep -o '{{[A-Z_]*}}' web/delete-account/index.html | sort -u   # nothing left b
    request. It is written that way rather than as a shorter promise on purpose — committing to
    less than the law requires creates an obligation nobody has staffed. Confirm it, and confirm
    that the identity check the page describes is the one you will actually perform.
-2. **The retention answer is "nothing".** The page says no copy of a deleted account is kept for
-   later restoration. That matches `deleteAccountDataImpl`, which hard-deletes rather than
-   tombstoning. Whether the hosting provider's own backups make that sentence exactly true is a
-   question about the Firebase DPA, and it is the kind of sentence a regulator reads closely.
+2. **The retention answer is "nothing on our servers".** The page says no copy of a deleted
+   account is kept for later restoration. That matches `deleteAccountDataImpl`, which
+   hard-deletes rather than tombstoning — the tombstones of records deleted earlier included,
+   since they still carry the author's uid — and, since September 2026, deletes the Storage
+   files of those records too (before then it left them in the bucket). Whether the hosting
+   provider's own backups make that sentence exactly true is a question about the Firebase DPA,
+   and it is the kind of sentence a regulator reads closely. What the page does **not** claim is
+   that the co-parent's phone forgets: the app never reconciles by absence (CLAUDE.md item 14),
+   so a record already downloaded there stays until they delete it, and the page says so.
 
 ### Keep three files in step
 
@@ -63,9 +68,11 @@ Every factual claim on the page mirrors `deleteAccountDataImpl` in `functions/in
 "Deleting your account" section of `docs/legal/PRIVACY-POLICY.md`. **If any of the three changes,
 all three do.** The one most likely to drift is the list of collections: the callable deletes
 `events`, `child_info`, `pets`, `expenses`, `budgets`, `change_requests`, `conversations`,
-`messages`, `custody_models`, `family_settings`, `calendar_friends`, `friend_profiles`,
-`invitations`, `notification_queue` and `users`, and adding a collection to the app without adding
-it there leaves data behind that the page promises is gone.
+`messages`, `custody_models`, `family_settings`, `parenting_plans`, `calendar_friends`,
+`friend_profiles`, `google_oauth`, `invitations`, `notification_queue` and `users`, plus the
+Storage files `AUTHORED_FILES` maps (`event_images/`, `receipts/`, `medical_photos/`,
+`pet_photos/`), and adding a collection or a file layout to the app without adding it there
+leaves data behind that the page promises is gone.
 
 ### Hosting
 
@@ -81,9 +88,12 @@ puts the three pages at `https://<site>/delete-account/`, `https://<site>/privac
 `https://<site>/terms/`. **Nothing has been deployed yet**, and deploying is a decision, not a
 build step: the privacy policy in particular must not go live with a draft banner on it. The
 URLs then go in **three** places: the Play Console's data-deletion and privacy-policy fields,
-`{{WEB_DELETION_URL}}` and `{{PRIVACY_POLICY_URL}}` in the legal documents, and the Settings rows
-the next paragraph describes.
+`{{WEB_DELETION_URL}}` and `{{PRIVACY_POLICY_URL}}` in the legal documents, and
+`publishedPrivacyPolicyUrl` at the top of `app/build.gradle.kts`.
 
-**Not wired into the app yet, on purpose.** Settings has no row linking to these URLs because they
-do not resolve yet, and a row pointing at a dead link is exactly the affordance-promising-nothing
-that design rule #8 in `CLAUDE.md` forbids. Add the rows in the same change that publishes the URLs.
+**The app links the policy, but only once that value is set.** Settings → Account has a
+"Privacy policy" row and the telemetry consent screen a "Read the privacy policy" button, both
+behind `PrivacyPolicyLink.url`, which is null while `BuildConfig.PRIVACY_POLICY_URL` is blank. A
+row pointing at a dead link is exactly the affordance-promising-nothing that design rule #8 in
+`CLAUDE.md` forbids, so the build that ships with the URL is the first one to show either.
+`-PCOPLANLY_PRIVACY_POLICY_URL=…` sets it for one build without committing it.
