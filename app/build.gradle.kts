@@ -93,7 +93,9 @@ android {
         applicationId = "app.coplanly"
         minSdk = 26
         targetSdk = 36
-        versionCode = 2
+        // Overridden per upload by the release workflow (-PCOPLANLY_VERSION_CODE), because Play
+        // refuses a second bundle with the same versionCode.
+        versionCode = (project.findProperty("COPLANLY_VERSION_CODE") as String?)?.toInt() ?: 2
         versionName = "1.1.0"
 
         testInstrumentationRunner = "com.coparently.app.HiltTestRunner"
@@ -127,6 +129,7 @@ android {
             // succeeds. See `canSignRelease`.
             signingConfig = if (canSignRelease) signingConfigs.getByName("release") else null
             isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
