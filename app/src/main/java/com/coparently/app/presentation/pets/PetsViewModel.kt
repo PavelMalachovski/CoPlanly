@@ -326,6 +326,7 @@ class PetsViewModel @Inject constructor(
 sealed class PetsUiState {
     data object Loading : PetsUiState()
     data class Success(val pets: List<Pet>) : PetsUiState()
+
     /** The list could not be shown; [message] is resolved by the screen (CQ-14). */
     data class Error(val message: UiText) : PetsUiState()
 }

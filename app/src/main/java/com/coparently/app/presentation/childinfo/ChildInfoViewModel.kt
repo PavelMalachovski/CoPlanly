@@ -494,6 +494,7 @@ enum class ChildSaveOutcome {
 sealed class ChildInfoUiState {
     data object Loading : ChildInfoUiState()
     data class Success(val childInfoList: List<ChildInfo>) : ChildInfoUiState()
+
     /** The list could not be shown; [message] is resolved by the screen (CQ-14). */
     data class Error(val message: UiText) : ChildInfoUiState()
 }
