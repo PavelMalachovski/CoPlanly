@@ -110,7 +110,7 @@ invocation is yours.
 | **REL-6** | Play Console: Data Safety, listing, screenshots, content rating, a closed track with **real co-parent pairs** | This product cannot be tested by one person. |
 | **REL-7** | Install a release build and confirm a child's medical profile reaches the co-parent non-empty | The one test CI cannot run: a green `assembleRelease` proves R8 ran, not that Gson still finds its field names. |
 | **CQ-16** | Digital Asset Links | Needs a domain you own — the same one REL-4 needs. |
-| **CQ-18** | Cross-time-zone chat on two phones | Two devices, two zones. Unit tests already drive the logic; this is the acceptance run. |
+| **CQ-18** | Cross-time-zone chat on two phones — **what is drawn only** | The logic now runs end to end in CI (`e2e` job, `TwoParentChatTest`: UTC+14 and UTC−11, unread → DELIVERED → READ). Left for the phones: the badge and ticks as rendered, the displayed times, and the push. |
 | **MON-1** | Price, unit (family, not seat), and what the free tier contains | A decision, and it shapes the code that follows. |
 | **MON-9** | Distribution: mediators, Cochem courts, OSPOD, NGOs | Phone calls and meetings. A session can draft the material; it cannot make the call. |
 | **MON-8 (input)** | A real Bakaláři or EduPage export | The parser is cloud work; it needs one actual file to be written against. |
@@ -885,12 +885,22 @@ scheme rather than a verified App Link. Both need the domain **REL-4** needs for
 
 ### CQ-18 · P3 · S · Cross-time-zone chat was implemented but never verified on two devices
 
-**Where:** 💻 yours — two phones, two zones.
+**Where:** 💻 yours — two phones, two zones — **for the rendered half only** (September 2026).
 
 Epoch-millis message times are covered by unit tests that drive two zones explicitly
 (`ChatReadStateTimeZoneTest`) plus a 12→13 migration test. The **two-phone acceptance run** — set
 one phone 2–3 hours apart, send, confirm unread counts, badge clearing and READ ticks — was
 deferred, not run. Everything else in that acceptance round passed on real devices.
+
+**Partly covered by CI since September 2026.** The `e2e` job ("Android — two parents on the
+Firebase emulators") runs two accounts in one Android process against the Auth, Firestore and
+Functions emulators, with the real rules and the production `MessageRepositoryImpl` on each side.
+`TwoParentChatTest` puts one parent at UTC+14 and the other at UTC−11 — further apart than the
+checklist asks — and asserts that the message arrives unread, that the Room count the badge reads
+is 1 and drops to 0 on `markRead`, and that the sender's `ChatReadState.statusFor` reaches DELIVERED
+and then READ. What remains for two phones: the badge and ticks **as drawn**, the time **as
+displayed** in each zone, the order of alternately sent messages on screen, and the push that makes
+the other phone look — FCM has no emulator.
 
 ### CQ-19 · **DONE** · Deleting a child or a pet removed the document outright
 
