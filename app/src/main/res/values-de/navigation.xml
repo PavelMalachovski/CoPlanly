@@ -10,4 +10,5 @@
     <string name="budgets_title">Budgets</string>
     <string name="budgets_back">Zurück</string>
     <string name="conversations_title">Nachrichten</string>
+    <string name="navigation_loading">Wird geladen…</string>
 </resources>

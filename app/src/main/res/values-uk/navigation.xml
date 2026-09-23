@@ -10,4 +10,5 @@
     <string name="budgets_title">Бюджети</string>
     <string name="budgets_back">Назад</string>
     <string name="conversations_title">Повідомлення</string>
+    <string name="navigation_loading">Завантаження…</string>
 </resources>

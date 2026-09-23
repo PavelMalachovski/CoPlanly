@@ -1294,8 +1294,12 @@ fun AddEditEventScreen(
                                 )
                             }
                         }
+                        val importantLabel = stringResource(R.string.event_form_important_title)
                         Switch(
                             checked = isImportant,
+                            // Named for TalkBack: a bare switch beside its label reads as
+                            // "Switch, off" with nothing to say what it toggles.
+                            modifier = Modifier.semantics { contentDescription = importantLabel },
                             onCheckedChange = {
                                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 isImportant = it
@@ -1346,8 +1350,13 @@ fun AddEditEventScreen(
                             style = MaterialTheme.typography.titleSmall,
                             modifier = Modifier.weight(1f)
                         )
+                        val participatesLabel = stringResource(
+                            R.string.friend_event_participates,
+                            friend.name
+                        )
                         Switch(
                             checked = friendParticipates == friend.friendUid,
+                            modifier = Modifier.semantics { contentDescription = participatesLabel },
                             onCheckedChange = { on ->
                                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 friendParticipates = if (on) friend.friendUid else null
@@ -1393,8 +1402,10 @@ fun AddEditEventScreen(
                             )
                         }
                     }
+                    val privateLabel = stringResource(R.string.event_form_private_title)
                     Switch(
                         checked = isPrivate,
+                        modifier = Modifier.semantics { contentDescription = privateLabel },
                         onCheckedChange = {
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             isPrivate = it

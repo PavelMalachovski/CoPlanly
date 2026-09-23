@@ -21,6 +21,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -30,6 +31,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
+import com.coparently.app.R
 import com.coparently.app.domain.telemetry.TelemetryConsent
 import com.coparently.app.presentation.LocalGoogleSignInCallback
 import com.coparently.app.presentation.auth.AuthScreen
@@ -1159,7 +1161,7 @@ private fun LoadingScreen() {
         ) {
             CircularProgressIndicator()
             Text(
-                text = "Checking authentication...",
+                text = stringResource(R.string.navigation_loading),
                 style = MaterialTheme.typography.bodyLarge,
                 textAlign = TextAlign.Center
             )

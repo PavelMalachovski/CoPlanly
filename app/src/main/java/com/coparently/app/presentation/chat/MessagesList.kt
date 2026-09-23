@@ -27,6 +27,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
@@ -435,7 +436,11 @@ fun MessageItem(
                         if (onRetryFailed == null) {
                             Modifier
                         } else {
-                            Modifier.clickable(onClick = onRetryFailed)
+                            // The only recovery for an undelivered message: a real button
+                            // for TalkBack, and a 48dp target rather than a 16dp caption.
+                            Modifier
+                                .minimumInteractiveComponentSize()
+                                .clickable(role = Role.Button, onClick = onRetryFailed)
                         }
                     ),
                 verticalAlignment = Alignment.CenterVertically,

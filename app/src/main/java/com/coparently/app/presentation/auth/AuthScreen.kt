@@ -123,7 +123,7 @@ fun AuthScreen(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
-                    text = "CoPlanly",
+                    text = stringResource(R.string.app_name),
                     style = MaterialTheme.typography.headlineLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground
@@ -411,10 +411,9 @@ fun AuthScreen(
                         enabled = !uiState.isLoading &&
                                   uiState.email.isNotBlank() &&
                                   uiState.password.isNotBlank(),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = CoPlanlyColors.BrandPrimary
-                        )
+                        // Theme primary, not BrandPrimary: the brand indigo is light-theme-only
+                        // (2.73:1 on the dark surface) and under onPrimary's dark text in dark theme.
+                        shape = RoundedCornerShape(16.dp)
                     ) {
                         if (uiState.isLoading) {
                             CircularProgressIndicator(
@@ -462,7 +461,7 @@ fun AuthScreen(
                             stringResource(R.string.auth_action_sign_in)
                         },
                         fontWeight = FontWeight.Bold,
-                        color = CoPlanlyColors.BrandPrimary
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
             }

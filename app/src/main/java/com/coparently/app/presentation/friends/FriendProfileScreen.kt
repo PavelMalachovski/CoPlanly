@@ -39,6 +39,7 @@ import com.coparently.app.domain.friends.FriendRole
 import com.coparently.app.presentation.common.AccountAvatar
 import com.coparently.app.presentation.common.PillChip
 import com.coparently.app.presentation.theme.CoPlanlyColors
+import com.coparently.app.presentation.theme.ParentColors
 
 /**
  * The friend's own profile, authored by them (item 16).
@@ -135,7 +136,7 @@ fun FriendProfileScreen(
                             null
                         },
                         contentColor = if (option == role) {
-                            CoPlanlyColors.FriendTeal
+                            ParentColors.friendText
                         } else {
                             MaterialTheme.colorScheme.onSurfaceVariant
                         },

@@ -82,6 +82,8 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
@@ -711,8 +713,11 @@ fun SettingsScreen(
                         title = stringResource(R.string.settings_telemetry_title),
                         supporting = stringResource(R.string.settings_telemetry_description),
                         trailing = {
+                            val telemetryLabel = stringResource(R.string.settings_telemetry_title)
                             Switch(
                                 checked = telemetryConsent == TelemetryConsent.GRANTED,
+                                // Named for TalkBack, which otherwise reads only "Switch, on".
+                                modifier = Modifier.semantics { contentDescription = telemetryLabel },
                                 onCheckedChange = { granted ->
                                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                     telemetryConsentViewModel.answer(granted)
@@ -729,7 +734,9 @@ fun SettingsScreen(
                         title = stringResource(R.string.settings_push_notifications),
                         supporting = stringResource(R.string.settings_push_notifications_description),
                         trailing = {
+                            val pushLabel = stringResource(R.string.settings_push_notifications)
                             Switch(
+                                modifier = Modifier.semantics { contentDescription = pushLabel },
                                 checked = settingsUiState.notificationsEnabled &&
                                     com.coparently.app.presentation.common.hasNotificationPermission(context),
                                 onCheckedChange = { enabled ->
@@ -992,12 +999,14 @@ private fun GoogleCalendarActions(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
+            val syncLabel = stringResource(R.string.settings_gcal_enable_sync)
             Text(
-                text = stringResource(R.string.settings_gcal_enable_sync),
+                text = syncLabel,
                 style = MaterialTheme.typography.bodyLarge
             )
             Switch(
                 checked = isSyncEnabled,
+                modifier = Modifier.semantics { contentDescription = syncLabel },
                 onCheckedChange = onToggleSync,
                 enabled = isSignedIn || !isSyncEnabled
             )

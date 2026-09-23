@@ -46,6 +46,7 @@ import com.coparently.app.R
 import com.coparently.app.presentation.calendar.ParentFilter
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.theme.CoPlanlyColors
+import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.dimensions
 import androidx.compose.foundation.layout.ExperimentalLayoutApi as FoundationExperimentalLayoutApi
 
@@ -286,19 +287,23 @@ private fun ParentFilterSegments(
     onSelected: (ParentFilter) -> Unit
 ) {
     SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+        // Fill hue for container and border; text-grade partner for the label (design item 2:
+        // the raw pink on a dark surface is under AA as a foreground).
+        data class Segment(val filter: ParentFilter, val label: String, val color: Color, val content: Color)
+        val primary = MaterialTheme.colorScheme.primary
         val options = listOf(
-            Triple(ParentFilter.MOM, parentNames.labelFor("mom"), CoPlanlyColors.MomPink),
-            Triple(ParentFilter.BOTH, stringResource(R.string.calendar_filter_both), MaterialTheme.colorScheme.primary),
-            Triple(ParentFilter.DAD, parentNames.labelFor("dad"), CoPlanlyColors.DadBlue)
+            Segment(ParentFilter.MOM, parentNames.labelFor("mom"), CoPlanlyColors.MomPink, ParentColors.text("mom")),
+            Segment(ParentFilter.BOTH, stringResource(R.string.calendar_filter_both), primary, primary),
+            Segment(ParentFilter.DAD, parentNames.labelFor("dad"), CoPlanlyColors.DadBlue, ParentColors.text("dad"))
         )
-        options.forEachIndexed { index, (filter, label, color) ->
+        options.forEachIndexed { index, (filter, label, color, content) ->
             SegmentedButton(
                 selected = selected == filter,
                 onClick = { onSelected(filter) },
                 shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size),
                 colors = SegmentedButtonDefaults.colors(
                     activeContainerColor = color.copy(alpha = 0.15f),
-                    activeContentColor = color,
+                    activeContentColor = content,
                     activeBorderColor = color
                 ),
                 icon = {}

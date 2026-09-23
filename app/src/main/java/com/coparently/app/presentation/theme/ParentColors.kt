@@ -63,6 +63,15 @@ object ParentColors {
         palette.of(parent).let { if (isDarkTheme) it.light else it.dark }
 
     /**
+     * The calendar friend's teal as a **text-grade** foreground for the current theme. The raw
+     * [CoPlanlyColors.FriendTeal] is 3.36:1 on the dark surface, so dark theme takes the light
+     * partner — the same rule [text] applies to the two parent hues.
+     */
+    val friendText: Color
+        @Composable @ReadOnlyComposable
+        get() = if (isDarkTheme) CoPlanlyColors.FriendTealLight else CoPlanlyColors.FriendTeal
+
+    /**
      * A soft container tint in the parent's hue, for chips and hero backgrounds that carry
      * [text]-coloured content.
      *
