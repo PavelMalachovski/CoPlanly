@@ -20,8 +20,8 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * Home's cards: the handover hero, the "today" agenda card (with the co-parent's contact window,
- * MON-6b), the seven-day timeline and the stat tiles. All four carry translated sentences and parent colours, so they take the full
- * [ScreenshotVariants.TEXT_HEAVY] set.
+ * MON-6b), the seven-day timeline and the stat tiles. All four carry translated sentences and
+ * parent colours, so they take the full [ScreenshotVariants.TEXT_HEAVY] set.
  *
  * @param variant Language, theme, font scale and palette for this run
  */
