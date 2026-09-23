@@ -1,6 +1,5 @@
 package com.coparently.app.presentation.calendar
 
-import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -252,11 +251,6 @@ fun CalendarScreen(
     // this one value, so no two of them can name the same slot differently.
     val parents by calendarViewModel.parents.collectAsState()
     val parentNames = rememberParentNames(parents)
-
-    // Reduce animation duration on older devices for better performance
-    val animationDuration = remember {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) 150 else 200
-    }
 
     val now = remember { YearMonth.now() }
 
@@ -755,7 +749,7 @@ fun CalendarScreen(
                 Crossfade(
                     targetState = viewMode,
                     animationSpec = tween(
-                        durationMillis = animationDuration,
+                        durationMillis = com.coparently.app.presentation.theme.Motion.SHORT_MS,
                         easing = FastOutSlowInEasing
                     ),
                     modifier = Modifier.weight(1f)

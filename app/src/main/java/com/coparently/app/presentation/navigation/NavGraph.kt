@@ -140,7 +140,14 @@ fun NavGraph(
         NavHost(
             navController = navController,
             startDestination = startDestination,
-            modifier = Modifier.padding(innerPadding)
+            modifier = Modifier.padding(innerPadding),
+            // The standard push for any route that names no transitions of its own. Without
+            // these, such a route got Navigation's own 700 ms crossfade — more than twice as
+            // slow as every other screen.
+            enterTransition = { slideInFromRight() },
+            exitTransition = { slideOutToLeft() },
+            popEnterTransition = { slideInFromLeft() },
+            popExitTransition = { slideOutToRight() }
         ) {
             // Loading screen while checking authentication
             composable(
@@ -203,7 +210,9 @@ fun NavGraph(
             composable(
                 route = Screen.Auth.route,
                 enterTransition = { slideInFromRight() },
-                exitTransition = { slideOutToLeft() }
+                exitTransition = { slideOutToLeft() },
+                popEnterTransition = { slideInFromLeft() },
+                popExitTransition = { slideOutToRight() }
             ) {
                 AuthScreen(
                     onAuthSuccess = {

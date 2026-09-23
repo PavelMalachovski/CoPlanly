@@ -1,13 +1,10 @@
 package com.coparently.app.presentation.calendar
 
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -82,6 +79,7 @@ import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.rememberToday
 import com.coparently.app.presentation.theme.CoPlanlyColors
 import com.coparently.app.presentation.theme.Dimensions
+import com.coparently.app.presentation.theme.Motion
 import com.coparently.app.presentation.theme.dimensions
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -257,47 +255,16 @@ private fun DayWeekPage(
         with(density) { hourCellHeight.toPx() }
     }
 
-    // The AnimatedContent wrappers below no longer animate (the pager provides the
-    // motion); a static direction keeps their transitionSpec inert.
-    val swipeDirection = 0
-
     Column(
         modifier = Modifier.fillMaxSize()
     ) {
         // Fixed header row with modern design - 1.5x larger
-        // Animated header with optimized animation (200ms slide + 150ms fade)
         AnimatedContent(
             targetState = selectedDate,
             transitionSpec = {
-                val direction = swipeDirection
-                (
-                    slideInHorizontally(
-                        animationSpec = tween(
-                            durationMillis = 200,
-                            easing = FastOutSlowInEasing
-                        ),
-                        initialOffsetX = { fullWidth -> fullWidth * direction }
-                    ) + fadeIn(
-                        animationSpec = tween(
-                            durationMillis = 150,
-                            easing = LinearEasing
-                        )
-                    )
-                    ) togetherWith
-                    (
-                        slideOutHorizontally(
-                            animationSpec = tween(
-                                durationMillis = 200,
-                                easing = FastOutSlowInEasing
-                            ),
-                            targetOffsetX = { fullWidth -> -fullWidth * direction }
-                        ) + fadeOut(
-                            animationSpec = tween(
-                                durationMillis = 150,
-                                easing = LinearEasing
-                            )
-                        )
-                        )
+                // Pager supplies the horizontal motion; a date change inside one page only fades.
+                fadeIn(tween(Motion.SHORT_MS, easing = LinearEasing)) togetherWith
+                    fadeOut(tween(Motion.SHORT_MS, easing = LinearEasing))
             },
             modifier = Modifier
                 .fillMaxWidth()
@@ -483,39 +450,13 @@ private fun DayWeekPage(
                             )
                         }
 
-                        // Day columns - animated, optimized animation (200ms slide + 150ms fade)
+                        // Day columns (fade on date change; the pager does the sliding)
                         AnimatedContent(
                             targetState = selectedDate,
                             transitionSpec = {
-                                val direction = swipeDirection
-                                (
-                                    slideInHorizontally(
-                                        animationSpec = tween(
-                                            durationMillis = 200,
-                                            easing = FastOutSlowInEasing
-                                        ),
-                                        initialOffsetX = { fullWidth -> fullWidth * direction }
-                                    ) + fadeIn(
-                                        animationSpec = tween(
-                                            durationMillis = 150,
-                                            easing = LinearEasing
-                                        )
-                                    )
-                                    ) togetherWith
-                                    (
-                                        slideOutHorizontally(
-                                            animationSpec = tween(
-                                                durationMillis = 200,
-                                                easing = FastOutSlowInEasing
-                                            ),
-                                            targetOffsetX = { fullWidth -> -fullWidth * direction }
-                                        ) + fadeOut(
-                                            animationSpec = tween(
-                                                durationMillis = 150,
-                                                easing = LinearEasing
-                                            )
-                                        )
-                                        )
+                                // Pager supplies the horizontal motion; a date change inside one page only fades.
+                                fadeIn(tween(Motion.SHORT_MS, easing = LinearEasing)) togetherWith
+                                    fadeOut(tween(Motion.SHORT_MS, easing = LinearEasing))
                             },
                             modifier = Modifier.weight(1f)
                         ) { currentDate ->
