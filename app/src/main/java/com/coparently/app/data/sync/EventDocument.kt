@@ -36,7 +36,11 @@ internal object EventDocument {
         title = data["title"] as String,
         description = data["description"] as? String,
         startDateTime = LocalDateTime.parse(data["startDateTime"] as String, formatter),
-        endDateTime = (data["endDateTime"] as? String)?.let { LocalDateTime.parse(it, formatter) },
+        // Blank reads as "no end", like every other optional date here. `toFirestoreMap()` writes
+        // `""` for an event without one, so parsing it unguarded threw, and the per-document catch
+        // on the reading side then skipped the event: the co-parent never received it at all.
+        endDateTime = (data["endDateTime"] as? String)?.ifBlank { null }
+            ?.let { LocalDateTime.parse(it, formatter) },
         eventType = data["eventType"] as String,
         parentOwner = data["parentOwner"] as String,
         isRecurring = data["isRecurring"] as? Boolean ?: false,
