@@ -2,9 +2,11 @@ package com.coparently.app.testing
 
 import android.os.SystemClock
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.junit4.ComposeTestRule
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.dp
 import org.junit.Assert.assertTrue
 
@@ -72,9 +74,14 @@ val iconOnlyControl: SemanticsMatcher = SemanticsMatcher("a clickable control wi
  * `IconButton` draws 40 dp and reaches 48 dp through `minimumInteractiveComponentSize`, which
  * widens the touch target around the node rather than the node's own layout — so measuring
  * `size` flags every standard icon button (the first run did, on Home's gear).
+ *
+ * Those bounds are clipped to the window, so a control below the fold of a scrolling screen
+ * measures 0x0 (Settings' sync button did). Such a node is scrolled into view and measured
+ * again — skipping it instead would let the check pass on whatever is not on the first screen.
  */
 fun ComposeTestRule.assertIconOnlyControlsAreAccessible(screen: String) {
-    val offenders = onAllNodes(iconOnlyControl).fetchSemanticsNodes().mapNotNull { node ->
+    val ids = onAllNodes(iconOnlyControl).fetchSemanticsNodes().map { it.id }
+    val offenders = ids.mapNotNull { id -> measuredOnScreen(id) }.mapNotNull { node ->
         val minimum = with(node.layoutInfo.density) { MIN_TOUCH_TARGET_DP.dp.roundToPx() }
         val label = node.config.getOrElseNullable(SemanticsProperties.ContentDescription) { null }
             .orEmpty()
@@ -92,6 +99,16 @@ fun ComposeTestRule.assertIconOnlyControlsAreAccessible(screen: String) {
         "$screen has icon-only controls that fail basic accessibility:\n" + offenders.joinToString("\n"),
         offenders.isEmpty()
     )
+}
+
+/** The node with [id], scrolled into view first when it is entirely outside the window. */
+private fun ComposeTestRule.measuredOnScreen(id: Int): SemanticsNode? {
+    val matcher = SemanticsMatcher("semantics id $id") { it.id == id }
+    val node = onAllNodes(matcher).fetchSemanticsNodes().singleOrNull() ?: return null
+    if (!node.touchBoundsInRoot.isEmpty) return node
+    onNode(matcher).performScrollTo()
+    settle()
+    return onAllNodes(matcher).fetchSemanticsNodes().singleOrNull()
 }
 
 private const val MIN_TOUCH_TARGET_DP = 48
