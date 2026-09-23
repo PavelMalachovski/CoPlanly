@@ -1,5 +1,6 @@
 package com.coparently.app.presentation.common
 
+import com.coparently.app.data.chat.OtherFamiliesUnreadSource
 import com.coparently.app.data.family.FamilyOption
 import com.coparently.app.data.family.SelectedFamilySource
 import com.coparently.app.domain.repository.UserRepository
@@ -29,7 +30,8 @@ import kotlin.test.assertTrue
  *
  * Two rules worth pinning: it is offered **at two, not at one**, and the co-parents' names — the
  * one remote read — are fetched once per co-parent rather than on every emission of a row that
- * re-emits whenever any column of it moves.
+ * re-emits whenever any column of it moves. And the cross-family dot: shown for a family not on
+ * screen whose chat moved, never for the family on screen and never at one family.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class FamilySwitcherViewModelTest {
@@ -38,6 +40,10 @@ class FamilySwitcherViewModelTest {
     private val families = MutableStateFlow(listOf(BOB_FAMILY))
     private val source = mockk<SelectedFamilySource>(relaxed = true)
     private val userRepository = mockk<UserRepository>()
+    private val unread = MutableStateFlow<Set<String>>(emptySet())
+    private val unreadSource = mockk<OtherFamiliesUnreadSource> {
+        every { unreadFamilyIds } returns unread
+    }
 
     @Before
     fun setUp() {
@@ -57,7 +63,7 @@ class FamilySwitcherViewModelTest {
 
     @Test
     fun `one family offers no switcher and costs no read`() = runTest(dispatcher) {
-        val vm = FamilySwitcherViewModel(source, userRepository)
+        val vm = FamilySwitcherViewModel(source, userRepository, unreadSource)
         backgroundScope.launch { vm.state.collect {} }
         advanceUntilIdle()
 
@@ -67,7 +73,7 @@ class FamilySwitcherViewModelTest {
 
     @Test
     fun `a second family offers the switcher, with both co-parents named`() = runTest(dispatcher) {
-        val vm = FamilySwitcherViewModel(source, userRepository)
+        val vm = FamilySwitcherViewModel(source, userRepository, unreadSource)
         backgroundScope.launch { vm.state.collect {} }
         families.value = listOf(BOB_FAMILY, CAROL_FAMILY)
         advanceUntilIdle()
@@ -80,7 +86,7 @@ class FamilySwitcherViewModelTest {
 
     @Test
     fun `a name is read once, not on every emission`() = runTest(dispatcher) {
-        val vm = FamilySwitcherViewModel(source, userRepository)
+        val vm = FamilySwitcherViewModel(source, userRepository, unreadSource)
         backgroundScope.launch { vm.state.collect {} }
         families.value = listOf(BOB_FAMILY, CAROL_FAMILY)
         advanceUntilIdle()
@@ -95,12 +101,54 @@ class FamilySwitcherViewModelTest {
 
     @Test
     fun `a switch goes through the one place that re-points the projection`() = runTest(dispatcher) {
-        val vm = FamilySwitcherViewModel(source, userRepository)
+        val vm = FamilySwitcherViewModel(source, userRepository, unreadSource)
 
         vm.select(CAROL_FAMILY.familyId)
         advanceUntilIdle()
 
         coVerify { source.select(CAROL_FAMILY.familyId) }
+    }
+
+    @Test
+    fun `another family's news raises the chip's dot and that family's row`() = runTest(dispatcher) {
+        val vm = FamilySwitcherViewModel(source, userRepository, unreadSource)
+        backgroundScope.launch { vm.state.collect {} }
+        families.value = listOf(BOB_FAMILY, CAROL_FAMILY)
+        advanceUntilIdle()
+        assertFalse(vm.state.value.otherFamilyHasUnread)
+
+        unread.value = setOf(CAROL_FAMILY.familyId)
+        advanceUntilIdle()
+
+        val state = vm.state.value
+        assertTrue(state.otherFamilyHasUnread)
+        assertTrue(state.hasUnread(CAROL_FAMILY.familyId))
+        assertFalse(state.hasUnread(BOB_FAMILY.familyId))
+    }
+
+    @Test
+    fun `the family on screen never raises the dot`() = runTest(dispatcher) {
+        // The source excludes it too; this is the guard for the moment a switch lands before
+        // the source has re-keyed its listeners.
+        unread.value = setOf(BOB_FAMILY.familyId)
+        val vm = FamilySwitcherViewModel(source, userRepository, unreadSource)
+        backgroundScope.launch { vm.state.collect {} }
+        families.value = listOf(BOB_FAMILY, CAROL_FAMILY)
+        advanceUntilIdle()
+
+        assertFalse(vm.state.value.otherFamilyHasUnread)
+        assertFalse(vm.state.value.hasUnread(BOB_FAMILY.familyId))
+    }
+
+    @Test
+    fun `one family shows no dot whatever the source says`() = runTest(dispatcher) {
+        unread.value = setOf(CAROL_FAMILY.familyId)
+        val vm = FamilySwitcherViewModel(source, userRepository, unreadSource)
+        backgroundScope.launch { vm.state.collect {} }
+        advanceUntilIdle()
+
+        assertFalse(vm.state.value.otherFamilyHasUnread)
+        assertFalse(vm.state.value.hasUnread(CAROL_FAMILY.familyId))
     }
 
     private companion object {

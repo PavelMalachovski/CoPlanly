@@ -78,6 +78,10 @@
     <string name="settings_family_shown">Family shown</string>
     <string name="settings_family_switch">Switch family</string>
     <string name="settings_family_unnamed">Not named yet</string>
+    <!-- The family switcher's dot (M-8): another family's chat has something newer than this
+         parent's read mark. A dot, never a count; see OtherFamiliesUnreadSource. -->
+    <string name="family_switcher_unread_other">New messages in another family</string>
+    <string name="family_switcher_unread_row">New messages</string>
     <!-- The Bakaláři / EduPage import row (MON-8). Inert until the import exists; see the
          comment at its call site in SettingsScreen for why an inert row is not the affordance
          design rule 8 forbids, and for the condition under which it has to come out. -->

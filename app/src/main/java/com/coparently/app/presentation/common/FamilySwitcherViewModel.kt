@@ -2,6 +2,7 @@ package com.coparently.app.presentation.common
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.coparently.app.data.chat.OtherFamiliesUnreadSource
 import com.coparently.app.data.family.FamilyOption
 import com.coparently.app.data.family.SelectedFamilySource
 import com.coparently.app.domain.repository.UserRepository
@@ -13,6 +14,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.mapLatest
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -23,16 +25,30 @@ import javax.inject.Inject
  * @property families Every family, each co-parent named where their profile could be read.
  *   Names are resolved only when there are at least two, because nothing shows them otherwise.
  * @property selectedFamilyId The family on screen, or null when the account is in none.
+ * @property unreadFamilyIds Families whose chat moved after this parent's read mark, as
+ *   [OtherFamiliesUnreadSource] reports them — read only through [hasUnread] and
+ *   [otherFamilyHasUnread], which never let it speak for the family on screen or at one family.
  */
 data class FamilySwitcherState(
     val families: List<FamilyOption> = emptyList(),
-    val selectedFamilyId: String? = null
+    val selectedFamilyId: String? = null,
+    val unreadFamilyIds: Set<String> = emptySet()
 ) {
     /** Whether a switcher should be offered at all: **at two, not at one** (FAM-1's rule). */
     val canSwitch: Boolean get() = families.size > 1
 
     /** The family on screen, if it is one of [families]. */
     val selected: FamilyOption? get() = families.firstOrNull { it.familyId == selectedFamilyId }
+
+    /** Whether any family *not* on screen has something new in its chat: the chip's dot. */
+    val otherFamilyHasUnread: Boolean get() = families.any { hasUnread(it.familyId) }
+
+    /**
+     * Whether [familyId]'s row in the switcher dialog carries a dot. Never the family on
+     * screen — its own badge is the Chat tab's — and never at one family, where nothing is drawn.
+     */
+    fun hasUnread(familyId: String): Boolean =
+        canSwitch && familyId != selectedFamilyId && familyId in unreadFamilyIds
 }
 
 /**
@@ -50,12 +66,17 @@ data class FamilySwitcherState(
  * there are two or more, only for a co-parent this instance has not named yet, and not again
  * when the list re-emits for an unrelated reason — which a tab that is left and re-entered makes
  * the ordinary case, since `WhileSubscribed` restarts the upstream each time.
+ *
+ * **The dot is the other exception**: one conversation-document listener per family *not* on
+ * screen, owned by the shared [OtherFamiliesUnreadSource] rather than by this instance, and none
+ * at all for a one-family account.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class FamilySwitcherViewModel @Inject constructor(
     private val selectedFamilySource: SelectedFamilySource,
-    userRepository: UserRepository
+    userRepository: UserRepository,
+    otherFamiliesUnreadSource: OtherFamiliesUnreadSource
 ) : ViewModel() {
 
     /** Co-parent uid → name, for the lifetime of this instance; see the class KDoc. */
@@ -69,8 +90,13 @@ class FamilySwitcherViewModel @Inject constructor(
             } else {
                 combine(
                     selectedFamilySource.observeFamilies(uid).mapLatest(::withNames),
-                    selectedFamilySource.observe(uid)
-                ) { families, selected -> FamilySwitcherState(families, selected?.familyId) }
+                    selectedFamilySource.observe(uid),
+                    // Its own listeners, shared across every switcher on screen; the start value
+                    // keeps the chip from waiting on Firestore to draw its name.
+                    otherFamiliesUnreadSource.unreadFamilyIds.onStart { emit(emptySet()) }
+                ) { families, selected, unread ->
+                    FamilySwitcherState(families, selected?.familyId, unread)
+                }
             }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), FamilySwitcherState())
