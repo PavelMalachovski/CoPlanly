@@ -471,12 +471,15 @@ private val HEADER_AVATAR_SIZE = 36.dp
  * mock's "synced just now": the app tracks no chat sync timestamp, and printing one it does not
  * have is exactly the kind of affordance this refresh removed elsewhere.
  *
+ * Internal rather than private so the JVM screenshot tests (`ScreenshotMatrix` and its
+ * subclasses under `app/src/test`) can render it on its own.
+ *
  * @param title Conversation title — the co-parent's name once `ensureConversation` has run
  * @param messages Thread contents, newest last
  * @param currentUserId Whose messages count towards the status
  */
 @Composable
-private fun ChatThreadHeader(title: String, messages: List<Message>, currentUserId: String) {
+internal fun ChatThreadHeader(title: String, messages: List<Message>, currentUserId: String) {
     val mine = messages.filter { it.senderId == currentUserId }
     val status = when {
         mine.any { it.status == MessageSendStatus.ERROR } -> R.string.chat_failed_to_send

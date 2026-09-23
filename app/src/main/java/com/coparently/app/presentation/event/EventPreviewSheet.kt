@@ -63,7 +63,7 @@ import java.time.format.DateTimeFormatter
  *   own (Home) — the button is then left out rather than shown doing something else
  * @param onDismiss Close the sheet without action
  */
-@Suppress("LongMethod", "LongParameterList") // linear declarative layout, no logic to extract
+@Suppress("LongParameterList") // the sheet's API: event, names, members and three actions
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EventPreviewSheet(
@@ -74,6 +74,43 @@ fun EventPreviewSheet(
     onDelete: (() -> Unit)?,
     onDismiss: () -> Unit
 ) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        // Opens fully, like every other sheet in the app: a half-open action sheet is one more
+        // resting state to drag through (audit 2026-09 §3.3).
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ) {
+        EventPreviewContent(
+            event = event,
+            parentNames = parentNames,
+            members = members,
+            onEdit = onEdit,
+            onDelete = onDelete
+        )
+    }
+}
+
+/**
+ * The body of [EventPreviewSheet], without the sheet around it.
+ *
+ * Split out so the JVM screenshot tests can render it: a `ModalBottomSheet` opens its own window,
+ * which a single-view capture does not see. Everything the sheet shows lives here.
+ *
+ * @param event Event (or expanded occurrence) to preview
+ * @param parentNames Resolves the event's slot to that parent's name
+ * @param members The family's children and pets, for naming who the event is about
+ * @param onEdit Open the full editor for this event
+ * @param onDelete Delete the event, or null to leave the button out
+ */
+@Suppress("LongMethod") // linear declarative layout, no logic to extract
+@Composable
+internal fun EventPreviewContent(
+    event: Event,
+    parentNames: ParentNames,
+    members: List<FamilyMember>,
+    onEdit: () -> Unit,
+    onDelete: (() -> Unit)?
+) {
     val parentColor = when (event.parentOwner) {
         "mom" -> ParentColors.fill("mom")
         "dad" -> ParentColors.fill("dad")
@@ -81,161 +118,154 @@ fun EventPreviewSheet(
     }
     val parentLabel = parentNames.labelFor(event.parentOwner)
 
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        // Opens fully, like every other sheet in the app: a half-open action sheet is one more
-        // resting state to drag through (audit 2026-09 §3.3).
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp)
+            .padding(bottom = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp)
-                .padding(bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(12.dp)
-                        .background(parentColor, CircleShape)
-                )
-                Text(
-                    text = event.title,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    // Long titles used to wrap mid-word and push the sheet's actions down.
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(start = 10.dp)
-                )
-            }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(12.dp)
+                    .background(parentColor, CircleShape)
+            )
+            Text(
+                text = event.title,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                // Long titles used to wrap mid-word and push the sheet's actions down.
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(start = 10.dp)
+            )
+        }
 
-            PreviewRow(icon = Icons.Default.Schedule) {
-                val dateFormat = DateTimeFormatter.ofPattern("EEE, d MMM yyyy")
-                val timeFormat = DateTimeFormatter.ofPattern("HH:mm")
-                val dateText = event.startDateTime.format(dateFormat)
-                val timeText = buildString {
-                    append(event.startDateTime.format(timeFormat))
-                    event.endDateTime?.let { end ->
-                        append(" – ")
-                        // An overnight or multi-day event names its end day too; "22:00 – 07:00"
-                        // under the start date read as ending before it began.
-                        if (end.toLocalDate() != event.startDateTime.toLocalDate()) {
-                            append(end.format(dateFormat))
-                            append(' ')
-                        }
-                        append(end.format(timeFormat))
+        PreviewRow(icon = Icons.Default.Schedule) {
+            val dateFormat = DateTimeFormatter.ofPattern("EEE, d MMM yyyy")
+            val timeFormat = DateTimeFormatter.ofPattern("HH:mm")
+            val dateText = event.startDateTime.format(dateFormat)
+            val timeText = buildString {
+                append(event.startDateTime.format(timeFormat))
+                event.endDateTime?.let { end ->
+                    append(" – ")
+                    // An overnight or multi-day event names its end day too; "22:00 – 07:00"
+                    // under the start date read as ending before it began.
+                    if (end.toLocalDate() != event.startDateTime.toLocalDate()) {
+                        append(end.format(dateFormat))
+                        append(' ')
                     }
+                    append(end.format(timeFormat))
                 }
+            }
+            Text(
+                text = "$dateText · $timeText",
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
+
+        PreviewRow(icon = Icons.Default.Person) {
+            Text(text = parentLabel, style = MaterialTheme.typography.bodyMedium)
+        }
+
+        // Who the event is about, named rather than coloured — the parent slot above already
+        // owns the one colour this sheet spends. An event that names nobody is the whole
+        // family's and gets no row at all, rather than a row saying "everyone", which would
+        // add a line to every event in the app to state the default.
+        //
+        // Resolved against the family's current records, so a reference this build does not
+        // understand, or one whose record is gone, is simply not named. It stays on the
+        // event either way — see `FamilyMemberRef.Unknown`.
+        val memberNames = event.forMembers.mapNotNull { ref ->
+            members.firstOrNull { it.ref == ref }?.name
+        }
+        if (memberNames.isNotEmpty()) {
+            PreviewRow(icon = Icons.Default.Groups) {
                 Text(
-                    text = "$dateText · $timeText",
+                    text = memberNames.joinToString(", "),
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
+        }
 
-            PreviewRow(icon = Icons.Default.Person) {
-                Text(text = parentLabel, style = MaterialTheme.typography.bodyMedium)
+        event.description?.takeIf { it.isNotBlank() }?.let { description ->
+            PreviewRow(icon = Icons.Default.Description) {
+                Text(text = description, style = MaterialTheme.typography.bodyMedium)
             }
+        }
 
-            // Who the event is about, named rather than coloured — the parent slot above already
-            // owns the one colour this sheet spends. An event that names nobody is the whole
-            // family's and gets no row at all, rather than a row saying "everyone", which would
-            // add a line to every event in the app to state the default.
-            //
-            // Resolved against the family's current records, so a reference this build does not
-            // understand, or one whose record is gone, is simply not named. It stays on the
-            // event either way — see `FamilyMemberRef.Unknown`.
-            val memberNames = event.forMembers.mapNotNull { ref ->
-                members.firstOrNull { it.ref == ref }?.name
-            }
-            if (memberNames.isNotEmpty()) {
-                PreviewRow(icon = Icons.Default.Groups) {
-                    Text(
-                        text = memberNames.joinToString(", "),
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-            }
-
-            event.description?.takeIf { it.isNotBlank() }?.let { description ->
-                PreviewRow(icon = Icons.Default.Description) {
-                    Text(text = description, style = MaterialTheme.typography.bodyMedium)
-                }
-            }
-
-            if (event.isPrivate) {
-                PreviewRow(icon = Icons.Default.Lock) {
-                    Text(
-                        text = stringResource(R.string.event_preview_private),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            event.imageUrl?.let { url ->
-                // Cropped to 180dp here, so the photo is a hint at what is attached rather than
-                // the thing itself; tapping opens the zoomable viewer that shows all of it.
-                var viewingPhoto by rememberSaveable { mutableStateOf(false) }
-                AsyncImage(
-                    model = url,
-                    contentDescription = stringResource(R.string.image_viewer_open),
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(180.dp)
-                        .clip(MaterialTheme.shapes.medium)
-                        .clickable { viewingPhoto = true }
+        if (event.isPrivate) {
+            PreviewRow(icon = Icons.Default.Lock) {
+                Text(
+                    text = stringResource(R.string.event_preview_private),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                if (viewingPhoto) {
-                    FullScreenImageDialog(
-                        model = url,
-                        contentDescription = stringResource(R.string.event_preview_photo),
-                        onDismiss = { viewingPhoto = false }
-                    )
-                }
             }
+        }
 
-            Spacer(modifier = Modifier.height(4.dp))
+        event.imageUrl?.let { url ->
+            // Cropped to 180dp here, so the photo is a hint at what is attached rather than
+            // the thing itself; tapping opens the zoomable viewer that shows all of it.
+            var viewingPhoto by rememberSaveable { mutableStateOf(false) }
+            AsyncImage(
+                model = url,
+                contentDescription = stringResource(R.string.image_viewer_open),
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(180.dp)
+                    .clip(MaterialTheme.shapes.medium)
+                    .clickable { viewingPhoto = true }
+            )
+            if (viewingPhoto) {
+                FullScreenImageDialog(
+                    model = url,
+                    contentDescription = stringResource(R.string.event_preview_photo),
+                    onDismiss = { viewingPhoto = false }
+                )
+            }
+        }
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                if (onDelete != null) {
-                    OutlinedButton(
-                        onClick = onDelete,
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.error
-                        )
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Text(
-                            text = stringResource(R.string.event_preview_delete),
-                            modifier = Modifier.padding(start = 6.dp)
-                        )
-                    }
-                }
-                Button(
-                    onClick = onEdit,
-                    modifier = Modifier.weight(1f)
+        Spacer(modifier = Modifier.height(4.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            if (onDelete != null) {
+                OutlinedButton(
+                    onClick = onDelete,
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Edit,
+                        imageVector = Icons.Default.Delete,
                         contentDescription = null,
                         modifier = Modifier.size(18.dp)
                     )
                     Text(
-                        text = stringResource(R.string.event_preview_edit),
+                        text = stringResource(R.string.event_preview_delete),
                         modifier = Modifier.padding(start = 6.dp)
                     )
                 }
+            }
+            Button(
+                onClick = onEdit,
+                modifier = Modifier.weight(1f)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Edit,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Text(
+                    text = stringResource(R.string.event_preview_edit),
+                    modifier = Modifier.padding(start = 6.dp)
+                )
             }
         }
     }
