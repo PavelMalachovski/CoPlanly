@@ -876,9 +876,9 @@ whatever you were doing; a stale "known issue" costs more than a missing one.
 - Calendar range/day queries now match multi-day & overnight events by overlap
   (`getSingleEventsByDateRange` / `getEventsByDate`), not start date only.
 - Unit tests for ChildInfo/Pairing/Settings/Sync ViewModels were once removed as stale (they
-  targeted long-gone APIs). **Three of the four are back**: `ChildInfoViewModelTest`,
-  `PairingViewModelTest` and `SyncServiceTest` all exist and run. Settings still has none —
-  that is the one to write when touching it.
+  targeted long-gone APIs). **All four are back**: `ChildInfoViewModelTest`,
+  `PairingViewModelTest`, `SyncServiceTest` and — since September 2026, starting with the push
+  switch — `SettingsViewModelTest`.
 
 - **`ChildInfoViewModel`'s editor state is loaded by id, never from the head of a list.**
   `loadChildInfo()` serves the list screen and touches nothing else; `loadChildInfoById()` is the
