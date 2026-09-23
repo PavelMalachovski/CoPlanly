@@ -20,7 +20,7 @@ open item whether a cloud session, a CI job, or a machine with an Android SDK an
 it, and **§10**, the dependency order.
 
 **The latest full audit lives in `docs/AUDIT-2026-08.md`** (`AUDIT-2026-07.md` is the previous
-one); `docs/ROADMAP.md` §3 is the live version of its §5. The app still cannot be published: no
+one; `AUDIT-2026-09.md` adds Play closed-test readiness, motion and UI/UX on top of it); `docs/ROADMAP.md` §3 is the live version of its §5. The app still cannot be published: no
 hosted privacy policy, no signing config, no Play listing. Two claims that paragraph used to make
 are **no longer true** and were corrected here rather than left to mislead — in-app account
 deletion ships (server-side teardown plus a local wipe, PR #68), and the `applicationId` is now

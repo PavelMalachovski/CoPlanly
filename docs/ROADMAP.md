@@ -76,7 +76,7 @@ invocation is yours.
 | **UX-9** | Five different empty-state anatomies, one of which renders under the top bar | P2 | M |
 | **UX-12** | Clerical English success messages — and a branch on the literal that will break when they are localised | P2 | S |
 | **UX-14** | Four different brand purples | P3 | S |
-| **UX-15** | `ParentColors` is adopted at roughly a quarter | P3 | S |
+| **UX-15** | Thread the chosen palette into `ParentColors` — the colour picker is built and hidden until this lands | P1 | M |
 | **UX-16** | Drag an event to reschedule it (MVP 3) | P3 | S |
 | **MON-2** | Verify the market facts — most of them are public pages | P0 | S |
 | **MON-3** | Export to PDF/CSV — the first paid feature (needs MON-4 first) | P1 | M |
@@ -380,7 +380,12 @@ control.
       `docs/legal/DATA-SAFETY.md`. Check them against the code before submitting; a wrong
       declaration is a policy violation, not a typo.
 - [ ] Store listing, screenshots, feature graphic. Czech first, English second.
-- [ ] Content rating questionnaire.
+- [ ] Content rating questionnaire — declare user-to-user communication (chat).
+- [ ] **Google OAuth consent screen** (September 2026 audit, not tracked before): the app asks
+      for the sensitive `calendar` scope, so until the screen is verified every closed-test
+      tester must be added as an OAuth test user or sees "unverified app" (100-user cap).
+      Consider `calendar.events` instead.
+- [ ] Target audience 18+ only, not in the Families programme (`DATA-SAFETY.md`).
 - [ ] Closed testing track with **real co-parent pairs** — this product cannot be tested by one
       person, and the failure modes only appear across two devices.
 
@@ -949,7 +954,15 @@ Audit §9.15.
 `#6200EE`, and a splash gradient between the first two. Icon, system splash, Compose splash and app
 do not agree. Audit §9.16.
 
-### UX-15 · P3 · S · `ParentColors` is adopted at roughly a quarter
+### UX-15 · P1 · M · Thread the chosen palette into `ParentColors` (was P3 · S)
+
+**September 2026 audit:** worse than this item said. No composable reads `ParentsSource.palette`,
+so even the `ParentColors` calls take the default palette — the "My colour" picker changed nothing
+anywhere. It is now **hidden** behind `PARENT_COLOUR_PICKER_ENABLED` (Settings and onboarding);
+turn it on in the same change that threads the palette through. `docs/AUDIT-2026-09.md` §4.2
+lists the sites.
+
+*Original text:*
 
 **Where:** ☁️ cloud.
 
