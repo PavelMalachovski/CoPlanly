@@ -502,6 +502,106 @@ describe('custody_models', () => {
                 .where('participants', 'array-contains', MOM).get());
       });
 
+  describe('contact windows (MON-6b)', () => {
+    // Part of a cycle day with the parent who does not have that day, as
+    // `ContactWindowCodec` strings. Part of the agreed pattern: only a pattern write, which
+    // stamps its author and is announced, may change them.
+    const WINDOWS = ['2|15:00|19:00|dad', '9|15:00|19:00|dad'];
+    const DATE = '2026-09-05';
+    const proposal = (by, extra) => Object.assign({
+      modelType: 'EVERY_OTHER_WEEKEND',
+      patternDays: 14,
+      momDayIndices: [0, 1, 2, 3, 4, 7, 8, 9, 10, 11, 12, 13],
+      startDate: '2026-08-03',
+      repeatYearly: true,
+      proposedBy: by,
+      proposedAt: '2026-08-24T10:00:00',
+    }, extra);
+
+    it('lets a participant create the document with windows', async () => {
+      const db = env.authenticatedContext(MOM).firestore();
+      await assertSucceeds(db.doc(PATH).set(custodyDoc({contactWindows: WINDOWS})));
+    });
+
+    it('lets a pattern write set, change and clear them', async () => {
+      await seed(env, {[PATH]: custodyDoc({})});
+      const db = env.authenticatedContext(DAD).firestore();
+      await assertSucceeds(db.doc(PATH).update({contactWindows: WINDOWS, lastModifiedBy: DAD}));
+      await assertSucceeds(db.doc(PATH).update({contactWindows: [WINDOWS[0]], lastModifiedBy: DAD}));
+      // A removal is an explicit empty list, which is how a current build says "none".
+      await assertSucceeds(db.doc(PATH).update({contactWindows: [], lastModifiedBy: DAD}));
+    });
+
+    it('lets a current build propose while carrying the stored windows unchanged', async () => {
+      // `FirestoreCustodyDataSource` re-sends the whole document; the stored list goes back
+      // verbatim, so it is not among the affected keys.
+      await seed(env, {[PATH]: custodyDoc({contactWindows: WINDOWS})});
+      const db = env.authenticatedContext(DAD).firestore();
+      await assertSucceeds(db.doc(PATH).set(custodyDoc({
+        contactWindows: WINDOWS,
+        proposal: proposal(DAD, {contactWindows: [WINDOWS[0]]}),
+      })));
+    });
+
+    it('lets an older build propose, although its set() drops the windows', async () => {
+      // A build that predates the field cannot carry a key it has never heard of. Refusing its
+      // write would lock a co-parent on an older build out of proposing at all.
+      await seed(env, {[PATH]: custodyDoc({contactWindows: WINDOWS})});
+      const db = env.authenticatedContext(DAD).firestore();
+      await assertSucceeds(db.doc(PATH).set(custodyDoc({proposal: proposal(DAD)})));
+    });
+
+    it('refuses a proposal-only write that rewrites the agreed windows', async () => {
+      // A proposal write does not stamp its author and raises no banner, so changing the agreed
+      // windows through one would move the co-parent's afternoons in silence.
+      await seed(env, {[PATH]: custodyDoc({contactWindows: WINDOWS})});
+      const db = env.authenticatedContext(DAD).firestore();
+      await assertFails(db.doc(PATH).update({
+        proposal: proposal(DAD),
+        contactWindows: ['2|12:00|19:00|dad'],
+      }));
+      await assertFails(db.doc(PATH).update({
+        proposal: proposal(DAD),
+        contactWindows: [],
+      }));
+    });
+
+    it('refuses a proposal-only write that adds windows where there were none', async () => {
+      await seed(env, {[PATH]: custodyDoc({})});
+      const db = env.authenticatedContext(DAD).firestore();
+      await assertFails(db.doc(PATH).update({proposal: proposal(DAD), contactWindows: WINDOWS}));
+    });
+
+    it('lets a swap carry the windows unchanged, and an older build\'s swap drop them', async () => {
+      await seed(env, {[PATH]: custodyDoc({contactWindows: WINDOWS})});
+      const db = env.authenticatedContext(MOM).firestore();
+      const swap = {
+        dayOverrides: {[DATE]: pendingSwap(MOM, 'dad')},
+        lastModifiedBy: MOM,
+        lastModifiedKind: 'SWAP',
+        lastSwapDate: DATE,
+      };
+      await assertSucceeds(db.doc(PATH).set(custodyDoc(Object.assign({contactWindows: WINDOWS}, swap))));
+
+      await seed(env, {[PATH]: custodyDoc({contactWindows: WINDOWS})});
+      await assertSucceeds(db.doc(PATH).set(custodyDoc(swap)));
+    });
+
+    it('refuses a swap write that changes the windows', async () => {
+      // `CustodyChangeAnnouncement` suppresses the banner for a SWAP stamp, so a window change
+      // riding on one would be a pattern change nobody is told about.
+      await seed(env, {[PATH]: custodyDoc({contactWindows: WINDOWS})});
+      const db = env.authenticatedContext(MOM).firestore();
+      await assertFails(db.doc(PATH).update({
+        dayOverrides: {[DATE]: pendingSwap(MOM, 'dad')},
+        contactWindows: ['2|15:00|20:00|mom'],
+        lastModifiedBy: MOM,
+        lastModifiedKind: 'SWAP',
+        lastSwapDate: DATE,
+      }));
+    });
+  });
+
   describe('custody-pattern proposals (item 7)', () => {
     const proposal = (by) => ({
       modelType: 'WEEK_ON_WEEK_OFF',

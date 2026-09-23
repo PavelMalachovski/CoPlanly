@@ -67,26 +67,19 @@ invocation is yours.
 | Id | What | Pri | Size |
 | --- | --- | --- | --- |
 | **M-5** | Multi-family cleanup: delete `partnerId`, `User.role`, `Event.sharedWith`, `isPartnerOf` — **after** the ops steps in REL-3 | P2 | M |
-| **M-8** | M-4's leftovers: badges that count across families, `familyId` on pushes, a switcher chip in the top bar | P2 | M |
-| **CQ-11** | The declared error model is not the one in use | P3 | S |
-| **CQ-13** | Fourteen of twenty-four ViewModels have no tests | P2 | M |
-| **CQ-15** | The last of the dead code, and one decision about it | P3 | S |
+| **M-8** | M-4's last leftover: badges across families — and chat still follows the *first* co-parent, not the selected family (the chip and `familyId` on pushes are done) | P2 | M |
 | **CQ-17** | Six dependencies worth moving | P3 | S |
-| **UX-9** | Five different empty-state anatomies, one of which renders under the top bar | P2 | M |
-| **UX-14** | Four different brand purples | P3 | S |
-| **UX-16** | Drag an event to reschedule it (MVP 3) | P3 | S |
 | **MON-2** | Verify the market facts — most of them are public pages | P0 | S |
 | **MON-3** | Export to PDF/CSV — the first paid feature (needs MON-4 first) | P1 | M |
 | **MON-4** | The paper is written; three answers are owed by the owner, and MON-3 waits on them | P1 | S |
 | **MON-5** | The plan ships; swapping in the Ministry's own wording needs the form itself | P1 | S |
-| **MON-6b** | Half-day custody, so contact afternoons can be described | P2 | L |
+| **MON-6b** | Contact windows ship (schema 36); left: Home's today card, and verifying the mixed-version path on two phones | P2 | S |
 | **MON-8** | Bakaláři / EduPage school import — the parsing, once you supply a real export | P2 | L |
 | **MON-11** | Payments (MVP 3) — the entitlement model, after MON-1 decides the price | P2 | L |
 | **MON-12** | Intelligent suggestions (MVP 3) — behind SEC-1's proxy, never with a key in the client | P3 | M |
-| **MON-13** | The tables are done (five countries; Ukraine's holidays are suspended by martial law) — left: a state/region setting for Germany's and Austria's regional holidays and school vacations | P2 | M |
+| **MON-13** | The tables and Germany's Länder are done (five countries; Ukraine's holidays are suspended by martial law) — left: school vacations outside Czechia, and whether Austria's patron-saint days are drawn at all | P2 | M |
 | **FAM-4** | Custody per child | P2 | L |
 | **REL-4 (drafting)** | Fill the placeholders in the legal drafts, write the web account-deletion page | P0 | S |
-| **REL-5** | An analytics consent gate for the EU | P0 | M |
 
 ### ⚙️ Cloud, but a CI job has to be built first
 
@@ -101,7 +94,7 @@ invocation is yours.
 | **SEC-1 §1** | Storage rules keyed on Firestore state (cross-service rules — the "this needs the proxy" claim was a factual error) | The **Storage emulator does not resolve cross-service calls**, so `firestore-tests/` cannot cover it. Settle the verification story — a staging bucket against a real project — before writing the rule. |
 | **SEC-5** | `androidx.security:security-crypto` is on an alpha holding OAuth tokens | A dependency bump compiles in CI; whether tokens survive it is a sign-in on a real device. |
 | **UX-8** | The second half: two surfaces colour a chip from two different sources | An owner's answer to "what does a chip's colour mean" — the event's owner, or whose day it falls on. |
-| **UX-13** | Light theme is unverifiable rather than incomplete | Six previews across 148 UI files, none on a main screen; and a white flash on a dark cold start that only a device shows. |
+| **UX-13** | Light theme is unverifiable rather than incomplete — the cloud half is done (night window background, light+dark previews on the main screens' pieces) | Whether a dark cold start still flashes: only a device shows the window before Compose's first frame. |
 | **FAM-5** | The event chip does not say who it is about | Chips are single-line with ellipsis and every colour channel is spent. Worth an owner's eye on a real device rather than a treatment invented blind. |
 | **M-4 (shipped, unseen)** | The colour palette, the family switcher, the second-co-parent invite | Kotlin compiled in CI; nobody has looked at it. |
 
@@ -130,11 +123,10 @@ In this order, and each is genuinely finishable in the cloud:
    lines of `docs/DESIGN-court-record.md` §9 that only the owner can write**: an export of a record
    nobody can vouch for is worth nothing to a lawyer. Fill the form in and this is a cloud task.
    The parenting plan is now one of the things worth exporting.
-2. **CQ-13** — sixteen of twenty-five ViewModels have no tests. `SettingsViewModel` now has its
-   first (the push switch, September 2026); the rest of its surface is still uncovered.
 *(Everything that headed this list — **M-6**, **CQ-19**, **CQ-12**, **CQ-1**'s bleeding half,
 **CQ-5**, **CQ-6 + CQ-8**, **SEC-2**, the three honesty gaps **CQ-20**, **UX-17**, **UX-18**, and
-**UX-15**, which un-hid the colour picker, and the **MON-13** holiday tables — is done. **SEC-2**
+**UX-15**, which un-hid the colour picker, the **MON-13** holiday tables, and **CQ-13**'s ViewModel
+tests — is done. **SEC-2**
 carries one caveat that is not a cloud task: see its entry.)*
 
 ---
@@ -158,7 +150,7 @@ shipped, and a plan that describes work already done is worse than no plan.
 | Reoccurrence | Clear | S | High | **Done.** `RecurrenceExpander`; CQ-4 removed the two-year cliff |
 | Confirm pickup | Other side sees it is picked up | S | High | **Done.** `pickupConfirmedBy` / `pickupConfirmedAt` |
 | Notifications | 30 min or 1 h before pickup | M | High | **Done.** `ReminderScheduler` + WorkManager; the permission is asked contextually, never on cold start |
-| Holidays and vacations by country | Clear | S | High | **Done for holidays, partly for vacations.** The country is asked for and stored (MON-13), and Czechia, Slovakia, Germany, Austria and Russia each have a computed table verified against the Python `holidays` library; Ukraine's holidays are suspended under martial law and the picker says so. School vacations exist for Czechia only — the others are regional |
+| Holidays and vacations by country | Clear | S | High | **Done for holidays, partly for vacations.** The country is asked for and stored (MON-13), and Czechia, Slovakia, Germany (with a Land setting for its state holidays), Austria and Russia each have a computed table verified against the Python `holidays` library; Ukraine's holidays are suspended under martial law and the picker says so. School vacations exist for Czechia only — the others are regional |
 | Add events only you can see | Related to switching views | S | High | **Done.** `isPrivate`, filtered out of every sync path |
 | Sat/Sun a different colour | Clear | S | High | **Done.** `DayCellFills` draws the weekend as a base layer under custody, never instead of it |
 
@@ -184,7 +176,7 @@ one of them should probably not be built at all.
 | Payments | Clear | XL | Low | **MON-11, P2 · L.** Gated on MON-1's pricing decision — and **Onward closed on 8 October 2024** built entirely on expense splitting and payments. Expense reimbursement does not carry a product on its own |
 | Exports to PDF/CSV | Summary / punctuality. CSV preferred | M | Low | **MON-3, P1 · M.** Backwards at Low: this is the **first paid feature**. Willingness to pay concentrates on documentation you can hand to a lawyer. Blocked on **MON-4** |
 | Intelligent suggestions | Based on past schedules | M-L | Low | **MON-12, P3 · M.** Only behind SEC-1's proxy — the AI subsystem was deleted with its key (MON-7), and it comes back as *one* feature, never eight |
-| Time setting by dragging | Whole event by 15 min, corners by the minute | S | Low | **UX-16, P3 · S.** The smallest item here and the one a user notices daily |
+| Time setting by dragging | Whole event by 15 min, corners by the minute | S | Low | **UX-16, done.** Move by 15 minutes and resize were already in `DayWeekView`; the corners now move by the minute. Needs a thumb to judge |
 
 ### What none of the three phases contains
 
@@ -726,17 +718,39 @@ collector. **Do not** "fix" it by removing the `.catch` — an uncaught failure 
 broken rule would then reconnect for the life of the process, and any test of the give-up path
 spins on the virtual clock instead of finishing.
 
-### CQ-11 · **PARTLY DONE** · P3 · S · Error handling is declared but not wired
+### CQ-11 · **DONE** · P3 · S · Error handling is declared but not wired
 
 **Where:** ☁️ cloud.
 
 **Done:** all ten `printStackTrace()` calls now record to Crashlytics; `SyncWorker` logs and reports
 both its failure paths and gained the `NetworkType.CONNECTED` constraint it was missing.
 
-**Still open:** `domain/error/AppError.kt` and `ErrorHandler.kt` have three references outside their
-own package, and 228 `catch` blocks — 116 of them `catch (e: Exception)` — are the error model in
-use. Audit §8.12. Decide whether `AppError` becomes real or goes; a declared model nobody uses is
-worse than none, because it reads as coverage.
+**Decided (September 2026): the error model is two shapes, and `AppError` is the smaller one.**
+Measured against the code rather than the audit, `ErrorHandler` was not unwired — `EventViewModel`
+routes all twelve of its failure paths through it, and since CQ-14 `AppError.toUiText()` words the
+result. What was dead was the part that read as coverage: `getRetryAction` (it returned `null` on
+every branch and had no caller), `shouldRetry` and `userMessage` (read by nothing — the latter was
+"logs-only" with no log reading it), and the `SyncError` variant (never constructed) with its
+string. All of it is deleted, and `ErrorHandlerTest` pins what is left: each failure is recorded
+and classified, an I/O failure says whether the device was offline, a classified error passes
+through.
+
+The model in use, which is the rule for new code:
+
+- **A ViewModel that knows which operation failed says so with its own resource** —
+  `UiText.Res(R.string.change_request_error_apply_failed)`, `custody_setup_save_failed`,
+  `pets_delete_failed` — and logs the exception. This is most of the app, and it is more useful to a
+  parent than a sentence chosen by exception type, so it is **not** to be routed through
+  `ErrorHandler`.
+- **A ViewModel whose failures arrive as an arbitrary `Throwable` from a use case** — today only
+  `EventViewModel` — classifies them with `ErrorHandler.handleError` and words the `AppError` with
+  `toUiText()`, mapping a `ValidationError.field` to something more specific where it can.
+- **A screen that branches on an outcome gets a typed code** (`EventOperation`, `SyncFailure`,
+  `SwapError`, `PetSaveOutcome`), never text (CQ-14).
+
+The 228 `catch` blocks are not a defect of this model; each is a local decision about what a failure
+means at that call site. The ones that matter to a user are the ones whose outcome reaches a screen,
+and those are the ViewModel tests CQ-13 added.
 
 ### CQ-12 · **DONE** · detekt gates again
 
@@ -761,20 +775,32 @@ Do not put `continue-on-error` back to turn a red build green. Fix the finding, 
 baseline through the workflow so the acceptance is somebody's decision rather than a side effect.
 The debt the baseline records is still there to work down; the baseline is what stops it growing.
 
-### CQ-13 · P2 · M · Test coverage is concentrated in pure domain logic
+### CQ-13 · **DONE** · P2 · M · Test coverage is concentrated in pure domain logic
 
 **Where:** ☁️ cloud — JVM unit tests are exactly what CI runs.
 
-**Fourteen of twenty-four ViewModels have no tests** (counted September 2026; this used to say
-seventeen of twenty-five): ChangeRequest, RequestChange, TelemetryConsent, Contacts, CustodySetup,
-Budget, Friend, GuestAccept, CustodyConflict, ParentingPlan, Pets, Settings, AuthState and Sync.
-`SettingsViewModel` and `SyncViewModel` were removed as stale and never rewritten;
-`ChildInfoViewModelTest`, `PairingViewModelTest`, `OnboardingViewModelTest` and `SyncServiceTest`
-exist.
+**Every one of the twenty-five ViewModels now has a test file** (September 2026). The thirteen that
+had none — ChangeRequest, RequestChange, TelemetryConsent, Contacts, CustodySetup, Budget, Friend,
+GuestAccept, CustodyConflict, ParentingPlan, Pets, AuthState and Sync — got two to six tests each,
+aimed at behaviour a regression would hurt rather than at construction: the custom-pattern week
+shortcut and the every-other-weekend form reopening on a Monday midweek (`CustodySetupViewModelTest`),
+a friend profile saved from a route that never collected the grant (item 17,
+`FriendViewModelTest`) and a revoke's result reaching the screen, telemetry's `DENIED` stored as an
+answer rather than left unanswered, accepting a change request whose event has not synced, the
+onboarding decision counting only this account's own records (`AuthStateViewModelTest`), a pet
+photo whose delete failed staying on the record, a conflict choice that archives a same-id rejected
+pattern and can be retried after a failure, and each save path's localised error. `SettingsViewModel`
+has its push-switch tests from earlier in the month.
+
+They were written in a session with no Android SDK, so CI's `build-test` job is their first run.
 
 The first four CI runs are the argument: 30 unit tests were failing because their mocks had gone
 stale against collaborators added months earlier, and nobody knew. Tests that do not run are not
 coverage.
+
+**Still thin, and worth a line when touching them:** the rest of `SettingsViewModel` (account
+deletion, the family dialogs), `SyncViewModel.handleSignInResult` (it takes a Play-services `Task`),
+and the Compose screens themselves, which only the instrumented job reaches.
 
 ### CQ-14 · **DONE** · P2 · M · User-facing strings produced inside ViewModels and services
 
@@ -796,8 +822,9 @@ follows the Activity. Where a screen *branches* on an outcome, the answer is sti
 What moved, every one of them checked against a composable that actually renders it:
 `GoogleCalendarSyncState` (and `CalendarSyncRepository`'s `SyncResult`, which now reports facts —
 counts, the window as dates, a `SyncFailure` — instead of sentences), `EventUiState.Error`
-(`AppError` is mapped by type in `presentation/common/ErrorText.kt`; `userMessage` is logs-only now),
-`ChangeRequestViewModel.errorMessage` (inbox Toast and Home snackbar), `RequestChangeUiState.Error`,
+(`AppError` is mapped by type in `presentation/common/ErrorText.kt`; its `userMessage` has since
+been deleted — CQ-11), `ChangeRequestViewModel.errorMessage` (inbox Toast and Home snackbar),
+`RequestChangeUiState.Error`,
 the child and pet list errors, the expense save error and receipt warnings, the custody-setup save
 error, the Co-parent sync row's error line, the event form's title/description validation, and the
 FCM notification channel's name and description (system Settings shows them). Every place on that
@@ -807,8 +834,8 @@ prints a localised sentence and logs the exception instead.
 Deliberately left, each for a stated reason: `UiError.message` and the `UiState.Loading/Success`
 messages (no screen renders them; Settings, the only collector, reads the state's type — the
 literals it passed were dropped), `SettingsUiState.successMessage` (never rendered; removed),
-`AppError.userMessage` (logs), `CredentialManagerService`'s error strings (logged, no longer shown),
-the unused validators in `utils/ValidationUtils.kt` (no caller), and three **stored** fallbacks —
+`AppError.userMessage` (logs; since deleted by CQ-11, when nothing turned out to log it),
+`CredentialManagerService`'s error strings (logged, no longer shown), the unused validators in `utils/ValidationUtils.kt` (no caller), and three **stored** fallbacks —
 `"Untitled Event"` on a Google import, `"Unknown"` as a chat `senderName`, `"Co-parent"` as a
 conversation's partner name. Those are data written to Room and Firestore, not text drawn from a
 ViewModel; localising them would bake the writer's language into a record the other parent reads.
@@ -937,9 +964,25 @@ chip colours from `event.parentOwner`, so one visual channel carries two meaning
 cards. That is a question about what a chip's colour *means* — the event's owner, or whose day it
 falls on — and it wants an answer before either call site changes.
 
-### UX-9 · P2 · M · Five different empty-state anatomies
+### UX-9 · **DONE** · P2 · M · Five different empty-state anatomies
 
 **Where:** ☁️ cloud.
+
+**Done (September 2026).** One composable, `EmptyState` in `presentation/common/DesignSystem.kt`:
+an icon on a tonal disc, a title, an optional description and an optional primary action. It takes
+a `modifier` (every caller now passes its Scaffold padding), and it scrolls when its height is
+bounded and it does not fit, so it no longer clips at large font scales; inside a parent that
+already scrolls it wraps instead. Every variant below renders through it — Contacts, ChildInfo
+(and the child-detail "record no longer exists" state, which now has its own sentence), Pets,
+Friends, Home's week and recent-changes cards, Conversations, the message thread, Budgets,
+Expenses and EventList. `AnimatedEmptyState` is deleted, and with it the only use of
+`lottie-compose` and `res/raw/empty_state_animation.json` — whose Lottie file had **no layers**,
+so the "animation" was a 200 dp blank square above every empty state. **Contacts** now offers "Add
+a contact", which opens the children's list (a contact lives on a child's record, and
+`ContactsViewModel` never writes); **Home's empty week** offers "Add event". Not yet seen on a
+device, including the pets-only family, for whom Contacts' action lands on an empty child list.
+
+What it replaced:
 
 `AnimatedEmptyState` in five places, plus bespoke variants in Contacts, ChildInfo, Pets, Friends and
 Home — Home's being the `Card { Text }` pattern the August refresh explicitly outlawed. The previous
@@ -968,15 +1011,36 @@ silently removes the undo snackbar. Fix the branch first, then the strings.
 
 **Where:** 👁 cloud writes the previews and the theme fix; only a device shows the flash.
 
+**Cloud half done (September 2026).** `Theme.CoPlanly` is now `Theme.AppCompat.DayNight.NoActionBar`
+(still AppCompat, as per-app locales require) with `android:windowBackground` =
+`@color/window_background`, which `values-night/colors.xml` overrides with `DarkBackground`. It
+follows the *system* night mode: the in-app choice lives in Compose and is not known before the
+first frame. Previews: `PreviewWrapper` defaulted `darkTheme` to `false`, so **every "Dark Mode"
+preview in the project rendered the light theme** — it now follows the preview's `uiMode`.
+New `@LightDarkPreviews` cover a piece of each main screen that previews without a ViewModel:
+`SectionGroup`/`SectionRow`/`PillChip` and `EmptyState` (Settings, Home, Chat, Expenses),
+`DayAgendaCard` (Calendar and Home), `HandoverHero` and `StatTiles` (Home), `ChatThreadHeader`
+(Chat), beside the existing `ExpenseSummaryHeader` and `CalendarHeader`. detekt's
+`UnusedPrivateMember` now ignores `@Preview`/`@LightDarkPreviews` functions, which it used to
+report as unused. **Left for a device:** whether the dark cold start still flashes.
+
 `LightColorScheme` is complete and correct and the setting works — but there are six
 `LightDarkPreviews` across 148 UI files, two of them on dead components, and **none on any of the
 six main screens**. There is no `values-night/`, and `themes.xml` uses an AppCompat *Light* parent
 regardless of theme, so a cold start in dark mode flashes a white window before Compose draws.
 Audit §9.15.
 
-### UX-14 · P3 · S · Four different brand purples
+### UX-14 · **DONE** · P3 · S · Four different brand purples
 
 **Where:** ☁️ cloud; the launcher icon wants a glance on a device.
+
+**Done (September 2026).** `CoPlanlyColors.BrandPrimary` `#4F46E5` — the light theme's `primary` —
+is the one brand colour and its source of truth. `@color/brand_primary` (system splash) now holds
+the same value, `@color/ic_launcher_background` aliases it, the launcher background drawable is a
+flat fill of it instead of the `#6750A4 → #4F46E5` gradient, and the Compose splash draws it flat
+instead of the same gradient. XML cannot read a Kotlin constant, so `Color.kt` and `colors.xml`
+each say the other must match. The dark theme's `#C2C1FF` primary is the same hue at a light tone,
+not a second brand colour. Not seen on a device: the launcher icon and the splash hand-off.
 
 `brand_primary` `#6750A4` (system splash), `BrandPrimary` `#4F46E5` (Compose), launcher background
 `#6200EE`, and a splash gradient between the first two. Icon, system splash, Compose splash and app
@@ -1039,14 +1103,36 @@ broke (parent hues as 8sp text on Custody Setup) is exactly where it was bypasse
 one, so a direct `MomPink` reference is no longer merely a style violation — it draws the wrong
 person's colour for anyone who picked purple or orange.
 
-### UX-16 · P3 · S · Drag an event to reschedule it
+### UX-16 · **DONE** · Drag an event to reschedule it
 
-**Where:** ☁️ cloud writes it; 👁 nobody can tell whether a drag feels right without a thumb.
+**Where:** 👁 what is left is acceptance — nobody can tell whether a drag feels right without a thumb.
 
 MVP 3's "time setting by dragging corners": drag the whole event by 15-minute steps, drag a corner
-by single minutes. The smallest item in MVP 3 and the one a user touches daily. Day and week views
-are `HorizontalPager` with fling physics, so the gesture has to be nested inside a pager that
-already claims horizontal drags — which is the whole difficulty.
+by single minutes. This line said it was open long after most of it had shipped; checked against
+`presentation/calendar/DayWeekView.kt` (September 2026):
+
+- **Move — was already there.** `EventChip` runs `detectDragGesturesAfterLongPress`: a long press
+  lifts the block (haptic), the drag's vertical travel snaps to `MOVE_SNAP_MINUTES` (15) and its
+  horizontal travel to whole day columns in week view, and the drop calls
+  `EventViewModel.moveEvent` with a minute-of-day, which keeps the duration and offers Undo
+  (`EventOperation.RESCHEDULED`). Dropping on the delete target deletes instead.
+- **Nested in the pager — was already solved,** by the long press itself: until it fires, a
+  horizontal swipe belongs to the `HorizontalPager` and pages the day or week; after it, the chip's
+  handler consumes every change, so the pager never sees the drag. The resize handles consume from
+  the first touch, and they are small pills at the block's top and bottom edges, so a swipe that
+  starts anywhere else still pages.
+- **Resize by the minute — the gap, now closed.** Both handles existed, with a live `HH:mm – HH:mm`
+  badge over the block, but snapped to the same 15-minute grid as the move. They now step by
+  `RESIZE_STEP_MINUTES` (1) — the precise gesture is the one for "pickup is at 15:40" — and never
+  make an event shorter than `MIN_EVENT_MINUTES` (15): a corner dragged past the other one leaves a
+  quarter-hour block instead of refusing the drop, as it used to. The badge shows exactly what the
+  drop writes (`resizedStart`/`resizedEnd` serve both), and a drop that changes nothing writes
+  nothing.
+
+Left, deliberately: **Month view has no drag** — its cells carry dots, not blocks, and a dot has no
+duration to move. Continuation slices of a multi-day or overnight event stay fixed, since which end
+a drag on the middle day means is ambiguous. Acceptance on a device: whether one minute per dp (an hour
+row is about 60 dp) is controllable under a thumb, or wants a coarser step on compact screens.
 
 ### UX-17 · **DONE** · A proposed split ratio could not be withdrawn, and the proposer was told nothing
 
@@ -1215,19 +1301,54 @@ Replacing the catalogue is a data edit: `ParentingPlanCatalogue` holds ids, the 
 stored answers keyed by an id that survives are untouched. Then, and only then, the disclaimer
 comes out. Audit §10.6.
 
-### MON-6b · P2 · L · Half-day custody, so contact afternoons can be described
+### MON-6b · **CONTACT WINDOWS DONE** · P2 · S · Contact afternoons on top of the whole days
 
-**Where:** ☁️ cloud.
+**Where:** ☁️ done in a cloud session; 📱 the mixed-version check below needs two phones.
 
 `CustodyModel` assigns each day of the cycle to exactly one parent (`momDayIndices`), so an
 arrangement of the form "every second weekend **plus Wednesday afternoon**" — which is most Czech
-contact orders, not an edge case — can only be entered by rounding the afternoon up to a whole day
-or dropping it. MON-6's preset drops it and says so; `CUSTOM` cannot express it either.
+contact orders, not an edge case — could only be entered by rounding the afternoon up to a whole
+day or dropping it.
 
-Not a small change: it touches the pattern representation, the Room entity, the Firestore document,
-`getCustodyFor`, `complemented`, `isEquivalentTo`, the custom-pattern editor and the day-cell fills.
-Worth doing before claiming the app describes a Czech family's real schedule; worth costing properly
-first.
+**Owner decision (September 2026): keep one parent per day, and overlay "contact windows".** A
+window is `{cycle day, from, to, parent slot}` (`domain/custody/ContactWindow.kt`), repeating
+with the cycle exactly like `momDayIndices`. `getCustodyFor` is **unchanged** — whose *day* it is
+does not move for an afternoon, so the grid's colour, the handover walk, swaps and every build
+already shipped keep their answer — and `CustodyModel.contactWindowsOn(date)` is the new question.
+What it took, and the choices worth knowing:
+
+- **Storage.** Room `custody_models.contactWindowsJson` (schema 36, `MIGRATION_35_36`, null =
+  none) and the document's `contactWindows`, both as lists of `ContactWindowCodec` strings
+  (`"9|15:00|19:00|dad"`) — never a Gson serialisation of the data class. The proposal sub-map
+  carries its own list.
+- **Older builds, and why a missing key is not "none".** An older build rewrites the whole
+  document with `set()` and cannot carry a key it has never heard of. So: this build always writes
+  the key on a pattern write (`[]` for none); a document *without* it is read as "written by an
+  older build" and the mirror keeps this device's copy; and proposal/swap writes send the stored
+  list back **verbatim** (`SharedCustody.contactWindowsWire`), because `firestore.rules` now
+  refuses a proposal-only or swap write that *changes* `contactWindows` — a pattern change riding
+  on a write whose banner is suppressed — while allowing one that **drops** it, which is exactly
+  what an older co-parent's swap or proposal does. Cases in `custody-models.test.js`. A proposal
+  sub-map with no list (an older proposer) keeps the agreed windows rather than removing them.
+- **Equivalence and the diff see windows.** `isEquivalentTo` compares each date's windows by
+  content, so a pairing conflict that differs only in the afternoons is shown, not silently
+  settled; `CustodyPatternDiff.contactWindowsChanged` stops a windows-only proposal being described
+  as "nothing on the calendar would change". `complemented` flips each window's slot with the days.
+- **Setup.** A "Contact windows" section under every pattern type (weekday, every week or one
+  week of the cycle, from/to via the existing `TimePickerDialog`, which parent). **The MON-6
+  midweek toggle is left exactly as it was** — it is the whole-day-with-overnight shape, and no
+  saved schedule is converted — and its warning now points to a contact window for the
+  afternoon-only case instead of to `CUSTOM`, which could never express one.
+- **Calendar.** Day and Week draw an hour band in the window parent's custody tint over the cell's
+  own base (weekend grey survives inside it), with a full-hue edge — the saturation rule's two
+  strengths of one hue. Month marks the day with a small corner triangle in the window parent's
+  full hue, laid over everything else, so the weekend base, the band and the handover diagonal
+  read as before; the hours are in the cell's description and one tap away in Day view. A window
+  naming the parent who already has the day (the pattern's, or an accepted swap's) is not drawn.
+
+**Left.** Home's handover/today card does not mention a window yet. And the mixed-version path —
+one phone on this build, one on an older one, a swap and a proposal each way — is covered by the
+rules suite and the unit tests but has not been run on two devices.
 
 ### MON-8 · P2 · L · Bakaláři / EduPage school import
 
@@ -1309,10 +1430,11 @@ verdict is discoverable material in a custody dispute, which makes it a liabilit
 than a feature. Anything resembling emotion inference deserves a legal read under the EU AI Act
 before launch.
 
-### MON-13 · **TABLES DONE** · P2 · M · Holidays by country — what is left is regional
+### MON-13 · **TABLES AND REGIONS DONE** · P2 · M · Holidays by country — school vacations are left
 
-**Where:** ☁️ done: the setting, the registry, and five tables verified against a maintained
-dataset. What remains (a state/region setting) is a product decision before it is code.
+**Where:** ☁️ done: the setting, the registry, five tables verified against a maintained dataset,
+and Germany's sixteen Länder. What remains (school vacations outside Czechia, Austria's
+patron-saint days) is a product decision before it is code.
 
 MVP 1 asked for "holidays and vacations by country" and shipped one country. There was **no country
 setting anywhere in the app** — no field, no picker, not even a constant — so `CalendarScreen`
@@ -1351,9 +1473,9 @@ against it rather than from memory.
 - **Slovakia** — public holidays by year, which is exactly what memory would have got wrong:
   1 September off until 2023 (Act 530/2023), 17 November until 2024, and 8 May and 15 September
   working days in 2026 only (Act 261/2025). Only days off are drawn.
-- **Germany** — the nine **nationwide** holidays. The rest are state law and the app has no
-  Bundesland setting, so a Bavarian family sees fewer days off than it has; said in the KDoc, the
-  same trade Czechia's district-dependent spring break makes.
+- **Germany** — the nine **nationwide** holidays, plus the chosen Land's own (below). A parent who
+  has not named a state sees the nine; said in the KDoc, the same trade Czechia's
+  district-dependent spring break makes.
 - **Austria** — the thirteen nationwide holidays. Good Friday (Protestant-only until 2019), 24
   and 31 December and the Länder patron-saint days are bank holidays in the reference data and
   are not drawn.
@@ -1372,11 +1494,36 @@ against it rather than from memory.
   derived from the provider, so it cannot promise school vacations a provider does not return.
   The calendar filter's "Czech holidays" title became "Holidays" in all five locales.
 
+**Done (September 2026): the region, for Germany.** `User.regionCode` (Room schema 35, nullable
+with no default, so every existing account is "nationwide" and nobody's calendar changes) is an
+ISO 3166-2 suffix, synced to `users/{uid}.regionCode` beside `countryCode` (`""` for none, so a
+cleared region is cleared by the merge). `HolidayProvider.regions`/`forRegion` and
+`HolidayLocation` carry it to the grid; `HolidayCountry.regionOrNull` drops a code that is not
+the country's, and changing country clears it. The picker is a second chip row under the country
+chips on the wizard's profile step, and a second Settings row ("State") with its own dialog —
+both **only when the chosen country has regions**. The coverage note says which it draws:
+nationwide only with a nudge to pick a state, or the state's days as well.
+- **The data.** `GermanState` holds each Land's additions; `generate-holiday-fixture.py --regions`
+  writes `HolidayRegionReferenceFixture.kt` (only the days each state *adds*, and the script
+  refuses to write it if a state's list is not a superset of the nationwide one), and
+  `HolidayReferenceTest` rebuilds every state's list 2020–2035 as nationwide + those days.
+- **Left out on purpose**, and said in `GermanState`'s KDoc and the generator: the library's
+  `catholic` category (Assumption Day in Bavaria, Corpus Christi in parts of Saxony and Thuringia
+  — holidays only in Catholic-majority *municipalities*, which a state cannot identify), and
+  **Augsburg**, which the library models as a pseudo-subdivision for a city holiday. Kept: Berlin's
+  one-off anniversaries (2020, 2025, 2028) and Brandenburg's statutory Easter and Whit Sundays.
+- **Austria has no region picker, deliberately.** The library returns **no** regional *public*
+  holiday for any of its nine Länder; the patron-saint days (St. Leopold, St. Joseph, St. Florian,
+  …) are in its `bank` category — school-free and many offices close, but not statutory days off.
+  A state setting that changed nothing on the grid would be design rule 8's promise. **Owner call
+  if wanted:** draw the patron day as a separate, labelled kind of day, which needs its own name on
+  the grid rather than passing as a public holiday.
+
 **Left.** No school vacations outside Czechia — Germany's and Austria's are set per state,
-Slovakia's spring break per region, Russia's per region or school — and none were invented. A
-state/region setting would lift both that and Germany's missing state holidays (the reference
-library carries per-state data for both); whether it is worth a setting is an owner call. A
-per-family school calendar remains the honest fix for the per-viewer strips described above.
+Slovakia's spring break per region, Russia's per region or school — and none were invented. The
+region setting makes Germany's per-state school calendars *reachable* (the library carries them),
+but school vacations still follow the viewer rather than the child, so a per-family school
+calendar remains the honest fix for the per-viewer strips described above before any are drawn.
 
 ---
 
@@ -1472,19 +1619,57 @@ while looking at the wrong family. `CalendarSyncRepository` says so at the call 
 is where the answer goes. Related: **MON-8**, where a school import is the opposite case — it *is*
 about the child and must be shared.
 
-### M-8 · P2 · M · What M-4 deliberately left
+### M-8 · P2 · M · What M-4 deliberately left — two of three done, one documented
 
-**Where:** ☁️ cloud.
+**Where:** ☁️ cloud for what is left; a phone with two paired accounts for acceptance.
 
-- **Badges do not count across families.** Something happening in the family you are not looking at
-  is quiet until you switch. The counts are per-selected-family because every query resolves through
-  the projected `partnerId`; counting across families means querying across them.
-- **Pushes carry no `familyId`.** Adding the key alone would be a field nothing reads; the value is
-  deep-linking into the right family, which means the tap has to switch the selection first. The
-  `notification_queue` rule has no `hasOnly`, so a new key is accepted — but its own comment
-  requires a length bound, since "a field the rule does not know about is a field with no bound".
-- **A switcher chip in the top bar**, in addition to the Settings row. Two families is when the
-  Settings-only route starts costing three taps a day.
+- **Done — a switcher chip in the top bar** of Home and Expenses (`presentation/common/
+  FamilySwitcher.kt`, `FamilySwitcherChip`), beside the gear, naming the family on screen by its
+  co-parent. It **appears at two, not at one**: a parent with one co-parent sees the top bar they
+  always saw. It opens the dialog the Settings row opens — the dialog moved out of `SettingsScreen`
+  into the same file, and both entry points share `FamilySwitcherViewModel`, which replaced
+  `SettingsViewModel`'s own family state. The list is now *observed* off the signed-in Room row
+  (`SelectedFamilySource.observeFamilies`) rather than reloaded when Settings opens, because a chip
+  has no "opens" moment; the co-parents' names stay the one remote read, one per family, only at
+  two or more, cached per ViewModel. Not on the Calendar header, deliberately: design item 5 gave
+  that row a fixed four (title, Today, Filters, gear) and a person's name would squeeze the
+  Month/Week/Day title first. Not on Chat either, for the reason in the badges bullet below.
+- **Done — pushes carry `familyId`** (`PushPayload.FAMILY_ID`, a field, not a type, so item 15's
+  four-place rule does not apply). `FcmService.queueNotificationForUser` stamps every client push
+  with `FamilyKey.orNull(sender, addressee)` — one place, because a push goes to one co-parent and a
+  pair *is* a family — and the Cloud Functions stamp `chat_message` (its conversation id, which is
+  the family id) and `pairing_accepted` (the new family, so the inviter lands on it).
+  `pairing_removed` names none: that family is gone. The rule's new `isPushFamily` bounds the key
+  at 258 characters (two 128-character uids and the separator) **and** requires both the sender and
+  the addressee to be in it, read off the id itself with no document read; `firestore-tests`
+  `notification-payload.test.js` pins accept/foreign-to-sender/foreign-to-addressee/overlong/
+  non-string. On the phone, `CoPlanlyMessagingService` puts the id on the tap intent as an extra
+  *and* into the PendingIntent request code (extras are not part of a PendingIntent's identity, so
+  two same-typed pushes from two families would otherwise share one and the older notification
+  would switch to the newer one's family), and `MainActivity.readLaunchIntent` switches through
+  `SelectedFamilySource.select` **before** it arms any deep link, since `NavGraph` navigates the
+  moment one appears. `select` refuses a family the account is not in, so a stale notification
+  opens on whatever is showing.
+- **Not done — badges that count across families**, and the reason is a defect found on the way,
+  not cost alone. The chat badge is not even per *selected* family: `ChatViewModel.unreadCount`,
+  `coParentLink` and `ChatMirror` all key on `PairingRepository.observePairingState()`, which reads
+  the **server's** `users/{uid}.partnerId` — `partnersOf(...)[0]`, the *first* co-parent — not the
+  local projection `SelectedFamilySource` writes. So the Chat tab, its badge and the process-wide
+  mirror follow the first family whatever the switcher says; the second family's thread receives
+  messages into Room only while it is open (the thread's own `observeMessages` mirror), and is
+  reachable from the conversation list and, now, from its push. Two consequences for the badge
+  work. A Room `COUNT(*)` across every conversation — the cheap version — would **undercount the
+  second family silently**, because nothing mirrors its messages while it is closed; a badge that
+  says 0 when it is not is worse than none (design item 8). And the honest version needs, in order:
+  (1) `ChatMirror` and `ChatViewModel.coParentLink` moved from `observePairingState` to the
+  projection (`SelectedFamilySource.observe`) or to *every* family, which is CQ-8-sensitive code
+  and wants a phone; (2) one conversation-document listener per non-selected family, deriving
+  "has unread" from `lastMessageAt > lastReadAt[me]` — a dot on the switcher chip and its dialog
+  rows, not a count, since the messages themselves are not mirrored; (3) the same question asked
+  of change requests and custody proposals, whose queries resolve through the projected
+  `partnerId` and so see only the selected family by construction. Cost: N−1 extra snapshot
+  listeners for the process lifetime, zero for a one-family account. Until (1) lands, the chat
+  push is the cross-family signal, and it now switches the family on tap.
 
 ---
 
@@ -1533,7 +1718,7 @@ Not a wish-list ordering — a dependency ordering. Each block assumes the one a
 
 14. **CQ-5**, and **CQ-6 + CQ-8** together. All three grow worse with tenure, so they land on your
     longest-standing users first.
-15. **CQ-13** → **UX-9**, **M-5**. (**CQ-14** and **UX-12**, which used to open this line, are done.)
+15. **M-5**. (**CQ-14**, **UX-12**, **CQ-13** and **UX-9**, which used to open this line, are done.)
 
 **One thread runs through this document.** The security holes, the release-only Gson corruption, the
 plaintext refresh token, the two-year recurrence bug, thirty unit tests failing against a
@@ -1657,7 +1842,7 @@ in `docs/AUDIT-2026-08.md` under the § numbers cited.
   second because the enum's order is the picker's order. Its switch asks "who does the child live
   with" rather than "who starts first" — this pattern does not alternate blocks, so a parent asked
   who starts would answer about the first weekend and set it inverted. What it exposed is
-  **MON-6b**.
+  **MON-6b**, since done as contact windows.
 - **MON-7 · The AI subsystem is deleted.** 23 files, ~3,200 lines, reachable from no navigation
   graph, while the Gemini key shipped in every APK. `generativeai`, `retrofit`, `converter-gson`,
   `okhttp` and `logging-interceptor` went with it. It is in git history. See **MON-12** for the

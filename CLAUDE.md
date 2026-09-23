@@ -35,7 +35,11 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
 1. **Shared UI primitives** live in `presentation/common/DesignSystem.kt`: `SectionGroup`
    (one tonal container per run of rows; call its scope's `Divider()` between rows — this line
    used to say they were inserted for you, and they are not), `SectionRow` (icon,
-   title, status/value, **at most one** trailing control), `GroupLabel`, `PillChip`. Home,
+   title, status/value, **at most one** trailing control), `GroupLabel`, `PillChip`, and
+   `EmptyState` (UX-9, September 2026: icon on a tonal disc, title, optional description, optional
+   primary action; takes the caller's `modifier` so Scaffold padding applies, and scrolls when its
+   height is bounded — every empty list renders through it, so don't add a bespoke column or a
+   `Card { Text }` for one, and don't pass an action that does nothing). Home,
    Settings, Expenses and Chat all render through these — do not reintroduce
    `Card { ListItem { … } }` per row, which is what the audit called "double surfaces".
 2. **Parent colours go through `presentation/theme/ParentColors.kt`**: `fill()` for dots,
@@ -117,6 +121,14 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     colour uses `chipFill` (the deep tone) with `ParentColors.onFill(...)` for the text, never
     white on the full hue (4.35:1 on pink). The picker (Settings → Family, onboarding profile
     step) was hidden behind `PARENT_COLOUR_PICKER_ENABLED` until this landed; the flag is gone.
+13. **The family switcher is one state and one dialog, and it appears at two** (M-8, September
+    2026). `presentation/common/FamilySwitcher.kt` holds `FamilySwitcherChip` (Home and Expenses
+    top bars, beside the gear) and `FamilySwitcherDialog`, which the Settings row opens too; both
+    read `FamilySwitcherViewModel`, observed off the signed-in Room row. Don't give Settings its
+    own copy of the family list again — two sources for "which family is on screen" is how they
+    come to disagree. With one co-parent the chip renders nothing. It is deliberately not on the
+    Calendar header (item 5's fixed four) or on Chat (see the known issue on chat and the first
+    co-parent).
 
 ## UX/UI overhaul (July 2026 design review) — implemented, keep consistent
 
@@ -237,7 +249,13 @@ cd firestore-tests && npm test              # firestore.rules + storage.rules on
   job is green on what can run and the intent survives for whoever restores a schema. Do not
   read that as ordinary quarantine: an `@Ignore` normally hides a defect, and this one records
   missing data that no fix to the code can supply. The migrations a test can prove are those
-  six plus 33→34, which MON-5 added.
+  six plus 34→35 (MON-13's region) and 35→36 (MON-6b's contact windows) — this line used to
+  credit a 33→34 test to MON-5, and none exists (it could be written: `33.json` and `34.json` are
+  both there). Those two new tests each run 34→36 through both migrations, because **`35.json`
+  does not exist**: the build exports only the current version, and v35 and v36 landed on the
+  same branch before the Regenerate workflow ran, so 35 was never current there. A schema
+  version that is skipped this way is a new gap of the CQ-1 kind; run Regenerate after each
+  version bump, not after a batch of them.
   What stops the gap growing is a **step in `ci.yml`**: `git status --porcelain -- app/schemas`
   after the build, failing when the build produced a schema nobody committed. It is deliberately
   *not* `DatabaseSchemaExportTest`, which this line used to credit and which cannot do it — kapt
@@ -393,7 +411,7 @@ cd firestore-tests && npm test              # firestore.rules + storage.rules on
 
 ```
 domain/    — models, repository interfaces, use cases, holidays, ReminderScheduler
-data/      — Room (v34 + migrations), Firestore/Google clients, repository impls, sync
+data/      — Room (v36 + migrations), Firestore/Google clients, repository impls, sync
 presentation/ — Compose screens per feature + ViewModels + theme
 di/        — Hilt modules (Database, Firebase, Google, UseCase, Notification, …)
 ```
@@ -425,8 +443,8 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
    draws (`HolidayCountry.coverage` → `coverageNote()`), because drawing Czech holidays for a
    German family is the bug this replaced and drawing nothing — or less than the row implies —
    silently would be design item 8's forbidden affordance. Czechia, Slovakia, Germany (the nine
-   nationwide days only), Austria and Russia (statutory art. 112 days, no annual transfer decree)
-   have tables; **Ukraine deliberately has none** — its holidays are not days off under martial
+   nationwide days, plus the chosen Land's own — below), Austria and Russia (statutory art. 112
+   days, no annual transfer decree) have tables; **Ukraine deliberately has none** — its holidays are not days off under martial
    law, and the row says so. Only Czechia has school vacations; do not invent them for the others.
    The tables were written against the Python `holidays` library (September 2026, superseding the
    August decision to wait for verified data — this is that data) and are **pinned to it**:
@@ -440,6 +458,17 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
    `MonthView` already did, hardcoded to `"cs"`. `CzechHolidays` itself is unchanged: pure,
    computed, Easter via computus (now shared as `gregorianEasterSunday`), the nationwide MŠMT
    vacations, and the district-dependent spring break still intentionally excluded.
+   **A region sits under the country, and only where it changes the grid** (schema 35,
+   `users.regionCode`, nullable = nationwide). `HolidayProvider.regions`/`forRegion` and
+   `HolidayLocation` carry it; the calendar reads `HolidayLocation.provider`, and
+   `HolidayCountry.regionOrNull` drops a code that is not the country's, so a parent who moved
+   from Germany to Austria never keeps drawing Bavaria. Only Germany has regions: Austria's
+   Länder add no *public* holiday in the reference data (the patron-saint days are bank
+   holidays), so it gets no picker — a row that changed nothing is item 8 again. The German
+   states are pinned by a second fixture (`--regions`, only what each state *adds*), and the
+   library's `catholic` category and the Augsburg pseudo-state are excluded on purpose —
+   `GermanState`'s KDoc says why. The Room schema JSON for v36 (which carries this column) is exported by the Regenerate
+   workflow, not by hand.
 9. **Reminders** are scheduled through the `ReminderScheduler` domain interface
    (WorkManager impl `EventReminderScheduler`), hooked into the event use cases —
    schedule on create/update, cancel on delete.
@@ -479,7 +508,7 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     the conversation as `{uid: epochMillis}` maps — one write per event — and the ticks and
     unread badge are derived from them by `ChatReadState`, never stored per message.
     Message times are stored the same way: `Message.sentAtMillis`, epoch millis (Room
-    schema v13, since superseded — the database is at v34), not a naive `LocalDateTime`, so two
+    schema v13, since superseded — the database is at v36), not a naive `LocalDateTime`, so two
     parents in different time zones agree
     on what a mark means and on when a message was sent. The Firestore field keeps its name
     (`timestamp`) and the read path still accepts a legacy ISO string, so a co-parent on an
@@ -522,6 +551,14 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     from any of them is a push that silently never appears. This is also why service-layer
     string extraction (**CQ-14**) was *not* a prerequisite: the string is read on the receiving
     device, which has a `Context` and all five translations.
+    **A push also names its family** (`PushPayload.FAMILY_ID`, M-8) — a *field*, which every type
+    may carry and an older build ignores, so the four-place rule does not apply to it.
+    `FcmService.queueNotificationForUser` stamps it for every client push (a pair is a family, so
+    it is derived there, never by each payload builder), the functions stamp `chat_message` and
+    `pairing_accepted`, and `firestore.rules`' `isPushFamily` bounds it and requires the sender
+    and the addressee both to be in it. The tap carries it as an intent extra **and** in the
+    PendingIntent request code, and `MainActivity.readLaunchIntent` switches the family **before**
+    arming any deep link — arming first would let `NavGraph` open the target on the wrong family.
 16. **`sharedWith` is computed at upload time and never recomputed for a row already marked
     synced.** An event created while the account was unpaired is uploaded with an audience of
     one uid, and nothing revisits it — so it stays unreadable by a co-parent who arrives later.
@@ -693,6 +730,28 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     because an offline sign-out used to leave the previous account's calendar token for the next
     one.
 
+24. **A contact window sits on top of the whole-day pattern and never splits it** (MON-6b,
+    September 2026, owner decision; schema 36). `domain/custody/ContactWindow.kt` is the one
+    definition: `{cycle day, from, to, parent slot}`, repeating with the cycle like
+    `momDayIndices`. **`getCustodyFor` stays whole-day** — do not teach it about windows: the
+    grid's colour, the handover walk, swaps and every older build read it, and whose *day* it is
+    does not move for an afternoon. `CustodyModel.contactWindowsOn(date)` is the separate question,
+    and `CalendarScreen.getContactWindows` drops a window naming the day's own parent. Four things
+    not to undo. **The wire form is `ContactWindowCodec` strings** (`"9|15:00|19:00|dad"`), never
+    Gson over the data class, and `encodeAll` is canonical (sorted, de-duplicated). **A missing
+    `contactWindows` key is not "none"**: an older build rewrites the whole document without it on
+    every save, so the mirror keeps its own copy when the key is absent, and this build always
+    writes the key on a pattern write (`[]` for none). **Proposal and swap writes carry the stored
+    list verbatim** (`SharedCustody.contactWindowsWire`, `CustodyProposal.contactWindowsWire`):
+    `firestore.rules`' `contactWindowsKeptOrDropped` refuses a proposal-only or swap write that
+    *changes* the list — a pattern change riding on a write whose banner is suppressed — and allows
+    one that *drops* it, which is what an older co-parent's write does. Re-encoding from the model
+    there would be refused the day a newer build wrote an entry this one cannot decode. And **the
+    MON-6 midweek toggle is not a window**: it is the whole day with the overnight, stays as it
+    was, and no saved schedule is converted between the two. On the grid a window is a band in the
+    window parent's tint with a full-hue edge (Day/Week) and a full-hue corner triangle (Month),
+    both over the `DayCellFills` layers rather than a new fill competing with them.
+
 ## Known issues / do not "fix" silently
 
 **Check an entry against the code before acting on it.** Two entries in this section, and one
@@ -792,6 +851,18 @@ whatever you were doing; a stale "known issue" costs more than a missing one.
   uncaught failure in `viewModelScope.launch` terminates the process — and don't make the retry
   unbounded: a genuinely broken rule would then reconnect for the life of the process, and any
   test of the give-up path spins on the virtual clock instead of finishing.
+
+- **Chat follows the *first* co-parent, not the selected family** (found in M-8, September 2026).
+  `ChatViewModel.coParentLink`/`unreadCount` and `ChatMirror` key on
+  `PairingRepository.observePairingState()`, which reads the **server's** `users/{uid}.partnerId`
+  (`partnersOf(...)[0]`) rather than the local projection `SelectedFamilySource` writes. For a
+  one-family account the two are the same uid and nothing is wrong. With two families the Chat
+  tab, its badge and the process-wide mirror stay on the first family whatever the switcher says;
+  the second family's thread fills only while it is open, and is reached from the conversation
+  list or its push (which now switches the family on tap). This is also why cross-family badges
+  were **not** built: a Room count across conversations would silently undercount the family
+  nothing mirrors. The fix and its order are in `docs/ROADMAP.md` M-8 — don't paper over it with a
+  count.
 
 - **Cross-time-zone chat is implemented but never verified on two devices.** The August 2026
   chat sync moved message times to epoch millis specifically so two parents in different zones
@@ -896,8 +967,13 @@ whatever you were doing; a stale "known issue" costs more than a missing one.
   gets a typed code, not text** — `CalendarScreen` used to compare the literal
   `"Event rescheduled"` to decide whether to offer Undo (UX-12); it now reads
   `EventOperation.RESCHEDULED`. **Never render `e.message`**: it is English and sometimes a class
-  name — log it, and show a localised sentence (`AppError` maps by type in
-  `presentation/common/ErrorText.kt`; `AppError.userMessage` and `UiError.message` are logs-only).
+  name — log it, and show a localised sentence (`UiError.message` is logs-only). **Which sentence
+  is decided by what the ViewModel knows** (CQ-11): one that knows which operation failed uses its
+  own resource (`change_request_error_apply_failed`, `pets_delete_failed`, …); only one whose
+  failures arrive as an arbitrary `Throwable` from a use case — today `EventViewModel` alone —
+  classifies them with `ErrorHandler.handleError` into an `AppError` and words that by type
+  (`presentation/common/ErrorText.kt`). Don't route the first kind through `ErrorHandler`: a
+  sentence chosen by exception type is vaguer than the one the call site already has.
   **The data layer reports facts, not sentences** — `CalendarSyncRepository`'s `SyncResult`
   carries counts, dates and a `SyncFailure`, and `SyncViewModel` words them. Stored fallbacks
   (`"Untitled Event"` on an import, a chat `senderName` of `"Unknown"`) are data, not UI text,
@@ -908,7 +984,8 @@ whatever you were doing; a stale "known issue" costs more than a missing one.
 - Unit tests for ChildInfo/Pairing/Settings/Sync ViewModels were once removed as stale (they
   targeted long-gone APIs). **All four are back**: `ChildInfoViewModelTest`,
   `PairingViewModelTest`, `SyncServiceTest` and — since September 2026, starting with the push
-  switch — `SettingsViewModelTest`.
+  switch — `SettingsViewModelTest`. As of CQ-13 **every ViewModel has a test file**; a new
+  ViewModel arrives with one.
 
 - **`ChildInfoViewModel`'s editor state is loaded by id, never from the head of a list.**
   `loadChildInfo()` serves the list screen and touches nothing else; `loadChildInfoById()` is the
@@ -935,8 +1012,11 @@ Ukrainian** (`values-cs/`, `values-de/`, `values-ru/`, `values-uk/`). Rules:
   source of truth.
 - **Infra invariants**: `MainActivity`/`QRScannerActivity` must stay `AppCompatActivity`
   (not `ComponentActivity`) and `Theme.CoPlanly` must stay an AppCompat theme — per-app
-  locales silently stop working otherwise. `res/xml/locales_config.xml`, the `AppLanguage`
-  enum, and the `values-*` folders must list the same locale set.
+  locales silently stop working otherwise. (It is `Theme.AppCompat.DayNight.NoActionBar` since
+  UX-13, with a per-theme `@color/window_background` so a dark cold start does not flash white;
+  `values-night/` is a night qualifier holding that colour, not a locale, and holds no strings.)
+  `res/xml/locales_config.xml`, the `AppLanguage` enum, and the `values-<language>` folders must
+  list the same locale set.
 - **Adding a string** = add the key to the feature's base `values/<feature>_strings.xml`
   AND to all four locale variants of that file. Missing translations fall back to English
   at runtime. **Lint will not catch a missing one**: `MissingTranslation` is switched off

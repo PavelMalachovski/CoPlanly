@@ -15,4 +15,7 @@
          button. -->
     <string name="contacts_no_dialer">На цьому пристрої немає застосунку для дзвінків.</string>
     <string name="contacts_vet">Ветеринар</string>
+
+    <!-- Empty-state action: opens the children, where a contact is added. -->
+    <string name="contacts_empty_action">Додати контакт</string>
 </resources>

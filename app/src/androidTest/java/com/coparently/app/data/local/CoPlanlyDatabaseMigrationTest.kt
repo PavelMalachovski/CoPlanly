@@ -629,6 +629,83 @@ class CoPlanlyDatabaseMigrationTest {
         }
     }
 
+    /**
+     * 34-to-35 adds a parent's holiday region (MON-13, regional half) and gives every existing
+     * row none.
+     *
+     * Null is the whole point: it is "nationwide", which is what every account was drawing
+     * before the column existed, so a German parent's calendar is unchanged until they name a
+     * Land. The country beside it must survive untouched.
+     *
+     * Both this test and the next start from 34 and validate at 36: the build exports only the
+     * current version's schema, and 35 was never current on a commit the Regenerate workflow ran
+     * on, so there is no `35.json` to validate against or create from. Chaining through 35 still
+     * runs both migrations; what it cannot do is check 35's shape on its own.
+     */
+    @Test
+    fun migration34To35_givesEveryExistingParentNoRegion() {
+        val db = helper.createDatabase(TEST_DB, VERSION_34)
+        db.execSQL(
+            """
+            INSERT INTO users (id, email, name, role, colorCode, googleCalendarSyncEnabled,
+                               partnerIdsJson, allergiesJson, medicalProfileJson, countryCode)
+            VALUES ('u1', 'a@example.com', 'Anna', 'mom', '#FF4081', 0, '[]', '[]', '{}', 'DE')
+            """.trimIndent()
+        )
+        db.close()
+
+        val migrated = helper.runMigrationsAndValidate(
+            TEST_DB,
+            VERSION_36,
+            true,
+            DatabaseMigrations.MIGRATION_34_35,
+            DatabaseMigrations.MIGRATION_35_36
+        )
+
+        migrated.query("SELECT countryCode, regionCode FROM users").use {
+            assertTrue(it.moveToFirst())
+            assertEquals("DE", it.getString(0))
+            assertTrue("an existing parent draws the nationwide calendar", it.isNull(1))
+        }
+    }
+
+    /**
+     * 35-to-36 adds contact windows to the custody pattern (MON-6b) and gives every existing
+     * pattern none.
+     *
+     * The pattern itself must come through untouched — a window sits on top of the whole days
+     * and never replaces them — and the new column must be null rather than `[]`, which is what
+     * keeps a row with no windows byte-identical to the mirror's own output.
+     */
+    @Test
+    fun migration35To36_keepsThePatternAndAddsNoWindows() {
+        val db = helper.createDatabase(TEST_DB, VERSION_34)
+        db.execSQL(
+            """
+            INSERT INTO custody_models (id, modelType, patternDays, momDaysPattern, startDate,
+                                        isActive, repeatYearly, createdAt, lastModifiedAt,
+                                        lastModifiedAtMillis, dayOverridesJson)
+            VALUES ('m1', 'every_other_weekend', 14, '[0,1,2,3,4,7,8,9,10,11,12,13]',
+                    '2026-08-03', 1, 1, '2026-08-01T09:00:00', '', 1785578400000, NULL)
+            """.trimIndent()
+        )
+        db.close()
+
+        val migrated = helper.runMigrationsAndValidate(
+            TEST_DB,
+            VERSION_36,
+            true,
+            DatabaseMigrations.MIGRATION_34_35,
+            DatabaseMigrations.MIGRATION_35_36
+        )
+
+        migrated.query("SELECT momDaysPattern, contactWindowsJson FROM custody_models").use {
+            assertTrue(it.moveToFirst())
+            assertEquals("[0,1,2,3,4,7,8,9,10,11,12,13]", it.getString(0))
+            assertTrue("an existing pattern has no contact windows", it.isNull(1))
+        }
+    }
+
     private companion object {
         const val TEST_DB = "coplanly-migration-test.db"
         const val VERSION_11 = 11
@@ -644,6 +721,8 @@ class CoPlanlyDatabaseMigrationTest {
         const val VERSION_21 = 21
         const val VERSION_24 = 24
         const val VERSION_25 = 25
+        const val VERSION_34 = 34
+        const val VERSION_36 = 36
 
         /** 2026-08-01T12:00:00 at UTC+05:30, i.e. 06:30:00Z. */
         const val NOON_AT_PLUS_FIVE_THIRTY_MILLIS = 1_785_565_800_000L

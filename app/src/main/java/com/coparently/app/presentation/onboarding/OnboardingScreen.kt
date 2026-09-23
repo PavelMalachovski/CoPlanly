@@ -14,7 +14,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -126,13 +126,32 @@ fun OnboardingScreen(
     // step 4. Inside the wizard, back means "the previous question".
     BackHandler(enabled = !uiState.isFirstStep) { viewModel.back() }
 
+    // Skip writes nothing, so over something typed on this step it asks first.
+    var confirmSkip by remember { mutableStateOf(false) }
+    if (confirmSkip) {
+        ConfirmationDialog(
+            title = stringResource(R.string.onboarding_skip_unsaved_title),
+            message = stringResource(R.string.onboarding_skip_unsaved_message),
+            confirmText = stringResource(R.string.onboarding_skip),
+            dismissText = stringResource(R.string.common_keep_editing),
+            isDestructive = true,
+            onDismiss = { confirmSkip = false },
+            onConfirm = {
+                confirmSkip = false
+                viewModel.skip()
+            }
+        )
+    }
+
     Scaffold(
         topBar = { OnboardingTopBar(state = uiState) },
         bottomBar = {
             OnboardingBottomBar(
                 state = uiState,
                 onBack = viewModel::back,
-                onSkip = viewModel::skip,
+                onSkip = {
+                    if (uiState.skipDiscardsEdits) confirmSkip = true else viewModel.skip()
+                },
                 onNext = viewModel::next
             )
         }
@@ -413,7 +432,9 @@ private fun ProfileStep(state: OnboardingUiState, viewModel: OnboardingViewModel
     SectionHeading(title = R.string.country_label)
     CountryPicker(
         selected = state.country,
-        onSelect = viewModel::updateCountry
+        onSelect = viewModel::updateCountry,
+        selectedRegion = state.region,
+        onSelectRegion = viewModel::updateRegion
     )
 
     DateOfBirthField(
@@ -965,8 +986,18 @@ private fun DateOfBirthField(date: LocalDate?, onDateChange: (LocalDate?) -> Uni
     var showPicker by remember { mutableStateOf(false) }
     val formatter = remember { DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM) }
 
+    // The label stays once a date is chosen: a bare "12 Mar 2015" on a button says nothing about
+    // what it is, and TalkBack would read exactly that.
     OutlinedButton(onClick = { showPicker = true }, modifier = Modifier.fillMaxWidth()) {
-        Text(date?.format(formatter) ?: stringResource(R.string.profile_dob_label))
+        val label = stringResource(R.string.profile_dob_label)
+        if (date == null) {
+            Text(label)
+        } else {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(text = label, style = MaterialTheme.typography.labelSmall)
+                Text(text = date.format(formatter))
+            }
+        }
     }
     if (showPicker) {
         DatePickerDialog(
@@ -1023,7 +1054,7 @@ private fun OnboardingBottomBar(
             Button(
                 onClick = onNext,
                 enabled = state.canAdvance && !state.isSaving,
-                modifier = Modifier.height(48.dp)
+                modifier = Modifier.heightIn(min = 48.dp)
             ) {
                 if (state.isSaving) {
                     CircularProgressIndicator(

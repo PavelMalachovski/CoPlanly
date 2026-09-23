@@ -182,6 +182,63 @@ describe('SEC-3: notification payloads', () => {
     });
   });
 
+  describe('which family a push names (M-8)', () => {
+    // The receiving device switches to this family before opening the tap target, so the id
+    // is bounded like every other key a client writes, and must name a family the sender and
+    // the addressee are both in.
+    it('accepts the family the two of them share', async () => {
+      const db = env.authenticatedContext(ALICE).firestore();
+      await assertSucceeds(db.collection('notification_queue').add(queued({
+        type: 'event_created',
+        familyId: 'alice-uid__bob-uid',
+      })));
+    });
+
+    it('accepts a payload with no family, which is what an older build sends', async () => {
+      const db = env.authenticatedContext(ALICE).firestore();
+      await assertSucceeds(db.collection('notification_queue').add(queued({
+        type: 'event_created',
+        familyId: '',
+      })));
+    });
+
+    it('refuses a family the sender is not in', async () => {
+      const db = env.authenticatedContext(ALICE).firestore();
+      await assertFails(db.collection('notification_queue').add(queued({
+        type: 'event_created',
+        familyId: 'bob-uid__carol-uid',
+      })));
+    });
+
+    it('refuses a family the addressee is not in', async () => {
+      // Alice is in it, Bob is not: steering Bob's app at a family of Alice's with somebody
+      // else is not something Alice's push may do.
+      const db = env.authenticatedContext(ALICE).firestore();
+      await assertFails(db.collection('notification_queue').add(queued({
+        type: 'event_created',
+        familyId: 'alice-uid__carol-uid',
+      })));
+    });
+
+    it('bounds the family id like every other key', async () => {
+      // A key the rule does not know about is a key with no bound. Membership alone would let
+      // an id carry the two uids plus any amount of padding in a third part.
+      const db = env.authenticatedContext(ALICE).firestore();
+      await assertFails(db.collection('notification_queue').add(queued({
+        type: 'event_created',
+        familyId: 'alice-uid__bob-uid__' + 'x'.repeat(300),
+      })));
+    });
+
+    it('refuses a family id that is not a string', async () => {
+      const db = env.authenticatedContext(ALICE).firestore();
+      await assertFails(db.collection('notification_queue').add(queued({
+        type: 'event_created',
+        familyId: 42,
+      })));
+    });
+  });
+
   describe('who a client may notify', () => {
     it('still refuses a stranger', async () => {
       // Unchanged by SEC-3, and re-pinned here because the rule was rewritten around it.

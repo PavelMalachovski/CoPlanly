@@ -52,4 +52,7 @@
     <string name="parenting_plan_q_money_extraordinary">Как вы разделите разовые расходы — очки, школьную поездку, ноутбук?</string>
     <string name="parenting_plan_q_communication_between_parents">Как вы будете передавать друг другу информацию о ребёнке и как быстро ждёте ответа?</string>
     <string name="parenting_plan_q_communication_disagreement">Что вы сделаете, если не сможете договориться?</string>
+
+    <!-- Asked when the question sheet is closed with an edited, unsaved answer. -->
+    <string name="parenting_plan_discard_message">Ваш ответ не сохранён. Если закрыть вопрос сейчас, введённый текст пропадёт.</string>
 </resources>

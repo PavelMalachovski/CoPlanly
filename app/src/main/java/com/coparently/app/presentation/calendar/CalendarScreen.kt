@@ -59,6 +59,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.data.sync.SyncWorker
+import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.custody.CustodyResolver
 import com.coparently.app.domain.custody.DaySwapInbox
 import com.coparently.app.domain.family.FamilyMemberRef
@@ -243,7 +244,7 @@ fun CalendarScreen(
     val hiddenEventTypes by calendarViewModel.hiddenEventTypes.collectAsState()
     val customEventTypes by calendarViewModel.customEventTypes.collectAsState()
     val showHolidays by calendarViewModel.showHolidays.collectAsState()
-    val holidayCountry by calendarViewModel.holidayCountry.collectAsState()
+    val holidayLocation by calendarViewModel.holidayLocation.collectAsState()
     val custodyChangeAnnouncement by calendarViewModel.custodyChangeAnnouncement.collectAsState()
     val pendingProposal by calendarViewModel.pendingProposal.collectAsState()
     val calendarFriends by calendarViewModel.calendarFriends.collectAsState()
@@ -358,6 +359,21 @@ fun CalendarScreen(
         }
     }
 
+    // Contact windows (MON-6b): part of a day with the parent who does not have it — "every
+    // Wednesday 15:00–19:00". Separate from `getCustody`, which stays whole-day: whose *day* it is
+    // does not change for an afternoon. Only a window that says something is drawn — one naming
+    // the parent who already has the day (the pattern gives it to them, or an accepted swap does)
+    // is not an afternoon with anybody new, so it is skipped rather than painted over its own
+    // parent's tint.
+    val getContactWindows: (LocalDate) -> List<ContactWindow> = remember(custodyModel, getCustody) {
+        val model = custodyModel
+        if (model == null || model.contactWindows.isEmpty()) {
+            { _ -> emptyList() }
+        } else {
+            { date -> model.contactWindowsOn(date).filter { it.parent != getCustody(date) } }
+        }
+    }
+
     // The dates a swap is being negotiated on. A pending swap has changed nothing about whose
     // day it is, so it is deliberately not part of `getCustody` — the grid marks it separately.
     val pendingSwapDates: Set<LocalDate> = remember(dayOverrides) {
@@ -411,10 +427,15 @@ fun CalendarScreen(
     // (MON-13). This used to call `CzechHolidays` outright, which is how a family in Germany or
     // Ukraine got Czech holidays. A country the app has no table for draws none — see
     // `HolidayCountry`, and the picker says so rather than leaving it a mystery.
+    // The region comes with the country (`HolidayLocation`): a German parent who named their
+    // Land gets its own days on top of the nine nationwide ones.
     val holidays: Map<LocalDate, Holiday> = remember(
-        viewMode, queryAnchorDate, showHolidays, holidayCountry
+        viewMode,
+        queryAnchorDate,
+        showHolidays,
+        holidayLocation
     ) {
-        val provider = holidayCountry.provider
+        val provider = holidayLocation.provider
         if (!showHolidays || provider == null) {
             emptyMap()
         } else {
@@ -781,6 +802,7 @@ fun CalendarScreen(
                                     events = filteredEvents,
                                     getCustody = getCustody,
                                     getProposedCustody = getProposedCustody,
+                                    getContactWindows = getContactWindows,
                                     parentNames = parentNames,
                                     onDateChange = { calendarViewModel.setSelectedDate(it) },
                                     onEventClick = { eventId -> previewEventId = eventId },
@@ -817,6 +839,7 @@ fun CalendarScreen(
                                     eventsByDay = eventsByDay,
                                     getCustody = getCustody,
                                     getProposedCustody = getProposedCustody,
+                                    getContactWindows = getContactWindows,
                                     parentNames = parentNames,
                                     pendingSwapDates = pendingSwapDates,
                                     swappedDates = swappedDates,

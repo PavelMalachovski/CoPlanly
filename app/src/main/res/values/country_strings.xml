@@ -16,4 +16,28 @@
     <string name="country_holidays_unavailable">Public holidays for %1$s are not in the app yet, so none are shown.</string>
     <string name="country_holidays_public_only">Nationwide public holidays are shown on the calendar. School vacations for %1$s are not in the app.</string>
     <string name="country_holidays_suspended">Public holidays in %1$s are not days off while martial law is in force, so none are shown.</string>
+
+    <!-- MON-13, regional half: the Land whose own public holidays are added. -->
+    <string name="holiday_region_label_de">State</string>
+    <string name="holiday_region_settings_summary">Adds that state\'s own public holidays</string>
+    <string name="holiday_region_none">Nationwide only</string>
+    <string name="country_holidays_pick_region">Nationwide public holidays are shown on the calendar; choose a state to add its own. School vacations for %1$s are not in the app.</string>
+    <string name="country_holidays_with_region">Nationwide public holidays and those of %1$s are shown on the calendar. School vacations are not in the app.</string>
+
+    <string name="region_de_bb">Brandenburg</string>
+    <string name="region_de_be">Berlin</string>
+    <string name="region_de_bw">Baden-Württemberg</string>
+    <string name="region_de_by">Bavaria</string>
+    <string name="region_de_hb">Bremen</string>
+    <string name="region_de_he">Hesse</string>
+    <string name="region_de_hh">Hamburg</string>
+    <string name="region_de_mv">Mecklenburg-Western Pomerania</string>
+    <string name="region_de_ni">Lower Saxony</string>
+    <string name="region_de_nw">North Rhine-Westphalia</string>
+    <string name="region_de_rp">Rhineland-Palatinate</string>
+    <string name="region_de_sh">Schleswig-Holstein</string>
+    <string name="region_de_sl">Saarland</string>
+    <string name="region_de_sn">Saxony</string>
+    <string name="region_de_st">Saxony-Anhalt</string>
+    <string name="region_de_th">Thuringia</string>
 </resources>

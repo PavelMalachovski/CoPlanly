@@ -382,7 +382,11 @@ class UserRepositoryImpl @Inject constructor(
             // *column* default rather than a literal, so "what an account with no answer gets"
             // is stated in exactly one place — the v32→v33 migration.
             countryCode = remote?.string("countryCode")?.takeIf { it.isNotBlank() }
-                ?: HolidayCountry.Default.code
+                ?: HolidayCountry.Default.code,
+            // Restored for the reason the country is: a reinstall must not quietly drop the
+            // Land's holidays. Blank is "none", which is also what an older build's document
+            // (no such key) reads as.
+            regionCode = remote?.string("regionCode")?.takeIf { it.isNotBlank() }
         )
         if (updated != local) userDao.insertUser(updated)
     }
@@ -450,7 +454,11 @@ class UserRepositoryImpl @Inject constructor(
                     // Written so a reinstall or a second device restores the country rather than
                     // silently reverting to Czechia. Nothing else reads it: which holidays a
                     // parent sees is their own business, not their co-parent's.
-                    "countryCode" to user.countryCode
+                    "countryCode" to user.countryCode,
+                    // Beside the country and for the same reason. `""` rather than a missing key
+                    // for "nationwide": this is a merge, so an omitted key would leave a region
+                    // the parent has since cleared in place for the next reinstall to restore.
+                    "regionCode" to (user.regionCode ?: "")
                 )
                 firestoreUserDataSource.updateUser(firebaseUser.uid, userData).getOrThrow()
                 mirrorCaresForToFamily(firebaseUser.uid, user)
@@ -572,7 +580,8 @@ class UserRepositoryImpl @Inject constructor(
                 ).withSanitizedVaccinationNames(),
             onboardingCompletedAt = onboardingCompletedAt,
             caresFor = FamilyKind.fromStored(caresForKinds),
-            countryCode = countryCode
+            countryCode = countryCode,
+            regionCode = regionCode
         )
     }
 
@@ -598,7 +607,8 @@ class UserRepositoryImpl @Inject constructor(
             medicalProfileJson = gson.toJson(medicalProfile),
             onboardingCompletedAt = onboardingCompletedAt,
             caresForKinds = FamilyKind.toStored(caresFor),
-            countryCode = countryCode
+            countryCode = countryCode,
+            regionCode = regionCode
         )
     }
 
@@ -629,6 +639,7 @@ class UserRepositoryImpl @Inject constructor(
             colorCode = this["colorCode"] as? String ?: "#FF4081",
             countryCode = (this["countryCode"] as? String)?.takeIf { it.isNotBlank() }
                 ?: HolidayCountry.Default.code,
+            regionCode = (this["regionCode"] as? String)?.takeIf { it.isNotBlank() },
             profilePhotoUrl = this["profilePhotoUrl"] as? String,
             googleCalendarSyncEnabled = this["googleCalendarSyncEnabled"] as? Boolean ?: false,
             googleCalendarId = this["googleCalendarId"] as? String,

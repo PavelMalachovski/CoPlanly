@@ -1,5 +1,7 @@
 package com.coparently.app.data.remote.firebase
 
+import com.coparently.app.domain.custody.ContactWindow
+import com.coparently.app.domain.custody.ContactWindowCodec
 import com.coparently.app.domain.custody.CustodyDecision
 import com.coparently.app.domain.custody.CustodyDecisionOutcome
 import com.coparently.app.domain.custody.CustodyProposal
@@ -143,6 +145,10 @@ class FirestoreCustodyDataSource @Inject constructor(
             // checks the diff affects only that key.
             lastSwapDate?.let { put("lastSwapDate", it) }
             put("lastModifiedKind", lastModifiedKind.name)
+            // Written exactly as it was read (or as the pattern write built it), and omitted when
+            // the document never had it — see `SharedCustody.contactWindowsWire`. A proposal or
+            // swap write that changed this list would be refused by `firestore.rules`.
+            contactWindowsWire?.let { put("contactWindows", it) }
         }
 
     /**
@@ -162,16 +168,22 @@ class FirestoreCustodyDataSource @Inject constructor(
         groupId?.let { put("groupId", it) }
     }
 
-    /** The proposal as a sub-map; `momDayIndices` is a real array, like the pattern's. */
-    private fun CustodyProposal.toMap(): Map<String, Any> = mapOf(
-        "modelType" to CustodyModelType.toString(model.modelType),
-        "patternDays" to model.patternDays,
-        "momDayIndices" to model.momDayIndices.sorted(),
-        "startDate" to model.startDate.format(DateTimeFormatter.ISO_LOCAL_DATE),
-        "repeatYearly" to repeatYearly,
-        "proposedBy" to proposedBy,
-        "proposedAt" to proposedAt
-    )
+    /**
+     * The proposal as a sub-map; `momDayIndices` is a real array, like the pattern's.
+     * `contactWindows` is carried verbatim and omitted when the stored proposal had none, for the
+     * reason the document's own list is — a swap write re-sends this sub-map and must not
+     * change it.
+     */
+    private fun CustodyProposal.toMap(): Map<String, Any> = buildMap {
+        put("modelType", CustodyModelType.toString(model.modelType))
+        put("patternDays", model.patternDays)
+        put("momDayIndices", model.momDayIndices.sorted())
+        put("startDate", model.startDate.format(DateTimeFormatter.ISO_LOCAL_DATE))
+        put("repeatYearly", repeatYearly)
+        put("proposedBy", proposedBy)
+        put("proposedAt", proposedAt)
+        contactWindowsWire?.let { put("contactWindows", it) }
+    }
 
     /** The decision as a sub-map. `note` is omitted when absent rather than written as null. */
     private fun CustodyDecision.toMap(): Map<String, Any> = buildMap {
@@ -202,6 +214,8 @@ class FirestoreCustodyDataSource @Inject constructor(
         }
         val patternDays = (this["patternDays"] as? Number)?.toInt()
         if (startDate == null || patternDays == null) return null
+        val windowsWire = (this["contactWindows"] as? List<*>)?.mapNotNull { it as? String }
+        val windows = ContactWindowCodec.decodeAll(windowsWire)
 
         return SharedCustody(
             model = CustodyModel(
@@ -213,13 +227,14 @@ class FirestoreCustodyDataSource @Inject constructor(
                     .mapNotNull { (it as? Number)?.toInt() }
                     .toSet(),
                 startDate = startDate,
-                isActive = true
+                isActive = true,
+                contactWindows = windows
             ),
             lastModifiedBy = (this["lastModifiedBy"] as? String).orEmpty(),
             lastModifiedAtMillis = CustodyTimestamp.fromWire(this["lastModifiedAt"] as? String),
             createdAt = (this["createdAt"] as? String).orEmpty(),
             repeatYearly = this["repeatYearly"] as? Boolean ?: true,
-            proposal = (this["proposal"] as? Map<*, *>)?.toProposal(documentId),
+            proposal = (this["proposal"] as? Map<*, *>)?.toProposal(documentId, windows),
             lastDecision = (this["lastDecision"] as? Map<*, *>)?.toDecision(),
             dayOverrides = (this["dayOverrides"] as? Map<*, *>).toDayOverrides(),
             lastSwapDate = (this["lastSwapDate"] as? String)?.takeIf { it.isNotBlank() },
@@ -229,7 +244,8 @@ class FirestoreCustodyDataSource @Inject constructor(
             // safe side of that error, and silence is the side this product cannot afford.
             lastModifiedKind = (this["lastModifiedKind"] as? String)
                 ?.let { name -> CustodyWriteKind.entries.firstOrNull { it.name == name } }
-                ?: CustodyWriteKind.PATTERN
+                ?: CustodyWriteKind.PATTERN,
+            contactWindowsWire = windowsWire
         )
     }
 
@@ -284,14 +300,21 @@ class FirestoreCustodyDataSource @Inject constructor(
      *
      * @param documentId Used as the proposed model's id — the sub-map carries no id of its own,
      *   and the pair's document is the only identity a pending proposal has.
+     * @param agreedWindows The agreed pattern's contact windows, which a proposal with no
+     *   `contactWindows` of its own keeps: it was written by a build that could not express
+     *   windows, and that is not a proposal to remove them.
      */
-    private fun Map<*, *>.toProposal(documentId: String): CustodyProposal? {
+    private fun Map<*, *>.toProposal(
+        documentId: String,
+        agreedWindows: List<ContactWindow>
+    ): CustodyProposal? {
         val startDate = (this["startDate"] as? String)?.let { iso ->
             runCatching { LocalDate.parse(iso) }.getOrNull()
         }
         val patternDays = (this["patternDays"] as? Number)?.toInt()
         val proposedBy = (this["proposedBy"] as? String)?.takeIf { it.isNotBlank() }
         if (startDate == null || patternDays == null || proposedBy == null) return null
+        val windowsWire = (this["contactWindows"] as? List<*>)?.mapNotNull { it as? String }
 
         return CustodyProposal(
             model = CustodyModel(
@@ -305,11 +328,13 @@ class FirestoreCustodyDataSource @Inject constructor(
                 startDate = startDate,
                 // Not the active pattern, and must never be mistaken for one by a caller that
                 // reads the field to decide what the calendar should colour.
-                isActive = false
+                isActive = false,
+                contactWindows = windowsWire?.let { ContactWindowCodec.decodeAll(it) } ?: agreedWindows
             ),
             repeatYearly = this["repeatYearly"] as? Boolean ?: true,
             proposedBy = proposedBy,
-            proposedAt = (this["proposedAt"] as? String).orEmpty()
+            proposedAt = (this["proposedAt"] as? String).orEmpty(),
+            contactWindowsWire = windowsWire
         )
     }
 

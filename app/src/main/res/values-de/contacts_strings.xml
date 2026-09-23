@@ -15,4 +15,7 @@
          button. -->
     <string name="contacts_no_dialer">Dieses Gerät hat keine Telefon-App.</string>
     <string name="contacts_vet">Tierarzt</string>
+
+    <!-- Empty-state action: opens the children, where a contact is added. -->
+    <string name="contacts_empty_action">Kontakt hinzufügen</string>
 </resources>

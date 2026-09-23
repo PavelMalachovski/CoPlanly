@@ -54,6 +54,71 @@ class HolidayReferenceTest {
     }
 
     @Test
+    fun `the regional fixture covers exactly the regions each country offers`() {
+        // A Land the app offers with no fixture would be drawn unverified; a fixture key the
+        // app does not offer would be a region nobody can pick.
+        val offered = HolidayCountry.entries.flatMap { country ->
+            country.regions.map { "${country.code}-$it" }
+        }.toSet()
+
+        assertEquals(offered, holidayRegionReference.keys)
+    }
+
+    @Test
+    fun `every region matches the reference data year by year`() {
+        // The fixture lists only what a region adds, so the expected list is the nationwide one
+        // plus those days — which also proves a regional calendar never *drops* a nationwide day.
+        holidayRegionReference.forEach { (key, added) ->
+            val countryCode = key.substringBefore('-')
+            val regionCode = key.substringAfter('-')
+            val provider = HolidayLocation.of(countryCode, regionCode).provider!!
+            val expectedByYear = (holidayReference.getValue(countryCode) + added)
+                .map { (date, nameEn, nameLocal) -> Triple(LocalDate.parse(date), nameEn, nameLocal) }
+                .groupBy { it.first.year }
+
+            (HOLIDAY_REFERENCE_FIRST_YEAR..HOLIDAY_REFERENCE_LAST_YEAR).forEach { year ->
+                val expected = expectedByYear[year].orEmpty().sortedBy { it.first }
+                val actual = provider.publicHolidays(year)
+                    .map { Triple(it.date, it.nameEn, it.nameLocal) }
+
+                assertEquals(expected, actual, "$key $year differs from holidays v$HOLIDAY_REFERENCE_VERSION")
+            }
+        }
+    }
+
+    @Test
+    fun `every region adds something to the nationwide calendar`() {
+        // A region that added nothing would be a picker row that promises a feature.
+        GermanHolidays.regions.forEach { region ->
+            val regional = GermanHolidays.forRegion(region).publicHolidays(2026)
+            assertTrue(regional.size > GermanHolidays.publicHolidays(2026).size, region)
+        }
+    }
+
+    @Test
+    fun `Bavaria gets its own days and Berlin does not get them`() {
+        // The case the state setting exists for, pinned in words as well as in the fixture.
+        fun daysOff(region: String) =
+            GermanHolidays.forRegion(region).publicHolidays(2026).map { it.date }.toSet()
+
+        assertTrue(LocalDate.of(2026, 1, 6) in daysOff("BY"))
+        assertTrue(LocalDate.of(2026, 6, 4) in daysOff("BY"))
+        assertTrue(LocalDate.of(2026, 1, 6) !in daysOff("BE"))
+        assertTrue(LocalDate.of(2026, 3, 8) in daysOff("BE"))
+        // Assumption Day in Bavaria is a Catholic-municipality holiday and deliberately absent.
+        assertTrue(LocalDate.of(2026, 8, 15) !in daysOff("BY"))
+        assertTrue(LocalDate.of(2026, 8, 15) in daysOff("SL"))
+    }
+
+    @Test
+    fun `an unknown or missing region draws the nationwide days`() {
+        // A newer build's region read by an older one must not blank the calendar.
+        assertEquals(GermanHolidays, GermanHolidays.forRegion(null))
+        assertEquals(GermanHolidays, GermanHolidays.forRegion("XX"))
+        assertEquals(GermanHolidays, GermanHolidays.forRegion("Augsburg"))
+    }
+
+    @Test
     fun `every holiday carries its provider's language`() {
         providers.values.forEach { provider ->
             provider.publicHolidays(2026).forEach {

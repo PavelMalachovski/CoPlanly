@@ -52,7 +52,6 @@ class SettingsViewModelTest {
             signedInAccountSource = mockk(relaxed = true),
             familyKindSource = mockk(relaxed = true),
             parentsSource = mockk(relaxed = true),
-            selectedFamilySource = mockk(relaxed = true),
             familySettingsRepository = mockk(relaxed = true)
         )
     }

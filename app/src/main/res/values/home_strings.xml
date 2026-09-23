@@ -68,4 +68,7 @@
         <item quantity="one">%2$s proposes changing who has the child on %1$d day, %3$s.</item>
         <item quantity="other">%2$s proposes changing who has the child on %1$d days, %3$s to %4$s.</item>
     </plurals>
+
+    <!-- The empty seven-day card's action. -->
+    <string name="home_week_empty_action">Add event</string>
 </resources>

@@ -248,6 +248,12 @@ data class OnboardingUiState(
      * Czechia — exactly what they were being shown before they could choose.
      */
     val country: HolidayCountry = HolidayCountry.Default,
+    /**
+     * The region within [country] whose own public holidays are added (MON-13, regional half),
+     * or null for the nationwide calendar. Only ever one of [country]'s regions: changing the
+     * country clears it.
+     */
+    val region: String? = null,
     val allergies: List<String> = emptyList(),
     val medicalProfile: MedicalProfile = MedicalProfile(),
     val children: List<ChildDraft> = emptyList(),
@@ -262,6 +268,15 @@ data class OnboardingUiState(
     val coParent: CoParentLink = CoParentLink.Unknown,
     val fetch: CoParentFetch = CoParentFetch.Idle,
     val custodyType: CustodyModelType? = null,
+    /**
+     * The step the parent last typed into, cleared whenever a step is left forwards.
+     *
+     * A flag of intent rather than a comparison of the drafts: those also fill in from Room — the
+     * co-parent's children arriving after the link — and a Skip over records that are already
+     * stored loses nothing, so a comparison would ask "discard your changes?" about changes
+     * nobody made.
+     */
+    val editedStep: OnboardingStep? = null,
     val isSaving: Boolean = false,
     val isFinished: Boolean = false
 ) {
@@ -328,6 +343,15 @@ data class OnboardingUiState(
     val canSkip: Boolean
         get() = step.isSkippable &&
             !(step == OnboardingStep.CoParent && coParent is CoParentLink.Linked)
+
+    /**
+     * True when Skip would leave something this parent typed on this step unsaved.
+     *
+     * Skip writes nothing (see [OnboardingViewModel.skip]), which is right for an unanswered
+     * question and wrong for an answered one the parent then pressed the wrong button on, so the
+     * screen asks before it lets typing go.
+     */
+    val skipDiscardsEdits: Boolean get() = canSkip && editedStep == step
 
     /**
      * Whether the relatives step can accept contacts yet.
@@ -476,13 +500,17 @@ class OnboardingViewModel @Inject constructor(
                 val cachedMyPercent = familySettingsRepository.agreedRatioOrDefault()
                     .myPercent(slotOne = user?.role != SLOT_TWO)
                 _uiState.update { state ->
+                    // The stored value unless the parent has already touched the chips on this
+                    // run, the same rule `caresFor` follows below.
+                    val country = state.country.takeIf { it != HolidayCountry.Default }
+                        ?: HolidayCountry.fromCode(user?.countryCode)
                     state.copy(
                         name = state.name.orStored(user?.name),
                         dateOfBirth = state.dateOfBirth ?: user?.dateOfBirth,
-                        // The stored value unless the parent has already touched the chips on
-                        // this run, the same rule `caresFor` follows below.
-                        country = state.country.takeIf { it != HolidayCountry.Default }
-                            ?: HolidayCountry.fromCode(user?.countryCode),
+                        country = country,
+                        // Same rule, read against whichever country won: a stored region for a
+                        // country the parent has just moved away from on this run is dropped.
+                        region = state.region ?: country.regionOrNull(user?.regionCode),
                         phone = state.phone.orStored(user?.phone),
                         allergies = state.allergies.orStored(user?.allergies),
                         medicalProfile = state.medicalProfile.orStored(user?.medicalProfile),
@@ -707,7 +735,12 @@ class OnboardingViewModel @Inject constructor(
         _uiState.update { it.copy(parentColor = choice) }
 
     /** Records the country picked on the profile step. */
-    fun updateCountry(country: HolidayCountry) = _uiState.update { it.copy(country = country) }
+    fun updateCountry(country: HolidayCountry) =
+        _uiState.update { it.copy(country = country, region = country.regionOrNull(it.region)) }
+
+    /** Records the region picked on the profile step, or null for "nationwide only". */
+    fun updateRegion(region: String?) =
+        _uiState.update { it.copy(region = it.country.regionOrNull(region)) }
 
     /** Updates the parent's allergies. */
     fun updateAllergies(allergies: List<String>) = _uiState.update { it.copy(allergies = allergies) }
@@ -845,19 +878,26 @@ class OnboardingViewModel @Inject constructor(
     /** Applies [transform] to the one child with [id], leaving the rest of the list alone. */
     private fun updateChild(id: String, transform: (ChildDraft) -> ChildDraft) =
         _uiState.update { state ->
-            state.copy(children = state.children.map { if (it.id == id) transform(it) else it })
+            state.copy(
+                children = state.children.map { if (it.id == id) transform(it) else it },
+                editedStep = state.step
+            )
         }
 
     /** Applies [transform] to the one pet with [id]. See [updateChild]. */
     private fun updatePet(id: String, transform: (PetDraft) -> PetDraft) =
         _uiState.update { state ->
-            state.copy(pets = state.pets.map { if (it.id == id) transform(it) else it })
+            state.copy(pets = state.pets.map { if (it.id == id) transform(it) else it }, editedStep = state.step)
         }
 
     /** The split step's slider: this parent's share, as a whole percent. */
     fun setSplitMyPercent(value: Int) {
         _uiState.update {
-            it.copy(splitMyPercent = value.coerceIn(0, WHOLE_PERCENT), splitTouched = true)
+            it.copy(
+                splitMyPercent = value.coerceIn(0, WHOLE_PERCENT),
+                splitTouched = true,
+                editedStep = it.step
+            )
         }
     }
 
@@ -913,7 +953,7 @@ class OnboardingViewModel @Inject constructor(
         _uiState.update { state ->
             val steps = state.steps
             val following = steps.getOrNull(steps.indexOf(step) + 1)
-            following?.let { state.copy(step = it) } ?: state
+            following?.let { state.copy(step = it, editedStep = null) } ?: state
         }
         if (_uiState.value.step == OnboardingStep.Split) {
             viewModelScope.launch { refreshSplitFromPair() }
@@ -1023,7 +1063,8 @@ class OnboardingViewModel @Inject constructor(
                 // Only when they actually chose. An untouched swatch strip must not overwrite a
                 // colour the parent set in Settings on a previous run through this wizard.
                 colorCode = state.parentColor?.storedCode ?: fresh.colorCode,
-                countryCode = state.country.code
+                countryCode = state.country.code,
+                regionCode = state.country.regionOrNull(state.region)
             )
         )
     }

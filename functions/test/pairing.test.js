@@ -188,6 +188,40 @@ describe('acceptPairingInvitation', () => {
     assert.strictEqual(db._docs.users.bob.role, 'dad');
   });
 
+  it('names the new family on the push it queues for the inviter (M-8)', async () => {
+    // The inviter's tap switches to this family, which is where a parent with two families
+    // wants to land once the second one exists.
+    const db = fakeDb({
+      invitations: {
+        inv1: {id: 'inv1', status: 'pending', fromUserId: 'alice', toEmail: 'bob@example.com'},
+      },
+      users: {
+        alice: {id: 'alice', name: 'Alice', role: 'mom'},
+        bob: {id: 'bob', name: 'Bob'},
+      },
+    });
+    const queued = [];
+    const collection = db.collection.bind(db);
+    db.collection = (name) => {
+      const ref = collection(name);
+      if (name !== 'notification_queue') return ref;
+      return Object.assign({}, ref, {
+        async add(data) {
+          queued.push(data);
+          return ref.add(data);
+        },
+      });
+    };
+
+    await myFunctions.acceptPairingInvitationImpl(
+        db, 'bob', 'bob@example.com', {code: null, invitationId: 'inv1'});
+
+    assert.strictEqual(queued.length, 1);
+    assert.strictEqual(queued[0].targetUserId, 'alice');
+    assert.strictEqual(queued[0].data.type, 'pairing_accepted');
+    assert.strictEqual(queued[0].data.familyId, 'alice__bob');
+  });
+
   it('refuses a code that was spent between the lookup and the transaction', async () => {
     // Two accounts redeeming one code at the same moment both passed the plain read at the
     // top of the function; only the transaction can see that the first commit has already

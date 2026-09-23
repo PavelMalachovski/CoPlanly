@@ -9,8 +9,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -39,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.domain.model.Pet
+import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.GroupLabel
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
@@ -123,7 +122,16 @@ fun PetsScreen(
                 }
                 is PetsUiState.Success -> {
                     if (state.pets.isEmpty()) {
-                        EmptyState(onAdd = { onEditPet("new") })
+                        EmptyState(
+                            icon = Icons.Default.Pets,
+                            title = stringResource(R.string.pets_empty_state),
+                            actionLabel = stringResource(R.string.pets_add),
+                            onAction = {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                onEditPet("new")
+                            },
+                            modifier = Modifier.fillMaxSize()
+                        )
                     } else {
                         PetsList(pets = state.pets, onEditPet = onEditPet)
                     }
@@ -164,39 +172,6 @@ private fun PetsList(pets: List<Pet>, onEditPet: (String) -> Unit) {
                     }
                 }
             }
-        }
-    }
-}
-
-/** Shown when the family has no pets yet. */
-@Composable
-private fun BoxScope.EmptyState(onAdd: () -> Unit) {
-    val haptic = LocalHapticFeedback.current
-    Column(
-        modifier = Modifier
-            .align(Alignment.Center)
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Icon(
-            Icons.Default.Pets,
-            contentDescription = null,
-            modifier = Modifier.size(48.dp),
-            tint = MaterialTheme.colorScheme.primary
-        )
-        Spacer(modifier = Modifier.height(12.dp))
-        Text(
-            text = stringResource(R.string.pets_empty_state),
-            style = MaterialTheme.typography.bodyLarge
-        )
-        Spacer(modifier = Modifier.height(12.dp))
-        Button(onClick = {
-            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-            onAdd()
-        }) {
-            Icon(Icons.Default.Add, contentDescription = null)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(stringResource(R.string.pets_add))
         }
     }
 }

@@ -32,6 +32,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.domain.friends.CalendarFriendGrant
 import com.coparently.app.presentation.common.AccountAvatar
+import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import java.time.Instant
@@ -115,10 +116,12 @@ fun FriendsScreen(
             }
 
             if (friends.isEmpty()) {
-                Text(
-                    text = stringResource(R.string.friend_empty),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                // No action of its own: the invite row below is the way forward, and a second
+                // button saying the same thing would be two answers to one question.
+                EmptyState(
+                    icon = Icons.Default.Diversity3,
+                    title = stringResource(R.string.friend_empty),
+                    modifier = Modifier.fillMaxWidth()
                 )
                 // Somebody handed a code needs somewhere to type it, and this screen is where
                 // Settings sends them. Only while they hold no grant — the branch above

@@ -82,4 +82,7 @@
     <!-- UX-8. -->
     <string name="calendar_agenda_custody_day">день родителя %1$s</string>
     <string name="calendar_filter_members">Показать для</string>
+
+    <!-- MON-6b: a contact window on the grid. -->
+    <string name="calendar_contact_window_desc">Общение: %1$s, %2$s–%3$s</string>
 </resources>

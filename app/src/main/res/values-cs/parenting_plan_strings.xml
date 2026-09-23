@@ -52,4 +52,7 @@
     <string name="parenting_plan_q_money_extraordinary">Jak se podělíte o jednorázové výdaje — brýle, školní výlet, notebook?</string>
     <string name="parenting_plan_q_communication_between_parents">Jak si budete předávat informace o dítěti a jak rychlou odpověď od sebe očekáváte?</string>
     <string name="parenting_plan_q_communication_disagreement">Co uděláte, když se nedokážete shodnout?</string>
+
+    <!-- Asked when the question sheet is closed with an edited, unsaved answer. -->
+    <string name="parenting_plan_discard_message">Vaše odpověď není uložená. Pokud otázku teď zavřete, napsaný text se ztratí.</string>
 </resources>

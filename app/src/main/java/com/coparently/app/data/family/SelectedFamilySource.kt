@@ -88,12 +88,30 @@ class SelectedFamilySource @Inject constructor(
     suspend fun families(): List<FamilyOption> {
         val uid = currentUid() ?: return emptyList()
         val me = userDao.getUserById(uid) ?: return emptyList()
-        return gson.fromJson(me.partnerIdsJson, Array<String>::class.java)
+        return optionsFor(uid, me.partnerIdsJson)
+    }
+
+    /**
+     * [families], as a stream that follows the signed-in parent's row.
+     *
+     * For the top-bar switcher (M-8), which has to appear the moment a second family exists and
+     * go away the moment one ends, without anybody opening Settings to refresh it. Room's own
+     * invalidation drives it, like [observe], so it adds no Firestore listener; and it is
+     * distinct on the list, so the unrelated column writes that re-emit the row cost nothing
+     * downstream — which matters, because what a subscriber does with a new list is
+     * [named], one Firestore read per family.
+     */
+    fun observeFamilies(uid: String): Flow<List<FamilyOption>> =
+        userDao.observeUserById(uid)
+            .map { row -> row?.let { optionsFor(uid, it.partnerIdsJson) }.orEmpty() }
+            .distinctUntilChanged()
+
+    private fun optionsFor(uid: String, partnerIdsJson: String?): List<FamilyOption> =
+        gson.fromJson(partnerIdsJson, Array<String>::class.java)
             ?.toList().orEmpty()
             .mapNotNull { partnerUid ->
                 FamilyKey.orNull(uid, partnerUid)?.let { FamilyOption(it, partnerUid) }
             }
-    }
 
     /**
      * The family this device is showing, or null when the account is in none.
@@ -171,7 +189,10 @@ class SelectedFamilySource @Inject constructor(
      * list: a switcher that disappears because one profile was unreachable is worse than one
      * with an unnamed row in it.
      */
-    suspend fun namedFamilies(): List<FamilyOption> = families().map { option ->
+    suspend fun namedFamilies(): List<FamilyOption> = named(families())
+
+    /** [options] with each co-parent's name resolved; see [namedFamilies] for what it costs. */
+    suspend fun named(options: List<FamilyOption>): List<FamilyOption> = options.map { option ->
         val name = runCatching {
             firestoreUserDataSource.getUserById(option.partnerUid)?.get("name") as? String
         }.getOrNull().orEmpty()

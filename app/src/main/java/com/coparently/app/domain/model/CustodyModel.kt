@@ -1,5 +1,6 @@
 package com.coparently.app.domain.model
 
+import com.coparently.app.domain.custody.ContactWindow
 import java.time.DayOfWeek
 import java.time.LocalDate
 
@@ -13,6 +14,10 @@ import java.time.LocalDate
  * @property momDayIndices Set of day indices (0-based) within the pattern when mom has custody
  * @property startDate Anchor date for calculating pattern position
  * @property isActive Whether this model is currently in use
+ * @property contactWindows Parts of a cycle day spent with the parent who does not have that day
+ *   (MON-6b) — "every Wednesday 15:00–19:00 with the other parent". Overlaid on the whole-day
+ *   pattern, never folded into it: [getCustodyFor] ignores them, and [contactWindowsOn] is the
+ *   one question they answer. See [ContactWindow].
  */
 data class CustodyModel(
     val id: String,
@@ -20,7 +25,8 @@ data class CustodyModel(
     val patternDays: Int,
     val momDayIndices: Set<Int>,
     val startDate: LocalDate,
-    val isActive: Boolean = true
+    val isActive: Boolean = true,
+    val contactWindows: List<ContactWindow> = emptyList()
 ) {
     /**
      * Determines which parent has custody on the given date.
@@ -33,6 +39,26 @@ data class CustodyModel(
         // Handle negative days (dates before start)
         val adjustedDays = ((daysSinceStart % patternDays) + patternDays) % patternDays
         return if (momDayIndices.contains(adjustedDays)) "mom" else "dad"
+    }
+
+    /**
+     * The contact windows that fall on [date], earliest first (MON-6b).
+     *
+     * A separate question from [getCustodyFor], which stays whole-day: whose *day* it is does not
+     * change because the other parent has the child for an afternoon, and every caller that asks
+     * "whose day" — the grid's colour, the handover walk, a swap — keeps its answer.
+     *
+     * Returns every window defined for the date's position in the cycle, including one naming
+     * the parent who already has the day; a caller that draws them decides whether such a window
+     * says anything (the calendar skips it, and it skips a window on a day an accepted swap
+     * handed to the window's own parent for the same reason). Empty for a pattern with no cycle
+     * to reduce into, rather than the division by zero [getCustodyFor] would raise.
+     */
+    fun contactWindowsOn(date: LocalDate): List<ContactWindow> {
+        if (patternDays <= 0 || contactWindows.isEmpty()) return emptyList()
+        val daysSinceStart = java.time.temporal.ChronoUnit.DAYS.between(startDate, date)
+        val index = Math.floorMod(daysSinceStart, patternDays.toLong()).toInt()
+        return contactWindows.filter { it.dayIndex == index }.sortedBy { it.start }
     }
 
     /**
@@ -57,7 +83,12 @@ data class CustodyModel(
      */
     fun complemented(): CustodyModel {
         if (patternDays <= 0) return this
-        return copy(momDayIndices = (0 until patternDays).toSet() - momDayIndices)
+        // Contact windows name a slot too, so they flip with the days: the afternoon that was
+        // the co-parent's must still be the co-parent's after this device changes slot.
+        return copy(
+            momDayIndices = (0 until patternDays).toSet() - momDayIndices,
+            contactWindows = contactWindows.map { it.withOtherParent() }
+        )
     }
 
     /**
@@ -87,11 +118,24 @@ data class CustodyModel(
         val from = minOf(startDate, other.startDate)
         return (0 until window).all { offset ->
             val date = from.plusDays(offset)
-            getCustodyFor(date) == other.getCustodyFor(date)
+            getCustodyFor(date) == other.getCustodyFor(date) &&
+                sameContactWindows(contactWindowsOn(date), other.contactWindowsOn(date))
         }
     }
 
     companion object {
+        /**
+         * Whether two days' windows describe the same hours with the same parents.
+         *
+         * By content, not by `dayIndex`: two patterns with different start dates or cycle
+         * lengths number the same Wednesday differently, and [isEquivalentTo] is asking about
+         * outcomes on dates. Part of equivalence because a pairing conflict that differed only
+         * in the contact afternoons would otherwise be settled silently, discarding one side's.
+         */
+        fun sameContactWindows(first: List<ContactWindow>, second: List<ContactWindow>): Boolean =
+            first.map { Triple(it.start, it.end, it.parent) }.toSet() ==
+                second.map { Triple(it.start, it.end, it.parent) }.toSet()
+
         /**
          * Creates a week-on-week-off pattern.
          * Mom has first week (days 0-6), Dad has second week (days 7-13).

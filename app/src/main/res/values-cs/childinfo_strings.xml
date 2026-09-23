@@ -115,4 +115,10 @@
     <string name="childinfo_load_failed">Údaje o dětech se nepodařilo načíst. Zkuste to prosím znovu.</string>
     <string name="childinfo_delete_failed">Údaje o dítěti se nepodařilo smazat. Zkuste to prosím znovu.</string>
     <string name="childinfo_sync_failed">Údaje o dětech se nepodařilo synchronizovat. Zkuste to prosím znovu.</string>
+
+    <!-- School "Clear" confirmation, and the detail screen of a child deleted while it was open. -->
+    <string name="childinfo_school_clear_title">Vymazat údaje o škole?</string>
+    <string name="childinfo_school_clear_message">Vyprázdní se pole školy, učitele a kontaktů.</string>
+    <string name="childinfo_record_gone_title">Tento záznam už neexistuje</string>
+    <string name="childinfo_record_gone_description">Byl smazán v tomto telefonu nebo v telefonu druhého rodiče.</string>
 </resources>

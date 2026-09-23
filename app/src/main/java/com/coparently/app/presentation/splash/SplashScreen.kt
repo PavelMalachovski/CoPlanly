@@ -26,7 +26,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
@@ -35,6 +34,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.coparently.app.R
+import com.coparently.app.presentation.theme.CoPlanlyColors
 import com.coparently.app.presentation.theme.Motion
 import com.coparently.app.presentation.theme.rememberReducedMotion
 import kotlinx.coroutines.coroutineScope
@@ -42,9 +42,16 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * Branded startup splash: a violet background with the CoPlanly wordmark and a
+ * Branded startup splash: the brand indigo with the CoPlanly wordmark and a
  * small entrance animation (icon scales/settles in, wordmark fades up, a subtle
  * pulse on the icon). Purely cosmetic — shown briefly over the app on launch.
+ *
+ * The background is [CoPlanlyColors.BrandPrimary], flat, and not a gradient (UX-14). The system
+ * splash before it (`windowSplashScreenBackground` = `@color/brand_primary`) and the launcher
+ * icon's background are the same value, so icon → system splash → this screen → the app's own
+ * primary read as one colour. It used to be a gradient from `#6750A4` (Material's baseline
+ * purple, which the system splash also used) to `#4F46E5`, beside a `#6200EE` launcher: four
+ * purples for one brand.
  *
  * @param onFinished Invoked once the splash animation has played, so the host can
  *   fade the splash out and reveal the app.
@@ -53,10 +60,6 @@ import kotlinx.coroutines.launch
 fun SplashScreen(
     onFinished: () -> Unit = {}
 ) {
-    // Violet brand gradient background
-    val topColor = Color(0xFF6750A4) // brand primary (violet)
-    val bottomColor = Color(0xFF4F46E5) // indigo accent
-
     // Entrance animations
     val iconScale = remember { Animatable(0.6f) }
     val iconAlpha = remember { Animatable(0f) }
@@ -106,16 +109,14 @@ fun SplashScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(colors = listOf(topColor, bottomColor))
-            ),
+            .background(CoPlanlyColors.BrandPrimary),
         contentAlignment = Alignment.Center
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            // The actual app launcher icon, shown on a rounded purple badge so the
+            // The actual app launcher icon, shown on a rounded brand badge so the
             // splash and the home-screen icon are one and the same.
             Box(
                 modifier = Modifier
@@ -132,7 +133,7 @@ fun SplashScreen(
             ) {
                 // The same white calendar as the launcher icon (its day cells knocked
                 // out), so the splash badge and the home-screen icon share one shape
-                // and the whole thing stays in the single violet-and-white palette.
+                // and the whole thing stays in the single brand-and-white palette.
                 Image(
                     painter = painterResource(R.drawable.ic_calendar_splash),
                     contentDescription = null,

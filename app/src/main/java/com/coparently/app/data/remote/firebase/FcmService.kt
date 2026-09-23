@@ -2,6 +2,7 @@ package com.coparently.app.data.remote.firebase
 
 import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.local.preferences.PreferenceKeys
+import com.coparently.app.domain.family.FamilyKey
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.messaging.FirebaseMessaging
 import com.google.gson.Gson
@@ -171,6 +172,13 @@ class FcmService @Inject constructor(
      * Sends notification data to Firestore for Cloud Functions to process.
      * This creates a document in a notifications queue that triggers a Cloud Function.
      *
+     * Every push is stamped here with the family it belongs to (M-8), so the tap on the other
+     * phone can switch to that family before it opens anything. Stamped in this one place rather
+     * than by each of the payload builders because the answer never depends on the payload: a
+     * push goes from this parent to one co-parent, and a pair *is* a family
+     * ([FamilyKey.orNull]). A push to oneself names no family and carries no key, which is also
+     * what an older build sends; `firestore.rules` accepts only a family both uids are in.
+     *
      * @param targetUserId The Firebase UID of the user to notify
      * @param notificationData The notification payload
      */
@@ -179,9 +187,15 @@ class FcmService @Inject constructor(
         notificationData: Map<String, String>
     ): Result<Unit> {
         return try {
+            val familyId = FamilyKey.orNull(firebaseAuthService.getCurrentUser()?.uid, targetUserId)
+            val stamped = if (familyId == null || PushPayload.FAMILY_ID in notificationData) {
+                notificationData
+            } else {
+                notificationData + (PushPayload.FAMILY_ID to familyId)
+            }
             val notificationDoc = mapOf(
                 "targetUserId" to targetUserId,
-                "data" to notificationData,
+                "data" to stamped,
                 "createdAt" to System.currentTimeMillis(),
                 "status" to "pending"
             )

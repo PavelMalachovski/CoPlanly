@@ -1,5 +1,6 @@
 package com.coparently.app.presentation.components
 
+import android.text.format.DateFormat
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -9,6 +10,7 @@ import androidx.compose.material3.TimePicker
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import com.coparently.app.R
@@ -34,7 +36,9 @@ fun TimePickerDialog(
     val timePickerState = rememberTimePickerState(
         initialHour = initialTime.hour,
         initialMinute = initialTime.minute,
-        is24Hour = true
+        // The device's own 12/24-hour setting, not a guess from the locale: a parent in the
+        // US with 24-hour time switched on expects the dial they chose.
+        is24Hour = DateFormat.is24HourFormat(LocalContext.current)
     )
 
     AlertDialog(

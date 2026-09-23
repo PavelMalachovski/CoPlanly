@@ -60,4 +60,8 @@
     <string name="onboarding_split_agreed_body">Уже погоджено з %1$s. Посуньте повзунок, щоб запропонувати інший поділ — іншу сторону попросять підтвердити.</string>
     <string name="onboarding_custody_set_body">Розклад уже налаштовано: %1$s. Перевірте його або завершіть налаштування і змініть пізніше в налаштуваннях.</string>
     <string name="onboarding_custody_review">Переглянути розклад</string>
+
+    <!-- Asked when Skip would leave something typed on this step unsaved. -->
+    <string name="onboarding_skip_unsaved_title">Пропустити без збереження?</string>
+    <string name="onboarding_skip_unsaved_message">Введене на цьому кроці ще не збережено. «Пропустити» перейде далі без нього, «Далі» збереже.</string>
 </resources>

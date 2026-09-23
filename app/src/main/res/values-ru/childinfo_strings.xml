@@ -115,4 +115,10 @@
     <string name="childinfo_load_failed">Не удалось загрузить данные детей. Попробуйте ещё раз.</string>
     <string name="childinfo_delete_failed">Не удалось удалить данные ребёнка. Попробуйте ещё раз.</string>
     <string name="childinfo_sync_failed">Не удалось синхронизировать данные детей. Попробуйте ещё раз.</string>
+
+    <!-- School "Clear" confirmation, and the detail screen of a child deleted while it was open. -->
+    <string name="childinfo_school_clear_title">Очистить данные о школе?</string>
+    <string name="childinfo_school_clear_message">Поля школы, учителя и контактов будут очищены.</string>
+    <string name="childinfo_record_gone_title">Эта запись больше не существует</string>
+    <string name="childinfo_record_gone_description">Её удалили на этом телефоне или на телефоне второго родителя.</string>
 </resources>

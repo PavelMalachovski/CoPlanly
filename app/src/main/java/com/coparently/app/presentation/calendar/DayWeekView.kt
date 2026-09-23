@@ -54,6 +54,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -79,6 +80,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.coparently.app.R
+import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.rememberToday
@@ -112,6 +114,15 @@ private const val GRIDLINE_ALPHA = 0.55f
 /** Today's tint strength in the week grid, drawn over the cell's base fill. */
 private const val TODAY_TINT_ALPHA = 0.05f
 
+/** Full-hue edge on a contact-window band: the marker that carries whose afternoon it is. */
+private val CONTACT_WINDOW_EDGE_WIDTH = 3.dp
+
+/** Corner radius of a contact-window band, matching the hour cells it lies over. */
+private val CONTACT_WINDOW_CORNER = 4.dp
+
+/** Timestamp format of a contact window's label in Day view. */
+private val CONTACT_WINDOW_TIME: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+
 /**
  * Width of the hour-label gutter.
  *
@@ -139,6 +150,7 @@ fun DayWeekView(
     events: List<Event>,
     getCustody: (LocalDate) -> String?,
     getProposedCustody: (LocalDate) -> String? = { null },
+    getContactWindows: (LocalDate) -> List<ContactWindow> = { emptyList() },
     parentNames: ParentNames,
     onDateChange: (LocalDate) -> Unit,
     onEventClick: (String) -> Unit,
@@ -206,6 +218,7 @@ fun DayWeekView(
             events = events,
             getCustody = getCustody,
             getProposedCustody = getProposedCustody,
+            getContactWindows = getContactWindows,
             parentNames = parentNames,
             scrollState = scrollState,
             onEventClick = onEventClick,
@@ -235,6 +248,7 @@ private fun DayWeekPage(
     events: List<Event>,
     getCustody: (LocalDate) -> String?,
     getProposedCustody: (LocalDate) -> String?,
+    getContactWindows: (LocalDate) -> List<ContactWindow>,
     parentNames: ParentNames,
     scrollState: LazyListState,
     onEventClick: (String) -> Unit,
@@ -622,6 +636,34 @@ private fun DayWeekPage(
                         currentDates.forEachIndexed { dayIndex, date ->
                             val dayColumnX = dayIndex * (columnWidth + spacingPx)
 
+                            // Contact windows (MON-6b) first, so events sit on top of them: an
+                            // hour band in the window parent's tint over the day's own, on the
+                            // same base (weekend grey or surface) the hour cells use, so the
+                            // weekend layer survives inside the band too (DayCellFills).
+                            val bandBase = if (CustodyHelper.isWeekend(date)) {
+                                if (isDarkTheme) {
+                                    CoPlanlyColors.WeekendBackgroundDark
+                                } else {
+                                    CoPlanlyColors.WeekendBackgroundLight
+                                }
+                            } else {
+                                MaterialTheme.colorScheme.surface
+                            }
+                            getContactWindows(date).forEach { window ->
+                                ContactWindowBand(
+                                    window = window,
+                                    bounds = Rect(
+                                        left = dayColumnX,
+                                        top = yOffsetFor(date.atTime(window.start)),
+                                        right = dayColumnX + columnWidth,
+                                        bottom = yOffsetFor(date.atTime(window.end))
+                                    ),
+                                    baseColor = bandBase,
+                                    parentName = parentNames.labelFor(window.parent),
+                                    showLabel = daysCount == 1
+                                )
+                            }
+
                             // Multi-day/overnight events are clamped to this day and laid out
                             // in side-by-side lanes when they overlap in time.
                             layoutDayEvents(events, date).forEach { seg ->
@@ -690,6 +732,68 @@ private fun DayWeekPage(
                     }
                 }
             }
+        }
+    }
+}
+
+/**
+ * One contact window (MON-6b) as an hour band over its day column: the window parent's custody
+ * tint over the cell's own base, and a full-hue edge — the saturation rule's two strengths of one
+ * hue, the tint for the stretch of time and the edge as its marker. Drawn on its own base first
+ * so the two parents' 14% tints are not stacked into a third colour, the reasoning `MonthView`'s
+ * handover diagonal already follows.
+ *
+ * Not clickable: an empty hour inside the band still creates an event through the cell beneath,
+ * which is the only route to one in this view. It carries a description instead, so a screen
+ * reader hears the window the eye sees.
+ *
+ * @param window The window.
+ * @param bounds Where it sits, in the overlay's pixels.
+ * @param baseColor The hour cell's base under the band — weekend grey or surface.
+ * @param parentName The window parent's name, for the label and the description.
+ * @param showLabel Day view has room to write the description in the band; a week column does not.
+ */
+@Composable
+private fun ContactWindowBand(
+    window: ContactWindow,
+    bounds: Rect,
+    baseColor: Color,
+    parentName: String,
+    showLabel: Boolean
+) {
+    val density = LocalDensity.current
+    val shape = RoundedCornerShape(CONTACT_WINDOW_CORNER)
+    val from = window.start.format(CONTACT_WINDOW_TIME)
+    val to = window.end.format(CONTACT_WINDOW_TIME)
+    val description = stringResource(R.string.calendar_contact_window_desc, parentName, from, to)
+    Box(
+        modifier = Modifier
+            .offset(
+                x = with(density) { bounds.left.toDp() },
+                y = with(density) { bounds.top.toDp() }
+            )
+            .width(with(density) { bounds.width.toDp() })
+            .height(with(density) { bounds.height.toDp() })
+            .clip(shape)
+            .background(baseColor)
+            .background(ParentColors.container(window.parent))
+            .semantics { contentDescription = description }
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxHeight()
+                .width(CONTACT_WINDOW_EDGE_WIDTH)
+                .background(ParentColors.fill(window.parent))
+        )
+        if (showLabel) {
+            Text(
+                text = description,
+                style = MaterialTheme.typography.labelSmall,
+                color = ParentColors.text(window.parent),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(start = CONTACT_WINDOW_EDGE_WIDTH + 4.dp, top = 2.dp)
+            )
         }
     }
 }
@@ -770,18 +874,20 @@ private fun EventChip(
 
     // Long press state - track when user is holding the event
     var isLongPressing by remember { mutableStateOf(false) }
-    // Calculate temporary times for display during resize, snapped to a 15-minute grid
-    val tempStartTime = remember(isResizingStart, resizeDragAmountStart, eventStart) {
+    // The times a resize would set, shown live in the badge while the handle is held. They are
+    // the same values the drop writes (UX-16: a corner moves by the minute, never shorter than
+    // MIN_EVENT_MINUTES), so the badge cannot promise a time the drop then rounds away.
+    val tempStartTime = remember(isResizingStart, resizeDragAmountStart, eventStart, eventEnd) {
         if (isResizingStart) {
-            resizedTime(eventStart, resizeDragAmountStart, hourHeightPx)
+            resizedStart(eventStart, eventEnd, resizeDragAmountStart, hourHeightPx)
         } else {
             eventStart
         }
     }
 
-    val tempEndTime = remember(isResizingEnd, resizeDragAmountEnd, eventEnd) {
+    val tempEndTime = remember(isResizingEnd, resizeDragAmountEnd, eventStart, eventEnd) {
         if (isResizingEnd) {
-            resizedTime(eventEnd, resizeDragAmountEnd, hourHeightPx)
+            resizedEnd(eventStart, eventEnd, resizeDragAmountEnd, hourHeightPx)
         } else {
             eventEnd
         }
@@ -997,12 +1103,14 @@ private fun EventChip(
                                         // Normal drag & drop: snap the vertical move to a 15-minute grid
                                         val dayOffset = (totalDrag.x / columnWidthPx).roundToInt()
                                         val rawMinuteShift = (totalDrag.y / hourHeightPx * 60f).roundToInt()
-                                        val minuteShift = (rawMinuteShift / RESIZE_SNAP_MINUTES.toFloat()).roundToInt() * RESIZE_SNAP_MINUTES
+                                        val snapSteps = (rawMinuteShift / MOVE_SNAP_MINUTES.toFloat()).roundToInt()
+                                        val minuteShift = snapSteps * MOVE_SNAP_MINUTES
                                         if (dayOffset != 0 || minuteShift != 0) {
                                             val newStart = resizedTime(
                                                 event.startDateTime.plusDays(dayOffset.toLong()),
                                                 minuteShift.toFloat() / 60f * hourHeightPx,
-                                                hourHeightPx
+                                                hourHeightPx,
+                                                MOVE_SNAP_MINUTES
                                             )
                                             val targetMinuteOfDay = newStart.hour * 60 + newStart.minute
                                             onDragDrop(event.id, newStart.toLocalDate(), targetMinuteOfDay)
@@ -1146,9 +1254,9 @@ private fun EventChip(
                             },
                             onDragEnd = {
                                 if (isResizingStart && onResize != null) {
-                                    val newStartTime = resizedTime(eventStart, resizeDragAmountStart, hourHeightPx)
-                                    // Keep at least one 15-minute slot before the end
-                                    if (newStartTime.isBefore(eventEnd)) {
+                                    val newStartTime =
+                                        resizedStart(eventStart, eventEnd, resizeDragAmountStart, hourHeightPx)
+                                    if (newStartTime != eventStart) {
                                         onResize(event.id, newStartTime, null)
                                     }
                                     hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -1187,9 +1295,9 @@ private fun EventChip(
                             },
                             onDragEnd = {
                                 if (isResizingEnd && onResize != null) {
-                                    val newEndTime = resizedTime(eventEnd, resizeDragAmountEnd, hourHeightPx)
-                                    // Keep at least one 15-minute slot after the start
-                                    if (newEndTime.isAfter(eventStart)) {
+                                    val newEndTime =
+                                        resizedEnd(eventStart, eventEnd, resizeDragAmountEnd, hourHeightPx)
+                                    if (newEndTime != eventEnd) {
                                         onResize(event.id, null, newEndTime)
                                     }
                                     hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -1211,8 +1319,25 @@ private fun EventChip(
     }
 }
 
-/** Minutes the resize handles snap to. */
-private const val RESIZE_SNAP_MINUTES = 15
+/**
+ * Minutes a whole event moves by when it is dragged (UX-16): a quarter hour, because a move is a
+ * coarse gesture across a grid drawn in hours and nobody reschedules a dentist to 10:07.
+ */
+private const val MOVE_SNAP_MINUTES = 15
+
+/**
+ * Minutes a resize handle moves by (UX-16): one. A corner is the precise gesture — the one a
+ * parent reaches for when pickup is at 15:40 — and the live time badge over the chip is what
+ * makes single minutes usable under a thumb.
+ */
+private const val RESIZE_STEP_MINUTES = 1
+
+/**
+ * The shortest an event can be made by dragging a corner. The move grid's quarter hour, so a
+ * block stays tall enough to grab again, and so a corner dragged past the other one leaves an
+ * event rather than refusing the drop.
+ */
+private const val MIN_EVENT_MINUTES = 15L
 
 /** Google-Calendar-style red "now" indicator. */
 private val NowIndicatorColor = Color(0xFFEA4335)
@@ -1302,20 +1427,54 @@ private fun layoutDayEvents(events: List<Event>, date: LocalDate): List<EventSeg
 }
 
 /**
- * Applies a vertical drag (in pixels) to a base time and snaps the result to the
- * nearest [RESIZE_SNAP_MINUTES] grid, so resizing moves in clean 15-minute steps.
+ * Applies a vertical drag (in pixels) to a base time and snaps the result to the nearest
+ * multiple of [stepMinutes] within the same day — [MOVE_SNAP_MINUTES] for a move,
+ * [RESIZE_STEP_MINUTES] for a corner.
  */
 private fun resizedTime(
     base: LocalDateTime,
     dragPx: Float,
-    hourHeightPx: Float
+    hourHeightPx: Float,
+    stepMinutes: Int
 ): LocalDateTime {
     val deltaMinutes = (dragPx / hourHeightPx * 60f).roundToInt()
     val moved = base.plusMinutes(deltaMinutes.toLong()).withSecond(0).withNano(0)
     val minutesOfDay = moved.hour * 60 + moved.minute
-    val snapped = ((minutesOfDay + RESIZE_SNAP_MINUTES / 2) / RESIZE_SNAP_MINUTES) * RESIZE_SNAP_MINUTES
-    val clamped = snapped.coerceIn(0, 24 * 60 - RESIZE_SNAP_MINUTES)
+    val snapped = ((minutesOfDay + stepMinutes / 2) / stepMinutes) * stepMinutes
+    val clamped = snapped.coerceIn(0, 24 * 60 - stepMinutes)
     return moved.toLocalDate().atStartOfDay().plusMinutes(clamped.toLong())
+}
+
+/**
+ * Where the top handle puts the start: [start] moved by the minute, and never later than
+ * [MIN_EVENT_MINUTES] before [end].
+ */
+private fun resizedStart(
+    start: LocalDateTime,
+    end: LocalDateTime,
+    dragPx: Float,
+    hourHeightPx: Float
+): LocalDateTime {
+    val moved = resizedTime(start, dragPx, hourHeightPx, RESIZE_STEP_MINUTES)
+    // An event already shorter than the minimum is not stretched by a drag that did not ask to:
+    // the bound is where it starts, not a quarter hour before its end.
+    val latest = end.minusMinutes(MIN_EVENT_MINUTES).let { if (it.isBefore(start)) start else it }
+    return if (moved.isAfter(latest)) latest else moved
+}
+
+/**
+ * Where the bottom handle puts the end: [end] moved by the minute, and never earlier than
+ * [MIN_EVENT_MINUTES] after [start].
+ */
+private fun resizedEnd(
+    start: LocalDateTime,
+    end: LocalDateTime,
+    dragPx: Float,
+    hourHeightPx: Float
+): LocalDateTime {
+    val moved = resizedTime(end, dragPx, hourHeightPx, RESIZE_STEP_MINUTES)
+    val earliest = start.plusMinutes(MIN_EVENT_MINUTES).let { if (it.isAfter(end)) end else it }
+    return if (moved.isBefore(earliest)) earliest else moved
 }
 
 /**

@@ -52,5 +52,9 @@
     <string name="common_error_server">The server could not be reached. Please try again later.</string>
     <string name="common_error_permission">You don\'t have permission to do that.</string>
     <string name="common_error_invalid_input">Some details are missing or invalid. Check them and try again.</string>
-    <string name="common_error_sync">Couldn\'t sync. Please try again.</string>
+    <!-- Audit leftovers (Sept 2026): required-field marker and the discard-changes dialog. -->
+    <string name="common_required">Required</string>
+    <string name="common_keep_editing">Keep editing</string>
+    <string name="common_discard">Discard</string>
+    <string name="common_discard_changes_title">Discard changes?</string>
 </resources>

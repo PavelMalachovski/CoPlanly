@@ -61,4 +61,7 @@
         <item quantity="many">%2$s navrhuje změnit, kdo má dítě, na %1$d dne, %3$s až %4$s.</item>
         <item quantity="other">%2$s navrhuje změnit, kdo má dítě, na %1$d dní, %3$s až %4$s.</item>
     </plurals>
+
+    <!-- The empty seven-day card's action. -->
+    <string name="home_week_empty_action">Přidat událost</string>
 </resources>

@@ -55,6 +55,8 @@ import kotlin.test.assertTrue
  * for someone's benefit must not lock them out of their calendar, so the only thing that blocks
  * progress is the one field the app genuinely cannot work without: a name to put on the events.
  */
+// One class per ViewModel, as elsewhere in the suite; the wizard has many steps to pin.
+@Suppress("LargeClass")
 @OptIn(ExperimentalCoroutinesApi::class)
 class OnboardingViewModelTest {
 
@@ -245,6 +247,22 @@ class OnboardingViewModelTest {
         advanceUntilIdle()
 
         assertTrue(viewModel.uiState.value.isFinished)
+    }
+
+    @Test
+    fun `Skip asks first only when something was typed on this step`() = runTest(dispatcher) {
+        walkTo(OnboardingStep.Child)
+        advanceUntilIdle()
+        assertFalse(viewModel.uiState.value.skipDiscardsEdits, "an untouched step skips silently")
+
+        viewModel.updateChildName(firstChildId(), "Mia")
+        assertTrue(viewModel.uiState.value.skipDiscardsEdits)
+
+        // Leaving forwards settles the question; the next step starts clean.
+        viewModel.next()
+        advanceUntilIdle()
+        assertEquals(OnboardingStep.Relatives, viewModel.uiState.value.step)
+        assertFalse(viewModel.uiState.value.skipDiscardsEdits)
     }
 
     @Test

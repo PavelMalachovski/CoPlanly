@@ -66,7 +66,7 @@
     <string name="custody_is_resident">Живе з: %1$s</string>
     <string name="custody_midweek_title">Контакт всередині тижня</string>
     <string name="custody_midweek_enable">Додати день всередині тижня</string>
-    <string name="custody_midweek_overnight_warning">Цей графік розподіляє цілі дні, тож день всередині тижня включає й ніч. Якщо у вашому рішенні йдеться лише про вечір, складіть двотижневий цикл у розділі «Власний графік».</string>
+    <string name="custody_midweek_overnight_warning">Цей графік розподіляє цілі дні, тож день всередині тижня включає й ніч. Якщо у вашому рішенні йдеться лише про вечір, залиште це вимкненим і додайте нижче період спілкування.</string>
     <string name="custody_midweek_every_week">Щотижня</string>
     <string name="custody_midweek_off_week_only">Лише в тиждень без вихідних</string>
     <string name="custody_preview_every_other_weekend_midweek">Кожен день: %1$s. Кожні другі сб–нд і %3$s: %2$s.</string>
@@ -81,4 +81,25 @@
 
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
     <string name="custody_setup_save_failed">Графік не вдалося зберегти. Спробуйте ще раз.</string>
+
+    <!-- MON-6b: contact windows over the whole-day pattern. -->
+    <string name="custody_windows_title">Періоди спілкування</string>
+    <string name="custody_windows_hint">Частина дня з батьком чи матір’ю, у кого цього дня немає, наприклад щосереди 15:00–19:00. Сам день лишається за тим, у кого він є; період спілкування показується поверх.</string>
+    <string name="custody_windows_empty">Періодів спілкування немає.</string>
+    <string name="custody_windows_add">Додати період спілкування</string>
+    <string name="custody_window_remove">Видалити період спілкування</string>
+    <string name="custody_window_summary">%1$s · %2$s–%3$s · %4$s</string>
+    <string name="custody_window_day_label">Тиждень %1$d, %2$s</string>
+    <string name="custody_window_dialog_title">Новий період спілкування</string>
+    <string name="custody_window_weekday">День</string>
+    <string name="custody_window_week">Тиждень</string>
+    <string name="custody_window_every_week">Щотижня</string>
+    <string name="custody_window_week_n">Тиждень %1$d</string>
+    <string name="custody_window_from">З %1$s</string>
+    <string name="custody_window_to">До %1$s</string>
+    <string name="custody_window_with">З ким</string>
+    <string name="custody_window_invalid">Період має закінчуватися пізніше, ніж починається, і того ж дня.</string>
+    <string name="custody_window_add_confirm">Додати</string>
+    <string name="custody_diff_windows_only">Зміняться лише періоди спілкування.</string>
+    <string name="custody_diff_windows_too">Періоди спілкування теж змінюються.</string>
 </resources>

@@ -15,4 +15,7 @@
          button. -->
     <string name="contacts_no_dialer">This device has no dialler.</string>
     <string name="contacts_vet">Vet</string>
+
+    <!-- Empty-state action: opens the children, where a contact is added. -->
+    <string name="contacts_empty_action">Add a contact</string>
 </resources>

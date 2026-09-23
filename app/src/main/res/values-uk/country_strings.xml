@@ -16,4 +16,28 @@
     <string name="country_holidays_unavailable">Свят для країни «%1$s» у застосунку ще немає, тому вони не показуються.</string>
     <string name="country_holidays_public_only">У календарі показуються загальнодержавні свята. Шкільних канікул для країни «%1$s» у застосунку немає.</string>
     <string name="country_holidays_suspended">Під час воєнного стану свята в країні «%1$s» не є вихідними днями, тому вони не показуються.</string>
+
+    <!-- MON-13, regional half: the Land whose own public holidays are added. -->
+    <string name="holiday_region_label_de">Федеральна земля</string>
+    <string name="holiday_region_settings_summary">Додає свята цієї федеральної землі</string>
+    <string name="holiday_region_none">Лише загальнодержавні</string>
+    <string name="country_holidays_pick_region">У календарі показуються загальнодержавні свята; виберіть федеральну землю, щоб додати її власні. Шкільних канікул для країни «%1$s» у застосунку немає.</string>
+    <string name="country_holidays_with_region">У календарі показуються загальнодержавні свята та свята землі «%1$s». Шкільних канікул у застосунку немає.</string>
+
+    <string name="region_de_bb">Бранденбург</string>
+    <string name="region_de_be">Берлін</string>
+    <string name="region_de_bw">Баден-Вюртемберг</string>
+    <string name="region_de_by">Баварія</string>
+    <string name="region_de_hb">Бремен</string>
+    <string name="region_de_he">Гессен</string>
+    <string name="region_de_hh">Гамбург</string>
+    <string name="region_de_mv">Мекленбург-Передня Померанія</string>
+    <string name="region_de_ni">Нижня Саксонія</string>
+    <string name="region_de_nw">Північний Рейн-Вестфалія</string>
+    <string name="region_de_rp">Рейнланд-Пфальц</string>
+    <string name="region_de_sh">Шлезвіг-Гольштейн</string>
+    <string name="region_de_sl">Саар</string>
+    <string name="region_de_sn">Саксонія</string>
+    <string name="region_de_st">Саксонія-Ангальт</string>
+    <string name="region_de_th">Тюрингія</string>
 </resources>

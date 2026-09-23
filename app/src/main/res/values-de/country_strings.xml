@@ -16,4 +16,28 @@
     <string name="country_holidays_unavailable">Feiertage für %1$s sind noch nicht in der App, daher werden keine angezeigt.</string>
     <string name="country_holidays_public_only">Bundesweite Feiertage werden im Kalender angezeigt. Schulferien für %1$s sind nicht in der App.</string>
     <string name="country_holidays_suspended">Feiertage für %1$s sind unter dem Kriegsrecht keine arbeitsfreien Tage, daher werden keine angezeigt.</string>
+
+    <!-- MON-13, regional half: the Land whose own public holidays are added. -->
+    <string name="holiday_region_label_de">Bundesland</string>
+    <string name="holiday_region_settings_summary">Ergänzt die Feiertage des Bundeslandes</string>
+    <string name="holiday_region_none">Nur bundesweit</string>
+    <string name="country_holidays_pick_region">Bundesweite Feiertage werden im Kalender angezeigt; wählen Sie ein Bundesland, um dessen eigene hinzuzufügen. Schulferien für %1$s sind nicht in der App.</string>
+    <string name="country_holidays_with_region">Bundesweite Feiertage und die von %1$s werden im Kalender angezeigt. Schulferien sind nicht in der App.</string>
+
+    <string name="region_de_bb">Brandenburg</string>
+    <string name="region_de_be">Berlin</string>
+    <string name="region_de_bw">Baden-Württemberg</string>
+    <string name="region_de_by">Bayern</string>
+    <string name="region_de_hb">Bremen</string>
+    <string name="region_de_he">Hessen</string>
+    <string name="region_de_hh">Hamburg</string>
+    <string name="region_de_mv">Mecklenburg-Vorpommern</string>
+    <string name="region_de_ni">Niedersachsen</string>
+    <string name="region_de_nw">Nordrhein-Westfalen</string>
+    <string name="region_de_rp">Rheinland-Pfalz</string>
+    <string name="region_de_sh">Schleswig-Holstein</string>
+    <string name="region_de_sl">Saarland</string>
+    <string name="region_de_sn">Sachsen</string>
+    <string name="region_de_st">Sachsen-Anhalt</string>
+    <string name="region_de_th">Thüringen</string>
 </resources>

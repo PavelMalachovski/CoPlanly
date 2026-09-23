@@ -6,16 +6,25 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Balance
+import androidx.compose.material.icons.filled.Contacts
+import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -29,8 +38,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.coparently.app.presentation.theme.LayoutConstants
+import com.coparently.app.utils.LightDarkPreviews
+import com.coparently.app.utils.PreviewWrapper
 import java.util.Locale
 
 /**
@@ -310,7 +323,151 @@ fun PillChip(
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Medium,
             color = contentColor,
-            maxLines = 1
+            maxLines = 1,
+            // Ellipsised rather than clipped when a caller bounds the chip's width — a person's
+            // name in the family switcher (M-8) is the case that needs it.
+            overflow = TextOverflow.Ellipsis
         )
+    }
+}
+
+/**
+ * The one empty-state anatomy (UX-9): an icon on a tonal disc, a title, an optional line of
+ * explanation and an optional primary action.
+ *
+ * There used to be six of these — `AnimatedEmptyState` (whose Lottie file had no layers, so it
+ * drew a 200 dp blank square above the text) and bespoke columns in Contacts, ChildInfo, Pets,
+ * Friends and Home, one of them the `Card { Text }` the refresh outlawed. Two properties are why
+ * a shared one is not merely tidier:
+ *
+ * - **It takes a [modifier] and draws nothing outside it.** The old one hard-coded
+ *   `fillMaxSize().padding(32.dp)`, so a caller could not apply its `Scaffold` padding and the
+ *   text rendered under the top bar in Chat and Budgets.
+ * - **It scrolls when its height is bounded and it does not fit.** At the largest font scale a
+ *   title, two lines of explanation and a button outgrow a landscape phone, and a column that
+ *   cannot scroll clips the button — the one part a parent needs. Inside a parent that already
+ *   scrolls (Home's week card) the height is unbounded and it simply wraps its content, because
+ *   a nested vertical scroll measured with infinite height throws.
+ *
+ * The action is the screen's way out of being empty — "Add a contact", "Add event" — and is
+ * omitted where there is none. Design item 8 applies: never pass an action that does nothing.
+ *
+ * @param icon What the screen would list, drawn decoratively (the title says it in words).
+ * @param title One short sentence saying what is missing.
+ * @param modifier Applied to the whole state; pass the Scaffold padding and the size here.
+ * @param description Optional second line: why it is empty, or what adding one does.
+ * @param actionLabel Label of the primary action, or null for none.
+ * @param onAction The primary action; the button shows only when this and [actionLabel] are set.
+ */
+@Composable
+@Suppress("LongParameterList") // one empty-state anatomy, expressed as one parameter list
+fun EmptyState(
+    icon: ImageVector,
+    title: String,
+    modifier: Modifier = Modifier,
+    description: String? = null,
+    actionLabel: String? = null,
+    onAction: (() -> Unit)? = null
+) {
+    BoxWithConstraints(modifier = modifier) {
+        val scrolling = if (constraints.hasBoundedHeight) {
+            // At least as tall as the space it was given, so a short state is centred in it,
+            // and scrollable, so a tall one is still reachable.
+            Modifier
+                .verticalScroll(rememberScrollState())
+                .heightIn(min = maxHeight)
+        } else {
+            Modifier
+        }
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .then(scrolling)
+                .padding(horizontal = 24.dp, vertical = 32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(EMPTY_STATE_DISC)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primaryContainer),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.size(EMPTY_STATE_ICON)
+                )
+            }
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center
+            )
+            if (description != null) {
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+            }
+            if (actionLabel != null && onAction != null) {
+                Button(onClick = onAction, modifier = Modifier.padding(top = 4.dp)) {
+                    Text(actionLabel)
+                }
+            }
+        }
+    }
+}
+
+/** Diameter of the tonal disc behind an [EmptyState] icon. */
+private val EMPTY_STATE_DISC = 72.dp
+
+/** Size of the icon inside the [EmptyState] disc. */
+private val EMPTY_STATE_ICON = 36.dp
+
+@LightDarkPreviews
+@Composable
+private fun EmptyStatePreview() {
+    PreviewWrapper {
+        EmptyState(
+            icon = Icons.Default.Contacts,
+            title = "No contacts yet",
+            description = "Save the school, the doctor or a relative to reach them in one tap.",
+            actionLabel = "Add a contact",
+            onAction = {},
+            modifier = Modifier.fillMaxSize()
+        )
+    }
+}
+
+@LightDarkPreviews
+@Composable
+private fun SectionGroupPreview() {
+    PreviewWrapper {
+        Column(modifier = Modifier.padding(16.dp)) {
+            GroupLabel("Family")
+            SectionGroup {
+                SectionRow(
+                    icon = Icons.Default.Contacts,
+                    title = "Contacts",
+                    supporting = "3 saved",
+                    onClick = {}
+                )
+                Divider()
+                SectionRow(
+                    icon = Icons.Default.Balance,
+                    title = "Expense split",
+                    supporting = "50 / 50",
+                    trailing = {
+                        PillChip(label = "Agreed", leadingDot = MaterialTheme.colorScheme.primary)
+                    }
+                )
+            }
+        }
     }
 }

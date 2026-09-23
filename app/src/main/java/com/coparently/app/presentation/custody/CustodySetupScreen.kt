@@ -62,7 +62,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -427,6 +426,15 @@ fun CustodySetupScreen(
                 }
             }
 
+            // Contact windows (MON-6b) — for every pattern type: an afternoon with the parent
+            // who does not have that day, on top of the whole days chosen above.
+            ContactWindowsSection(
+                uiState = uiState,
+                parentNames = parentNames,
+                onAdd = viewModel::addContactWindows,
+                onRemove = viewModel::removeContactWindow
+            )
+
             // Preview section
             Card(
                 modifier = Modifier
@@ -469,10 +477,13 @@ fun CustodySetupScreen(
                         repeat(14) { dayOffset ->
                             val date = uiState.startDate.plusDays(dayOffset.toLong())
                             val custody = tempModel?.getCustodyFor(date)
+                            // The deep chip tone with a label colour picked for contrast — the
+                            // week band's recipe. White on the full hue at 70 % failed AA for
+                            // pink, and for any lighter colour a parent picks.
                             val color = when (custody) {
-                                "mom" -> ParentColors.fill("mom")
-                                "dad" -> ParentColors.fill("dad")
-                                else -> Color.Gray
+                                "mom" -> ParentColors.chipFill("mom")
+                                "dad" -> ParentColors.chipFill("dad")
+                                else -> MaterialTheme.colorScheme.surfaceVariant
                             }
                             Box(
                                 modifier = Modifier
@@ -480,16 +491,13 @@ fun CustodySetupScreen(
                                     // `heightIn`, not `height`: a fixed box clips its own
                                     // label as soon as the reader's font scale grows.
                                     .heightIn(min = 24.dp)
-                                    .background(
-                                        color.copy(alpha = 0.7f),
-                                        RoundedCornerShape(4.dp)
-                                    ),
+                                    .background(color, RoundedCornerShape(4.dp)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
                                     text = date.dayOfMonth.toString(),
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = Color.White,
+                                    color = ParentColors.onFill(color),
                                     textAlign = TextAlign.Center
                                 )
                             }
@@ -507,7 +515,7 @@ fun CustodySetupScreen(
                         Box(
                             modifier = Modifier
                                 .size(10.dp)
-                                .background(ParentColors.fill("mom"), CircleShape)
+                                .background(ParentColors.chipFill("mom"), CircleShape)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
@@ -522,7 +530,7 @@ fun CustodySetupScreen(
                         Box(
                             modifier = Modifier
                                 .size(10.dp)
-                                .background(ParentColors.fill("dad"), CircleShape)
+                                .background(ParentColors.chipFill("dad"), CircleShape)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(

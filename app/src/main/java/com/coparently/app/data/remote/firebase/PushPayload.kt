@@ -84,6 +84,19 @@ object PushPayload {
      */
     const val TARGET_USER_ID = "targetUserId"
 
+    /**
+     * The family a push belongs to, `FamilyKey.of(sender, addressee)` (M-8).
+     *
+     * A **field**, not a type: every type may carry it, and a build that does not know it
+     * ignores it. `FcmService.queueNotificationForUser` stamps it on every client push and the
+     * Cloud Functions on the two server pushes that belong to a live family. The tap reads it
+     * back as an intent extra of the same name and switches the selected family before opening
+     * anything — what arrives from family B must not open on family A's calendar or thread.
+     * `firestore.rules` bounds it, like every key a client writes, to a family both the sender
+     * and the addressee are in.
+     */
+    const val FAMILY_ID = "familyId"
+
     /** The first line or so of a chat message, written by the Cloud Function that saw it. */
     const val PREVIEW = "preview"
 

@@ -60,4 +60,8 @@
     <string name="onboarding_split_agreed_body">Už dohodnuto s %1$s. Posunutím jezdce navrhnete jiné dělení — druhá strana ho bude muset potvrdit.</string>
     <string name="onboarding_custody_set_body">Rozvrh už je nastavený: %1$s. Zkontrolujte ho, nebo dokončete nastavení a změňte ho později v Nastavení.</string>
     <string name="onboarding_custody_review">Zobrazit rozvrh</string>
+
+    <!-- Asked when Skip would leave something typed on this step unsaved. -->
+    <string name="onboarding_skip_unsaved_title">Přeskočit bez uložení?</string>
+    <string name="onboarding_skip_unsaved_message">To, co jste v tomto kroku zadali, zatím není uložené. Přeskočit pokračuje bez toho, Další to uloží.</string>
 </resources>
