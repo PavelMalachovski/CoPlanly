@@ -4,6 +4,8 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.dagger.hilt.android")
     id("io.gitlab.arturbosch.detekt")
+    id("io.github.takahirom.roborazzi")
+    id("org.jetbrains.kotlinx.kover")
     kotlin("kapt")
 }
 
@@ -75,6 +77,13 @@ val canSignRelease = run {
  */
 val publishedPrivacyPolicyUrl = ""
 
+/**
+ * The export verification page (MON-16), `web/verify/` once hosted — printed on every exported
+ * file beside its record id. Empty until `firebase deploy --only hosting` has run; while it is,
+ * a registered file prints its record id without an address rather than one that does not resolve.
+ */
+val publishedExportVerifyUrl = ""
+
 android {
     // The Kotlin package, and therefore where `R` and `BuildConfig` are generated. Deliberately
     // *not* the same as `applicationId` below: renaming the package would touch every file in
@@ -116,6 +125,12 @@ android {
             ?.trim()
             ?: publishedPrivacyPolicyUrl
         buildConfigField("String", "PRIVACY_POLICY_URL", "\"$privacyPolicyUrl\"")
+
+        // MON-16. Same rule as the policy: blank until hosted, and blank omits the line.
+        val exportVerifyUrl = (project.findProperty("COPLANLY_EXPORT_VERIFY_URL") as String?)
+            ?.trim()
+            ?: publishedExportVerifyUrl
+        buildConfigField("String", "EXPORT_VERIFY_URL", "\"$exportVerifyUrl\"")
 
         vectorDrawables {
             useSupportLibrary = true
@@ -371,7 +386,10 @@ dependencies {
     // MockK for mocking - Latest stable
     testImplementation("io.mockk:mockk:1.13.13")
     testImplementation("io.mockk:mockk-android:1.13.13")
-    androidTestImplementation("io.mockk:mockk-android:1.13.13")
+    // 1.14.0 is the first release whose inline-mocking agent (libmockkjvmtiagent.so) is 16 KB
+    // page-aligned; 1.13.x fails to dlopen on the API 35 16 KB emulator leg, before any test
+    // runs. The JVM unit tests above do not load the agent and stay on 1.13.13.
+    androidTestImplementation("io.mockk:mockk-android:1.14.0")
 
     // Coroutines Test - Latest stable
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
@@ -391,6 +409,16 @@ dependencies {
 
     // Navigation Testing
     androidTestImplementation("androidx.navigation:navigation-testing:2.9.3")
+
+    // JVM screenshot tests — Roborazzi on Robolectric's native graphics, no emulator
+    // (`app/src/test/java/com/coparently/app/screenshots`, recorded by `recordRoborazziDebug`).
+    // Robolectric 4.16.1 knows SDK 36, but runs SDK 36 only on JDK 21 and CI builds on 17, so
+    // the tests pin `@Config(sdk = [34])` — see `ScreenshotMatrix`. `ui-test-junit4` provides
+    // `createComposeRule`; its activity comes from the `ui-test-manifest` debug dependency above.
+    testImplementation("org.robolectric:robolectric:4.16.1")
+    testImplementation("io.github.takahirom.roborazzi:roborazzi:1.60.0")
+    testImplementation(composeBom)
+    testImplementation("androidx.compose.ui:ui-test-junit4")
 }
 
 // androidx.room:room-testing-android pulls in JUnit 5 (junit-jupiter/junit-platform)
@@ -426,6 +454,30 @@ dependencies {
     detektPlugins("io.gitlab.arturbosch.detekt:detekt-formatting:1.23.7")
 }
 
+// Screenshots are recorded into the plugin's default `build/outputs/roborazzi`, which is what CI
+// uploads. Test code names each file relative to this directory (see
+// `roborazzi.record.filePathStrategy` in gradle.properties), so switching to committed baselines
+// later is this one line — `outputDir.set(file("src/test/screenshots"))` — and no test changes.
+roborazzi {
+    outputDir.set(layout.buildDirectory.dir("outputs/roborazzi"))
+}
+
+/**
+ * Whether this build was asked for a Roborazzi task (`recordRoborazziDebug`, `verify…`,
+ * `compare…`). Screenshot tests run only then: they are slow (each one boots a Robolectric
+ * sandbox and renders natively), their first run downloads an SDK jar, and a rendering problem in
+ * one of them must not turn the ordinary unit-test job red. Conversely a Roborazzi run runs only
+ * them, so the `screenshots` CI job does not repeat the unit tests `build-test` already ran.
+ */
+val roborazziRequested = gradle.startParameter.taskNames.any { it.contains("Roborazzi") }
+
+tasks.withType<Test>().configureEach {
+    if (roborazziRequested) {
+        filter.includeTestsMatching("com.coparently.app.screenshots.*")
+    } else {
+        exclude("com/coparently/app/screenshots/**")
+    }
+}
 
 // A failing unit test on CI printed only its exception class and a line number — enough to
 // know something broke, not enough to know what. `FULL` prints the assertion message and the
@@ -437,5 +489,43 @@ tasks.withType<Test>().configureEach {
         exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
         showStackTraces = true
         showCauses = true
+    }
+}
+
+// Unit-test coverage, for visibility only: CI runs `koverXmlReportDebug koverHtmlReportDebug`
+// after the unit tests and prints the line percentage in the PR summary comment. There is no
+// verification rule, deliberately — a gate on a number nobody has yet watched move would be
+// tuned to pass rather than to mean something.
+//
+// The exclusions are code nobody here writes: Hilt/Dagger's generated factories, injectors and
+// components, Room's `_Impl` DAOs and database, Compose's lambda singletons and previews, and
+// BuildConfig. Counting them would make the percentage mostly a measure of how much kapt emits.
+// In Kover's class filters `*` matches any characters, dots and `$` included.
+kover {
+    reports {
+        filters {
+            excludes {
+                classes(
+                    "*_Factory*",
+                    "*_MembersInjector",
+                    "*_HiltModules*",
+                    "*_HiltComponents*",
+                    "*_GeneratedInjector",
+                    "*_ComponentTreeDeps",
+                    "*Hilt_*",
+                    "*_Impl",
+                    "*_Impl$*",
+                    "*_AutoMigration_*",
+                    "*ComposableSingletons*",
+                    "*.BuildConfig",
+                )
+                packages("hilt_aggregated_deps", "dagger.hilt.internal.aggregatedroot.codegen")
+                annotatedBy(
+                    "androidx.compose.ui.tooling.preview.Preview",
+                    "javax.annotation.processing.Generated",
+                    "dagger.internal.DaggerGenerated",
+                )
+            }
+        }
     }
 }

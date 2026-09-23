@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Professional access (MON-18): a mediator, lawyer, guardian ad litem or therapist reading one
+  family's calendar, custody schedule and parenting plan, read-only, with both parents' consent
+  and an end date. Every string that promises scope says what is NOT shared as well.
+-->
+<resources>
+    <string name="professional_section_title">Professionals</string>
+    <string name="professional_section_supporting">A mediator, lawyer or therapist — read-only, with both parents’ consent</string>
+    <string name="professional_empty">No professional can read this family</string>
+    <string name="professional_invite_action">Invite a professional</string>
+    <string name="professional_invite_explainer">They will read the calendar, the custody schedule and the parenting plan — nothing else: never chat, expenses or child records. Access starts only when your co-parent consents too, and ends on the date you choose.</string>
+    <string name="professional_invite_role_label">Their role</string>
+    <string name="professional_invite_duration_label">Access for</string>
+    <string name="professional_invite_create">Create code</string>
+    <string name="professional_invite_code_label">Their code</string>
+    <string name="professional_invite_share">Share code</string>
+    <string name="professional_share_message">You are invited to read a family’s calendar and parenting plan in CoPlanly, read-only. Open Settings → Professionals and enter the code %1$s. Get the app: %2$s</string>
+    <string name="professional_role_mediator">Mediator</string>
+    <string name="professional_role_lawyer">Lawyer</string>
+    <string name="professional_role_guardian_ad_litem">Guardian ad litem</string>
+    <string name="professional_role_therapist">Therapist</string>
+    <string name="professional_role_other">Other</string>
+    <string name="professional_duration_month">30 days</string>
+    <string name="professional_duration_quarter">90 days</string>
+    <string name="professional_duration_half_year">6 months</string>
+    <string name="professional_status_waiting_for_you">Waiting for your consent</string>
+    <string name="professional_status_waiting_for_co_parent">Waiting for your co-parent’s consent</string>
+    <string name="professional_status_waiting_for_parents">Waiting for both parents’ consent</string>
+    <string name="professional_status_active_until">Can read until %1$s</string>
+    <string name="professional_status_expired">Access ended on %1$s</string>
+    <string name="professional_row_supporting">%1$s · %2$s</string>
+    <string name="professional_dialog_body">%1$s can read this family’s calendar, custody schedule and parenting plan until %2$s — never chat, expenses or child records. Access starts only when both parents consent, and either of you can end it at any time.</string>
+    <string name="professional_revoke_confirm">End %1$s’s access now? Your co-parent does not need to agree, and it cannot be undone — a new invitation would be needed.</string>
+    <string name="professional_dialog_consent">I consent</string>
+    <string name="professional_dialog_revoke">End access</string>
+    <string name="professional_dialog_close">Close</string>
+    <string name="professional_action_failed">That didn’t go through. Please try again.</string>
+    <string name="professional_redeem_title">I have a professional code</string>
+    <string name="professional_redeem_label">Code</string>
+    <string name="professional_redeem_action">Accept code</string>
+    <string name="professional_redeem_done">Code accepted. You can read once both parents have consented.</string>
+    <string name="professional_my_access_title">Families I can read</string>
+    <string name="professional_family_label">%1$s and %2$s</string>
+    <string name="professional_open_calendar">Calendar</string>
+    <string name="professional_open_plan">Parenting plan</string>
+    <string name="professional_calendar_title">Family calendar</string>
+    <string name="professional_calendar_read_only">Read-only. Private events are never shared.</string>
+    <string name="professional_calendar_custody_with">With %1$s</string>
+    <string name="professional_calendar_no_events">No events</string>
+    <string name="professional_calendar_previous">Earlier weeks</string>
+    <string name="professional_calendar_next">Later weeks</string>
+    <string name="professional_calendar_event_supporting">%1$s · %2$s</string>
+    <string name="professional_unavailable">Nothing to show — access is not active. It opens when both parents have consented and ends on its end date.</string>
+    <string name="professional_plan_not_answered">Not answered</string>
+    <string name="professional_plan_answer_by">%1$s: %2$s</string>
+    <string name="professional_parent_fallback">A parent</string>
+    <string name="professional_error_is_professional_invitation">This is a professional invitation. Open Settings → Professionals to use it.</string>
+    <string name="professional_error_not_professional_invitation">This is not a professional invitation.</string>
+    <string name="professional_error_inviter_not_paired">The family this invitation names is no longer linked.</string>
+    <string name="access_error_grant_ended">This access has already ended. Ask for a new code.</string>
+    <string name="access_error_already_in_family">You are already a parent in this family.</string>
+</resources>

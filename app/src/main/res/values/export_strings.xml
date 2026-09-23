@@ -68,4 +68,17 @@
     <string name="export_action_sent">Sent</string>
     <string name="export_action_not_sent">Not sent</string>
     <string name="export_action_recorded">Recorded</string>
+
+    <!-- MON-16: the record id and whether the file can be verified. -->
+    <string name="export_verify_explainer">When the server can be reached, the file is registered: its record ID and a fingerprint of its exact contents are kept, so anyone holding it can check that it has not been changed. Only the fingerprint leaves this phone, never the file.</string>
+    <string name="export_verify_record_id">Record ID</string>
+    <string name="export_verify_at">Verify at</string>
+    <string name="export_verify_instruction">To check that this file has not been changed, open the address above and choose the file. A single changed character fails the check.</string>
+    <string name="export_verify_instruction_no_url">A fingerprint of this file was registered with CoPlanly under this record ID when it was made.</string>
+    <string name="export_verify_not_registered">Not registered — verification unavailable. The server could not be reached when this file was made, so no fingerprint of it was registered and nobody can check it for changes.</string>
+    <string name="export_verify_not_registered_short">Not registered — verification unavailable</string>
+    <string name="export_unregistered_title">Not registered — verification unavailable</string>
+    <string name="export_unregistered_body">The server could not be reached, so this file was not registered and nobody will be able to check it for changes. The file says so near the top. You can share it anyway, or export again when you are online.</string>
+    <string name="export_unregistered_share">Share anyway</string>
+    <string name="export_unregistered_not_now">Not now</string>
 </resources>

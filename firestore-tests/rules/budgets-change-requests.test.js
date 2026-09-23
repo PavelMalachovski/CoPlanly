@@ -308,4 +308,26 @@ describe('Part 1d: change_requests', () => {
     await assertSucceeds(
         db.collection('change_requests').where('requestedTo', '==', BOB).get());
   });
+
+  it('serves the pending-from-this-co-parent query the family switcher\'s dot runs', async () => {
+    // FirestoreChangeRequestDataSource.observeHasPendingFrom (M-8): it is the `requestedTo`
+    // equality that satisfies the rule; the requester and the status only narrow it.
+    await seed(env, {'change_requests/cr-1': changeRequestDoc({status: 'PENDING'})});
+    const db = env.authenticatedContext(BOB).firestore();
+    await assertSucceeds(db.collection('change_requests')
+        .where('requestedTo', '==', BOB)
+        .where('requestedBy', '==', ALICE)
+        .where('status', '==', 'PENDING')
+        .limit(1)
+        .get());
+  });
+
+  it('refuses the same query without the addressee filter, which the rule keys on', async () => {
+    const db = env.authenticatedContext(BOB).firestore();
+    await assertFails(db.collection('change_requests')
+        .where('requestedBy', '==', ALICE)
+        .where('status', '==', 'PENDING')
+        .limit(1)
+        .get());
+  });
 });

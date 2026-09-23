@@ -54,7 +54,11 @@ locally. What *is* verifiable in the session is the Firestore rules suite agains
 Everything Kotlin is proved by **CI** — `assembleDebug`, `testDebugUnitTest`, `lint`, `detekt`
 (a gate again since **CQ-12**), `assembleRelease` so R8 runs, and — since September 2026 — the
 `instrumented` job, an API 30 emulator running `connectedDebugAndroidTest` with Firebase replaced
-in the graph and Room left real (this sentence used to say no emulator job existed). And no session holds
+in the graph and Room left real (this sentence used to say no emulator job existed). Besides the
+migration tests it now runs a first set of device checks (September 2026): the date pickers in four
+time zones, the per-app language switch, the export's files and share intent, a signed-in walk of
+the main screens with a basic accessibility sweep — `docs/DEVICE-CHECKLIST.md` marks what they cover
+**[CI]**. And no session holds
 Firebase or Play credentials: every `firebase deploy`, every console change and every callable
 invocation is yours.
 
@@ -72,7 +76,6 @@ invocation is yours.
 | Id | What | Pri | Size |
 | --- | --- | --- | --- |
 | **M-5** | Multi-family cleanup: delete `partnerId`, `User.role`, `Event.sharedWith`, `isPartnerOf` — **after** the ops steps in REL-3 | P2 | M |
-| **M-8** | M-4's last leftover, and now a small one: chat follows the selected family and the switcher carries a cross-family chat dot (both done, September 2026); left is the same signal for change requests and custody proposals | P2 | S |
 | **CQ-17** | Six dependencies worth moving | P3 | S |
 | **MON-2** | Market facts checked (23 Sep 2026): **app2us has an Android build**; left: mediator count, ARPU, Facebook groups, app2us price on a phone | P0 | S |
 | **MON-3** | The export ships, ungated; left: a PDF read on a device, and the paywall with MON-11 | P2 | S |
@@ -82,13 +85,13 @@ invocation is yours.
 | **MON-8** | Bakaláři / EduPage school import — the parsing, once you supply a real export | P2 | L |
 | **MON-11** | Payments (MVP 3) — the entitlement model, after MON-1 decides the price | P2 | L |
 | **MON-12** | Intelligent suggestions (MVP 3) — behind SEC-1's proxy, never with a key in the client | P3 | M |
-| **MON-13** | The tables and Germany's Länder are done (five countries; Ukraine's holidays are suspended by martial law) — left: school vacations outside Czechia, and whether Austria's patron-saint days are drawn at all | P2 | M |
+| **MON-13** | The tables, Germany's Länder and sourced school vacations (Slovakia and Austria nationwide, Germany per Land) are done — left: Austria's per-Land breaks, Slovakia's regional spring holidays, a grid marker for school vacations, whether Austria's patron-saint days are drawn at all, and ODbL attribution | P2 | M |
 | **FAM-4** | Custody per child | P2 | L |
 | **MON-14** | Seasonal schedule layers (summer / school holidays override the base pattern), with "fill from school holidays" | P1 | M |
 | **MON-15 (FTS)** | Chat search ships on `LIKE` plus a Kotlin fold; the FTS4 table is the later schema change, once the schema is free | P3 | S |
-| **MON-16** | Verifiable export: record ID + SHA-256 registered server-side, verified in the browser | P1 | S |
+| **MON-16** | **Built** (callables, closed rules, record ID on every export, `web/verify/`); left: the functions, rules and hosting deploys, then `publishedExportVerifyUrl` | P1 | — |
 | **MON-17** | **Built** (functions, rules, Settings screen); left: the deploy and a subscription from a real iPhone — see the 👁 table | P1 | — |
-| **MON-18** | Free, expiring, two-consent access for a mediator or lawyer | P1 | M |
+| **MON-18** | **Built** (fourth callable, two-consent rules, screens); left: the functions and rules deploys and a three-account run — see the 👁 table | P1 | — |
 | **MON-20** | Holiday fairness at a glance (who has which holidays, nights per parent) | P2 | S |
 | **MON-21** | From the agreed parenting plan to a proposed schedule | P2 | M |
 | **MON-22** | A private, local-only journal that can be attached to an export | P2 | M |
@@ -107,15 +110,17 @@ invocation is yours.
 | **SEC-1 §1** | Storage rules keyed on Firestore state (cross-service rules — the "this needs the proxy" claim was a factual error) | The **Storage emulator does not resolve cross-service calls**, so `firestore-tests/` cannot cover it. Settle the verification story — a staging bucket against a real project — before writing the rule. |
 | **SEC-5** | `androidx.security:security-crypto` is on an alpha holding OAuth tokens | A dependency bump compiles in CI; whether tokens survive it is a sign-in on a real device. |
 | **UX-8** | The second half: two surfaces colour a chip from two different sources | An owner's answer to "what does a chip's colour mean" — the event's owner, or whose day it falls on. |
-| **UX-13** | Light theme is unverifiable rather than incomplete — the cloud half is done (night window background, light+dark previews on the main screens' pieces) | Whether a dark cold start still flashes: only a device shows the window before Compose's first frame. |
+| **UX-13** | Light theme is no longer unverifiable: CI's `screenshots` job renders the main screens' pieces in light and dark on every Android PR (night window background and previews done before it) | Whether a dark cold start still flashes: only a device shows the window before Compose's first frame. |
 | **FAM-5** | The event chip does not say who it is about | Chips are single-line with ellipsis and every colour channel is spent. Worth an owner's eye on a real device rather than a treatment invented blind. |
+| **MON-16 (shipped, unseen)** | A registered export: the record ID on the PDF's face and footer, the offline "not registered" dialog, and `web/verify/` answering for a real file | Export once online and once in flight mode; open the PDF (every page's footer names the record, or says "not registered"); upload the online one to the hosted `web/verify/` and see a match, then re-save it from a PDF viewer and see it fail. Only a device renders the footer, and only a deploy answers the page. |
 | **MON-3 (shipped, unseen)** | The PDF export and the share sheet | `PdfDocument` drawing, Cyrillic and Czech glyphs in the default typeface, page breaks, and whether the share sheet hands the file to a mail app — the layout is unit-tested, the drawing is not. |
 | **M-4 (shipped, unseen)** | The colour palette, the family switcher, the second-co-parent invite | Kotlin compiled in CI; nobody has looked at it. |
 | **MON-15 (shipped, unseen)** | Search in the chat thread: header action, results with the match marked, a tap scrolls to the message | Kotlin compiled in CI and the matching is unit-tested; nobody has typed "cas" on a phone holding "čas", tapped a result three hundred messages back and watched the thread land on it, or timed a search over a years-long thread. |
 | **MON-19 (shipped, unseen)** | Settings → App → "Pause before sending": a five-second hold with Undo, and the lexical hint over the composer | Unit tests pin the hold and the three rules; only a phone shows whether the countdown line and the hint sit well above the keyboard, and whether the word lists read as mild in each language to a native speaker. |
 | **M-8 (chat, shipped, unseen)** | Chat, its badge and `ChatMirror` follow the selected family | Unit tests pin the re-key; only an account with two co-parents on real phones shows a switch landing the Chat tab on the other thread, the badge moving with it, and messages from the family *left* arriving again after switching back. |
-| **M-8 (dot, shipped, unseen)** | The switcher chip and dialog show a dot when a family not on screen has chat news | Three accounts (a parent and two co-parents) on at least two phones: the co-parent of the family *not* on screen sends, the dot appears on the chip and on that row within seconds; opening that family's thread clears it; sending from the family on screen never raises it; a one-family account shows exactly what it did. |
+| **M-8 (dot, shipped, unseen)** | The switcher chip and dialog show a dot when a family not on screen has chat news, a change request or a schedule proposal / day swap waiting on this parent; the dialog row names which | Three accounts (a parent and two co-parents) on at least two phones: the co-parent of the family *not* on screen sends a message, then files a change request, then proposes a schedule — each raises the dot on the chip and on that row within seconds, the row's line names it, and TalkBack reads the kind; answering it (or opening the thread) clears that kind; news in the family on screen never raises it; a one-family account shows exactly what it did. Also: the first change-request dot must not fail with a missing-index error in logcat (`OtherFamiliesSignals`) — the query is equality-only and should need none. |
 | **MON-17 (built, unseen)** | The iCalendar feed: `calendarFeed` + three callables, the Settings → Sync row | The RFC 5545 text and the custody port are pinned by `functions/test/calendar-feed.test.js`; only Apple Calendar shows whether it *subscribes* (`webcal://` from the share sheet), draws the all-day custody bars and the contact windows at the right local times, refreshes within the hour, and stops updating after a revoke. Checklist in MON-17. |
+| **MON-18 (shipped, unseen)** | Professional access: invite, the co-parent's consent, the professional's read-only calendar and plan, revoke | The rules and the callable are proved offline (emulator suite, mocha); the Kotlin is compiled by CI and seen by nobody. Three accounts (A, B, a professional P): A invites, P redeems, P sees "waiting"; B consents from Settings → Family → Professionals; P reads the calendar and plan and nothing else; either parent revokes and P's views empty at once. `docs/DEVICE-CHECKLIST.md` §5.4. Needs the functions **and** rules deploy first. |
 
 ### 💻 Yours only — no session can do these
 
@@ -123,6 +128,7 @@ invocation is yours.
 | --- | --- | --- |
 | **REL-3 ops** | `firebase deploy --only functions` → invoke `backfillFamilyDocuments` → invoke `backfillRecordFamilyIds` → `firebase deploy --only firestore:rules` | **The order matters.** PR #76's isolation is inert until this runs, and running the rules deploy before the record backfill leaves each co-parent's expenses looking empty on the other phone. The functions deploy also ships the `onFamilyCreated` re-stamp trigger and the `sweepLapsedCalendarFriends` schedule. `functions/README.md` has the runbook. |
 | **MON-4 deploy** | `firebase deploy --only firestore:rules` (the `event_versions` block) and `firebase deploy --only functions` (account deletion reaches revisions); trigger the Regenerate workflow for `37.json` | Until the rules are deployed every revision upload is refused and stays queued on the phone — nothing is lost, but nothing is recorded server-side either. The schema export is the one artefact only a machine with an Android SDK can produce; CI's schema guard fails until it is committed. Fold the rules deploy into REL-3's order: after the record backfill, like every rules deploy. |
+| **MON-16 deploy** | `firebase deploy --only functions` (`reserveExportRecordId`, `registerExportReceipt`, `verifyExport`, and account deletion scrubbing receipts), `firebase deploy --only firestore:rules` (the closed `export_receipts` block), `firebase deploy --only hosting` (`web/verify/`); then set `publishedExportVerifyUrl` in `app/build.gradle.kts` | Until the functions are deployed every export says "not registered" — honestly, and nothing is lost. Until the page is hosted and the URL set, a registered file prints its record ID without an address. `verifyExport` must be publicly invokable (a callable is by default); check `allUsers` has the Cloud Functions Invoker role after the first deploy. Rules order as for MON-4: after REL-3's record backfill. |
 | **REL-3 storage** | `firebase deploy --only storage` | One command that fixes a live bug: every pet and medical photo upload is refused today because the bucket still runs the July rules. |
 | **REL-1** | Firebase console, Google Cloud console, a fresh `google-services.json`, the debug and release SHA-1 | A local build fails until this is done — deliberately, since `applicationId` changed to `app.coplanly`. |
 | **REL-2** | Generate the release keystore and back it up in two places | The single most irreversible item in this document. |
@@ -130,7 +136,7 @@ invocation is yours.
 | **REL-6** | Play Console: Data Safety, listing, screenshots, content rating, a closed track with **real co-parent pairs** | This product cannot be tested by one person. |
 | **REL-7** | Install a release build and confirm a child's medical profile reaches the co-parent non-empty | The one test CI cannot run: a green `assembleRelease` proves R8 ran, not that Gson still finds its field names. |
 | **CQ-16** | Digital Asset Links | Needs a domain you own — the same one REL-4 needs. |
-| **CQ-18** | Cross-time-zone chat on two phones | Two devices, two zones. Unit tests already drive the logic; this is the acceptance run. |
+| **CQ-18** | Cross-time-zone chat on two phones — **what is drawn only** | The logic now runs end to end in CI (`e2e` job, `TwoParentChatTest`: UTC+14 and UTC−11, unread → DELIVERED → READ). Left for the phones: the badge and ticks as rendered, the displayed times, and the push. |
 | **MON-1** | Price, unit (family, not seat), and what the free tier contains | A decision, and it shapes the code that follows. |
 | **MON-9** | Distribution: mediators, Cochem courts, OSPOD, NGOs | Phone calls and meetings. A session can draft the material; it cannot make the call. |
 | **MON-8 (input)** | A real Bakaláři or EduPage export | The parser is cloud work; it needs one actual file to be written against. |
@@ -171,7 +177,7 @@ shipped, and a plan that describes work already done is worse than no plan.
 | Reoccurrence | Clear | S | High | **Done.** `RecurrenceExpander`; CQ-4 removed the two-year cliff |
 | Confirm pickup | Other side sees it is picked up | S | High | **Done.** `pickupConfirmedBy` / `pickupConfirmedAt` |
 | Notifications | 30 min or 1 h before pickup | M | High | **Done.** `ReminderScheduler` + WorkManager; the permission is asked contextually, never on cold start |
-| Holidays and vacations by country | Clear | S | High | **Done for holidays, partly for vacations.** The country is asked for and stored (MON-13), and Czechia, Slovakia, Germany (with a Land setting for its state holidays), Austria and Russia each have a computed table verified against the Python `holidays` library; Ukraine's holidays are suspended under martial law and the picker says so. School vacations exist for Czechia only — the others are regional |
+| Holidays and vacations by country | Clear | S | High | **Done for holidays, partly for vacations.** The country is asked for and stored (MON-13), and Czechia, Slovakia, Germany (with a Land setting for its state holidays), Austria and Russia each have a computed table verified against the Python `holidays` library; Ukraine's holidays are suspended under martial law and the picker says so. School vacations: Czechia (computed), Slovakia and Austria (nationwide periods) and each German Land, from the OpenHolidays dataset for 2025/26 onward; regional parts (Slovak spring, Austrian semester/summer) are left out |
 | Add events only you can see | Related to switching views | S | High | **Done.** `isPrivate`, filtered out of every sync path |
 | Sat/Sun a different colour | Clear | S | High | **Done.** `DayCellFills` draws the weekend as a base layer under custody, never instead of it |
 
@@ -870,7 +876,9 @@ coverage.
 
 **Still thin, and worth a line when touching them:** the rest of `SettingsViewModel` (account
 deletion, the family dialogs), `SyncViewModel.handleSignInResult` (it takes a Play-services `Task`),
-and the Compose screens themselves, which only the instrumented job reaches.
+and the Compose screens themselves, which only the instrumented job reaches. It reaches the main
+screens now, as a signed-in smoke walk (`MainNavigationSmokeTest`) — a crash check with Firebase
+mocked, not a behavioural test of any one screen.
 
 ### CQ-14 · **DONE** · P2 · M · User-facing strings produced inside ViewModels and services
 
@@ -960,12 +968,22 @@ changing.
 
 ### CQ-18 · P3 · S · Cross-time-zone chat was implemented but never verified on two devices
 
-**Where:** 💻 yours — two phones, two zones.
+**Where:** 💻 yours — two phones, two zones — **for the rendered half only** (September 2026).
 
 Epoch-millis message times are covered by unit tests that drive two zones explicitly
 (`ChatReadStateTimeZoneTest`) plus a 12→13 migration test. The **two-phone acceptance run** — set
 one phone 2–3 hours apart, send, confirm unread counts, badge clearing and READ ticks — was
 deferred, not run. Everything else in that acceptance round passed on real devices.
+
+**Partly covered by CI since September 2026.** The `e2e` job ("Android — two parents on the
+Firebase emulators") runs two accounts in one Android process against the Auth, Firestore and
+Functions emulators, with the real rules and the production `MessageRepositoryImpl` on each side.
+`TwoParentChatTest` puts one parent at UTC+14 and the other at UTC−11 — further apart than the
+checklist asks — and asserts that the message arrives unread, that the Room count the badge reads
+is 1 and drops to 0 on `markRead`, and that the sender's `ChatReadState.statusFor` reaches DELIVERED
+and then READ. What remains for two phones: the badge and ticks **as drawn**, the time **as
+displayed** in each zone, the order of alternately sent messages on screen, and the push that makes
+the other phone look — FCM has no emulator.
 
 ### CQ-19 · **DONE** · Deleting a child or a pet removed the document outright
 
@@ -1085,6 +1103,19 @@ silently removes the undo snackbar. Fix the branch first, then the strings.
 ### UX-13 · P3 · M · Light theme is unverifiable rather than incomplete
 
 **Where:** 👁 cloud writes the previews and the theme fix; only a device shows the flash.
+
+**Reviewable from CI (September 2026).** The `screenshots` job (Roborazzi on Robolectric's native
+graphics, `app/src/test/java/com/coparently/app/screenshots`) records Home's four cards, the month
+grid with every `DayCellFills` layer, the calendar banners, a Settings group, `EmptyState`, the
+Expenses summary header, a chat thread, the event preview, the consent screen and the family
+switcher chip — each in light **and** dark, across the five languages, at 1.0× and 1.5× text, and
+in the default and a purple/orange palette (112 images; `ScreenshotVariants` documents which
+combinations). The artefact carries an `index.html` gallery. So "does the light theme render
+right" is answered on every Android pull request without a phone, and so are two neighbours:
+translations that clip at large text, and a surface the chosen palette does not reach (UX-15).
+The job records only; it does not compare yet, because baselines have to be recorded on the CI
+runner itself to be stable — the `TODO(screenshots)` in `ci.yml` has the three steps. What stays
+on the device is the window before Compose's first frame.
 
 **Cloud half done (September 2026).** `Theme.CoPlanly` is now `Theme.AppCompat.DayNight.NoActionBar`
 (still AppCompat, as per-app locales require) with `android:windowBackground` =
@@ -1570,11 +1601,13 @@ verdict is discoverable material in a custody dispute, which makes it a liabilit
 than a feature. Anything resembling emotion inference deserves a legal read under the EU AI Act
 before launch.
 
-### MON-13 · **TABLES AND REGIONS DONE** · P2 · M · Holidays by country — school vacations are left
+### MON-13 · **TABLES, REGIONS AND SOURCED SCHOOL VACATIONS DONE** · P2 · M · Holidays by country — regional school breaks are left
 
 **Where:** ☁️ done: the setting, the registry, five tables verified against a maintained dataset,
-and Germany's sixteen Länder. What remains (school vacations outside Czechia, Austria's
-patron-saint days) is a product decision before it is code.
+Germany's sixteen Länder, and school vacations for Slovakia, Austria and every German Land from a
+second, pinned dataset. What remains is either data nobody publishes in final form yet (Austria's
+per-Land breaks), a region the app does not model (Slovakia's kraje), or a product decision
+(Austria's patron-saint days, a grid marker for school vacations).
 
 MVP 1 asked for "holidays and vacations by country" and shipped one country. There was **no country
 setting anywhere in the app** — no field, no picker, not even a constant — so `CalendarScreen`
@@ -1629,9 +1662,11 @@ against it rather than from memory.
   (`HolidayCountry.holidaysSuspended` → `country_holidays_suspended`) instead of "not in the app
   yet", which was true of the app and false of the country. When martial law ends, add the table
   the law then describes.
-- **The picker states coverage per country** (`HolidayCountry.coverage`): holidays and school
-  vacations (Czechia), public holidays only (four), suspended (Ukraine), none (Other). It is
-  derived from the provider, so it cannot promise school vacations a provider does not return.
+- **The picker states coverage per country** (`HolidayCountry.coverage`, and `coverageIn(region)`
+  since the school vacations below): holidays and school vacations (Czechia, Slovakia, Austria,
+  and Germany *with* a Land), public holidays only (Germany without a Land, Russia), suspended
+  (Ukraine), none (Other). It is derived from the calendar the grid would draw, so it cannot
+  promise school vacations a provider does not return.
   The calendar filter's "Czech holidays" title became "Holidays" in all five locales.
 
 **Done (September 2026): the region, for Germany.** `User.regionCode` (Room schema 35, nullable
@@ -1659,11 +1694,62 @@ nationwide only with a nudge to pick a state, or the state's days as well.
   if wanted:** draw the patron day as a separate, labelled kind of day, which needs its own name on
   the grid rather than passing as a public holiday.
 
-**Left.** No school vacations outside Czechia — Germany's and Austria's are set per state,
-Slovakia's spring break per region, Russia's per region or school — and none were invented. The
-region setting makes Germany's per-state school calendars *reachable* (the library carries them),
-but school vacations still follow the viewer rather than the child, so a per-family school
-calendar remains the honest fix for the per-viewer strips described above before any are drawn.
+**Done (September 2026): school vacations outside Czechia, from a sourced dataset.** Not
+computable — each ministry publishes them per school year — so they are dated tables
+(`SchoolVacation.kt`: ISO dates and a `SchoolBreak` enum of names), and nothing was typed from
+memory.
+- **Source.** The official publishers (kmk.org, bmbwf.gv.at / bmb.gv.at, minedu.sk) and the
+  aggregating APIs (ferien-api.de, openholidaysapi.org) are all blocked by the cloud session's
+  egress policy. The OpenHolidays project's **data repository** on GitHub
+  (`openpotato/openholidaysapi.data`, the source openholidaysapi.org serves; ODbL 1.0) is
+  reachable, and is read at a pinned commit. A sample was cross-checked against the official
+  pages through search-result excerpts before the tables were written: Bavaria 2025/26 (KMK
+  Ferienkalender, km.bayern.de), Austria's 2025/26 semester and summer breaks (bmb.gv.at), and
+  Slovakia's 2025/26 and 2026/27 periods (minedu.sk). All matched.
+- **How it is verified.** `tools/generate-school-vacation-fixture.py` reads the pinned CSVs,
+  applies the rules below, and writes `SchoolVacationReferenceFixture.kt`;
+  `SchoolVacationReferenceTest` compares every period and both names of every calendar (Slovakia,
+  Austria, the sixteen Länder) with it. The script exits on anything its rules did not
+  anticipate — an unknown name, a regional row of an unknown kind, two overlapping periods — so
+  a regeneration surfaces a decision instead of drawing it. Change a table by regenerating and
+  reading the diff.
+- **What is drawn.** Every period starting on or after 1 Sep 2025, up to whatever the dataset
+  publishes — no extrapolation, so a later year simply has none:
+  - **Germany, per Land only** (to summer 2030; Schleswig-Holstein to spring 2031). A parent who
+    has not named a Land sees none, and the note now asks for a Land "to add its school vacations
+    and its own public holidays". Each Land's own list, including its Land-wide single days
+    (Buß- und Bettag in Bavaria, the day after Ascension, …). Mecklenburg-Western Pomerania's
+    general schools only (not `MV-BBS`); Schleswig-Holstein's island exceptions dropped.
+  - **Austria, the nationwide periods** (autumn 27–31 Oct, All Souls' Day, Christmas, Easter,
+    Whitsun; to Christmas 2028/29).
+  - **Slovakia, the nationwide periods** (autumn, Christmas, Easter, summer; to summer 2028).
+- **Where they show.** Only in Day view's header label today: the month grid has had no
+  school-vacation marker since the banner was removed for the month-swipe height (see
+  `CalendarScreen`), and Week view shows none. That was already true of Czechia; a marker that
+  reserves its height in every month is a design task, not part of this item.
+
+**Left.**
+- **Austria's semester and summer breaks, per Land.** The dataset has final Land dates only for
+  2025/26 and marks every later one `Provisional`; at least one provisional grouping (the 2027
+  semester break) disagrees with bmb.gv.at's published 2026/27 list. So there is **no Austrian Land
+  picker** — it would add only a past school year (design rule 8). When a source with final Land
+  dates is reachable, add a regional table and the picker together.
+- **Slovakia's spring holidays** are set per kraj in three staggered weeks; the app has no Slovak
+  region, so they are not drawn (the Czech spring-break trade). The ministry's one-day
+  **half-year holiday** (polročné prázdniny) is **not in the dataset** and is therefore missing.
+- **Austria's patron-saint days** — school-free in their Land, bank holidays for employees — are
+  still not drawn at all; **owner call** above.
+- **Russia** — school vacations are set per region or per school; none.
+- **The data ends.** Each table runs out where its publisher stopped (SK 2028, AT early 2029,
+  DE 2030/31). Regenerate the fixture from a newer commit before then; nothing warns the user
+  when a year has no data.
+- **ODbL 1.0.** The dataset's licence asks for attribution wherever the data is used publicly
+  (and share-alike for a derived *database*). Before a Play release, name "OpenHolidays API
+  (openholidaysapi.org), ODbL 1.0" in the app's notices/licences screen; the source files and the
+  generator already carry the attribution.
+- **Per viewer, not per child.** School vacations still follow the viewer's country (and Land),
+  as the public holidays do. A per-family school calendar remains the honest fix for a child whose
+  school is not where the viewing parent lives.
 
 ---
 
@@ -1706,7 +1792,7 @@ day at a time.
   absent. Proposal and swap writes carry the stored list verbatim, and the rule refuses a
   proposal-only or swap write that changes it.
 - **The part AppClose does not have:** "Fill from school holidays". The Czech vacation table
-  (and the German Länder once MON-13 has school vacations) proposes the layer's dates; the
+  (and the Slovak, Austrian and German-Land tables MON-13 now has) proposes the layer's dates; the
   parents confirm. Never auto-applied — a proposal, like every other schedule change.
 - Holiday fairness (below, **MON-20**) reads these layers.
 
@@ -1749,24 +1835,45 @@ its triggers and a migration — run the Regenerate workflow after *that* bump, 
 removes diacritics but the snippet still has to be mapped back to the original text. Search in
 the export (MON-3) can use the same query.
 
-### MON-16 · P1 · S · A verifiable export, without anybody's affidavit
+### MON-16 · **SHIPPED** · P1 · S · A verifiable export, without anybody's affidavit
 
-**Where:** ☁️ cloud (functions + rules + client).
+**Where:** ☁️ built (functions + rules + client + `web/verify/`); 💻 three deploys; 👁 a PDF on a
+device and a file through the hosted page. `docs/DESIGN-court-record.md` §10 is the design.
 
 **Answers:** AppClose's "certified records" rest on the vendor's affidavit. This does the same job
 with arithmetic.
 
-Every generated export (MON-3) gets:
-- a **record ID** and a **SHA-256** of the exact file bytes;
-- both registered by a callable in `export_receipts/{id}` with `recordedAt = request.time`
-  (server clock, per MON-4's decision), the family id, the generating uid and the date range.
+**What ships.**
+- `functions/export-receipts.js` behind three callables. `reserveExportRecordId` mints a 16-character
+  Crockford base-32 record ID (80 random bits, nothing identifying in it) bound to the caller, the
+  family, the period and the format **before the file is rendered** — the hash has to cover the ID
+  it prints. `registerExportReceipt` records the SHA-256 of the file's exact bytes under it, once,
+  at the server's time (MON-4's clock decision). `verifyExport` needs **no account**, is rate-limited
+  per address with an instance cap, and answers by hash or by record ID with the receipt alone:
+  registered at, period, format, size, and "one of the family's parents" — never a name, a uid or a
+  family id. §10 gives the reasoning field by field.
+- `export_receipts/{recordId}` is closed to every client in `firestore.rules`, pinned by
+  `firestore-tests/rules/export-receipts.test.js`.
+- The app reserves, renders with the ID, hashes, registers, and saves the bytes it hashed. The PDF
+  prints the record ID and the verification address under the statement and in **every page's
+  footer**; the CSV in its preamble. Offline — or if registration fails after a reservation — the
+  file is rendered as **"Not registered — verification unavailable"** on its face and the screen
+  says the same before the share sheet opens. No file ever names an ID the server holds no hash for
+  (design item 8). The address is `BuildConfig.EXPORT_VERIFY_URL`, blank until hosted; blank omits
+  the line.
+- `web/verify/`: a self-contained page that hashes the file **in the browser** with `crypto.subtle`
+  and calls `verifyExport` over plain HTTPS; the file never leaves the verifier's machine. A record
+  ID can be looked up on its own, and entered beside a file to check the two belong together.
+- Account deletion **scrubs** receipts rather than deleting them — `generatorUid` and `familyId`
+  blanked, the hash kept — so erasing one parent does not un-verify the other's evidence; unused
+  reservations are deleted. The privacy policy and the deletion page say so.
+- The chat immutability pin DESIGN §4 called missing now covers both parents, every field, a
+  smuggled rewrite, `set()`, delete and a stranger (`firestore-tests/rules/event-versions.test.js`).
 
-The PDF footer prints the ID and a short verification instruction. A lawyer, or the other
-parent, uploads the file to a static verification page (hosted with the privacy policy, REL-4).
-The page hashes it **in the browser** and asks the callable whether that hash was registered, and
-when. The file itself never leaves the verifier's machine. A single altered byte fails. Pairs
-with a test that pins message immutability in `firestore.rules` (called out as missing in
-`DESIGN-court-record.md`).
+**Not built:** a signature over the hash (a verifier trusts CoPlanly's register, as they would a
+notary's; signing with a published key is the next step if a court asks), a sweep of reservations
+that never received a hash (harmless, deleted with the account), and registering an offline export
+after the fact (it would print a server time that is not when the file was made).
 
 ### MON-17 · **BUILT, UNSEEN ON AN IPHONE** · P1 · M · A calendar feed for a co-parent on an iPhone
 
@@ -1850,9 +1957,43 @@ changes), and the settings text must say exactly that (design item 8).
    Subscribed Calendars → Fetch, or up to an hour): the change arrives.
 6. Revoke the link on Android: the iPhone stops receiving updates (its next fetch gets a 404).
 
-### MON-18 · P1 · M · Free, expiring access for a mediator or lawyer
+### MON-18 · **DONE (unseen on a device)** · P1 · M · Free, expiring access for a mediator or lawyer
 
-**Where:** ☁️ cloud; 📱 the invite flow.
+**Where:** 👁 shipped; the device pass is `docs/DEVICE-CHECKLIST.md` §5.4, after the REL-3 deploys.
+
+**What shipped (September 2026).** `professional_grants/{familyId}__{proUid}`, written only by a
+fourth callable, `acceptProfessionalInvitation`; CLAUDE.md item 29 has the invariants.
+In short:
+- **Two consents to open, one to close.** The grant is born carrying the inviting parent's consent
+  (`consents: {uid: epochMillis}`); the co-parent adds their own key from Settings → Family →
+  Professionals, and `firestore.rules` lets each parent write **only their own key** (the nested
+  `hasOnly` shape of item 21). Nothing is readable until the map holds both parents. Either parent
+  deletes the grant alone.
+- **Always expiring.** The invitation names the end; the rules refuse one more than 180 days out
+  and the callable clamps to 180 days from redemption. The rule compares against `request.time`;
+  `sweepLapsedProfessionalGrants` (06:00 UTC) removes the row afterwards. Unpair deletes the
+  family's grants; account deletion deletes both directions.
+- **One family, read-only, never chat.** `isProfessionalOf(familyId)` opens `events` (last
+  disjunct, with the creator checked against `familyParents`, as for a friend),
+  `parenting_plans/{familyId}` and `custody_models/{familyId}` — `get` only for the last two.
+  Chat, messages, expenses, budgets, child and pet records, family settings, families and user
+  profiles admit no professional; `professional-access.test.js` pins each one.
+- **The professional's view is new, not the friend's.** The brief assumed a calendar friend
+  already had a read-only calendar to reuse. It does not — a friend's app shows their grant and
+  their profile, nothing else — so the professional gets a list-shaped agenda (four weeks at a
+  time, whose day it is **named** rather than coloured, the family's shared events) and a
+  read-only parenting plan with both halves side by side. Both read Firestore live and write
+  nothing to Room: a professional's phone holds no copy of the family. Building the friend's
+  view on the same pieces is now a small change.
+- **A push, server-only**: `professional_access_requested` to both parents when a code is
+  redeemed. It says consent is being asked for, never that access began.
+
+**Left, deliberately.** Exports "the parents choose to share" wait for MON-3/MON-16. A web
+read-only view is still a later step. There is no in-app notice to the professional when the
+second consent lands — their list updates live; a push would need a fifth server type. The grant's
+copy of the parents' names and slots is taken at redemption and not refreshed.
+
+The original brief:
 
 **Answers:** AppClose Pro. Mediators are this product's distribution channel (MON-9), and a free
 portal is how AppClose earns their recommendation.
@@ -2021,9 +2162,9 @@ while looking at the wrong family. `CalendarSyncRepository` says so at the call 
 is where the answer goes. Related: **MON-8**, where a school import is the opposite case — it *is*
 about the child and must be shared.
 
-### M-8 · P2 · S · What M-4 deliberately left — chip, pushes, chat and the chat dot done
+### M-8 · P2 · S · What M-4 deliberately left — done (chip, pushes, chat, and the cross-family dot)
 
-**Where:** ☁️ cloud for what is left; a phone with two paired accounts for acceptance.
+**Where:** closed in the cloud; a phone with two paired accounts for acceptance (§1's "👁" table).
 
 - **Done — a switcher chip in the top bar** of Home and Expenses (`presentation/common/
   FamilySwitcher.kt`, `FamilySwitcherChip`), beside the gear, naming the family on screen by its
@@ -2082,13 +2223,14 @@ about the child and must be shared.
   bottom-bar and Home badges count the **selected** family only (Home through the Room
   `partnerId`, Chat through `ChatPartnerSource`).
 - **Done (September 2026) — a dot for the other families' chat.** Step (2) of the order this
-  bullet used to give. `data/chat/OtherFamiliesUnreadSource` holds one **conversation-document**
-  listener per family *not* on screen — the messages collection is never read — and derives "has
+  bullet used to give. `data/family/OtherFamiliesSignals` (it began as
+  `data/chat/OtherFamiliesUnreadSource`; the next bullet generalised it) holds one
+  **conversation-document** listener per family *not* on screen — the messages collection is never read — and derives "has
   unread" from `lastMessageAt > lastReadAt[me]` (`ChatReadState.hasUnread`, strictly newer, so a
   mark written at the newest message covers it). It is a yes/no, so the switcher chip carries a
   Material `Badge` dot and each dialog row its own, **never a number**, each with a content
   description (`family_switcher_unread_other`, `family_switcher_unread_row`). Properties the code
-  holds and the tests pin (`OtherFamiliesUnreadSourceTest`, `FamilySwitcherViewModelTest`,
+  holds and the tests pin (`OtherFamiliesSignalsTest`, `FamilySwitcherViewModelTest`,
   `ChatReadStateTest`): **no listener at all at one family**, and the state refuses a dot at one
   family or for the family on screen even if the source says otherwise; the listeners are one
   `shareIn(WhileSubscribed)` for the process, so Home's chip, Expenses' chip and the Settings
@@ -2103,13 +2245,39 @@ about the child and must be shared.
   `lastMessageAt` does not name its sender, so a message **I** sent could raise my own dot if my
   read mark never reached the server (sent offline, then switched away) — the open thread
   re-asserts the mark on every change to its messages, own sends included, so the normal path is
-  covered; and the dot says *chat* only. Cost: N−1 single-document listeners while a switcher is
-  on screen, zero for a one-family account. **Not seen on a device** — see §1's "👁" table.
-- **Not done — the same question for change requests and custody proposals**, whose queries
-  resolve through the projected `partnerId` and so see only the selected family by construction.
-  Each would need its own per-family document read or listener, and neither has a single
-  document per family the way a conversation does; until then the push (which switches the family
-  on tap) is the cross-family signal for those.
+  covered. Cost: N−1 single-document listeners while a switcher is on screen, zero for a
+  one-family account. **Not seen on a device** — see §1's "👁" table.
+- **Done (September 2026) — the same dot for change requests and custody proposals.** The source
+  is now `data/family/OtherFamiliesSignals`, which reports `Map<familyId, Set<FamilySignal>>`
+  (`CHAT`, `CHANGE_REQUEST`, `SCHEDULE`) with every property of the chat bullet above unchanged —
+  one `shareIn(WhileSubscribed)`, none at one family, re-derived and cancelled by `flatMapLatest`,
+  and the bound applied **per listener**, so a family's custody listener that gives up does not
+  take its chat dot with it. Per family *not* on screen it adds two listeners:
+  - **Change requests**: `FirestoreChangeRequestDataSource.observeHasPendingFrom` —
+    `requestedTo == me`, `requestedBy == that co-parent`, `status == "PENDING"`, `limit(1)`. The
+    `requestedTo` equality is what satisfies the rule (CLAUDE.md item 12); the requester names the
+    family, rather than `familyId`, because a request written before the stamp carries none.
+    Equality-only with no `orderBy`, so Firestore serves it by merging single-field indexes and
+    **no composite index** was added. `firestore-tests` pins the query and its refusal without
+    the addressee filter.
+  - **Schedule**: `custody_models/{familyId}` read by id (`FirestoreCustodyDataSource.
+    observeCustody`) — the rule grants `allow get` only, so this is a document listener, never a
+    query. A dot when the stored `proposal` was made by the co-parent, **or** a day swap is waiting
+    on this parent, through `DaySwapInbox.visible`/`awaitsAnswerFrom` so the dot agrees with the
+    inbox it leads to (pending, offered by the other parent, not a day already lived). A proposal
+    of this parent's own raises nothing: it waits on the co-parent, not here.
+  The chip's content description names each kind (`family_switcher_unread_other`,
+  `family_switcher_request_other`, `family_switcher_schedule_other`), and each dialog row gains a
+  visible line with the matching phrases (`…_row`), so the row — not the dot — carries the
+  description. **No rule change.** Cost: up to three listeners per other family while a switcher
+  is on screen, zero at one family. One thing found on the way and **not** changed: the
+  change-request *inbox* and Home's request count are not family-scoped at all —
+  `observeChangeRequestsForUser` mirrors every request naming this parent into Room while the
+  Change Requests screen is open, and `getPendingIncomingCount` counts them all — so a request
+  from another family can show in both the dot and the selected family's count. Scoping the
+  inbox is its own decision (a request is about an event, and events follow the family); the
+  paragraph that sat here claimed those queries "see only the selected family by construction",
+  which was true of custody and never of change requests.
 
 ---
 

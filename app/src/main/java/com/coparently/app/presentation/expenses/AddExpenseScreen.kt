@@ -33,8 +33,6 @@ import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -55,7 +53,6 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -86,14 +83,13 @@ import com.coparently.app.domain.money.SupportedCurrency
 import com.coparently.app.domain.receipts.ReceiptScan
 import com.coparently.app.presentation.common.FamilyMemberChips
 import com.coparently.app.presentation.common.FullScreenImageDialog
+import com.coparently.app.presentation.common.LocalDatePickerDialog
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.toggling
 import com.coparently.app.presentation.theme.CoPlanlyShapes
 import java.io.File
-import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
-import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.util.Locale
@@ -549,7 +545,6 @@ private fun CategoryDot(category: ExpenseCategory) {
  * Extracted out of [AddExpenseScreen] to keep that composable's cyclomatic complexity down —
  * the dialog owns no state of its own, it just reports the confirmed date back up.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ExpenseDatePickerDialog(
     visible: Boolean,
@@ -559,34 +554,13 @@ private fun ExpenseDatePickerDialog(
 ) {
     if (!visible) return
 
-    val pickerState = rememberDatePickerState(
-        initialSelectedDateMillis = date
-            .atStartOfDay(ZoneOffset.UTC)
-            .toInstant()
-            .toEpochMilli()
+    LocalDatePickerDialog(
+        initialDate = date,
+        confirmLabel = stringResource(R.string.expense_date_confirm),
+        dismissLabel = stringResource(R.string.expense_date_cancel),
+        onConfirm = onConfirm,
+        onDismiss = onDismiss
     )
-    DatePickerDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = {
-            TextButton(onClick = {
-                pickerState.selectedDateMillis?.let { millis ->
-                    // The picker reports UTC midnight; converting through the system
-                    // zone here would shift the date by a day in negative offsets.
-                    onConfirm(Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate())
-                }
-                onDismiss()
-            }) {
-                Text(stringResource(R.string.expense_date_confirm))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.expense_date_cancel))
-            }
-        }
-    ) {
-        DatePicker(state = pickerState)
-    }
 }
 
 /**

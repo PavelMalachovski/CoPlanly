@@ -16,6 +16,8 @@ import java.time.ZoneId
  *
  * **The statement comes first**, as rows of its own, before the table: a CSV has no "face"
  * otherwise, and the owner's answer to MON-4 is that the export says what it is on its face.
+ * The record id and how to verify the file follow it (MON-16) — or, for a file that could not be
+ * registered, the sentence saying it cannot be verified.
  *
  * Starts with a UTF-8 byte-order mark. Outside RFC 4180, harmless to a parser that follows it,
  * and the difference between Excel showing "Čeština" and "ÄŒeÅ¡tina" to the lawyer who opens it.
@@ -57,8 +59,23 @@ object CommunicationRecordCsv {
             listOf(labels.parents, record.parents.joinToString(", "))
         )
         val warning = if (record.complete) emptyList() else listOf(listOf(labels.incomplete))
-        return listOf(listOf(labels.title)) + labels.statement.map { listOf(it) } + meta + warning
+        return listOf(listOf(labels.title)) + labels.statement.map { listOf(it) } + meta +
+            verification(record, labels.verification) + warning
     }
+
+    /**
+     * The record id, where to check it and how — or the file's statement that it cannot be
+     * checked (MON-16). After the statement, which stays first, and before the table.
+     */
+    private fun verification(record: CommunicationRecord, words: VerificationLabels): List<List<String>> =
+        when (val verification = record.verification) {
+            is RecordVerification.Registered -> listOfNotNull(
+                listOf(words.recordId, RecordId.display(verification.recordId)),
+                verification.verifyUrl.takeIf { it.isNotBlank() }?.let { listOf(words.verifyAt, it) },
+                listOf(if (verification.verifyUrl.isBlank()) words.instructionNoUrl else words.instruction)
+            )
+            RecordVerification.Unregistered -> listOf(listOf(words.notRegistered))
+        }
 
     private fun body(record: CommunicationRecord, labels: RecordLabels): List<List<String>> =
         record.events.flatMap { event -> event.revisions.map { eventRow(event, it, record.zone, labels) } } +

@@ -71,7 +71,9 @@ data class PageGeometry(
 object RecordLayout {
 
     private const val SECTION_GAP = 14f
-    private const val ITEM_GAP = 8f
+
+    /** The gap above an item; shared with [RecordVerificationLayout] so the header reads as one. */
+    internal const val ITEM_GAP = 8f
     private const val SMALL_GAP = 3f
 
     /** The record as paragraphs, in reading order. */
@@ -162,7 +164,8 @@ object RecordLayout {
         } else {
             listOf(RecordBlock(labels.incomplete, LineStyle.EMPHASIS, spaceBefore = ITEM_GAP))
         }
-        return listOf(RecordBlock(labels.title, LineStyle.TITLE)) + statement + meta + warning
+        return listOf(RecordBlock(labels.title, LineStyle.TITLE)) + statement + meta +
+            RecordVerificationLayout.blocks(record, labels.verification) + warning
     }
 
     private fun events(record: CommunicationRecord, labels: RecordLabels): List<RecordBlock> {

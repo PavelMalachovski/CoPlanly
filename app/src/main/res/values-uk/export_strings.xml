@@ -62,4 +62,17 @@
     <string name="export_action_sent">Надіслано</string>
     <string name="export_action_not_sent">Не надіслано</string>
     <string name="export_action_recorded">Записано</string>
+
+    <!-- MON-16: the record id and whether the file can be verified. -->
+    <string name="export_verify_explainer">Якщо сервер доступний, файл реєструється: зберігаються його ідентифікатор запису й відбиток його точного вмісту, тож будь-хто, у кого він є, може перевірити, що файл не змінено. З телефона йде лише відбиток, ніколи не сам файл.</string>
+    <string name="export_verify_record_id">Ідентифікатор запису</string>
+    <string name="export_verify_at">Перевірити на</string>
+    <string name="export_verify_instruction">Щоб перевірити, що цей файл не змінено, відкрийте адресу вище й виберіть файл. Навіть один змінений символ не пройде перевірку.</string>
+    <string name="export_verify_instruction_no_url">Відбиток цього файлу було зареєстровано в CoPlanly під цим ідентифікатором запису під час його створення.</string>
+    <string name="export_verify_not_registered">Не зареєстровано — перевірка недоступна. Під час створення цього файлу сервер був недоступний, тому його відбиток не зареєстровано і ніхто не зможе перевірити його на зміни.</string>
+    <string name="export_verify_not_registered_short">Не зареєстровано — перевірка недоступна</string>
+    <string name="export_unregistered_title">Не зареєстровано — перевірка недоступна</string>
+    <string name="export_unregistered_body">Сервер був недоступний, тому цей файл не зареєстровано і ніхто не зможе перевірити його на зміни. Файл каже про це на початку. Можна все одно поділитися ним або експортувати знову, коли з\'явиться мережа.</string>
+    <string name="export_unregistered_share">Все одно поділитися</string>
+    <string name="export_unregistered_not_now">Не зараз</string>
 </resources>

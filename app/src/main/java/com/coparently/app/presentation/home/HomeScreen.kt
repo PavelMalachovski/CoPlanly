@@ -779,12 +779,15 @@ private fun SectionHeader(text: String) {
  * The wash runs from the current parent's hue into the next parent's, so the card itself shows
  * the direction of the handover before a word is read.
  *
+ * Internal rather than private so the JVM screenshot tests (`ScreenshotMatrix` and its
+ * subclasses under `app/src/test`) can render it on its own.
+ *
  * @param info Next handover
  * @param onConfirm Opens the change-request inbox, where a handover is actually acted on
  */
 @Composable
 @Suppress("LongMethod") // one card: gradient, headline, chips and action read as a single block
-private fun HandoverHero(
+internal fun HandoverHero(
     info: HandoverInfo,
     parentNames: ParentNames,
     onConfirm: () -> Unit
@@ -876,6 +879,9 @@ private fun HandoverHero(
  * The unread tile disappears at zero rather than sitting there saying "0", which is what it
  * says most of the time; the spend tile then takes the full width.
  *
+ * Internal rather than private so the JVM screenshot tests (`ScreenshotMatrix` and its
+ * subclasses under `app/src/test`) can render it on its own.
+ *
  * @param spend This month's total, per currency
  * @param balances This month's settle-up position, per currency
  * @param unreadCount Unread messages across all conversations
@@ -883,7 +889,7 @@ private fun HandoverHero(
  * @param onOpenChat Deep link for the unread tile
  */
 @Composable
-private fun StatTiles(
+internal fun StatTiles(
     spend: MonthSpend,
     balances: List<CurrencyBalance>,
     unreadCount: Int,
@@ -1009,13 +1015,17 @@ private fun StatTile(
  * says nothing, and the owner is a fact the app does hold. The words drop the "'s day" clause in
  * that case, because that is the part that would be a guess.
  *
+ * Internal rather than private so the JVM screenshot tests (`ScreenshotMatrix` and its
+ * subclasses under `app/src/test`) can render it on its own.
+ *
  * @param entry The row
  * @param parentNames Resolves a slot to that parent's name
  * @param isLast Whether this is the final row, which drops the trailing connector
  * @param onClick Opens the event
  */
 @Composable
-private fun TimelineRow(
+@Suppress("LongMethod") // rail, node, title, time and custody words: one row
+internal fun TimelineRow(
     entry: WeekEntry,
     parentNames: ParentNames,
     isLast: Boolean,

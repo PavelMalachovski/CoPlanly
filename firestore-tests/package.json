@@ -10,6 +10,7 @@
   "scripts": {
     "test": "firebase emulators:exec --only firestore,storage --project demo-coplanly \"npm run test:only\"",
     "test:only": "mocha --timeout 20000 \"rules/**/*.test.js\"",
+    "test:ci": "firebase emulators:exec --only firestore,storage --project demo-coplanly \"npm run test:only -- --reporter ../tools/mocha-ci-reporter.js\"",
     "lint": "eslint ."
   },
   "devDependencies": {

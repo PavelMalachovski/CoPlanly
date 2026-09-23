@@ -62,4 +62,17 @@
     <string name="export_action_sent">Odesláno</string>
     <string name="export_action_not_sent">Neodesláno</string>
     <string name="export_action_recorded">Zaznamenáno</string>
+
+    <!-- MON-16: the record id and whether the file can be verified. -->
+    <string name="export_verify_explainer">Když je server dostupný, soubor se zaregistruje: uloží se jeho ID záznamu a otisk jeho přesného obsahu, takže kdokoli, kdo ho má, může ověřit, že nebyl změněn. Z telefonu odchází jen otisk, nikdy soubor.</string>
+    <string name="export_verify_record_id">ID záznamu</string>
+    <string name="export_verify_at">Ověření na</string>
+    <string name="export_verify_instruction">Chcete-li ověřit, že tento soubor nebyl změněn, otevřete adresu výše a vyberte soubor. Jediný změněný znak ověření neprojde.</string>
+    <string name="export_verify_instruction_no_url">Otisk tohoto souboru byl při jeho vytvoření zaregistrován v CoPlanly pod tímto ID záznamu.</string>
+    <string name="export_verify_not_registered">Nezaregistrováno — ověření není k dispozici. Při vytváření tohoto souboru nebyl server dostupný, takže jeho otisk nebyl zaregistrován a nikdo nemůže ověřit, zda byl změněn.</string>
+    <string name="export_verify_not_registered_short">Nezaregistrováno — ověření není k dispozici</string>
+    <string name="export_unregistered_title">Nezaregistrováno — ověření není k dispozici</string>
+    <string name="export_unregistered_body">Server nebyl dostupný, takže tento soubor nebyl zaregistrován a nikdo nebude moci ověřit, zda byl změněn. Soubor to uvádí na začátku. Můžete ho přesto sdílet, nebo ho exportovat znovu, až budete online.</string>
+    <string name="export_unregistered_share">Přesto sdílet</string>
+    <string name="export_unregistered_not_now">Teď ne</string>
 </resources>

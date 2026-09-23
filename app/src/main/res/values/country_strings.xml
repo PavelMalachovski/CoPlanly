@@ -2,7 +2,7 @@
 <resources>
     <!-- MON-13: the country whose public holidays the calendar draws. -->
     <string name="country_label">Country</string>
-    <string name="country_settings_summary">Decides which public holidays the calendar shows</string>
+    <string name="country_settings_summary">Decides which public holidays and school vacations the calendar shows</string>
 
     <string name="country_cz">Czechia</string>
     <string name="country_sk">Slovakia</string>
@@ -12,17 +12,19 @@
     <string name="country_ru">Russia</string>
     <string name="country_other">Other</string>
 
-    <string name="country_holidays_supported">Public holidays and school vacations are shown on the calendar.</string>
+    <string name="country_holidays_supported">Public holidays and school vacations are shown on the calendar. The spring break is set per district and is not shown.</string>
+    <string name="country_holidays_school_sk">Public holidays and school vacations are shown on the calendar, as the ministry publishes them. The spring holidays are set per region and are not shown.</string>
+    <string name="country_holidays_school_at">Public holidays and the school vacations common to all of Austria are shown on the calendar. Semester and summer holidays are set per state and are not shown.</string>
     <string name="country_holidays_unavailable">Public holidays for %1$s are not in the app yet, so none are shown.</string>
     <string name="country_holidays_public_only">Nationwide public holidays are shown on the calendar. School vacations for %1$s are not in the app.</string>
     <string name="country_holidays_suspended">Public holidays in %1$s are not days off while martial law is in force, so none are shown.</string>
 
     <!-- MON-13, regional half: the Land whose own public holidays are added. -->
     <string name="holiday_region_label_de">State</string>
-    <string name="holiday_region_settings_summary">Adds that state\'s own public holidays</string>
+    <string name="holiday_region_settings_summary">Adds that state\'s own public holidays and school vacations</string>
     <string name="holiday_region_none">Nationwide only</string>
-    <string name="country_holidays_pick_region">Nationwide public holidays are shown on the calendar; choose a state to add its own. School vacations for %1$s are not in the app.</string>
-    <string name="country_holidays_with_region">Nationwide public holidays and those of %1$s are shown on the calendar. School vacations are not in the app.</string>
+    <string name="country_holidays_pick_region">Nationwide public holidays are shown on the calendar. School vacations are set per state: choose one to add its school vacations and its own public holidays.</string>
+    <string name="country_holidays_with_region">Nationwide public holidays, and the public holidays and school vacations of %1$s, are shown on the calendar.</string>
 
     <string name="region_de_bb">Brandenburg</string>
     <string name="region_de_be">Berlin</string>

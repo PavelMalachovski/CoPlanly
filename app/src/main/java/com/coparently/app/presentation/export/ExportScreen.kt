@@ -15,9 +15,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.TableChart
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -29,7 +28,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -45,17 +43,19 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.data.export.ExportedFile
+import com.coparently.app.domain.export.ExportFormat
 import com.coparently.app.domain.export.RecordActions
 import com.coparently.app.domain.export.RecordColumns
 import com.coparently.app.domain.export.RecordLabels
+import com.coparently.app.domain.export.VerificationLabels
 import com.coparently.app.presentation.common.GroupLabel
+import com.coparently.app.presentation.common.LocalDatePickerDialog
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.asString
-import java.time.Instant
+import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate
-import java.time.ZoneOffset
 
 /**
  * Exporting the communication record (MON-3): a period, and a CSV or a PDF of it.
@@ -82,12 +82,9 @@ fun ExportScreen(
         coParent = stringResource(R.string.parent_label_coparent),
         unknown = stringResource(R.string.parent_label_unknown)
     )
-    val shareTitle = stringResource(R.string.export_share_title)
     var picking by rememberSaveable { mutableStateOf<RangeEnd?>(null) }
 
-    LaunchedEffect(Unit) {
-        viewModel.files.collect { file -> share(context, file, shareTitle) }
-    }
+    ShareWhenFinished(viewModel.files)
     LaunchedEffect(state.error) {
         state.error?.let {
             snackbarHostState.showSnackbar(it.asString(context))
@@ -184,6 +181,11 @@ private fun ExportContent(
                     statement.forEach { paragraph ->
                         Text(text = paragraph, style = MaterialTheme.typography.bodySmall)
                     }
+                    Text(
+                        text = stringResource(R.string.export_verify_explainer),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
         }
@@ -193,6 +195,52 @@ private fun ExportContent(
             ExportRow(format = ExportFormat.CSV, working = state.working, onClick = { onExport(ExportFormat.CSV) })
         }
     }
+}
+
+/**
+ * Hands each finished file to the share sheet — at once when it was registered, and after
+ * [UnregisteredDialog] when it was not (MON-16): the share sheet alone would hand over a file that
+ * cannot be verified without a word about it.
+ */
+@Composable
+private fun ShareWhenFinished(files: Flow<FinishedExport>) {
+    val context = LocalContext.current
+    val shareTitle = stringResource(R.string.export_share_title)
+    var unregistered by remember { mutableStateOf<ExportedFile?>(null) }
+
+    LaunchedEffect(files) {
+        files.collect { finished ->
+            if (finished.recordId != null) share(context, finished.file, shareTitle) else unregistered = finished.file
+        }
+    }
+    unregistered?.let { file ->
+        UnregisteredDialog(
+            onShare = {
+                unregistered = null
+                share(context, file, shareTitle)
+            },
+            onDismiss = { unregistered = null }
+        )
+    }
+}
+
+/**
+ * Said before a file that could not be registered is shared: it cannot be verified, it says so on
+ * its face, and the parent may share it anyway or try again online.
+ */
+@Composable
+private fun UnregisteredDialog(onShare: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.export_unregistered_title)) },
+        text = { Text(stringResource(R.string.export_unregistered_body)) },
+        confirmButton = {
+            TextButton(onClick = onShare) { Text(stringResource(R.string.export_unregistered_share)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.export_unregistered_not_now)) }
+        }
+    )
 }
 
 /** Which end of the range a date picker is choosing. */
@@ -220,35 +268,16 @@ private fun ExportRow(format: ExportFormat, working: ExportFormat?, onClick: () 
     )
 }
 
-/** A date picker for one end of the range; the picker speaks UTC-midnight millis. */
-@OptIn(ExperimentalMaterial3Api::class)
+/** A date picker for one end of the range; see [LocalDatePickerDialog] for the millis it speaks. */
 @Composable
 private fun RangeDatePicker(initial: LocalDate, onPicked: (LocalDate) -> Unit, onDismiss: () -> Unit) {
-    val pickerState = rememberDatePickerState(
-        initialSelectedDateMillis = initial.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+    LocalDatePickerDialog(
+        initialDate = initial,
+        confirmLabel = stringResource(R.string.export_pick_ok),
+        dismissLabel = stringResource(R.string.export_pick_cancel),
+        onConfirm = onPicked,
+        onDismiss = onDismiss
     )
-    DatePickerDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    // `atZone`, not `LocalDate.ofInstant`, which is API 34 (minSdk is 26).
-                    pickerState.selectedDateMillis?.let { millis ->
-                        onPicked(Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate())
-                    } ?: onDismiss()
-                }
-            ) {
-                Text(stringResource(R.string.export_pick_ok))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.export_pick_cancel))
-            }
-        }
-    ) {
-        DatePicker(state = pickerState)
-    }
 }
 
 /** Every word the exported file prints, in the reader's language. */
@@ -298,21 +327,33 @@ private fun rememberRecordLabels(): RecordLabels = RecordLabels(
     notYetOnServer = stringResource(R.string.export_record_not_on_server),
     noServerTime = stringResource(R.string.export_record_no_server_time),
     revision = stringResource(R.string.export_record_revision),
-    page = stringResource(R.string.export_record_page)
+    page = stringResource(R.string.export_record_page),
+    verification = VerificationLabels(
+        recordId = stringResource(R.string.export_verify_record_id),
+        verifyAt = stringResource(R.string.export_verify_at),
+        instruction = stringResource(R.string.export_verify_instruction),
+        instructionNoUrl = stringResource(R.string.export_verify_instruction_no_url),
+        notRegistered = stringResource(R.string.export_verify_not_registered),
+        notRegisteredShort = stringResource(R.string.export_verify_not_registered_short)
+    )
 )
 
+/** Hands [file] to the share sheet, through [recordShareIntent]. */
+private fun share(context: Context, file: ExportedFile, title: String) {
+    context.startActivity(Intent.createChooser(recordShareIntent(file), title))
+}
+
 /**
- * Hands [file] to the share sheet with a one-off read grant, and to nothing else.
+ * The `ACTION_SEND` intent an exported record is shared with: the file's `FileProvider` URI and a
+ * one-off read grant, and nothing else.
  *
  * The grant is on the intent *and* its `ClipData`, because some targets read the URI from the clip
- * and the chooser only forwards the grant it can see there.
+ * and the chooser only forwards the grant it can see there. Public so the instrumented export test
+ * can check the intent the share sheet receives without driving the chooser.
  */
-private fun share(context: Context, file: ExportedFile, title: String) {
-    val send = Intent(Intent.ACTION_SEND).apply {
-        type = file.mimeType
-        putExtra(Intent.EXTRA_STREAM, file.uri)
-        clipData = ClipData.newRawUri(null, file.uri)
-        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-    }
-    context.startActivity(Intent.createChooser(send, title))
+fun recordShareIntent(file: ExportedFile): Intent = Intent(Intent.ACTION_SEND).apply {
+    type = file.mimeType
+    putExtra(Intent.EXTRA_STREAM, file.uri)
+    clipData = ClipData.newRawUri(null, file.uri)
+    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
 }

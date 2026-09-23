@@ -367,6 +367,24 @@ describe('deleteAccountDataImpl', () => {
     assert.deepStrictEqual(db._store.friend_profiles, []);
   });
 
+  it('removes professional grants in both directions (MON-18)', async () => {
+    const seed = family();
+    seed.professional_grants = [
+      {id: 'alice__bob__med', familyId: 'alice__bob', familyParents: [ALICE, BOB], proUid: 'med',
+        expiresAtMillis: 4102444800000},
+      {id: 'x__y__alice', familyId: 'x__y', familyParents: ['x', 'y'], proUid: ALICE,
+        expiresAtMillis: 4102444800000},
+      {id: 'x__y__med', familyId: 'x__y', familyParents: ['x', 'y'], proUid: 'med',
+        expiresAtMillis: 4102444800000},
+    ];
+    const db = fakeDb(seed);
+
+    await myFunctions.deleteAccountDataImpl(db, ALICE);
+
+    assert.deepStrictEqual(db._store.professional_grants.map((g) => g.id), ['x__y__med'],
+        'only a grant that neither names nor is held by the deleted account may survive');
+  });
+
   // The documents were erased and the files they named were not: a child's medical photographs
   // stayed in the bucket under ids nothing could look up any more. The files have to go first,
   // while the documents still say which files exist.
@@ -442,6 +460,31 @@ describe('deleteAccountDataImpl', () => {
 
     assert.deepStrictEqual(db._store.expenses.map((e) => e.id), ['ex-1']);
     assert.ok(db._store.users.some((u) => u.id === ALICE), 'the profile went before the files');
+  });
+
+  // MON-16. A receipt vouches for a file that may already be evidence; erasing the parent who
+  // made it must not un-verify it. What goes is what identifies them.
+  it('scrubs export receipts rather than deleting them, and drops unused reservations', async () => {
+    const seedDocs = Object.assign(family(), {
+      export_receipts: [
+        {id: 'R-ALICE', state: 'registered', generatorUid: ALICE, familyId: `${ALICE}__${BOB}`,
+          sha256: 'a'.repeat(64)},
+        {id: 'R-PENDING', state: 'reserved', generatorUid: ALICE, familyId: `${ALICE}__${BOB}`},
+        {id: 'R-BOB', state: 'registered', generatorUid: BOB, familyId: `${ALICE}__${BOB}`,
+          sha256: 'b'.repeat(64)},
+      ],
+    });
+    const db = fakeDb(seedDocs);
+    const removed = await myFunctions.deleteAccountDataImpl(db, ALICE);
+
+    const byId = (id) => db._store.export_receipts.find((r) => r.id === id);
+    assert.strictEqual(byId('R-PENDING'), undefined);
+    assert.deepStrictEqual(
+        [byId('R-ALICE').generatorUid, byId('R-ALICE').familyId, byId('R-ALICE').sha256],
+        ['', '', 'a'.repeat(64)]);
+    assert.deepStrictEqual([byId('R-BOB').generatorUid, byId('R-BOB').familyId], [BOB, '']);
+    assert.strictEqual(removed.export_receipts_deleted, 1);
+    assert.ok(!JSON.stringify(db._store.export_receipts).includes(ALICE), 'the erased uid survived');
   });
 });
 

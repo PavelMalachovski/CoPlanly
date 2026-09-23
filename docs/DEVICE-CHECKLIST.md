@@ -9,6 +9,15 @@ upgrade over old data, a first launch) come first, and the one that destroys an 
 last. Tick the boxes as you go. When a check fails, write down what you saw and the logcat
 lines, and go on to the next one. Do not fix things during the session.
 
+**Per pull request.** You do not need the whole script for every PR. CI's sticky comment on each
+pull request ("CI summary", posted by the `report` job) has a section **"Manual checks this PR
+needs"**: `tools/manual-test-plan.js` maps the paths the PR changes to the sections below, with a
+link to each. Run those; changed app files it cannot map are listed under it, so decide those by
+hand. The same comment links the PR's debug APK — a **UI-only** build, because CI has no
+`google-services.json`, so sign-in and sync do not work in it. For any check here that needs an
+account, build locally as §1 describes. If you renumber a section, update `RULES` in that script
+in the same commit; its test in the CI `invariants` job fails otherwise.
+
 **Markers**
 
 | Marker | Means |
@@ -18,6 +27,7 @@ lines, and go on to the next one. Do not fix things during the session.
 | **3A** | Needs three accounts: you plus two co-parents. |
 | **[branch]** | Only in a build that includes `claude/charming-ritchie-d6uqz8` (merged to `main`, or built from that branch). On `main` @ `44f9d66` the check does not apply yet. |
 | **[#99]** | Lands with PR #99. Check it against the merged PR, because the details may differ. |
+| **[CI]** | The `instrumented` CI job already exercises the mechanism on an emulator (table below). The phone still confirms it against real data and real services. |
 
 **Warning: switching accounts wipes the phone's local data.** `AccountSwitchGuard` clears Room
 when a *different* uid signs in. Records that already synced come back from the cloud. Records
@@ -36,6 +46,32 @@ adb logcat -v time EncryptedDatabase:V DatabaseKey:V SyncService:V SyncWorker:V 
 `AndroidRuntime:E` is where a crash shows up, including a failed Room migration
 (`IllegalStateException: A migration from N to M was required but not found` or
 `Migration didn't properly handle`). A release build strips `Log.d/v/i` but keeps `Log.w/e`.
+
+**Look at the screenshots before the phone.** Every pull request that touches Android uploads a
+`screenshots` artefact from CI (the `screenshots` job: Roborazzi on Robolectric, no emulator).
+Unzip it and open `index.html`; it filters by component, language, theme, font scale and palette.
+It renders Home's cards (handover hero, today card with a contact window, week timeline, stat
+tiles), the month grid with every layer, the calendar banners, a Settings group, an empty state,
+the Expenses summary header, a chat thread, the event preview, the consent screen and the family
+switcher chip — in light and dark, in all five languages, at 1.0× and 1.5× text, and in the
+default and a purple/orange palette (`ScreenshotVariants` says which combinations). What those
+images settle is marked **(screenshots)** below: the static look of a component. They cannot show
+anything a device adds — the window before Compose's first frame, insets, the keyboard, motion,
+TalkBack, AppCompat's per-app locale switching, or a screen assembled from real data — so those
+checks stay. A check marked **(screenshots)** only needs a glance on the phone, or none.
+
+**What CI now covers.** The `instrumented` job (API 26/30/35 emulators, debug build, Firebase mocked by
+`FakeFirebaseModule`, Room real) runs these on every Android pull request. A check they cover is
+marked **[CI]** below: CI saw the mechanism work, so on the phone it is a quick confirmation, and
+a failure there points at something the emulator does not have — real Firebase, real data, a
+Play install, a vendor skin.
+
+| Test (`app/src/androidTest/...`) | Covers | What only the phone still adds |
+| --- | --- | --- |
+| `presentation/common/PickerDatesTest`, `LocalDatePickerDialogTest` | §3.1: every picker's conversion and both picker composables, tapped, in Prague, Kiritimati (+14), Los Angeles and Pago Pago (−11) | Each *screen* saving what its picker returned, and a stored date staying put across a zone change |
+| `presentation/settings/PerAppLocaleTest` | §3.6: `setApplicationLocales` to cs/de/ru/uk renders Settings in that language | The Settings row itself, Android 13's system setting, and §4.2 (a Play install) — never CI |
+| `data/export/ExportFileWriterTest` | §6: a CSV (RFC 4180, statement first, formula guard, both clocks, no private event) and a PDF that `PdfRenderer` opens, written through the real writer; the share intent's `FileProvider` URI and read-only grant | Real revisions from the server, the share sheet, and a spreadsheet or PDF app opening the file |
+| `presentation/navigation/MainNavigationSmokeTest` | A signed-in launch visiting Home, Calendar (month/week/day), Chat, Expenses and Settings without a crash; bottom bar on the tabs only; icon-only controls named and ≥ 48 dp | Everything that needs data, a co-parent or a server; TalkBack itself (§3.9) |
 
 ---
 
@@ -208,7 +244,12 @@ Preconditions: `adb uninstall app.coplanly`, set the system to **dark** theme
     in-app choice is not known before Compose draws. Note it, but it is not a failure.
   - **If it fails:** look at `res/values/themes.xml` and `res/values-night/colors.xml`
     (`window_background`).
-- [ ] **REL-5, telemetry consent screen**, shown before sign-in on a fresh install.
+  - **(screenshots)** The *rest* of UX-13 — whether the light theme renders correctly once
+    Compose draws — is in the artefact's `light` images; this device check is only about the
+    window before the first frame.
+- [ ] **REL-5, telemetry consent screen**, shown before sign-in on a fresh install. Its layout,
+      in every language and at 1.5× text, is in the screenshots (`consent_screen`); on the phone
+      check that it appears, and when.
   - **Expected:** the decline button comes first. It is outlined, **enabled**, and reads as a
     real choice rather than a disabled control. The default is off.
   - Decline. Later, Settings → App → **Usage statistics** shows the switch off.
@@ -238,7 +279,13 @@ Preconditions: `adb uninstall app.coplanly`, set the system to **dark** theme
 Signed in as A, with some data (the §2.2 install). Unless a check says otherwise, keep the system
 language as it is.
 
-### 3.1 Date pickers: the off-by-one fix · 1P
+### 3.1 Date pickers: the off-by-one fix · 1P [CI]
+
+**[CI]** Every picker below now opens one of two composables (`LocalDatePickerDialog`, or the
+child/pet `DatePickerDialog` that wraps it) and converts through `PickerDates`; CI taps both in a
+UTC+1, +14, −8 and −11 zone and checks the highlighted and the returned day. What is left here is
+each screen's own save and the stored date surviving a zone change, so one UTC+ and one UTC−
+pass over the list is enough.
 
 Material3 date pickers work in UTC-midnight millis. Before the fix, east of Greenwich the picker
 highlighted the previous day, and west of it the app saved the previous day. Test in **one UTC+
@@ -298,6 +345,12 @@ zone back to automatic afterwards.
 
 Settings → Family → **My colour** → choose a **non-default** colour (purple or orange).
 
+**(screenshots)** The `purpleorange` images already show the month grid (wash, dots, handover
+triangle, contact-window corner), Home's today card, week timeline and handover hero, the event
+preview, the Expenses split bar and the family switcher. A pink or blue in any of them is the
+bug, found without a phone. Spend the device time on the surfaces the screenshots do not render:
+Day/Week, the event form, Filters, Custody setup and the onboarding picker.
+
 - [ ] Every surface below shows the new colour, not pink or blue:
   - [ ] Month grid: the custody wash (about 14% alpha), event dots, handover triangle.
   - [ ] Day/Week: hour-cell wash, event blocks (fill, border, accent), and the **custody band**,
@@ -328,20 +381,35 @@ October–November 2026 and check the dates below.
       Record whether any school vacation actually appears: AUDIT §4.2 says `VacationBanner` has
       no caller.
 - [ ] **Slovakia:** 1 Nov drawn. **15 Sep 2026 and 17 Nov 2026 not drawn** (both are working
-      days by law in 2026).
-- [ ] **Germany**, no state: 3 Oct drawn, and the note asks you to pick a state.
-  - **Bavaria** adds 1 Nov and 6 Jan 2027.
-  - **Saxony** adds 31 Oct and **18 Nov 2026** (Buß- und Bettag).
-  - **Berlin** adds 8 Mar 2027.
+      days by law in 2026). The note says school vacations are shown and spring holidays are not.
+      **Day view on 29 Oct 2026** is labelled "Jesenné prázdniny" (app in Slovak or matching
+      language) or "Autumn vacation"; **Day view on 17 Feb 2027** has no label (spring holidays
+      are regional and not drawn).
+- [ ] **Germany**, no state: 3 Oct drawn, and the note asks you to pick a state to add its
+      school vacations and public holidays. **Day view on 2 Nov 2026 has no label.**
+  - **Bavaria** adds 1 Nov and 6 Jan 2027, and the note now mentions school vacations.
+    **Day view on 2–6 Nov 2026** is labelled "Herbstferien"/"Autumn vacation", and on
+    **18 Nov 2026** "Buß- und Bettag" as a school-free day.
+  - **Saxony** adds 31 Oct and **18 Nov 2026** (Buß- und Bettag, a public holiday there — the
+    day's cell is tinted as a holiday, unlike Bavaria's).
+  - **Berlin** adds 8 Mar 2027; **Day view on 19 Oct 2026** is labelled "Herbstferien".
   - Change the country to Austria: the state row disappears and Bavaria's days go.
-- [ ] **Austria:** 26 Oct, 1 Nov, 8 Dec drawn. There is no state picker.
+- [ ] **Austria:** 26 Oct, 1 Nov, 8 Dec drawn. There is no state picker. The note says the
+      nationwide school vacations are shown and the semester and summer breaks are not. **Day view
+      on 28 Oct 2026** is labelled "Herbstferien"; **2 Nov 2026** "Allerseelen".
+- [ ] **School vacations are not marked on the month grid** for any country, Czechia included —
+      record it, do not fail it: the month banner was removed on purpose (ROADMAP MON-13, "Where
+      they show").
 - [ ] **Russia:** 4 Nov drawn.
 - [ ] **Ukraine:** nothing drawn, and the note says holidays are suspended under martial law.
 - [ ] **Other:** nothing drawn, and the note says so.
 - [ ] Holiday names: with the app language matching the country (e.g. Deutsch with Germany),
       the local name shows; otherwise the English name.
-- **If it fails:** the data is pinned by `HolidayReferenceTest`, so suspect the rendering or
-  the setting (`domain/holidays/HolidayCountry.kt`, `HolidayLocation`) rather than the tables.
+- **If it fails:** the data is pinned by `HolidayReferenceTest` (public holidays) and
+  `SchoolVacationReferenceTest` (school vacations), so suspect the rendering or the setting
+  (`domain/holidays/HolidayCountry.kt`, `HolidayLocation`) rather than the tables — unless a
+  ministry has changed a published date since the pinned dataset commit, in which case regenerate
+  with `tools/generate-school-vacation-fixture.py`.
 
 ### 3.5 Contact windows (MON-6b) · 1P
 
@@ -355,7 +423,9 @@ who does **not** have today.
 - [ ] Add a window naming the parent who **already has** that day. It is **not drawn**.
 - [ ] **Home today card** [branch]: under "whose day it is", a line reads
       "15:00–19:00 · contact with <name>" in the window parent's colour. Without the branch,
-      Home does not mention windows.
+      Home does not mention windows. **(screenshots)** `home_today_card` and
+      `calendar_month_grid` show the line and the Month corner from fixed data; on the phone,
+      check that a window you *saved* reaches them.
 - [ ] The existing MON-6 midweek toggle still behaves as before (a whole day with overnight).
       Its warning now points to contact windows.
 - [ ] **2P, mixed versions:** one phone on build A (`f6bab3e`, which has no windows) and one on
@@ -366,7 +436,12 @@ who does **not** have today.
 - **If it fails:** `presentation/custody/ContactWindowsSection.kt`, `MonthView.kt`,
   `DayWeekView.kt`, `CustodyResolver.contactWindowsResolver` [branch]; tag `CustodyModelRepo`.
 
-### 3.6 Per-app language picker, debug APK part · 1P
+### 3.6 Per-app language picker, debug APK part · 1P [CI]
+
+**[CI]** `PerAppLocaleTest` sets each of cs, de, ru and uk through
+`AppCompatDelegate.setApplicationLocales` and sees Settings render in it on API 30 — so
+`MainActivity` is still an `AppCompatActivity` and composition follows the choice. It does not tap
+the Settings row, and it cannot see Android 13's system setting or a Play install.
 
 - [ ] Settings → App → **Language** → **Deutsch**, while the phone is in another language. The
       UI switches at once.
@@ -376,6 +451,9 @@ who does **not** have today.
 - [ ] Go through Čeština, Русский, Українська and English, then back to **System default**.
 - [ ] Known and not a failure (AUDIT §4.2): Home's dates may keep the old language until the
       process restarts.
+- **(screenshots)** Whether each translation *fits* — clipping, ellipsis, wrapping at 1.5× text
+  in German and Ukrainian — is in the artefact for the components it renders. This section is
+  about the picker switching the language, which only a device shows.
 - The install that matters is the Play-like one in §4.2. A sideloaded APK always contains every
   language, so this part cannot catch the split bug.
 
@@ -411,7 +489,9 @@ who does **not** have today.
 - [ ] **Home → tap an event.** The preview sheet opens, Edit works from it, and there is no
       Delete (Home passes `onDelete = null`).
 - [ ] **TalkBack:** delete an expense through the actions menu, and toggle "Private" on an event.
-      Each switch announces its name.
+      Each switch announces its name. (**[CI]** checks only that icon-only controls on Home,
+      Calendar, Chat, Expenses and Settings carry a label and are at least 48 dp — on empty
+      screens. TalkBack's reading order and the controls that appear with data are still yours.)
 - [ ] **Google Calendar** connect and import. This needs REL-3's OAuth env and a functions
       deploy. It also covers SEC-5 (tokens in `EncryptedPreferences`): relaunch the app and the
       account stays connected.
@@ -491,6 +571,8 @@ Preconditions: A and B are paired, and each phone has its own account signed in.
 
 ### 5.1 Cross-time-zone chat (CQ-18) · 2P, no real fallback
 
+> **[CI e2e]** `TwoParentChatTest` (the `e2e` job, two accounts on the Firebase emulators, UTC+14 vs UTC−11) proves the unread count, DELIVERED and READ agree across zones. The phones are still needed for what is drawn — the badge, the ticks, displayed times, on-screen order — and for push delivery.
+
 - [ ] Set B's phone **2–3 hours** away from A's (e.g. A on Prague, B on Dubai or on
       Reykjavík). Force-stop both apps.
 - [ ] B sends a message. On A it arrives **unread**, the badge counts it, and the time shown is
@@ -505,6 +587,8 @@ Preconditions: A and B are paired, and each phone has its own account signed in.
   logic, and `ChatReadStateTimeZoneTest` is the unit-level pin.
 
 ### 5.2 Family switcher and chat following the selected family (M-8) · 3A, 2P or 1P fallback
+
+> **[CI e2e]** `MultiFamilyTest` proves the data side: with a second co-parent selected, a new event gets that family's audience and `familyId` and its announcement goes to that thread, and none of it reaches the first co-parent. The switcher UI, the chat tab re-keying and pushes stay manual.
 
 Preconditions: A is paired with **both** B and C (two families). Invite C from Settings → Family.
 
@@ -522,7 +606,19 @@ Preconditions: A is paired with **both** B and C (two families). Invite C from S
     behaviour.
 - [ ] A **push** from the family *not* on screen, tapped, switches to that family first and then
       opens the target.
-- [ ] The chip and its dialog show **no** unread count or dot for other families, by design.
+- [ ] **[branch] The cross-family dot.** With B's family on screen, have **C**:
+  - send a chat message — a dot appears on the chip and on C's row in the dialog, whose line
+    says "New messages";
+  - file a change request on one of C's events — C's row also says "A change request is
+    waiting";
+  - propose a new custody schedule, or offer a day swap — C's row also says "A schedule
+    proposal is waiting".
+  - With TalkBack on, the chip reads those kinds, not only "new".
+  - Each kind goes once it is answered (or the thread is read) on C's family; the dot goes with
+    the last.
+  - Never a number. News in the family **on screen** (B) never raises it. A one-family account
+    shows no chip at all.
+  - logcat (`OtherFamiliesSignals`) shows no "gave up" and no missing-index error.
 - **Fallback (1P):**
   - Generate the invite codes as A.
   - Sign out, sign in as B, redeem, send a chat message.
@@ -532,14 +628,44 @@ Preconditions: A is paired with **both** B and C (two families). Invite C from S
   This cannot show live arrival or pushes. Each sign-in as a different account wipes local
   data, so do it only after §2–§4.
 - **If it fails:** tags `SelectedFamily`, `ChatMirror`, `ChatViewModel`;
-  `presentation/common/FamilySwitcher.kt`, `data/chat/ChatPartnerSource.kt` [branch].
+  `presentation/common/FamilySwitcher.kt`, `data/chat/ChatPartnerSource.kt`,
+  `data/family/OtherFamiliesSignals.kt` (tag `OtherFamiliesSignals`) [branch].
 
 ### 5.3 Also worth doing while two phones are paired · 2P
+
+> Real FCM delivery cannot be emulated: the e2e job sees the `notification_queue` document written, never the push arrive.
 
 - [ ] UX-15 with both parents on non-default colours (§3.3).
 - [ ] MON-6b with mixed versions (§3.5).
 - [ ] REL-7 on both phones (§4.1).
 - [ ] The push opt-out end to end (§3.7).
+
+### 5.4 Professional access (MON-18) · 3A, 2P or 1P fallback
+
+Needs the REL-3 functions **and** rules deploys: without the functions the code does not redeem,
+without the rules the grant opens nothing. Accounts: A and B paired, P a third account (the
+professional), signed in on its own phone or after A/B on the fallback phone.
+
+- [ ] A: Settings → Family → **Professionals** → Invite. Role and length are chosen first; the
+      sheet says what is and is not shared. The code shares through the share sheet.
+- [ ] P: Settings → Professionals → enter the code. It says the code was accepted and that
+      reading starts once both parents consent. The family appears with Calendar and Parenting
+      plan **disabled** and "waiting for both parents' consent".
+- [ ] A and B each get the push "Professional access requested", in each phone's language.
+- [ ] A's row reads "waiting for your co-parent's consent"; B's reads "waiting for your consent".
+      B opens it → **I consent**. Both rows turn to "can read until {date}".
+- [ ] P: Calendar opens, four weeks per page, each day names whose day it is and lists the
+      shared events. No private event of A or B appears. Nothing can be tapped to edit.
+- [ ] P: Parenting plan shows both parents' answers side by side, "Agreed" where both ticked,
+      and the disclaimer. Nothing is editable.
+- [ ] P has no way to chat, see expenses or child records (there is no route to them at all).
+- [ ] A (not B) → the row → **End access** → confirm. P's calendar and plan show "nothing to
+      show" at once, and the row leaves both parents' lists.
+- [ ] Unpair A and B while a grant is active: the grant disappears from P's list.
+- **Fallback (1P):** do the steps as A, then B, then P by signing in and out. This cannot show
+  pushes arriving or P's view emptying live.
+- **If it fails:** tag `ProfessionalRepository`; `presentation/professionals/`,
+  `firestore.rules` `isProfessionalOf`, `functions/index.js` `acceptProfessionalInvitationImpl`.
 
 ---
 
@@ -547,6 +673,13 @@ Preconditions: A is paired with **both** B and C (two families). Invite C from S
 
 **Verify against the merged PR; the details may differ.** Expected: event versions, plus a PDF
 and CSV export started from Settings.
+
+**[CI]** `ExportFileWriterTest` writes both files on the emulator from a fixture (two revisions
+with both clocks, a private event, a formula-looking message, an expense) and checks the CSV
+parses as RFC 4180 with the statement first, the formula guard and no private event, that the
+PDF opens in `PdfRenderer`, and that the share intent carries the `FileProvider` URI with a
+read-only grant. Still yours: revisions that came from the server, the share sheet, and a real
+spreadsheet and PDF app.
 
 Preconditions:
 - a build with PR #99 merged;

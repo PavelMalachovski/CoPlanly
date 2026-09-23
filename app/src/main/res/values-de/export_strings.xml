@@ -62,4 +62,17 @@
     <string name="export_action_sent">Gesendet</string>
     <string name="export_action_not_sent">Nicht gesendet</string>
     <string name="export_action_recorded">Festgehalten</string>
+
+    <!-- MON-16: the record id and whether the file can be verified. -->
+    <string name="export_verify_explainer">Wenn der Server erreichbar ist, wird die Datei registriert: Ihre Protokoll-ID und ein Fingerabdruck ihres genauen Inhalts werden gespeichert, sodass jeder, der sie hat, prüfen kann, dass sie nicht verändert wurde. Nur der Fingerabdruck verlässt dieses Telefon, nie die Datei.</string>
+    <string name="export_verify_record_id">Protokoll-ID</string>
+    <string name="export_verify_at">Prüfen unter</string>
+    <string name="export_verify_instruction">Um zu prüfen, dass diese Datei nicht verändert wurde, öffnen Sie die Adresse oben und wählen Sie die Datei aus. Schon ein einziges geändertes Zeichen lässt die Prüfung scheitern.</string>
+    <string name="export_verify_instruction_no_url">Ein Fingerabdruck dieser Datei wurde bei ihrer Erstellung unter dieser Protokoll-ID bei CoPlanly registriert.</string>
+    <string name="export_verify_not_registered">Nicht registriert — keine Prüfung möglich. Der Server war bei der Erstellung dieser Datei nicht erreichbar, daher wurde kein Fingerabdruck registriert und niemand kann sie auf Änderungen prüfen.</string>
+    <string name="export_verify_not_registered_short">Nicht registriert — keine Prüfung möglich</string>
+    <string name="export_unregistered_title">Nicht registriert — keine Prüfung möglich</string>
+    <string name="export_unregistered_body">Der Server war nicht erreichbar, daher wurde diese Datei nicht registriert und niemand wird sie auf Änderungen prüfen können. Die Datei sagt das am Anfang. Sie können sie trotzdem teilen oder erneut exportieren, wenn Sie online sind.</string>
+    <string name="export_unregistered_share">Trotzdem teilen</string>
+    <string name="export_unregistered_not_now">Nicht jetzt</string>
 </resources>

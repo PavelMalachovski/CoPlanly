@@ -299,6 +299,33 @@ What to know before touching it:
   created by one of the family's two parents, and anything that is not the calendar (chat,
   expenses, children's records). Parents are titled by name, never by slot.
 
+## Verifiable exports (MON-16)
+
+`export-receipts.js` holds the logic, `index.js` the three callables. The design is
+`docs/DESIGN-court-record.md` §10; what follows is what an operator needs.
+
+| callable | auth | what it does |
+| --- | --- | --- |
+| `reserveExportRecordId({familyId, fromDate, toDate, format})` | a parent of `familyId` (decided from the id, not from a live pairing), or `''` for no co-parent; 20 per account per 10 minutes per instance | mints `export_receipts/{recordId}` in state `reserved`, bound to the caller, the family, the period and the format — **before** the phone renders the file, because the hash must cover the id it prints |
+| `registerExportReceipt({recordId, sha256, byteLength})` | the parent who reserved the id, within an hour | records the SHA-256 (64 lowercase hex characters) and the length, with `recordedAt` from the function's clock. Create-once: another hash is `already-exists`; the same hash returns the original time |
+| `verifyExport({sha256} \| {recordId})` | **none** — a lawyer has no account; 30 per address per 10 minutes per instance | `{found: false}`, or `recordId`, `recordedAt`/`recordedAtMillis`, `fromDate`, `toDate`, `format`, `byteLength` and `generatedBy: "one of the family's parents"`. **Never** a uid, a family id or a name |
+
+- **Deploy:** `firebase deploy --only functions` for the three callables and the account-deletion
+  change, `firebase deploy --only firestore:rules` for the closed `export_receipts` block, and
+  `firebase deploy --only hosting` for `web/verify/`. Until the functions exist every export says
+  "not registered", which is honest and loses nothing.
+- **`verifyExport` must be invokable by `allUsers`.** A 1st-gen callable deployed by the Firebase
+  CLI is public by default; if an organisation policy strips that, the verification page answers
+  every file with a network error. Check the Cloud Functions Invoker role after the first deploy.
+- **`maxInstances: 10`** on `reserveExportRecordId` and `verifyExport` is what makes the in-memory,
+  per-instance rate limits a bound on the service. Raising it raises the ceiling proportionally.
+  No address is stored anywhere.
+- **Account deletion scrubs receipts, never deletes a registered one** (`scrubReceipts`):
+  `generatorUid` and `familyId` are blanked and the hash is kept, so the other parent's filed
+  evidence still verifies. Reservations that never received a hash are deleted.
+- **Region.** The callables run in `us-central1` with every other function here; `web/verify/`
+  hard-codes that base URL (`FUNCTIONS_BASE`) and must change with it.
+
 ## Admin operations
 
 ### The multi-family migration (run these in order)
@@ -420,7 +447,7 @@ failure the accept-path re-stamp exists to prevent, delivered by this migration 
 
 ## Scheduled sweeps
 
-Four daily jobs, an hour apart so they never contend (all UTC):
+Five daily jobs, an hour apart so they never contend (all UTC):
 
 | time | function | what it removes |
 | --- | --- | --- |
@@ -428,12 +455,39 @@ Four daily jobs, an hour apart so they never contend (all UTC):
 | 03:00 | `sweepExpiredGuests` | expired guest grants on `child_info` (from `guests` and `sharedWith`) |
 | 04:00 | `sweepDeletedDocuments` | tombstones older than 90 days (do not shorten — CLAUDE.md item 14) |
 | 05:00 | `sweepLapsedCalendarFriends` | `calendar_friends/{uid}` grants whose `expiresAtMillis` has passed |
+| 06:00 | `sweepLapsedProfessionalGrants` | `professional_grants/{familyId}__{proUid}` grants whose `expiresAtMillis` has passed (MON-18) |
 
 None of them enforces anything: the rules already refuse an expired guest or friend from the
 instant the grant ends. They remove the rows that would otherwise linger in the parents' lists.
-`sweepLapsedCalendarFriends` never deletes a grant without a positive numeric `expiresAtMillis` —
+Both grant sweeps share `sweepLapsedByExpiry`, which never deletes a grant without a positive numeric `expiresAtMillis` —
 the callable does not write one, and the rule reads a missing expiry as 0 and admits nothing
 through it, so such a row is inert; deciding what it means is left to a person.
+
+## Professional access (MON-18)
+
+A mediator, lawyer, guardian ad litem or therapist reads **one** family's calendar, custody
+schedule and parenting plan — never chat, money or child records — once **both** parents have
+consented, until a date at most 180 days out.
+
+- **`acceptProfessionalInvitation`** is the fourth redemption callable, beside
+  `acceptPairingInvitation`, `acceptGuestInvitation` and `acceptCalendarFriendInvitation`. It
+  accepts only `kind: 'professional'`; the pairing callable refuses that kind by name
+  (`professional-invitation`), and the guest and friend callables refuse it as not theirs. It
+  checks the family on the invitation is a live pairing **from both sides** (no fallback to the
+  family on screen), refuses a parent of that family, requires a known role, clamps the end to
+  `PROFESSIONAL_MAX_DAYS` (180) from now, and writes one document,
+  `professional_grants/{familyId}__{proUid}`, with the inviting parent's consent only. It copies
+  the professional's name and Google photo, and the two parents' names and slots, because the
+  professional may read no profile. It queues `professional_access_requested` (a type and a
+  name, no sentence) to both parents.
+- The **second consent** is a client write the rules restrict to the co-parent's own key; there
+  is no callable for it. **Revocation** is a client delete by either parent.
+- **`unpairCoParent`** deletes every grant over the ended family, after its transaction and
+  before the audience sweep; a failure there is logged, not thrown. **`deleteAccount`** deletes
+  grants over the account's families and grants the account holds as a professional.
+- **Deploy both halves together**: the functions (callable + sweep) and the rules
+  (`professional_grants` block, `isProfessionalOf`). Tests: `test/professional-invite.test.js`
+  here, `rules/professional-access.test.js` in `firestore-tests/`.
 
 ## Лицензия
 

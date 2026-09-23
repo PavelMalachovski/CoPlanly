@@ -131,13 +131,17 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     followed the first co-parent, whatever the switcher said) is fixed, and what remains is a
     layout call: the tab renders the thread in place (item 7) and its header already names the
     co-parent. **The chip and each dialog row carry a dot — never a count — when a family *not* on
-    screen has chat news**: only the selected family's messages are mirrored, so no figure for
-    another family could be backed, but its conversation *document* can say "newer than my read
-    mark". `data/chat/OtherFamiliesUnreadSource` holds one such listener per other family, shared
-    process-wide (`shareIn`, `WhileSubscribed`), **none at one family**, re-derived and cancelled
-    on a switch, pairing change or sign-out, and bounded like `reconnecting()`. Don't turn the dot
-    into a number, don't attach the listener per composable, and don't let it create a
-    conversation — it only reads (ROADMAP M-8).
+    screen has something waiting**: chat newer than my read mark (the conversation *document*),
+    a pending change request from that co-parent (a `limit(1)` query keyed on `requestedTo`, the
+    field the rule reads), or a schedule proposal or day swap awaiting me (`custody_models/{id}`
+    by **id** — `allow get` only, never a query). Only the selected family is mirrored, so no
+    figure for another family could be backed. `data/family/OtherFamiliesSignals` holds those
+    listeners per other family and reports which `FamilySignal` kinds are waiting; the chip's
+    content description and the dialog row's line name them. Shared process-wide (`shareIn`,
+    `WhileSubscribed`), **none at one family**, re-derived and cancelled on a switch, pairing
+    change or sign-out, and bounded like `reconnecting()` per listener. Don't turn the dot into a
+    number, don't attach a listener per composable, and don't let it create anything — it only
+    reads (ROADMAP M-8).
 
 ## UX/UI overhaul (July 2026 design review) — implemented, keep consistent
 
@@ -204,6 +208,8 @@ crash with "migration from 3 to 9 required but not found".
 ```bash
 cd functions && npm test && npm run lint    # Cloud Functions (mocha + eslint)
 cd firestore-tests && npm test              # firestore.rules + storage.rules on the emulators
+tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Functions emulators;
+                                            # needs a running Android emulator (see the e2e job)
 ```
 
 - **Never debug `firestore.rules` by deploying to production and watching a phone.** That
@@ -222,8 +228,9 @@ cd firestore-tests && npm test              # firestore.rules + storage.rules on
   degrades gracefully if it is missing (see the conditional apply in `app/build.gradle.kts`).
 - **GitHub CI runs on every pull request, and on every push to `main`** — a push to a
   feature branch with no PR open is not built (`.github/workflows/ci.yml`, added
-  August 2026 — this line used to say there was none). Eight jobs (this line used to say
-  seven, before `instrumented` was added): `changes` (a cheap gate,
+  August 2026 — this line used to say there was none). Ten jobs that test (this line used to say
+  eight, before `screenshots` and `e2e` were added, and seven before `instrumented`), plus
+  `report`, which only reads them (below): `changes` (a cheap gate,
   below), three Android ones — `build-test` (`assembleDebug` + `testDebugUnitTest` in a
   single invocation), `static` (`lint`, then `detekt`), `release` (`assembleRelease`, where
   R8 runs, and where `node tools/check-r8-mapping.js` then reads R8's own `mapping.txt` and
@@ -281,11 +288,61 @@ cd firestore-tests && npm test              # firestore.rules + storage.rules on
   same branch before the Regenerate workflow ran, so 35 was never current there. A schema
   version that is skipped this way is a new gap of the CQ-1 kind; run Regenerate after each
   version bump, not after a batch of them.
+  **(3) Device checks** (September 2026) run in the same job: every date picker in two UTC+ and
+  two UTC− zones (`PickerDatesTest`, `LocalDatePickerDialogTest` — which is why every `LocalDate`
+  picker opens `presentation/common/PickerDates.kt`'s `LocalDatePickerDialog`; don't give a screen
+  its own copy of the millis conversion again), the per-app locale switch, the export's files and
+  share intent, and a signed-in walk of the main screens with a basic accessibility sweep;
+  `docs/DEVICE-CHECKLIST.md` marks what they cover **[CI]**. Two things to know before adding one.
+  A test that launches `MainActivity` signs in through `androidTest`'s `testing/SignedInSession` —
+  a stubbed `currentUser` on the mocked `FirebaseAuth`, a real Room row with onboarding done, the
+  telemetry question answered "no", all undone in `@After` because the emulator's files outlive the
+  test — and **pauses the Compose clock** (`testing/PausedClock.kt`): the splash and the list
+  skeletons animate for as long as a screen waits on a Firestore that never answers, so with the
+  clock running every `waitForIdle` times out. And the accessibility sweep is a semantics check
+  (unnamed or sub-48 dp icon-only controls), not ATF: `enableAccessibilityChecks()` needs an
+  artifact this build does not declare.
   What stops the gap growing is a **step in `ci.yml`**: `git status --porcelain -- app/schemas`
   after the build, failing when the build produced a schema nobody committed. It is deliberately
   *not* `DatabaseSchemaExportTest`, which this line used to credit and which cannot do it — kapt
   writes that directory during the build immediately before the test reads it, so the file it
   looks for has just been created whether or not it is in the repository.
+
+  The **`e2e` job** ("Android — two parents on the Firebase emulators", September 2026) is the
+  two-phone round a runner *can* do. `app/src/androidTest/java/com/coparently/app/e2e/` runs two
+  parents in one process — each an `EmulatorParent`: a **named** `FirebaseApp` built from
+  `FirebaseOptions` for the credential-free `demo-coplanly` project, its own in-memory Room, and
+  the production data layer constructed by hand from the constructors Hilt calls (one process has
+  one `SingletonComponent`, and this needs two of everything). `tools/e2e/run-two-parent-tests.sh`
+  wraps `firebase emulators:exec --only auth,firestore,functions` around a Node smoke
+  (`tools/e2e/pairing-smoke.js`, which pairs two accounts over REST in seconds and fails with a
+  reason before an APK is installed) and `connectedDebugAndroidTest` filtered to that package with
+  `-e coplanlyEmulatorHost 10.0.2.2`. What it proves, all against the real `firestore.rules` and
+  the real `acceptPairingInvitation`: pairing on both phones (profiles, `families/{id}.slots`, the
+  Room projection, one conversation); an event readable through the sync's own `array-contains`
+  query, a private event absent from the server, a tombstone delivered as a tombstone; chat
+  **across the date line** (UTC+14 and UTC−11) reaching unread, DELIVERED and READ on the right
+  phones — **CQ-18's logic, closed as far as software can close it**; a shared expense that puts
+  half the amount on the *other* parent's balance (the `splitBetween` class); and M-8's second
+  family keeping its audience, `familyId` and announcement thread. Five things not to undo.
+  **No `google-services.json`** here either, for the reason given above. **The tests skip
+  themselves without the host argument**, so the `instrumented` job runs them as skipped and
+  keeps `FakeFirebaseModule` for everything else — and the `e2e` job fails on any skip, so the
+  same switch cannot turn it green by running nothing. **Cleartext to `10.0.2.2` and `127.0.0.1`
+  is allowed in `app/src/debug/res/xml/network_security_config.xml`, debug only**: Auth and
+  Functions reach their emulators over plain HTTP through the platform stack, and an
+  `androidTest` manifest cannot carry the exception because instrumentation runs under the
+  *app's* policy. **Two JDKs**: the emulators take 21 through `FIREBASE_JAVA_HOME`, Gradle stays
+  on 17 through `JAVA_HOME`. And the job is gated on its own `changes` output, `e2e`, which unlike
+  `android` stays true for `functions/` and rules changes — it is the one job that runs the
+  callable and the rules together. It found two defects on its first local run, both fixed in the
+  same branch: `admin.firestore.FieldValue` is `undefined` under the Functions emulator's proxy
+  (so `functions/index.js` now imports `FieldValue`/`Timestamp` from `firebase-admin/firestore`),
+  and `EventDocument` threw on the `""` `toFirestoreMap()` writes for a missing end time, so the
+  co-parent's sync skipped every event without one. **What it cannot do** stays on the device
+  checklist: real FCM delivery (no emulator exists for it — the queue document is written, the
+  push is not sent), anything drawn on screen, and the chat UI's family switch (`ChatPartnerSource`,
+  M-8), which the e2e job does not drive.
 
   **A second workflow file exists and is not part of CI**: `.github/workflows/regenerate.yml` runs
   `detektBaseline` and exports the Room schema, then commits both back to the branch it ran on.
@@ -297,8 +354,32 @@ cd firestore-tests && npm test              # firestore.rules + storage.rules on
   Still run the build locally before pushing — CI is a backstop, not a substitute.
   After switching branches, prefer `clean` — stale Hilt/kapt stubs from another branch cause
   errors like "Could not find class file for '…Application'".
+- **The `screenshots` job is how UI is reviewed without a phone** (September 2026). Roborazzi on
+  Robolectric's native graphics renders the tests in `app/src/test/java/com/coparently/app/
+  screenshots/` — Home's cards, the month grid with every `DayCellFills` layer, the calendar
+  banners, a Settings group, `EmptyState`, the Expenses summary header, a chat thread, the event
+  preview body, the consent screen and the family switcher chip — over a variant matrix of theme,
+  the five languages, 1.0×/1.5× font scale and the default vs a purple/orange parent palette
+  (`ScreenshotVariants`: nine variants for text-heavy components, four for the rest, 112 images).
+  **To view:** open the run's `screenshots` artefact, unzip, open `index.html`
+  (`tools/screenshot-gallery.js`, no dependencies, filters by component/language/theme/scale/
+  palette). Locally: `./gradlew recordRoborazziDebug`, images in `app/build/outputs/roborazzi/`.
+  Five things to know. **It records and does not compare** — no baselines are committed, because
+  they must be recorded on the CI runner to be pixel-stable; `ci.yml`'s `TODO(screenshots)` lists
+  the three steps to switch to `verifyRoborazziDebug` through the Regenerate workflow. **A
+  Roborazzi task runs only the screenshot package and `testDebugUnitTest` excludes it**
+  (`roborazziRequested` in `app/build.gradle.kts`), so `build-test` stays fast and a rendering
+  failure cannot redden it. **Robolectric runs SDK 34, not 36** (`SCREENSHOT_SDK`): 4.16.1
+  supports 36 but only on JDK 21, and every job builds on 17. **Roborazzi stays at 1.60.0**, the
+  last release built with Kotlin 2.0; later ones are built with Kotlin 2.3, whose metadata this Kotlin 2.1 compiler is
+  not guaranteed to read — upgrade the two together. And **a private composable a test needs becomes
+  `internal`**, never public (`HandoverHero`, `StatTiles`, `TimelineRow`, `ChatThreadHeader`), and
+  a sheet's body is split out of the sheet (`EventPreviewContent`), because a `ModalBottomSheet`
+  opens its own window that a node capture does not see. Every fixture date is pinned (May 2026,
+  `ScreenshotFixtures`) so an image does not change with the calendar — keep it that way, or the
+  suite can never move to verify.
 - **A docs/functions/rules-only pull request skips the Android jobs.** The `changes` job
-  diffs against the base and sets one output; the three Android jobs are `if:`-gated on it.
+  diffs against the base and sets one output; the Android jobs are `if:`-gated on it.
   Two things not to get wrong. The ignore list is deliberately conservative — a path wrongly
   *on* it silently stops building real changes, which is far worse than a path wrongly off it
   costing a few free runner minutes — and `.github/workflows/**` is deliberately **not** on
@@ -312,6 +393,43 @@ cd firestore-tests && npm test              # firestore.rules + storage.rules on
   `gradle.properties` and apply locally too; the build cache is local-only (there is no
   remote cache), so in CI it pays off on a re-run of the same branch, where `setup-gradle`'s
   per-job cache of `~/.gradle/caches` carries the previous run's task outputs forward.
+- **A CI result is meant to be read without opening a log** (September 2026). Three layers:
+  - **Check runs.** Each test job publishes its JUnit XML through
+    `mikepenz/action-junit-report@v6` as its own check run — "Unit tests (JVM)", "Instrumented
+    tests (API n)", "Cloud Functions tests", "Firestore and Storage rules tests" — with failures
+    as annotations. Mocha writes JUnit through `tools/mocha-ci-reporter.js` (spec output *and*
+    xunit, no dependency), enabled only in CI: `functions` passes `--reporter`, `firestore-tests`
+    has a `test:ci` script. Plain `npm test` is unchanged. Those jobs carry
+    `permissions: {contents: read, checks: write}`; naming one permission drops the rest to none,
+    which is why `contents: read` is restated.
+  - **The sticky PR comment.** The `report` job (`needs:` every other job, `if: always()`) runs
+    `tools/ci-report.js`, which reads the `junit-*` and `coverage-report` artifacts and the run's
+    jobs and artifacts through the API, and posts **one comment per PR, headed "CI summary",
+    edited on every run** (`marocchino/sticky-pull-request-comment@v2`, header `ci-summary`):
+    job → result, test counts per suite, failed tests with the first line of their message,
+    Kover line coverage, artifact links, and the manual plan below. The same facts sit in an
+    HTML comment as JSON (`<!-- ci-report-json … -->`) for an assistant reading the PR through
+    the API. On a push to `main` it goes to the run's job summary only. It lists jobs from the
+    API, so a new job appears without editing it — but **add a new job to `report`'s `needs`**,
+    or its row can read "in progress". It needs `actions: read` and `pull-requests: write`, and
+    never fails the run over the report.
+  - **Manual checks this PR needs.** `tools/manual-test-plan.js` maps the PR's changed paths to
+    sections of `docs/DEVICE-CHECKLIST.md` (the `RULES` table; unmapped app sources are listed,
+    not dropped) and the comment includes it. `node --test tools/test/*.test.js` runs in
+    `invariants` and fails when a rule names a section the checklist no longer has — renumbering
+    the checklist means updating `RULES` in the same commit.
+
+  **What testers download** (each linked from the comment, 14-day retention, GitHub login
+  needed): `coplanly-debug-apk` from `build-test` — **a UI-only build**: CI has no
+  `google-services.json` (and must not get one, see above), so sign-in and sync do not work in
+  it; for full testing build locally with the file. `emulator-video-api<n>-<target>` from each
+  `instrumented` leg — `tools/with-screen-recording.sh` records in 170 s segments around
+  `connectedDebugAndroidTest`, keeps the tests' exit status, and cannot fail the job.
+  `coverage-report` — Kover (`org.jetbrains.kotlinx.kover` 0.9.9, `app/build.gradle.kts`, Hilt/Room/
+  Compose-generated classes filtered out). Coverage is **visibility, not a gate**: there is no
+  verification rule, and its step is the one place in `ci.yml` where `continue-on-error` is
+  right, because failing to *report* a number must not turn a green build red. Screenshot and
+  e2e artifacts are described in the comment by name once those jobs upload them.
 
 ## Hard project rules
 
@@ -473,7 +591,17 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
    silently would be design item 8's forbidden affordance. Czechia, Slovakia, Germany (the nine
    nationwide days, plus the chosen Land's own — below), Austria and Russia (statutory art. 112
    days, no annual transfer decree) have tables; **Ukraine deliberately has none** — its holidays are not days off under martial
-   law, and the row says so. Only Czechia has school vacations; do not invent them for the others.
+   law, and the row says so. **School vacations are sourced, never invented** (September 2026):
+   Czechia's are computed (`CzechHolidays`); Slovakia's and Austria's *nationwide* periods and each
+   German **Land's** list are dated tables (`SchoolVacation.kt`, `GermanSchoolVacations.kt`) from
+   the OpenHolidays dataset (`github.com/openpotato/openholidaysapi.data`, ODbL 1.0 — the official
+   KMK/BMBWF/MŠVVaM sites and the APIs are blocked from cloud sessions, the GitHub data repo is
+   not), read at a pinned commit by `tools/generate-school-vacation-fixture.py` and held period by
+   period by `SchoolVacationReferenceTest`. From school year 2025/26 to whatever the dataset
+   publishes — no extrapolation. What is set per region the app does not model stays out: Slovak
+   spring holidays (by kraj), Austrian semester and summer breaks (by Land; the dataset's later
+   ones are all `Provisional`), and Germany without a Land draws none. Russia has none. Only Day
+   view labels a school-vacation day today; the month grid has no marker (ROADMAP MON-13).
    The tables were written against the Python `holidays` library (September 2026, superseding the
    August decision to wait for verified data — this is that data) and are **pinned to it**:
    `HolidayReferenceTest` compares every date and name, 2020–2035, with a fixture generated by
@@ -490,9 +618,12 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
    `users.regionCode`, nullable = nationwide). `HolidayProvider.regions`/`forRegion` and
    `HolidayLocation` carry it; the calendar reads `HolidayLocation.provider`, and
    `HolidayCountry.regionOrNull` drops a code that is not the country's, so a parent who moved
-   from Germany to Austria never keeps drawing Bavaria. Only Germany has regions: Austria's
-   Länder add no *public* holiday in the reference data (the patron-saint days are bank
-   holidays), so it gets no picker — a row that changed nothing is item 8 again. The German
+   from Germany to Austria never keeps drawing Bavaria. Only Germany has regions, and a Land adds
+   both its public holidays and its school vacations. Austria's Länder add no *public* holiday in
+   the reference data (the patron-saint days are bank holidays) and no *final* school dates past
+   2025/26, so it gets no picker — a row that changed nothing is item 8 again. The picker's note
+   reads `HolidayCountry.coverageIn(region)`, so "school vacations" appears for Germany only
+   once a Land is chosen. The German
    states are pinned by a second fixture (`--regions`, only what each state *adds*), and the
    library's `catholic` category and the Augsburg pseudo-state are excluded on purpose —
    `GermanState`'s KDoc says why. The Room schema JSON for v36 (which carries this column) is exported by the Regenerate
@@ -853,6 +984,28 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     with a flag — the gate is MON-11's. Times use `RecordFormat` (fixed `Locale.ROOT` patterns
     with the offset printed); event start/end are the naive wall-clock values the schema stores,
     and the statement says so.
+    **A registered export carries a record ID the server holds its SHA-256 under** (MON-16,
+    `docs/DESIGN-court-record.md` §10; `functions/export-receipts.js`, `web/verify/`). Six more
+    things not to undo. **The ID is reserved before the file is rendered, and the hash is of the
+    exact bytes saved** — `ExportViewModel` reserves, renders with the ID, hashes, registers, then
+    saves those same bytes; `ExportFileWriter.render`/`save` are split for that and nothing may
+    touch the bytes between. **No file names an ID the server holds no hash for**: a phone that
+    cannot reserve renders `export_verify_not_registered` on the face (and in every PDF footer),
+    and one whose registration fails after a reservation renders the file *again* without the ID —
+    never "registered" by default (`CommunicationRecord.verification` defaults to `Unregistered`),
+    and the screen says so before the share sheet opens. **`verifyExport` is unauthenticated and
+    answers with the receipt alone** — registered at, period, format, size and the fixed words "one
+    of the family's parents"; never a name, a uid, a `familyId` or whether the account still exists.
+    **`export_receipts` is closed to every client** (`allow read, write: if false`); only the
+    callables touch it, as admin. **`recordedAt` is the function's clock** and a receipt is
+    create-once: a second hash under a registered ID is refused, the same hash returns the original
+    time. And **account deletion scrubs a registered receipt, never deletes it** — `generatorUid`
+    and `familyId` blanked, the hash kept — because erasing one parent must not un-verify evidence
+    the other has filed; reservations that never received a hash are deleted. The verification
+    address is `BuildConfig.EXPORT_VERIFY_URL`, blank until `web/verify/` is hosted, and blank omits
+    the line rather than printing a dead link. The chat immutability pin §4 called missing lives in
+    `firestore-tests/rules/event-versions.test.js`'s last block: both parents, every field,
+    `set()`, delete and a stranger, with `isRead` as the control.
 
 27. **A calendar-feed token is the whole authorisation, so it is hashed, scoped and never served
     past what the app itself would show** (MON-17, September 2026). `functions/calendar-feed.js`
@@ -889,6 +1042,37 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     a held message back to the draft store if the ViewModel is cleared rather than sending it. The
     hint (`ToneCheck`) is three string tests computed while rendering: it never disables Send, is
     never stored, logged or sent, and never calls itself "AI" — a tone model is MON-12.
+
+29. **A professional reads one family, with both parents' consent, until a date, and never the
+    chat** (MON-18, September 2026). A mediator, lawyer, guardian ad litem or therapist holds
+    `professional_grants/{familyId}__{proUid}`, written only by `acceptProfessionalInvitation` —
+    a **fourth** callable beside pairing, guest and calendar friend. `acceptPairingInvitation`
+    refuses `kind: 'professional'` by name (redeeming it there would make a mediator a parent of
+    the family they observe), and the guest and friend callables refuse it as not theirs; test all
+    three whenever a kind is added. Five things not to invert. **Two consents to open, one to
+    close**: `consents` is a `{parentUid: epochMillis}` map, the callable writes only the inviting
+    parent's key, the rules let each parent add **only their own** (the nested `hasOnly` of item
+    21), and `isProfessionalOf` admits nothing until the map `hasAll(familyParents)`; either parent
+    **deletes** the grant alone, and there is deliberately no "withdraw my consent" edit — a parent
+    who no longer consents revokes. **Always expiring**: the invitation rule refuses an end more
+    than 180 days out, the callable clamps to 180 days from redemption and refuses a missing end,
+    the rule compares `expiresAtMillis` against `request.time`, and `sweepLapsedProfessionalGrants`
+    only tidies the row afterwards (it shares `sweepLapsedByExpiry` with the friend sweep, so a
+    grant with no numeric expiry is never matched). **One family**: the grant id is built from the
+    record's `familyId` and the caller's uid, the stored `familyId`/`proUid` must repeat it, and
+    an event additionally needs its creator in `familyParents` — the same two checks as
+    `isCalendarFriendOf`, for the same reason (M-6). Unpair deletes the family's grants; account
+    deletion deletes both directions. **Read-only, and three collections only**: `events` (last
+    disjunct), `parenting_plans/{familyId}` and `custody_models/{familyId}` (`get`, including a
+    document not yet written). Never `conversations`/`messages`, `expenses`, `budgets`,
+    `child_info`, `pets`, `family_settings`, `families` or `users` — `professional-access.test.js`
+    pins each; don't widen it for an export, attach the export instead (MON-3/MON-16). **No Room
+    table**: grants and the professional's reads are Firestore listeners (`ProfessionalRepository`),
+    so a professional's phone never stores somebody else's family and the schema did not move. The
+    professional's calendar is a list that **names** whose day it is rather than colouring it —
+    this phone cannot know the palette each parent chose (design item 12). The push
+    `professional_access_requested` is server-only, like `pairing_accepted`, and says consent is
+    being asked for, never that access began.
 
 ## Known issues / do not "fix" silently
 
@@ -1009,13 +1193,16 @@ whatever you were doing; a stale "known issue" costs more than a missing one.
   paper over it with a count. Unverified on two
   phones: see M-8's acceptance note.
 
-- **Cross-time-zone chat is implemented but never verified on two devices.** The August 2026
-  chat sync moved message times to epoch millis specifically so two parents in different zones
-  agree (see item 13 above), and it is covered by unit tests that drive the two zones explicitly
-  (`ChatReadStateTimeZoneTest`) plus a 12→13 migration test. The two-phone acceptance scenario —
-  set one phone's zone 2–3 hours apart, send a message, and confirm it counts as unread, the
-  badge clears on open, and the ticks reach READ — was **deferred, not run**. Backlog item for
-  the next review round. Everything else in that acceptance run passed on real devices.
+- **Cross-time-zone chat is verified between two clients, not yet on two screens.** The August
+  2026 chat sync moved message times to epoch millis specifically so two parents in different
+  zones agree (see item 13 above), and it is covered by unit tests that drive the two zones
+  explicitly (`ChatReadStateTimeZoneTest`) plus a 12→13 migration test. Since September 2026 the
+  `e2e` CI job runs the acceptance scenario's *logic* end to end: two accounts, the production
+  `MessageRepositoryImpl` on each, the real rules, one parent at UTC+14 and the other at UTC−11 —
+  the message arrives unread, the Room badge count is 1 and clears on `markRead`, and the
+  sender's ticks reach DELIVERED and then READ (`TwoParentChatTest`). What is still **not run** is
+  the part only phones show: the badge and ticks as drawn, the times as displayed, and the push
+  that wakes the other phone. Keep the device check for those; do not re-open the logic.
 
 - ~~**The shared custody schedule orders the two phones' writes by a naive local date-time.**~~
   **Fixed (SEC-4, schema 29).** `CustodyModelEntity.lastModifiedAtMillis` is epoch millis and

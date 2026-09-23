@@ -66,4 +66,6 @@
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
     <string name="push_channel_name">Уведомления CoPlanly</string>
     <string name="push_channel_description">Уведомления о событиях, запросах и сообщениях от второго родителя</string>
+    <string name="push_professional_access_requested_title">Запрос доступа специалиста</string>
+    <string name="push_professional_access_requested_body">%1$s принял(а) приглашение читать календарь и родительский план семьи. Доступ откроется только с согласия обоих родителей.</string>
 </resources>

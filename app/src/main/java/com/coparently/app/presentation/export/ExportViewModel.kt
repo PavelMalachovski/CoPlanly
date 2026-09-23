@@ -6,11 +6,16 @@ import androidx.lifecycle.viewModelScope
 import com.coparently.app.R
 import com.coparently.app.data.export.CommunicationRecordSource
 import com.coparently.app.data.export.ExportFileWriter
+import com.coparently.app.data.export.ExportReceipts
 import com.coparently.app.data.export.ExportedFile
 import com.coparently.app.domain.chat.ConversationKey
+import com.coparently.app.domain.export.CommunicationRecord
 import com.coparently.app.domain.export.CommunicationRecordBuilder
+import com.coparently.app.domain.export.ExportFingerprint
+import com.coparently.app.domain.export.ExportFormat
 import com.coparently.app.domain.export.RecordLabels
 import com.coparently.app.domain.export.RecordScope
+import com.coparently.app.domain.export.RecordVerification
 import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.presentation.common.Parents
@@ -34,9 +39,6 @@ import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
 
-/** The two files an export can be. */
-enum class ExportFormat { CSV, PDF }
-
 /**
  * The export screen's state.
  *
@@ -59,10 +61,25 @@ data class ExportUiState(
 data class NameFallbacks(val you: String, val coParent: String, val unknown: String)
 
 /**
- * Produces a communication record for a date range, as CSV or PDF (MON-3).
+ * A finished export, ready for the share sheet.
+ *
+ * @property recordId The id the file prints and the server holds its hash under, or null when the
+ *   file could not be registered — the screen then says so before it shares (MON-16).
+ */
+data class FinishedExport(val file: ExportedFile, val recordId: String?)
+
+/**
+ * Produces a communication record for a date range, as CSV or PDF (MON-3), and registers the
+ * file's fingerprint so it can be verified later (MON-16).
  *
  * **Ungated.** MON-1 has not set a price, so there is no entitlement to check; the gate arrives
  * with MON-11's entitlement layer, not as a flag invented here (ROADMAP MON-3).
+ *
+ * **The record id is inside the bytes it vouches for**, so the order is fixed: reserve an id,
+ * render the file with it, hash exactly those bytes, register the hash under the id, and save
+ * those same bytes. A phone that cannot reserve renders the file as not registered; one whose
+ * registration then fails renders it *again* without the id. No file ever names an id the server
+ * holds no hash for — that would be claiming a verifiability it lacks (design item 8).
  *
  * A save path in the sense of CLAUDE.md item 17: everything it needs at the moment of export is
  * read fresh — the signed-in uid, the co-parent, the names — never from a `WhileSubscribed`
@@ -72,6 +89,7 @@ data class NameFallbacks(val you: String, val coParent: String, val unknown: Str
 class ExportViewModel @Inject constructor(
     private val source: CommunicationRecordSource,
     private val writer: ExportFileWriter,
+    private val receipts: ExportReceipts,
     private val parentsSource: ParentsSource,
     private val userRepository: UserRepository
 ) : ViewModel() {
@@ -85,10 +103,10 @@ class ExportViewModel @Inject constructor(
     /** The range and whether an export is running. */
     val state: StateFlow<ExportUiState> = _state.asStateFlow()
 
-    private val _files = Channel<ExportedFile>(Channel.BUFFERED)
+    private val _files = Channel<FinishedExport>(Channel.BUFFERED)
 
     /** Each finished file, once — the screen hands it to the share sheet. */
-    val files: Flow<ExportedFile> = _files.receiveAsFlow()
+    val files: Flow<FinishedExport> = _files.receiveAsFlow()
 
     /** Moves the start of the range; an end before it moves with it. */
     fun setFrom(date: LocalDate) = _state.update { it.copy(from = date, to = maxOf(it.to, date)) }
@@ -111,11 +129,11 @@ class ExportViewModel @Inject constructor(
         _state.update { it.copy(working = format, error = null) }
         viewModelScope.launch {
             try {
-                val file = produce(format, range.from, range.to, labels, fallbacks)
-                if (file == null) {
+                val finished = produce(format, range.from, range.to, labels, fallbacks)
+                if (finished == null) {
                     _state.update { it.copy(error = UiText.Res(R.string.export_error_signed_out)) }
                 } else {
-                    _files.send(file)
+                    _files.send(finished)
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -136,9 +154,40 @@ class ExportViewModel @Inject constructor(
         to: LocalDate,
         labels: RecordLabels,
         fallbacks: NameFallbacks
-    ): ExportedFile? {
+    ): FinishedExport? {
         val myUid = userRepository.getCurrentUserId() ?: return null
         val partnerUid = parentsSource.coParentUid()
+        val record = buildRecord(myUid, partnerUid, from, to, fallbacks)
+        val recordId = receipts.reserve(FamilyKey.orNull(myUid, partnerUid).orEmpty(), from, to, format)
+        val registered = recordId?.let { registeredBytes(record, labels, format, it) }
+        val bytes = registered
+            ?: writer.render(record.copy(verification = RecordVerification.Unregistered), labels, format)
+        return FinishedExport(writer.save(bytes, record, format), recordId.takeIf { registered != null })
+    }
+
+    /**
+     * The file rendered with [recordId] on its face — but only if the server then registered
+     * exactly these bytes. Null means "render it again as not registered".
+     */
+    private suspend fun registeredBytes(
+        record: CommunicationRecord,
+        labels: RecordLabels,
+        format: ExportFormat,
+        recordId: String
+    ): ByteArray? {
+        val verification = RecordVerification.Registered(recordId, receipts.verifyUrl)
+        val bytes = writer.render(record.copy(verification = verification), labels, format)
+        val landed = receipts.register(recordId, ExportFingerprint.sha256Hex(bytes), bytes.size)
+        return bytes.takeIf { landed }
+    }
+
+    private suspend fun buildRecord(
+        myUid: String,
+        partnerUid: String?,
+        from: LocalDate,
+        to: LocalDate,
+        fallbacks: NameFallbacks
+    ): CommunicationRecord {
         // The pairing half can arrive a moment after the profile half; a record that named the
         // co-parent "Parent" because it was built in that moment would be a worse document.
         val parents = withTimeoutOrNull(NAMES_WAIT_MS) {
@@ -151,7 +200,7 @@ class ExportViewModel @Inject constructor(
             to = to,
             zone = zone
         )
-        val record = CommunicationRecordBuilder.build(
+        return CommunicationRecordBuilder.build(
             sources,
             RecordScope(
                 from = from,
@@ -164,10 +213,6 @@ class ExportViewModel @Inject constructor(
                 nameForSlot = { slot -> nameForSlot(slot, parents, fallbacks) }
             )
         )
-        return when (format) {
-            ExportFormat.CSV -> writer.writeCsv(record, labels)
-            ExportFormat.PDF -> writer.writePdf(record, labels)
-        }
     }
 
     private fun nameForUid(uid: String, parents: Parents, fallbacks: NameFallbacks): String =

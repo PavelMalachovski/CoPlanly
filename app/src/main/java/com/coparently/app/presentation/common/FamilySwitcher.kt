@@ -1,5 +1,6 @@
 package com.coparently.app.presentation.common
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,6 +15,7 @@ import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -33,11 +35,12 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.data.family.FamilyOption
+import com.coparently.app.data.family.FamilySignal
 
 /** Wide enough for a first name and a surname; a longer one ellipsises. */
 private val CHIP_MAX_WIDTH = 160.dp
 
-/** Space between a dialog row's name and its unread dot. */
+/** Space between a dialog row's text and its dot. */
 private val ROW_DOT_GAP = 8.dp
 
 /**
@@ -49,10 +52,11 @@ private val ROW_DOT_GAP = 8.dp
  * one is design item 8 in miniature. With two families the Settings-only route cost three taps
  * a day, which is what this is for.
  *
- * **A dot, never a number, when another family's chat has something new** — the chat mirrors only
- * the family on screen, so the only honest cross-family signal is its conversation document
- * saying "newer than your read mark" ([FamilySwitcherState.otherFamilyHasUnread]). The family on
- * screen never raises it: its count is the Chat tab's badge.
+ * **A dot, never a number, when another family has something waiting** — new chat, a change
+ * request or a schedule proposal to answer ([FamilySwitcherState.otherFamilySignals]). Everything
+ * else follows the family on screen, so the only honest cross-family signal is a yes or no from
+ * the server; the content description names which kinds. The family on screen never raises it:
+ * its own news is on its own screens.
  *
  * Self-contained: it collects its own [FamilySwitcherViewModel], so a screen adds it with one
  * line in `actions` and gains no parameter.
@@ -79,8 +83,10 @@ fun FamilySwitcherChip(
             onClick = { showDialog = true }
         )
     }
-    if (state.otherFamilyHasUnread) {
-        val dotDescription = stringResource(R.string.family_switcher_unread_other)
+    val waiting = state.otherFamilySignals
+    if (waiting.isNotEmpty()) {
+        // One sentence per kind, so TalkBack says what is waiting and not only that something is.
+        val dotDescription = waiting.map { stringResource(it.otherFamilyText) }.joinToString(SENTENCE_JOIN)
         BadgedBox(
             badge = { Badge(Modifier.semantics { contentDescription = dotDescription }) },
             modifier = modifier
@@ -92,7 +98,7 @@ fun FamilySwitcherChip(
         FamilySwitcherDialog(
             families = state.families,
             selectedFamilyId = state.selectedFamilyId,
-            hasUnread = state::hasUnread,
+            signalsOf = state::signalsOf,
             onSelect = { familyId ->
                 viewModel.select(familyId)
                 showDialog = false
@@ -124,8 +130,8 @@ fun familyLabel(family: FamilyOption?): String =
  *
  * @param families Every family the parent is in
  * @param selectedFamilyId The one on screen
- * @param hasUnread Whether a family's row carries the "something new in its chat" dot —
- *   [FamilySwitcherState.hasUnread], which never answers yes for the family on screen
+ * @param signalsOf What a family's row says is waiting, drawn as a dot and a line naming each
+ *   kind — [FamilySwitcherState.signalsOf], which is always empty for the family on screen
  * @param onSelect Called with the family tapped
  * @param onDismiss Closes without switching
  */
@@ -133,37 +139,22 @@ fun familyLabel(family: FamilyOption?): String =
 fun FamilySwitcherDialog(
     families: List<FamilyOption>,
     selectedFamilyId: String?,
-    hasUnread: (String) -> Boolean,
+    signalsOf: (String) -> Set<FamilySignal>,
     onSelect: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
-    val dotDescription = stringResource(R.string.family_switcher_unread_row)
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.settings_family_switch)) },
         text = {
             Column {
                 families.forEach { family ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .selectable(
-                                selected = family.familyId == selectedFamilyId,
-                                role = Role.RadioButton
-                            ) { onSelect(family.familyId) }
-                            .padding(vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = family.familyId == selectedFamilyId,
-                            onClick = null
-                        )
-                        Text(familyLabel(family))
-                        if (hasUnread(family.familyId)) {
-                            Spacer(Modifier.width(ROW_DOT_GAP))
-                            Badge(Modifier.semantics { contentDescription = dotDescription })
-                        }
-                    }
+                    FamilySwitcherRow(
+                        family = family,
+                        selected = family.familyId == selectedFamilyId,
+                        signals = signalsOf(family.familyId),
+                        onSelect = { onSelect(family.familyId) }
+                    )
                 }
             }
         },
@@ -174,3 +165,64 @@ fun FamilySwitcherDialog(
         }
     )
 }
+
+/**
+ * One family in [FamilySwitcherDialog]: a radio button, the co-parent's name and, when something
+ * is waiting there, a line saying what (one phrase per kind) and a dot. The line is the row's
+ * description, so the dot itself carries none — TalkBack would otherwise read it twice.
+ */
+@Composable
+private fun FamilySwitcherRow(
+    family: FamilyOption,
+    selected: Boolean,
+    signals: Set<FamilySignal>,
+    onSelect: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .selectable(selected = selected, role = Role.RadioButton, onClick = onSelect)
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        RadioButton(selected = selected, onClick = null)
+        Column(Modifier.weight(1f)) {
+            Text(familyLabel(family))
+            if (signals.isNotEmpty()) {
+                Text(
+                    text = signals.map { stringResource(it.rowText) }.joinToString(PHRASE_JOIN),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+        if (signals.isNotEmpty()) {
+            Spacer(Modifier.width(ROW_DOT_GAP))
+            Badge()
+        }
+    }
+}
+
+/** Joins the chip's per-kind sentences into one content description. */
+private const val SENTENCE_JOIN = ". "
+
+/** Joins a dialog row's per-kind phrases. */
+private const val PHRASE_JOIN = " · "
+
+/** The chip's sentence for one kind: "… in another family". */
+@get:StringRes
+private val FamilySignal.otherFamilyText: Int
+    get() = when (this) {
+        FamilySignal.CHAT -> R.string.family_switcher_unread_other
+        FamilySignal.CHANGE_REQUEST -> R.string.family_switcher_request_other
+        FamilySignal.SCHEDULE -> R.string.family_switcher_schedule_other
+    }
+
+/** A dialog row's phrase for one kind; the row already names the family. */
+@get:StringRes
+private val FamilySignal.rowText: Int
+    get() = when (this) {
+        FamilySignal.CHAT -> R.string.family_switcher_unread_row
+        FamilySignal.CHANGE_REQUEST -> R.string.family_switcher_request_row
+        FamilySignal.SCHEDULE -> R.string.family_switcher_schedule_row
+    }
