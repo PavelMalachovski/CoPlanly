@@ -45,15 +45,20 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Decides whether the Android jobs have anything to do. A pull request that only touches
-  # docs, Cloud Functions, the rules suite or the security rules themselves does not need a
-  # 7-minute R8 build to prove it, and those three are the changes this project makes most
-  # often between Android changes.
+  # Decides which jobs a pull request needs, from the paths it changes. The rules live in
+  # `tools/ci-changes.js`, which `invariants` tests (`tools/test/ci-changes.test.js`), so they can be
+  # read and checked without running a workflow. In short, on a pull request:
   #
-  # Anything not on the ignore list runs the full Android set — including `.github/workflows`,
-  # because editing this file is exactly when you want to see the build it describes actually
-  # run. A push to `main` always runs everything: `github.event.before` is unreliable across
-  # force-pushes and first pushes, and main is rare enough that guessing is not worth it.
+  #  * docs, Cloud Functions, the rules and their tests → no Android job at all;
+  #  * a screen-only change (`presentation/` outside `common/`, `res/`, `app/src/test/`) → no e2e;
+  #  * nothing the screenshots render (`presentation/`, `domain/`, `res/`, the tests) → no screenshots;
+  #  * the emulator matrix is API 30 alone unless the change touches what API 26 and 16 KB exist for
+  #    — `data/local/` (SQLCipher, Room), the manifest, `androidTest/`, `src/debug/` — or the build.
+  #
+  # The build files and `.github/workflows/**` run everything: editing this file is exactly when
+  # you want to see the build it describes. A push to `main` and a manual run always run everything
+  # too — `github.event.before` is unreliable across force-pushes and first pushes, and `main` is
+  # where the full matrix, API 26 and 16 KB included, is the backstop for what a PR skipped.
   changes:
     name: What changed
     runs-on: ubuntu-latest
@@ -64,54 +69,36 @@ jobs:
       # executes the pairing callable and the rules together, so those are exactly the pull
       # requests that can break it without touching a line of Kotlin.
       e2e: ${{ steps.filter.outputs.e2e }}
+      screenshots: ${{ steps.filter.outputs.screenshots }}
+      # The `instrumented` job's matrix, as a JSON array of legs.
+      matrix: ${{ steps.filter.outputs.matrix }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Decide whether Android needs building
+      - name: Decide which jobs to run
         id: filter
         env:
           EVENT_NAME: ${{ github.event_name }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
           set -u
-          # Anything outside this list means "build Android". Keep it conservative: a path
-          # wrongly listed here silently stops building real changes, which is worse than a
-          # path wrongly absent, which merely costs a few runner minutes.
-          NON_ANDROID='^(docs/|functions/|firestore-tests/|\.cursor/|[^/]*\.md$|.*\.rules(\.simple)?$|firestore\.indexes\.json$|firebase\.json$|\.gitignore$|LICENSE$)'
-          NON_E2E='^(docs/|\.cursor/|[^/]*\.md$|\.gitignore$|LICENSE$)'
-
           if [ "$EVENT_NAME" != "pull_request" ]; then
-            echo "Not a pull request — building everything."
-            echo "android=true" >> "$GITHUB_OUTPUT"
-            echo "e2e=true" >> "$GITHUB_OUTPUT"
+            echo "Not a pull request — running everything."
+            node tools/ci-changes.js --all | tee -a "$GITHUB_OUTPUT"
             exit 0
           fi
 
           if ! changed=$(git diff --name-only "$BASE_SHA"...HEAD 2>/dev/null) || [ -z "$changed" ]; then
-            echo "Could not determine the changed files — building everything."
-            echo "android=true" >> "$GITHUB_OUTPUT"
-            echo "e2e=true" >> "$GITHUB_OUTPUT"
+            echo "Could not determine the changed files — running everything."
+            node tools/ci-changes.js --all | tee -a "$GITHUB_OUTPUT"
             exit 0
           fi
 
           echo "Changed files:"
           echo "$changed" | sed 's/^/  /'
-
-          if echo "$changed" | grep -qvE "$NON_ANDROID"; then
-            echo "android=true" >> "$GITHUB_OUTPUT"
-            echo "→ Android jobs will run."
-          else
-            echo "android=false" >> "$GITHUB_OUTPUT"
-            echo "→ Nothing outside docs/functions/rules changed; skipping the Android jobs."
-          fi
-
-          if echo "$changed" | grep -qvE "$NON_E2E"; then
-            echo "e2e=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "e2e=false" >> "$GITHUB_OUTPUT"
-          fi
+          echo "$changed" | node tools/ci-changes.js | tee -a "$GITHUB_OUTPUT"
 
   # `google-services.json` is gitignored, and `app/build.gradle.kts` applies the Google
   # Services and Crashlytics plugins only when it is present — so a fresh clone builds
@@ -144,6 +131,11 @@ jobs:
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
+        with:
+          # Lets setup-gradle save and restore Gradle's configuration cache between runs (it holds
+          # secrets, so it is only stored encrypted). Optional: with the repository secret unset
+          # the cache still works within one job, just not across runs.
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
       # One invocation, not two: `testDebugUnitTest` compiles the same debug sources
       # `assembleDebug` does, so running them together shares a configuration phase and a
@@ -255,6 +247,11 @@ jobs:
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
+        with:
+          # Lets setup-gradle save and restore Gradle's configuration cache between runs (it holds
+          # secrets, so it is only stored encrypted). Optional: with the repository secret unset
+          # the cache still works within one job, just not across runs.
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
       - name: Android lint
         run: ./gradlew lint
@@ -307,6 +304,11 @@ jobs:
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
+        with:
+          # Lets setup-gradle save and restore Gradle's configuration cache between runs (it holds
+          # secrets, so it is only stored encrypted). Optional: with the repository secret unset
+          # the cache still works within one job, just not across runs.
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
       # A release build is the only place R8 runs, and R8 is what silently rewrote the field
       # names Gson depends on. Building it here is what stops that class of defect from
@@ -372,7 +374,7 @@ jobs:
   screenshots:
     name: Android — screenshots (Roborazzi, record)
     needs: changes
-    if: needs.changes.outputs.android == 'true'
+    if: needs.changes.outputs.screenshots == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -388,6 +390,11 @@ jobs:
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
+        with:
+          # Lets setup-gradle save and restore Gradle's configuration cache between runs (it holds
+          # secrets, so it is only stored encrypted). Optional: with the repository secret unset
+          # the cache still works within one job, just not across runs.
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
       - name: Record screenshots
         run: ./gradlew recordRoborazziDebug
@@ -451,34 +458,19 @@ jobs:
     needs: changes
     if: needs.changes.outputs.android == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    # The emulator step has its own 15-minute limit; this covers setup, a cold AVD and uploads.
+    timeout-minutes: 35
     permissions:
       contents: read
       checks: write
     strategy:
       fail-fast: false
+      # The legs are defined in tools/ci-changes.js (LEG_26, LEG_30, LEG_16KB — the 16 KB leg runs
+      # the non-Hilt tests only, because MockK's agent does not load on 16 KB pages) and chosen per
+      # pull request by the `changes` job: API 30 always, 26 and 16 KB when the diff reaches what
+      # they exist for, all three on `main`.
       matrix:
-        include:
-          - api-level: 26
-            target: default
-            arch: x86
-            label: ''
-            test-args: ''
-          - api-level: 30
-            target: default
-            arch: x86_64
-            label: ''
-            test-args: ''
-          # MockK's inline-mocking agent (libmockkjvmtiagent.so, test-only, never shipped) does
-          # not dlopen on 16 KB pages, and every Hilt test mocks through it in
-          # FakeFirebaseModule — so this leg runs the non-Hilt tests only. What it exists to
-          # prove, that the app's own native libraries load on 16 KB pages, is
-          # NativeLibrariesTest's job; the Hilt tests keep running on 26 and 30.
-          - api-level: 35
-            target: google_apis_ps16k
-            arch: x86_64
-            label: ', 16 KB pages'
-            test-args: -Pandroid.testInstrumentationRunnerArguments.notAnnotation=dagger.hilt.android.testing.HiltAndroidTest
+        include: ${{ fromJSON(needs.changes.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v4
 
@@ -490,6 +482,11 @@ jobs:
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
+        with:
+          # Lets setup-gradle save and restore Gradle's configuration cache between runs (it holds
+          # secrets, so it is only stored encrypted). Optional: with the repository secret unset
+          # the cache still works within one job, just not across runs.
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
       # The runner image ships KVM but leaves it owned by a group the runner user is not in,
       # so without this the emulator falls back to software rendering and times out.
@@ -537,10 +534,14 @@ jobs:
       # it either. So this step has its own timeout and `continue-on-error`, the script writes
       # the tests' exit status to a file, and "The instrumented tests finished and passed" fails
       # the job unless that file exists and says 0. A test failure, or a hang before the tests
-      # finish, is still red; a hang after they passed costs 30 minutes, not 60, and a warning.
+      # finish, is still red; a hang after they passed costs 15 minutes and a warning.
+      #
+      # 15 minutes is tight on purpose: the step measured ~11 on API 26 (SDK install and boot ~2,
+      # build and tests ~8). When the tests outgrow it, the next step says so in plain words —
+      # "did not finish" — and the answer is to raise this number, not to split the suite.
       - name: Run instrumented tests
         id: tests
-        timeout-minutes: 30
+        timeout-minutes: 15
         continue-on-error: true
         env:
           STATUS_FILE: ${{ runner.temp }}/instrumented-status
@@ -678,6 +679,11 @@ jobs:
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
+        with:
+          # Lets setup-gradle save and restore Gradle's configuration cache between runs (it holds
+          # secrets, so it is only stored encrypted). Optional: with the repository secret unset
+          # the cache still works within one job, just not across runs.
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
       # Built before the emulator boots, so the boot's minutes are not also spent compiling.
       - name: Build the app and test APKs
