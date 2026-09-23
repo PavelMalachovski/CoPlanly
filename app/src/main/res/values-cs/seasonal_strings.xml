@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Seasonal custody schedules (MON-14) and holiday fairness (MON-20). -->
+<resources>
+    <string name="seasonal_title">Sezónní rozvrhy</string>
+    <string name="seasonal_hint">Sezónní rozvrh nahrazuje výše uvedený vzorec v určitém období, například o letních prázdninách nebo o Vánocích. Každá změna se odesílá samostatně; tlačítko Uložit dole ukládá jen vzorec výše.</string>
+    <string name="seasonal_needs_base_pattern">Nejdřív uložte rozvrh. Sezónní rozvrh se klade na něj.</string>
+    <string name="seasonal_add">Přidat sezónní rozvrh</string>
+    <string name="seasonal_pending_theirs">%1$s navrhuje změnu rozvrhu. Odpovězte na ni, než pošlete další.</string>
+    <string name="seasonal_pending_mine">Vaše poslední změna čeká, až ji %1$s přijme.</string>
+    <string name="seasonal_sent_for_approval">Odesláno druhému rodiči ke schválení. Dokud ji nepřijme, nic se nemění.</string>
+    <string name="seasonal_saved">Sezónní rozvrh uložen.</string>
+    <string name="seasonal_save_failed">Sezónní rozvrh se nepodařilo odeslat. Zkuste to znovu.</string>
+    <string name="seasonal_answer_pending_first">Na návrh druhého rodiče čeká vaše odpověď. Nejdřív na něj odpovězte.</string>
+    <string name="seasonal_dialog_add_title">Nový sezónní rozvrh</string>
+    <string name="seasonal_dialog_edit_title">Upravit sezónní rozvrh</string>
+    <string name="seasonal_name_label">Název</string>
+    <string name="seasonal_from">Od %1$s</string>
+    <string name="seasonal_to">Do %1$s</string>
+    <string name="seasonal_fill_from_school">Vyplnit podle školních prázdnin</string>
+    <string name="seasonal_shape_label">Jak se dny dělí</string>
+    <string name="seasonal_shape_keep">Ponechat, jak je</string>
+    <string name="seasonal_shape_all">Vše u jednoho rodiče</string>
+    <string name="seasonal_shape_weeks">Střídání po týdnech</string>
+    <string name="seasonal_shape_half">Napůl</string>
+    <string name="seasonal_with">U koho</string>
+    <string name="seasonal_starts_with">Začíná</string>
+    <string name="seasonal_invalid_range">Sezónní rozvrh trvá od prvního do posledního dne, nejvýše 366 dní.</string>
+    <string name="seasonal_confirm">Uložit</string>
+    <string name="seasonal_delete">Smazat</string>
+    <string name="seasonal_cancel">Zrušit</string>
+    <string name="seasonal_ok">OK</string>
+    <string name="fairness_title">Spravedlnost svátků</string>
+    <string name="fairness_no_schedule">Uložte rozvrh a uvidíte, kdo má které svátky.</string>
+    <string name="fairness_nights">Noci</string>
+    <string name="fairness_christmas_eve">Štědrý den</string>
+    <string name="fairness_christmas_day">1. svátek vánoční</string>
+    <string name="fairness_new_year">Nový rok</string>
+    <string name="fairness_easter">Velikonoce</string>
+    <string name="fairness_birthday">Narozeniny: %1$s</string>
+    <string name="fairness_show_holidays">Zobrazit další státní svátky</string>
+    <string name="fairness_hide_holidays">Skrýt další státní svátky</string>
+    <string name="fairness_not_set">Nenastaveno</string>
+    <string name="fairness_note">Počítáno tak, jak to ukazuje kalendář, včetně dohodnutých výměn a sezónních rozvrhů. Odpoledne styku se jako noc nepočítá.</string>
+    <string name="fairness_propose">Navrhnout změnu</string>
+    <string name="custody_diff_layers_changed">Mění se i sezónní rozvrhy.</string>
+</resources>

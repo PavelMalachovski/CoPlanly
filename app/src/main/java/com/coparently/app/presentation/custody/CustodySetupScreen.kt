@@ -541,6 +541,10 @@ fun CustodySetupScreen(
                 }
             }
 
+            // Seasonal schedules (MON-14) and holiday fairness (MON-20). Sent on their own, not by
+            // the Save button below, which saves only the base pattern above.
+            SeasonalScheduleSection()
+
             Spacer(modifier = Modifier.height(80.dp)) // Space for bottom bar
         }
     }

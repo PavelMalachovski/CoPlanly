@@ -24,13 +24,28 @@ import com.coparently.app.presentation.common.ParentNames
 fun custodyDiffDescription(diff: CustodyPatternDiff?, parentNames: ParentNames): String? {
     if (diff == null || !diff.comparable) return null
     if (diff.identical) return stringResource(R.string.custody_diff_none)
-    // Only the contact afternoons move (MON-6b): "0 days move" would read as "nothing changes".
-    if (diff.movedDays.isEmpty()) return stringResource(R.string.custody_diff_windows_only)
-    val windowsLine = if (diff.contactWindowsChanged) {
-        "\n" + stringResource(R.string.custody_diff_windows_too)
+    // A seasonal layer (MON-14) can change without a day moving inside the compared window — a
+    // summer proposed in March — so it always gets its own line.
+    val layersLine = if (diff.seasonalLayersChanged) {
+        stringResource(R.string.custody_diff_layers_changed)
     } else {
-        ""
+        null
     }
+    // Only the afternoons or the layers move: "0 days move" would read as "nothing changes".
+    if (diff.movedDays.isEmpty()) {
+        val windowsOnly = if (diff.contactWindowsChanged) {
+            stringResource(R.string.custody_diff_windows_only)
+        } else {
+            null
+        }
+        return listOfNotNull(windowsOnly, layersLine).joinToString("\n")
+    }
+    val windowsToo = if (diff.contactWindowsChanged) {
+        stringResource(R.string.custody_diff_windows_too)
+    } else {
+        null
+    }
+    val windowsLine = listOfNotNull(windowsToo, layersLine).joinToString("") { "\n$it" }
 
     val context = LocalContext.current
     val summary = context.resources.getQuantityString(
