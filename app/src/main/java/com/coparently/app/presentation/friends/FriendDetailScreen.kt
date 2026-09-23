@@ -17,6 +17,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -24,6 +26,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -39,6 +43,7 @@ import com.coparently.app.presentation.common.ConfirmationDialog
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.theme.ParentColors
+import kotlinx.coroutines.launch
 
 /**
  * A friend, as the two parents read them: their face, what they are to the family, and the two
@@ -77,8 +82,12 @@ fun FriendDetailScreen(
     val photoUrl = profile?.photoUrl ?: grant?.photoUrl
 
     var confirmingRevoke by rememberSaveable { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    val revokeFailed = stringResource(R.string.friend_revoke_failed)
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text(name) },
@@ -164,8 +173,13 @@ fun FriendDetailScreen(
             dismissText = stringResource(R.string.pairing_cancel),
             onConfirm = {
                 confirmingRevoke = false
-                viewModel.revoke(friendUid)
-                onRevoked()
+                viewModel.revoke(friendUid) { succeeded ->
+                    if (succeeded) {
+                        onRevoked()
+                    } else {
+                        scope.launch { snackbarHostState.showSnackbar(revokeFailed) }
+                    }
+                }
             },
             onDismiss = { confirmingRevoke = false },
             isDestructive = true

@@ -97,9 +97,15 @@ fun AddEditChildInfoScreen(
     // Observe current child info for editing
     val currentChildInfo by viewModel.currentChildInfo.collectAsState()
 
-    // Update form when child info loads
+    // Seed the form once per record. `currentChildInfo` is an observation, so it emits again on
+    // every write to the row — a background sync tick or the co-parent's own edit — and copying
+    // each emission into the fields overwrote whatever the parent was typing. Plain `remember`,
+    // like the fields themselves: after a configuration change both reset, and the form is
+    // seeded again from the stored record.
+    var seededForId by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(currentChildInfo) {
-        currentChildInfo?.let { info ->
+        currentChildInfo?.takeIf { it.id != seededForId }?.let { info ->
+            seededForId = info.id
             childName = info.childName
             dateOfBirth = info.dateOfBirth
             medications = info.medications

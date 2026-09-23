@@ -20,4 +20,5 @@
     <string name="friend_event_participates">Бере участь %1$s</string>
     <string name="friend_event_none">Ніхто</string>
     <string name="friend_empty">Ні в кого поза сімʼєю немає доступу до календаря.</string>
+    <string name="friend_revoke_failed">Не вдалося закрити доступ. Перевірте підключення та спробуйте ще раз.</string>
 </resources>

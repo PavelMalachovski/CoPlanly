@@ -20,4 +20,5 @@
     <string name="friend_event_participates">%1$s takes part</string>
     <string name="friend_event_none">Nobody</string>
     <string name="friend_empty">Nobody outside the family has calendar access.</string>
+    <string name="friend_revoke_failed">Couldn\'t remove access. Check your connection and try again.</string>
 </resources>

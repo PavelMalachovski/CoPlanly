@@ -180,9 +180,14 @@ class FriendViewModel @Inject constructor(
         _viewedFriend.value = friendUid
     }
 
-    /** Ends [friendUid]'s access. */
-    fun revoke(friendUid: String) {
-        viewModelScope.launch { friendRepository.revokeFriend(friendUid) }
+    /**
+     * Ends [friendUid]'s access.
+     *
+     * @param onResult Told whether the grant was actually removed. The detail screen leaves only
+     *   on success: it used to pop at once, so a refused revoke looked exactly like one that worked.
+     */
+    fun revoke(friendUid: String, onResult: (succeeded: Boolean) -> Unit = {}) {
+        viewModelScope.launch { onResult(friendRepository.revokeFriend(friendUid).isSuccess) }
     }
 
     /**
