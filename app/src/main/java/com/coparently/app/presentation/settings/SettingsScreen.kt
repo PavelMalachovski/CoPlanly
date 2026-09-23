@@ -113,6 +113,8 @@ import com.coparently.app.presentation.common.animations.sectionExit
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.coverageNote
 import com.coparently.app.presentation.common.labelRes
+import com.coparently.app.presentation.common.regionLabelRes
+import com.coparently.app.presentation.common.regionName
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.consent.TelemetryConsentViewModel
 import com.coparently.app.presentation.sync.GoogleCalendarSyncState
@@ -202,6 +204,8 @@ fun SettingsScreen(
     var showColorPicker by rememberSaveable { mutableStateOf(false) }
     var showCountryPicker by rememberSaveable { mutableStateOf(false) }
     val country by settingsViewModel.country.collectAsState()
+    val holidayRegion by settingsViewModel.holidayRegion.collectAsState()
+    var showRegionPicker by rememberSaveable { mutableStateOf(false) }
     var showFamilySwitcher by rememberSaveable { mutableStateOf(false) }
     val families by settingsViewModel.families.collectAsState()
     val selectedFamilyId by settingsViewModel.selectedFamilyId.collectAsState()
@@ -246,11 +250,23 @@ fun SettingsScreen(
     if (showCountryPicker) {
         CountryDialog(
             selected = country,
+            selectedRegion = holidayRegion,
             onConfirm = { chosen ->
                 settingsViewModel.setCountry(chosen)
                 showCountryPicker = false
             },
             onDismiss = { showCountryPicker = false }
+        )
+    }
+    if (showRegionPicker) {
+        RegionDialog(
+            country = country,
+            selected = holidayRegion,
+            onConfirm = { chosen ->
+                settingsViewModel.setHolidayRegion(chosen)
+                showRegionPicker = false
+            },
+            onDismiss = { showRegionPicker = false }
         )
     }
     if (showColorPicker) {
@@ -482,6 +498,22 @@ fun SettingsScreen(
                         // theirs — one trailing control, and it says more than a chevron would.
                         trailing = { ValueLabel(stringResource(country.labelRes())) }
                     )
+                    // Only for a country whose holidays vary by region — Germany's Länder. For
+                    // every other country the row would change nothing (design rule 8).
+                    val regionLabel = country.regionLabelRes()
+                    if (regionLabel != null && country.regions.isNotEmpty()) {
+                        Divider()
+                        SectionRow(
+                            icon = Icons.Default.Public,
+                            title = stringResource(regionLabel),
+                            supporting = stringResource(R.string.holiday_region_settings_summary),
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                showRegionPicker = true
+                            },
+                            trailing = { ValueLabel(country.regionName(holidayRegion)) }
+                        )
+                    }
                     Divider()
                     // The money agreement lives with the family, not under App preferences: it
                     // is something the two parents agree, like the custody pattern, not a device
@@ -1425,6 +1457,7 @@ private fun ParentColorDialog(
 @Composable
 private fun CountryDialog(
     selected: HolidayCountry,
+    selectedRegion: String?,
     onConfirm: (HolidayCountry) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -1455,7 +1488,9 @@ private fun CountryDialog(
                     }
                 }
                 Text(
-                    text = country.coverageNote(),
+                    // The stored region only while the stored country is still the one chosen:
+                    // switching country clears it on save (SettingsViewModel.setCountry).
+                    text = country.coverageNote(selectedRegion.takeIf { country == selected }),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 8.dp)

@@ -48,7 +48,7 @@ import com.coparently.app.data.local.entity.UserEntity
         ChangeRequestEntity::class,
         ParentingPlanEntryEntity::class
     ],
-    version = 34,
+    version = 35,
     exportSchema = true
 )
 @TypeConverters(Converters::class)

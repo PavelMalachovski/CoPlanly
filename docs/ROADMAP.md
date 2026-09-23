@@ -83,7 +83,7 @@ invocation is yours.
 | **MON-8** | Bakaláři / EduPage school import — the parsing, once you supply a real export | P2 | L |
 | **MON-11** | Payments (MVP 3) — the entitlement model, after MON-1 decides the price | P2 | L |
 | **MON-12** | Intelligent suggestions (MVP 3) — behind SEC-1's proxy, never with a key in the client | P3 | M |
-| **MON-13** | The tables are done (five countries; Ukraine's holidays are suspended by martial law) — left: a state/region setting for Germany's and Austria's regional holidays and school vacations | P2 | M |
+| **MON-13** | The tables and Germany's Länder are done (five countries; Ukraine's holidays are suspended by martial law) — left: school vacations outside Czechia, and whether Austria's patron-saint days are drawn at all | P2 | M |
 | **FAM-4** | Custody per child | P2 | L |
 | **REL-4 (drafting)** | Fill the placeholders in the legal drafts, write the web account-deletion page | P0 | S |
 | **REL-5** | An analytics consent gate for the EU | P0 | M |
@@ -158,7 +158,7 @@ shipped, and a plan that describes work already done is worse than no plan.
 | Reoccurrence | Clear | S | High | **Done.** `RecurrenceExpander`; CQ-4 removed the two-year cliff |
 | Confirm pickup | Other side sees it is picked up | S | High | **Done.** `pickupConfirmedBy` / `pickupConfirmedAt` |
 | Notifications | 30 min or 1 h before pickup | M | High | **Done.** `ReminderScheduler` + WorkManager; the permission is asked contextually, never on cold start |
-| Holidays and vacations by country | Clear | S | High | **Done for holidays, partly for vacations.** The country is asked for and stored (MON-13), and Czechia, Slovakia, Germany, Austria and Russia each have a computed table verified against the Python `holidays` library; Ukraine's holidays are suspended under martial law and the picker says so. School vacations exist for Czechia only — the others are regional |
+| Holidays and vacations by country | Clear | S | High | **Done for holidays, partly for vacations.** The country is asked for and stored (MON-13), and Czechia, Slovakia, Germany (with a Land setting for its state holidays), Austria and Russia each have a computed table verified against the Python `holidays` library; Ukraine's holidays are suspended under martial law and the picker says so. School vacations exist for Czechia only — the others are regional |
 | Add events only you can see | Related to switching views | S | High | **Done.** `isPrivate`, filtered out of every sync path |
 | Sat/Sun a different colour | Clear | S | High | **Done.** `DayCellFills` draws the weekend as a base layer under custody, never instead of it |
 
@@ -1309,10 +1309,11 @@ verdict is discoverable material in a custody dispute, which makes it a liabilit
 than a feature. Anything resembling emotion inference deserves a legal read under the EU AI Act
 before launch.
 
-### MON-13 · **TABLES DONE** · P2 · M · Holidays by country — what is left is regional
+### MON-13 · **TABLES AND REGIONS DONE** · P2 · M · Holidays by country — school vacations are left
 
-**Where:** ☁️ done: the setting, the registry, and five tables verified against a maintained
-dataset. What remains (a state/region setting) is a product decision before it is code.
+**Where:** ☁️ done: the setting, the registry, five tables verified against a maintained dataset,
+and Germany's sixteen Länder. What remains (school vacations outside Czechia, Austria's
+patron-saint days) is a product decision before it is code.
 
 MVP 1 asked for "holidays and vacations by country" and shipped one country. There was **no country
 setting anywhere in the app** — no field, no picker, not even a constant — so `CalendarScreen`
@@ -1351,9 +1352,9 @@ against it rather than from memory.
 - **Slovakia** — public holidays by year, which is exactly what memory would have got wrong:
   1 September off until 2023 (Act 530/2023), 17 November until 2024, and 8 May and 15 September
   working days in 2026 only (Act 261/2025). Only days off are drawn.
-- **Germany** — the nine **nationwide** holidays. The rest are state law and the app has no
-  Bundesland setting, so a Bavarian family sees fewer days off than it has; said in the KDoc, the
-  same trade Czechia's district-dependent spring break makes.
+- **Germany** — the nine **nationwide** holidays, plus the chosen Land's own (below). A parent who
+  has not named a state sees the nine; said in the KDoc, the same trade Czechia's
+  district-dependent spring break makes.
 - **Austria** — the thirteen nationwide holidays. Good Friday (Protestant-only until 2019), 24
   and 31 December and the Länder patron-saint days are bank holidays in the reference data and
   are not drawn.
@@ -1372,11 +1373,36 @@ against it rather than from memory.
   derived from the provider, so it cannot promise school vacations a provider does not return.
   The calendar filter's "Czech holidays" title became "Holidays" in all five locales.
 
+**Done (September 2026): the region, for Germany.** `User.regionCode` (Room schema 35, nullable
+with no default, so every existing account is "nationwide" and nobody's calendar changes) is an
+ISO 3166-2 suffix, synced to `users/{uid}.regionCode` beside `countryCode` (`""` for none, so a
+cleared region is cleared by the merge). `HolidayProvider.regions`/`forRegion` and
+`HolidayLocation` carry it to the grid; `HolidayCountry.regionOrNull` drops a code that is not
+the country's, and changing country clears it. The picker is a second chip row under the country
+chips on the wizard's profile step, and a second Settings row ("State") with its own dialog —
+both **only when the chosen country has regions**. The coverage note says which it draws:
+nationwide only with a nudge to pick a state, or the state's days as well.
+- **The data.** `GermanState` holds each Land's additions; `generate-holiday-fixture.py --regions`
+  writes `HolidayRegionReferenceFixture.kt` (only the days each state *adds*, and the script
+  refuses to write it if a state's list is not a superset of the nationwide one), and
+  `HolidayReferenceTest` rebuilds every state's list 2020–2035 as nationwide + those days.
+- **Left out on purpose**, and said in `GermanState`'s KDoc and the generator: the library's
+  `catholic` category (Assumption Day in Bavaria, Corpus Christi in parts of Saxony and Thuringia
+  — holidays only in Catholic-majority *municipalities*, which a state cannot identify), and
+  **Augsburg**, which the library models as a pseudo-subdivision for a city holiday. Kept: Berlin's
+  one-off anniversaries (2020, 2025, 2028) and Brandenburg's statutory Easter and Whit Sundays.
+- **Austria has no region picker, deliberately.** The library returns **no** regional *public*
+  holiday for any of its nine Länder; the patron-saint days (St. Leopold, St. Joseph, St. Florian,
+  …) are in its `bank` category — school-free and many offices close, but not statutory days off.
+  A state setting that changed nothing on the grid would be design rule 8's promise. **Owner call
+  if wanted:** draw the patron day as a separate, labelled kind of day, which needs its own name on
+  the grid rather than passing as a public holiday.
+
 **Left.** No school vacations outside Czechia — Germany's and Austria's are set per state,
-Slovakia's spring break per region, Russia's per region or school — and none were invented. A
-state/region setting would lift both that and Germany's missing state holidays (the reference
-library carries per-state data for both); whether it is worth a setting is an owner call. A
-per-family school calendar remains the honest fix for the per-viewer strips described above.
+Slovakia's spring break per region, Russia's per region or school — and none were invented. The
+region setting makes Germany's per-state school calendars *reachable* (the library carries them),
+but school vacations still follow the viewer rather than the child, so a per-family school
+calendar remains the honest fix for the per-viewer strips described above before any are drawn.
 
 ---
 

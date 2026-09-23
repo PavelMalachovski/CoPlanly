@@ -237,7 +237,9 @@ cd firestore-tests && npm test              # firestore.rules + storage.rules on
   job is green on what can run and the intent survives for whoever restores a schema. Do not
   read that as ordinary quarantine: an `@Ignore` normally hides a defect, and this one records
   missing data that no fix to the code can supply. The migrations a test can prove are those
-  six plus 33→34, which MON-5 added.
+  six plus 34→35 (MON-13's region) — this line used to credit a 33→34 test to MON-5, and none
+  exists (it could be written: `33.json` and `34.json` are both there). 34→35 needs the Regenerate
+  workflow to have exported `35.json` first.
   What stops the gap growing is a **step in `ci.yml`**: `git status --porcelain -- app/schemas`
   after the build, failing when the build produced a schema nobody committed. It is deliberately
   *not* `DatabaseSchemaExportTest`, which this line used to credit and which cannot do it — kapt
@@ -393,7 +395,7 @@ cd firestore-tests && npm test              # firestore.rules + storage.rules on
 
 ```
 domain/    — models, repository interfaces, use cases, holidays, ReminderScheduler
-data/      — Room (v34 + migrations), Firestore/Google clients, repository impls, sync
+data/      — Room (v35 + migrations), Firestore/Google clients, repository impls, sync
 presentation/ — Compose screens per feature + ViewModels + theme
 di/        — Hilt modules (Database, Firebase, Google, UseCase, Notification, …)
 ```
@@ -425,8 +427,8 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
    draws (`HolidayCountry.coverage` → `coverageNote()`), because drawing Czech holidays for a
    German family is the bug this replaced and drawing nothing — or less than the row implies —
    silently would be design item 8's forbidden affordance. Czechia, Slovakia, Germany (the nine
-   nationwide days only), Austria and Russia (statutory art. 112 days, no annual transfer decree)
-   have tables; **Ukraine deliberately has none** — its holidays are not days off under martial
+   nationwide days, plus the chosen Land's own — below), Austria and Russia (statutory art. 112
+   days, no annual transfer decree) have tables; **Ukraine deliberately has none** — its holidays are not days off under martial
    law, and the row says so. Only Czechia has school vacations; do not invent them for the others.
    The tables were written against the Python `holidays` library (September 2026, superseding the
    August decision to wait for verified data — this is that data) and are **pinned to it**:
@@ -440,6 +442,17 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
    `MonthView` already did, hardcoded to `"cs"`. `CzechHolidays` itself is unchanged: pure,
    computed, Easter via computus (now shared as `gregorianEasterSunday`), the nationwide MŠMT
    vacations, and the district-dependent spring break still intentionally excluded.
+   **A region sits under the country, and only where it changes the grid** (schema 35,
+   `users.regionCode`, nullable = nationwide). `HolidayProvider.regions`/`forRegion` and
+   `HolidayLocation` carry it; the calendar reads `HolidayLocation.provider`, and
+   `HolidayCountry.regionOrNull` drops a code that is not the country's, so a parent who moved
+   from Germany to Austria never keeps drawing Bavaria. Only Germany has regions: Austria's
+   Länder add no *public* holiday in the reference data (the patron-saint days are bank
+   holidays), so it gets no picker — a row that changed nothing is item 8 again. The German
+   states are pinned by a second fixture (`--regions`, only what each state *adds*), and the
+   library's `catholic` category and the Augsburg pseudo-state are excluded on purpose —
+   `GermanState`'s KDoc says why. The Room schema JSON for v35 is exported by the Regenerate
+   workflow, not by hand.
 9. **Reminders** are scheduled through the `ReminderScheduler` domain interface
    (WorkManager impl `EventReminderScheduler`), hooked into the event use cases —
    schedule on create/update, cancel on delete.
@@ -479,7 +492,7 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     the conversation as `{uid: epochMillis}` maps — one write per event — and the ticks and
     unread badge are derived from them by `ChatReadState`, never stored per message.
     Message times are stored the same way: `Message.sentAtMillis`, epoch millis (Room
-    schema v13, since superseded — the database is at v34), not a naive `LocalDateTime`, so two
+    schema v13, since superseded — the database is at v35), not a naive `LocalDateTime`, so two
     parents in different time zones agree
     on what a mark means and on when a message was sent. The Firestore field keeps its name
     (`timestamp`) and the read path still accepts a legacy ISO string, so a co-parent on an

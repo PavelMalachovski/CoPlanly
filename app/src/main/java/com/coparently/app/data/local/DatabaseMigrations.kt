@@ -762,6 +762,22 @@ object DatabaseMigrations {
     }
 
     /**
+     * v34 -> v35: the region within a parent's country (MON-13, regional half).
+     *
+     * German public holidays are state law, so the country alone could only draw the nine
+     * nationwide days. `regionCode` names the Land whose own days are added.
+     *
+     * **Nullable and without a default**, unlike `countryCode`'s `DEFAULT 'CZ'`: every existing
+     * row honestly has no region, and null is what "nationwide" is. Nobody's calendar changes on
+     * upgrade — a German account keeps its nine days until the parent names a state.
+     */
+    val MIGRATION_34_35 = object : Migration(34, 35) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL("ALTER TABLE users ADD COLUMN regionCode TEXT")
+        }
+    }
+
+    /**
      * List of all migrations in order.
      */
     val ALL_MIGRATIONS = arrayOf(
@@ -793,6 +809,7 @@ object DatabaseMigrations {
         MIGRATION_30_31,
         MIGRATION_31_32,
         MIGRATION_32_33,
-        MIGRATION_33_34
+        MIGRATION_33_34,
+        MIGRATION_34_35
     )
 }

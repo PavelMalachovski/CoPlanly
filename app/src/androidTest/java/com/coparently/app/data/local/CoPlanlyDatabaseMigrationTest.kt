@@ -629,6 +629,37 @@ class CoPlanlyDatabaseMigrationTest {
         }
     }
 
+    /**
+     * 34-to-35 adds a parent's holiday region (MON-13, regional half) and gives every existing
+     * row none.
+     *
+     * Null is the whole point: it is "nationwide", which is what every account was drawing
+     * before the column existed, so a German parent's calendar is unchanged until they name a
+     * Land. The country beside it must survive untouched.
+     */
+    @Test
+    fun migration34To35_givesEveryExistingParentNoRegion() {
+        val db = helper.createDatabase(TEST_DB, VERSION_34)
+        db.execSQL(
+            """
+            INSERT INTO users (id, email, name, role, colorCode, googleCalendarSyncEnabled,
+                               partnerIdsJson, allergiesJson, medicalProfileJson, countryCode)
+            VALUES ('u1', 'a@example.com', 'Anna', 'mom', '#FF4081', 0, '[]', '[]', '{}', 'DE')
+            """.trimIndent()
+        )
+        db.close()
+
+        val migrated = helper.runMigrationsAndValidate(
+            TEST_DB, VERSION_35, true, DatabaseMigrations.MIGRATION_34_35
+        )
+
+        migrated.query("SELECT countryCode, regionCode FROM users").use {
+            assertTrue(it.moveToFirst())
+            assertEquals("DE", it.getString(0))
+            assertTrue("an existing parent draws the nationwide calendar", it.isNull(1))
+        }
+    }
+
     private companion object {
         const val TEST_DB = "coplanly-migration-test.db"
         const val VERSION_11 = 11
@@ -644,6 +675,8 @@ class CoPlanlyDatabaseMigrationTest {
         const val VERSION_21 = 21
         const val VERSION_24 = 24
         const val VERSION_25 = 25
+        const val VERSION_34 = 34
+        const val VERSION_35 = 35
 
         /** 2026-08-01T12:00:00 at UTC+05:30, i.e. 06:30:00Z. */
         const val NOON_AT_PLUS_FIVE_THIRTY_MILLIS = 1_785_565_800_000L

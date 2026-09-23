@@ -243,7 +243,7 @@ fun CalendarScreen(
     val hiddenEventTypes by calendarViewModel.hiddenEventTypes.collectAsState()
     val customEventTypes by calendarViewModel.customEventTypes.collectAsState()
     val showHolidays by calendarViewModel.showHolidays.collectAsState()
-    val holidayCountry by calendarViewModel.holidayCountry.collectAsState()
+    val holidayLocation by calendarViewModel.holidayLocation.collectAsState()
     val custodyChangeAnnouncement by calendarViewModel.custodyChangeAnnouncement.collectAsState()
     val pendingProposal by calendarViewModel.pendingProposal.collectAsState()
     val calendarFriends by calendarViewModel.calendarFriends.collectAsState()
@@ -411,10 +411,15 @@ fun CalendarScreen(
     // (MON-13). This used to call `CzechHolidays` outright, which is how a family in Germany or
     // Ukraine got Czech holidays. A country the app has no table for draws none — see
     // `HolidayCountry`, and the picker says so rather than leaving it a mystery.
+    // The region comes with the country (`HolidayLocation`): a German parent who named their
+    // Land gets its own days on top of the nine nationwide ones.
     val holidays: Map<LocalDate, Holiday> = remember(
-        viewMode, queryAnchorDate, showHolidays, holidayCountry
+        viewMode,
+        queryAnchorDate,
+        showHolidays,
+        holidayLocation
     ) {
-        val provider = holidayCountry.provider
+        val provider = holidayLocation.provider
         if (!showHolidays || provider == null) {
             emptyMap()
         } else {

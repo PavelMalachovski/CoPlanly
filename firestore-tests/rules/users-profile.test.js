@@ -142,6 +142,32 @@ describe('users profile: the identity write ensureProfile performs', () => {
     await assertSucceeds(alice.doc(`users/${ALICE}`).set({role: 'mom', name: 'Alice N'}, {merge: true}));
   });
 
+  it('lets the owner record and clear their holiday country and region', async () => {
+    // MON-13's regional half. `UserRepositoryImpl.updateUser` merges `regionCode` beside
+    // `countryCode`, and writes "" rather than omitting the key for "nationwide", so a cleared
+    // region is actually cleared. Nothing in the rule names either key: this pins that the
+    // profile rule stays an open map for them.
+    await seed(env, {
+      [`users/${ALICE}`]: {name: 'Alice', email: 'alice@example.com', role: 'mom', countryCode: 'CZ'},
+    });
+    await assertSucceeds(mergeProfile(env, {countryCode: 'DE', regionCode: 'BY'}));
+    await assertSucceeds(mergeProfile(env, {countryCode: 'DE', regionCode: ''}));
+
+    const stored = await readRaw(env, `users/${ALICE}`);
+    if (stored.countryCode !== 'DE') throw new Error('countryCode was not written');
+    if (stored.regionCode !== '') throw new Error('a cleared region was not cleared');
+  });
+
+  it('does not let the co-parent set the other parent\'s region', async () => {
+    await seed(env, {
+      [`users/${ALICE}`]: {name: 'Alice', email: 'alice@example.com', role: 'mom', partnerId: BOB},
+      [`users/${BOB}`]: {name: 'Bob', email: 'bob@example.com', role: 'dad', partnerId: ALICE},
+    });
+    await assertFails(
+        env.authenticatedContext(BOB).firestore()
+            .doc(`users/${ALICE}`).set({regionCode: 'BY'}, {merge: true}));
+  });
+
   it('bounds the name on update as it does on create', async () => {
     await seed(env, {
       [`users/${ALICE}`]: {name: 'Alice', email: 'alice@example.com', role: 'mom'},

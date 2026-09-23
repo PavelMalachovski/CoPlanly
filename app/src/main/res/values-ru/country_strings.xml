@@ -16,4 +16,28 @@
     <string name="country_holidays_unavailable">Праздников для страны «%1$s» в приложении пока нет, поэтому они не показываются.</string>
     <string name="country_holidays_public_only">В календаре показываются общегосударственные праздники. Школьных каникул для страны «%1$s» в приложении нет.</string>
     <string name="country_holidays_suspended">Во время военного положения праздники в стране «%1$s» не являются выходными днями, поэтому они не показываются.</string>
+
+    <!-- MON-13, regional half: the Land whose own public holidays are added. -->
+    <string name="holiday_region_label_de">Федеральная земля</string>
+    <string name="holiday_region_settings_summary">Добавляет праздники этой федеральной земли</string>
+    <string name="holiday_region_none">Только общегосударственные</string>
+    <string name="country_holidays_pick_region">В календаре показываются общегосударственные праздники; выберите федеральную землю, чтобы добавить её собственные. Школьных каникул для страны «%1$s» в приложении нет.</string>
+    <string name="country_holidays_with_region">В календаре показываются общегосударственные праздники и праздники земли «%1$s». Школьных каникул в приложении нет.</string>
+
+    <string name="region_de_bb">Бранденбург</string>
+    <string name="region_de_be">Берлин</string>
+    <string name="region_de_bw">Баден-Вюртемберг</string>
+    <string name="region_de_by">Бавария</string>
+    <string name="region_de_hb">Бремен</string>
+    <string name="region_de_he">Гессен</string>
+    <string name="region_de_hh">Гамбург</string>
+    <string name="region_de_mv">Мекленбург — Передняя Померания</string>
+    <string name="region_de_ni">Нижняя Саксония</string>
+    <string name="region_de_nw">Северный Рейн — Вестфалия</string>
+    <string name="region_de_rp">Рейнланд-Пфальц</string>
+    <string name="region_de_sh">Шлезвиг-Гольштейн</string>
+    <string name="region_de_sl">Саар</string>
+    <string name="region_de_sn">Саксония</string>
+    <string name="region_de_st">Саксония-Анхальт</string>
+    <string name="region_de_th">Тюрингия</string>
 </resources>

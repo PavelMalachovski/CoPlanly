@@ -16,8 +16,9 @@ package com.coparently.app.domain.holidays
  * - **Czechia** — public holidays and the nationwide MŠMT school vacations.
  * - **Slovakia, Germany, Austria, Russia** — public holidays only. Their school calendars are set
  *   per region, and inventing a nationwide one would be exactly the wrong date this item is about.
- *   Germany's table is the nine nationwide days (there is no state setting), and Russia's is the
- *   statutory list without the annual transfer decree; each provider's KDoc says what it leaves out.
+ *   Germany's table is the nine nationwide days, plus the chosen Land's own when the parent has
+ *   named one (see [regions] and [HolidayLocation]); Russia's is the statutory list without the
+ *   annual transfer decree. Each provider's KDoc says what it leaves out.
  * - **Ukraine** — none, and not because the table is missing. Under martial law (in force since
  *   24 February 2022) Ukraine's public holidays are not days off, and the reference data returns
  *   none from 2023 on. A provider that computed the pre-war list would put days off on the grid
@@ -65,10 +66,10 @@ enum class HolidayCountry(
     /** Public holidays only; the list changes by year (Acts 530/2023 and 261/2025). */
     SLOVAKIA("SK", SlovakHolidays),
 
-    /** The nine nationwide public holidays; state holidays need a state setting. */
+    /** The nine nationwide public holidays, plus the chosen Land's own. */
     GERMANY("DE", GermanHolidays),
 
-    /** The thirteen nationwide public holidays. */
+    /** The thirteen public holidays, which are nationwide — so no region to choose. */
     AUSTRIA("AT", AustrianHolidays),
 
     /** No days off under martial law — see the class KDoc. */
@@ -82,6 +83,25 @@ enum class HolidayCountry(
 
     /** Whether picking this country actually puts holidays on the grid. */
     val hasHolidays: Boolean get() = provider != null
+
+    /**
+     * The regions whose own public holidays this country's calendar can add, as ISO 3166-2
+     * suffixes — the sixteen Länder for Germany, and empty everywhere else. The region picker
+     * appears only when this is non-empty, so it can never be offered where it changes nothing.
+     */
+    val regions: List<String> get() = provider?.regions.orEmpty()
+
+    /**
+     * [code] if it names one of this country's [regions], else null.
+     *
+     * Null rather than a fallback region: "no region" is a real answer (the nationwide days), and
+     * a stored code that no longer fits — a parent who moved from Germany to Austria, or a newer
+     * build's region read by an older one — must degrade to that rather than to a guess.
+     */
+    fun regionOrNull(code: String?): String? {
+        val normalized = code?.trim()?.uppercase() ?: return null
+        return normalized.takeIf { it in regions }
+    }
 
     /** What picking this country puts on the grid — the sentence the picker shows under it. */
     val coverage: HolidayCoverage
@@ -115,6 +135,38 @@ enum class HolidayCountry(
         fun fromCode(code: String?): HolidayCountry {
             val normalized = code?.trim()?.uppercase().orEmpty()
             return entries.firstOrNull { it.code == normalized } ?: Default
+        }
+    }
+}
+
+/**
+ * Where a parent is, as far as the holiday calendar is concerned: a country and, where the
+ * country's holidays vary by region, the region (MON-13).
+ *
+ * The one value the calendar reads — `CalendarViewModel` builds it from the profile's
+ * `countryCode` and `regionCode`, and [provider] is what the grid draws. Built through [of], which
+ * drops a region that does not belong to the country, so a stale `regionCode` left behind by a
+ * change of country can never select another country's table.
+ *
+ * @property country The parent's country.
+ * @property regionCode One of [HolidayCountry.regions] for [country], or null for the nationwide
+ *   calendar.
+ */
+data class HolidayLocation(
+    val country: HolidayCountry,
+    val regionCode: String? = null
+) {
+    /** The calendar to draw, or null when the country has none. */
+    val provider: HolidayProvider? get() = country.provider?.forRegion(regionCode)
+
+    companion object {
+        /** Every account that has never chosen: [HolidayCountry.Default], nationwide. */
+        val Default: HolidayLocation = HolidayLocation(HolidayCountry.Default)
+
+        /** The location two stored codes name; see [HolidayCountry.fromCode] and [HolidayCountry.regionOrNull]. */
+        fun of(countryCode: String?, regionCode: String?): HolidayLocation {
+            val country = HolidayCountry.fromCode(countryCode)
+            return HolidayLocation(country, country.regionOrNull(regionCode))
         }
     }
 }

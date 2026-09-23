@@ -90,6 +90,19 @@ class SettingsViewModel @Inject constructor(
         )
 
     /**
+     * The region within [country] whose own public holidays are added (MON-13, regional half),
+     * or null for the nationwide calendar — including when the stored code belongs to a country
+     * the parent has since left, which [HolidayCountry.regionOrNull] drops.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val holidayRegion: StateFlow<String?> = userRepository.observeCurrentUserId()
+        .flatMapLatest { uid ->
+            if (uid == null) flowOf(null) else userRepository.observeUserById(uid)
+        }
+        .map { HolidayCountry.fromCode(it?.countryCode).regionOrNull(it?.regionCode) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(ACCOUNT_STOP_TIMEOUT_MS), null)
+
+    /**
      * Whether this family's app offers child records, pet records, or both.
      *
      * The union of the two parents' answers, from [FamilyKindSource]; an account that has never
@@ -235,7 +248,26 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             val fresh = userRepository.getCurrentUser() ?: return@launch
             if (fresh.countryCode == chosen.code) return@launch
-            userRepository.updateUser(fresh.copy(countryCode = chosen.code))
+            // A region belongs to its country: moving to Austria clears Bavaria rather than
+            // leaving a code behind that the next country might one day happen to reuse.
+            userRepository.updateUser(
+                fresh.copy(countryCode = chosen.code, regionCode = chosen.regionOrNull(fresh.regionCode))
+            )
+        }
+    }
+
+    /**
+     * Records the region picked in Settings, or null for "nationwide only".
+     *
+     * Fresh read for the reason [setCountry] gives, and validated against the *stored* country
+     * rather than against [country]'s `.value`: a code that is not that country's is dropped.
+     */
+    fun setHolidayRegion(code: String?) {
+        viewModelScope.launch {
+            val fresh = userRepository.getCurrentUser() ?: return@launch
+            val region = HolidayCountry.fromCode(fresh.countryCode).regionOrNull(code)
+            if (fresh.regionCode == region) return@launch
+            userRepository.updateUser(fresh.copy(regionCode = region))
         }
     }
 

@@ -35,19 +35,83 @@ fun HolidayCountry.labelRes(): Int = when (this) {
 }
 
 /**
+ * What this country calls the regions its holidays vary by — "State"/"Bundesland" for Germany —
+ * or null for a country with none, which is every other country today.
+ *
+ * Per country rather than one generic "Region" label, because the word a German parent looks
+ * for is the Land; a second country with regions would bring its own word.
+ */
+@StringRes
+fun HolidayCountry.regionLabelRes(): Int? = when (this) {
+    HolidayCountry.GERMANY -> R.string.holiday_region_label_de
+    else -> null
+}
+
+/**
+ * What region [code] is called on screen, or null for a code this build has no name for.
+ *
+ * Keyed on the stored code rather than on the domain's `GermanState`, which is internal to the
+ * holiday tables; the codes are the ISO 3166-2 suffixes `HolidayCountry.regions` lists.
+ */
+@StringRes
+fun holidayRegionLabelRes(code: String): Int? = REGION_LABELS[code]
+
+/** Germany's sixteen Länder by ISO 3166-2 suffix; see `GermanState` for what each adds. */
+private val REGION_LABELS: Map<String, Int> = mapOf(
+    "BB" to R.string.region_de_bb,
+    "BE" to R.string.region_de_be,
+    "BW" to R.string.region_de_bw,
+    "BY" to R.string.region_de_by,
+    "HB" to R.string.region_de_hb,
+    "HE" to R.string.region_de_he,
+    "HH" to R.string.region_de_hh,
+    "MV" to R.string.region_de_mv,
+    "NI" to R.string.region_de_ni,
+    "NW" to R.string.region_de_nw,
+    "RP" to R.string.region_de_rp,
+    "SH" to R.string.region_de_sh,
+    "SL" to R.string.region_de_sl,
+    "SN" to R.string.region_de_sn,
+    "ST" to R.string.region_de_st,
+    "TH" to R.string.region_de_th
+)
+
+/**
+ * The name to show for [regionCode] in this country — the region's own name, or "Nationwide
+ * only" when there is none.
+ */
+@Composable
+fun HolidayCountry.regionName(regionCode: String?): String {
+    val res = regionOrNull(regionCode)?.let { holidayRegionLabelRes(it) }
+    return stringResource(res ?: R.string.holiday_region_none)
+}
+
+/**
  * The sentence under a country picker saying what choosing [this] actually draws (MON-13).
  *
  * One function for the wizard's chips and the Settings dialog, so the two cannot drift on **what
  * is admitted**. It reads [HolidayCountry.coverage], which is derived from the provider, so the
  * note cannot promise school vacations a provider does not return — only Czechia has them — or
  * call Ukraine's holidays "not in the app yet" when the truth is that martial law suspended them.
+ *
+ * For a country with regions it also says whether the region's own days are in: "nationwide
+ * only" would under-state a Bavarian calendar that has Epiphany on it, and the old sentence
+ * would never tell a parent that choosing a state adds anything.
+ *
+ * @param regionCode The region stored for this country, if any; ignored when it is not one of
+ *   the country's regions.
  */
 @Composable
-fun HolidayCountry.coverageNote(): String {
+fun HolidayCountry.coverageNote(regionCode: String? = null): String {
     val name = stringResource(labelRes())
+    val region = regionOrNull(regionCode)
     return when (coverage) {
         HolidayCoverage.PUBLIC_AND_SCHOOL -> stringResource(R.string.country_holidays_supported)
-        HolidayCoverage.PUBLIC_ONLY -> stringResource(R.string.country_holidays_public_only, name)
+        HolidayCoverage.PUBLIC_ONLY -> when {
+            regions.isEmpty() -> stringResource(R.string.country_holidays_public_only, name)
+            region == null -> stringResource(R.string.country_holidays_pick_region, name)
+            else -> stringResource(R.string.country_holidays_with_region, regionName(region))
+        }
         HolidayCoverage.SUSPENDED -> stringResource(R.string.country_holidays_suspended, name)
         HolidayCoverage.NONE -> stringResource(R.string.country_holidays_unavailable, name)
     }
@@ -64,14 +128,23 @@ fun HolidayCountry.coverageNote(): String {
  * drew less than it implied would be the affordance design rule 8 forbids, and one that drew
  * *Czech* holidays for a German family is the bug this whole item exists to fix.
  *
+ * The region chips (MON-13, regional half) appear only when the chosen country has regions —
+ * Germany's sixteen Länder — and only when the caller takes a region at all, so a picker that
+ * has no region to store never offers one.
+ *
  * @param selected The country currently stored on the profile.
  * @param onSelect Called with the new country; the caller persists it.
+ * @param selectedRegion The region currently chosen, or null for the nationwide calendar.
+ * @param onSelectRegion Called with the new region (null for "nationwide only"); null hides the
+ *   region chips entirely.
  */
 @Composable
 fun CountryPicker(
     selected: HolidayCountry,
     onSelect: (HolidayCountry) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    selectedRegion: String? = null,
+    onSelectRegion: ((String?) -> Unit)? = null
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         FlowRow(
@@ -87,11 +160,61 @@ fun CountryPicker(
             }
         }
 
+        val regionLabel = selected.regionLabelRes()
+        if (onSelectRegion != null && regionLabel != null && selected.regions.isNotEmpty()) {
+            RegionChips(
+                label = stringResource(regionLabel),
+                regions = selected.regions,
+                selectedRegion = selected.regionOrNull(selectedRegion),
+                onSelectRegion = onSelectRegion
+            )
+        }
+
         Text(
-            text = selected.coverageNote(),
+            text = selected.coverageNote(selectedRegion),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 8.dp)
         )
+    }
+}
+
+/**
+ * The region chips under the country chips: "nationwide only" first, then each region by name.
+ *
+ * "Nationwide only" is a real choice, not an unset state — it is what every account had before
+ * the field existed, and a parent unsure of the rule is better off with nine true days than with
+ * a state's days they do not have.
+ */
+@Composable
+private fun RegionChips(
+    label: String,
+    regions: List<String>,
+    selectedRegion: String?,
+    onSelectRegion: (String?) -> Unit
+) {
+    Text(
+        text = label,
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(top = 12.dp, bottom = 4.dp)
+    )
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        FilterChip(
+            selected = selectedRegion == null,
+            onClick = { onSelectRegion(null) },
+            label = { Text(stringResource(R.string.holiday_region_none)) }
+        )
+        regions.forEach { code ->
+            val name = holidayRegionLabelRes(code)?.let { stringResource(it) } ?: code
+            FilterChip(
+                selected = selectedRegion == code,
+                onClick = { onSelectRegion(code) },
+                label = { Text(name) }
+            )
+        }
     }
 }
