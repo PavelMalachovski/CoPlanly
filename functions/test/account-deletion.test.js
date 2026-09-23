@@ -335,4 +335,62 @@ describe('deleteAccountDataImpl', () => {
         'a grant naming the deleted family, or held by it, survived');
     assert.deepStrictEqual(db._store.friend_profiles, []);
   });
+
+  // The documents were erased and the files they named were not: a child's medical photographs
+  // stayed in the bucket under ids nothing could look up any more. The files have to go first,
+  // while the documents still say which files exist.
+  it('deletes the files of authored records, and only those', async () => {
+    const seed = family();
+    seed.pets = [{id: 'pet-1', createdByFirebaseUid: ALICE, sharedWith: [ALICE, BOB]}];
+    const db = fakeDb(seed);
+    const bucket = fakeBucket();
+
+    const result = await myFunctions.deleteAccountDataImpl(db, ALICE, bucket);
+
+    assert.deepStrictEqual(bucket.deletedObjects.sort(),
+        ['event_images/ev-alice.jpg', 'receipts/ex-1.jpg']);
+    assert.deepStrictEqual(bucket.deletedPrefixes.sort(),
+        ['medical_photos/ch-1/', 'pet_photos/pet-1/']);
+    assert.ok(!bucket.deletedObjects.includes('event_images/ev-bob.jpg'),
+        'the co-parent\'s event photo was deleted');
+    assert.strictEqual(result.storage, 4);
+  });
+
+  it('keeps the documents when a file cannot be deleted, so a retry finds it', async () => {
+    const db = fakeDb(family());
+    const bucket = fakeBucket({failOn: 'receipts/ex-1.jpg'});
+
+    await assert.rejects(myFunctions.deleteAccountDataImpl(db, ALICE, bucket));
+
+    assert.deepStrictEqual(db._store.expenses.map((e) => e.id), ['ex-1']);
+    assert.ok(db._store.users.some((u) => u.id === ALICE), 'the profile went before the files');
+  });
 });
+
+/**
+ * A Storage bucket that records what it was asked to delete.
+ *
+ * @param {{failOn: (string|undefined)}=} options An object path whose delete throws.
+ * @return {!Object} The fake, exposing `deletedObjects` and `deletedPrefixes`.
+ */
+function fakeBucket(options) {
+  const failOn = options && options.failOn;
+  const deletedObjects = [];
+  const deletedPrefixes = [];
+  return {
+    deletedObjects,
+    deletedPrefixes,
+    file(path) {
+      return {
+        async delete(opts) {
+          assert.ok(opts && opts.ignoreNotFound, 'a missing photo must not fail the erasure');
+          if (path === failOn) throw new Error(`storage unavailable for ${path}`);
+          deletedObjects.push(path);
+        },
+      };
+    },
+    async deleteFiles(opts) {
+      deletedPrefixes.push(opts.prefix);
+    },
+  };
+}

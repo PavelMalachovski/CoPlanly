@@ -2518,6 +2518,60 @@ const AUTHORED_COLLECTIONS = ['events', 'child_info', 'pets', 'expenses', 'budge
 exports.AUTHORED_COLLECTIONS = AUTHORED_COLLECTIONS;
 
 /**
+ * Where each authored collection keeps its files in Cloud Storage, keyed by the document id.
+ *
+ * Mirrors `FirebaseImageStorage` on the client, which derives every path from the id of the
+ * record the file belongs to: one object per event photo and per receipt, and a folder of
+ * UUID-named objects per child's medical notes and per pet. `budgets` has no files. A layout
+ * added on the client without an entry here is a file an erased account leaves behind.
+ */
+const AUTHORED_FILES = {
+  events: {object: (id) => `event_images/${id}.jpg`},
+  expenses: {object: (id) => `receipts/${id}.jpg`},
+  child_info: {prefix: (id) => `medical_photos/${id}/`},
+  pets: {prefix: (id) => `pet_photos/${id}/`},
+};
+
+exports.AUTHORED_FILES = AUTHORED_FILES;
+
+/**
+ * Deletes the Storage files belonging to the records [uid] authored.
+ *
+ * Runs **before** the documents go, because the documents are the only index of which files
+ * exist: once `events/{id}` is deleted nothing names `event_images/{id}.jpg` any more, and a
+ * child's medical photographs would stay in the bucket under an id nobody can look up. A missing
+ * object is not an error — most events have no photo — but any other failure propagates, so the
+ * callable fails while the documents still exist and a retry can find the files again.
+ *
+ * @param {FirebaseFirestore.Firestore} db Firestore instance.
+ * @param {?Object} bucket A `@google-cloud/storage` bucket, or null to skip (tests that do not
+ *     exercise Storage).
+ * @param {string} uid The account being erased.
+ * @return {Promise<number>} How many objects or folders were deleted.
+ */
+async function deleteAuthoredFiles(db, bucket, uid) {
+  if (!bucket) return 0;
+  let deleted = 0;
+  for (const collection of Object.keys(AUTHORED_FILES)) {
+    const layout = AUTHORED_FILES[collection];
+    const snap = await db.collection(collection)
+        .where('createdByFirebaseUid', '==', uid)
+        .get();
+    for (const doc of snap.docs) {
+      if (layout.object) {
+        await bucket.file(layout.object(doc.id)).delete({ignoreNotFound: true});
+      } else {
+        await bucket.deleteFiles({prefix: layout.prefix(doc.id), force: true});
+      }
+      deleted++;
+    }
+  }
+  return deleted;
+}
+
+exports.deleteAuthoredFiles = deleteAuthoredFiles;
+
+/**
  * Deletes every document a query returns, in batches below the write cap.
  *
  * @param {FirebaseFirestore.Firestore} db Firestore instance.
@@ -2629,11 +2683,18 @@ exports.scrubFromAudiences = scrubFromAudiences;
  * Takes `db` as a parameter for the reason every other `*Impl` in this file does: it is the
  * only way to exercise the batching and the ordering without a live Firestore.
  *
+ * **Files go with their records.** Event photos, receipts, a child's medical photographs and pet
+ * photographs live in Cloud Storage under paths derived from the record's id, and are deleted
+ * through [deleteAuthoredFiles] before the records that name them. Until September 2026 they
+ * were not: the documents went and the files stayed, which the deletion page promised otherwise.
+ *
  * @param {FirebaseFirestore.Firestore} db Firestore instance.
  * @param {string} uid The account being erased.
+ * @param {?Object=} bucket The Storage bucket holding the account's files; omitted in tests that
+ *     do not exercise Storage, in which case no file is touched.
  * @return {Promise<!Object>} Counts per collection, plus `unpairedFrom`.
  */
-async function deleteAccountDataImpl(db, uid) {
+async function deleteAccountDataImpl(db, uid, bucket) {
   const removed = {};
 
   // Every co-parent, read before any of the links come down: unpairing clears the list this
@@ -2671,6 +2732,9 @@ async function deleteAccountDataImpl(db, uid) {
   // The Google OAuth fingerprint (SEC-1 §2). Nothing else deletes it, and a fingerprint of a
   // refresh token issued to an account that no longer exists has no reason to remain.
   await db.collection('google_oauth').doc(uid).delete();
+
+  // Files first: the documents deleted next are the only record of which files exist.
+  removed.storage = await deleteAuthoredFiles(db, bucket || null, uid);
 
   for (const collection of AUTHORED_COLLECTIONS) {
     removed[collection] = await deleteQueryInBatches(
@@ -2750,7 +2814,8 @@ exports.deleteAccount = functions.runWith({timeoutSeconds: 540}).https.onCall(
       }
       const uid = context.auth.uid;
 
-      const removed = await deleteAccountDataImpl(admin.firestore(), uid);
+      const removed = await deleteAccountDataImpl(
+          admin.firestore(), uid, admin.storage().bucket());
 
       try {
         await admin.auth().deleteUser(uid);
