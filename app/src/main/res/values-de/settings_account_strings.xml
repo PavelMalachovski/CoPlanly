@@ -48,9 +48,9 @@
     <string name="settings_account_delete">Konto löschen</string>
     <string name="settings_account_delete_description">Dieses Konto und alle Daten löschen</string>
     <string name="settings_account_delete_confirm_title">Dieses Konto löschen?</string>
-    <string name="settings_account_delete_confirm_message">Alles, was Sie eingetragen haben, wird gelöscht: Termine, Ausgaben, die Daten Ihres Kindes und der gesamte Chat. Dem anderen Elternteil bleibt nur, was er selbst erstellt hat. Das lässt sich nicht rückgängig machen.</string>
+    <string name="settings_account_delete_confirm_message">Alles, was Sie eingetragen haben, wird von unseren Servern und von diesem Telefon gelöscht: Termine, Ausgaben, die Daten Ihres Kindes und der gesamte Chat. Dem anderen Elternteil bleibt, was er selbst erstellt hat, und auf seinem Telefon bleiben die Kopien, die es bereits geladen hat. Das lässt sich nicht rückgängig machen.</string>
     <string name="settings_account_delete_final_title">Endgültig löschen?</string>
-    <string name="settings_account_delete_final_message">Es gibt keinen Weg zurück und keine Kopie. Wenn Sie sich nur von diesem Gerät abmelden möchten, nutzen Sie stattdessen die Abmeldung.</string>
+    <string name="settings_account_delete_final_message">Es gibt keinen Weg zurück: Wir bewahren keine Kopie zur Wiederherstellung auf. Wenn Sie sich nur von diesem Gerät abmelden möchten, nutzen Sie stattdessen die Abmeldung.</string>
     <string name="settings_account_delete_final_yes">Endgültig löschen</string>
     <string name="settings_account_delete_cancel">Konto behalten</string>
     <string name="settings_account_delete_progress">Konto wird gelöscht…</string>

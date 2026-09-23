@@ -49,9 +49,9 @@
     <string name="settings_account_delete">Delete account</string>
     <string name="settings_account_delete_description">Erase this account and all its data</string>
     <string name="settings_account_delete_confirm_title">Delete this account?</string>
-    <string name="settings_account_delete_confirm_message">Everything you entered goes: your events, expenses, your child\'s records and the whole chat. Your co-parent keeps only what they created themselves. This cannot be undone.</string>
+    <string name="settings_account_delete_confirm_message">Everything you entered is erased from our servers and from this phone: your events, expenses, your child\'s records and the whole chat. Your co-parent keeps what they created, and their phone keeps the copies it has already downloaded. This cannot be undone.</string>
     <string name="settings_account_delete_final_title">Delete permanently?</string>
-    <string name="settings_account_delete_final_message">There is no way back and no copy afterwards. If you only want to leave this device, sign out instead.</string>
+    <string name="settings_account_delete_final_message">There is no way back: we keep no copy to restore it from. If you only want to leave this device, sign out instead.</string>
     <string name="settings_account_delete_final_yes">Delete permanently</string>
     <string name="settings_account_delete_cancel">Keep my account</string>
     <string name="settings_account_delete_progress">Deleting your account…</string>
