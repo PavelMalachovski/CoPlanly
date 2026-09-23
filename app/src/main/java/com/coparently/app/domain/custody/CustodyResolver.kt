@@ -63,6 +63,28 @@ object CustodyResolver {
     ): (LocalDate) -> String? = { date -> custodyFor(model, overrides, legacy, date) }
 
     /**
+     * The contact windows worth showing on a date (MON-6b), bound to one pattern and one custody
+     * lookup — the calendar grid and the home screen's today card both read this, so they cannot
+     * disagree about which afternoons a day carries.
+     *
+     * [CustodyModel.contactWindowsOn] returns every window defined for the date's place in the
+     * cycle. A window naming the parent who **already has the day** — the pattern gives it to
+     * them, or an accepted swap does — is not an afternoon with anybody new, so it is dropped
+     * here rather than drawn over its own parent's colour or listed as news.
+     *
+     * @param model The agreed pattern, or null when none is active
+     * @param custodyFor Whose day a date is; pass [resolver]'s result, so a swap counts
+     * @return Windows for a date, earliest first; always empty without a model or windows
+     */
+    fun contactWindowsResolver(
+        model: CustodyModel?,
+        custodyFor: (LocalDate) -> String?
+    ): (LocalDate) -> List<ContactWindow> {
+        if (model == null || model.contactWindows.isEmpty()) return { emptyList() }
+        return { date -> model.contactWindowsOn(date).filter { it.parent != custodyFor(date) } }
+    }
+
+    /**
      * Whether the child changes hands on the morning of [date].
      *
      * A handover day is one whose custody differs from the day before it. Both days must resolve

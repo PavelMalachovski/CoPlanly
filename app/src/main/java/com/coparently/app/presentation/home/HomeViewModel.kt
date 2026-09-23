@@ -388,7 +388,9 @@ class HomeViewModel @Inject constructor(
                 events = events,
                 today = LocalDate.now(),
                 userId = userId,
-                custodyFor = custodyFor
+                custodyFor = custodyFor,
+                // The same windows the calendar grid draws (MON-6b), through the same lookup.
+                contactWindowsFor = CustodyResolver.contactWindowsResolver(model, custodyFor)
             ),
             week = HomeWeek.of(
                 events = events,

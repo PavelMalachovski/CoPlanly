@@ -33,6 +33,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.coparently.app.R
+import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.theme.CoPlanlyColors
@@ -43,6 +44,7 @@ import com.coparently.app.utils.PreviewWrapper
 import com.coparently.app.utils.createSampleEvent
 import com.coparently.app.utils.previewParentNames
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -219,6 +221,9 @@ fun CustodyChangedBanner(byName: String, onDismiss: () -> Unit, modifier: Modifi
  * @param parentNames Resolves a slot to that parent's name
  * @param onEventClick Opens an event
  * @param modifier Modifier for the card
+ * @param contactWindows The day's contact windows (MON-6b), earliest first — already filtered by
+ *   `CustodyResolver.contactWindowsResolver`, the lookup the calendar grid draws its bands from,
+ *   so this card and the grid never disagree about an afternoon. Empty draws nothing.
  */
 @Composable
 // header, custody line and event rows are one card, not three; the parameters are the
@@ -230,7 +235,8 @@ fun DayAgendaCard(
     custody: String?,
     parentNames: ParentNames,
     onEventClick: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    contactWindows: List<ContactWindow> = emptyList()
 ) {
     val dateFormatter = remember(Locale.getDefault()) {
         DateTimeFormatter.ofPattern("EEE, MMM d", Locale.getDefault())
@@ -271,6 +277,11 @@ fun DayAgendaCard(
                     fontWeight = FontWeight.SemiBold,
                     color = ParentColors.text(custody)
                 )
+            }
+            // An afternoon with the other parent, under the line that says whose day it is:
+            // the day stays theirs (item 24), and this says who has the child in between.
+            contactWindows.forEach { window ->
+                ContactWindowLine(window, parentNames, timeFormatter)
             }
         }
 
@@ -337,6 +348,46 @@ fun DayAgendaCard(
     }
 }
 
+/**
+ * One contact window as a line of the agenda card: "15:00–19:00 · contact with Alex".
+ *
+ * The marker is the window parent's full hue and the text its text-grade partner — the same
+ * two strengths of one hue the grid's band and edge use, through [ParentColors] so the family's
+ * chosen palette applies. The name comes from [ParentNames], never a role word.
+ */
+@Composable
+private fun ContactWindowLine(
+    window: ContactWindow,
+    parentNames: ParentNames,
+    formatter: DateTimeFormatter
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .width(10.dp)
+                .height(3.dp)
+                .clip(RoundedCornerShape(2.dp))
+                .background(ParentColors.fill(window.parent))
+        )
+        Text(
+            text = stringResource(
+                R.string.calendar_agenda_contact_window,
+                window.start.format(formatter),
+                window.end.format(formatter),
+                parentNames.labelFor(window.parent)
+            ),
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Medium,
+            color = ParentColors.text(window.parent),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
 /** "14:00–15:30", or just the start when the event has no end. */
 @Composable
 private fun agendaTime(event: Event, formatter: DateTimeFormatter): String {
@@ -362,7 +413,15 @@ private fun DayAgendaCardPreview() {
             custody = "mom",
             parentNames = previewParentNames,
             onEventClick = {},
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(16.dp),
+            contactWindows = listOf(
+                ContactWindow(
+                    dayIndex = 2,
+                    start = LocalTime.parse("15:00"),
+                    end = LocalTime.parse("19:00"),
+                    parent = "dad"
+                )
+            )
         )
     }
 }

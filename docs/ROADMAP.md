@@ -69,11 +69,11 @@ invocation is yours.
 | **M-5** | Multi-family cleanup: delete `partnerId`, `User.role`, `Event.sharedWith`, `isPartnerOf` — **after** the ops steps in REL-3 | P2 | M |
 | **M-8** | M-4's last leftover: badges across families. Chat now follows the selected family (done, September 2026); an honest cross-family signal needs a conversation-document listener per non-selected family — a dot, not a count | P2 | M |
 | **CQ-17** | Six dependencies worth moving | P3 | S |
-| **MON-2** | Verify the market facts — most of them are public pages | P0 | S |
+| **MON-2** | Market facts checked (23 Sep 2026): **app2us has an Android build**; left: mediator count, ARPU, Facebook groups, app2us price on a phone | P0 | S |
 | **MON-3** | Export to PDF/CSV — the first paid feature (needs MON-4 first) | P1 | M |
 | **MON-4** | The paper is written; three answers are owed by the owner, and MON-3 waits on them | P1 | S |
 | **MON-5** | The plan ships; swapping in the Ministry's own wording needs the form itself | P1 | S |
-| **MON-6b** | Contact windows ship (schema 36); left: Home's today card, and verifying the mixed-version path on two phones | P2 | S |
+| **MON-6b** | Contact windows ship (schema 36), on the grid and on Home's today card; left: verifying the mixed-version path on two phones | P2 | S |
 | **MON-8** | Bakaláři / EduPage school import — the parsing, once you supply a real export | P2 | L |
 | **MON-11** | Payments (MVP 3) — the entitlement model, after MON-1 decides the price | P2 | L |
 | **MON-12** | Intelligent suggestions (MVP 3) — behind SEC-1's proxy, never with a key in the client | P3 | M |
@@ -1188,7 +1188,7 @@ The audit's recommendation (§10.4), for a Czech-first launch:
   it" band; 1,200 CZK/year is about 2.4% of one average monthly wage.
 - **One subscription per family, the second parent free.** This is what the winning European
   products do (CoParently.de, 2houses, ParentDocket) and the opposite of the American per-parent
-  model — which correlates with OurFamilyWizard's 1.4★ on Trustpilot against 4.6★ in the stores,
+  model — which correlates with OurFamilyWizard's 2.5★ on Trustpilot (MON-2; the audit said 1.4) against 4.6★ in the stores,
   the signature of court-mandated use plus per-seat billing. There is a product reason as well as a
   market one: in a conflicted pair, **one** person will pay. Charging both loses both.
 - **A free tier is not optional.** The product does nothing until *both* parents install it, so a
@@ -1203,13 +1203,33 @@ whether an entitlement follows the payer across their families or is bought per 
 - [ ] Then build: Play Billing, an entitlement model, a paywall, restore-purchases, and the
       server-side check that a second parent inherits the family's entitlement. *(→ MON-11)*
 
-### MON-2 · P0 · S · Verify the market facts before acting on any of this
+### MON-2 · **CHECKED, FOUR LEFT** · P0 · S · Verify the market facts before acting on any of this
 
-**Where:** ☁️ mostly cloud — these are public pages, and a session can fetch them. §7 is yours.
+**Where:** ☁️ done as far as a cloud session can; 💻 what is left needs a phone, the justice.cz
+register or a paid data source.
 
-Direct page fetching was blocked in the audit environment, so competitor prices, ratings and the
-Czech statistics come from search-result summaries. Good enough to plan with, **not** good enough to
-publish. In order of how much each answer moves the plan (audit §10.7):
+**Done 23 September 2026 — audit §10.10 is the record,** 29 rows, each with its source and what kind
+of source it is, and §10 marks every fact inline. The pages themselves still could not be opened —
+the egress policy refuses the Play Store, the App Store, app2us, the vendors and justice.cz alike —
+so a "confirmed" means the primary page is in the search index saying so.
+
+**The answer to §1 changes the Czech plan: app2us has an Android build.** It is on Google Play as
+"app2us Family" (`com.app2us.family`), the vendor states iOS 15+ and Android 12+, and the App Store
+"Rodina" listing the audit leaned on is an unrelated app with the same name. It is reported at
+**149 CZK/month or 1,490 CZK/year** — exactly the top of MON-1's band — with a one-month trial and
+no free tier, and its calendar splits care "with hourly precision". So "an Android-first Czech
+product has a clear run" is gone; what is left of the gap is **the free tier**, five locales against
+two, and the parenting plan (MON-5). That bears directly on MON-1.
+
+Also corrected: OurFamilyWizard is 2.5★ on Trustpilot, not 1.4★ (MON-1's line below keeps its
+shape, with the right number); AppClose is 4.6★ on Play, so "Android is underserved" holds for
+TalkingParents and 2houses, not for the category; Custody X Change Bronze is $72/year ($144 is
+Gold); alternating care reached 27.4% in 2024.
+
+**Left:** confirm the app2us price on a phone (the index summary did not name its page); the
+mediator count against the register; Czech ARPU (paywalled); the Facebook groups.
+
+The original list, in order of how much each answer moves the plan (audit §10.7):
 
 1. **app2us "Rodina": is there an Android build, and what does it cost in CZK?** This single answer
    changes the Czech strategy more than anything else found.
@@ -1347,9 +1367,17 @@ What it took, and the choices worth knowing:
   read as before; the hours are in the cell's description and one tap away in Day view. A window
   naming the parent who already has the day (the pattern's, or an accepted swap's) is not drawn.
 
-**Left.** Home's handover/today card does not mention a window yet. And the mixed-version path —
-one phone on this build, one on an older one, a swap and a proposal each way — is covered by the
-rules suite and the unit tests but has not been run on two devices.
+- **Home's today card** (September 2026) lists the day's windows under the line that says whose
+  day it is — "15:00–19:00 · contact with Alex", marker in the window parent's hue, name through
+  `ParentNames`. The filter moved out of `CalendarScreen` into
+  `CustodyResolver.contactWindowsResolver`, which the grid and `HomeViewModel` both call with their
+  own custody lookup, so a window naming the day's own parent (or a parent an accepted swap gave the
+  day to) is dropped in both places by one rule. `TodayAgenda.contactWindows` carries it; tests in
+  `CustodyResolverTest`, `HomeWeekTest` and `HomeViewModelTest`.
+
+**Left.** The mixed-version path — one phone on this build, one on an older one, a swap and a
+proposal each way — is covered by the rules suite and the unit tests but has not been run on two
+devices.
 
 ### MON-8 · P2 · L · Bakaláři / EduPage school import
 
@@ -1706,8 +1734,9 @@ Not a wish-list ordering — a dependency ordering. Each block assumes the one a
 2. **REL-3's storage deploy** — one command; without it every pet and medical photo upload is
    refused on a live device today.
 3. **REL-1's console half** — a local build fails until it is done.
-4. **MON-2 §1** — find out whether app2us "Rodina" has an Android build. One afternoon; it moves the
-   plan more than any other single fact, and a session can do the fetching.
+4. ~~**MON-2 §1** — find out whether app2us "Rodina" has an Android build.~~ **Done 23 September
+   2026: it does** (Google Play, `com.app2us.family`). MON-1 is now priced against a Czech
+   incumbent on both platforms at 149 CZK/month.
 
 **Then the two CI jobs** — cloud work, and the pair everything later leans on
 

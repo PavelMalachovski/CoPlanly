@@ -663,7 +663,8 @@ private fun Dashboard(
                 events = state.today.events,
                 custody = state.today.dayParent,
                 parentNames = parentNames,
-                onEventClick = onOpenEvent
+                onEventClick = onOpenEvent,
+                contactWindows = state.today.contactWindows
             )
         }
 
