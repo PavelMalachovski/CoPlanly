@@ -251,7 +251,15 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   (`fail-fast: false`, AVD cached per level): **API 26** (minSdk, 32-bit x86 — a newer-API call
   only throws on an old device, and it is a second ABI for SQLCipher's native library), **API 30**
   (where the job was first made green), and **API 35 on `google_apis_ps16k`** (16 KB memory pages,
-  which Play requires; a misaligned `.so` fails `System.loadLibrary` there). One caveat on 26:
+  which Play requires; a misaligned `.so` fails `System.loadLibrary` there). **The 16 KB leg runs
+  no Hilt test** (`notAnnotation=…HiltAndroidTest` in the matrix's `test-args`): MockK's own
+  inline-mocking agent, `libmockkjvmtiagent.so`, does not dlopen on 16 KB pages even at 1.14.0
+  ("empty/missing DT_HASH/DT_GNU_HASH"), and every Hilt test mocks through it in
+  `FakeFirebaseModule` — a test-tool failure that says nothing about the app. What the leg exists
+  to prove is `NativeLibrariesTest`'s job, which is non-Hilt and mock-free: it loads SQLCipher and
+  writes an encrypted database, and runs ML Kit OCR and barcode scanning on a blank image. Lift
+  the filter only once a MockK release loads there. Every test check run sets `require_tests`, so
+  a job that died before writing results cannot publish a green check. One caveat on 26:
   mockk mocks *final* classes only on API 28+, so if a Firebase type `FakeFirebaseModule` mocks is
   final, the Hilt UI tests fail on that leg alone — replace that mock with an open fake, do not
   drop the leg. When the job ran at API 30 alone, its first attempt failed for two unrelated reasons, both older than the job and neither previously observed.

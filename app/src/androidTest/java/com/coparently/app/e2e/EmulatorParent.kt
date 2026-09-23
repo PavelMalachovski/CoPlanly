@@ -190,7 +190,10 @@ class EmulatorParent private constructor(
             val options = FirebaseOptions.Builder()
                 .setProjectId(EmulatorEnvironment.PROJECT_ID)
                 .setApplicationId("1:000000000000:android:0000000000000000")
-                .setApiKey("fake-api-key-for-the-emulators")
+                // Not a key: Firebase Installations (which Functions calls for a token) refuses
+                // any value that does not match `A[\w-]{38}`, emulator or not. Kept off the
+                // `AIza` shape so secret scanning never mistakes it for a Google API key.
+                .setApiKey("A-fake-key-for-the-firebase-emulators-x")
                 .build()
             val app = FirebaseApp.initializeApp(context, options, "e2e-$name-${UUID.randomUUID()}")
 

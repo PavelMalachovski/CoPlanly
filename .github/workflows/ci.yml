@@ -235,6 +235,8 @@ jobs:
           check_name: Unit tests (JVM)
           report_paths: app/build/test-results/testDebugUnitTest/*.xml
           detailed_summary: true
+          # A job that died before writing results must not publish a green check.
+          require_tests: true
 
   static:
     name: Android — static analysis
@@ -461,14 +463,22 @@ jobs:
             target: default
             arch: x86
             label: ''
+            test-args: ''
           - api-level: 30
             target: default
             arch: x86_64
             label: ''
+            test-args: ''
+          # MockK's inline-mocking agent (libmockkjvmtiagent.so, test-only, never shipped) does
+          # not dlopen on 16 KB pages, and every Hilt test mocks through it in
+          # FakeFirebaseModule — so this leg runs the non-Hilt tests only. What it exists to
+          # prove, that the app's own native libraries load on 16 KB pages, is
+          # NativeLibrariesTest's job; the Hilt tests keep running on 26 and 30.
           - api-level: 35
             target: google_apis_ps16k
             arch: x86_64
             label: ', 16 KB pages'
+            test-args: -Pandroid.testInstrumentationRunnerArguments.notAnnotation=dagger.hilt.android.testing.HiltAndroidTest
     steps:
       - uses: actions/checkout@v4
 
@@ -533,7 +543,7 @@ jobs:
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           # Records the screen in 170 s segments while the tests run and pulls the MP4s after;
           # the exit status is the tests', and a recorder that fails never fails the job.
-          script: bash tools/with-screen-recording.sh ./gradlew connectedDebugAndroidTest
+          script: bash tools/with-screen-recording.sh ./gradlew connectedDebugAndroidTest ${{ matrix.test-args }}
 
       - name: Upload reports
         if: always()
@@ -571,6 +581,8 @@ jobs:
           check_name: Instrumented tests (API ${{ matrix.api-level }}${{ matrix.label }})
           report_paths: app/build/outputs/androidTest-results/connected/**/*.xml
           detailed_summary: true
+          # A job that died before writing results must not publish a green check.
+          require_tests: true
 
   # Two parents, one process, the real backend's emulators (CQ-18 and the two-phone checklist, as
   # far as a runner can take them). `app/src/androidTest/.../e2e` signs up two accounts on the
@@ -766,6 +778,8 @@ jobs:
           check_name: Cloud Functions tests
           report_paths: ${{ runner.temp }}/junit/functions.xml
           detailed_summary: true
+          # A job that died before writing results must not publish a green check.
+          require_tests: true
 
   rules:
     name: Firestore security rules
@@ -820,6 +834,8 @@ jobs:
           check_name: Firestore and Storage rules tests
           report_paths: ${{ runner.temp }}/junit/rules.xml
           detailed_summary: true
+          # A job that died before writing results must not publish a green check.
+          require_tests: true
 
   # One sticky comment per pull request, edited on every run, saying what CI found — so a result
   # can be read without opening a log, by a person or by an assistant reading the PR through the
