@@ -9,6 +9,15 @@ upgrade over old data, a first launch) come first, and the one that destroys an 
 last. Tick the boxes as you go. When a check fails, write down what you saw and the logcat
 lines, and go on to the next one. Do not fix things during the session.
 
+**Per pull request.** You do not need the whole script for every PR. CI's sticky comment on each
+pull request ("CI summary", posted by the `report` job) has a section **"Manual checks this PR
+needs"**: `tools/manual-test-plan.js` maps the paths the PR changes to the sections below, with a
+link to each. Run those; changed app files it cannot map are listed under it, so decide those by
+hand. The same comment links the PR's debug APK — a **UI-only** build, because CI has no
+`google-services.json`, so sign-in and sync do not work in it. For any check here that needs an
+account, build locally as §1 describes. If you renumber a section, update `RULES` in that script
+in the same commit; its test in the CI `invariants` job fails otherwise.
+
 **Markers**
 
 | Marker | Means |

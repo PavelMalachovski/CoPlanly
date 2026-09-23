@@ -13,6 +13,7 @@ plugins {
     // compiler this project uses reads metadata at most one minor version ahead. Upgrade the two
     // together. The library versions live in app/build.gradle.kts beside the other test deps.
     id("io.github.takahirom.roborazzi") version "1.60.0" apply false
+    id("org.jetbrains.kotlinx.kover") version "0.9.9" apply false
 }
 
 tasks.register("clean", Delete::class) {

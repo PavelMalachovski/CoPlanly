@@ -224,8 +224,9 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   degrades gracefully if it is missing (see the conditional apply in `app/build.gradle.kts`).
 - **GitHub CI runs on every pull request, and on every push to `main`** — a push to a
   feature branch with no PR open is not built (`.github/workflows/ci.yml`, added
-  August 2026 — this line used to say there was none). Ten jobs (this line used to say
-  eight, before `screenshots` and `e2e` were added, and seven before `instrumented`): `changes` (a cheap gate,
+  August 2026 — this line used to say there was none). Ten jobs that test (this line used to say
+  eight, before `screenshots` and `e2e` were added, and seven before `instrumented`), plus
+  `report`, which only reads them (below): `changes` (a cheap gate,
   below), three Android ones — `build-test` (`assembleDebug` + `testDebugUnitTest` in a
   single invocation), `static` (`lint`, then `detekt`), `release` (`assembleRelease`, where
   R8 runs, and where `node tools/check-r8-mapping.js` then reads R8's own `mapping.txt` and
@@ -388,6 +389,43 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   `gradle.properties` and apply locally too; the build cache is local-only (there is no
   remote cache), so in CI it pays off on a re-run of the same branch, where `setup-gradle`'s
   per-job cache of `~/.gradle/caches` carries the previous run's task outputs forward.
+- **A CI result is meant to be read without opening a log** (September 2026). Three layers:
+  - **Check runs.** Each test job publishes its JUnit XML through
+    `mikepenz/action-junit-report@v6` as its own check run — "Unit tests (JVM)", "Instrumented
+    tests (API n)", "Cloud Functions tests", "Firestore and Storage rules tests" — with failures
+    as annotations. Mocha writes JUnit through `tools/mocha-ci-reporter.js` (spec output *and*
+    xunit, no dependency), enabled only in CI: `functions` passes `--reporter`, `firestore-tests`
+    has a `test:ci` script. Plain `npm test` is unchanged. Those jobs carry
+    `permissions: {contents: read, checks: write}`; naming one permission drops the rest to none,
+    which is why `contents: read` is restated.
+  - **The sticky PR comment.** The `report` job (`needs:` every other job, `if: always()`) runs
+    `tools/ci-report.js`, which reads the `junit-*` and `coverage-report` artifacts and the run's
+    jobs and artifacts through the API, and posts **one comment per PR, headed "CI summary",
+    edited on every run** (`marocchino/sticky-pull-request-comment@v2`, header `ci-summary`):
+    job → result, test counts per suite, failed tests with the first line of their message,
+    Kover line coverage, artifact links, and the manual plan below. The same facts sit in an
+    HTML comment as JSON (`<!-- ci-report-json … -->`) for an assistant reading the PR through
+    the API. On a push to `main` it goes to the run's job summary only. It lists jobs from the
+    API, so a new job appears without editing it — but **add a new job to `report`'s `needs`**,
+    or its row can read "in progress". It needs `actions: read` and `pull-requests: write`, and
+    never fails the run over the report.
+  - **Manual checks this PR needs.** `tools/manual-test-plan.js` maps the PR's changed paths to
+    sections of `docs/DEVICE-CHECKLIST.md` (the `RULES` table; unmapped app sources are listed,
+    not dropped) and the comment includes it. `node --test tools/test/*.test.js` runs in
+    `invariants` and fails when a rule names a section the checklist no longer has — renumbering
+    the checklist means updating `RULES` in the same commit.
+
+  **What testers download** (each linked from the comment, 14-day retention, GitHub login
+  needed): `coplanly-debug-apk` from `build-test` — **a UI-only build**: CI has no
+  `google-services.json` (and must not get one, see above), so sign-in and sync do not work in
+  it; for full testing build locally with the file. `emulator-video-api<n>-<target>` from each
+  `instrumented` leg — `tools/with-screen-recording.sh` records in 170 s segments around
+  `connectedDebugAndroidTest`, keeps the tests' exit status, and cannot fail the job.
+  `coverage-report` — Kover (`org.jetbrains.kotlinx.kover` 0.9.9, `app/build.gradle.kts`, Hilt/Room/
+  Compose-generated classes filtered out). Coverage is **visibility, not a gate**: there is no
+  verification rule, and its step is the one place in `ci.yml` where `continue-on-error` is
+  right, because failing to *report* a number must not turn a green build red. Screenshot and
+  e2e artifacts are described in the comment by name once those jobs upload them.
 
 ## Hard project rules
 
