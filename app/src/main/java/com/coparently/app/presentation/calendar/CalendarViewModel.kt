@@ -15,8 +15,8 @@ import com.coparently.app.domain.custody.DayOverride
 import com.coparently.app.domain.custody.DayOverrideTransition
 import com.coparently.app.domain.custody.SharedCustody
 import com.coparently.app.domain.friends.CalendarFriendGrant
+import com.coparently.app.domain.holidays.HolidayLocation
 import com.coparently.app.domain.model.CustodyModel
-import com.coparently.app.domain.holidays.HolidayCountry
 import com.coparently.app.domain.repository.FriendRepository
 import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.presentation.common.Parents
@@ -86,28 +86,30 @@ class CalendarViewModel @Inject constructor(
 ) : ViewModel() {
 
     /**
-     * Whose public holidays the grid draws (MON-13).
+     * Whose public holidays the grid draws (MON-13): the parent's country and, where the
+     * country's holidays vary by region, their region.
      *
      * Read from the signed-in parent's own profile rather than from the family: two separated
      * parents can live in two countries, and which public holidays apply is a fact about where
      * *you* are. Until this existed the answer was `CzechHolidays`, hardcoded at the call site,
      * for every user in all five of the app's languages.
      *
-     * Starts at [HolidayCountry.Default] rather than at null so the grid never has to render a
+     * Starts at [HolidayLocation.Default] rather than at null so the grid never has to render a
      * "country unknown" state — the default is Czechia, which is exactly what every account had
-     * before it could choose.
+     * before it could choose. [HolidayLocation.of] drops a region that is not the country's, so
+     * a stale `regionCode` never selects another country's table.
      */
     @OptIn(ExperimentalCoroutinesApi::class)
-    val holidayCountry: StateFlow<HolidayCountry> =
+    val holidayLocation: StateFlow<HolidayLocation> =
         userRepository.observeCurrentUserId()
             .flatMapLatest { uid ->
                 if (uid == null) flowOf(null) else userRepository.observeUserById(uid)
             }
-            .map { HolidayCountry.fromCode(it?.countryCode) }
+            .map { HolidayLocation.of(it?.countryCode, it?.regionCode) }
             .stateIn(
                 viewModelScope,
                 SharingStarted.WhileSubscribed(HANDOVER_STOP_TIMEOUT_MS),
-                HolidayCountry.Default
+                HolidayLocation.Default
             )
 
     /**

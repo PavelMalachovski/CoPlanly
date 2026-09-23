@@ -9,8 +9,14 @@ import java.time.LocalDate
  * Some days a reader might expect are deliberately absent, and the reference data files every one
  * of them outside the public holidays. **Good Friday** was a day off for Protestants only, and
  * not even that since BGBl. I Nr. 22/2019. **24 and 31 December** are bank holidays, and so is
- * each Land's patron-saint day (St. Leopold, St. Joseph, St. Florian, …) — and the app has no
- * state setting to pick the patron by anyway.
+ * each Land's patron-saint day (St. Leopold, St. Joseph, St. Florian, …).
+ *
+ * **Which is why Austria has no region picker**, although Germany does (MON-13's regional half).
+ * The reference library returns *no* regional public holiday for any of the nine Länder: the
+ * patron-saint days are school-free and many offices close, but they are not statutory days off
+ * for employees. A state setting here would change nothing on the grid, which is the promise
+ * design rule 8 forbids; [regions] stays empty. Drawing the patron days as a separate, labelled
+ * kind of day is a product decision, recorded in ROADMAP MON-13 rather than taken here.
  *
  * **No school vacations.** Austrian school holidays are set per state; there is no nationwide
  * period to draw without knowing the state.

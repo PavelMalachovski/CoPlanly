@@ -76,6 +76,18 @@ data class User(
      * viewer as well — the honest fix is a per-family school calendar, recorded under MON-13
      * rather than guessed at here.
      */
-    val countryCode: String = "CZ"
+    val countryCode: String = "CZ",
+    /**
+     * The region within [countryCode] whose own public holidays the calendar adds (MON-13's
+     * regional half), as an ISO 3166-2 suffix — a German Land such as `"BY"` — or null for the
+     * nationwide calendar.
+     *
+     * Only meaningful when the country has regions to choose from
+     * ([com.coparently.app.domain.holidays.HolidayCountry.regions], Germany alone today), and
+     * read through `HolidayLocation.of`, which drops a code that does not belong to the country:
+     * a parent who moves from Germany to Austria must not keep drawing Bavaria. A person's, not a
+     * family's, for the reason [countryCode] is.
+     */
+    val regionCode: String? = null
 )
 

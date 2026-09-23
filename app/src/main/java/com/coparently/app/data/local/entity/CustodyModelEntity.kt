@@ -60,5 +60,14 @@ data class CustodyModelEntity(
      * `dayOverrides`. Null means "none recorded" — including on every row written before this
      * column existed — and reads back as an empty map, never as a second shape of "none".
      */
-    val dayOverridesJson: String? = null
+    val dayOverridesJson: String? = null,
+    /**
+     * The pattern's contact windows (MON-6b) as a JSON array of `ContactWindowCodec` strings —
+     * `["9|15:00|19:00|dad"]` — or null for none.
+     *
+     * Null rather than `"[]"` for none, like [dayOverridesJson] and for the same reason: a row
+     * with no windows must be byte-identical to one written before this column existed, or the
+     * equality guard in `CustodyModelRepository.mirrorIntoRoom` would re-insert on every echo.
+     */
+    val contactWindowsJson: String? = null
 )

@@ -426,6 +426,15 @@ fun CustodySetupScreen(
                 }
             }
 
+            // Contact windows (MON-6b) — for every pattern type: an afternoon with the parent
+            // who does not have that day, on top of the whole days chosen above.
+            ContactWindowsSection(
+                uiState = uiState,
+                parentNames = parentNames,
+                onAdd = viewModel::addContactWindows,
+                onRemove = viewModel::removeContactWindow
+            )
+
             // Preview section
             Card(
                 modifier = Modifier

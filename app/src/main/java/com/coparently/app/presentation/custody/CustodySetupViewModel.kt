@@ -6,6 +6,8 @@ import androidx.lifecycle.viewModelScope
 import com.coparently.app.R
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.PatternSubmission
+import com.coparently.app.domain.custody.ContactWindow
+import com.coparently.app.domain.custody.ContactWindowCodec
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.CustodyModelType
 import com.coparently.app.domain.model.MidweekContact
@@ -90,7 +92,8 @@ class CustodySetupViewModel @Inject constructor(
                 CustodyModelType.CUSTOM -> true
             },
             customPatternDays = model.patternDays,
-            customMomDays = model.momDayIndices
+            customMomDays = model.momDayIndices,
+            contactWindows = model.contactWindows
         ).let { state ->
             if (model.modelType == CustodyModelType.EVERY_OTHER_WEEKEND) {
                 state.withMidweekFrom(model)
@@ -153,7 +156,7 @@ class CustodySetupViewModel @Inject constructor(
             // Reset custom settings when switching away from custom
             customPatternDays = if (type == CustodyModelType.CUSTOM) _uiState.value.customPatternDays else 14,
             customMomDays = if (type == CustodyModelType.CUSTOM) _uiState.value.customMomDays else emptySet()
-        )
+        ).withWindowsInCycle()
     }
 
     /**
@@ -179,7 +182,7 @@ class CustodySetupViewModel @Inject constructor(
             customPatternDays = validDays,
             // Clear mom days that are out of range
             customMomDays = _uiState.value.customMomDays.filter { it < validDays }.toSet()
-        )
+        ).withWindowsInCycle()
     }
 
     /**
@@ -231,6 +234,34 @@ class CustodySetupViewModel @Inject constructor(
     }
 
     /**
+     * Adds the contact windows [draft] describes (MON-6b) — one per matching day of the cycle,
+     * so "every Wednesday" in a fortnight is two windows. An invalid draft, or one no day of the
+     * cycle matches, changes nothing: the dialog refuses to confirm the first, and the second
+     * would be a window that can never be drawn.
+     */
+    fun addContactWindows(draft: ContactWindowDraft) {
+        val state = _uiState.value
+        val added = draft.toWindows(state.startDate, state.cycleDays)
+        if (added.isEmpty()) return
+        _uiState.value = state.copy(
+            contactWindows = ContactWindowCodec.canonical(state.contactWindows + added)
+        )
+    }
+
+    /** Removes one contact window. */
+    fun removeContactWindow(window: ContactWindow) {
+        _uiState.value = _uiState.value.copy(contactWindows = _uiState.value.contactWindows - window)
+    }
+
+    /**
+     * This state without the windows its cycle cannot reach — after the cycle got shorter, or
+     * the pattern type changed to one with a different length. Dropped here rather than kept
+     * silently, so what the list shows is what will be saved.
+     */
+    private fun CustodySetupUiState.withWindowsInCycle(): CustodySetupUiState =
+        copy(contactWindows = contactWindows.filter { it.dayIndex < cycleDays })
+
+    /**
      * Saves the custody model configuration.
      */
     fun save(onSuccess: () -> Unit = {}) {
@@ -244,25 +275,30 @@ class CustodySetupViewModel @Inject constructor(
                 val submission = when (state.selectedModelType) {
                     CustodyModelType.WEEK_ON_WEEK_OFF -> custodyModelRepository.createWeekOnWeekOff(
                         startDate = state.startDate,
-                        momFirst = state.momFirst
+                        momFirst = state.momFirst,
+                        contactWindows = state.contactWindows
                     )
                     CustodyModelType.EVERY_OTHER_WEEKEND -> custodyModelRepository.createEveryOtherWeekend(
                         startDate = state.startDate,
                         momIsResident = state.momFirst,
-                        midweek = state.midweek
+                        midweek = state.midweek,
+                        contactWindows = state.contactWindows
                     )
                     CustodyModelType.TWO_TWO_THREE -> custodyModelRepository.createTwoTwoThree(
                         startDate = state.startDate,
-                        momStartsFirst = state.momFirst
+                        momStartsFirst = state.momFirst,
+                        contactWindows = state.contactWindows
                     )
                     CustodyModelType.THREE_FOUR_FOUR_THREE -> custodyModelRepository.createThreeFourFourThree(
                         startDate = state.startDate,
-                        momStartsFirst = state.momFirst
+                        momStartsFirst = state.momFirst,
+                        contactWindows = state.contactWindows
                     )
                     CustodyModelType.CUSTOM -> custodyModelRepository.createCustom(
                         startDate = state.startDate,
                         patternDays = state.customPatternDays,
-                        momDayIndices = state.customMomDays
+                        momDayIndices = state.customMomDays,
+                        contactWindows = state.contactWindows
                     )
                 }
                 _uiState.value = state.copy(
@@ -324,6 +360,12 @@ data class CustodySetupUiState(
     val midweekDay: DayOfWeek = DayOfWeek.WEDNESDAY,
     /** True for both weeks of the fortnight; false for the week without the contact weekend. */
     val midweekEveryWeek: Boolean = true,
+    /**
+     * Contact windows on top of the whole days (MON-6b), for every pattern type. Not a
+     * replacement for the midweek day above, and not converted from it: that one is a whole day
+     * with the overnight, and a saved schedule that has one keeps it exactly as it was.
+     */
+    val contactWindows: List<ContactWindow> = emptyList(),
     val isLoading: Boolean = false,
     val isSaved: Boolean = false,
     /** True when the save was sent to the co-parent as a proposal rather than applied. */
@@ -365,4 +407,16 @@ data class CustodySetupUiState(
      */
     val firstSlot: String get() = if (momFirst) "mom" else "dad"
     val secondSlot: String get() = if (momFirst) "dad" else "mom"
+
+    /**
+     * Days in the cycle the selected pattern repeats on: the custom length, or the fortnight
+     * every preset is built on. What a contact window's day index is a position in.
+     */
+    val cycleDays: Int
+        get() = if (selectedModelType == CustodyModelType.CUSTOM) customPatternDays else PRESET_CYCLE_DAYS
+
+    private companion object {
+        /** Every preset pattern repeats over a fortnight. */
+        const val PRESET_CYCLE_DAYS = 14
+    }
 }

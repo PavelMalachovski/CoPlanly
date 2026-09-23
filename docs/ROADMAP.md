@@ -73,11 +73,11 @@ invocation is yours.
 | **MON-3** | Export to PDF/CSV — the first paid feature (needs MON-4 first) | P1 | M |
 | **MON-4** | The paper is written; three answers are owed by the owner, and MON-3 waits on them | P1 | S |
 | **MON-5** | The plan ships; swapping in the Ministry's own wording needs the form itself | P1 | S |
-| **MON-6b** | Half-day custody, so contact afternoons can be described | P2 | L |
+| **MON-6b** | Contact windows ship (schema 36); left: Home's today card, and verifying the mixed-version path on two phones | P2 | S |
 | **MON-8** | Bakaláři / EduPage school import — the parsing, once you supply a real export | P2 | L |
 | **MON-11** | Payments (MVP 3) — the entitlement model, after MON-1 decides the price | P2 | L |
 | **MON-12** | Intelligent suggestions (MVP 3) — behind SEC-1's proxy, never with a key in the client | P3 | M |
-| **MON-13** | The tables are done (five countries; Ukraine's holidays are suspended by martial law) — left: a state/region setting for Germany's and Austria's regional holidays and school vacations | P2 | M |
+| **MON-13** | The tables and Germany's Länder are done (five countries; Ukraine's holidays are suspended by martial law) — left: school vacations outside Czechia, and whether Austria's patron-saint days are drawn at all | P2 | M |
 | **FAM-4** | Custody per child | P2 | L |
 | **REL-4 (drafting)** | Fill the placeholders in the legal drafts, write the web account-deletion page | P0 | S |
 
@@ -150,7 +150,7 @@ shipped, and a plan that describes work already done is worse than no plan.
 | Reoccurrence | Clear | S | High | **Done.** `RecurrenceExpander`; CQ-4 removed the two-year cliff |
 | Confirm pickup | Other side sees it is picked up | S | High | **Done.** `pickupConfirmedBy` / `pickupConfirmedAt` |
 | Notifications | 30 min or 1 h before pickup | M | High | **Done.** `ReminderScheduler` + WorkManager; the permission is asked contextually, never on cold start |
-| Holidays and vacations by country | Clear | S | High | **Done for holidays, partly for vacations.** The country is asked for and stored (MON-13), and Czechia, Slovakia, Germany, Austria and Russia each have a computed table verified against the Python `holidays` library; Ukraine's holidays are suspended under martial law and the picker says so. School vacations exist for Czechia only — the others are regional |
+| Holidays and vacations by country | Clear | S | High | **Done for holidays, partly for vacations.** The country is asked for and stored (MON-13), and Czechia, Slovakia, Germany (with a Land setting for its state holidays), Austria and Russia each have a computed table verified against the Python `holidays` library; Ukraine's holidays are suspended under martial law and the picker says so. School vacations exist for Czechia only — the others are regional |
 | Add events only you can see | Related to switching views | S | High | **Done.** `isPrivate`, filtered out of every sync path |
 | Sat/Sun a different colour | Clear | S | High | **Done.** `DayCellFills` draws the weekend as a base layer under custody, never instead of it |
 
@@ -1301,19 +1301,54 @@ Replacing the catalogue is a data edit: `ParentingPlanCatalogue` holds ids, the 
 stored answers keyed by an id that survives are untouched. Then, and only then, the disclaimer
 comes out. Audit §10.6.
 
-### MON-6b · P2 · L · Half-day custody, so contact afternoons can be described
+### MON-6b · **CONTACT WINDOWS DONE** · P2 · S · Contact afternoons on top of the whole days
 
-**Where:** ☁️ cloud.
+**Where:** ☁️ done in a cloud session; 📱 the mixed-version check below needs two phones.
 
 `CustodyModel` assigns each day of the cycle to exactly one parent (`momDayIndices`), so an
 arrangement of the form "every second weekend **plus Wednesday afternoon**" — which is most Czech
-contact orders, not an edge case — can only be entered by rounding the afternoon up to a whole day
-or dropping it. MON-6's preset drops it and says so; `CUSTOM` cannot express it either.
+contact orders, not an edge case — could only be entered by rounding the afternoon up to a whole
+day or dropping it.
 
-Not a small change: it touches the pattern representation, the Room entity, the Firestore document,
-`getCustodyFor`, `complemented`, `isEquivalentTo`, the custom-pattern editor and the day-cell fills.
-Worth doing before claiming the app describes a Czech family's real schedule; worth costing properly
-first.
+**Owner decision (September 2026): keep one parent per day, and overlay "contact windows".** A
+window is `{cycle day, from, to, parent slot}` (`domain/custody/ContactWindow.kt`), repeating
+with the cycle exactly like `momDayIndices`. `getCustodyFor` is **unchanged** — whose *day* it is
+does not move for an afternoon, so the grid's colour, the handover walk, swaps and every build
+already shipped keep their answer — and `CustodyModel.contactWindowsOn(date)` is the new question.
+What it took, and the choices worth knowing:
+
+- **Storage.** Room `custody_models.contactWindowsJson` (schema 36, `MIGRATION_35_36`, null =
+  none) and the document's `contactWindows`, both as lists of `ContactWindowCodec` strings
+  (`"9|15:00|19:00|dad"`) — never a Gson serialisation of the data class. The proposal sub-map
+  carries its own list.
+- **Older builds, and why a missing key is not "none".** An older build rewrites the whole
+  document with `set()` and cannot carry a key it has never heard of. So: this build always writes
+  the key on a pattern write (`[]` for none); a document *without* it is read as "written by an
+  older build" and the mirror keeps this device's copy; and proposal/swap writes send the stored
+  list back **verbatim** (`SharedCustody.contactWindowsWire`), because `firestore.rules` now
+  refuses a proposal-only or swap write that *changes* `contactWindows` — a pattern change riding
+  on a write whose banner is suppressed — while allowing one that **drops** it, which is exactly
+  what an older co-parent's swap or proposal does. Cases in `custody-models.test.js`. A proposal
+  sub-map with no list (an older proposer) keeps the agreed windows rather than removing them.
+- **Equivalence and the diff see windows.** `isEquivalentTo` compares each date's windows by
+  content, so a pairing conflict that differs only in the afternoons is shown, not silently
+  settled; `CustodyPatternDiff.contactWindowsChanged` stops a windows-only proposal being described
+  as "nothing on the calendar would change". `complemented` flips each window's slot with the days.
+- **Setup.** A "Contact windows" section under every pattern type (weekday, every week or one
+  week of the cycle, from/to via the existing `TimePickerDialog`, which parent). **The MON-6
+  midweek toggle is left exactly as it was** — it is the whole-day-with-overnight shape, and no
+  saved schedule is converted — and its warning now points to a contact window for the
+  afternoon-only case instead of to `CUSTOM`, which could never express one.
+- **Calendar.** Day and Week draw an hour band in the window parent's custody tint over the cell's
+  own base (weekend grey survives inside it), with a full-hue edge — the saturation rule's two
+  strengths of one hue. Month marks the day with a small corner triangle in the window parent's
+  full hue, laid over everything else, so the weekend base, the band and the handover diagonal
+  read as before; the hours are in the cell's description and one tap away in Day view. A window
+  naming the parent who already has the day (the pattern's, or an accepted swap's) is not drawn.
+
+**Left.** Home's handover/today card does not mention a window yet. And the mixed-version path —
+one phone on this build, one on an older one, a swap and a proposal each way — is covered by the
+rules suite and the unit tests but has not been run on two devices.
 
 ### MON-8 · P2 · L · Bakaláři / EduPage school import
 
@@ -1395,10 +1430,11 @@ verdict is discoverable material in a custody dispute, which makes it a liabilit
 than a feature. Anything resembling emotion inference deserves a legal read under the EU AI Act
 before launch.
 
-### MON-13 · **TABLES DONE** · P2 · M · Holidays by country — what is left is regional
+### MON-13 · **TABLES AND REGIONS DONE** · P2 · M · Holidays by country — school vacations are left
 
-**Where:** ☁️ done: the setting, the registry, and five tables verified against a maintained
-dataset. What remains (a state/region setting) is a product decision before it is code.
+**Where:** ☁️ done: the setting, the registry, five tables verified against a maintained dataset,
+and Germany's sixteen Länder. What remains (school vacations outside Czechia, Austria's
+patron-saint days) is a product decision before it is code.
 
 MVP 1 asked for "holidays and vacations by country" and shipped one country. There was **no country
 setting anywhere in the app** — no field, no picker, not even a constant — so `CalendarScreen`
@@ -1437,9 +1473,9 @@ against it rather than from memory.
 - **Slovakia** — public holidays by year, which is exactly what memory would have got wrong:
   1 September off until 2023 (Act 530/2023), 17 November until 2024, and 8 May and 15 September
   working days in 2026 only (Act 261/2025). Only days off are drawn.
-- **Germany** — the nine **nationwide** holidays. The rest are state law and the app has no
-  Bundesland setting, so a Bavarian family sees fewer days off than it has; said in the KDoc, the
-  same trade Czechia's district-dependent spring break makes.
+- **Germany** — the nine **nationwide** holidays, plus the chosen Land's own (below). A parent who
+  has not named a state sees the nine; said in the KDoc, the same trade Czechia's
+  district-dependent spring break makes.
 - **Austria** — the thirteen nationwide holidays. Good Friday (Protestant-only until 2019), 24
   and 31 December and the Länder patron-saint days are bank holidays in the reference data and
   are not drawn.
@@ -1458,11 +1494,36 @@ against it rather than from memory.
   derived from the provider, so it cannot promise school vacations a provider does not return.
   The calendar filter's "Czech holidays" title became "Holidays" in all five locales.
 
+**Done (September 2026): the region, for Germany.** `User.regionCode` (Room schema 35, nullable
+with no default, so every existing account is "nationwide" and nobody's calendar changes) is an
+ISO 3166-2 suffix, synced to `users/{uid}.regionCode` beside `countryCode` (`""` for none, so a
+cleared region is cleared by the merge). `HolidayProvider.regions`/`forRegion` and
+`HolidayLocation` carry it to the grid; `HolidayCountry.regionOrNull` drops a code that is not
+the country's, and changing country clears it. The picker is a second chip row under the country
+chips on the wizard's profile step, and a second Settings row ("State") with its own dialog —
+both **only when the chosen country has regions**. The coverage note says which it draws:
+nationwide only with a nudge to pick a state, or the state's days as well.
+- **The data.** `GermanState` holds each Land's additions; `generate-holiday-fixture.py --regions`
+  writes `HolidayRegionReferenceFixture.kt` (only the days each state *adds*, and the script
+  refuses to write it if a state's list is not a superset of the nationwide one), and
+  `HolidayReferenceTest` rebuilds every state's list 2020–2035 as nationwide + those days.
+- **Left out on purpose**, and said in `GermanState`'s KDoc and the generator: the library's
+  `catholic` category (Assumption Day in Bavaria, Corpus Christi in parts of Saxony and Thuringia
+  — holidays only in Catholic-majority *municipalities*, which a state cannot identify), and
+  **Augsburg**, which the library models as a pseudo-subdivision for a city holiday. Kept: Berlin's
+  one-off anniversaries (2020, 2025, 2028) and Brandenburg's statutory Easter and Whit Sundays.
+- **Austria has no region picker, deliberately.** The library returns **no** regional *public*
+  holiday for any of its nine Länder; the patron-saint days (St. Leopold, St. Joseph, St. Florian,
+  …) are in its `bank` category — school-free and many offices close, but not statutory days off.
+  A state setting that changed nothing on the grid would be design rule 8's promise. **Owner call
+  if wanted:** draw the patron day as a separate, labelled kind of day, which needs its own name on
+  the grid rather than passing as a public holiday.
+
 **Left.** No school vacations outside Czechia — Germany's and Austria's are set per state,
-Slovakia's spring break per region, Russia's per region or school — and none were invented. A
-state/region setting would lift both that and Germany's missing state holidays (the reference
-library carries per-state data for both); whether it is worth a setting is an owner call. A
-per-family school calendar remains the honest fix for the per-viewer strips described above.
+Slovakia's spring break per region, Russia's per region or school — and none were invented. The
+region setting makes Germany's per-state school calendars *reachable* (the library carries them),
+but school vacations still follow the viewer rather than the child, so a per-family school
+calendar remains the honest fix for the per-viewer strips described above before any are drawn.
 
 ---
 
@@ -1781,7 +1842,7 @@ in `docs/AUDIT-2026-08.md` under the § numbers cited.
   second because the enum's order is the picker's order. Its switch asks "who does the child live
   with" rather than "who starts first" — this pattern does not alternate blocks, so a parent asked
   who starts would answer about the first weekend and set it inverted. What it exposed is
-  **MON-6b**.
+  **MON-6b**, since done as contact windows.
 - **MON-7 · The AI subsystem is deleted.** 23 files, ~3,200 lines, reachable from no navigation
   graph, while the Gemini key shipped in every APK. `generativeai`, `retrofit`, `converter-gson`,
   `okhttp` and `logging-interceptor` went with it. It is in git history. See **MON-12** for the

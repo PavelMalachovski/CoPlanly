@@ -248,6 +248,12 @@ data class OnboardingUiState(
      * Czechia — exactly what they were being shown before they could choose.
      */
     val country: HolidayCountry = HolidayCountry.Default,
+    /**
+     * The region within [country] whose own public holidays are added (MON-13, regional half),
+     * or null for the nationwide calendar. Only ever one of [country]'s regions: changing the
+     * country clears it.
+     */
+    val region: String? = null,
     val allergies: List<String> = emptyList(),
     val medicalProfile: MedicalProfile = MedicalProfile(),
     val children: List<ChildDraft> = emptyList(),
@@ -494,13 +500,17 @@ class OnboardingViewModel @Inject constructor(
                 val cachedMyPercent = familySettingsRepository.agreedRatioOrDefault()
                     .myPercent(slotOne = user?.role != SLOT_TWO)
                 _uiState.update { state ->
+                    // The stored value unless the parent has already touched the chips on this
+                    // run, the same rule `caresFor` follows below.
+                    val country = state.country.takeIf { it != HolidayCountry.Default }
+                        ?: HolidayCountry.fromCode(user?.countryCode)
                     state.copy(
                         name = state.name.orStored(user?.name),
                         dateOfBirth = state.dateOfBirth ?: user?.dateOfBirth,
-                        // The stored value unless the parent has already touched the chips on
-                        // this run, the same rule `caresFor` follows below.
-                        country = state.country.takeIf { it != HolidayCountry.Default }
-                            ?: HolidayCountry.fromCode(user?.countryCode),
+                        country = country,
+                        // Same rule, read against whichever country won: a stored region for a
+                        // country the parent has just moved away from on this run is dropped.
+                        region = state.region ?: country.regionOrNull(user?.regionCode),
                         phone = state.phone.orStored(user?.phone),
                         allergies = state.allergies.orStored(user?.allergies),
                         medicalProfile = state.medicalProfile.orStored(user?.medicalProfile),
@@ -725,7 +735,12 @@ class OnboardingViewModel @Inject constructor(
         _uiState.update { it.copy(parentColor = choice) }
 
     /** Records the country picked on the profile step. */
-    fun updateCountry(country: HolidayCountry) = _uiState.update { it.copy(country = country) }
+    fun updateCountry(country: HolidayCountry) =
+        _uiState.update { it.copy(country = country, region = country.regionOrNull(it.region)) }
+
+    /** Records the region picked on the profile step, or null for "nationwide only". */
+    fun updateRegion(region: String?) =
+        _uiState.update { it.copy(region = it.country.regionOrNull(region)) }
 
     /** Updates the parent's allergies. */
     fun updateAllergies(allergies: List<String>) = _uiState.update { it.copy(allergies = allergies) }
@@ -1048,7 +1063,8 @@ class OnboardingViewModel @Inject constructor(
                 // Only when they actually chose. An untouched swatch strip must not overwrite a
                 // colour the parent set in Settings on a previous run through this wizard.
                 colorCode = state.parentColor?.storedCode ?: fresh.colorCode,
-                countryCode = state.country.code
+                countryCode = state.country.code,
+                regionCode = state.country.regionOrNull(state.region)
             )
         )
     }

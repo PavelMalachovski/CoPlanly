@@ -85,6 +85,15 @@ data class UserEntity(
      * mismatch on the next open.
      */
     @ColumnInfo(defaultValue = "CZ")
-    val countryCode: String = "CZ"
+    val countryCode: String = "CZ",
+    /**
+     * The region within [countryCode] whose own public holidays the grid adds, as an ISO 3166-2
+     * suffix (`"BY"`), or null for the nationwide calendar — see
+     * [com.coparently.app.domain.model.User.regionCode].
+     *
+     * Nullable with no column default, unlike [countryCode]: "no region" is the honest answer
+     * for every row that predates the field, and the v34→v35 migration adds the column bare.
+     */
+    val regionCode: String? = null
 )
 

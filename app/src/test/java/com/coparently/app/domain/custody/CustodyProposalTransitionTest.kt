@@ -4,6 +4,7 @@ import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.CustodyModelType
 import org.junit.Test
 import java.time.LocalDate
+import java.time.LocalTime
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -84,6 +85,38 @@ class CustodyProposalTransitionTest {
     }
 
     @Test
+    fun `a proposal carries its contact windows, and accepting makes them the agreed ones`() {
+        // MON-6b. A proposal always says what the windows become, "none" included, so a
+        // co-parent's build can tell it from a proposal an older build wrote without the key.
+        val window = ContactWindow(2, LocalTime.of(15, 0), LocalTime.of(19, 0), DAD_SLOT)
+        val withWindow = wanted.copy(contactWindows = listOf(window))
+
+        val pending = CustodyProposalTransition
+            .propose(current, withWindow, true, DAD, NOW).getOrThrow()
+        assertEquals(listOf("2|15:00|19:00|dad"), pending.proposal?.contactWindowsWire)
+        // Proposing moves nothing: the agreed document keeps what it had.
+        assertNull(pending.contactWindowsWire)
+
+        val accepted = CustodyProposalTransition.accept(pending, MOM, LATER, LATER_MILLIS).getOrThrow()
+        assertEquals(listOf(window), accepted.model.contactWindows)
+        assertEquals(listOf("2|15:00|19:00|dad"), accepted.contactWindowsWire)
+
+        val none = CustodyProposalTransition.propose(current, wanted, true, DAD, NOW).getOrThrow()
+        assertEquals(emptyList(), none.proposal?.contactWindowsWire)
+    }
+
+    @Test
+    fun `declining leaves the stored windows exactly as they were`() {
+        // A decline re-sends the document; `firestore.rules` refuses one that changes the list.
+        val stored = current.copy(contactWindowsWire = listOf("2|15:00|19:00|dad"))
+        val pending = CustodyProposalTransition.propose(stored, wanted, true, DAD, NOW).getOrThrow()
+
+        val next = CustodyProposalTransition.decline(pending, MOM, LATER, null).getOrThrow()
+
+        assertEquals(stored.contactWindowsWire, next.contactWindowsWire)
+    }
+
+    @Test
     fun `accepting does not re-date the arrangement itself`() {
         val pending = CustodyProposalTransition
             .propose(current, wanted, true, DAD, NOW).getOrThrow()
@@ -152,6 +185,9 @@ class CustodyProposalTransitionTest {
     private companion object {
         const val MOM = "uid-mom"
         const val DAD = "uid-dad"
+
+        /** The schema slot id a window names — a slot, not a uid. */
+        const val DAD_SLOT = "dad"
         const val NOW = "2026-08-09T08:00:00"
         const val LATER = "2026-08-09T09:00:00"
 

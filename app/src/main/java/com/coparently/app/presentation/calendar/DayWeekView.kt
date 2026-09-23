@@ -54,6 +54,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -79,6 +80,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.coparently.app.R
+import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.rememberToday
@@ -112,6 +114,15 @@ private const val GRIDLINE_ALPHA = 0.55f
 /** Today's tint strength in the week grid, drawn over the cell's base fill. */
 private const val TODAY_TINT_ALPHA = 0.05f
 
+/** Full-hue edge on a contact-window band: the marker that carries whose afternoon it is. */
+private val CONTACT_WINDOW_EDGE_WIDTH = 3.dp
+
+/** Corner radius of a contact-window band, matching the hour cells it lies over. */
+private val CONTACT_WINDOW_CORNER = 4.dp
+
+/** Timestamp format of a contact window's label in Day view. */
+private val CONTACT_WINDOW_TIME: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+
 /**
  * Width of the hour-label gutter.
  *
@@ -139,6 +150,7 @@ fun DayWeekView(
     events: List<Event>,
     getCustody: (LocalDate) -> String?,
     getProposedCustody: (LocalDate) -> String? = { null },
+    getContactWindows: (LocalDate) -> List<ContactWindow> = { emptyList() },
     parentNames: ParentNames,
     onDateChange: (LocalDate) -> Unit,
     onEventClick: (String) -> Unit,
@@ -206,6 +218,7 @@ fun DayWeekView(
             events = events,
             getCustody = getCustody,
             getProposedCustody = getProposedCustody,
+            getContactWindows = getContactWindows,
             parentNames = parentNames,
             scrollState = scrollState,
             onEventClick = onEventClick,
@@ -235,6 +248,7 @@ private fun DayWeekPage(
     events: List<Event>,
     getCustody: (LocalDate) -> String?,
     getProposedCustody: (LocalDate) -> String?,
+    getContactWindows: (LocalDate) -> List<ContactWindow>,
     parentNames: ParentNames,
     scrollState: LazyListState,
     onEventClick: (String) -> Unit,
@@ -622,6 +636,34 @@ private fun DayWeekPage(
                         currentDates.forEachIndexed { dayIndex, date ->
                             val dayColumnX = dayIndex * (columnWidth + spacingPx)
 
+                            // Contact windows (MON-6b) first, so events sit on top of them: an
+                            // hour band in the window parent's tint over the day's own, on the
+                            // same base (weekend grey or surface) the hour cells use, so the
+                            // weekend layer survives inside the band too (DayCellFills).
+                            val bandBase = if (CustodyHelper.isWeekend(date)) {
+                                if (isDarkTheme) {
+                                    CoPlanlyColors.WeekendBackgroundDark
+                                } else {
+                                    CoPlanlyColors.WeekendBackgroundLight
+                                }
+                            } else {
+                                MaterialTheme.colorScheme.surface
+                            }
+                            getContactWindows(date).forEach { window ->
+                                ContactWindowBand(
+                                    window = window,
+                                    bounds = Rect(
+                                        left = dayColumnX,
+                                        top = yOffsetFor(date.atTime(window.start)),
+                                        right = dayColumnX + columnWidth,
+                                        bottom = yOffsetFor(date.atTime(window.end))
+                                    ),
+                                    baseColor = bandBase,
+                                    parentName = parentNames.labelFor(window.parent),
+                                    showLabel = daysCount == 1
+                                )
+                            }
+
                             // Multi-day/overnight events are clamped to this day and laid out
                             // in side-by-side lanes when they overlap in time.
                             layoutDayEvents(events, date).forEach { seg ->
@@ -690,6 +732,68 @@ private fun DayWeekPage(
                     }
                 }
             }
+        }
+    }
+}
+
+/**
+ * One contact window (MON-6b) as an hour band over its day column: the window parent's custody
+ * tint over the cell's own base, and a full-hue edge — the saturation rule's two strengths of one
+ * hue, the tint for the stretch of time and the edge as its marker. Drawn on its own base first
+ * so the two parents' 14% tints are not stacked into a third colour, the reasoning `MonthView`'s
+ * handover diagonal already follows.
+ *
+ * Not clickable: an empty hour inside the band still creates an event through the cell beneath,
+ * which is the only route to one in this view. It carries a description instead, so a screen
+ * reader hears the window the eye sees.
+ *
+ * @param window The window.
+ * @param bounds Where it sits, in the overlay's pixels.
+ * @param baseColor The hour cell's base under the band — weekend grey or surface.
+ * @param parentName The window parent's name, for the label and the description.
+ * @param showLabel Day view has room to write the description in the band; a week column does not.
+ */
+@Composable
+private fun ContactWindowBand(
+    window: ContactWindow,
+    bounds: Rect,
+    baseColor: Color,
+    parentName: String,
+    showLabel: Boolean
+) {
+    val density = LocalDensity.current
+    val shape = RoundedCornerShape(CONTACT_WINDOW_CORNER)
+    val from = window.start.format(CONTACT_WINDOW_TIME)
+    val to = window.end.format(CONTACT_WINDOW_TIME)
+    val description = stringResource(R.string.calendar_contact_window_desc, parentName, from, to)
+    Box(
+        modifier = Modifier
+            .offset(
+                x = with(density) { bounds.left.toDp() },
+                y = with(density) { bounds.top.toDp() }
+            )
+            .width(with(density) { bounds.width.toDp() })
+            .height(with(density) { bounds.height.toDp() })
+            .clip(shape)
+            .background(baseColor)
+            .background(ParentColors.container(window.parent))
+            .semantics { contentDescription = description }
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxHeight()
+                .width(CONTACT_WINDOW_EDGE_WIDTH)
+                .background(ParentColors.fill(window.parent))
+        )
+        if (showLabel) {
+            Text(
+                text = description,
+                style = MaterialTheme.typography.labelSmall,
+                color = ParentColors.text(window.parent),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(start = CONTACT_WINDOW_EDGE_WIDTH + 4.dp, top = 2.dp)
+            )
         }
     }
 }

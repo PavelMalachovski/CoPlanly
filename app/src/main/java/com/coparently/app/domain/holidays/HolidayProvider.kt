@@ -66,6 +66,27 @@ interface HolidayProvider {
     val hasSchoolVacations: Boolean
 
     /**
+     * The subdivisions whose own public holidays this calendar can add, as ISO 3166-2 suffixes
+     * (`"BY"` for `DE-BY`), or empty for a calendar that is the same everywhere in the country.
+     *
+     * Empty is the honest answer for every country but Germany today, **Austria included**: its
+     * thirteen public holidays are nationwide, and the per-Land patron-saint days the reference
+     * library carries are bank holidays, not days off. A region picker that changed nothing on
+     * the grid would be design rule 8's affordance that promises a feature (MON-13).
+     */
+    val regions: List<String> get() = emptyList()
+
+    /**
+     * This calendar with [regionCode]'s own public holidays added, or this provider itself for
+     * null, for a country with no [regions], or for a code this build does not know — a newer
+     * build's region read by an older one draws the nationwide days rather than nothing.
+     */
+    // The default is for a nationwide calendar, which has nothing to add whatever the region;
+    // the parameter is the override's (GermanHolidays), not this body's.
+    @Suppress("UnusedParameter")
+    fun forRegion(regionCode: String?): HolidayProvider = this
+
+    /**
      * The holiday for [date] — a public holiday first, then a school vacation — or null on an
      * ordinary day.
      *

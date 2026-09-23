@@ -16,4 +16,28 @@
     <string name="country_holidays_unavailable">Svátky pro zemi %1$s zatím v aplikaci nejsou, proto se nezobrazují.</string>
     <string name="country_holidays_public_only">V kalendáři se zobrazují celostátní svátky. Školní prázdniny pro zemi %1$s v aplikaci nejsou.</string>
     <string name="country_holidays_suspended">Státní svátky v zemi %1$s nejsou během válečného stavu dny pracovního volna, proto se nezobrazují.</string>
+
+    <!-- MON-13, regional half: the Land whose own public holidays are added. -->
+    <string name="holiday_region_label_de">Spolková země</string>
+    <string name="holiday_region_settings_summary">Přidá svátky dané spolkové země</string>
+    <string name="holiday_region_none">Jen celostátní</string>
+    <string name="country_holidays_pick_region">V kalendáři se zobrazují celostátní svátky; vyberte spolkovou zemi a přidají se i její vlastní. Školní prázdniny pro zemi %1$s v aplikaci nejsou.</string>
+    <string name="country_holidays_with_region">V kalendáři se zobrazují celostátní svátky i svátky spolkové země %1$s. Školní prázdniny v aplikaci nejsou.</string>
+
+    <string name="region_de_bb">Braniborsko</string>
+    <string name="region_de_be">Berlín</string>
+    <string name="region_de_bw">Bádensko-Württembersko</string>
+    <string name="region_de_by">Bavorsko</string>
+    <string name="region_de_hb">Brémy</string>
+    <string name="region_de_he">Hesensko</string>
+    <string name="region_de_hh">Hamburk</string>
+    <string name="region_de_mv">Meklenbursko-Přední Pomořansko</string>
+    <string name="region_de_ni">Dolní Sasko</string>
+    <string name="region_de_nw">Severní Porýní-Vestfálsko</string>
+    <string name="region_de_rp">Porýní-Falc</string>
+    <string name="region_de_sh">Šlesvicko-Holštýnsko</string>
+    <string name="region_de_sl">Sársko</string>
+    <string name="region_de_sn">Sasko</string>
+    <string name="region_de_st">Sasko-Anhaltsko</string>
+    <string name="region_de_th">Durynsko</string>
 </resources>

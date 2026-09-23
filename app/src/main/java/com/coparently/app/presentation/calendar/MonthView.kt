@@ -63,6 +63,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import com.coparently.app.R
+import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.holidays.Holiday
 import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.common.ParentNames
@@ -141,6 +142,7 @@ fun MonthView(
     eventsByDay: Map<LocalDate, List<Event>>,
     getCustody: (LocalDate) -> String?,
     getProposedCustody: (LocalDate) -> String? = { null },
+    getContactWindows: (LocalDate) -> List<ContactWindow> = { emptyList() },
     parentNames: ParentNames,
     onDayClick: (LocalDate) -> Unit,
     onMonthChange: (YearMonth) -> Unit,
@@ -271,6 +273,7 @@ fun MonthView(
                         events = eventsByDay[day.date].orEmpty(),
                         getCustody = getCustody,
                         getProposedCustody = getProposedCustody,
+                        getContactWindows = getContactWindows,
                         parentNames = parentNames,
                         onDayClick = onDayClick,
                         holiday = holidays[day.date],
@@ -293,6 +296,12 @@ fun MonthView(
 
 /** Outline width on a day picked for a multi-day swap. */
 private val SWAP_SELECTION_BORDER = 2.dp
+
+/** Side of the corner triangle that marks a day with a contact window (MON-6b). */
+private val CONTACT_WINDOW_MARKER_SIZE = 10.dp
+
+/** A contact window's times in a day cell's description. */
+private val WINDOW_MARKER_TIME: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
 /**
  * Weekday header row (Mon, Tue, Wed, etc.)
@@ -367,6 +376,7 @@ private fun DayCell(
     events: List<Event>,
     getCustody: (LocalDate) -> String?,
     getProposedCustody: (LocalDate) -> String?,
+    getContactWindows: (LocalDate) -> List<ContactWindow>,
     parentNames: ParentNames,
     onDayClick: (LocalDate) -> Unit,
     holiday: Holiday? = null,
@@ -449,6 +459,26 @@ private fun DayCell(
         else -> null
     }
 
+    // A contact window (MON-6b) is marked, not filled: a small corner in the window parent's
+    // full hue — the saturation rule's "marker" strength — laid over everything else, so the
+    // weekend base, the custody band and the handover diagonal all read exactly as before. The
+    // whole-day tint cannot carry it (it already says whose day it is), and a sixth fill would
+    // fight the five this cell stacks. The hours are in the description and in Day view, one tap
+    // away. On a borrowed day the marker is scaled like the band: a window is part of the pattern,
+    // and the pattern crosses the month boundary.
+    val contactWindows = getContactWindows(date)
+    val windowMarkerColor = contactWindows.firstOrNull()?.let {
+        ParentColors.fill(it.parent).copy(alpha = adjacentScale(fill.isAdjacentMonth))
+    }
+    val windowLabels = contactWindows.map { window ->
+        stringResource(
+            R.string.calendar_contact_window_desc,
+            parentNames.labelFor(window.parent),
+            window.start.format(WINDOW_MARKER_TIME),
+            window.end.format(WINDOW_MARKER_TIME)
+        )
+    }
+
     // All localized pieces are resolved in composable scope; buildString itself is not one.
     val todayLabel = stringResource(R.string.calendar_day_desc_today)
     val outsideMonthLabel = stringResource(R.string.calendar_day_desc_outside_month)
@@ -505,6 +535,10 @@ private fun DayCell(
             append(it)
         }
         swapLabel?.let {
+            append(", ")
+            append(it)
+        }
+        windowLabels.forEach {
             append(", ")
             append(it)
         }
@@ -644,6 +678,17 @@ private fun DayCell(
                 // handover boundary drawn inside it must be previewed too rather than punching
                 // a hole in it.
                 proposalColor?.let { drawRect(it) }
+                // The contact-window corner, last so no fill covers it (see `windowMarkerColor`).
+                windowMarkerColor?.let { color ->
+                    val side = CONTACT_WINDOW_MARKER_SIZE.toPx()
+                    val corner = Path().apply {
+                        moveTo(size.width, size.height - side)
+                        lineTo(size.width, size.height)
+                        lineTo(size.width - side, size.height)
+                        close()
+                    }
+                    drawPath(corner, color)
+                }
             }
             // Long-press offers the day to the co-parent. A day from a neighbouring month is
             // excluded: it is shown for context, not to be acted on, and its dimmed number and

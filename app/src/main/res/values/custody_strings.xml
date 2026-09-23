@@ -75,7 +75,7 @@
     <string name="custody_is_resident">Lives with: %1$s</string>
     <string name="custody_midweek_title">Midweek contact</string>
     <string name="custody_midweek_enable">Add a midweek day</string>
-    <string name="custody_midweek_overnight_warning">This schedule assigns whole days, so a midweek day includes the overnight. If your order says afternoon only, build the fortnight under Custom instead.</string>
+    <string name="custody_midweek_overnight_warning">This schedule assigns whole days, so a midweek day includes the overnight. If your order says afternoon only, leave this off and add a contact window below instead.</string>
     <string name="custody_midweek_every_week">Every week</string>
     <string name="custody_midweek_off_week_only">Only the week without the weekend</string>
     <string name="custody_preview_every_other_weekend_midweek">Every day: %1$s. Every second Sat–Sun and every %3$s: %2$s.</string>
@@ -88,4 +88,25 @@
 
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
     <string name="custody_setup_save_failed">The schedule could not be saved. Try again.</string>
+
+    <!-- MON-6b: contact windows over the whole-day pattern. -->
+    <string name="custody_windows_title">Contact windows</string>
+    <string name="custody_windows_hint">Part of a day with the parent who does not have that day, such as every Wednesday 15:00–19:00. The day itself stays with whoever has it; the window is shown on top.</string>
+    <string name="custody_windows_empty">No contact windows.</string>
+    <string name="custody_windows_add">Add contact window</string>
+    <string name="custody_window_remove">Remove contact window</string>
+    <string name="custody_window_summary">%1$s · %2$s–%3$s · %4$s</string>
+    <string name="custody_window_day_label">Week %1$d, %2$s</string>
+    <string name="custody_window_dialog_title">New contact window</string>
+    <string name="custody_window_weekday">Day</string>
+    <string name="custody_window_week">Week</string>
+    <string name="custody_window_every_week">Every week</string>
+    <string name="custody_window_week_n">Week %1$d</string>
+    <string name="custody_window_from">From %1$s</string>
+    <string name="custody_window_to">To %1$s</string>
+    <string name="custody_window_with">With</string>
+    <string name="custody_window_invalid">The window has to end after it starts, on the same day.</string>
+    <string name="custody_window_add_confirm">Add</string>
+    <string name="custody_diff_windows_only">Only the contact windows would change.</string>
+    <string name="custody_diff_windows_too">The contact windows change too.</string>
 </resources>

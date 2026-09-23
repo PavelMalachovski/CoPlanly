@@ -66,7 +66,7 @@
     <string name="custody_is_resident">Lebt bei: %1$s</string>
     <string name="custody_midweek_title">Kontakt unter der Woche</string>
     <string name="custody_midweek_enable">Einen Tag unter der Woche hinzufügen</string>
-    <string name="custody_midweek_overnight_warning">Dieser Plan vergibt ganze Tage, ein Tag unter der Woche schließt also die Übernachtung ein. Wenn eure Regelung nur den Nachmittag vorsieht, erstellt die zwei Wochen stattdessen unter Benutzerdefiniert.</string>
+    <string name="custody_midweek_overnight_warning">Dieser Plan vergibt ganze Tage, ein Tag unter der Woche schließt also die Übernachtung ein. Wenn eure Regelung nur den Nachmittag vorsieht, lasst dies aus und fügt stattdessen unten eine Umgangszeit hinzu.</string>
     <string name="custody_midweek_every_week">Jede Woche</string>
     <string name="custody_midweek_off_week_only">Nur in der Woche ohne Wochenende</string>
     <string name="custody_preview_every_other_weekend_midweek">Jeden Tag: %1$s. Jedes zweite Sa–So und jeden %3$s: %2$s.</string>
@@ -79,4 +79,25 @@
 
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
     <string name="custody_setup_save_failed">Der Zeitplan konnte nicht gespeichert werden. Versuchen Sie es erneut.</string>
+
+    <!-- MON-6b: contact windows over the whole-day pattern. -->
+    <string name="custody_windows_title">Umgangszeiten</string>
+    <string name="custody_windows_hint">Ein Teil eines Tages mit dem Elternteil, der diesen Tag nicht hat, etwa jeden Mittwoch 15:00–19:00. Der Tag selbst bleibt bei dem, der ihn hat; die Umgangszeit wird zusätzlich angezeigt.</string>
+    <string name="custody_windows_empty">Keine Umgangszeiten.</string>
+    <string name="custody_windows_add">Umgangszeit hinzufügen</string>
+    <string name="custody_window_remove">Umgangszeit entfernen</string>
+    <string name="custody_window_summary">%1$s · %2$s–%3$s · %4$s</string>
+    <string name="custody_window_day_label">Woche %1$d, %2$s</string>
+    <string name="custody_window_dialog_title">Neue Umgangszeit</string>
+    <string name="custody_window_weekday">Tag</string>
+    <string name="custody_window_week">Woche</string>
+    <string name="custody_window_every_week">Jede Woche</string>
+    <string name="custody_window_week_n">Woche %1$d</string>
+    <string name="custody_window_from">Von %1$s</string>
+    <string name="custody_window_to">Bis %1$s</string>
+    <string name="custody_window_with">Bei</string>
+    <string name="custody_window_invalid">Die Umgangszeit muss nach ihrem Beginn enden, am selben Tag.</string>
+    <string name="custody_window_add_confirm">Hinzufügen</string>
+    <string name="custody_diff_windows_only">Nur die Umgangszeiten würden sich ändern.</string>
+    <string name="custody_diff_windows_too">Auch die Umgangszeiten ändern sich.</string>
 </resources>

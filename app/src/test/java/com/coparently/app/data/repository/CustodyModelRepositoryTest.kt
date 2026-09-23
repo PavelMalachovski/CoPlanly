@@ -3,6 +3,7 @@ package com.coparently.app.data.repository
 import com.coparently.app.data.local.dao.CustodyModelDao
 import com.coparently.app.data.local.entity.CustodyModelEntity
 import com.coparently.app.data.remote.firebase.FirestoreCustodyDataSource
+import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.custody.CustodyTimestamp
 import com.coparently.app.domain.custody.SharedCustody
 import com.coparently.app.domain.custody.SharedCustodyRead
@@ -36,6 +37,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.time.LocalDate
+import java.time.LocalTime
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -459,6 +461,67 @@ class CustodyModelRepositoryTest {
         coVerify(exactly = 0) { custodyModelDao.deactivateAllModels() }
     }
 
+    // ---- contact windows (MON-6b) -------------------------------------------
+
+    @Test
+    fun `a pattern save writes its contact windows, and an empty list rather than no key`() =
+        runTest(dispatcher) {
+            val custody = slot<SharedCustody>()
+            coEvery {
+                firestoreCustodyDataSource.setCustody(any(), any(), capture(custody))
+            } returns Unit
+
+            repository.saveAndActivate(localModel().copy(contactWindows = listOf(WEDNESDAY_WINDOW)))
+            assertEquals(listOf("2|15:00|19:00|dad"), custody.captured.contactWindowsWire)
+
+            // "None" is an explicit empty list: a missing key is what an older build writes, and
+            // the mirror reads that as "keep what you have" rather than as a removal.
+            repository.saveAndActivate(localModel())
+            assertEquals(emptyList<String>(), custody.captured.contactWindowsWire)
+        }
+
+    @Test
+    fun `a document an older build wrote without windows keeps this device's windows`() =
+        runTest(dispatcher) {
+            // An older co-parent's ordinary save rewrites the whole document with no
+            // `contactWindows` key. That is not a removal, and must not erase the afternoons.
+            val stored = mirroredEntity().copy(contactWindowsJson = """["2|15:00|19:00|dad"]""")
+            coEvery { custodyModelDao.getModelById(REMOTE_MODEL_ID) } returns stored
+            every { firestoreCustodyDataSource.observeCustody(DOCUMENT_ID) } returns
+                flowOf(remoteCustody(lastModifiedAtMillis = RECENTLY))
+            val entity = slot<CustodyModelEntity>()
+            coEvery { custodyModelDao.insertModel(capture(entity)) } returns Unit
+
+            repository.observeShared().first()
+
+            assertEquals(stored.contactWindowsJson, entity.captured.contactWindowsJson)
+        }
+
+    @Test
+    fun `an explicit list on the document replaces this device's windows, empty included`() =
+        runTest(dispatcher) {
+            val stored = mirroredEntity().copy(contactWindowsJson = """["2|15:00|19:00|dad"]""")
+            coEvery { custodyModelDao.getModelById(REMOTE_MODEL_ID) } returns stored
+            every { firestoreCustodyDataSource.observeCustody(DOCUMENT_ID) } returns
+                flowOf(remoteCustody().copy(contactWindowsWire = emptyList()))
+            val entity = slot<CustodyModelEntity>()
+            coEvery { custodyModelDao.insertModel(capture(entity)) } returns Unit
+
+            repository.observeShared().first()
+
+            assertNull(entity.captured.contactWindowsJson)
+        }
+
+    @Test
+    fun `a stored row's windows come back on the model`() = runTest(dispatcher) {
+        coEvery { custodyModelDao.getActiveModelSync() } returns
+            mirroredEntity().copy(contactWindowsJson = """["9|15:00|19:00|dad","2|15:00|19:00|dad"]""")
+
+        val model = repository.getActiveModelSync()
+
+        assertEquals(listOf(WEDNESDAY_WINDOW, WEDNESDAY_WINDOW.copy(dayIndex = 9)), model?.contactWindows)
+    }
+
     // ---- fixtures ---------------------------------------------------------
 
     /** Points both the one-shot and the streaming uid lookups at [partnerUid]. */
@@ -545,5 +608,8 @@ class CustodyModelRepositoryTest {
         const val FIRST_BACKOFF_MS = 1_000L
 
         val START_DATE: LocalDate = LocalDate.of(2026, 8, 3)
+
+        /** Wednesday of the first week (day 0 is Monday 3 August), 15:00-19:00 with slot 2. */
+        val WEDNESDAY_WINDOW = ContactWindow(2, LocalTime.of(15, 0), LocalTime.of(19, 0), "dad")
     }
 }

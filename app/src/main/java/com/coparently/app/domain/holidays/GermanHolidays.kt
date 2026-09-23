@@ -7,14 +7,17 @@ import java.time.LocalDate
  *
  * Public holidays in Germany are state law. Nine are observed in every Land; the rest — Epiphany,
  * Corpus Christi, Assumption, Reformation Day, All Saints' Day and others — hold in some states
- * and not in others, and the app has no Bundesland setting to pick between them. A family in
- * Bavaria therefore sees fewer days off than it has. That is the same trade [CzechHolidays] makes
- * for the district-dependent spring break: an incomplete list of true days beats a complete list
- * that is wrong for half the country. A state setting is what would lift it (ROADMAP MON-13).
+ * and not in others. This object is the nine, and it is what a parent who has not named a state
+ * sees: an incomplete list of true days beats a complete list that is wrong for half the
+ * country, the same trade [CzechHolidays] makes for the district-dependent spring break.
  *
- * **No school vacations.** German school holidays are set per state and shift every year; there
- * is no nationwide period to draw. (The reference library does carry per-state school holiday
- * tables, which is where a state setting would take them from.)
+ * **A parent who names their Land gets its days too** (`users.regionCode`, MON-13's regional
+ * half): [forRegion] returns this table plus that state's rules from [GermanState], which says
+ * what each state adds and which library entries are deliberately not drawn.
+ *
+ * **No school vacations**, with or without a state. German school holidays are set per state and
+ * shift every year; the reference library carries them, but school calendars stay Czech-only
+ * until there is a per-family school calendar to hang them on (ROADMAP MON-13).
  *
  * Names and dates are the Python `holidays` library's (v0.105) for Germany without a subdivision,
  * and `HolidayReferenceTest` holds this table to it for every year of its fixture (2020–2035).
@@ -38,8 +41,34 @@ object GermanHolidays : HolidayProvider {
         HolidayRule("Second Day of Christmas", "Zweiter Weihnachtstag", fixed("--12-26"))
     )
 
+    override val regions: List<String> = GermanState.entries.map { it.code }
+
+    /** One provider per state, built once: the grid asks on every range change. */
+    private val byState: Map<GermanState, HolidayProvider> by lazy {
+        GermanState.entries.associateWith { StateHolidays(table + it.rules) }
+    }
+
+    override fun forRegion(regionCode: String?): HolidayProvider =
+        GermanState.fromCode(regionCode)?.let { byState.getValue(it) } ?: this
+
     override fun publicHolidays(year: Int): List<Holiday> = table.holidaysIn(year, localLanguage)
 
     override fun schoolVacations(year: Int): List<Pair<ClosedRange<LocalDate>, Pair<String, String>>> =
         emptyList()
+
+    /**
+     * One Land's calendar: the nationwide table and the state's own rules, as one list so the
+     * shared [holidaysIn] sorts them together. Has no regions of its own — a state is already the
+     * finest division the app knows.
+     */
+    private class StateHolidays(private val rules: List<HolidayRule>) : HolidayProvider {
+        override val localLanguage: String = "de"
+
+        override val hasSchoolVacations: Boolean = false
+
+        override fun publicHolidays(year: Int): List<Holiday> = rules.holidaysIn(year, localLanguage)
+
+        override fun schoolVacations(year: Int): List<Pair<ClosedRange<LocalDate>, Pair<String, String>>> =
+            emptyList()
+    }
 }

@@ -36,18 +36,23 @@ data class MovedDay(val date: LocalDate, val fromSlot: String, val toSlot: Strin
  *   A slot with no change is absent.
  * @property windowDays How many days from the anchor were compared, so the screen can say what
  *   "3 days move" is measured over.
- * @property identical True when the two patterns assign every day the same way; a proposal that
- *   changes nothing visible is worth saying out loud rather than describing as "0 days".
+ * @property identical True when the two patterns assign every day the same way **and** carry the
+ *   same contact windows; a proposal that changes nothing visible is worth saying out loud rather
+ *   than describing as "0 days". A proposal that only moves an afternoon is not identical — saying
+ *   "nothing on the calendar would change" over it would be a false sentence.
  * @property comparable False when one of the patterns could not be read — an unvalidated cycle
  *   length off the co-parent's document. The screen then falls back to the old wording rather
  *   than printing a confidently wrong "nothing changes".
+ * @property contactWindowsChanged True when some day inside the window gains, loses or moves a
+ *   contact window (MON-6b), whether or not any whole day moves.
  */
 data class CustodyPatternDiff(
     val movedDays: List<MovedDay>,
     val netDaysBySlot: Map<String, Int>,
     val windowDays: Int,
     val identical: Boolean,
-    val comparable: Boolean
+    val comparable: Boolean,
+    val contactWindowsChanged: Boolean = false
 ) {
     /** How many days move — the number the summary sentence leads with. */
     val movedDayCount: Int get() = movedDays.size
@@ -100,6 +105,11 @@ data class CustodyPatternDiff(
                 if (before == after) null else MovedDay(date, before, after)
             }
 
+            val windowsChanged = (0 until window).any { offset ->
+                val date = from.plusDays(offset.toLong())
+                !CustodyModel.sameContactWindows(agreed.contactWindowsOn(date), proposed.contactWindowsOn(date))
+            }
+
             val net = mutableMapOf<String, Int>()
             moved.forEach { day ->
                 net[day.fromSlot] = (net[day.fromSlot] ?: 0) - 1
@@ -110,8 +120,9 @@ data class CustodyPatternDiff(
                 movedDays = moved,
                 netDaysBySlot = net.filterValues { it != 0 },
                 windowDays = window,
-                identical = moved.isEmpty(),
-                comparable = true
+                identical = moved.isEmpty() && !windowsChanged,
+                comparable = true,
+                contactWindowsChanged = windowsChanged
             )
         }
 

@@ -432,7 +432,9 @@ private fun ProfileStep(state: OnboardingUiState, viewModel: OnboardingViewModel
     SectionHeading(title = R.string.country_label)
     CountryPicker(
         selected = state.country,
-        onSelect = viewModel::updateCountry
+        onSelect = viewModel::updateCountry,
+        selectedRegion = state.region,
+        onSelectRegion = viewModel::updateRegion
     )
 
     DateOfBirthField(

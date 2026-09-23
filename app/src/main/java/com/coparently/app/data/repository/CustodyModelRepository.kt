@@ -10,6 +10,8 @@ import com.coparently.app.domain.activity.ActivityAnnouncement
 import com.coparently.app.domain.activity.ActivityAnnouncer
 import com.coparently.app.domain.activity.ActivityEntityType
 import com.coparently.app.domain.activity.ActivityKind
+import com.coparently.app.domain.custody.ContactWindow
+import com.coparently.app.domain.custody.ContactWindowCodec
 import com.coparently.app.domain.custody.CustodyKey
 import com.coparently.app.domain.custody.CustodyProposalTransition
 import com.coparently.app.domain.custody.CustodyTimestamp
@@ -467,13 +469,17 @@ class CustodyModelRepository(
      * @param startDate The anchor date for the pattern
      * @param momFirst If true, mom has the first week; if false, dad has the first week
      */
-    suspend fun createWeekOnWeekOff(startDate: LocalDate, momFirst: Boolean = true): PatternSubmission {
+    suspend fun createWeekOnWeekOff(
+        startDate: LocalDate,
+        momFirst: Boolean = true,
+        contactWindows: List<ContactWindow> = emptyList()
+    ): PatternSubmission {
         val model = CustodyModel.weekOnWeekOff(
             id = UUID.randomUUID().toString(),
             startDate = startDate,
             momFirst = momFirst
         )
-        return submitPattern(model)
+        return submitPattern(model.withWindows(contactWindows))
     }
 
     /**
@@ -482,11 +488,13 @@ class CustodyModelRepository(
      * @param startDate The anchor date, expected to be the Monday the fortnight opens on
      * @param momIsResident True when slot 1 is the parent the child lives with
      * @param midweek The midweek contact day, or null for alternate weekends only
+     * @param contactWindows Contact afternoons on top of the days (MON-6b)
      */
     suspend fun createEveryOtherWeekend(
         startDate: LocalDate,
         momIsResident: Boolean = true,
-        midweek: MidweekContact? = null
+        midweek: MidweekContact? = null,
+        contactWindows: List<ContactWindow> = emptyList()
     ): PatternSubmission {
         val model = CustodyModel.everyOtherWeekend(
             id = UUID.randomUUID().toString(),
@@ -494,31 +502,39 @@ class CustodyModelRepository(
             momIsResident = momIsResident,
             midweek = midweek
         )
-        return submitPattern(model)
+        return submitPattern(model.withWindows(contactWindows))
     }
 
     /**
      * Creates and saves a 2-2-3 custody model.
      */
-    suspend fun createTwoTwoThree(startDate: LocalDate, momStartsFirst: Boolean = true): PatternSubmission {
+    suspend fun createTwoTwoThree(
+        startDate: LocalDate,
+        momStartsFirst: Boolean = true,
+        contactWindows: List<ContactWindow> = emptyList()
+    ): PatternSubmission {
         val model = CustodyModel.twoTwoThree(
             id = UUID.randomUUID().toString(),
             startDate = startDate,
             momStartsFirst = momStartsFirst
         )
-        return submitPattern(model)
+        return submitPattern(model.withWindows(contactWindows))
     }
 
     /**
      * Creates and saves a 3-4-4-3 custody model.
      */
-    suspend fun createThreeFourFourThree(startDate: LocalDate, momStartsFirst: Boolean = true): PatternSubmission {
+    suspend fun createThreeFourFourThree(
+        startDate: LocalDate,
+        momStartsFirst: Boolean = true,
+        contactWindows: List<ContactWindow> = emptyList()
+    ): PatternSubmission {
         val model = CustodyModel.threeFourFourThree(
             id = UUID.randomUUID().toString(),
             startDate = startDate,
             momStartsFirst = momStartsFirst
         )
-        return submitPattern(model)
+        return submitPattern(model.withWindows(contactWindows))
     }
 
     /**
@@ -527,7 +543,8 @@ class CustodyModelRepository(
     suspend fun createCustom(
         startDate: LocalDate,
         patternDays: Int,
-        momDayIndices: Set<Int>
+        momDayIndices: Set<Int>,
+        contactWindows: List<ContactWindow> = emptyList()
     ): PatternSubmission {
         val model = CustodyModel.custom(
             id = UUID.randomUUID().toString(),
@@ -535,8 +552,16 @@ class CustodyModelRepository(
             patternDays = patternDays,
             momDayIndices = momDayIndices
         )
-        return submitPattern(model)
+        return submitPattern(model.withWindows(contactWindows))
     }
+
+    /**
+     * [this] with [windows] attached, minus any that fall outside the cycle — a window left over
+     * from a longer pattern the parent has just shortened would never match a date, and storing
+     * it would only make the two phones' documents differ over something nobody can see.
+     */
+    private fun CustodyModel.withWindows(windows: List<ContactWindow>): CustodyModel =
+        copy(contactWindows = ContactWindowCodec.canonical(windows.filter { it.dayIndex < patternDays }))
 
     /**
      * Deletes a custody model.
@@ -620,7 +645,19 @@ class CustodyModelRepository(
                 .takeIf { it != CustodyTimestamp.UNDATED }
                 ?: existing?.lastModifiedAtMillis ?: nowMillis(),
             dayOverrides = remote.dayOverrides
-        ).copy(isActive = true, repeatYearly = remote.repeatYearly)
+        ).copy(
+            isActive = true,
+            repeatYearly = remote.repeatYearly,
+            // A document with no `contactWindows` key was written by a build that predates
+            // MON-6b, which rewrites the whole document without it on every save — including an
+            // ordinary swap. That is not a removal, so this row keeps what it had. A removal this
+            // build makes is an explicit empty list, never a missing key.
+            contactWindowsJson = if (remote.contactWindowsWire == null) {
+                existing?.contactWindowsJson
+            } else {
+                ContactWindowJson.encode(remote.model.contactWindows)
+            }
+        )
         if (entity == existing) return
 
         val localActive = custodyModelDao.getActiveModelSync()
@@ -695,7 +732,11 @@ class CustodyModelRepository(
                     // every agreed swap — including from `republish`, which runs with no user
                     // action behind it at all, during ordinary mirroring.
                     dayOverrides = existing?.dayOverrides.orEmpty(),
-                    lastModifiedKind = CustodyWriteKind.PATTERN
+                    lastModifiedKind = CustodyWriteKind.PATTERN,
+                    // Always the key, as `[]` for none: this is a pattern write, the one kind
+                    // `firestore.rules` lets replace the list, and an explicit empty list is how
+                    // a removal is told apart from an older build that never wrote the key.
+                    contactWindowsWire = ContactWindowCodec.encodeAll(model.contactWindows)
                 )
             )
         }
@@ -1038,7 +1079,8 @@ class CustodyModelRepository(
             patternDays = patternDays,
             momDayIndices = momDays,
             startDate = LocalDate.parse(startDate),
-            isActive = isActive
+            isActive = isActive,
+            contactWindows = ContactWindowJson.decode(contactWindowsJson)
         )
     }
 
@@ -1071,7 +1113,9 @@ class CustodyModelRepository(
             // Null rather than "{}" for none, so a row that has never carried a swap is
             // byte-identical to one written before the column existed — which the equality
             // guard in `mirrorIntoRoom` depends on to stay quiet.
-            dayOverridesJson = DayOverrideJson.encode(dayOverrides)
+            dayOverridesJson = DayOverrideJson.encode(dayOverrides),
+            // Null for none, for the same reason.
+            contactWindowsJson = ContactWindowJson.encode(contactWindows)
         )
     }
 

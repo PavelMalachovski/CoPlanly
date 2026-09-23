@@ -115,6 +115,38 @@ class HolidayCountryTest {
     }
 
     @Test
+    fun `only Germany offers regions`() {
+        // Austria's public holidays are nationwide; its patron-saint days are bank holidays. A
+        // region picker there would change nothing on the grid.
+        assertEquals(16, HolidayCountry.GERMANY.regions.size)
+        HolidayCountry.entries.filter { it != HolidayCountry.GERMANY }.forEach { country ->
+            assertEquals(emptyList(), country.regions, country.code)
+        }
+    }
+
+    @Test
+    fun `a region that does not belong to the country is dropped`() {
+        // A parent who moved from Germany to Austria keeps a stale `regionCode` until the next
+        // save; it must not select anything, least of all another country's table.
+        assertEquals("BY", HolidayCountry.GERMANY.regionOrNull(" by "))
+        assertNull(HolidayCountry.AUSTRIA.regionOrNull("BY"))
+        assertNull(HolidayCountry.GERMANY.regionOrNull("XX"))
+        assertNull(HolidayCountry.GERMANY.regionOrNull(null))
+
+        val location = HolidayLocation.of("AT", "BY")
+        assertEquals(HolidayCountry.AUSTRIA, location.country)
+        assertNull(location.regionCode)
+        assertEquals(AustrianHolidays, location.provider)
+    }
+
+    @Test
+    fun `a location with no region draws the nationwide calendar`() {
+        assertEquals(GermanHolidays, HolidayLocation.of("DE", null).provider)
+        assertEquals(HolidayLocation(HolidayCountry.CZECHIA), HolidayLocation.Default)
+        assertNull(HolidayLocation.of("UA", null).provider)
+    }
+
+    @Test
     fun `a public holiday wins over a school vacation covering the same day`() {
         // 24-26 December are both, and a parent looking at the grid wants to be told it is
         // Christmas rather than that school is out. The precedence lives on the interface now,
