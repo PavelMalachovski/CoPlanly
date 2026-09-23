@@ -79,6 +79,15 @@ invocation is yours.
 | **MON-12** | Intelligent suggestions (MVP 3) — behind SEC-1's proxy, never with a key in the client | P3 | M |
 | **MON-13** | The tables and Germany's Länder are done (five countries; Ukraine's holidays are suspended by martial law) — left: school vacations outside Czechia, and whether Austria's patron-saint days are drawn at all | P2 | M |
 | **FAM-4** | Custody per child | P2 | L |
+| **MON-14** | Seasonal schedule layers (summer / school holidays override the base pattern), with "fill from school holidays" | P1 | M |
+| **MON-15** | Search in chat — local Room FTS, never a server index | P1 | S |
+| **MON-16** | Verifiable export: record ID + SHA-256 registered server-side, verified in the browser | P1 | S |
+| **MON-17** | ICS calendar feed for a co-parent on an iPhone (secret revocable token, no private events) | P1 | M |
+| **MON-18** | Free, expiring, two-consent access for a mediator or lawyer | P1 | M |
+| **MON-19** | A pause before sending (undo window + a lexical nudge, no AI) | P2 | S |
+| **MON-20** | Holiday fairness at a glance (who has which holidays, nights per parent) | P2 | S |
+| **MON-21** | From the agreed parenting plan to a proposed schedule | P2 | M |
+| **MON-22** | A private, local-only journal that can be attached to an export | P2 | M |
 | **REL-4 (drafting)** | Done as far as the code can answer: every placeholder left is a fact only the owner has, listed at the top of each document. The deletion page and the privacy link in the app are written | P0 | S |
 
 ### ⚙️ Cloud, but a CI job has to be built first
@@ -1576,6 +1585,154 @@ but school vacations still follow the viewer rather than the child, so a per-fam
 calendar remains the honest fix for the per-viewer strips described above before any are drawn.
 
 ---
+
+### Where to be stronger than the competition (September 2026)
+
+`docs/COMPETITORS-2026-09.md` compares the app with AppClose feature by feature. Two gaps are
+worth closing outright (**MON-14**, **MON-15**). The rest of this block is a bet: build where
+AppClose is structurally weak rather than copy it. Its weak points:
+- **per-parent billing** that turns a non-payer's account read-only;
+- **US data residency**;
+- **English and Spanish only**;
+- **iOS/web reach we cannot match soon**;
+- **an export whose trust rests on the vendor's affidavit**.
+
+Each item below says which of those it answers.
+
+**A principle for MON-1, not a feature: communication never goes read-only.** AppClose's
+"Read-Only Mode" for a parent who does not pay is its most-cited complaint, and lawyers have
+written advisories about it: a paywall that can stall a court-ordered channel is a liability. Whatever
+MON-1 decides, messaging, the calendar and the custody schedule stay usable by both parents
+regardless of who pays. The paid tier is documentation (export, verification, versions),
+never the ability to talk.
+
+### MON-14 · P1 · M · Seasonal schedule layers (summer, school holidays)
+
+**Where:** ☁️ cloud; 📱 a look at the grid.
+
+A base pattern plus **layers with a date range that override it**. AppClose's precedence is
+holiday > summer > regular. In CZ/DE, summer care is routinely split differently from term time
+(e.g. two blocks of two weeks each), and today the only way to enter that is day overrides, one
+day at a time.
+
+- A layer is `{name, from, to, pattern (the same shape as the base: cycle length, day
+  indices, contact windows), priority}` stored **inside** the custody model document. It is not a
+  second model: `CustodyModel.getCustodyFor(date)` resolves the layers first, the base second.
+  `getCustodyFor` stays the one question (item 24's rule that a window never splits a day holds
+  within a layer too).
+- Wire form: a codec of plain strings, like `ContactWindowCodec`. **A missing key is not "no
+  layers"**, the same older-build rule as item 24: the mirror keeps its copy when the key is
+  absent. Proposal and swap writes carry the stored list verbatim, and the rule refuses a
+  proposal-only or swap write that changes it.
+- **The part AppClose does not have:** "Fill from school holidays". The Czech vacation table
+  (and the German Länder once MON-13 has school vacations) proposes the layer's dates; the
+  parents confirm. Never auto-applied — a proposal, like every other schedule change.
+- Holiday fairness (below, **MON-20**) reads these layers.
+
+### MON-15 · P1 · S · Search in chat
+
+**Where:** ☁️ cloud.
+
+Search over this device's Room copy of the thread: SQLite FTS4 on `messages.text`, or a `LIKE`
+if FTS proves awkward under SQLCipher. Results jump to the message in context. It never queries
+Firestore: the mirror already holds the thread, and a server-side search would need an index
+that exposes message text to a service. Local-only is also the privacy answer. It needs a schema
+bump and a migration (run the Regenerate workflow after *this* bump, not after a batch — see
+CLAUDE.md on the missing `35.json`). Search in the export (MON-3) comes free with the same
+query.
+
+### MON-16 · P1 · S · A verifiable export, without anybody's affidavit
+
+**Where:** ☁️ cloud (functions + rules + client).
+
+**Answers:** AppClose's "certified records" rest on the vendor's affidavit. This does the same job
+with arithmetic.
+
+Every generated export (MON-3) gets:
+- a **record ID** and a **SHA-256** of the exact file bytes;
+- both registered by a callable in `export_receipts/{id}` with `recordedAt = request.time`
+  (server clock, per MON-4's decision), the family id, the generating uid and the date range.
+
+The PDF footer prints the ID and a short verification instruction. A lawyer, or the other
+parent, uploads the file to a static verification page (hosted with the privacy policy, REL-4).
+The page hashes it **in the browser** and asks the callable whether that hash was registered, and
+when. The file itself never leaves the verifier's machine. A single altered byte fails. Pairs
+with a test that pins message immutability in `firestore.rules` (called out as missing in
+`DESIGN-court-record.md`).
+
+### MON-17 · P1 · M · A calendar feed for a co-parent on an iPhone
+
+**Where:** ☁️ cloud (functions); 📱 subscribing from an iPhone.
+
+**Answers:** the iOS gap, the one that outweighs any single feature. A native iOS app is an owner
+decision and not planned. A read-only **ICS subscription** lets an iPhone parent see the custody
+days and shared events in Apple Calendar today. It is not a substitute for the app (no chat, no
+changes), and the settings text must say exactly that (design item 8).
+
+- An HTTPS function serves `text/calendar` for a **secret, revocable token** (random ≥128 bits,
+  stored hashed, one per subscriber, revoked from Settings). The token is the whole
+  authorisation, so it names one family and one subscriber and expires if unused.
+- Content: custody days as all-day events titled with the parent's *name* (never Mom/Dad),
+  contact windows as timed events, and non-private shared events. **Private events never**
+  (item 3), tombstoned events never.
+- Rate-limit it and cache per token. Calendar clients poll hourly, and the function must not fan
+  out to Firestore per poll.
+
+### MON-18 · P1 · M · Free, expiring access for a mediator or lawyer
+
+**Where:** ☁️ cloud; 📱 the invite flow.
+
+**Answers:** AppClose Pro. Mediators are this product's distribution channel (MON-9), and a free
+portal is how AppClose earns their recommendation.
+
+A **professional grant** beside the calendar friend (item 16):
+- central, family-scoped, **always expiring**, and granted by **both** parents: each parent's
+  consent is a separate key, the same own-key-only shape as the parenting plan;
+- read-only access to the calendar, the parenting plan and the exports the parents choose to
+  share. **Never** the chat by default: a parent may attach an export instead.
+
+No new portal app. The professional uses the same Android app, or the web export verification
+(MON-16). A web read-only view is a later step.
+
+### MON-19 · P2 · S · A pause before sending
+
+**Where:** ☁️ cloud.
+
+**Answers:** tone checks (Co-Parent Assist, ToneMeter) **without** a model, a key or a data
+flow. An opt-in setting ("Give me a moment before sending") holds an outgoing message for a
+short, cancellable interval with an Undo, like Gmail's undo send. There is also a gentle,
+purely lexical nudge (all-caps, several exclamation marks, words from a short per-locale list)
+that **never blocks and never stores anything**. It is honest about what it is: no "AI". A real
+tone model remains MON-12, behind SEC-1's proxy and an EU AI Act review.
+
+### MON-20 · P2 · S · Holiday fairness at a glance
+
+**Where:** ☁️ cloud.
+
+**Answers:** nothing a competitor ships. The holiday tables (MON-13) and the schedule are both in
+the app, so it can answer: over this year and the next, who has Christmas Eve, Easter, the
+children's birthdays and each school break, and how many nights each parent has in total. Shown
+as a small read-only summary in the custody settings, with the proposal flow (never an automatic
+change) when a parent wants to rebalance. It uses **MON-14**'s layers.
+
+### MON-21 · P2 · M · From the parenting plan to the schedule
+
+**Where:** ☁️ cloud.
+
+**Answers:** the Czech parenting plan (MON-5) is a document today. When both parents have agreed
+the plan's custody and holiday sections, offer to **propose** the matching schedule: a base
+pattern and MON-14 layers, through the normal proposal and accept flow. The agreement already
+records the exact wording (item 21), so the proposal can cite the answer it came from. Unique in
+CZ, and a reason for a mediator to recommend the app.
+
+### MON-22 · P2 · M · A private journal
+
+**Where:** ☁️ cloud.
+
+**Answers:** AppClose's journal and notes. Entries are **local-only by default** (Room, under
+SQLCipher, never synced), and a parent may *attach* chosen entries to an export (MON-3/MON-16).
+They are not shared with the co-parent: a journal about the other parent that syncs to them is a
+different, worse product.
 
 ## 8. [FAM] More than one child, more than one pet
 
