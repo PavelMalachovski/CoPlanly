@@ -247,6 +247,7 @@ fun SettingsScreen(
         FamilySwitcherDialog(
             families = familySwitcher.families,
             selectedFamilyId = familySwitcher.selectedFamilyId,
+            hasUnread = familySwitcher::hasUnread,
             onSelect = { familyId ->
                 familySwitcherViewModel.select(familyId)
                 showFamilySwitcher = false

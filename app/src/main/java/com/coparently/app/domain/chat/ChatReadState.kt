@@ -30,6 +30,30 @@ object ChatReadState {
     }
 
     /**
+     * Whether a thread holds something newer than my read mark, answered from the conversation
+     * document alone — for a family that is not on screen, whose messages this device does not
+     * mirror (M-8), so [unreadCount] has nothing to count.
+     *
+     * A yes/no, never a number: the document says *that* the thread moved after my mark, not by
+     * how many messages. And it does not say who moved it — `lastMessageAt` is bumped by the
+     * sender, me included. That is safe in practice because the open thread re-asserts my read
+     * mark on every change to its messages, my own sends included, so a message I sent is
+     * covered by my mark within the same moment; a mark that never reached the server (offline
+     * at send) is the one way my own message can raise the signal, and it clears on the next
+     * open.
+     *
+     * Strictly newer, like [unreadCount]: a mark equal to the newest message covers it.
+     *
+     * @param lastMessageAtMillis The conversation's `lastMessageAt`, or null when nothing has
+     *   been sent in it yet — which is never unread.
+     * @param lastReadAtMillis My mark, or null when I have never opened the thread.
+     */
+    fun hasUnread(lastMessageAtMillis: Long?, lastReadAtMillis: Long?): Boolean {
+        val newest = lastMessageAtMillis ?: return false
+        return newest > (lastReadAtMillis ?: Long.MIN_VALUE)
+    }
+
+    /**
      * The status to render for [message], promoting a successfully sent message to
      * [MessageSendStatus.DELIVERED] or [MessageSendStatus.READ] according to the other
      * parent's marks.

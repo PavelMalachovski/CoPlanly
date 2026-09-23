@@ -3,6 +3,8 @@ package com.coparently.app.domain.chat
 import com.coparently.app.domain.model.Message
 import com.coparently.app.domain.model.MessageSendStatus
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ChatReadStateTest {
@@ -143,5 +145,28 @@ class ChatReadStateTest {
         )
 
         assertEquals(MessageSendStatus.SENDING, status)
+    }
+
+    @Test
+    fun `a thread that moved after my mark has something unread`() {
+        assertTrue(ChatReadState.hasUnread(lastMessageAtMillis = 300, lastReadAtMillis = 200))
+    }
+
+    @Test
+    fun `a mark equal to the newest message covers it`() {
+        // The open thread writes the mark at the newest message's own timestamp, mine included.
+        assertFalse(ChatReadState.hasUnread(lastMessageAtMillis = 300, lastReadAtMillis = 300))
+        assertFalse(ChatReadState.hasUnread(lastMessageAtMillis = 300, lastReadAtMillis = 400))
+    }
+
+    @Test
+    fun `a thread never opened is unread once anything was said in it`() {
+        assertTrue(ChatReadState.hasUnread(lastMessageAtMillis = 300, lastReadAtMillis = null))
+    }
+
+    @Test
+    fun `a thread nothing was said in is never unread`() {
+        assertFalse(ChatReadState.hasUnread(lastMessageAtMillis = null, lastReadAtMillis = null))
+        assertFalse(ChatReadState.hasUnread(lastMessageAtMillis = null, lastReadAtMillis = 100))
     }
 }
