@@ -754,7 +754,7 @@ class SyncService @Inject constructor(
                 parentSlotMigrator.reslotIfSlotChanged(myUid = userId, newRole = updatedUser.role)
             }.onFailure { e ->
                 if (e is CancellationException) throw e
-                Log.e(TAG, "Failed to react to a remote slot change for $userId", e)
+                Log.e(TAG, "Failed to react to a remote slot change", e)
             }
         }
     }

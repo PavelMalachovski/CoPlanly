@@ -794,19 +794,18 @@ device, which has a `Context` and all five translations. Worth remembering when 
 claims to be blocked behind this one — the question to ask is which side of the wire the string is
 finally read on.
 
-### CQ-15 · **PARTLY DONE** · P3 · S · Dead code
+### CQ-15 · **DONE** · P3 · S · Dead code
 
 **Where:** ☁️ cloud.
 
 **Most of the original list was wrong, and it was measured rather than re-read** — three entries had
 consumers all along and two more had since been wired. 1,264 lines were deleted; the rest stays.
 
-**Still open, and it is a decision rather than a deletion:** `ErrorDisplay` and `CoPlanlySnackbarHost`
-are unreferenced, and this item originally asked for them to be *wired* rather than deleted. UX-2
-then decided that a failed list read stays a loaded empty value rather than an error surface, so
-the case for `ErrorDisplay` is weaker than when this was written. Decide it before doing either.
-Also: `presentation/common/animations/LoadingSkeleton.kt` duplicates `SkeletonBox` — one of the two
-files should go.
+**Closed in the September 2026 audit.** `ErrorDisplay` and `CoPlanlySnackbarHost` were deleted
+rather than wired: UX-2 had already decided a failed list read stays a loaded empty value, and both
+carried hardcoded English and literal colours. `LoadingSkeleton.kt`, the unused skeletons,
+`AnimatedTheme`/`CoPlanlyDynamicTheme` (no caller) and the Glance dependencies (no widget) went
+with them.
 
 **Not to be deleted**: the five `EventDao` methods including `getEventsForParentPaginated`, which is
 the thing CQ-5's Home-screen half would use. Deleting it now would be deleting the answer.

@@ -94,7 +94,7 @@ class PairingRepositoryImpl @Inject constructor(
                                         // The UI renders a blank name identically whether the
                                         // profile could not be read or genuinely has none; the
                                         // log is what tells the two apart after the fact.
-                                        Log.w(TAG, "Could not read the partner profile $partnerId", it)
+                                        Log.w(TAG, "Could not read the partner profile", it)
                                         PartnerSummary(
                                             id = partnerId,
                                             name = "",
@@ -305,7 +305,7 @@ class PairingRepositoryImpl @Inject constructor(
         val registration = firestore.collection(USERS).document(uid)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    Log.w(TAG, "User document listener failed for uid=$uid", error)
+                    Log.w(TAG, "User document listener failed", error)
                     return@addSnapshotListener
                 }
                 trySend(snapshot)
@@ -319,7 +319,7 @@ class PairingRepositoryImpl @Inject constructor(
             .whereEqualTo("status", STATUS_PENDING)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    Log.w(TAG, "Own-invitations listener failed for uid=$uid", error)
+                    Log.w(TAG, "Own-invitations listener failed", error)
                 }
                 trySend(snapshot?.documents.orEmpty().toActiveCodeInvites())
             }
@@ -444,7 +444,7 @@ class PairingRepositoryImpl @Inject constructor(
         } catch (
             @Suppress("TooGenericExceptionCaught") e: Exception
         ) {
-            Log.w(TAG, "Failed to create the post-pairing conversation with $partnerId", e)
+            Log.w(TAG, "Failed to create the post-pairing conversation", e)
         }
     }
 

@@ -39,7 +39,7 @@ class FirestoreParentingPlanDataSource @Inject constructor(
         val registration = firestore.collection(COLLECTION).document(familyId)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    Log.w(TAG, "Parenting plan listener failed for $familyId", error)
+                    Log.w(TAG, "Parenting plan listener failed", error)
                     close(error)
                     return@addSnapshotListener
                 }

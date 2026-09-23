@@ -37,7 +37,7 @@ class FirestoreUserDataSource @Inject constructor(
             android.util.Log.d("FirestoreUserDataSource", "Got user from ${if (snapshot.metadata.isFromCache) "cache" else "server"}: $uid")
             snapshot.data
         } catch (e: Exception) {
-            android.util.Log.e("FirestoreUserDataSource", "Failed to get user: $uid", e)
+            android.util.Log.e("FirestoreUserDataSource", "Failed to get user", e)
             null
         }
     }
