@@ -44,12 +44,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
+import com.coparently.app.domain.events.CalendarVisibility
 import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.animations.AnimatedEmptyState
 import com.coparently.app.presentation.common.rememberParentNames
-import com.coparently.app.domain.events.CalendarVisibility
-import com.coparently.app.presentation.theme.CoPlanlyColors
+import com.coparently.app.presentation.theme.ParentColors
 import kotlinx.coroutines.launch
 
 /**
@@ -280,9 +280,10 @@ private fun EventCardContent(
             Text(
                 text = stringResource(R.string.event_list_parent, parentLabel),
                 style = MaterialTheme.typography.bodySmall,
+                // Text, so the text-grade tone: the full-strength hue is under AA as a foreground.
                 color = when (event.parentOwner) {
-                    "mom" -> CoPlanlyColors.MomPink
-                    "dad" -> CoPlanlyColors.DadBlue
+                    "mom" -> ParentColors.text("mom")
+                    "dad" -> ParentColors.text("dad")
                     else -> MaterialTheme.colorScheme.onSurface
                 }
             )

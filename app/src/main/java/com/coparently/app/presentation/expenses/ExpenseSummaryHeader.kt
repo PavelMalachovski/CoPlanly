@@ -41,7 +41,6 @@ import com.coparently.app.presentation.common.NamedParent
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.PillChip
-import com.coparently.app.presentation.theme.CoPlanlyColors
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.utils.LightDarkPreviews
 import com.coparently.app.utils.PreviewWrapper
@@ -286,7 +285,7 @@ internal fun Modifier.monthSwipe(navigation: MonthNavigation): Modifier {
     }
 }
 
-/** Proportional pink/blue bar showing what share of the month each parent fronted. */
+/** Proportional bar, in each parent's own colour, showing what share of the month each fronted. */
 @Composable
 private fun SplitBar(momShare: Float, modifier: Modifier = Modifier) {
     Row(
@@ -300,7 +299,7 @@ private fun SplitBar(momShare: Float, modifier: Modifier = Modifier) {
                 modifier = Modifier
                     .weight(momShare)
                     .fillMaxHeight()
-                    .background(CoPlanlyColors.MomPink)
+                    .background(ParentColors.fill("mom"))
             )
         }
         if (momShare < 1f) {
@@ -308,7 +307,7 @@ private fun SplitBar(momShare: Float, modifier: Modifier = Modifier) {
                 modifier = Modifier
                     .weight(1f - momShare)
                     .fillMaxHeight()
-                    .background(CoPlanlyColors.DadBlue)
+                    .background(ParentColors.fill("dad"))
             )
         }
     }

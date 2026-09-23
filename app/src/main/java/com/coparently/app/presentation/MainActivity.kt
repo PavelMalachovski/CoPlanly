@@ -26,6 +26,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.rememberNavController
 import com.coparently.app.data.notification.NotificationManager
@@ -33,6 +34,7 @@ import com.coparently.app.domain.chat.ChatUri
 import com.coparently.app.domain.guests.GuestInviteUri
 import com.coparently.app.domain.pairing.PairingUri
 import com.coparently.app.domain.repository.PreferencesRepository
+import com.coparently.app.presentation.common.ParentPaletteViewModel
 import com.coparently.app.presentation.navigation.NavGraph
 import com.coparently.app.presentation.navigation.PendingChatLink
 import com.coparently.app.presentation.navigation.PendingChatOpen
@@ -40,6 +42,7 @@ import com.coparently.app.presentation.navigation.PendingInviteCodes
 import com.coparently.app.presentation.splash.SplashScreen
 import com.coparently.app.presentation.sync.SyncViewModel
 import com.coparently.app.presentation.theme.CoPlanlyTheme
+import com.coparently.app.presentation.theme.LocalParentPalette
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -120,6 +123,9 @@ class MainActivity : AppCompatActivity() {
     )
 
     private val syncViewModel: SyncViewModel by viewModels()
+
+    /** Source of [LocalParentPalette] for the whole tree (UX-15). */
+    private val parentPaletteViewModel: ParentPaletteViewModel by viewModels()
 
     // Google Sign-In Activity Result launcher for sync
     private val googleSignInLauncher = registerForActivityResult(
@@ -215,6 +221,11 @@ class MainActivity : AppCompatActivity() {
             // Use saved preference or fall back to system default
             val useDarkTheme = darkTheme ?: systemDarkTheme
 
+            // The family's chosen parent colours, provided once for every ParentColors call in
+            // the app (UX-15). Lifecycle-aware so the ParentsSource upstream can stop while the
+            // app is in the background.
+            val parentPalette by parentPaletteViewModel.palette.collectAsStateWithLifecycle()
+
             // Provide Google Sign-In callback through CompositionLocal
             val googleSignInCallback: (android.content.Intent) -> Unit = remember(googleSignInLauncher) {
                 {
@@ -235,7 +246,8 @@ class MainActivity : AppCompatActivity() {
 
                     Box(modifier = Modifier.fillMaxSize()) {
                         CompositionLocalProvider(
-                            LocalGoogleSignInCallback provides googleSignInCallback
+                            LocalGoogleSignInCallback provides googleSignInCallback,
+                            LocalParentPalette provides parentPalette
                         ) {
                             NavGraph(
                                 navController = navController,

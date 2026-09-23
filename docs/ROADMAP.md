@@ -76,7 +76,6 @@ invocation is yours.
 | **UX-9** | Five different empty-state anatomies, one of which renders under the top bar | P2 | M |
 | **UX-12** | Clerical English success messages — and a branch on the literal that will break when they are localised | P2 | S |
 | **UX-14** | Four different brand purples | P3 | S |
-| **UX-15** | Thread the chosen palette into `ParentColors` — the colour picker is built and hidden until this lands | P1 | M |
 | **UX-16** | Drag an event to reschedule it (MVP 3) | P3 | S |
 | **MON-2** | Verify the market facts — most of them are public pages | P0 | S |
 | **MON-3** | Export to PDF/CSV — the first paid feature (needs MON-4 first) | P1 | M |
@@ -139,8 +138,8 @@ In this order, and each is genuinely finishable in the cloud:
    picker says so on the row. Honest, and still a blank calendar for a German or Polish family.
 
 *(Everything that headed this list — **M-6**, **CQ-19**, **CQ-12**, **CQ-1**'s bleeding half,
-**CQ-5**, **CQ-6 + CQ-8**, **SEC-2**, and the three honesty gaps **CQ-20**, **UX-17**, **UX-18** —
-is done. **SEC-2** carries one caveat that is not a cloud task: see its entry.)*
+**CQ-5**, **CQ-6 + CQ-8**, **SEC-2**, the three honesty gaps **CQ-20**, **UX-17**, **UX-18**, and
+**UX-15**, which un-hid the colour picker — is done. **SEC-2** carries one caveat that is not a cloud task: see its entry.)*
 
 ---
 
@@ -953,7 +952,45 @@ Audit §9.15.
 `#6200EE`, and a splash gradient between the first two. Icon, system splash, Compose splash and app
 do not agree. Audit §9.16.
 
-### UX-15 · P1 · M · Thread the chosen palette into `ParentColors` (was P3 · S)
+### UX-15 · **DONE** · Thread the chosen palette into `ParentColors` (was P1 · M)
+
+**Where:** ☁️ cloud wrote it; 👁 a device with two parents who picked two non-default colours is
+the acceptance check — nothing has seen it rendered yet.
+
+**What shipped (September 2026).** One `CompositionLocal`, provided once:
+
+- `LocalParentPalette` (`theme/ParentColors.kt`, `staticCompositionLocalOf`, default
+  `ParentPalette.Default`) is provided in `MainActivity` beside `LocalGoogleSignInCallback`, from
+  a new Activity-scoped `ParentPaletteViewModel` that maps `ParentsSource.observe()` to
+  `Parents.palette`. It is collected with `collectAsStateWithLifecycle`, so the shared
+  `ParentsSource` upstream still stops in the background. No new Firestore listener: it is the
+  same shared flow every `parents`-exposing ViewModel already subscribes to.
+- `ParentColors.fill`, `container` and `text` became `@Composable @ReadOnlyComposable` and take
+  `palette = LocalParentPalette.current` as their default, so the existing calls picked the
+  palette up with no change and no screen threads a parameter (no detekt `LongParameterList`
+  churn either). Every call site was already in composable scope.
+- Every raw `CoPlanlyColors.MomPink`/`DadBlue` outside `theme/` is gone: `MonthView` (custody
+  wash, handover triangle, proposal preview, event dots), `DayWeekView` (hour-cell wash, proposal
+  preview, event block fill/border/accent, the custody band), `AddEditEventScreen` (owner cards),
+  `EventPreviewSheet`, `EventListScreen` (the parent line was raw pink *as text* — now
+  `ParentColors.text`), `CalendarFilters`, `ExpenseSummaryHeader`'s split bar and
+  `CustodySetupScreen` (pattern grid, 14-day preview, legend, first-parent dot).
+- **The week view's custody band label now clears AA.** It was white `labelSmall` on the full
+  hue — 4.35:1 on pink. The band is drawn in the new `ParentColors.chipFill` (each choice's deep
+  tone, ≥ 5.6:1 under white for all four) and the label colour comes from
+  `ParentColors.onFill`, which picks black or white by WCAG contrast ratio so a future palette
+  entry cannot silently fail. `ParentColorsTest` pins both, per choice.
+- `PARENT_COLOUR_PICKER_ENABLED` and its two `if`s (Settings → Family, onboarding profile step)
+  were removed; the picker shows.
+
+Deliberately unchanged: the slot ids, the saturation rule (washes still go through `container`
+at the custody alpha, dots and bars through `fill` at full strength), the weekend/holiday/friend
+colours, and `DynamicTheme`'s use of the blue family as a *theme* colour. The Settings swatch
+shows the parent's own stored choice rather than the collision-resolved palette, which is what
+`ParentPalette.of` documents. Not done here: the white day numbers on `CustodySetupScreen`'s
+14-day preview sit on the hue at 70% alpha and have the same AA question the band had.
+
+*History:*
 
 **September 2026 audit:** worse than this item said. No composable reads `ParentsSource.palette`,
 so even the `ParentColors` calls take the default palette — the "My colour" picker changed nothing

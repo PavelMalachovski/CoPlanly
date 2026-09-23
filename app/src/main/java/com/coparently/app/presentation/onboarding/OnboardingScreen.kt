@@ -79,7 +79,6 @@ import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.labelRes
 import com.coparently.app.presentation.custody.labelRes
-import com.coparently.app.presentation.theme.PARENT_COLOUR_PICKER_ENABLED
 import com.coparently.app.presentation.theme.ParentColorChoice
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -401,14 +400,11 @@ private fun ProfileStep(state: OnboardingUiState, viewModel: OnboardingViewModel
     // Beside the name rather than on a step of its own: this is "who you are" — what you are
     // called and how you are marked — and a whole wizard step for four swatches would be a step
     // most people tap straight through.
-    // Hidden with the Settings row until the palette reaches the screens.
-    if (PARENT_COLOUR_PICKER_ENABLED) {
-        SectionHeading(title = R.string.settings_parent_color)
-        ParentColorSwatches(
-            selected = state.parentColor,
-            onSelect = viewModel::updateParentColor
-        )
-    }
+    SectionHeading(title = R.string.settings_parent_color)
+    ParentColorSwatches(
+        selected = state.parentColor,
+        onSelect = viewModel::updateParentColor
+    )
 
     // Also "who you are", and for the same reason as the colour above: a whole wizard step for
     // one row of chips is a step most people tap straight through. It is here rather than in

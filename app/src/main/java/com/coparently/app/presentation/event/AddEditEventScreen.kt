@@ -107,7 +107,7 @@ import com.coparently.app.presentation.common.FullScreenImageDialog
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.common.toggling
 import com.coparently.app.presentation.components.TimePickerDialog
-import com.coparently.app.presentation.theme.CoPlanlyColors
+import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.dimensions
 import com.coparently.app.utils.ValidationResult
 import com.coparently.app.utils.ValidationUtils
@@ -837,8 +837,8 @@ fun AddEditEventScreen(
                             colors = CardDefaults.cardColors(
                                 containerColor = if (isSelected) {
                                     when (value) {
-                                        "mom" -> CoPlanlyColors.MomPink.copy(alpha = 0.2f)
-                                        "dad" -> CoPlanlyColors.DadBlue.copy(alpha = 0.2f)
+                                        "mom" -> ParentColors.container("mom", alpha = 0.2f)
+                                        "dad" -> ParentColors.container("dad", alpha = 0.2f)
                                         else -> MaterialTheme.colorScheme.surfaceVariant
                                     }
                                 } else {
@@ -854,8 +854,8 @@ fun AddEditEventScreen(
                                 BorderStroke(
                                     1.5.dp,
                                     when (value) {
-                                        "mom" -> CoPlanlyColors.MomPink
-                                        "dad" -> CoPlanlyColors.DadBlue
+                                        "mom" -> ParentColors.fill("mom")
+                                        "dad" -> ParentColors.fill("dad")
                                         else -> MaterialTheme.colorScheme.primary
                                     }
                                 )
@@ -881,8 +881,8 @@ fun AddEditEventScreen(
                                     imageVector = Icons.Default.Person,
                                     contentDescription = stringResource(R.string.event_form_cd_label_icon, label),
                                     tint = when (value) {
-                                        "mom" -> CoPlanlyColors.MomPink
-                                        "dad" -> CoPlanlyColors.DadBlue
+                                        "mom" -> ParentColors.fill("mom")
+                                        "dad" -> ParentColors.fill("dad")
                                         else -> MaterialTheme.colorScheme.primary
                                     },
                                     modifier = Modifier.size(dims.iconSize * 1.17f) // ~28dp for compact

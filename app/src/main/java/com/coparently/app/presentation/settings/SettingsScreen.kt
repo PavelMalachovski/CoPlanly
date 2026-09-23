@@ -115,7 +115,6 @@ import com.coparently.app.presentation.consent.TelemetryConsentViewModel
 import com.coparently.app.presentation.sync.GoogleCalendarSyncState
 import com.coparently.app.presentation.sync.SyncViewModel
 import com.coparently.app.presentation.theme.Motion
-import com.coparently.app.presentation.theme.PARENT_COLOUR_PICKER_ENABLED
 import com.coparently.app.presentation.theme.ParentColorChoice
 import kotlinx.coroutines.launch
 import java.time.format.DateTimeFormatter
@@ -435,42 +434,36 @@ fun SettingsScreen(
                         )
                         Divider()
                     }
-                    // Hidden until the chosen palette actually reaches the screens (UX-15, audit
-                    // 2026-09): every calendar, chip and ledger still draws the default pink and
-                    // blue, so a picker here would promise a feature that does not exist (design
-                    // item 8). Flip PARENT_COLOUR_PICKER_ENABLED once the palette is plumbed.
-                    if (PARENT_COLOUR_PICKER_ENABLED) {
-                        // The parent's own colour. In the Family group rather than under App
-                        // preferences because it is how this person is identified to the other one —
-                        // the same kind of fact as their name, not a device setting like the theme.
-                        SectionRow(
-                            icon = Icons.Default.Palette,
-                            title = stringResource(R.string.settings_parent_color),
-                            supporting = stringResource(R.string.settings_parent_color_desc),
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                showColorPicker = true
-                            },
-                            trailing = {
-                                // The swatch rather than a chevron: one trailing control, and the
-                                // colour itself says more than an arrow would.
-                                Box(
-                                    modifier = Modifier
-                                        .size(24.dp)
-                                        .clip(CircleShape)
-                                        .background(
-                                            (
-                                                ParentColorChoice.fromStored(parents.me?.colorCode)
-                                                    ?: ParentColorChoice.defaultFor(
-                                                        parents.me?.slot.orEmpty()
-                                                    )
-                                                ).fill
-                                        )
-                                )
-                            }
-                        )
-                        Divider()
-                    }
+                    // The parent's own colour. In the Family group rather than under App
+                    // preferences because it is how this person is identified to the other one —
+                    // the same kind of fact as their name, not a device setting like the theme.
+                    SectionRow(
+                        icon = Icons.Default.Palette,
+                        title = stringResource(R.string.settings_parent_color),
+                        supporting = stringResource(R.string.settings_parent_color_desc),
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            showColorPicker = true
+                        },
+                        trailing = {
+                            // The swatch rather than a chevron: one trailing control, and the
+                            // colour itself says more than an arrow would.
+                            Box(
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        (
+                                            ParentColorChoice.fromStored(parents.me?.colorCode)
+                                                ?: ParentColorChoice.defaultFor(
+                                                    parents.me?.slot.orEmpty()
+                                                )
+                                            ).fill
+                                    )
+                            )
+                        }
+                    )
+                    Divider()
                     // Beside the colour rather than under App preferences: both are answers about
                     // this parent — how they are marked and where they are — while the language
                     // and the theme are answers about this device.

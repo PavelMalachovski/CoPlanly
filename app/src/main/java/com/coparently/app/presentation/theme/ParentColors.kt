@@ -3,18 +3,26 @@ package com.coparently.app.presentation.theme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 
 /**
- * Whether the app offers the parent-colour picker (Settings → Family, onboarding profile step).
+ * The palette of the family on screen, for every [ParentColors] call beneath it (UX-15).
  *
- * Off until the chosen [ParentPalette] reaches the screens: every `ParentColors` call still takes
- * the default palette and about twenty sites use the raw pink/blue, so a picker would promise a
- * feature that does not exist (design item 8; ROADMAP UX-15, audit 2026-09). Turn it on in the
- * same change that threads the palette through.
+ * Provided **once**, in `MainActivity`, from `ParentPaletteViewModel` — which derives it from
+ * `ParentsSource`, the single place the two parents are joined — so no screen has to remember to
+ * thread it and no call site can quietly draw the default instead of the family's choice.
+ * [ParentColors.fill], [ParentColors.text], [ParentColors.container] and [ParentColors.chipFill]
+ * read it as their default argument.
+ *
+ * The default is pink and blue, which is what a preview, a test host, the auth screen and the
+ * first frame before the parents have loaded draw — exactly what the app drew before anyone
+ * could choose. `static` because the value changes about once per session (when the parents
+ * load, or when a parent picks a colour), and on that change the whole tree genuinely does
+ * have to repaint.
  */
-const val PARENT_COLOUR_PICKER_ENABLED = false
+val LocalParentPalette = staticCompositionLocalOf { ParentPalette.Default }
 
 /**
  * Parent identity colours, resolved for the theme that is actually being painted.
@@ -55,22 +63,72 @@ object ParentColors {
      * custody tints. Never use as a text colour; use [text] for that.
      *
      * @param parent `"mom"` or `"dad"`; anything else falls back to slot 1.
-     * @param palette The family's two chosen colours. Defaults to pink and blue, which is
-     *   what a screen that has not resolved the parents draws — unchanged from before anyone
-     *   could choose.
+     * @param palette The family's two chosen colours. Defaults to [LocalParentPalette], the
+     *   palette of the family on screen; pass one explicitly only to draw a different family.
      */
-    fun fill(parent: String, palette: ParentPalette = ParentPalette.Default): Color =
+    @Composable
+    @ReadOnlyComposable
+    fun fill(parent: String, palette: ParentPalette = LocalParentPalette.current): Color =
         palette.of(parent).fill
 
     /**
      * The parent's identity hue as a **text-grade** foreground for the current theme.
      *
      * @param parent `"mom"` or `"dad"`; anything else falls back to mom.
+     * @param palette Defaults to [LocalParentPalette]; see [fill].
      */
     @Composable
     @ReadOnlyComposable
-    fun text(parent: String, palette: ParentPalette = ParentPalette.Default): Color =
+    fun text(parent: String, palette: ParentPalette = LocalParentPalette.current): Color =
         palette.of(parent).let { if (isDarkTheme) it.light else it.dark }
+
+    /**
+     * A **solid** parent fill that carries text on top of it — a labelled custody band, a chip
+     * with a name in it.
+     *
+     * Not [fill]: the full-strength hue is fill-only for a reason that holds *under* text as
+     * well as beside it — white on the original pink is 4.35:1, under AA. The deep tone of each
+     * [ParentColorChoice] (the one [text] uses on a light surface) clears AA under white for all
+     * four choices, which is what `CoPlanlyColors.MomChipFill`/`DadChipFill` already said for
+     * pink and blue. Pair it with [onFill] rather than hard-coding white, so a future choice
+     * whose deep tone is light gets dark text instead of an unreadable label.
+     *
+     * @param parent `"mom"` or `"dad"`; anything else falls back to slot 1.
+     * @param palette Defaults to [LocalParentPalette]; see [fill].
+     */
+    @Composable
+    @ReadOnlyComposable
+    fun chipFill(parent: String, palette: ParentPalette = LocalParentPalette.current): Color =
+        palette.of(parent).dark
+
+    /**
+     * Black or white, whichever contrasts more with [background] — the text colour for a label
+     * drawn *on* a parent fill.
+     *
+     * Chosen by the WCAG contrast ratio rather than a luminance threshold, because the ratio is
+     * the thing AA is stated in and a threshold only approximates it near the middle. Pure and
+     * not composable, so a draw lambda can use it too.
+     *
+     * @param background The opaque colour the text sits on.
+     */
+    fun onFill(background: Color): Color =
+        if (contrastRatio(Color.White, background) >= contrastRatio(Color.Black, background)) {
+            Color.White
+        } else {
+            Color.Black
+        }
+
+    /**
+     * The WCAG 2.x contrast ratio between two opaque colours, from 1 (identical) to 21.
+     *
+     * @param first One colour.
+     * @param second The other; the order does not matter.
+     */
+    fun contrastRatio(first: Color, second: Color): Float {
+        val a = first.luminance()
+        val b = second.luminance()
+        return (maxOf(a, b) + WCAG_FLARE) / (minOf(a, b) + WCAG_FLARE)
+    }
 
     /**
      * The calendar friend's teal as a **text-grade** foreground for the current theme. The raw
@@ -88,10 +146,16 @@ object ParentColors {
      * @param parent `"mom"` or `"dad"`; anything else falls back to mom.
      * @param alpha Tint strength; the default matches the calendar's custody wash so a chip on
      *   the dashboard and a day cell in the grid read as the same system.
+     * @param palette Defaults to [LocalParentPalette]; see [fill].
      */
+    @Composable
+    @ReadOnlyComposable
     fun container(
         parent: String,
         alpha: Float = CoPlanlyColors.CUSTODY_TINT_ALPHA,
-        palette: ParentPalette = ParentPalette.Default
-    ): Color = fill(parent, palette).copy(alpha = alpha)
+        palette: ParentPalette = LocalParentPalette.current
+    ): Color = palette.of(parent).fill.copy(alpha = alpha)
+
+    /** The 0.05 WCAG adds to both luminances, standing in for ambient flare on a screen. */
+    private const val WCAG_FLARE = 0.05f
 }

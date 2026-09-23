@@ -107,10 +107,16 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     fade); **the four tabs fade-through between each other** (`tabEnter`/`tabExit` in
     `NavGraph.kt`), because peers have no direction. Don't add a literal duration — pick a
     token, or add one here with its reason.
-12. **The parent-colour picker is hidden** behind `PARENT_COLOUR_PICKER_ENABLED`
-    (`theme/ParentColors.kt`), in Settings and in onboarding. No screen reads the chosen
-    palette yet (UX-15), so the picker changed nothing — design item 8. Turn the flag on in the
-    same change that threads `ParentsSource.palette` into `ParentColors`.
+12. **The chosen parent colour reaches every screen through one CompositionLocal** (UX-15,
+    September 2026). `MainActivity` provides `LocalParentPalette` (`theme/ParentColors.kt`) from
+    `ParentPaletteViewModel`, which maps `ParentsSource`'s `Parents.palette`; `ParentColors.fill`,
+    `text`, `container` and `chipFill` are `@Composable` and read it as their default argument.
+    So a render site needs no plumbing, and **a raw `CoPlanlyColors.MomPink`/`DadBlue` in a
+    screen is a bug** — it draws pink for a parent who chose purple. Resolve the colour in
+    composable scope before a draw lambda if you need it there. A label *on* a solid parent
+    colour uses `chipFill` (the deep tone) with `ParentColors.onFill(...)` for the text, never
+    white on the full hue (4.35:1 on pink). The picker (Settings → Family, onboarding profile
+    step) was hidden behind `PARENT_COLOUR_PICKER_ENABLED` until this landed; the flag is gone.
 
 ## UX/UI overhaul (July 2026 design review) — implemented, keep consistent
 
@@ -141,7 +147,8 @@ When touching the UI, keep these invariants:
    the editor is the second step — on Home too since September 2026 (`HomeViewModel.
    openPreview`; Home passes `onDelete = null` because it has no delete-with-undo). The event form has a sticky bottom Save button.
 6. **Color semantics**: Mom-pink/Dad-blue are parent identity ONLY, applied via
-   `CoPlanlyColors.MomPink/DadBlue` directly. The theme's `secondary` slot is a neutral
+   `ParentColors` (which resolves the family's chosen palette — design refresh item 12), never
+   `CoPlanlyColors.MomPink/DadBlue` directly in a screen. The theme's `secondary` slot is a neutral
    indigo (`CoPlanlyColors.Neutral*`), so generic Material selected states (FilterChips)
    are neutral — never wire pink through `colorScheme.secondary`. **Saturation rule** (so
    the day-cell wash and the event chip read as one system, not two pinks): a custody
@@ -279,8 +286,9 @@ cd firestore-tests && npm test              # firestore.rules + storage.rules on
   that person's name. `"mom"`/`"dad"` survive as the two *slot identifiers* in Room, in the
   Firestore document schema and in `firestore.rules`, and are never renamed — `Event.parentOwner`
   is part of the schema `EventRepositoryImpl.toFirestoreMap()` defines, and a co-parent on an
-  older build must keep reading it. Slot 1 is pink, slot 2 is blue; pairing assigns the slots
-  (`functions/index.js`, `assignSlots`), nobody chooses one.
+  older build must keep reading it. Pairing assigns the slots (`functions/index.js`,
+  `assignSlots`), nobody chooses one; the *colour* is each person's own choice
+  (`theme/ParentPalette.kt`), defaulting to pink for slot 1 and blue for slot 2.
 - **A calendar friend sits beside the two slots and never occupies one** (item 16, Aug 2026).
   A guardian/friend/grandparent with their own account reads the family's calendar through a
   **central** grant, `calendar_friends/{friendUid}` — never by being fanned out into every
