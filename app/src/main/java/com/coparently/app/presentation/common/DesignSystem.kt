@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
@@ -167,7 +168,7 @@ fun SectionRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier)
             .defaultMinSize(minHeight = 56.dp)
             .padding(horizontal = 16.dp, vertical = 14.dp),
         horizontalArrangement = Arrangement.spacedBy(14.dp),
@@ -231,6 +232,9 @@ fun SectionRow(
  * @param contentColor Text and icon colour
  * @param leadingDot Colour of a small status dot before the label, or null for none
  * @param onClick Tap handler, or null for a display-only chip
+ * @param selected Whether this chip is the chosen one of a single-choice set, or null when the
+ *   chip is not a choice. Non-null makes it a radio button to TalkBack, which otherwise heard
+ *   the selection only as a colour change.
  */
 @Composable
 @Suppress("LongParameterList") // one chip anatomy, expressed as one parameter list
@@ -242,7 +246,8 @@ fun PillChip(
     container: Color? = null,
     contentColor: Color = MaterialTheme.colorScheme.primary,
     leadingDot: Color? = null,
-    onClick: (() -> Unit)? = null
+    onClick: (() -> Unit)? = null,
+    selected: Boolean? = null
 ) {
     val shape = RoundedCornerShape(PILL_CORNER)
     Row(
@@ -270,9 +275,12 @@ fun PillChip(
             // sits in.
             .then(
                 if (onClick != null) {
-                    Modifier
-                        .clickable(role = Role.Button, onClick = onClick)
-                        .defaultMinSize(minHeight = LayoutConstants.MIN_TOUCH_TARGET)
+                    val action = if (selected != null) {
+                        Modifier.selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
+                    } else {
+                        Modifier.clickable(role = Role.Button, onClick = onClick)
+                    }
+                    action.defaultMinSize(minHeight = LayoutConstants.MIN_TOUCH_TARGET)
                 } else {
                     Modifier
                 }

@@ -2,7 +2,6 @@ package com.coparently.app.presentation.settings
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -82,6 +82,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -1203,10 +1204,12 @@ private fun ChoiceRow(label: String, selected: Boolean, onSelect: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onSelect)
+            // One focus stop that announces itself as a radio button, instead of a clickable row
+            // and a second, separately focusable RadioButton inside it.
+            .selectable(selected = selected, role = Role.RadioButton, onClick = onSelect)
             .padding(vertical = 8.dp)
     ) {
-        RadioButton(selected = selected, onClick = onSelect)
+        RadioButton(selected = selected, onClick = null)
         Spacer(modifier = Modifier.width(8.dp))
         Text(text = label)
     }
@@ -1302,13 +1305,16 @@ private fun FamilySwitcherDialog(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { onSelect(family.familyId) }
+                            .selectable(
+                                selected = family.familyId == selectedFamilyId,
+                                role = Role.RadioButton
+                            ) { onSelect(family.familyId) }
                             .padding(vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         RadioButton(
                             selected = family.familyId == selectedFamilyId,
-                            onClick = { onSelect(family.familyId) }
+                            onClick = null
                         )
                         Text(
                             family.partnerName.takeIf { it.isNotBlank() }
@@ -1348,13 +1354,15 @@ private fun ParentColorDialog(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { chosen = choice.name }
+                            .selectable(selected = chosen == choice.name, role = Role.RadioButton) {
+                                chosen = choice.name
+                            }
                             .padding(vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         RadioButton(
                             selected = chosen == choice.name,
-                            onClick = { chosen = choice.name }
+                            onClick = null
                         )
                         Box(
                             modifier = Modifier
@@ -1417,13 +1425,15 @@ private fun CountryDialog(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { chosen = entry.name }
+                            .selectable(selected = chosen == entry.name, role = Role.RadioButton) {
+                                chosen = entry.name
+                            }
                             .padding(vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         RadioButton(
                             selected = chosen == entry.name,
-                            onClick = { chosen = entry.name }
+                            onClick = null
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(stringResource(entry.labelRes()))

@@ -92,7 +92,8 @@ fun FriendInviteSheet(
                             } else {
                                 MaterialTheme.colorScheme.onSurfaceVariant
                             },
-                            onClick = { onChooseDuration(duration) }
+                            onClick = { onChooseDuration(duration) },
+                            selected = duration == state.duration
                         )
                     }
                 }

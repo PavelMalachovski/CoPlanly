@@ -142,7 +142,8 @@ fun FriendProfileScreen(
                         } else {
                             MaterialTheme.colorScheme.onSurfaceVariant
                         },
-                        onClick = { role = option }
+                        onClick = { role = option },
+                        selected = option == role
                     )
                 }
             }
