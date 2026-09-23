@@ -403,7 +403,6 @@
     <ID>NoConsecutiveBlankLines:MedicationEditor.kt$ </ID>
     <ID>NoConsecutiveBlankLines:MonthView.kt$ </ID>
     <ID>NoConsecutiveBlankLines:NotificationManager.kt$ </ID>
-    <ID>NoConsecutiveBlankLines:RepositoryModule.kt$ </ID>
     <ID>NoConsecutiveBlankLines:SchoolInfoEditor.kt$ </ID>
     <ID>NoConsecutiveBlankLines:SettingsViewModel.kt$ </ID>
     <ID>NoConsecutiveBlankLines:SkeletonLoading.kt$ </ID>
