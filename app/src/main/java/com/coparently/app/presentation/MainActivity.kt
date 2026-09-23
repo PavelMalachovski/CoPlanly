@@ -29,7 +29,9 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.rememberNavController
+import com.coparently.app.data.family.SelectedFamilySource
 import com.coparently.app.data.notification.NotificationManager
+import com.coparently.app.data.remote.firebase.PushPayload
 import com.coparently.app.domain.chat.ChatUri
 import com.coparently.app.domain.guests.GuestInviteUri
 import com.coparently.app.domain.pairing.PairingUri
@@ -74,6 +76,9 @@ class MainActivity : AppCompatActivity() {
 
     @Inject
     lateinit var preferencesRepository: PreferencesRepository
+
+    @Inject
+    lateinit var selectedFamilySource: SelectedFamilySource
 
     private val _darkThemeState = MutableStateFlow<Boolean?>(null)
     private val darkThemeState: StateFlow<Boolean?> = _darkThemeState
@@ -160,9 +165,7 @@ class MainActivity : AppCompatActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        readPairingCode(intent)
-        readGuestCode(intent)
-        readChatDeepLink(intent)
+        readLaunchIntent(intent)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -212,9 +215,7 @@ class MainActivity : AppCompatActivity() {
         // savedInstanceState; re-reading the same launching intent there would
         // re-arm the confirmation dialog for a code the user already handled.
         if (savedInstanceState == null) {
-            readPairingCode(intent)
-            readGuestCode(intent)
-            readChatDeepLink(intent)
+            readLaunchIntent(intent)
         }
 
         setContent {
@@ -271,6 +272,49 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+
+    /**
+     * Reads every deep link [intent] may carry, after switching to the family it names.
+     *
+     * A push tap carries the family the push belongs to ([PushPayload.FAMILY_ID], M-8). The
+     * switch has to land **before** the links are armed: [NavGraph] navigates the moment a
+     * pending link appears, and a chat thread, a proposal or an event opened while the device
+     * still shows the other family would be read against the wrong co-parent. So with a family
+     * to switch to, the links are armed from the coroutine that switched; without one they are
+     * armed at once, exactly as before.
+     *
+     * [SelectedFamilySource.select] refuses a family the signed-in account is not in, so a
+     * stale notification — from a family since left, or for an account since signed out — opens
+     * on whatever is showing rather than blanking the co-parent every screen reads. The extra is
+     * removed once read, so a configuration change cannot replay the switch after the parent has
+     * chosen another family.
+     */
+    private fun readLaunchIntent(intent: Intent?) {
+        val familyId = intent?.getStringExtra(PushPayload.FAMILY_ID)?.takeIf { it.isNotBlank() }
+        if (intent == null || familyId == null) {
+            readDeepLinks(intent)
+            return
+        }
+        intent.removeExtra(PushPayload.FAMILY_ID)
+        lifecycleScope.launch {
+            runCatching {
+                if (selectedFamilySource.selected()?.familyId != familyId) {
+                    selectedFamilySource.select(familyId)
+                }
+            }.onFailure {
+                // A switch that fails still opens the link, on the family already showing —
+                // the same outcome as a push from a build that sent no family at all.
+                Log.w("MainActivity", "Could not switch to the family a notification named", it)
+            }
+            readDeepLinks(intent)
+        }
+    }
+
+    private fun readDeepLinks(intent: Intent?) {
+        readPairingCode(intent)
+        readGuestCode(intent)
+        readChatDeepLink(intent)
     }
 
     /**

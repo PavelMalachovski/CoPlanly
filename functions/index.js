@@ -528,6 +528,9 @@ async function acceptPairingInvitationImpl(db, acceptingUserId, acceptingEmail, 
     data: {
       type: 'pairing_accepted',
       actorName: accepterName,
+      // The family the pairing just created (M-8): the inviter's tap switches to it, which is
+      // where a parent with two families wants to land after the second one is made.
+      familyId: custodyModelKey(invite.fromUserId, acceptingUserId),
     },
     status: 'pending',
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -2466,6 +2469,9 @@ async function notifyOfChatMessage(db, message) {
     data: {
       type: 'chat_message',
       conversationId,
+      // A conversation id *is* the family id — both are `FamilyKey.of` of the pair (M-8). Sent
+      // under its own key anyway, so the receiving device reads one field for every type.
+      familyId: conversationId,
       // `actorName`/`preview` rather than `title`/`body`, so that no queued payload anywhere
       // carries pre-written notification text and the security rule can refuse those two keys
       // outright (SEC-3). This one still relays rather than composes — a chat notification's
