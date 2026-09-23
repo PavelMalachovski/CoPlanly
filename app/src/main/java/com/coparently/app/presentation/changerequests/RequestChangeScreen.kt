@@ -47,7 +47,7 @@ import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.components.TimePickerDialog
 import java.time.Instant
 import java.time.LocalDateTime
-import java.time.ZoneId
+import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
 /**
@@ -271,7 +271,8 @@ private fun RequestChangeForm(
     if (showDatePicker) {
         val datePickerState = rememberDatePickerState(
             initialSelectedDateMillis = proposedDate
-                .atStartOfDay(ZoneId.systemDefault())
+                // UTC on both sides: DatePickerState speaks UTC-midnight millis.
+                .atStartOfDay(ZoneOffset.UTC)
                 .toInstant()
                 .toEpochMilli()
         )
@@ -282,7 +283,7 @@ private fun RequestChangeForm(
                     onClick = {
                         datePickerState.selectedDateMillis?.let { millis ->
                             proposedDate = Instant.ofEpochMilli(millis)
-                                .atZone(ZoneId.systemDefault())
+                                .atZone(ZoneOffset.UTC)
                                 .toLocalDate()
                         }
                         showDatePicker = false

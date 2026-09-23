@@ -118,7 +118,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
-import java.time.ZoneId
+import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.util.UUID
 
@@ -1504,7 +1504,7 @@ fun AddEditEventScreen(
     if (showRecurrenceEndPicker) {
         val recurrenceEndPickerState = rememberDatePickerState(
             initialSelectedDateMillis = (recurrenceEndDate ?: startDate.plusMonths(3))
-                .atStartOfDay(ZoneId.systemDefault())
+                .atStartOfDay(ZoneOffset.UTC)
                 .toInstant()
                 .toEpochMilli()
         )
@@ -1515,9 +1515,10 @@ fun AddEditEventScreen(
                 TextButton(
                     onClick = {
                         recurrenceEndPickerState.selectedDateMillis?.let { millis ->
-                            // LocalDate.ofInstant requires API 34; atZone works from minSdk 26
+                            // LocalDate.ofInstant requires API 34; atZone works from minSdk 26.
+                            // UTC, not the system zone: DatePickerState speaks UTC-midnight millis.
                             recurrenceEndDate = Instant.ofEpochMilli(millis)
-                                .atZone(ZoneId.systemDefault())
+                                .atZone(ZoneOffset.UTC)
                                 .toLocalDate()
                         }
                         showRecurrenceEndPicker = false
@@ -1539,7 +1540,7 @@ fun AddEditEventScreen(
     // Date Picker Dialog
     if (showDatePicker) {
         val datePickerState = rememberDatePickerState(
-            initialSelectedDateMillis = startDate.atStartOfDay(ZoneId.systemDefault())
+            initialSelectedDateMillis = startDate.atStartOfDay(ZoneOffset.UTC)
                 .toInstant()
                 .toEpochMilli()
         )
@@ -1550,9 +1551,10 @@ fun AddEditEventScreen(
                 TextButton(
                     onClick = {
                         datePickerState.selectedDateMillis?.let { millis ->
-                            // LocalDate.ofInstant requires API 34; atZone works from minSdk 26
+                            // LocalDate.ofInstant requires API 34; atZone works from minSdk 26.
+                            // UTC, not the system zone: DatePickerState speaks UTC-midnight millis.
                             startDate = Instant.ofEpochMilli(millis)
-                                .atZone(ZoneId.systemDefault())
+                                .atZone(ZoneOffset.UTC)
                                 .toLocalDate()
                         }
                         showDatePicker = false
