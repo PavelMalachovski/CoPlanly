@@ -65,6 +65,15 @@ adb pull "$REMOTE/." "$VIDEO_DIR/" >/dev/null 2>&1 || true
 rm -f "$STOP_FLAG"
 echo "Screen recording: $(find "$VIDEO_DIR" -name '*.mp4' 2>/dev/null | wc -l) segment(s) in $VIDEO_DIR"
 
+# A crashed process ("Process crashed", "System has crashed") leaves no stack trace in Gradle's
+# output, and the log is often the only thing a reader can reach. Print the crash buffer — the
+# stack of every process that died — so the failure can be diagnosed from the job log alone.
+if [ "$status" -ne 0 ]; then
+  echo "::group::logcat crash buffer (tests exited with $status)"
+  adb logcat -d -b crash 2>/dev/null | tail -n 300 || true
+  echo "::endgroup::"
+fi
+
 # The CI job reads this to decide the leg, rather than the emulator step's own outcome: that step
 # can also fail or time out *after* the tests, while the emulator shuts down (see ci.yml).
 if [ -n "${STATUS_FILE:-}" ]; then
