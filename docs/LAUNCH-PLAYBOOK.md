@@ -511,7 +511,7 @@ Three reasons, and the third is the one that decides it:
 
 1. **It is what the winning European products do.** CoParently.de charges €4.99/month covering the
    whole family and keeps a permanently free basic tier; 2houses and ParentDocket are also
-   family-unit. The American per-parent model correlates with OurFamilyWizard's 1.4★ on Trustpilot
+   family-unit. The American per-parent model correlates with OurFamilyWizard's 2.5★ on Trustpilot
    against 4.6★ in the stores — the signature of court-mandated use plus per-seat billing.
 2. **The product does nothing until both parents install it.** A paywall at the door kills the
    network effect that makes it work at all. Free must cover calendar and custody **completely**.
@@ -597,7 +597,8 @@ addressable market and not an absurd one.
 Which is the real conclusion: **Czechia alone supports a good side business, not a company.** The
 DACH expansion the audit sketches is what changes the ceiling, and it is more expensive than it
 looks — CoParently.de is cheaper than the CZ price at €4.99 covering a family, and
-Getrennt-Gemeinsam (Väter-Netzwerk e.V.) is entirely free and professionally endorsed. Going there
+Getrennt-Gemeinsam (published by Bavaria's counselling association, recommended by Väter-Netzwerk
+e.V.) is entirely free and professionally endorsed. Going there
 means competing with a cheaper local incumbent, not with American pricing.
 
 ---
