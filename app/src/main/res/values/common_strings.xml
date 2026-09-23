@@ -45,4 +45,12 @@
          and honestly numbers what is not. -->
     <string name="parent_label_slot_first">First parent</string>
     <string name="parent_label_slot_second">Second parent</string>
+
+    <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
+    <string name="common_error_generic">Something went wrong. Please try again.</string>
+    <string name="common_error_offline">No internet connection. Check your connection and try again.</string>
+    <string name="common_error_server">The server could not be reached. Please try again later.</string>
+    <string name="common_error_permission">You don\'t have permission to do that.</string>
+    <string name="common_error_invalid_input">Some details are missing or invalid. Check them and try again.</string>
+    <string name="common_error_sync">Couldn\'t sync. Please try again.</string>
 </resources>

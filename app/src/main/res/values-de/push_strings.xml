@@ -56,4 +56,8 @@
     <string name="push_split_ratio_agreed_body">Die Aufteilung wurde festgelegt, bevor Sie verbunden waren. Öffnen Sie die Einstellungen.</string>
     <string name="push_records_shared_title">Freigegebene Einträge</string>
     <string name="push_records_shared_body">%1$s hat den Kalender und die Familieneinträge mit dir geteilt</string>
+
+    <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
+    <string name="push_channel_name">CoPlanly-Benachrichtigungen</string>
+    <string name="push_channel_description">Benachrichtigungen zu Terminen, Anfragen und Nachrichten des anderen Elternteils</string>
 </resources>

@@ -2,7 +2,10 @@ package com.coparently.app.domain.error
 
 /**
  * Sealed class hierarchy for application errors.
- * Provides user-friendly error messages and retry logic.
+ *
+ * [userMessage] is English and is for logs only: the domain layer has no `Context`, so the text
+ * a user reads is chosen by the presentation layer from the error's *type*
+ * (`presentation/common/ErrorText.kt`, CQ-14). Do not render it.
  */
 sealed class AppError : Exception() {
     abstract val userMessage: String
@@ -14,7 +17,9 @@ sealed class AppError : Exception() {
     data class NetworkError(
         override val userMessage: String = "Check your internet connection",
         override val shouldRetry: Boolean = true,
-        val originalException: Throwable? = null
+        val originalException: Throwable? = null,
+        /** True when the device had no connection; false when it did and the server failed. */
+        val offline: Boolean = true
     ) : AppError()
 
     /**

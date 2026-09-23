@@ -85,4 +85,7 @@
     <string name="settings_school_import_description">Your child’s school timetable, straight into the calendar. Not built yet.</string>
     <string name="settings_school_import_planned">Planned</string>
     <string name="settings_operation_failed">That didn\'t work. Check your connection and try again.</string>
+
+    <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
+    <string name="settings_sync_failed">Last sync failed</string>
 </resources>

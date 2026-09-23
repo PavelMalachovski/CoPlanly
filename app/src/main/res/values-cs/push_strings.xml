@@ -62,4 +62,8 @@
     <string name="push_split_ratio_agreed_body">Poměr, kterým se výdaje dělí, byl nastaven ještě před spárováním. Otevřete Nastavení.</string>
     <string name="push_records_shared_title">Sdílené záznamy</string>
     <string name="push_records_shared_body">%1$s s vámi sdílí kalendář a rodinné záznamy</string>
+
+    <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
+    <string name="push_channel_name">Oznámení CoPlanly</string>
+    <string name="push_channel_description">Oznámení o událostech, žádostech a zprávách od druhého rodiče</string>
 </resources>

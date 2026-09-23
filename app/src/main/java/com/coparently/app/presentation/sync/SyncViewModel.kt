@@ -3,12 +3,16 @@ package com.coparently.app.presentation.sync
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.coparently.app.R
 import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.remote.google.CredentialManagerService
 import com.coparently.app.data.sync.CalendarSyncRepository
+import com.coparently.app.data.sync.SyncFailure
 import com.coparently.app.data.sync.SyncResult
 import com.coparently.app.data.sync.SyncService
+import com.coparently.app.data.sync.SyncStage
 import com.coparently.app.data.sync.SyncStatus
+import com.coparently.app.presentation.common.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -73,12 +77,12 @@ class SyncViewModel @Inject constructor(
      */
     fun createGoogleSignInIntent(): android.content.Intent? {
         return try {
-            _syncState.value = GoogleCalendarSyncState.Syncing("Opening Google Sign-In...")
+            _syncState.value = GoogleCalendarSyncState.Syncing(UiText.Res(R.string.sync_google_opening_sign_in))
             val client = credentialManagerService.getGoogleSignInClient()
             if (client == null) {
                 Log.e(TAG, "Google Sign-In client is not available. OAuth may not be configured.")
                 _syncState.value = GoogleCalendarSyncState.Error(
-                    "Google Sign-In is not available. Please check OAuth configuration."
+                    UiText.Res(R.string.sync_google_sign_in_unavailable)
                 )
                 null
             } else {
@@ -86,17 +90,17 @@ class SyncViewModel @Inject constructor(
             }
         } catch (e: Exception) {
             Log.e(TAG, "Unable to create Google Sign-In intent", e)
-            _syncState.value = GoogleCalendarSyncState.Error(
-                "Unable to start Google Sign-In: ${e.message ?: "Unknown error"}"
-            )
+            _syncState.value = GoogleCalendarSyncState.Error(UiText.Res(R.string.sync_google_sign_in_failed))
             null
         }
     }
 
     /**
      * Сообщает об отмене/ошибке входа, чтобы обновить UI.
+     *
+     * @param message A resource reference, resolved when the screen draws it (CQ-14).
      */
-    fun handleSignInCancellation(message: String) {
+    fun handleSignInCancellation(message: UiText) {
         _syncState.value = GoogleCalendarSyncState.Error(message)
     }
 
@@ -106,8 +110,10 @@ class SyncViewModel @Inject constructor(
      * @param completedTask Task с результатом Google Sign-In
      */
     suspend fun handleSignInResult(completedTask: com.google.android.gms.tasks.Task<com.google.android.gms.auth.api.signin.GoogleSignInAccount>): GoogleCalendarSyncState {
-        _syncState.value = GoogleCalendarSyncState.Syncing("Processing sign-in...")
+        _syncState.value = GoogleCalendarSyncState.Syncing(UiText.Res(R.string.sync_google_processing_sign_in))
 
+        // The service's error text is English and technical; it goes to the log, and the user
+        // reads a localised sentence instead (CQ-14).
         val (account, error) = credentialManagerService.handleSignInResult(completedTask)
 
         return if (account != null) {
@@ -117,19 +123,24 @@ class SyncViewModel @Inject constructor(
             // Проверяем, можем ли получить access token
             val (token, tokenError) = credentialManagerService.getAccessToken()
             if (token != null) {
-                val successState = GoogleCalendarSyncState.Success("Signed in successfully as ${account.displayName ?: account.email}")
+                val who = account.displayName ?: account.email.orEmpty()
+                val successState = GoogleCalendarSyncState.Success(
+                    UiText.Res(R.string.sync_google_signed_in_as, listOf(who))
+                )
                 _syncState.value = successState
                 successState
             } else {
+                Log.w(TAG, "No Calendar access token: $tokenError")
                 val errorState = GoogleCalendarSyncState.Error(
-                    tokenError ?: "Failed to get Calendar access"
+                    UiText.Res(R.string.sync_google_no_calendar_access)
                 )
                 _syncState.value = errorState
                 errorState
             }
         } else {
+            Log.w(TAG, "Google sign-in failed: $error")
             val errorState = GoogleCalendarSyncState.Error(
-                error ?: "Sign in failed"
+                UiText.Res(R.string.sync_google_sign_in_failed)
             )
             _syncState.value = errorState
             errorState
@@ -151,18 +162,14 @@ class SyncViewModel @Inject constructor(
      */
     fun syncFromGoogle() {
         if (!_isSignedIn.value) {
-            _syncState.value = GoogleCalendarSyncState.Error("Not signed in to Google")
+            _syncState.value = GoogleCalendarSyncState.Error(SyncFailure.NOT_SIGNED_IN_GOOGLE.toUiText())
             return
         }
 
         viewModelScope.launch {
             // Access token refresh is handled automatically in CredentialProvider
             calendarSyncRepository.syncFromGoogle().collect { result ->
-                _syncState.value = when (result) {
-                    is SyncResult.Progress -> GoogleCalendarSyncState.Syncing(result.message)
-                    is SyncResult.Success -> GoogleCalendarSyncState.Success(result.message)
-                    is SyncResult.Error -> GoogleCalendarSyncState.Error(result.message)
-                }
+                _syncState.value = result.toSyncState()
             }
         }
     }
@@ -193,10 +200,50 @@ class SyncViewModel @Inject constructor(
 
 /**
  * State representing Google Calendar sync operation status.
+ *
+ * Each message is a [UiText] the Settings screen resolves in composition (CQ-14) — this used to
+ * be English, some of it raw exception text.
  */
 sealed class GoogleCalendarSyncState {
     data object Idle : GoogleCalendarSyncState()
-    data class Syncing(val message: String) : GoogleCalendarSyncState()
-    data class Success(val message: String) : GoogleCalendarSyncState()
-    data class Error(val message: String) : GoogleCalendarSyncState()
+    data class Syncing(val message: UiText) : GoogleCalendarSyncState()
+    data class Success(val message: UiText) : GoogleCalendarSyncState()
+    data class Error(val message: UiText) : GoogleCalendarSyncState()
 }
+
+/**
+ * Words an import's progress, result or failure. Pure, so `SyncStateTextTest` can pin that a
+ * truncated import never reads like a complete one (CQ-7).
+ */
+internal fun SyncResult.toSyncState(): GoogleCalendarSyncState = when (this) {
+    is SyncResult.Progress -> GoogleCalendarSyncState.Syncing(
+        when (stage) {
+            SyncStage.STARTING -> UiText.Res(R.string.sync_google_progress_starting)
+            SyncStage.FETCHING -> UiText.Res(R.string.sync_google_progress_fetching)
+            SyncStage.FOUND -> UiText.Plural(R.plurals.sync_google_progress_found, found)
+        }
+    )
+    is SyncResult.Success -> GoogleCalendarSyncState.Success(
+        UiText.Plural(
+            id = if (truncated) R.plurals.sync_google_synced_truncated else R.plurals.sync_google_synced,
+            count = synced,
+            args = listOf(synced, UiText.Date(from), UiText.Date(until))
+        )
+    )
+    is SyncResult.Error -> GoogleCalendarSyncState.Error(reason.toUiText())
+}
+
+/** The sentence a user reads for a failed Google Calendar import. */
+internal fun SyncFailure.toUiText(): UiText = UiText.Res(
+    when (this) {
+        SyncFailure.NOT_SIGNED_IN_GOOGLE -> R.string.sync_google_error_not_connected
+        SyncFailure.NOT_SIGNED_IN_APP -> R.string.sync_google_error_signed_out
+        SyncFailure.AUTHENTICATION -> R.string.sync_google_error_authentication
+        SyncFailure.ACCESS_DENIED -> R.string.sync_google_error_access_denied
+        SyncFailure.CALENDAR_NOT_FOUND -> R.string.sync_google_error_calendar_not_found
+        SyncFailure.RATE_LIMITED -> R.string.sync_google_error_rate_limited
+        SyncFailure.SERVICE_UNAVAILABLE -> R.string.sync_google_error_unavailable
+        SyncFailure.NETWORK -> R.string.sync_google_error_network
+        SyncFailure.UNKNOWN -> R.string.sync_google_error_unknown
+    }
+)

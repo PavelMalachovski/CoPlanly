@@ -79,4 +79,7 @@
     <string name="settings_school_import_description">Der Stundenplan Ihres Kindes direkt in den Kalender. Diese Funktion gibt es noch nicht.</string>
     <string name="settings_school_import_planned">Geplant</string>
     <string name="settings_operation_failed">Das hat nicht geklappt. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.</string>
+
+    <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
+    <string name="settings_sync_failed">Letzte Synchronisierung fehlgeschlagen</string>
 </resources>

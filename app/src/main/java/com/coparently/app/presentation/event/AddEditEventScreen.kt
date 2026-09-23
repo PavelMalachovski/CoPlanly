@@ -280,6 +280,16 @@ fun AddEditEventScreen(
     val endBeforeStartMessage = stringResource(R.string.event_form_end_before_start)
     val draftRestoredMessage = stringResource(R.string.event_form_draft_restored)
     val draftClearLabel = stringResource(R.string.event_form_clear)
+    // The validator's own messages are English; it decides, these say it (CQ-14).
+    val titleEmptyMessage = stringResource(R.string.event_form_title_empty)
+    val titleTooLongMessage = stringResource(
+        R.string.event_form_title_too_long,
+        ValidationUtils.MAX_TITLE_LENGTH
+    )
+    val descriptionTooLongMessage = stringResource(
+        R.string.event_form_description_too_long,
+        ValidationUtils.MAX_DESCRIPTION_LENGTH
+    )
 
     // Validation states
     var titleError by remember { mutableStateOf<String?>(null) }
@@ -290,14 +300,18 @@ fun AddEditEventScreen(
     // Validate title
     fun validateTitle(): Boolean {
         val result = ValidationUtils.validateEventTitle(title)
-        titleError = if (result is ValidationResult.Error) result.message else null
+        titleError = when {
+            result is ValidationResult.Success -> null
+            title.isBlank() -> titleEmptyMessage
+            else -> titleTooLongMessage
+        }
         return result is ValidationResult.Success
     }
 
     // Validate description
     fun validateDescription(): Boolean {
         val result = ValidationUtils.validateDescription(description)
-        descriptionError = if (result is ValidationResult.Error) result.message else null
+        descriptionError = if (result is ValidationResult.Error) descriptionTooLongMessage else null
         return result is ValidationResult.Success
     }
 
@@ -551,7 +565,8 @@ fun AddEditEventScreen(
                 // snackbar's lifetime and used to leave the button dead in the meantime.
                 isSaving = false
                 snackbarHostState.showSnackbar(
-                    message = context.getString(R.string.event_form_save_failed, e.message),
+                    // Not `e.message`: that is the exception's English text (CQ-14).
+                    message = context.getString(R.string.event_form_save_failed),
                     duration = SnackbarDuration.Long
                 )
             }
@@ -1649,10 +1664,7 @@ fun AddEditEventScreen(
                                 }
                             } catch (e: Exception) {
                                 snackbarHostState.showSnackbar(
-                                    message = context.getString(
-                                        R.string.event_form_delete_failed,
-                                        e.message ?: ""
-                                    ),
+                                    message = context.getString(R.string.event_form_delete_failed),
                                     duration = SnackbarDuration.Long
                                 )
                                 isDeleting = false

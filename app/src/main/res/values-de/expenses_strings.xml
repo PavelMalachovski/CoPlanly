@@ -109,4 +109,9 @@
     <string name="expenses_split_proposal_waiting_title">Warten auf eine Antwort</string>
     <string name="expenses_split_proposal_waiting_body">Sie haben %1$d/%2$d vorgeschlagen. Der andere Elternteil hat noch nicht geantwortet.</string>
     <string name="expenses_split_proposal_withdraw">Zurückziehen</string>
+
+    <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
+    <string name="expense_error_signed_out">Du musst angemeldet sein, um eine Ausgabe hinzuzufügen.</string>
+    <string name="expense_warning_receipt_upload_failed">Beleg-Upload fehlgeschlagen — Ausgabe ohne Beleg gespeichert</string>
+    <string name="expense_warning_new_receipt_upload_failed">Beleg-Upload fehlgeschlagen — Ausgabe ohne den neuen Beleg gespeichert</string>
 </resources>

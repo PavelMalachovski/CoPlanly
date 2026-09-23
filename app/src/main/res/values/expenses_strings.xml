@@ -122,4 +122,9 @@
     <string name="expenses_split_proposal_waiting_title">Waiting for an answer</string>
     <string name="expenses_split_proposal_waiting_body">You proposed %1$d/%2$d. Your co-parent has not answered yet.</string>
     <string name="expenses_split_proposal_withdraw">Withdraw</string>
+
+    <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
+    <string name="expense_error_signed_out">You must be signed in to add an expense.</string>
+    <string name="expense_warning_receipt_upload_failed">Receipt upload failed — expense saved without receipt</string>
+    <string name="expense_warning_new_receipt_upload_failed">Receipt upload failed — expense saved without the new receipt</string>
 </resources>

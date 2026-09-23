@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Google Calendar import: the status line under the Google Calendar row in Settings (CQ-14).
+
+  `CalendarSyncRepository` reports facts (`SyncResult`), and `SyncViewModel` picks these
+  resources for them; the Settings screen resolves them in composition. They used to be English
+  literals built in the data layer, some of them the raw exception text.
+-->
+<resources>
+    <string name="sync_google_opening_sign_in">Otevírá se přihlášení přes Google…</string>
+    <string name="sync_google_sign_in_unavailable">Přihlášení přes Google není v této verzi aplikace k dispozici.</string>
+    <string name="sync_google_processing_sign_in">Probíhá přihlášení…</string>
+    <string name="sync_google_signed_in_as">Připojeno jako %1$s</string>
+    <string name="sync_google_no_calendar_access">Přihlášení proběhlo, ale přístup ke Kalendáři Google nebyl udělen. Zkuste se připojit znovu.</string>
+    <string name="sync_google_progress_starting">Spouští se synchronizace z Kalendáře Google…</string>
+    <string name="sync_google_progress_fetching">Načítají se události z Kalendáře Google…</string>
+    <plurals name="sync_google_progress_found">
+        <item quantity="one">V Kalendáři Google nalezena %1$d událost</item>
+        <item quantity="few">V Kalendáři Google nalezeny %1$d události</item>
+        <item quantity="many">V Kalendáři Google nalezeno %1$d události</item>
+        <item quantity="other">V Kalendáři Google nalezeno %1$d událostí</item>
+    </plurals>
+    <plurals name="sync_google_synced">
+        <item quantity="one">Synchronizována %1$d událost (%2$s – %3$s)</item>
+        <item quantity="few">Synchronizovány %1$d události (%2$s – %3$s)</item>
+        <item quantity="many">Synchronizováno %1$d události (%2$s – %3$s)</item>
+        <item quantity="other">Synchronizováno %1$d událostí (%2$s – %3$s)</item>
+    </plurals>
+    <plurals name="sync_google_synced_truncated">
+        <item quantity="one">Synchronizována první %1$d událost (%2$s – %3$s). V tomto období je jich víc, než jeden import pojme.</item>
+        <item quantity="few">Synchronizovány první %1$d události (%2$s – %3$s). V tomto období je jich víc, než jeden import pojme.</item>
+        <item quantity="many">Synchronizováno prvních %1$d události (%2$s – %3$s). V tomto období je jich víc, než jeden import pojme.</item>
+        <item quantity="other">Synchronizováno prvních %1$d událostí (%2$s – %3$s). V tomto období je jich víc, než jeden import pojme.</item>
+    </plurals>
+    <string name="sync_google_error_not_connected">Nejste připojeni ke Googlu. Pro synchronizaci se přihlaste přes Google.</string>
+    <string name="sync_google_error_signed_out">Jste odhlášeni z CoPlanly. Přihlaste se a zkuste to znovu.</string>
+    <string name="sync_google_error_authentication">Přihlášení ke Googlu vypršelo. Připojte Kalendář Google znovu.</string>
+    <string name="sync_google_error_access_denied">CoPlanly nemá přístup k vašemu Kalendáři Google. Zkontrolujte oprávnění ve svém účtu Google.</string>
+    <string name="sync_google_error_calendar_not_found">Váš Kalendář Google se nepodařilo najít.</string>
+    <string name="sync_google_error_rate_limited">Kalendář Google je právě přetížený. Zkuste to za pár minut.</string>
+    <string name="sync_google_error_unavailable">Kalendář Google je momentálně nedostupný. Zkuste to později.</string>
+    <string name="sync_google_error_network">Kalendář Google není dostupný. Zkontrolujte připojení k internetu.</string>
+    <string name="sync_google_error_unknown">Synchronizace z Kalendáře Google se nezdařila. Zkuste to prosím znovu.</string>
+</resources>

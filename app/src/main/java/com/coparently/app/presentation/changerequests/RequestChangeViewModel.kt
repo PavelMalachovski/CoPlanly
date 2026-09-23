@@ -1,7 +1,9 @@
 package com.coparently.app.presentation.changerequests
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.coparently.app.R
 import com.coparently.app.domain.activity.ActivityAnnouncement
 import com.coparently.app.domain.activity.ActivityAnnouncer
 import com.coparently.app.domain.activity.ActivityEntityType
@@ -11,6 +13,7 @@ import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.repository.ChangeRequestRepository
 import com.coparently.app.domain.repository.EventRepository
 import com.coparently.app.domain.repository.UserRepository
+import com.coparently.app.presentation.common.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -41,7 +44,9 @@ sealed interface RequestChangeUiState {
      * honest report of what happened is the queued chip on the request's card, not this name.
      */
     data object Saved : RequestChangeUiState
-    data class Error(val message: String) : RequestChangeUiState
+
+    /** The form cannot go on; [message] is resolved by the screen (CQ-14). */
+    data class Error(val message: UiText) : RequestChangeUiState
 }
 
 /**
@@ -64,7 +69,7 @@ class RequestChangeViewModel @Inject constructor(
             _uiState.value = if (event != null) {
                 RequestChangeUiState.Ready(event)
             } else {
-                RequestChangeUiState.Error("Event not found")
+                RequestChangeUiState.Error(UiText.Res(R.string.event_form_not_found))
             }
         }
     }
@@ -89,13 +94,13 @@ class RequestChangeViewModel @Inject constructor(
         viewModelScope.launch {
             val user = userRepository.getCurrentUser()
             if (user == null) {
-                _uiState.value = RequestChangeUiState.Error("Not signed in")
+                _uiState.value = RequestChangeUiState.Error(UiText.Res(R.string.change_request_error_signed_out))
                 return@launch
             }
             val partnerId = user.partnerId
             if (partnerId.isNullOrEmpty()) {
                 _uiState.value =
-                    RequestChangeUiState.Error("Pair with your co-parent first to send change requests")
+                    RequestChangeUiState.Error(UiText.Res(R.string.change_request_error_not_paired))
                 return@launch
             }
 
@@ -141,8 +146,10 @@ class RequestChangeViewModel @Inject constructor(
                 // Firestore/network failures surface as a form error, not a crash
                 @Suppress("TooGenericExceptionCaught") e: Exception
             ) {
+                // The exception's own text is English and technical: it goes to the log.
+                Log.w("RequestChangeViewModel", "Creating a change request failed", e)
                 _uiState.value =
-                    RequestChangeUiState.Error(e.message ?: "Failed to send the change request")
+                    RequestChangeUiState.Error(UiText.Res(R.string.change_request_error_send_failed))
             }
         }
     }

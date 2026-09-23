@@ -61,4 +61,9 @@
     <string name="pet_photos_upload_failed">Не вдалося завантажити фото. Спробуйте ще раз.</string>
     <string name="pet_photos_delete_failed">Не вдалося видалити фото. Воно залишилося прикріпленим.</string>
     <string name="pet_save_failed">Не вдалося зберегти улюбленця. Спробуйте ще раз.</string>
+
+    <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
+    <string name="pets_load_failed">Не вдалося завантажити домашніх улюбленців. Спробуйте ще раз.</string>
+    <string name="pets_delete_failed">Не вдалося видалити улюбленця. Спробуйте ще раз.</string>
+    <string name="pets_sync_failed">Не вдалося синхронізувати улюбленців. Спробуйте ще раз.</string>
 </resources>

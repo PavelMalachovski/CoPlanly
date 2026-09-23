@@ -35,6 +35,7 @@ import com.coparently.app.domain.guests.GuestInviteUri
 import com.coparently.app.domain.pairing.PairingUri
 import com.coparently.app.domain.repository.PreferencesRepository
 import com.coparently.app.presentation.common.ParentPaletteViewModel
+import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.navigation.NavGraph
 import com.coparently.app.presentation.navigation.PendingChatLink
 import com.coparently.app.presentation.navigation.PendingChatOpen
@@ -139,11 +140,13 @@ class MainActivity : AppCompatActivity() {
             }
         } else {
             val isCanceled = result.resultCode == RESULT_CANCELED
-            val message = if (isCanceled) {
-                getString(com.coparently.app.R.string.sync_google_sign_in_cancelled)
-            } else {
-                getString(com.coparently.app.R.string.sync_google_sign_in_failed)
-            }
+            val message = UiText.Res(
+                if (isCanceled) {
+                    com.coparently.app.R.string.sync_google_sign_in_cancelled
+                } else {
+                    com.coparently.app.R.string.sync_google_sign_in_failed
+                }
+            )
             Log.w("MainActivity", "Google sign-in aborted: resultCode=${result.resultCode}")
             syncViewModel.handleSignInCancellation(message)
         }

@@ -85,9 +85,15 @@
     <string name="event_form_delete_dialog_message">Möchtest du diesen Termin wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.</string>
     <string name="event_form_event_deleted">Termin gelöscht</string>
     <string name="event_form_not_found">Termin nicht gefunden</string>
-    <string name="event_form_delete_failed">Termin konnte nicht gelöscht werden: %1$s</string>
-    <string name="event_form_save_failed">Termin konnte nicht gespeichert werden: %1$s</string>
+    <string name="event_form_delete_failed">Termin konnte nicht gelöscht werden. Bitte versuche es erneut.</string>
+    <string name="event_form_save_failed">Termin konnte nicht gespeichert werden. Bitte versuche es erneut.</string>
     <string name="event_form_photo_upload_failed">Foto-Upload fehlgeschlagen — Termin ohne neues Foto gespeichert</string>
     <string name="event_form_owner_unknown">Wir wissen noch nicht, wessen Termin das ist — wähle oben aus, um zu speichern</string>
     <string name="event_form_for_members">Für wen ist das?</string>
+
+    <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
+    <string name="event_error_title_invalid">Gib dem Termin einen Titel mit höchstens 100 Zeichen.</string>
+    <string name="event_form_title_empty">Der Titel darf nicht leer sein</string>
+    <string name="event_form_title_too_long">Der Titel ist zu lang (max. %1$d Zeichen)</string>
+    <string name="event_form_description_too_long">Die Beschreibung ist zu lang (max. %1$d Zeichen)</string>
 </resources>

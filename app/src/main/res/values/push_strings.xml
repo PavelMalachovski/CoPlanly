@@ -68,4 +68,8 @@
     <string name="push_split_ratio_agreed_body">The split you and your co-parent will share by was set before you paired. Open Settings to see it.</string>
     <string name="push_records_shared_title">Records shared with you</string>
     <string name="push_records_shared_body">%1$s shared their calendar and family records with you</string>
+
+    <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
+    <string name="push_channel_name">CoPlanly notifications</string>
+    <string name="push_channel_description">Notifications about events, requests and messages from your co-parent</string>
 </resources>

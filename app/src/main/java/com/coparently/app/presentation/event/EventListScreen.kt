@@ -48,6 +48,7 @@ import com.coparently.app.domain.events.CalendarVisibility
 import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.animations.AnimatedEmptyState
+import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.theme.ParentColors
 import kotlinx.coroutines.launch
@@ -147,7 +148,7 @@ fun EventListScreen(
                         .padding(paddingValues)
                 ) {
                     Text(
-                        text = stringResource(R.string.event_list_error, state.message),
+                        text = stringResource(R.string.event_list_error, state.message.asString()),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.error,
                         modifier = Modifier.padding(16.dp)
