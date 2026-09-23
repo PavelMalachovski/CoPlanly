@@ -76,7 +76,6 @@ invocation is yours.
 | Id | What | Pri | Size |
 | --- | --- | --- | --- |
 | **M-5** | Multi-family cleanup: delete `partnerId`, `User.role`, `Event.sharedWith`, `isPartnerOf` — **after** the ops steps in REL-3 | P2 | M |
-| **M-8** | M-4's last leftover, and now a small one: chat follows the selected family and the switcher carries a cross-family chat dot (both done, September 2026); left is the same signal for change requests and custody proposals | P2 | S |
 | **CQ-17** | Six dependencies worth moving | P3 | S |
 | **MON-2** | Market facts checked (23 Sep 2026): **app2us has an Android build**; left: mediator count, ARPU, Facebook groups, app2us price on a phone | P0 | S |
 | **MON-3** | The export ships, ungated; left: a PDF read on a device, and the paywall with MON-11 | P2 | S |
@@ -118,7 +117,7 @@ invocation is yours.
 | **MON-15 (shipped, unseen)** | Search in the chat thread: header action, results with the match marked, a tap scrolls to the message | Kotlin compiled in CI and the matching is unit-tested; nobody has typed "cas" on a phone holding "čas", tapped a result three hundred messages back and watched the thread land on it, or timed a search over a years-long thread. |
 | **MON-19 (shipped, unseen)** | Settings → App → "Pause before sending": a five-second hold with Undo, and the lexical hint over the composer | Unit tests pin the hold and the three rules; only a phone shows whether the countdown line and the hint sit well above the keyboard, and whether the word lists read as mild in each language to a native speaker. |
 | **M-8 (chat, shipped, unseen)** | Chat, its badge and `ChatMirror` follow the selected family | Unit tests pin the re-key; only an account with two co-parents on real phones shows a switch landing the Chat tab on the other thread, the badge moving with it, and messages from the family *left* arriving again after switching back. |
-| **M-8 (dot, shipped, unseen)** | The switcher chip and dialog show a dot when a family not on screen has chat news | Three accounts (a parent and two co-parents) on at least two phones: the co-parent of the family *not* on screen sends, the dot appears on the chip and on that row within seconds; opening that family's thread clears it; sending from the family on screen never raises it; a one-family account shows exactly what it did. |
+| **M-8 (dot, shipped, unseen)** | The switcher chip and dialog show a dot when a family not on screen has chat news, a change request or a schedule proposal / day swap waiting on this parent; the dialog row names which | Three accounts (a parent and two co-parents) on at least two phones: the co-parent of the family *not* on screen sends a message, then files a change request, then proposes a schedule — each raises the dot on the chip and on that row within seconds, the row's line names it, and TalkBack reads the kind; answering it (or opening the thread) clears that kind; news in the family on screen never raises it; a one-family account shows exactly what it did. Also: the first change-request dot must not fail with a missing-index error in logcat (`OtherFamiliesSignals`) — the query is equality-only and should need none. |
 | **MON-17 (built, unseen)** | The iCalendar feed: `calendarFeed` + three callables, the Settings → Sync row | The RFC 5545 text and the custody port are pinned by `functions/test/calendar-feed.test.js`; only Apple Calendar shows whether it *subscribes* (`webcal://` from the share sheet), draws the all-day custody bars and the contact windows at the right local times, refreshes within the hour, and stops updating after a revoke. Checklist in MON-17. |
 
 ### 💻 Yours only — no session can do these
@@ -2050,9 +2049,9 @@ while looking at the wrong family. `CalendarSyncRepository` says so at the call 
 is where the answer goes. Related: **MON-8**, where a school import is the opposite case — it *is*
 about the child and must be shared.
 
-### M-8 · P2 · S · What M-4 deliberately left — chip, pushes, chat and the chat dot done
+### M-8 · P2 · S · What M-4 deliberately left — done (chip, pushes, chat, and the cross-family dot)
 
-**Where:** ☁️ cloud for what is left; a phone with two paired accounts for acceptance.
+**Where:** closed in the cloud; a phone with two paired accounts for acceptance (§1's "👁" table).
 
 - **Done — a switcher chip in the top bar** of Home and Expenses (`presentation/common/
   FamilySwitcher.kt`, `FamilySwitcherChip`), beside the gear, naming the family on screen by its
@@ -2111,13 +2110,14 @@ about the child and must be shared.
   bottom-bar and Home badges count the **selected** family only (Home through the Room
   `partnerId`, Chat through `ChatPartnerSource`).
 - **Done (September 2026) — a dot for the other families' chat.** Step (2) of the order this
-  bullet used to give. `data/chat/OtherFamiliesUnreadSource` holds one **conversation-document**
-  listener per family *not* on screen — the messages collection is never read — and derives "has
+  bullet used to give. `data/family/OtherFamiliesSignals` (it began as
+  `data/chat/OtherFamiliesUnreadSource`; the next bullet generalised it) holds one
+  **conversation-document** listener per family *not* on screen — the messages collection is never read — and derives "has
   unread" from `lastMessageAt > lastReadAt[me]` (`ChatReadState.hasUnread`, strictly newer, so a
   mark written at the newest message covers it). It is a yes/no, so the switcher chip carries a
   Material `Badge` dot and each dialog row its own, **never a number**, each with a content
   description (`family_switcher_unread_other`, `family_switcher_unread_row`). Properties the code
-  holds and the tests pin (`OtherFamiliesUnreadSourceTest`, `FamilySwitcherViewModelTest`,
+  holds and the tests pin (`OtherFamiliesSignalsTest`, `FamilySwitcherViewModelTest`,
   `ChatReadStateTest`): **no listener at all at one family**, and the state refuses a dot at one
   family or for the family on screen even if the source says otherwise; the listeners are one
   `shareIn(WhileSubscribed)` for the process, so Home's chip, Expenses' chip and the Settings
@@ -2132,13 +2132,39 @@ about the child and must be shared.
   `lastMessageAt` does not name its sender, so a message **I** sent could raise my own dot if my
   read mark never reached the server (sent offline, then switched away) — the open thread
   re-asserts the mark on every change to its messages, own sends included, so the normal path is
-  covered; and the dot says *chat* only. Cost: N−1 single-document listeners while a switcher is
-  on screen, zero for a one-family account. **Not seen on a device** — see §1's "👁" table.
-- **Not done — the same question for change requests and custody proposals**, whose queries
-  resolve through the projected `partnerId` and so see only the selected family by construction.
-  Each would need its own per-family document read or listener, and neither has a single
-  document per family the way a conversation does; until then the push (which switches the family
-  on tap) is the cross-family signal for those.
+  covered. Cost: N−1 single-document listeners while a switcher is on screen, zero for a
+  one-family account. **Not seen on a device** — see §1's "👁" table.
+- **Done (September 2026) — the same dot for change requests and custody proposals.** The source
+  is now `data/family/OtherFamiliesSignals`, which reports `Map<familyId, Set<FamilySignal>>`
+  (`CHAT`, `CHANGE_REQUEST`, `SCHEDULE`) with every property of the chat bullet above unchanged —
+  one `shareIn(WhileSubscribed)`, none at one family, re-derived and cancelled by `flatMapLatest`,
+  and the bound applied **per listener**, so a family's custody listener that gives up does not
+  take its chat dot with it. Per family *not* on screen it adds two listeners:
+  - **Change requests**: `FirestoreChangeRequestDataSource.observeHasPendingFrom` —
+    `requestedTo == me`, `requestedBy == that co-parent`, `status == "PENDING"`, `limit(1)`. The
+    `requestedTo` equality is what satisfies the rule (CLAUDE.md item 12); the requester names the
+    family, rather than `familyId`, because a request written before the stamp carries none.
+    Equality-only with no `orderBy`, so Firestore serves it by merging single-field indexes and
+    **no composite index** was added. `firestore-tests` pins the query and its refusal without
+    the addressee filter.
+  - **Schedule**: `custody_models/{familyId}` read by id (`FirestoreCustodyDataSource.
+    observeCustody`) — the rule grants `allow get` only, so this is a document listener, never a
+    query. A dot when the stored `proposal` was made by the co-parent, **or** a day swap is waiting
+    on this parent, through `DaySwapInbox.visible`/`awaitsAnswerFrom` so the dot agrees with the
+    inbox it leads to (pending, offered by the other parent, not a day already lived). A proposal
+    of this parent's own raises nothing: it waits on the co-parent, not here.
+  The chip's content description names each kind (`family_switcher_unread_other`,
+  `family_switcher_request_other`, `family_switcher_schedule_other`), and each dialog row gains a
+  visible line with the matching phrases (`…_row`), so the row — not the dot — carries the
+  description. **No rule change.** Cost: up to three listeners per other family while a switcher
+  is on screen, zero at one family. One thing found on the way and **not** changed: the
+  change-request *inbox* and Home's request count are not family-scoped at all —
+  `observeChangeRequestsForUser` mirrors every request naming this parent into Room while the
+  Change Requests screen is open, and `getPendingIncomingCount` counts them all — so a request
+  from another family can show in both the dot and the selected family's count. Scoping the
+  inbox is its own decision (a request is about an event, and events follow the family); the
+  paragraph that sat here claimed those queries "see only the selected family by construction",
+  which was true of custody and never of change requests.
 
 ---
 

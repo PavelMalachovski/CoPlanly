@@ -77,6 +77,10 @@
     <string name="settings_family_unnamed">Noch ohne Namen</string>
     <string name="family_switcher_unread_other">Neue Nachrichten in einer anderen Familie</string>
     <string name="family_switcher_unread_row">Neue Nachrichten</string>
+    <string name="family_switcher_request_other">In einer anderen Familie wartet eine Änderungsanfrage</string>
+    <string name="family_switcher_request_row">Eine Änderungsanfrage wartet</string>
+    <string name="family_switcher_schedule_other">In einer anderen Familie wartet ein Vorschlag zum Betreuungsplan</string>
+    <string name="family_switcher_schedule_row">Ein Vorschlag zum Betreuungsplan wartet</string>
     <string name="settings_school_import_title">Import aus Bakaláři und EduPage</string>
     <string name="settings_school_import_description">Der Stundenplan Ihres Kindes direkt in den Kalender. Diese Funktion gibt es noch nicht.</string>
     <string name="settings_school_import_planned">Geplant</string>

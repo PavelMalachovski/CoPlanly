@@ -591,7 +591,19 @@ Preconditions: A is paired with **both** B and C (two families). Invite C from S
     behaviour.
 - [ ] A **push** from the family *not* on screen, tapped, switches to that family first and then
       opens the target.
-- [ ] The chip and its dialog show **no** unread count or dot for other families, by design.
+- [ ] **[branch] The cross-family dot.** With B's family on screen, have **C**:
+  - send a chat message — a dot appears on the chip and on C's row in the dialog, whose line
+    says "New messages";
+  - file a change request on one of C's events — C's row also says "A change request is
+    waiting";
+  - propose a new custody schedule, or offer a day swap — C's row also says "A schedule
+    proposal is waiting".
+  - With TalkBack on, the chip reads those kinds, not only "new".
+  - Each kind goes once it is answered (or the thread is read) on C's family; the dot goes with
+    the last.
+  - Never a number. News in the family **on screen** (B) never raises it. A one-family account
+    shows no chip at all.
+  - logcat (`OtherFamiliesSignals`) shows no "gave up" and no missing-index error.
 - **Fallback (1P):**
   - Generate the invite codes as A.
   - Sign out, sign in as B, redeem, send a chat message.
@@ -601,7 +613,8 @@ Preconditions: A is paired with **both** B and C (two families). Invite C from S
   This cannot show live arrival or pushes. Each sign-in as a different account wipes local
   data, so do it only after §2–§4.
 - **If it fails:** tags `SelectedFamily`, `ChatMirror`, `ChatViewModel`;
-  `presentation/common/FamilySwitcher.kt`, `data/chat/ChatPartnerSource.kt` [branch].
+  `presentation/common/FamilySwitcher.kt`, `data/chat/ChatPartnerSource.kt`,
+  `data/family/OtherFamiliesSignals.kt` (tag `OtherFamiliesSignals`) [branch].
 
 ### 5.3 Also worth doing while two phones are paired · 2P
 
