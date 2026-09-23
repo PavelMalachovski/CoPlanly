@@ -602,6 +602,114 @@ describe('custody_models', () => {
     });
   });
 
+  describe('seasonal layers (MON-14)', () => {
+    // Date ranges on which another pattern replaces the base one, as `SeasonalLayerCodec`
+    // strings. Part of the agreed pattern — a layer decides whose day a whole summer is — so only
+    // a pattern write, which stamps its author and is announced, may change them.
+    const SUMMER = 'L1;summer-26;0;2026-07-01;2026-08-31;2026-07-01;62;' +
+        Array.from({length: 31}, (_, i) => i).join(',') + ';;Summer';
+    const CHRISTMAS = 'L1;xmas-26;1;2026-12-23;2026-12-31;2026-12-23;1;0;;Christmas';
+    const LAYERS = [CHRISTMAS, SUMMER].sort();
+    const DATE = '2026-09-05';
+    const proposal = (by, extra) => Object.assign({
+      modelType: 'WEEK_ON_WEEK_OFF',
+      patternDays: 14,
+      momDayIndices: [0, 1, 2, 3, 4, 5, 6],
+      startDate: '2026-08-03',
+      repeatYearly: true,
+      proposedBy: by,
+      proposedAt: '2026-08-24T10:00:00',
+    }, extra);
+    const swap = {
+      dayOverrides: {[DATE]: pendingSwap(MOM, 'dad')},
+      lastModifiedBy: MOM,
+      lastModifiedKind: 'SWAP',
+      lastSwapDate: DATE,
+    };
+
+    it('lets a participant create the document with layers', async () => {
+      const db = env.authenticatedContext(MOM).firestore();
+      await assertSucceeds(db.doc(PATH).set(custodyDoc({seasonalLayers: LAYERS})));
+    });
+
+    it('lets a pattern write set, change and clear them', async () => {
+      await seed(env, {[PATH]: custodyDoc({})});
+      const db = env.authenticatedContext(DAD).firestore();
+      await assertSucceeds(db.doc(PATH).update({seasonalLayers: LAYERS, lastModifiedBy: DAD}));
+      await assertSucceeds(db.doc(PATH).update({seasonalLayers: [SUMMER], lastModifiedBy: DAD}));
+      // A removal is an explicit empty list, which is how a current build says "none".
+      await assertSucceeds(db.doc(PATH).update({seasonalLayers: [], lastModifiedBy: DAD}));
+    });
+
+    it('lets accepting a proposal replace the layers, as the pattern write it is', async () => {
+      await seed(env, {[PATH]: custodyDoc({
+        seasonalLayers: [SUMMER],
+        proposal: proposal(MOM, {seasonalLayers: LAYERS}),
+      })});
+      const db = env.authenticatedContext(DAD).firestore();
+      await assertSucceeds(db.doc(PATH).set(custodyDoc({
+        seasonalLayers: LAYERS,
+        lastModifiedBy: DAD,
+        lastModifiedAt: '2026-08-25T10:00:00',
+        lastDecision: {outcome: 'ACCEPTED', by: DAD, at: '2026-08-25T10:00:00', proposalAt: '2026-08-24T10:00:00'},
+      })));
+    });
+
+    it('lets a current build propose new layers while carrying the stored ones unchanged', async () => {
+      await seed(env, {[PATH]: custodyDoc({seasonalLayers: [SUMMER]})});
+      const db = env.authenticatedContext(DAD).firestore();
+      await assertSucceeds(db.doc(PATH).set(custodyDoc({
+        seasonalLayers: [SUMMER],
+        proposal: proposal(DAD, {seasonalLayers: LAYERS}),
+      })));
+    });
+
+    it('lets an older build propose, although its set() drops the layers', async () => {
+      await seed(env, {[PATH]: custodyDoc({seasonalLayers: LAYERS})});
+      const db = env.authenticatedContext(DAD).firestore();
+      await assertSucceeds(db.doc(PATH).set(custodyDoc({proposal: proposal(DAD)})));
+    });
+
+    it('refuses a proposal-only write that rewrites or clears the agreed layers', async () => {
+      // A proposal write does not stamp its author and raises no banner: changing the agreed
+      // layers through one would hand a summer to one parent in silence.
+      await seed(env, {[PATH]: custodyDoc({seasonalLayers: LAYERS})});
+      const db = env.authenticatedContext(DAD).firestore();
+      await assertFails(db.doc(PATH).update({proposal: proposal(DAD), seasonalLayers: [SUMMER]}));
+      await assertFails(db.doc(PATH).update({proposal: proposal(DAD), seasonalLayers: []}));
+    });
+
+    it('refuses a proposal-only write that adds layers where there were none', async () => {
+      await seed(env, {[PATH]: custodyDoc({})});
+      const db = env.authenticatedContext(DAD).firestore();
+      await assertFails(db.doc(PATH).update({proposal: proposal(DAD), seasonalLayers: LAYERS}));
+    });
+
+    it('lets a swap carry the layers unchanged, and an older build\'s swap drop them', async () => {
+      await seed(env, {[PATH]: custodyDoc({seasonalLayers: LAYERS})});
+      const db = env.authenticatedContext(MOM).firestore();
+      await assertSucceeds(db.doc(PATH).set(custodyDoc(Object.assign({seasonalLayers: LAYERS}, swap))));
+
+      await seed(env, {[PATH]: custodyDoc({seasonalLayers: LAYERS})});
+      await assertSucceeds(db.doc(PATH).set(custodyDoc(swap)));
+    });
+
+    it('refuses a swap write that changes the layers', async () => {
+      // A SWAP stamp suppresses the banner, so a layer change riding on one would move a whole
+      // season with nobody told.
+      await seed(env, {[PATH]: custodyDoc({seasonalLayers: LAYERS})});
+      const db = env.authenticatedContext(MOM).firestore();
+      await assertFails(db.doc(PATH).update(Object.assign({seasonalLayers: [CHRISTMAS]}, swap)));
+      await assertFails(db.doc(PATH).update(Object.assign({seasonalLayers: []}, swap)));
+    });
+
+    it('refuses a swap write that adds layers where there were none', async () => {
+      await seed(env, {[PATH]: custodyDoc({})});
+      const db = env.authenticatedContext(MOM).firestore();
+      await assertFails(db.doc(PATH).update(Object.assign({seasonalLayers: LAYERS}, swap)));
+    });
+  });
+
   describe('custody-pattern proposals (item 7)', () => {
     const proposal = (by) => ({
       modelType: 'WEEK_ON_WEEK_OFF',

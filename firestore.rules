@@ -372,8 +372,9 @@ service cloud.firestore {
     function swapWriteTouchesOnlyTheSwap(before, after) {
       return after.diff(before).affectedKeys()
                   .hasOnly(['dayOverrides', 'lastSwapDate', 'lastModifiedBy', 'lastModifiedKind',
-                            'contactWindows']) &&
-             contactWindowsKeptOrDropped(before, after);
+                            'contactWindows', 'seasonalLayers']) &&
+             contactWindowsKeptOrDropped(before, after) &&
+             seasonalLayersKeptOrDropped(before, after);
     }
 
     // True when a write leaves `contactWindows` (MON-6b) exactly as it was, or drops the key.
@@ -395,6 +396,20 @@ service cloud.firestore {
              !after.diff(before).affectedKeys().hasAny(['contactWindows']);
     }
 
+    // True when a write leaves `seasonalLayers` (MON-14) exactly as it was, or drops the key.
+    //
+    // The same rule as `contactWindowsKeptOrDropped`, for the same two reasons. A seasonal layer
+    // is part of the agreed pattern — it decides whose day a whole summer is — so a swap or a
+    // proposal write may not change it: only a pattern write, which stamps `lastModifiedBy` and
+    // is announced, may. And a build that predates the field rewrites the whole document without
+    // the key, so dropping it must stay allowed or every swap and proposal from an older
+    // co-parent would be denied the moment the pair had a layer; a current build reads a missing
+    // key as "written by an older build" and keeps its own copy.
+    function seasonalLayersKeptOrDropped(before, after) {
+      return !('seasonalLayers' in after) ||
+             !after.diff(before).affectedKeys().hasAny(['seasonalLayers']);
+    }
+
     // True when a write only puts, clears, or records the outcome of a custody *proposal* (item
     // 7) — it never touches the agreed pattern, its dates, or `lastModifiedBy`. That is the whole
     // safety property: a proposal write can never move anyone's calendar, so it is allowed
@@ -403,8 +418,10 @@ service cloud.firestore {
     // echo and swallow its banner). Accepting a proposal is a different write — it changes the
     // model and stamps the accepter — and passes the normal pattern branch below, not this one.
     function proposalWriteTouchesOnlyProposal(before, after) {
-      return after.diff(before).affectedKeys().hasOnly(['proposal', 'lastDecision', 'contactWindows']) &&
-             contactWindowsKeptOrDropped(before, after);
+      return after.diff(before).affectedKeys()
+                  .hasOnly(['proposal', 'lastDecision', 'contactWindows', 'seasonalLayers']) &&
+             contactWindowsKeptOrDropped(before, after) &&
+             seasonalLayersKeptOrDropped(before, after);
     }
 
     // The canonical pair id for a 2-element participants list — the same sorted-join formula
