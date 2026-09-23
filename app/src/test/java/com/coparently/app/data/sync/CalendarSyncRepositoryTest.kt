@@ -18,8 +18,10 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
+import java.time.LocalDate
 import java.time.LocalDateTime
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import com.google.api.services.calendar.model.Event as GoogleEvent
 
@@ -99,10 +101,7 @@ class CalendarSyncRepositoryTest {
 
             val error = results.last()
             assertTrue(error is SyncResult.Error)
-            assertEquals(
-                "Not signed in. Please sign in to CoPlanly.",
-                (error as SyncResult.Error).message
-            )
+            assertEquals(SyncFailure.NOT_SIGNED_IN_APP, (error as SyncResult.Error).reason)
             verify(exactly = 0) {
                 googleCalendarApi.listEvents(
                     credential = any(),
@@ -119,7 +118,8 @@ class CalendarSyncRepositoryTest {
     fun `a truncated import says so, instead of reading like a finished one`() = runTest {
         // The whole point of CQ-7: the old import stopped at the 50th event and reported the same
         // "Synced N events" a complete one did, so a user with a full calendar was told it had
-        // finished. Whatever the wording, the two outcomes must not read alike.
+        // finished. The result carries the fact; `SyncStateTextTest` pins that the two facts are
+        // worded differently.
         val credential = mockk<Credential>()
         coEvery { credentialProvider.getCredential() } returns credential
         coEvery { userRepository.getCurrentUserId() } returns "u1"
@@ -144,10 +144,8 @@ class CalendarSyncRepositoryTest {
 
         assertTrue(cutShort is SyncResult.Success)
         assertTrue(complete is SyncResult.Success)
-        assertTrue(
-            (cutShort as SyncResult.Success).message != (complete as SyncResult.Success).message,
-            "a cut-short import must not report what a complete one reports"
-        )
+        assertTrue((cutShort as SyncResult.Success).truncated, "a cut-short import must say so")
+        assertFalse((complete as SyncResult.Success).truncated, "a complete import must not")
     }
 
     @Test
@@ -171,10 +169,10 @@ class CalendarSyncRepositoryTest {
             until = LocalDateTime.of(2027, 8, 24, 0, 0)
         )
 
-        val message = (repository().syncFromGoogle().toList().last() as SyncResult.Success).message
+        val success = repository().syncFromGoogle().toList().last() as SyncResult.Success
 
-        assertTrue(message.contains("2026-08-24"), "start of the window: $message")
-        assertTrue(message.contains("2027-08-24"), "end of the window: $message")
+        assertEquals(LocalDate.of(2026, 8, 24), success.from, "start of the window")
+        assertEquals(LocalDate.of(2027, 8, 24), success.until, "end of the window")
     }
 
     private fun imported(vararg events: GoogleEvent, truncated: Boolean = false) = CalendarEvents(

@@ -108,4 +108,9 @@
     <string name="expenses_split_proposal_waiting_title">Ждём ответа</string>
     <string name="expenses_split_proposal_waiting_body">Вы предложили %1$d/%2$d. Второй родитель ещё не ответил.</string>
     <string name="expenses_split_proposal_withdraw">Отозвать</string>
+
+    <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
+    <string name="expense_error_signed_out">Чтобы добавить расход, нужно войти в аккаунт.</string>
+    <string name="expense_warning_receipt_upload_failed">Не удалось загрузить чек — расход сохранён без чека</string>
+    <string name="expense_warning_new_receipt_upload_failed">Не удалось загрузить чек — расход сохранён без нового чека</string>
 </resources>

@@ -3,6 +3,7 @@ package com.coparently.app.presentation.expenses
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.coparently.app.R
 import com.coparently.app.data.repository.FamilySettingsRepository
 import com.coparently.app.domain.expenses.CurrencyBalance
 import com.coparently.app.domain.expenses.CurrencyBreakdown
@@ -22,11 +23,12 @@ import com.coparently.app.domain.repository.ExpenseRepository
 import com.coparently.app.domain.repository.PreferencesRepository
 import com.coparently.app.domain.repository.ReceiptStorage
 import com.coparently.app.domain.repository.UserRepository
-import com.coparently.app.presentation.common.Loadable
-import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.FamilyMember
 import com.coparently.app.presentation.common.FamilyMembersSource
+import com.coparently.app.presentation.common.Loadable
+import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.ParentsSource
+import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.stateInLoadable
 import com.coparently.app.presentation.common.toggling
 import com.coparently.app.presentation.common.valueOrNull
@@ -64,10 +66,13 @@ sealed interface ExpenseSaveState {
      * [warning] is non-null when the receipt photo upload failed —
      * the expense itself was still saved, just without the receipt.
      */
-    data class Saved(val warning: String? = null) : ExpenseSaveState
+    data class Saved(val warning: UiText? = null) : ExpenseSaveState
 
-    /** Save could not proceed (e.g. no signed-in user); [message] is user-facing. */
-    data class Error(val message: String) : ExpenseSaveState
+    /**
+     * Save could not proceed (e.g. no signed-in user); [message] is resolved by the screen
+     * (CQ-14).
+     */
+    data class Error(val message: UiText) : ExpenseSaveState
 }
 
 /**
@@ -511,14 +516,14 @@ class ExpenseViewModel @Inject constructor(
             // be no local profile row, so fall back to the auth uid directly.
             val userId = _currentUserId.value.ifEmpty { userRepository.getCurrentUserId() ?: "" }
             if (userId.isEmpty()) {
-                _saveState.value = ExpenseSaveState.Error("You must be signed in to add an expense")
+                _saveState.value = ExpenseSaveState.Error(UiText.Res(R.string.expense_error_signed_out))
                 return@launch
             }
             _currentUserId.value = userId
 
             val expenseId = UUID.randomUUID().toString()
             var receiptUrl: String? = null
-            var warning: String? = null
+            var warning: UiText? = null
             if (receiptImageUri != null) {
                 receiptUrl = try {
                     receiptStorage.uploadReceipt(expenseId, receiptImageUri)
@@ -527,7 +532,7 @@ class ExpenseViewModel @Inject constructor(
                     @Suppress("TooGenericExceptionCaught") e: Exception
                 ) {
                     android.util.Log.e("CoPlanlyUpload", "Receipt upload failed", e)
-                    warning = "Receipt upload failed — expense saved without receipt"
+                    warning = UiText.Res(R.string.expense_warning_receipt_upload_failed)
                     null
                 }
             }
@@ -596,7 +601,7 @@ class ExpenseViewModel @Inject constructor(
         viewModelScope.launch {
             _saveState.value = ExpenseSaveState.Saving
 
-            var warning: String? = null
+            var warning: UiText? = null
             val receiptUrl = when (receiptImageUri) {
                 null -> null
                 original.receiptUrl -> original.receiptUrl // unchanged remote photo, no re-upload
@@ -606,7 +611,7 @@ class ExpenseViewModel @Inject constructor(
                     @Suppress("TooGenericExceptionCaught") e: Exception
                 ) {
                     android.util.Log.e("CoPlanlyUpload", "Receipt upload failed", e)
-                    warning = "Receipt upload failed — expense saved without the new receipt"
+                    warning = UiText.Res(R.string.expense_warning_new_receipt_upload_failed)
                     original.receiptUrl
                 }
             }

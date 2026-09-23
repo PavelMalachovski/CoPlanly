@@ -70,11 +70,9 @@ invocation is yours.
 | **M-8** | M-4's leftovers: badges that count across families, `familyId` on pushes, a switcher chip in the top bar | P2 | M |
 | **CQ-11** | The declared error model is not the one in use | P3 | S |
 | **CQ-13** | Fourteen of twenty-four ViewModels have no tests | P2 | M |
-| **CQ-14** | User-facing strings produced inside ViewModels and services | P2 | M |
 | **CQ-15** | The last of the dead code, and one decision about it | P3 | S |
 | **CQ-17** | Six dependencies worth moving | P3 | S |
 | **UX-9** | Five different empty-state anatomies, one of which renders under the top bar | P2 | M |
-| **UX-12** | Clerical English success messages — and a branch on the literal that will break when they are localised | P2 | S |
 | **UX-14** | Four different brand purples | P3 | S |
 | **UX-16** | Drag an event to reschedule it (MVP 3) | P3 | S |
 | **MON-2** | Verify the market facts — most of them are public pages | P0 | S |
@@ -778,13 +776,42 @@ The first four CI runs are the argument: 30 unit tests were failing because thei
 stale against collaborators added months earlier, and nobody knew. Tests that do not run are not
 coverage.
 
-### CQ-14 · P2 · M · User-facing strings produced inside ViewModels and services
+### CQ-14 · **DONE** · P2 · M · User-facing strings produced inside ViewModels and services
 
 **Where:** ☁️ cloud.
 
 `GoogleCalendarSyncState.message`, sync/status errors, `NavGraph`'s "Checking authentication…" —
 hardcoded English, unreachable by `stringResource`. Extracting them needs a resource-provider
 abstraction. **Do not** inject `Context` into a ViewModel ad hoc to fix one. Blocks **UX-12**.
+
+**Done (September 2026), and the abstraction is a type rather than a provider.**
+`presentation/common/UiText.kt` holds *which* string — a resource with arguments, a plural, a date,
+or text that is already the user's own (a name) — and composition resolves it (`asString()`), or the
+Activity's `Context` does inside a snackbar or Toast lambda. A provider injected into the ViewModel
+was the rejected alternative: it resolves against the application's configuration, which under
+AppCompat's per-app locales can still be the previous language on older APIs, while composition
+follows the Activity. Where a screen *branches* on an outcome, the answer is still a typed code
+(`EventOperation`, `SyncFailure`, the existing `SwapError`), never a `UiText`.
+
+What moved, every one of them checked against a composable that actually renders it:
+`GoogleCalendarSyncState` (and `CalendarSyncRepository`'s `SyncResult`, which now reports facts —
+counts, the window as dates, a `SyncFailure` — instead of sentences), `EventUiState.Error`
+(`AppError` is mapped by type in `presentation/common/ErrorText.kt`; `userMessage` is logs-only now),
+`ChangeRequestViewModel.errorMessage` (inbox Toast and Home snackbar), `RequestChangeUiState.Error`,
+the child and pet list errors, the expense save error and receipt warnings, the custody-setup save
+error, the Co-parent sync row's error line, the event form's title/description validation, and the
+FCM notification channel's name and description (system Settings shows them). Every place on that
+list that used to print `e.message` — raw exception text, in English, sometimes a class name — now
+prints a localised sentence and logs the exception instead.
+
+Deliberately left, each for a stated reason: `UiError.message` and the `UiState.Loading/Success`
+messages (no screen renders them; Settings, the only collector, reads the state's type — the
+literals it passed were dropped), `SettingsUiState.successMessage` (never rendered; removed),
+`AppError.userMessage` (logs), `CredentialManagerService`'s error strings (logged, no longer shown),
+the unused validators in `utils/ValidationUtils.kt` (no caller), and three **stored** fallbacks —
+`"Untitled Event"` on a Google import, `"Unknown"` as a chat `senderName`, `"Co-parent"` as a
+conversation's partner name. Those are data written to Room and Firestore, not text drawn from a
+ViewModel; localising them would bake the writer's language into a record the other parent reads.
 
 It used to be recorded as blocking **SEC-3** too. It did not: push text moved to the *receiving*
 device, which has a `Context` and all five translations. Worth remembering when the next item
@@ -924,9 +951,14 @@ sentences and no action. Separately, `AnimatedEmptyState` takes no `modifier` an
 bar in `ConversationsScreen` and `BudgetScreen`; it also does not scroll, so it clips at large font
 scales. Audit §9.12.
 
-### UX-12 · P2 · S · Clerical English success messages
+### UX-12 · **DONE** · P2 · S · Clerical English success messages
 
 **Where:** ☁️ cloud. Blocked behind **CQ-14** for the ViewModel-side strings.
+
+**Done with CQ-14.** `EventUiState.OperationSuccess` carries an `EventOperation`, not a sentence, and
+`CalendarScreen` offers Undo on `EventOperation.RESCHEDULED` (`EventViewModelTest` pins it). None of
+the seven "… successfully" literals was ever rendered — they existed only to be compared — so no
+string replaced them.
 
 "Event created successfully", "Event rescheduled" and friends are still English literals — and
 `CalendarScreen` **branches on the literal** `"Event rescheduled"`, so localising that string
@@ -1501,7 +1533,7 @@ Not a wish-list ordering — a dependency ordering. Each block assumes the one a
 
 14. **CQ-5**, and **CQ-6 + CQ-8** together. All three grow worse with tenure, so they land on your
     longest-standing users first.
-15. **CQ-13**, **CQ-14** → **UX-12**, **UX-9**, **M-5**.
+15. **CQ-13** → **UX-9**, **M-5**. (**CQ-14** and **UX-12**, which used to open this line, are done.)
 
 **One thread runs through this document.** The security holes, the release-only Gson corruption, the
 plaintext refresh token, the two-year recurrence bug, thirty unit tests failing against a

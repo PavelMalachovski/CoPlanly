@@ -85,6 +85,7 @@ import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.PillChip
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
+import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.common.rememberToday
 import com.coparently.app.presentation.components.SkeletonBox
@@ -180,9 +181,10 @@ fun HomeScreen(
     // closed either way — while the co-parent went on waiting.
     val snackbarHostState = remember { SnackbarHostState() }
     val changeRequestError by changeRequestViewModel.errorMessage.collectAsState()
+    val errorContext = LocalContext.current
     LaunchedEffect(changeRequestError) {
         changeRequestError?.let { message ->
-            snackbarHostState.showSnackbar(message)
+            snackbarHostState.showSnackbar(message.asString(errorContext))
             changeRequestViewModel.clearError()
         }
     }

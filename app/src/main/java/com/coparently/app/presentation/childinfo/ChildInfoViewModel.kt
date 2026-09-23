@@ -16,6 +16,7 @@ import com.coparently.app.domain.model.PairingError
 import com.coparently.app.domain.repository.ChildInfoRepository
 import com.coparently.app.domain.repository.GuestRepository
 import com.coparently.app.domain.repository.MedicalPhotoStorage
+import com.coparently.app.presentation.common.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -34,9 +35,9 @@ import javax.inject.Inject
  * Why a photograph did not make it on or off the record.
  *
  * A code, not a message: a ViewModel has no `Context` and must not acquire one to build
- * user-facing text — the same rule that keeps `GoogleCalendarSyncState.message` on the
- * localization follow-up list. The screen resolves it in composable scope, exactly as
- * `CalendarViewModel.SwapError` is resolved.
+ * user-facing text (CQ-14 — see `presentation/common/UiText.kt` for text a screen only shows).
+ * The screen resolves it in composable scope, exactly as `CalendarViewModel.SwapError` is
+ * resolved.
  */
 enum class MedicalPhotoError {
     /** The upload failed. The photograph is not on the record and nothing is in the bucket. */
@@ -259,7 +260,8 @@ class ChildInfoViewModel @Inject constructor(
                     _uiState.value = ChildInfoUiState.Success(childInfoList)
                 }
             } catch (e: Exception) {
-                _uiState.value = ChildInfoUiState.Error(e.message ?: "Failed to load child info")
+                Log.w(TAG, "Loading child info failed", e)
+                _uiState.value = ChildInfoUiState.Error(UiText.Res(R.string.childinfo_load_failed))
             }
         }
     }
@@ -451,7 +453,7 @@ class ChildInfoViewModel @Inject constructor(
                     e,
                     mapOf("action" to "delete_child_info", "child_id" to childInfo.id)
                 )
-                _uiState.value = ChildInfoUiState.Error(e.message ?: "Failed to delete child info")
+                _uiState.value = ChildInfoUiState.Error(UiText.Res(R.string.childinfo_delete_failed))
             }
         }
     }
@@ -464,7 +466,8 @@ class ChildInfoViewModel @Inject constructor(
             try {
                 childInfoRepository.pullOnce()
             } catch (e: Exception) {
-                _uiState.value = ChildInfoUiState.Error(e.message ?: "Failed to sync child info")
+                Log.w(TAG, "Syncing child info failed", e)
+                _uiState.value = ChildInfoUiState.Error(UiText.Res(R.string.childinfo_sync_failed))
             }
         }
     }
@@ -491,6 +494,7 @@ enum class ChildSaveOutcome {
 sealed class ChildInfoUiState {
     data object Loading : ChildInfoUiState()
     data class Success(val childInfoList: List<ChildInfo>) : ChildInfoUiState()
-    data class Error(val message: String) : ChildInfoUiState()
+    /** The list could not be shown; [message] is resolved by the screen (CQ-14). */
+    data class Error(val message: UiText) : ChildInfoUiState()
 }
 

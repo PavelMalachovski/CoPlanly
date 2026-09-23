@@ -71,6 +71,11 @@ sealed class UiState<out T> {
 
 /**
  * Detailed error information with retry capability.
+ *
+ * [message] is English and is not rendered anywhere: the one screen that collects a
+ * `UiState.Error` (Settings) shows its own localised sentence and reads only the state's type.
+ * If a screen ever needs to show a `UiError`, give it a `UiText` (CQ-14) rather than rendering
+ * this — and never `throwable.message`, which the `UNKNOWN` branch below still falls back to.
  */
 data class UiError(
     val message: String,

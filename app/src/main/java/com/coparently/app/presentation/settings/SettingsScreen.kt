@@ -107,8 +107,10 @@ import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.SignedInAsRow
 import com.coparently.app.presentation.common.UiState
+import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.animations.sectionEnter
 import com.coparently.app.presentation.common.animations.sectionExit
+import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.coverageNote
 import com.coparently.app.presentation.common.labelRes
 import com.coparently.app.presentation.common.rememberParentNames
@@ -651,7 +653,7 @@ fun SettingsScreen(
                                         onStartGoogleSignIn(signInIntent)
                                     } else {
                                         syncViewModel.handleSignInCancellation(
-                                            context.getString(R.string.sync_google_sign_in_failed)
+                                            UiText.Res(R.string.sync_google_sign_in_failed)
                                         )
                                     }
                                 }
@@ -1057,16 +1059,16 @@ private fun GoogleCalendarActions(
 
         when (syncState) {
             is GoogleCalendarSyncState.Syncing -> StatusLine(
-                text = syncState.message,
+                text = syncState.message.asString(),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 busy = true
             )
             is GoogleCalendarSyncState.Success -> StatusLine(
-                text = syncState.message,
+                text = syncState.message.asString(),
                 color = MaterialTheme.colorScheme.tertiary
             )
             is GoogleCalendarSyncState.Error -> StatusLine(
-                text = syncState.message,
+                text = syncState.message.asString(),
                 color = MaterialTheme.colorScheme.error
             )
             else -> Unit
@@ -1240,7 +1242,8 @@ private fun SyncStatus.summary(): String = when (this) {
     is SyncStatus.Syncing -> stringResource(R.string.settings_syncing)
     is SyncStatus.Success ->
         stringResource(R.string.settings_sync_last, lastSyncTime.format(syncTimeFormatter))
-    is SyncStatus.Error -> message
+    // Not `message`: that is the exception's own English text, kept for the log (CQ-14).
+    is SyncStatus.Error -> stringResource(R.string.settings_sync_failed)
 }
 
 /** Colour for [summary]; errors are the only state that shouts. */

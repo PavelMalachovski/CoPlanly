@@ -350,7 +350,7 @@ class SettingsViewModel @Inject constructor(
      */
     private fun loadSettings() {
         viewModelScope.launch {
-            _operationState.value = UiState.Loading("Loading settings...")
+            _operationState.value = UiState.Loading()
             try {
                 // Get current user
                 val currentUser = userRepository.getCurrentUser()
@@ -379,9 +379,9 @@ class SettingsViewModel @Inject constructor(
      */
     fun toggleNotifications(enabled: Boolean) {
         viewModelScope.launch {
-            _operationState.value = UiState.Loading(
-                message = if (enabled) "Enabling notifications..." else "Disabling notifications..."
-            )
+            // No message: nothing renders one (the switch itself is the feedback), and the
+            // English literals this used to carry were the only text here a locale never saw.
+            _operationState.value = UiState.Loading()
 
             try {
                 // Off used to change the switch and nothing else: the token stayed on the
@@ -390,20 +390,11 @@ class SettingsViewModel @Inject constructor(
                 fcmService.setPushEnabled(enabled).getOrElse { throw IOException(it) }
 
                 analyticsManager.logNotificationsToggled(enabled)
-                _settingsState.value = _settingsState.value.copy(
-                    notificationsEnabled = enabled,
-                    successMessage = if (enabled) "Notifications enabled" else "Notifications disabled"
-                )
-                _operationState.value = UiState.Success(
-                    data = Unit,
-                    message = if (enabled) "Notifications enabled successfully" else "Notifications disabled"
-                )
+                _settingsState.value = _settingsState.value.copy(notificationsEnabled = enabled)
+                _operationState.value = UiState.Success(Unit)
             } catch (e: IOException) {
                 _operationState.value = UiState.Error(
-                    UiError.network(
-                        message = "Network error. Please check your connection and try again.",
-                        retry = { toggleNotifications(enabled) }
-                    )
+                    UiError.network(retry = { toggleNotifications(enabled) })
                 )
             } catch (e: Exception) {
                 _operationState.value = UiState.Error(
@@ -421,19 +412,13 @@ class SettingsViewModel @Inject constructor(
      */
     fun requestNotificationPermission() {
         viewModelScope.launch {
-            _operationState.value = UiState.Loading("Requesting permission...")
+            _operationState.value = UiState.Loading()
 
             try {
                 fcmService.setPushEnabled(true).getOrElse { throw IOException(it) }
 
-                _settingsState.value = _settingsState.value.copy(
-                    notificationsEnabled = true,
-                    successMessage = "Notifications enabled"
-                )
-                _operationState.value = UiState.Success(
-                    data = Unit,
-                    message = "Notifications enabled successfully"
-                )
+                _settingsState.value = _settingsState.value.copy(notificationsEnabled = true)
+                _operationState.value = UiState.Success(Unit)
             } catch (e: Exception) {
                 _operationState.value = UiState.Error(
                     UiError.fromException(
@@ -479,13 +464,10 @@ class SettingsViewModel @Inject constructor(
     }
 
     /**
-     * Clears success/error messages.
+     * Clears the failure flags once the screen has shown them.
      */
     fun clearMessages() {
-        _settingsState.value = _settingsState.value.copy(
-            successMessage = null,
-            errorMessage = null
-        )
+        _settingsState.value = _settingsState.value.copy(errorMessage = null)
         _operationState.value = UiState.Idle
     }
 
@@ -535,8 +517,9 @@ class SettingsViewModel @Inject constructor(
  * @property userName Current user's name
  * @property partnerId Partner's Firebase UID if paired
  * @property isLoading Loading state
- * @property successMessage Success message to display
- * @property errorMessage Error message to display
+ * @property errorMessage Non-null when deleting the account failed. Read as a flag only: the
+ *   screen shows its own localised sentence, and this holds the exception's English text for
+ *   nothing but debugging (CQ-14). There is no success message — nothing ever rendered one.
  */
 data class SettingsUiState(
     val notificationsEnabled: Boolean = false,
@@ -544,7 +527,6 @@ data class SettingsUiState(
     val userName: String? = null,
     val partnerId: String? = null,
     val isLoading: Boolean = true,
-    val successMessage: String? = null,
     val errorMessage: String? = null,
     /**
      * True while [SettingsViewModel.deleteAccount] is in flight.

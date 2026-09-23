@@ -42,6 +42,7 @@ import com.coparently.app.domain.model.Pet
 import com.coparently.app.presentation.common.GroupLabel
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
+import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.labelRes
 
 /**
@@ -118,7 +119,7 @@ fun PetsScreen(
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                 }
                 is PetsUiState.Error -> {
-                    ErrorState(message = state.message, onRetry = viewModel::loadPets)
+                    ErrorState(message = state.message.asString(), onRetry = viewModel::loadPets)
                 }
                 is PetsUiState.Success -> {
                     if (state.pets.isEmpty()) {

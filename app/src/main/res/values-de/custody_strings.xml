@@ -76,4 +76,7 @@
         <item quantity="other">In den kommenden Wochen würden sich %1$d Tage verschieben.</item>
     </plurals>
     <string name="custody_diff_none">Im Kalender würde sich nichts ändern.</string>
+
+    <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
+    <string name="custody_setup_save_failed">Der Zeitplan konnte nicht gespeichert werden. Versuchen Sie es erneut.</string>
 </resources>

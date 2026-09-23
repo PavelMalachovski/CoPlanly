@@ -1,5 +1,6 @@
 package com.coparently.app.presentation.event
 
+import com.coparently.app.R
 import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.domain.error.AppError
 import com.coparently.app.domain.error.ErrorHandler
@@ -10,6 +11,7 @@ import com.coparently.app.domain.usecase.DeleteEventUseCase
 import com.coparently.app.domain.usecase.EventUseCases
 import com.coparently.app.domain.usecase.GetEventsUseCase
 import com.coparently.app.domain.usecase.UpdateEventUseCase
+import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.testFamilyMembersSource
 import com.coparently.app.presentation.common.testParentsSource
 import com.google.gson.Gson
@@ -27,15 +29,18 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import java.time.LocalDate
 import java.time.LocalDateTime
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 /**
  * Unit tests for EventViewModel.
@@ -209,7 +214,7 @@ class EventViewModelTest {
         advanceUntilIdle()
 
         assertEquals(
-            EventUiState.Error("Something went wrong. Please try again."),
+            EventUiState.Error(UiText.Res(R.string.common_error_generic)),
             viewModel.uiState.value
         )
 
@@ -236,7 +241,7 @@ class EventViewModelTest {
         viewModel.loadEventsForDateRange(start, end)
         advanceUntilIdle()
         assertEquals(
-            EventUiState.Error("Something went wrong. Please try again."),
+            EventUiState.Error(UiText.Res(R.string.common_error_generic)),
             viewModel.uiState.value
         )
 
@@ -250,5 +255,38 @@ class EventViewModelTest {
         recovered.emit(listOf(sampleEvent))
         advanceUntilIdle()
         assertEquals(listOf(sampleEvent), viewModel.events.value)
+    }
+
+    @Test
+    fun `a move reports RESCHEDULED as a type, which is what offers Undo`() = runTest {
+        // UX-12: CalendarScreen used to offer Undo only when the message equalled the English
+        // literal "Event rescheduled", so localising that string would have removed the Undo.
+        advanceUntilIdle()
+        coEvery { getEvents.getById("e1") } returns sampleEvent
+        val saved = slot<Event>()
+        coEvery { updateEvent.invoke(capture(saved)) } answers { Result.success(saved.captured) }
+
+        viewModel.moveEvent("e1", LocalDate.of(2026, 7, 22))
+        runCurrent()
+
+        assertEquals(EventUiState.OperationSuccess(EventOperation.RESCHEDULED), viewModel.uiState.value)
+        assertTrue(viewModel.hasUndoAction())
+    }
+
+    @Test
+    fun `a validation failure names the field in the reader's language, not the validator's`() = runTest {
+        advanceUntilIdle()
+        val failure = RuntimeException("Event title cannot be empty")
+        coEvery { updateEvent.invoke(any()) } returns Result.failure(failure)
+        val refusal = AppError.ValidationError(field = "title", validationMessage = "Event title cannot be empty")
+        every { errorHandler.handleError(failure) } returns refusal
+
+        viewModel.updateEvent(sampleEvent)
+        runCurrent()
+
+        assertEquals(
+            EventUiState.Error(UiText.Res(R.string.event_error_title_invalid)),
+            viewModel.uiState.value
+        )
     }
 }

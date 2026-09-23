@@ -110,4 +110,9 @@
     <string name="childinfo_delete_confirm">Удалить</string>
     <string name="childinfo_delete_cancel">Оставить</string>
     <string name="childinfo_delete_action">Удалить ребёнка</string>
+
+    <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
+    <string name="childinfo_load_failed">Не удалось загрузить данные детей. Попробуйте ещё раз.</string>
+    <string name="childinfo_delete_failed">Не удалось удалить данные ребёнка. Попробуйте ещё раз.</string>
+    <string name="childinfo_sync_failed">Не удалось синхронизировать данные детей. Попробуйте ещё раз.</string>
 </resources>

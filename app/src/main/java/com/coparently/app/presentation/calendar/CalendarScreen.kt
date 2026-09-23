@@ -73,6 +73,7 @@ import com.coparently.app.presentation.common.FamilyMemberChips
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.common.rememberToday
 import com.coparently.app.presentation.common.toggling
+import com.coparently.app.presentation.event.EventOperation
 import com.coparently.app.presentation.event.EventUiState
 import com.coparently.app.presentation.event.EventViewModel
 import com.coparently.app.presentation.theme.dimensions
@@ -437,7 +438,9 @@ fun CalendarScreen(
     LaunchedEffect(uiState) {
         when (val state = uiState) {
             is EventUiState.OperationSuccess -> {
-                if (state.message == "Event rescheduled" && eventViewModel.hasUndoAction()) {
+                // Branches on the operation, never on its wording (UX-12): this compared the
+                // English literal "Event rescheduled", which localising would have broken.
+                if (state.operation == EventOperation.RESCHEDULED && eventViewModel.hasUndoAction()) {
                     val result = snackbarHostState.showSnackbar(
                         message = movedMessage,
                         actionLabel = undoMoveLabel,

@@ -910,7 +910,8 @@ sealed class SyncStatus {
     /**
      * Sync failed with an error.
      *
-     * @property message Error message
+     * @property message The exception's own text, for logs only. The screen shows a localised
+     *   sentence instead (CQ-14) — this is English and often technical.
      */
     data class Error(val message: String) : SyncStatus()
 }

@@ -30,4 +30,16 @@
     <!-- CQ-20: this device has a write that has not reached Firestore yet. -->
     <string name="change_request_status_queued">Ve frontě</string>
     <string name="change_request_status_queued_desc">Zatím neodesláno — čeká na připojení</string>
+
+    <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
+    <string name="change_request_error_event_missing">Událost, které se žádost týká, už neexistuje.</string>
+    <string name="change_request_error_apply_failed">Změnu se nepodařilo použít. Zkuste to prosím znovu.</string>
+    <string name="change_request_error_offer_answered">Na tuto nabídku už bylo odpovězeno.</string>
+    <string name="change_request_error_swap_failed">Na výměnu se nepodařilo odpovědět. Zkuste to prosím znovu.</string>
+    <string name="change_request_error_proposal_accept_failed">Návrh se nepodařilo přijmout. Zkuste to prosím znovu.</string>
+    <string name="change_request_error_proposal_decline_failed">Návrh se nepodařilo odmítnout. Zkuste to prosím znovu.</string>
+    <string name="change_request_error_answer_failed">Odpověď se nepodařilo odeslat. Zkuste to prosím znovu.</string>
+    <string name="change_request_error_signed_out">Jste odhlášeni. Přihlaste se a zkuste to znovu.</string>
+    <string name="change_request_error_not_paired">Nejdřív se propojte s druhým rodičem, abyste mohli posílat žádosti o změnu.</string>
+    <string name="change_request_error_send_failed">Žádost o změnu se nepodařilo odeslat. Zkuste to prosím znovu.</string>
 </resources>

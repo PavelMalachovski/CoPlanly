@@ -79,4 +79,7 @@
     <string name="settings_school_import_description">Школьное расписание ребёнка прямо в календарь. Пока не сделано.</string>
     <string name="settings_school_import_planned">В планах</string>
     <string name="settings_operation_failed">Не получилось. Проверьте подключение и попробуйте ещё раз.</string>
+
+    <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
+    <string name="settings_sync_failed">Последняя синхронизация не удалась</string>
 </resources>

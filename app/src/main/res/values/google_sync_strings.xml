@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Google Calendar import: the status line under the Google Calendar row in Settings (CQ-14).
+
+  `CalendarSyncRepository` reports facts (`SyncResult`), and `SyncViewModel` picks these
+  resources for them; the Settings screen resolves them in composition. They used to be English
+  literals built in the data layer, some of them the raw exception text.
+-->
+<resources>
+    <string name="sync_google_opening_sign_in">Opening Google sign-in…</string>
+    <string name="sync_google_sign_in_unavailable">Google sign-in isn\'t available in this version of the app.</string>
+    <string name="sync_google_processing_sign_in">Signing in…</string>
+    <string name="sync_google_signed_in_as">Connected as %1$s</string>
+    <string name="sync_google_no_calendar_access">Signed in, but access to Google Calendar was not granted. Try connecting again.</string>
+    <string name="sync_google_progress_starting">Starting sync from Google Calendar…</string>
+    <string name="sync_google_progress_fetching">Fetching events from Google Calendar…</string>
+    <plurals name="sync_google_progress_found">
+        <item quantity="one">Found %1$d event in Google Calendar</item>
+        <item quantity="other">Found %1$d events in Google Calendar</item>
+    </plurals>
+    <plurals name="sync_google_synced">
+        <item quantity="one">Synced %1$d event (%2$s – %3$s)</item>
+        <item quantity="other">Synced %1$d events (%2$s – %3$s)</item>
+    </plurals>
+    <plurals name="sync_google_synced_truncated">
+        <item quantity="one">Synced the first %1$d event (%2$s – %3$s). There are more in that period than one import can take.</item>
+        <item quantity="other">Synced the first %1$d events (%2$s – %3$s). There are more in that period than one import can take.</item>
+    </plurals>
+    <string name="sync_google_error_not_connected">Not connected to Google. Sign in with Google to sync.</string>
+    <string name="sync_google_error_signed_out">You\'re signed out of CoPlanly. Sign in and try again.</string>
+    <string name="sync_google_error_authentication">Google sign-in has expired. Connect Google Calendar again.</string>
+    <string name="sync_google_error_access_denied">CoPlanly has no access to your Google Calendar. Check the permission in your Google account.</string>
+    <string name="sync_google_error_calendar_not_found">Your Google Calendar could not be found.</string>
+    <string name="sync_google_error_rate_limited">Google Calendar is busy right now. Try again in a few minutes.</string>
+    <string name="sync_google_error_unavailable">Google Calendar is unavailable right now. Try again later.</string>
+    <string name="sync_google_error_network">Couldn\'t reach Google Calendar. Check your internet connection.</string>
+    <string name="sync_google_error_unknown">The sync from Google Calendar failed. Please try again.</string>
+</resources>

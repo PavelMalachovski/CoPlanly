@@ -30,4 +30,16 @@
     <!-- CQ-20: this device has a write that has not reached Firestore yet. -->
     <string name="change_request_status_queued">У черзі</string>
     <string name="change_request_status_queued_desc">Ще не надіслано — очікує підключення</string>
+
+    <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
+    <string name="change_request_error_event_missing">Подія, до якої належить запит, більше не існує.</string>
+    <string name="change_request_error_apply_failed">Не вдалося застосувати зміну. Спробуйте ще раз.</string>
+    <string name="change_request_error_offer_answered">На цю пропозицію вже відповіли.</string>
+    <string name="change_request_error_swap_failed">Не вдалося відповісти на обмін. Спробуйте ще раз.</string>
+    <string name="change_request_error_proposal_accept_failed">Не вдалося прийняти пропозицію. Спробуйте ще раз.</string>
+    <string name="change_request_error_proposal_decline_failed">Не вдалося відхилити пропозицію. Спробуйте ще раз.</string>
+    <string name="change_request_error_answer_failed">Не вдалося відповісти. Спробуйте ще раз.</string>
+    <string name="change_request_error_signed_out">Ви вийшли з облікового запису. Увійдіть і спробуйте ще раз.</string>
+    <string name="change_request_error_not_paired">Спершу поєднайтеся з іншим батьком, щоб надсилати запити на зміну.</string>
+    <string name="change_request_error_send_failed">Не вдалося надіслати запит на зміну. Спробуйте ще раз.</string>
 </resources>

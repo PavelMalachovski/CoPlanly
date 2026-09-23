@@ -46,9 +46,8 @@ private const val HANDOVER_STOP_TIMEOUT_MS = 5_000L
  * Why offering a one-off day swap did not work.
  *
  * A code, not a message: a ViewModel has no `Context` and must not acquire one to build
- * user-facing text — the same rule that keeps `GoogleCalendarSyncState.message` on the
- * localization follow-up list rather than being "fixed" with an injected `Context`. The screen
- * resolves it to a string in composable scope.
+ * user-facing text, and must not be "fixed" with an injected `Context` either (CQ-14). The
+ * screen resolves it to a string in composable scope.
  */
 sealed interface SwapError {
     /** No co-parent, or this device does not know who it is yet. Nobody could accept. */
@@ -147,8 +146,8 @@ class CalendarViewModel @Inject constructor(
      * Why a swap could not be offered, or null when nothing is wrong.
      *
      * An enum rather than a message, because a ViewModel has no `Context` and must not acquire
-     * one to build a user-facing string — CLAUDE.md's standing rule, and the reason
-     * `GoogleCalendarSyncState.message` is still a tracked follow-up.
+     * one to build a user-facing string — CLAUDE.md's standing rule (CQ-14). An enum rather than
+     * a `UiText` because the screen branches on it, not only shows it.
      */
     private val _swapError = MutableStateFlow<SwapError?>(null)
     val swapError: StateFlow<SwapError?> = _swapError.asStateFlow()

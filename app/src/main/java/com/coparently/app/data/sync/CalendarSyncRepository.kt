@@ -14,6 +14,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.withContext
+import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -40,10 +41,10 @@ class CalendarSyncRepository @Inject constructor(
         endDate: LocalDateTime? = null
     ): Flow<SyncResult> = flow {
         try {
-            emit(SyncResult.Progress("Starting sync from Google Calendar..."))
+            emit(SyncResult.Progress(SyncStage.STARTING))
 
             val credential = credentialProvider.getCredential()
-                ?: throw IllegalStateException("Not authenticated. Please sign in to Google.")
+                ?: throw SyncFailureException(SyncFailure.NOT_SIGNED_IN_GOOGLE)
             // Token refresh is now handled automatically in getCredential()
 
             // A Google Calendar import is created by whoever pulled it in - the same "yours by
@@ -53,16 +54,16 @@ class CalendarSyncRepository @Inject constructor(
             // class used to reach for instead, across a layer boundary it had no business
             // crossing. Resolved once per sync, not once per event.
             val ownerUid = userRepository.getCurrentUserId()
-                ?: throw IllegalStateException("Not signed in. Please sign in to CoPlanly.")
+                ?: throw SyncFailureException(SyncFailure.NOT_SIGNED_IN_APP)
             val owner = userRepository.getUserById(ownerUid)
-                ?: throw IllegalStateException("Not signed in. Please sign in to CoPlanly.")
+                ?: throw SyncFailureException(SyncFailure.NOT_SIGNED_IN_APP)
             val ownerSlot = owner.role
             // The family this import belongs to — still stamped, though nothing shares it.
             // See `toEventEntity` for why an import is private, and why that makes the
             // "which family" question stop needing an answer.
             val ownerFamilyId = FamilyKey.orNull(ownerUid, owner.partnerId)
 
-            emit(SyncResult.Progress("Fetching events from Google Calendar..."))
+            emit(SyncResult.Progress(SyncStage.FETCHING))
 
             // Execute API call on IO dispatcher to avoid NetworkOnMainThreadException
             val imported = withContext(Dispatchers.IO) {
@@ -73,7 +74,7 @@ class CalendarSyncRepository @Inject constructor(
                 )
             }
 
-            emit(SyncResult.Progress("Found ${imported.events.size} events in Google Calendar"))
+            emit(SyncResult.Progress(SyncStage.FOUND, found = imported.events.size))
 
             val eventsToInsert = mutableListOf<EventEntity>()
 
@@ -88,67 +89,46 @@ class CalendarSyncRepository @Inject constructor(
 
             // Says which window was read and whether anything was left behind. "Synced N events"
             // on its own is what a truncated import used to say too, which is how a half-finished
-            // import passed for a complete one.
-            val window = "${imported.from.toLocalDate()} - ${imported.until.toLocalDate()}"
+            // import passed for a complete one. The facts, not a sentence: the ViewModel words
+            // them in the reader's language (CQ-14).
             emit(
                 SyncResult.Success(
-                    if (imported.truncated) {
-                        "Synced the first ${eventsToInsert.size} events ($window). " +
-                            "There are more in that period than one import can take."
-                    } else {
-                        "Synced ${eventsToInsert.size} events ($window)"
-                    }
+                    synced = eventsToInsert.size,
+                    from = imported.from.toLocalDate(),
+                    until = imported.until.toLocalDate(),
+                    truncated = imported.truncated
                 )
             )
+        } catch (e: SyncFailureException) {
+            android.util.Log.e("CalendarSync", "Sync refused: ${e.failure}", e)
+            emit(SyncResult.Error(e.failure))
         } catch (e: IllegalStateException) {
             android.util.Log.e("CalendarSync", "Authentication error: ${e.message}", e)
-            emit(SyncResult.Error(e.message ?: "Authentication error. Please sign in again."))
+            emit(SyncResult.Error(SyncFailure.AUTHENTICATION))
         } catch (e: android.os.NetworkOnMainThreadException) {
             android.util.Log.e("CalendarSync", "NetworkOnMainThreadException: API call must be on background thread", e)
-            emit(SyncResult.Error("Synchronization error: Network operation cannot run on main thread. Please try again."))
+            emit(SyncResult.Error(SyncFailure.UNKNOWN))
         } catch (e: com.google.api.client.googleapis.json.GoogleJsonResponseException) {
             // Google API specific errors
             android.util.Log.e("CalendarSync", "Google API error: ${e.statusCode} - ${e.message}", e)
-            val errorMsg = when (e.statusCode) {
-                401 -> "Authentication failed. Please sign in again."
-                403 -> "Access denied. Please check Calendar permission in Google settings."
-                404 -> "Calendar not found. Please check your Google Calendar."
-                429 -> "Too many requests. Please try again later."
-                else -> "Google Calendar API error: ${e.statusCode} - ${e.message ?: "Unknown error"}"
-            }
-            emit(SyncResult.Error(errorMsg))
+            emit(SyncResult.Error(SyncFailure.forStatus(e.statusCode)))
         } catch (e: com.google.api.client.http.HttpResponseException) {
             // HTTP response errors. This MUST precede the IOException branch below —
             // HttpResponseException extends IOException, so the reverse order (which shipped)
             // made every 401/403/404/500 here unreachable and surfaced as a generic
             // "Network error". Kotlin does not flag an unreachable catch the way Java does.
             android.util.Log.e("CalendarSync", "HTTP error: ${e.statusCode} - ${e.message}", e)
-            val errorMsg = when (e.statusCode) {
-                401 -> "Authentication failed. Please sign in again."
-                403 -> "Access denied. Please check Calendar permission."
-                404 -> "Calendar not found."
-                500, 503 -> "Google Calendar service unavailable. Please try again later."
-                else -> "HTTP error ${e.statusCode}: ${e.message ?: "Unknown error"}"
-            }
-            emit(SyncResult.Error(errorMsg))
+            emit(SyncResult.Error(SyncFailure.forStatus(e.statusCode)))
         } catch (e: java.io.IOException) {
             android.util.Log.e("CalendarSync", "Network error: ${e.message}", e)
-            emit(SyncResult.Error("Network error: ${e.message ?: "Unable to connect to Google Calendar. Please check your internet connection."}"))
+            emit(SyncResult.Error(SyncFailure.NETWORK))
         } catch (e: Exception) {
             // Log full error for debugging
             android.util.Log.e("CalendarSync", "Unexpected error: ${e.javaClass.simpleName} - ${e.message}", e)
+            // The exception's class and message go to the log above and to Crashlytics; they
+            // used to be printed on the Settings screen too, in English, as the whole message.
             crashlyticsManager.recordException(e)
-            val errorDetails = buildString {
-                append("Error during sync: ")
-                append(e.javaClass.simpleName)
-                if (e.message != null) {
-                    append(" - ${e.message}")
-                }
-                if (e.cause != null) {
-                    append(" (caused by: ${e.cause?.javaClass?.simpleName})")
-                }
-            }
-            emit(SyncResult.Error(errorDetails))
+            emit(SyncResult.Error(SyncFailure.UNKNOWN))
         }
     }
 
@@ -232,10 +212,85 @@ class CalendarSyncRepository @Inject constructor(
 
 /**
  * Result of synchronization operation.
+ *
+ * Facts, not sentences (CQ-14): the data layer has no `Context` to localise with, so
+ * `SyncViewModel` words each of these in the reader's language. Every variant used to carry an
+ * English string, and some of them the raw exception text.
  */
 sealed class SyncResult {
-    data class Progress(val message: String) : SyncResult()
-    data class Success(val message: String) : SyncResult()
-    data class Error(val message: String) : SyncResult()
+    /** The import is under way; [found] is the number of events read, for [SyncStage.FOUND]. */
+    data class Progress(val stage: SyncStage, val found: Int = 0) : SyncResult()
+
+    /**
+     * The import finished: [synced] events over the window [from]..[until]. [truncated] means
+     * the window held more than one import can take — it must never read like a complete one.
+     */
+    data class Success(
+        val synced: Int,
+        val from: LocalDate,
+        val until: LocalDate,
+        val truncated: Boolean
+    ) : SyncResult()
+
+    /** The import failed, and why. */
+    data class Error(val reason: SyncFailure) : SyncResult()
 }
+
+/** Where a running Google Calendar import has got to. */
+enum class SyncStage {
+    STARTING,
+    FETCHING,
+    FOUND
+}
+
+/** Why a Google Calendar import failed, as far as the user can act on it. */
+enum class SyncFailure {
+    /** No Google credential: the user has to connect Google Calendar again. */
+    NOT_SIGNED_IN_GOOGLE,
+
+    /** Nobody is signed in to the app, so there is no one to attribute the import to. */
+    NOT_SIGNED_IN_APP,
+
+    /** Google refused the credential (401). */
+    AUTHENTICATION,
+
+    /** The account has not granted Calendar access (403). */
+    ACCESS_DENIED,
+
+    /** The calendar does not exist (404). */
+    CALENDAR_NOT_FOUND,
+
+    /** Too many requests (429). */
+    RATE_LIMITED,
+
+    /** Google's side failed (5xx). */
+    SERVICE_UNAVAILABLE,
+
+    /** The device could not reach Google. */
+    NETWORK,
+
+    /** Anything else; the detail is in the log and in Crashlytics. */
+    UNKNOWN;
+
+    companion object {
+        /** Maps an HTTP status from the Calendar API to a failure. */
+        fun forStatus(statusCode: Int): SyncFailure = when (statusCode) {
+            HTTP_UNAUTHORIZED -> AUTHENTICATION
+            HTTP_FORBIDDEN -> ACCESS_DENIED
+            HTTP_NOT_FOUND -> CALENDAR_NOT_FOUND
+            HTTP_TOO_MANY_REQUESTS -> RATE_LIMITED
+            in HTTP_SERVER_ERRORS -> SERVICE_UNAVAILABLE
+            else -> UNKNOWN
+        }
+
+        private const val HTTP_UNAUTHORIZED = 401
+        private const val HTTP_FORBIDDEN = 403
+        private const val HTTP_NOT_FOUND = 404
+        private const val HTTP_TOO_MANY_REQUESTS = 429
+        private val HTTP_SERVER_ERRORS = 500..599
+    }
+}
+
+/** Ends an import early with a [SyncFailure] the user is shown. */
+internal class SyncFailureException(val failure: SyncFailure) : Exception(failure.name)
 
