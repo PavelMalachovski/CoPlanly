@@ -289,8 +289,10 @@ dependencies {
     // Coroutines - Updated to latest stable
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
 
-    // WorkManager for background tasks
-    implementation("androidx.work:work-runtime-ktx:2.9.0")
+    // WorkManager for background tasks. 2.10.x (CQ-17) for its Doze and foreground-service
+    // fixes, which is what the 15-minute periodic sync runs into; 2.11 raised minSdk and is a
+    // separate step.
+    implementation("androidx.work:work-runtime-ktx:2.10.5")
 
     // Calendar - Check for updates at https://github.com/kizitonwose/Calendar
     implementation("com.kizitonwose.calendar:compose:2.6.1")
