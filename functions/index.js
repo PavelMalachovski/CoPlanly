@@ -6,6 +6,15 @@
 
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
+// The sentinels and `Timestamp` come from the modular entry point, never through
+// `admin.firestore.FieldValue`. They are the same classes — `instanceof` against either holds, so
+// the tests are unaffected — but the Functions emulator wraps `firebase-admin` in a proxy that
+// hands out `admin.firestore` as a *bound copy* of the function, and a bound function carries none
+// of the original's static properties. Under the emulator `admin.firestore.FieldValue` was
+// therefore `undefined`, and `acceptPairingInvitation` died with "Cannot read properties of
+// undefined (reading 'arrayUnion')" — found the first time anything ran the callable end to end
+// (`tools/e2e/pairing-smoke.js`). Production never saw it, because production has no proxy.
+const {FieldValue, Timestamp} = require('firebase-admin/firestore');
 
 // Инициализация Firebase Admin SDK
 admin.initializeApp();
@@ -113,7 +122,7 @@ exports.sendNotification = functions.firestore
           await snap.ref.update({
             status: 'skipped',
             error: 'No FCM token',
-            sentAt: admin.firestore.FieldValue.serverTimestamp(),
+            sentAt: FieldValue.serverTimestamp(),
           });
           return null;
         }
@@ -132,7 +141,7 @@ exports.sendNotification = functions.firestore
         // Обновление статуса в базе данных
         await snap.ref.update({
           status: 'sent',
-          sentAt: admin.firestore.FieldValue.serverTimestamp(),
+          sentAt: FieldValue.serverTimestamp(),
           messageId: response,
         });
 
@@ -144,7 +153,7 @@ exports.sendNotification = functions.firestore
         await snap.ref.update({
           status: 'failed',
           error: error.message,
-          sentAt: admin.firestore.FieldValue.serverTimestamp(),
+          sentAt: FieldValue.serverTimestamp(),
         });
 
         // Повторная попытка для определенных ошибок
@@ -155,7 +164,7 @@ exports.sendNotification = functions.firestore
               .collection('users')
               .doc(notificationData.targetUserId)
               .update({
-                fcmToken: admin.firestore.FieldValue.delete(),
+                fcmToken: FieldValue.delete(),
               });
         }
 
@@ -184,7 +193,7 @@ exports.cleanupOldNotifications = functions.pubsub
       // without bound.
       const queue = admin.firestore().collection('notification_queue');
       const [byTimestamp, byMillis] = await Promise.all([
-        queue.where('createdAt', '<', admin.firestore.Timestamp.fromDate(thirtyDaysAgo)).get(),
+        queue.where('createdAt', '<', Timestamp.fromDate(thirtyDaysAgo)).get(),
         queue.where('createdAt', '<', thirtyDaysAgo.getTime()).get(),
       ]);
       const oldNotificationsQuery = {docs: byTimestamp.docs.concat(byMillis.docs)};
@@ -272,7 +281,7 @@ exports.onEventCreated = functions.firestore
               eventId: eventId,
             },
             status: 'pending',
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            createdAt: FieldValue.serverTimestamp(),
           });
 
       console.log(`Notification queued for partner ${partnerId}`);
@@ -332,7 +341,7 @@ exports.onChildInfoUpdated = functions.firestore
               childInfoId: childInfoId,
             },
             status: 'pending',
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            createdAt: FieldValue.serverTimestamp(),
           });
 
       console.log(`Notification queued for partner ${partnerId}`);
@@ -499,13 +508,13 @@ async function acceptPairingInvitationImpl(db, acceptingUserId, acceptingEmail, 
     // relationship — so it should keep showing the one it already knew rather than being
     // silently moved to a family it has never heard of. M-5 deletes the field.
     tx.update(inviterRef, {
-      partnerIds: admin.firestore.FieldValue.arrayUnion(acceptingUserId),
+      partnerIds: FieldValue.arrayUnion(acceptingUserId),
       partnerId: partnersOf(inviterSnap.data())[0] || acceptingUserId,
       pairedAt,
       role: slots.inviterRole,
     });
     tx.update(accepterRef, {
-      partnerIds: admin.firestore.FieldValue.arrayUnion(invite.fromUserId),
+      partnerIds: FieldValue.arrayUnion(invite.fromUserId),
       partnerId: partnersOf(accepterSnap.data())[0] || invite.fromUserId,
       pairedAt,
       role: slots.accepterRole,
@@ -533,7 +542,7 @@ async function acceptPairingInvitationImpl(db, acceptingUserId, acceptingEmail, 
       familyId: custodyModelKey(invite.fromUserId, acceptingUserId),
     },
     status: 'pending',
-    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    createdAt: FieldValue.serverTimestamp(),
   });
 
   return {partnerId: invite.fromUserId, role: slots.accepterRole};
@@ -729,7 +738,7 @@ async function acceptGuestInvitationImpl(db, acceptingUserId, acceptingEmail, re
       body: `${await guestName(accepterRef, acceptingEmail)} can now see this child's record`,
     },
     status: 'pending',
-    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    createdAt: FieldValue.serverTimestamp(),
   });
 
   return {childInfoId, expiresAtMillis};
@@ -954,7 +963,7 @@ async function acceptCalendarFriendInvitationImpl(db, acceptingUserId, accepting
         body: `${acceptingEmail || 'A friend'} can now see the family calendar`,
       },
       status: 'pending',
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      createdAt: FieldValue.serverTimestamp(),
     })));
 
   return {familyParents, familyId, expiresAtMillis};
@@ -1071,7 +1080,7 @@ async function sweepExpiredGuestsImpl(db, nowMillis) {
     const update = {guests: kept};
     const fromAudience = expired.filter((uid) => uid !== data.createdByFirebaseUid);
     if (fromAudience.length > 0) {
-      update.sharedWith = admin.firestore.FieldValue.arrayRemove(...fromAudience);
+      update.sharedWith = FieldValue.arrayRemove(...fromAudience);
     }
 
     batch.update(doc.ref, update);
@@ -1363,7 +1372,7 @@ async function revokeSharedAudience(db, uidA, uidB) {
         }
 
         batch.update(doc.ref, {
-          sharedWith: admin.firestore.FieldValue.arrayRemove(removed),
+          sharedWith: FieldValue.arrayRemove(removed),
         });
         pending++;
         revoked++;
@@ -1611,7 +1620,7 @@ async function unpairCoParentImpl(db, callerUid, requestedPartnerId) {
           actorName: result.callerName || '',
         },
         status: 'pending',
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        createdAt: FieldValue.serverTimestamp(),
       });
     } catch (err) {
       console.error(
@@ -1629,7 +1638,7 @@ async function unpairCoParentImpl(db, callerUid, requestedPartnerId) {
       // undo the bookkeeping for the ones that already finished.
       await callerRef.update({
         pendingRevocationOf: remaining.length > 0 ?
-          remaining : admin.firestore.FieldValue.delete(),
+          remaining : FieldValue.delete(),
       });
     } catch (err) {
       console.error(`Shared-audience revocation failed for ${callerUid}`, err);
@@ -1782,7 +1791,7 @@ exports.assignSlots = assignSlots;
 function withPartnerRemoved(data, removedUid, extra) {
   const remaining = partnersOf(data).filter((uid) => uid !== removedUid);
   return Object.assign({
-    partnerIds: admin.firestore.FieldValue.arrayRemove(removedUid),
+    partnerIds: FieldValue.arrayRemove(removedUid),
     partnerId: remaining[0] || '',
     pairedAt: remaining.length > 0 ? (data || {}).pairedAt || null : null,
   }, extra);
@@ -2806,7 +2815,7 @@ async function notifyOfChatMessage(db, message) {
       preview: String(message.content || '').slice(0, CHAT_MESSAGE_PREVIEW_LENGTH),
     },
     status: 'pending',
-    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    createdAt: FieldValue.serverTimestamp(),
   });
 }
 
@@ -2954,7 +2963,7 @@ async function scrubFromAudiences(db, uid) {
         continue;
       }
       batch.update(doc.ref, {
-        sharedWith: admin.firestore.FieldValue.arrayRemove(uid),
+        sharedWith: FieldValue.arrayRemove(uid),
       });
       pending++;
       narrowed++;
@@ -3000,7 +3009,7 @@ async function scrubRevisionAudiences(db, uid) {
       continue;
     }
     batch.update(doc.ref, {
-      sharedWith: admin.firestore.FieldValue.arrayRemove(uid),
+      sharedWith: FieldValue.arrayRemove(uid),
     });
     pending++;
     narrowed++;

@@ -204,6 +204,8 @@ crash with "migration from 3 to 9 required but not found".
 ```bash
 cd functions && npm test && npm run lint    # Cloud Functions (mocha + eslint)
 cd firestore-tests && npm test              # firestore.rules + storage.rules on the emulators
+tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Functions emulators;
+                                            # needs a running Android emulator (see the e2e job)
 ```
 
 - **Never debug `firestore.rules` by deploying to production and watching a phone.** That
@@ -222,8 +224,8 @@ cd firestore-tests && npm test              # firestore.rules + storage.rules on
   degrades gracefully if it is missing (see the conditional apply in `app/build.gradle.kts`).
 - **GitHub CI runs on every pull request, and on every push to `main`** — a push to a
   feature branch with no PR open is not built (`.github/workflows/ci.yml`, added
-  August 2026 — this line used to say there was none). Nine jobs (this line used to say
-  eight, before `screenshots` was added, and seven before `instrumented`): `changes` (a cheap gate,
+  August 2026 — this line used to say there was none). Ten jobs (this line used to say
+  eight, before `screenshots` and `e2e` were added, and seven before `instrumented`): `changes` (a cheap gate,
   below), three Android ones — `build-test` (`assembleDebug` + `testDebugUnitTest` in a
   single invocation), `static` (`lint`, then `detekt`), `release` (`assembleRelease`, where
   R8 runs, and where `node tools/check-r8-mapping.js` then reads R8's own `mapping.txt` and
@@ -300,6 +302,42 @@ cd firestore-tests && npm test              # firestore.rules + storage.rules on
   *not* `DatabaseSchemaExportTest`, which this line used to credit and which cannot do it — kapt
   writes that directory during the build immediately before the test reads it, so the file it
   looks for has just been created whether or not it is in the repository.
+
+  The **`e2e` job** ("Android — two parents on the Firebase emulators", September 2026) is the
+  two-phone round a runner *can* do. `app/src/androidTest/java/com/coparently/app/e2e/` runs two
+  parents in one process — each an `EmulatorParent`: a **named** `FirebaseApp` built from
+  `FirebaseOptions` for the credential-free `demo-coplanly` project, its own in-memory Room, and
+  the production data layer constructed by hand from the constructors Hilt calls (one process has
+  one `SingletonComponent`, and this needs two of everything). `tools/e2e/run-two-parent-tests.sh`
+  wraps `firebase emulators:exec --only auth,firestore,functions` around a Node smoke
+  (`tools/e2e/pairing-smoke.js`, which pairs two accounts over REST in seconds and fails with a
+  reason before an APK is installed) and `connectedDebugAndroidTest` filtered to that package with
+  `-e coplanlyEmulatorHost 10.0.2.2`. What it proves, all against the real `firestore.rules` and
+  the real `acceptPairingInvitation`: pairing on both phones (profiles, `families/{id}.slots`, the
+  Room projection, one conversation); an event readable through the sync's own `array-contains`
+  query, a private event absent from the server, a tombstone delivered as a tombstone; chat
+  **across the date line** (UTC+14 and UTC−11) reaching unread, DELIVERED and READ on the right
+  phones — **CQ-18's logic, closed as far as software can close it**; a shared expense that puts
+  half the amount on the *other* parent's balance (the `splitBetween` class); and M-8's second
+  family keeping its audience, `familyId` and announcement thread. Five things not to undo.
+  **No `google-services.json`** here either, for the reason given above. **The tests skip
+  themselves without the host argument**, so the `instrumented` job runs them as skipped and
+  keeps `FakeFirebaseModule` for everything else — and the `e2e` job fails on any skip, so the
+  same switch cannot turn it green by running nothing. **Cleartext to `10.0.2.2` and `127.0.0.1`
+  is allowed in `app/src/debug/res/xml/network_security_config.xml`, debug only**: Auth and
+  Functions reach their emulators over plain HTTP through the platform stack, and an
+  `androidTest` manifest cannot carry the exception because instrumentation runs under the
+  *app's* policy. **Two JDKs**: the emulators take 21 through `FIREBASE_JAVA_HOME`, Gradle stays
+  on 17 through `JAVA_HOME`. And the job is gated on its own `changes` output, `e2e`, which unlike
+  `android` stays true for `functions/` and rules changes — it is the one job that runs the
+  callable and the rules together. It found two defects on its first local run, both fixed in the
+  same branch: `admin.firestore.FieldValue` is `undefined` under the Functions emulator's proxy
+  (so `functions/index.js` now imports `FieldValue`/`Timestamp` from `firebase-admin/firestore`),
+  and `EventDocument` threw on the `""` `toFirestoreMap()` writes for a missing end time, so the
+  co-parent's sync skipped every event without one. **What it cannot do** stays on the device
+  checklist: real FCM delivery (no emulator exists for it — the queue document is written, the
+  push is not sent), anything drawn on screen, and the chat UI's family switch (`ChatPartnerSource`,
+  M-8), which the e2e job does not drive.
 
   **A second workflow file exists and is not part of CI**: `.github/workflows/regenerate.yml` runs
   `detektBaseline` and exports the Room schema, then commits both back to the branch it ran on.
@@ -1047,13 +1085,16 @@ whatever you were doing; a stale "known issue" costs more than a missing one.
   paper over it with a count. Unverified on two
   phones: see M-8's acceptance note.
 
-- **Cross-time-zone chat is implemented but never verified on two devices.** The August 2026
-  chat sync moved message times to epoch millis specifically so two parents in different zones
-  agree (see item 13 above), and it is covered by unit tests that drive the two zones explicitly
-  (`ChatReadStateTimeZoneTest`) plus a 12→13 migration test. The two-phone acceptance scenario —
-  set one phone's zone 2–3 hours apart, send a message, and confirm it counts as unread, the
-  badge clears on open, and the ticks reach READ — was **deferred, not run**. Backlog item for
-  the next review round. Everything else in that acceptance run passed on real devices.
+- **Cross-time-zone chat is verified between two clients, not yet on two screens.** The August
+  2026 chat sync moved message times to epoch millis specifically so two parents in different
+  zones agree (see item 13 above), and it is covered by unit tests that drive the two zones
+  explicitly (`ChatReadStateTimeZoneTest`) plus a 12→13 migration test. Since September 2026 the
+  `e2e` CI job runs the acceptance scenario's *logic* end to end: two accounts, the production
+  `MessageRepositoryImpl` on each, the real rules, one parent at UTC+14 and the other at UTC−11 —
+  the message arrives unread, the Room badge count is 1 and clears on `markRead`, and the
+  sender's ticks reach DELIVERED and then READ (`TwoParentChatTest`). What is still **not run** is
+  the part only phones show: the badge and ticks as drawn, the times as displayed, and the push
+  that wakes the other phone. Keep the device check for those; do not re-open the logic.
 
 - ~~**The shared custody schedule orders the two phones' writes by a naive local date-time.**~~
   **Fixed (SEC-4, schema 29).** `CustodyModelEntity.lastModifiedAtMillis` is epoch millis and

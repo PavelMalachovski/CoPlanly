@@ -60,6 +60,10 @@ jobs:
     timeout-minutes: 5
     outputs:
       android: ${{ steps.filter.outputs.android }}
+      # The two-parent job also runs on Cloud Functions and rules changes: it is the only job that
+      # executes the pairing callable and the rules together, so those are exactly the pull
+      # requests that can break it without touching a line of Kotlin.
+      e2e: ${{ steps.filter.outputs.e2e }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -76,16 +80,19 @@ jobs:
           # wrongly listed here silently stops building real changes, which is worse than a
           # path wrongly absent, which merely costs a few runner minutes.
           NON_ANDROID='^(docs/|functions/|firestore-tests/|\.cursor/|[^/]*\.md$|.*\.rules(\.simple)?$|firestore\.indexes\.json$|firebase\.json$|\.gitignore$|LICENSE$)'
+          NON_E2E='^(docs/|\.cursor/|[^/]*\.md$|\.gitignore$|LICENSE$)'
 
           if [ "$EVENT_NAME" != "pull_request" ]; then
             echo "Not a pull request — building everything."
             echo "android=true" >> "$GITHUB_OUTPUT"
+            echo "e2e=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
           if ! changed=$(git diff --name-only "$BASE_SHA"...HEAD 2>/dev/null) || [ -z "$changed" ]; then
             echo "Could not determine the changed files — building everything."
             echo "android=true" >> "$GITHUB_OUTPUT"
+            echo "e2e=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
@@ -98,6 +105,12 @@ jobs:
           else
             echo "android=false" >> "$GITHUB_OUTPUT"
             echo "→ Nothing outside docs/functions/rules changed; skipping the Android jobs."
+          fi
+
+          if echo "$changed" | grep -qvE "$NON_E2E"; then
+            echo "e2e=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "e2e=false" >> "$GITHUB_OUTPUT"
           fi
 
   # `google-services.json` is gitignored, and `app/build.gradle.kts` applies the Google
@@ -471,6 +484,124 @@ jobs:
           path: |
             app/build/reports/androidTests/
             app/build/outputs/androidTest-results/
+          if-no-files-found: ignore
+          retention-days: 14
+
+  # Two parents, one process, the real backend's emulators (CQ-18 and the two-phone checklist, as
+  # far as a runner can take them). `app/src/androidTest/.../e2e` signs up two accounts on the
+  # Auth emulator, pairs them through the real `acceptPairingInvitation` on the Functions
+  # emulator, and drives the production repositories — events, a private event and a tombstone,
+  # chat across the date line, a shared expense, a second family — against the real
+  # `firestore.rules` on the Firestore emulator. Each parent is a named FirebaseApp with its own
+  # Room database; see `EmulatorParent`.
+  #
+  # Things that must stay true, each learned from something that did not:
+  #  * **No `google-services.json`, fake or otherwise.** The tests configure their FirebaseApps
+  #    from `FirebaseOptions` for the `demo-coplanly` project, which needs no credentials and
+  #    cannot reach production. The plugin gate in `app/build.gradle.kts` stays closed.
+  #  * **The `instrumented` job above is untouched.** These tests are not Hilt tests and install
+  #    no module; without the `coplanlyEmulatorHost` argument they skip themselves, so that job
+  #    reports them as skipped and keeps `FakeFirebaseModule` for everything else.
+  #  * **A skip is a failure here.** The last step reads the XML and fails on any skipped test,
+  #    so a missing argument cannot turn this job green by running nothing.
+  #  * **Two JDKs.** The emulators need 21+ on PATH (firestore-tests/README.md); Gradle builds on
+  #    17 through JAVA_HOME. JDK 21 is set up first and its path handed to the script, so the
+  #    second setup-java leaves JAVA_HOME and PATH on 17 for Gradle.
+  #  * **Host loopback, not 0.0.0.0.** The Android emulator reaches the runner's 127.0.0.1 as
+  #    `10.0.2.2`, so `firebase.json`'s default binding is already reachable. Cleartext to that
+  #    address is allowed in `app/src/debug/res/xml/network_security_config.xml` — debug only.
+  e2e:
+    name: Android — two parents on the Firebase emulators
+    needs: changes
+    if: needs.changes.outputs.e2e == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21 (Firebase emulators)
+        id: jdk21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: temurin
+
+      - name: Set up JDK 17 (Gradle)
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: temurin
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: |
+            functions/package-lock.json
+            firestore-tests/package-lock.json
+
+      # `functions/` is what the Functions emulator loads; `firestore-tests/` pins the Firebase
+      # CLI version the rules suite already runs on, so both jobs use one emulator build.
+      - name: Install the Cloud Functions and the Firebase CLI
+        run: |
+          npm ci --prefix functions
+          npm ci --prefix firestore-tests
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      # Built before the emulator boots, so the boot's minutes are not also spent compiling.
+      - name: Build the app and test APKs
+        run: ./gradlew assembleDebug assembleDebugAndroidTest
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Run the two-parent tests
+        uses: reactivecircus/android-emulator-runner@v2
+        env:
+          FIREBASE_JAVA_HOME: ${{ steps.jdk21.outputs.path }}
+        with:
+          api-level: 30
+          arch: x86_64
+          target: default
+          profile: pixel_2
+          ram-size: 4096M
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          script: bash tools/e2e/run-two-parent-tests.sh
+
+      - name: Every two-parent test ran — none skipped
+        run: |
+          set -euo pipefail
+          results=$(find app/build/outputs/androidTest-results -name '*.xml' 2>/dev/null || true)
+          if [ -z "$results" ]; then
+            echo "::error::No instrumentation results were written."
+            exit 1
+          fi
+          if ! grep -q 'classname="com.coparently.app.e2e.' $results; then
+            echo "::error::No test in com.coparently.app.e2e ran."
+            exit 1
+          fi
+          if grep -q '<skipped' $results; then
+            echo "::error::A two-parent test was skipped — the emulator host argument did not arrive."
+            exit 1
+          fi
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-reports-e2e
+          path: |
+            app/build/reports/androidTests/
+            app/build/outputs/androidTest-results/
+            firebase-debug.log
+            firestore-debug.log
           if-no-files-found: ignore
           retention-days: 14
 

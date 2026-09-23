@@ -547,6 +547,8 @@ Preconditions: A and B are paired, and each phone has its own account signed in.
 
 ### 5.1 Cross-time-zone chat (CQ-18) · 2P, no real fallback
 
+> **[CI e2e]** `TwoParentChatTest` (the `e2e` job, two accounts on the Firebase emulators, UTC+14 vs UTC−11) proves the unread count, DELIVERED and READ agree across zones. The phones are still needed for what is drawn — the badge, the ticks, displayed times, on-screen order — and for push delivery.
+
 - [ ] Set B's phone **2–3 hours** away from A's (e.g. A on Prague, B on Dubai or on
       Reykjavík). Force-stop both apps.
 - [ ] B sends a message. On A it arrives **unread**, the badge counts it, and the time shown is
@@ -561,6 +563,8 @@ Preconditions: A and B are paired, and each phone has its own account signed in.
   logic, and `ChatReadStateTimeZoneTest` is the unit-level pin.
 
 ### 5.2 Family switcher and chat following the selected family (M-8) · 3A, 2P or 1P fallback
+
+> **[CI e2e]** `MultiFamilyTest` proves the data side: with a second co-parent selected, a new event gets that family's audience and `familyId` and its announcement goes to that thread, and none of it reaches the first co-parent. The switcher UI, the chat tab re-keying and pushes stay manual.
 
 Preconditions: A is paired with **both** B and C (two families). Invite C from Settings → Family.
 
@@ -591,6 +595,8 @@ Preconditions: A is paired with **both** B and C (two families). Invite C from S
   `presentation/common/FamilySwitcher.kt`, `data/chat/ChatPartnerSource.kt` [branch].
 
 ### 5.3 Also worth doing while two phones are paired · 2P
+
+> Real FCM delivery cannot be emulated: the e2e job sees the `notification_queue` document written, never the push arrive.
 
 - [ ] UX-15 with both parents on non-default colours (§3.3).
 - [ ] MON-6b with mixed versions (§3.5).

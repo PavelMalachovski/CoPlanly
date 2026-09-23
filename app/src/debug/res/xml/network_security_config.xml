@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Debug builds only: overrides `src/main/res/xml/network_security_config.xml` for the debug
+  variant, which is the APK `connectedDebugAndroidTest` installs. Release is untouched.
+
+  Everything stays cleartext-off except the two addresses the Firebase emulators are reached on:
+  `10.0.2.2`, the Android emulator's alias for the host machine's loopback, and `127.0.0.1`, for a
+  physical phone forwarded with `adb reverse`. The two-parent CI job (`app/src/androidTest/.../e2e`)
+  talks to the Auth and Functions emulators over plain HTTP, and those SDKs go through the
+  platform's HTTP stack, which enforces this file: without the exception every sign-up fails with
+  "Cleartext HTTP traffic to 10.0.2.2 not permitted". An `androidTest` manifest cannot carry it,
+  because instrumentation runs in the *app's* process under the app's policy, not the test APK's.
+
+  Neither address can reach anything but the machine the phone is plugged into or emulated on.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">10.0.2.2</domain>
+        <domain includeSubdomains="false">127.0.0.1</domain>
+    </domain-config>
+</network-security-config>
