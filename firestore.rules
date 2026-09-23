@@ -468,6 +468,19 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // ---- Calendar feeds (MON-17) ---------------------------------------------
+    // `calendar_feeds/{sha256(token)}` — one read-only iCalendar link each: the family it
+    // serves, who made it, and when it was last fetched. **No client may touch it, in either
+    // direction**, for the reason `google_oauth` above is closed. The document id is the hash of
+    // the only credential the feed has, so a client that could list the collection could learn
+    // which families have a link, and one that could write it could mint a feed into somebody
+    // else's family, point an existing one at another family, or keep a revoked one alive.
+    // `createCalendarFeed`, `listCalendarFeeds`, `revokeCalendarFeed` and the `calendarFeed`
+    // HTTPS function run on Admin credentials and are its only door.
+    match /calendar_feeds/{feedHash} {
+      allow read, write: if false;
+    }
+
     // ---- Friend profiles ------------------------------------------------
     // A trusted third person (guardian, friend, grandparent — item 16) authors their own
     // profile; the two parents read it but never write it, so nobody puts words in a

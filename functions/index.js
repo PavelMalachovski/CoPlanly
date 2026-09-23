@@ -3153,6 +3153,12 @@ async function deleteAccountDataImpl(db, uid, bucket) {
   removed.invitations = await deleteQueryInBatches(
       db, db.collection('invitations').where('fromUserId', '==', uid));
 
+  // Every calendar-feed link into a family this account was in (MON-17), whoever made it: a
+  // co-parent's link would stop serving on its own (the family is gone), but its record names
+  // this uid and has no reason to outlive the account.
+  removed.calendar_feeds = await deleteQueryInBatches(
+      db, db.collection('calendar_feeds').where('familyMembers', 'array-contains', uid));
+
   // Queued pushes addressed to an account that is going away would otherwise be delivered to
   // whatever device still holds its FCM token.
   removed.notification_queue = await deleteQueryInBatches(
@@ -3451,3 +3457,385 @@ exports.refreshGoogleAccessToken = functions.https.onCall(async (data, context) 
       admin.firestore(), requireGoogleOAuthConfig(), postToGoogleToken,
       context.auth.uid, refreshToken);
 });
+
+// ── Calendar feed (MON-17) ─────────────────────────────────────────────────────────────────
+//
+// A read-only iCalendar subscription for a parent whose phone cannot run the app — an iPhone,
+// today. The token in the URL is the whole authorisation, so four things hold it up:
+//
+// - **Only a hash is stored.** `calendar_feeds/{sha256(token)}`; the token is returned once, to
+//   the parent who asked, and never written anywhere. No client may read or write the collection
+//   (`firestore.rules`), so the callables below are its only door.
+// - **A link names one family and one owner**, and is served only while that family is live —
+//   both profiles present and naming each other. An unpair, or either account's deletion, ends it.
+// - **What is served is what the owner could read in the app, minus what must never leave it**:
+//   custody days and contact windows, and the family's shared events — never a private event
+//   (item 3), never a tombstone (item 14), never another family's record (M-6). No chat, no
+//   expenses, no children's records.
+// - **Parents are named, never "Mom"/"Dad"**: the slots are resolved to the names on the two
+//   `users/{uid}` documents.
+//
+// The pure half — the custody port and the RFC 5545 text — is `calendar-feed.js`.
+
+const calendarFeed = require('./calendar-feed');
+
+/**
+ * Where feed URLs point: `CALENDAR_FEED_BASE_URL` when a deployment sets one (a Hosting rewrite
+ * or a custom domain), otherwise the function's own default URL.
+ *
+ * @return {string} The base URL, without a trailing slash.
+ */
+function calendarFeedBaseUrl() {
+  const configured = process.env.CALENDAR_FEED_BASE_URL || '';
+  if (configured) return configured.replace(/\/+$/, '');
+  let projectId = process.env.GCLOUD_PROJECT || '';
+  if (!projectId && process.env.FIREBASE_CONFIG) {
+    try {
+      projectId = JSON.parse(process.env.FIREBASE_CONFIG).projectId || '';
+    } catch (err) {
+      projectId = '';
+    }
+  }
+  return `https://us-central1-${projectId}.cloudfunctions.net/calendarFeed`;
+}
+
+exports.calendarFeedBaseUrl = calendarFeedBaseUrl;
+
+/**
+ * The family's two members and their profiles, when [uid] is live in [familyId] — both profiles
+ * exist and name each other — or null.
+ *
+ * An id is a claim about a relationship, not proof it still exists (see [partnerFromFamilyId]),
+ * so both sides are read: a one-sided `partnerIds` is what an interrupted unpair leaves.
+ *
+ * @param {FirebaseFirestore.Firestore} db Firestore instance.
+ * @param {*} familyId The family the caller named.
+ * @param {string} uid The parent.
+ * @return {Promise<?{members: !Array<string>, profiles: !Object<string, !Object>}>} The family.
+ */
+async function liveFamily(db, familyId, uid) {
+  const partner = partnerFromFamilyId(familyId, uid);
+  if (!partner) return null;
+  const [mine, theirs] = await Promise.all([
+    db.collection('users').doc(uid).get(),
+    db.collection('users').doc(partner).get(),
+  ]);
+  if (!mine.exists || !theirs.exists) return null;
+  const myData = mine.data() || {};
+  const theirData = theirs.data() || {};
+  if (!partnersOf(myData).includes(partner) || !partnersOf(theirData).includes(uid)) return null;
+  return {members: [uid, partner], profiles: {[uid]: myData, [partner]: theirData}};
+}
+
+exports.liveFamily = liveFamily;
+
+/**
+ * Whether a feed has gone unused for [calendarFeed.FEED_IDLE_EXPIRY_DAYS].
+ *
+ * @param {!Object} feed The stored record.
+ * @param {number} nowMillis Now.
+ * @return {boolean} True when it must no longer be served.
+ */
+function calendarFeedExpired(feed, nowMillis) {
+  const last = Number(feed.lastUsedAtMillis || feed.createdAtMillis || 0);
+  return nowMillis - last > calendarFeed.FEED_IDLE_EXPIRY_DAYS * calendarFeed.DAY_MS;
+}
+
+exports.calendarFeedExpired = calendarFeedExpired;
+
+/**
+ * Slot → display name for the two parents, or null when they cannot be told apart.
+ *
+ * The slot comes from `families/{id}.slots` (M-3), falling back to each profile's `role` the way
+ * the client's `ParentsSource` does; a pair still sharing one slot gets no custody layer, because
+ * naming either parent for a day would be a guess. A blank name reads as the neutral "Parent" in
+ * the feed's language — never "Mom" or "Dad".
+ *
+ * @param {?Object} family The family document's data.
+ * @param {!{members: !Array<string>, profiles: !Object<string, !Object>}} live From [liveFamily].
+ * @param {string} locale The feed's language.
+ * @return {?Object<string, string>} `{mom: name, dad: name}`, or null.
+ */
+function calendarFeedNames(family, live, locale) {
+  const slots = family && family.slots && typeof family.slots === 'object' ? family.slots : {};
+  const slotOf = (uid) => (slots[uid] === 'mom' || slots[uid] === 'dad' ?
+    slots[uid] : normalizedSlot(live.profiles[uid].role));
+  const nameOf = (uid) => {
+    const stored = live.profiles[uid].name;
+    return (typeof stored === 'string' && stored.trim()) || calendarFeed.label(locale, 'parent');
+  };
+  const [a, b] = live.members;
+  if (slotOf(a) === slotOf(b)) return null;
+  return {[slotOf(a)]: nameOf(a), [slotOf(b)]: nameOf(b)};
+}
+
+exports.calendarFeedNames = calendarFeedNames;
+
+/**
+ * Body of `createCalendarFeed`: mints a link to [familyId]'s calendar for the caller.
+ *
+ * The token is returned **once**, inside the URL, and only its hash is stored. `feedId` is a
+ * separate random id the client lists and revokes by, so nothing the app keeps can fetch a feed.
+ *
+ * @param {FirebaseFirestore.Firestore} db Firestore instance.
+ * @param {string} callerUid The signed-in parent.
+ * @param {*} familyId The family the link is for; the caller must be live in it.
+ * @param {*} locale The app language, for the few words the feed writes itself.
+ * @param {number} nowMillis Now.
+ * @param {string=} token Injected by tests; minted otherwise.
+ * @return {Promise<{feedId: string, familyId: string, url: string, webcalUrl: string,
+ *   createdAtMillis: number}>} The new link.
+ */
+async function createCalendarFeedImpl(db, callerUid, familyId, locale, nowMillis, token) {
+  const live = await liveFamily(db, familyId, callerUid);
+  if (!live) {
+    throw new functions.https.HttpsError(
+        'permission-denied', 'Not a parent in this family', {reason: 'not-in-family'});
+  }
+  const owned = await db.collection(calendarFeed.FEED_COLLECTION)
+      .where('ownerUid', '==', callerUid).get();
+  const liveCount = owned.docs.filter((doc) => !calendarFeedExpired(doc.data(), nowMillis)).length;
+  if (liveCount >= calendarFeed.MAX_FEEDS_PER_OWNER) {
+    throw new functions.https.HttpsError(
+        'resource-exhausted', 'Too many calendar links', {reason: 'too-many-feeds'});
+  }
+
+  const secret = token || calendarFeed.newFeedToken();
+  const feedId = require('crypto').randomBytes(12).toString('hex');
+  await db.collection(calendarFeed.FEED_COLLECTION).doc(calendarFeed.feedTokenHash(secret)).set({
+    feedId,
+    familyId,
+    familyMembers: live.members.slice().sort(),
+    ownerUid: callerUid,
+    locale: calendarFeed.feedLocale(locale),
+    createdAtMillis: nowMillis,
+    lastUsedAtMillis: nowMillis,
+  });
+
+  const url = `${calendarFeedBaseUrl()}/${secret}.ics`;
+  return {feedId, familyId, url, webcalUrl: url.replace(/^https?:/, 'webcal:'), createdAtMillis: nowMillis};
+}
+
+exports.createCalendarFeedImpl = createCalendarFeedImpl;
+
+/**
+ * Body of `listCalendarFeeds`: the caller's links, newest first, **without their tokens** —
+ * there are none to return, only hashes. An idle-expired link is deleted on the way.
+ *
+ * @param {FirebaseFirestore.Firestore} db Firestore instance.
+ * @param {string} callerUid The signed-in parent.
+ * @param {number} nowMillis Now.
+ * @return {Promise<{feeds: !Array<{feedId: string, familyId: string, createdAtMillis: number,
+ *   lastUsedAtMillis: number}>}>} The links.
+ */
+async function listCalendarFeedsImpl(db, callerUid, nowMillis) {
+  const snap = await db.collection(calendarFeed.FEED_COLLECTION)
+      .where('ownerUid', '==', callerUid).get();
+  const feeds = [];
+  for (const doc of snap.docs) {
+    const data = doc.data() || {};
+    if (calendarFeedExpired(data, nowMillis)) {
+      await doc.ref.delete();
+      continue;
+    }
+    feeds.push({
+      feedId: String(data.feedId || ''),
+      familyId: String(data.familyId || ''),
+      createdAtMillis: Number(data.createdAtMillis || 0),
+      lastUsedAtMillis: Number(data.lastUsedAtMillis || 0),
+    });
+  }
+  feeds.sort((a, b) => b.createdAtMillis - a.createdAtMillis);
+  return {feeds};
+}
+
+exports.listCalendarFeedsImpl = listCalendarFeedsImpl;
+
+/**
+ * Body of `revokeCalendarFeed`: deletes the caller's link [feedId]. Idempotent — revoking a link
+ * that is already gone is not an error, since the outcome the parent asked for holds.
+ *
+ * @param {FirebaseFirestore.Firestore} db Firestore instance.
+ * @param {string} callerUid The signed-in parent; only their own links match.
+ * @param {*} feedId The link to revoke.
+ * @return {Promise<{revoked: number}>} How many records went.
+ */
+async function revokeCalendarFeedImpl(db, callerUid, feedId) {
+  if (typeof feedId !== 'string' || !feedId) {
+    throw new functions.https.HttpsError('invalid-argument', 'feedId is required');
+  }
+  const snap = await db.collection(calendarFeed.FEED_COLLECTION)
+      .where('ownerUid', '==', callerUid)
+      .where('feedId', '==', feedId)
+      .get();
+  for (const doc of snap.docs) {
+    await doc.ref.delete();
+  }
+  return {revoked: snap.docs.length};
+}
+
+exports.revokeCalendarFeedImpl = revokeCalendarFeedImpl;
+
+/**
+ * Serves one feed request: `{status, body}` for the HTTPS handler to send.
+ *
+ * Order matters. The rate limit comes before any read, so a hammering client costs no Firestore.
+ * The record is read on **every** request, so a revoked link stops at once; only the render —
+ * the family, custody and events reads — is cached, per token, for
+ * [calendarFeed.CACHE_TTL_MS]. Every way a token can fail to name a live feed — unknown,
+ * revoked, idle-expired, family ended — answers the same 404, and an ended one is deleted.
+ *
+ * @param {FirebaseFirestore.Firestore} db Firestore instance.
+ * @param {?string} token The token from the path, or null when the path was not a feed URL.
+ * @param {number} nowMillis Now.
+ * @param {!Object} cache A [calendarFeed.ttlCache].
+ * @param {!Object} limiter A [calendarFeed.rateLimiter].
+ * @return {Promise<{status: number, body: string}>} The response.
+ */
+async function serveCalendarFeedImpl(db, token, nowMillis, cache, limiter) {
+  const notFound = {status: 404, body: 'Not found\n'};
+  if (!token) return notFound;
+  const hash = calendarFeed.feedTokenHash(token);
+  if (!limiter.allow(hash, nowMillis)) return {status: 429, body: 'Too many requests\n'};
+
+  const ref = db.collection(calendarFeed.FEED_COLLECTION).doc(hash);
+  const snap = await ref.get();
+  if (!snap.exists) {
+    cache.delete(hash);
+    return notFound;
+  }
+  const feed = snap.data() || {};
+  if (calendarFeedExpired(feed, nowMillis)) {
+    await ref.delete();
+    cache.delete(hash);
+    return notFound;
+  }
+  if (nowMillis - Number(feed.lastUsedAtMillis || 0) >= calendarFeed.LAST_USED_WRITE_INTERVAL_MS) {
+    await ref.update({lastUsedAtMillis: nowMillis});
+  }
+
+  const cached = cache.get(hash, nowMillis);
+  if (cached !== undefined) return {status: 200, body: cached};
+
+  const live = await liveFamily(db, feed.familyId, feed.ownerUid);
+  if (!live) {
+    await ref.delete();
+    return notFound;
+  }
+  const [family, custody, events] = await Promise.all([
+    db.collection('families').doc(feed.familyId).get(),
+    db.collection('custody_models').doc(feed.familyId).get(),
+    db.collection('events').where('familyId', '==', feed.familyId).get(),
+  ]);
+  const body = calendarFeed.buildFeed({
+    familyId: feed.familyId,
+    members: live.members,
+    ownerUid: feed.ownerUid,
+    locale: feed.locale,
+    nowMillis,
+    custody: custody.exists ? calendarFeed.parseCustodyModel(custody.data()) : null,
+    names: calendarFeedNames(family.exists ? family.data() : null, live, feed.locale),
+    events: events.docs.map((doc) => doc.data() || {}),
+  });
+  cache.set(hash, body, nowMillis);
+  return {status: 200, body};
+}
+
+exports.serveCalendarFeedImpl = serveCalendarFeedImpl;
+
+/**
+ * Body of the daily sweep: deletes every link unused for [calendarFeed.FEED_IDLE_EXPIRY_DAYS].
+ * Housekeeping, not enforcement — a request already refuses an idle link.
+ *
+ * @param {FirebaseFirestore.Firestore} db Firestore instance.
+ * @param {number} nowMillis Now.
+ * @return {Promise<number>} How many went.
+ */
+async function sweepIdleCalendarFeedsImpl(db, nowMillis) {
+  const cutoff = nowMillis - calendarFeed.FEED_IDLE_EXPIRY_DAYS * calendarFeed.DAY_MS;
+  return deleteQueryInBatches(
+      db, db.collection(calendarFeed.FEED_COLLECTION).where('lastUsedAtMillis', '<', cutoff));
+}
+
+exports.sweepIdleCalendarFeedsImpl = sweepIdleCalendarFeedsImpl;
+
+/** Per-instance render cache and rate limit for [exports.calendarFeed]. */
+const calendarFeedCache = calendarFeed.ttlCache(calendarFeed.CACHE_TTL_MS);
+const calendarFeedLimiter = calendarFeed.rateLimiter(calendarFeed.RATE_LIMIT, calendarFeed.RATE_WINDOW_MS);
+
+/**
+ * `GET /calendarFeed/<token>.ics` — the subscription itself. No sign-in: the token is the
+ * authorisation, and it is never logged.
+ */
+exports.calendarFeed = functions.https.onRequest(async (req, res) => {
+  res.set('X-Content-Type-Options', 'nosniff');
+  res.set('Referrer-Policy', 'no-referrer');
+  if (req.method !== 'GET' && req.method !== 'HEAD') {
+    res.set('Allow', 'GET, HEAD');
+    res.set('Cache-Control', 'no-store');
+    res.status(405).send('Method not allowed\n');
+    return;
+  }
+  try {
+    const result = await serveCalendarFeedImpl(
+        admin.firestore(), calendarFeed.tokenFromPath(req.path), Date.now(),
+        calendarFeedCache, calendarFeedLimiter);
+    if (result.status === 200) {
+      res.set('Content-Type', 'text/calendar; charset=utf-8');
+      res.set('Content-Disposition', 'inline; filename="coplanly.ics"');
+      res.set('Cache-Control', `private, max-age=${Math.round(calendarFeed.CACHE_TTL_MS / 1000)}`);
+    } else {
+      res.set('Content-Type', 'text/plain; charset=utf-8');
+      res.set('Cache-Control', 'no-store');
+      if (result.status === 429) {
+        res.set('Retry-After', String(Math.round(calendarFeed.RATE_WINDOW_MS / 1000)));
+      }
+    }
+    res.status(result.status).send(req.method === 'HEAD' ? '' : result.body);
+  } catch (err) {
+    // The message only: an error object can carry the request, and the request carries the token.
+    console.error('Calendar feed failed', err && err.message);
+    res.set('Content-Type', 'text/plain; charset=utf-8');
+    res.set('Cache-Control', 'no-store');
+    res.status(500).send('Error\n');
+  }
+});
+
+/** Creates a feed link. See [createCalendarFeedImpl]. */
+exports.createCalendarFeed = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'Sign in first');
+  }
+  const familyId = data && typeof data.familyId === 'string' ? data.familyId : '';
+  if (!familyId) {
+    throw new functions.https.HttpsError('invalid-argument', 'familyId is required');
+  }
+  return createCalendarFeedImpl(
+      admin.firestore(), context.auth.uid, familyId, data && data.locale, Date.now());
+});
+
+/** Lists the caller's feed links. See [listCalendarFeedsImpl]. */
+exports.listCalendarFeeds = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'Sign in first');
+  }
+  return listCalendarFeedsImpl(admin.firestore(), context.auth.uid, Date.now());
+});
+
+/** Revokes one of the caller's feed links. See [revokeCalendarFeedImpl]. */
+exports.revokeCalendarFeed = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'Sign in first');
+  }
+  return revokeCalendarFeedImpl(admin.firestore(), context.auth.uid, data && data.feedId);
+});
+
+/** Deletes idle links daily, after the other sweeps. See [sweepIdleCalendarFeedsImpl]. */
+exports.sweepIdleCalendarFeeds = functions.pubsub
+    .schedule('30 4 * * *')
+    .timeZone('UTC')
+    .onRun(async () => {
+      const removed = await sweepIdleCalendarFeedsImpl(admin.firestore(), Date.now());
+      console.log(`Swept ${removed} idle calendar feeds`);
+      return null;
+    });

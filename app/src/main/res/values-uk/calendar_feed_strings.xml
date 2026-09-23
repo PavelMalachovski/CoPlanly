@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- MON-17: read-only calendar links for an iPhone or any other calendar app. -->
+    <string name="calendar_feed_settings_title">Календар для iPhone та інших календарів</string>
+    <string name="calendar_feed_settings_description">Посилання на сімейний календар лише для перегляду</string>
+    <string name="calendar_feed_title">Календар для інших застосунків</string>
+    <string name="calendar_feed_intro">Створіть посилання лише для перегляду, яке Календар на iPhone — або будь-який застосунок-календар, що вміє підписуватися на вебадресу, — підтримуватиме в актуальному стані. Інший застосунок оновлює його приблизно раз на годину.</string>
+    <string name="calendar_feed_included">Містить: дні опіки та час спілкування, щоразу з іменем одного з батьків, і події, якими ви ділитеся з другим із батьків.</string>
+    <string name="calendar_feed_excluded">Не містить: особисті події, чат, витрати та записи про дітей. В іншому календарі нічого не можна змінити; зміни вносяться тут, у CoPlanly.</string>
+    <string name="calendar_feed_warning">Будь-хто, хто має посилання, бачить цей календар. Надсилайте його лише тому, для кого воно призначене, і відкличте тут, якщо воно потрапило далі. Посилання, яке жоден календар не відкривав 90 днів, перестає працювати.</string>
+    <string name="calendar_feed_create">Створити посилання</string>
+    <string name="calendar_feed_created_title">Нове посилання готове</string>
+    <string name="calendar_feed_created_supporting">Поділіться ним або скопіюйте його зараз. З міркувань безпеки його не можна буде показати знову.</string>
+    <string name="calendar_feed_share">Поділитися посиланням</string>
+    <string name="calendar_feed_copy">Скопіювати посилання</string>
+    <string name="calendar_feed_done">Готово</string>
+    <string name="calendar_feed_share_chooser">Поділитися посиланням на календар</string>
+    <string name="calendar_feed_share_message">Наш календар CoPlanly, лише для перегляду. На iPhone торкніться, щоб підписатися:\n%1$s\n\nЯкщо застосунок-календар просить вебадресу, використайте:\n%2$s</string>
+    <string name="calendar_feed_links_label">Активні посилання</string>
+    <string name="calendar_feed_empty">Посилань ще немає</string>
+    <string name="calendar_feed_no_family">Спершу зв’яжіться з другим із батьків. Посилання показує спільний календар вашої родини.</string>
+    <string name="calendar_feed_link_title">Створено %1$s</string>
+    <string name="calendar_feed_link_used">Востаннє календар відкривав його %1$s</string>
+    <string name="calendar_feed_link_unused">Жоден календар його ще не відкривав</string>
+    <string name="calendar_feed_revoke">Відкликати посилання</string>
+    <string name="calendar_feed_revoke_confirm_title">Відкликати це посилання?</string>
+    <string name="calendar_feed_revoke_confirm_text">Календар, підписаний на нього, перестане отримувати оновлення. Це не можна скасувати, але можна створити нове посилання.</string>
+    <string name="calendar_feed_revoke_confirm">Відкликати</string>
+    <string name="calendar_feed_revoked">Посилання відкликано</string>
+    <string name="calendar_feed_revoke_failed">Не вдалося відкликати посилання. Перевірте з’єднання та спробуйте ще раз.</string>
+    <string name="calendar_feed_create_failed">Не вдалося створити посилання. Перевірте з’єднання та спробуйте ще раз.</string>
+    <string name="calendar_feed_limit_reached">У вас уже максимальна кількість посилань. Спершу відкличте те, яке більше не потрібне.</string>
+    <string name="calendar_feed_load_failed">Не вдалося завантажити ваші посилання.</string>
+</resources>

@@ -178,6 +178,11 @@ function family() {
     ],
     custody_models: [{id: `${ALICE}__${BOB}`, participants: [ALICE, BOB]}],
     calendar_friends: [],
+    calendar_feeds: [
+      {id: 'hash-alice', ownerUid: ALICE, familyMembers: [ALICE, BOB]},
+      {id: 'hash-bob', ownerUid: BOB, familyMembers: [ALICE, BOB]},
+      {id: 'hash-other', ownerUid: 'carol', familyMembers: ['carol', 'dave']},
+    ],
     friend_profiles: [],
     invitations: [{id: 'inv-1', fromUserId: ALICE, status: 'pending'}],
     notification_queue: [{id: 'n-1', targetUserId: ALICE}],
@@ -189,6 +194,13 @@ describe('deleteAccountDataImpl', () => {
 
   before(() => {
     myFunctions = require('../index');
+  });
+
+  // MON-17: a feed link into a family this account was in names the account, whoever made it.
+  it('removes every calendar-feed link into the departing parent\'s families', async () => {
+    const db = fakeDb(family());
+    await myFunctions.deleteAccountDataImpl(db, ALICE);
+    assert.deepStrictEqual(db._store.calendar_feeds.map((f) => f.id), ['hash-other']);
   });
 
   it('removes the account profile itself', async () => {

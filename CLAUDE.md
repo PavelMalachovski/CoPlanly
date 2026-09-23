@@ -838,6 +838,28 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     with the offset printed); event start/end are the naive wall-clock values the schema stores,
     and the statement says so.
 
+27. **A calendar-feed token is the whole authorisation, so it is hashed, scoped and never served
+    past what the app itself would show** (MON-17, September 2026). `functions/calendar-feed.js`
+    holds the pure half (token, RFC 5545 text, the custody port); `functions/index.js` the
+    `createCalendarFeed`/`listCalendarFeeds`/`revokeCalendarFeed` callables and the `calendarFeed`
+    HTTPS function; `presentation/settings/CalendarFeedScreen.kt` the one screen. Five things not
+    to undo. **Only `sha256(token)` is stored** — it is the `calendar_feeds` document id — and the
+    token leaves the server once, in `createCalendarFeed`'s URL; the app lists and revokes by a
+    separate random `feedId` and keeps nothing on the device. Never log a feed path or a token.
+    **`calendar_feeds` is closed to every client** (`allow read, write: if false`, pinned by
+    `firestore-tests/rules/calendar-feeds.test.js`): a readable collection says which families have
+    a link, a writable one mints a feed into somebody else's family. **A private event (item 3) and
+    a tombstoned one (item 14) are never served**, nor one whose `familyId` is not the feed's or
+    whose creator is not one of that family's two parents — the M-6 rule, and do not soften it with
+    a fallback for unstamped events. **Parents are named, never slotted**: titles come from
+    `users/{uid}.name`, the slot from `families/{id}.slots`, and a pair still sharing one slot gets
+    no custody layer rather than a guess. And **the custody port must agree with
+    `CustodyResolver`/`ContactWindowCodec`** — accepted swaps first, whole-day pattern, windows
+    dropped when they name the day's own parent; change the Kotlin, add a fixture to
+    `functions/test/calendar-feed.test.js`. A link is served only while its family is live (both
+    profiles name each other); an unpair, an account deletion or 90 idle days end it with the same
+    404 as an unknown token.
+
 ## Known issues / do not "fix" silently
 
 **Check an entry against the code before acting on it.** Two entries in this section, and one

@@ -101,6 +101,17 @@ child's records rather than on the child's consent.
 
 Every such grant carries an expiry, is visible to both parents, and can be revoked at any time.
 
+### Calendar links you create
+
+You can create a **read-only calendar link** (Settings → Sync) so that a calendar app — for
+example Apple Calendar on an iPhone — can show your family's custody days and shared events.
+Anyone who has the link can read what it shows, so share it only with the person it is for. It
+never includes private events, deleted events, chat, expenses or children's records. We store a
+one-way fingerprint (a SHA-256 hash) of the link, never the link itself, together with the family
+it belongs to, who created it and when a calendar last fetched it. You can revoke a link at any
+time; a link no calendar has fetched for **90 days** is deleted automatically, and every link into
+a family ends when the co-parents unlink or either account is deleted.
+
 ### Technical data
 
 - **A push notification token**, so we can notify you about changes your co-parent makes.
@@ -136,6 +147,7 @@ We do not sell personal data, and we do not use it for advertising.
 | --- | --- | --- |
 | **Your co-parent** | Everything you share — which is most of it | The purpose of the service |
 | **Guests and calendar friends you invite** | Only the record or calendar you granted, until the grant expires | Because you granted it |
+| **Whoever holds a calendar link you created** | Custody days and shared events, read-only, until you revoke the link | Because you created and shared it |
 | Google (Firebase) | Account data, all synced content, files, push tokens, crash and usage data | Our hosting, database, file storage and messaging provider |
 | Google (Calendar API) | Only your calendar, only if you connect it | The integration you enabled |
 
@@ -173,6 +185,7 @@ notifications are deleted after **30 days**.
   pet photographs;
 - removes you from the audience of anything your co-parent created, and ends any guest or
   calendar-friend access you granted or held;
+- deletes every read-only calendar link into your families, whichever of you created it;
 - unlinks the two of you, so their access ends immediately;
 - deletes the fingerprint of your Google Calendar authorisation, if you connected one, and
   any notifications still queued for you;

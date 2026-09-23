@@ -269,6 +269,36 @@ Two things worth knowing before touching this:
   use — trusting it would let whoever presents a stolen token first bind it to themselves. The
   app already prompts to reconnect when a refresh fails, so this surfaces as that prompt.
 
+## Calendar feed (MON-17)
+
+A read-only iCalendar subscription for a parent whose phone cannot run the app. Five functions,
+all shipped by the ordinary `firebase deploy --only functions`:
+
+| Function | Kind | What it does |
+| --- | --- | --- |
+| `createCalendarFeed` | callable | `{familyId, locale}` → `{feedId, url, webcalUrl}`. The caller must be live in the family (both profiles exist and name each other). Returns the token **once**, inside the URL. At most 10 live links per parent. |
+| `listCalendarFeeds` | callable | The caller's links — `feedId`, `familyId`, `createdAtMillis`, `lastUsedAtMillis`. Never a token or a hash. |
+| `revokeCalendarFeed` | callable | `{feedId}` → deletes the caller's link. Idempotent. |
+| `calendarFeed` | HTTPS (`onRequest`) | `GET /calendarFeed/<token>.ics` → `text/calendar`. No sign-in: the token is the authorisation. |
+| `sweepIdleCalendarFeeds` | scheduled, 04:30 UTC | Deletes links no calendar has fetched for 90 days. |
+
+What to know before touching it:
+
+- **Only `sha256(token)` is stored** — it is the document id in `calendar_feeds`, which
+  `firestore.rules` closes to every client. Never log a request path or a token; the handler logs
+  only an error's message.
+- **The URL** defaults to `https://us-central1-<project>.cloudfunctions.net/calendarFeed/<token>.ics`.
+  Set `CALENDAR_FEED_BASE_URL` in `functions/.env` (no trailing slash) if the functions move region
+  or a Hosting rewrite / custom domain fronts them — links already handed out keep the old base.
+- **The cache and rate limit are per instance** (15-minute render cache, 30 requests per token per
+  10 minutes). The feed record itself is read on every request, so a revoke is immediate.
+- **The custody port lives in `calendar-feed.js`** and must agree with `CustodyResolver` /
+  `ContactWindowCodec` on the Android side. `test/calendar-feed.test.js` pins it against fixtures;
+  add one there when the Kotlin changes.
+- **What is never served**: private events, tombstoned events, events of another family or not
+  created by one of the family's two parents, and anything that is not the calendar (chat,
+  expenses, children's records). Parents are titled by name, never by slot.
+
 ## Admin operations
 
 ### The multi-family migration (run these in order)
