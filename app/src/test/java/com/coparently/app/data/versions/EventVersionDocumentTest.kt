@@ -40,8 +40,14 @@ class EventVersionDocumentTest {
 
         assertEquals(
             setOf(
-                "eventId", "kind", "editorUid", "deviceTimeMillis", "sharedWith", "familyId",
-                "event", "formatVersion"
+                "eventId",
+                "kind",
+                "editorUid",
+                "deviceTimeMillis",
+                "sharedWith",
+                "familyId",
+                "event",
+                "formatVersion"
             ),
             document.keys
         )

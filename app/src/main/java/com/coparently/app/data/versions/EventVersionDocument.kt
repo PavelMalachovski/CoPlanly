@@ -128,6 +128,7 @@ object EventVersionDocument {
                 val kind = EventVersionKind.fromWire(data[KIND] as? String)
                 val editor = data[EDITOR_UID] as? String
                 val deviceTime = (data[DEVICE_TIME_MILLIS] as? Number)?.toLong()
+
                 @Suppress("UNCHECKED_CAST")
                 val snapshot = (data[EVENT] as? Map<String, Any?>)
                 if (eventId == null || kind == null || editor == null) return null
