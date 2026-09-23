@@ -243,4 +243,3 @@ class SeasonalScheduleViewModel @Inject constructor(
         const val TAG = "SeasonalScheduleVM"
     }
 }
-

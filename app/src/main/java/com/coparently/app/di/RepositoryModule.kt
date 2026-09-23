@@ -211,4 +211,3 @@ abstract class RepositoryModule {
         guestRepositoryImpl: GuestRepositoryImpl
     ): GuestRepository
 }
-

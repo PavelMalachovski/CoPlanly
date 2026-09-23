@@ -104,7 +104,7 @@ object HolidayFairnessCalculator {
     ): HolidayFairness {
         val first = LocalDate.of(year, 1, 1)
         val nights = mutableMapOf<String, Int>()
-        (0 until Year.of(year).length()).forEach { offset ->
+        for (offset in 0 until Year.of(year).length()) {
             custodyFor(first.plusDays(offset.toLong()))?.let { nights[it] = (nights[it] ?: 0) + 1 }
         }
         val rows = fixedRows(year) + publicHolidayRows(year, provider) + birthdayRows(year, birthdays) +

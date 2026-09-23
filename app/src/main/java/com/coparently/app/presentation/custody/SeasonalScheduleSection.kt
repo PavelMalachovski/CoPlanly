@@ -94,24 +94,42 @@ fun SeasonalScheduleSection(viewModel: SeasonalScheduleViewModel = hiltViewModel
     }
 
     editor?.let { target ->
-        SeasonalLayerDialog(
-            initial = target.draft,
-            isEditing = target.layerId != null,
-            suggestions = layers.suggestions,
+        LayerEditor(
+            target = target,
+            state = layers,
             parentNames = parentNames,
-            onConfirm = { draft ->
-                viewModel.saveLayer(draft, target.layerId)
-                editor = null
-            },
-            onDelete = target.layerId?.let { id ->
-                {
-                    viewModel.deleteLayer(id)
-                    editor = null
-                }
-            },
-            onDismiss = { editor = null }
+            viewModel = viewModel,
+            onClose = { editor = null }
         )
     }
+}
+
+/** The editor for one layer, new or existing; [onClose] runs after a save, a delete or a dismiss. */
+@Composable
+private fun LayerEditor(
+    target: EditorTarget,
+    state: SeasonalLayersUiState,
+    parentNames: ParentNames,
+    viewModel: SeasonalScheduleViewModel,
+    onClose: () -> Unit
+) {
+    SeasonalLayerDialog(
+        initial = target.draft,
+        isEditing = target.layerId != null,
+        suggestions = state.suggestions,
+        parentNames = parentNames,
+        onConfirm = { draft ->
+            viewModel.saveLayer(draft, target.layerId)
+            onClose()
+        },
+        onDelete = target.layerId?.let { id ->
+            {
+                viewModel.deleteLayer(id)
+                onClose()
+            }
+        },
+        onDismiss = onClose
+    )
 }
 
 /**
