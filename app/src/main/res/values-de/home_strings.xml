@@ -55,4 +55,7 @@
         <item quantity="one">%2$s schlägt vor, an %1$d Tag zu wechseln, wer das Kind hat: %3$s.</item>
         <item quantity="other">%2$s schlägt vor, an %1$d Tagen zu wechseln, wer das Kind hat: %3$s bis %4$s.</item>
     </plurals>
+
+    <!-- The empty seven-day card's action. -->
+    <string name="home_week_empty_action">Termin hinzufügen</string>
 </resources>

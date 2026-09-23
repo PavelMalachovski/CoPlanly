@@ -50,4 +50,10 @@
     <string name="common_error_permission">У вас немає прав на цю дію.</string>
     <string name="common_error_invalid_input">Деякі дані відсутні або неправильні. Перевірте їх і спробуйте ще раз.</string>
     <string name="common_error_sync">Не вдалося синхронізувати. Спробуйте ще раз.</string>
+
+    <!-- Audit leftovers (Sept 2026): required-field marker and the discard-changes dialog. -->
+    <string name="common_required">Обов’язково</string>
+    <string name="common_keep_editing">Продовжити редагування</string>
+    <string name="common_discard">Не зберігати</string>
+    <string name="common_discard_changes_title">Не зберігати зміни?</string>
 </resources>

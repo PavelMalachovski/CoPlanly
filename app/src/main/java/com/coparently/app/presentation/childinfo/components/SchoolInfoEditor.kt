@@ -10,6 +10,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.coparently.app.R
 import com.coparently.app.domain.model.SchoolInfo
+import com.coparently.app.presentation.common.ConfirmationDialog
 
 /**
  * Editor for managing school information.
@@ -31,6 +32,36 @@ fun SchoolInfoEditor(
     var teacherName by remember { mutableStateOf(schoolInfo?.teacherName ?: "") }
     var teacherEmail by remember { mutableStateOf(schoolInfo?.teacherEmail ?: "") }
     var grade by remember { mutableStateOf(schoolInfo?.grade ?: "") }
+    var confirmClear by remember { mutableStateOf(false) }
+
+    // "Clear" empties six fields at once and sits right beside Save, with nothing between a slip
+    // of the thumb and retyping a school's whole record — so it asks first, but only when there
+    // is something to lose.
+    val clear = {
+        onSave(null)
+        name = ""
+        address = ""
+        phone = ""
+        teacherName = ""
+        teacherEmail = ""
+        grade = ""
+        isEditing = false
+    }
+    val hasContent = listOf(name, address, phone, teacherName, teacherEmail, grade).any { it.isNotBlank() }
+    if (confirmClear) {
+        ConfirmationDialog(
+            title = stringResource(R.string.childinfo_school_clear_title),
+            message = stringResource(R.string.childinfo_school_clear_message),
+            confirmText = stringResource(R.string.childinfo_clear),
+            dismissText = stringResource(R.string.childinfo_cancel),
+            isDestructive = true,
+            onDismiss = { confirmClear = false },
+            onConfirm = {
+                confirmClear = false
+                clear()
+            }
+        )
+    }
 
     Column(
         modifier = modifier,
@@ -117,16 +148,7 @@ fun SchoolInfoEditor(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         OutlinedButton(
-                            onClick = {
-                                onSave(null)
-                                name = ""
-                                address = ""
-                                phone = ""
-                                teacherName = ""
-                                teacherEmail = ""
-                                grade = ""
-                                isEditing = false
-                            },
+                            onClick = { if (hasContent) confirmClear = true else clear() },
                             modifier = Modifier.weight(1f)
                         ) {
                             Text(stringResource(R.string.childinfo_clear))

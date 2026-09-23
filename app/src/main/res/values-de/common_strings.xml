@@ -50,4 +50,10 @@
     <string name="common_error_permission">Dafür fehlt dir die Berechtigung.</string>
     <string name="common_error_invalid_input">Einige Angaben fehlen oder sind ungültig. Prüfe sie und versuche es erneut.</string>
     <string name="common_error_sync">Synchronisierung fehlgeschlagen. Bitte versuche es erneut.</string>
+
+    <!-- Audit leftovers (Sept 2026): required-field marker and the discard-changes dialog. -->
+    <string name="common_required">Pflichtfeld</string>
+    <string name="common_keep_editing">Weiter bearbeiten</string>
+    <string name="common_discard">Verwerfen</string>
+    <string name="common_discard_changes_title">Änderungen verwerfen?</string>
 </resources>

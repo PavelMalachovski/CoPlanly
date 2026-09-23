@@ -115,4 +115,10 @@
     <string name="childinfo_load_failed">Не вдалося завантажити дані дітей. Спробуйте ще раз.</string>
     <string name="childinfo_delete_failed">Не вдалося видалити дані дитини. Спробуйте ще раз.</string>
     <string name="childinfo_sync_failed">Не вдалося синхронізувати дані дітей. Спробуйте ще раз.</string>
+
+    <!-- School "Clear" confirmation, and the detail screen of a child deleted while it was open. -->
+    <string name="childinfo_school_clear_title">Очистити дані про школу?</string>
+    <string name="childinfo_school_clear_message">Поля школи, вчителя та контактів буде очищено.</string>
+    <string name="childinfo_record_gone_title">Цей запис більше не існує</string>
+    <string name="childinfo_record_gone_description">Його видалили на цьому телефоні або на телефоні іншого з батьків.</string>
 </resources>

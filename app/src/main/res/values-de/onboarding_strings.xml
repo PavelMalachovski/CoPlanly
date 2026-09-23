@@ -60,4 +60,8 @@
     <string name="onboarding_split_agreed_body">Bereits mit %1$s vereinbart. Verschiebe den Regler, um eine andere Aufteilung vorzuschlagen — die andere Seite wird um Bestätigung gebeten.</string>
     <string name="onboarding_custody_set_body">Ein Plan ist bereits eingerichtet: %1$s. Prüfe ihn, oder schließe die Einrichtung ab und ändere ihn später in den Einstellungen.</string>
     <string name="onboarding_custody_review">Plan ansehen</string>
+
+    <!-- Asked when Skip would leave something typed on this step unsaved. -->
+    <string name="onboarding_skip_unsaved_title">Ohne Speichern überspringen?</string>
+    <string name="onboarding_skip_unsaved_message">Was du in diesem Schritt eingegeben hast, ist noch nicht gespeichert. Überspringen geht ohne diese Angaben weiter, Weiter speichert sie.</string>
 </resources>

@@ -52,4 +52,7 @@
     <string name="parenting_plan_q_money_extraordinary">How will one-off costs — glasses, a school trip, a laptop — be shared?</string>
     <string name="parenting_plan_q_communication_between_parents">How will you pass on information about the child, and how quickly do you expect a reply?</string>
     <string name="parenting_plan_q_communication_disagreement">What will you do when you cannot agree?</string>
+
+    <!-- Asked when the question sheet is closed with an edited, unsaved answer. -->
+    <string name="parenting_plan_discard_message">Your answer has not been saved. If you close the question now, what you typed is lost.</string>
 </resources>

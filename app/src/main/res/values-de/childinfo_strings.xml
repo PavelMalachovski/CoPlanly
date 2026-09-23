@@ -115,4 +115,10 @@
     <string name="childinfo_load_failed">Die Angaben zu den Kindern konnten nicht geladen werden. Bitte versuche es erneut.</string>
     <string name="childinfo_delete_failed">Die Angaben zum Kind konnten nicht gelöscht werden. Bitte versuche es erneut.</string>
     <string name="childinfo_sync_failed">Die Angaben zu den Kindern konnten nicht synchronisiert werden. Bitte versuche es erneut.</string>
+
+    <!-- School "Clear" confirmation, and the detail screen of a child deleted while it was open. -->
+    <string name="childinfo_school_clear_title">Schulangaben leeren?</string>
+    <string name="childinfo_school_clear_message">Die Felder zu Schule, Lehrkraft und Kontakt werden geleert.</string>
+    <string name="childinfo_record_gone_title">Dieser Eintrag existiert nicht mehr</string>
+    <string name="childinfo_record_gone_description">Er wurde auf diesem Telefon oder auf dem des anderen Elternteils gelöscht.</string>
 </resources>

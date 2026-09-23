@@ -61,4 +61,7 @@
         <item quantity="many">%2$s предлагает изменить, у кого ребёнок, на %1$d дней, с %3$s по %4$s.</item>
         <item quantity="other">%2$s предлагает изменить, у кого ребёнок, на %1$d дней, с %3$s по %4$s.</item>
     </plurals>
+
+    <!-- The empty seven-day card's action. -->
+    <string name="home_week_empty_action">Добавить событие</string>
 </resources>

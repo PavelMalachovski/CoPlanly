@@ -63,4 +63,8 @@
     <string name="onboarding_split_agreed_body">Already agreed with %1$s. Move the slider to propose a different split — they will be asked to confirm it.</string>
     <string name="onboarding_custody_set_body">A schedule is already set up: %1$s. Check it, or finish now and change it later from Settings.</string>
     <string name="onboarding_custody_review">Review the schedule</string>
+
+    <!-- Asked when Skip would leave something typed on this step unsaved. -->
+    <string name="onboarding_skip_unsaved_title">Skip without saving?</string>
+    <string name="onboarding_skip_unsaved_message">What you entered on this step has not been saved. Skip moves on without it; Next saves it.</string>
 </resources>
