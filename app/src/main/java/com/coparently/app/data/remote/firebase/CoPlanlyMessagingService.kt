@@ -112,7 +112,9 @@ class CoPlanlyMessagingService : FirebaseMessagingService() {
         // other type, and showNotification only reads it for that one branch.
         val conversationId = data[PushPayload.CONVERSATION_ID]
 
-        showNotification(text.title, text.body, type, conversationId)
+        showNotification(
+            NotificationTarget(text, type, conversationId, data[PushPayload.FAMILY_ID]?.takeIf { it.isNotBlank() })
+        )
     }
 
     /**
@@ -190,11 +192,19 @@ class CoPlanlyMessagingService : FirebaseMessagingService() {
      * notification. Every other notification type keeps a timestamp id so
      * unrelated notifications keep accumulating.
      *
-     * @param conversationId The `data["conversationId"]` [onMessageReceived] read off the
-     *   message; only meaningful (and only ever non-null) for [TYPE_CHAT_MESSAGE].
+     * **The family rides along as an intent extra** ([PushPayload.FAMILY_ID], M-8), and
+     * `MainActivity` switches to it before it hands the link to navigation — a push from the
+     * family this device is not showing must not open on the other family's screens. It is also
+     * part of the request code, because a PendingIntent is identified by request code and
+     * intent data but *not* by extras: two same-typed pushes from two families would otherwise
+     * share one PendingIntent, `FLAG_UPDATE_CURRENT` would overwrite the first one's family with
+     * the second's, and tapping the older notification would switch to the wrong family.
+     *
+     * @param target What to show and where a tap leads; see [NotificationTarget].
      */
-    private fun showNotification(title: String, body: String, type: String?, conversationId: String? = null) {
+    private fun showNotification(target: NotificationTarget) {
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val type = target.type
 
         val isPairingEvent = type == TYPE_PAIRING_ACCEPTED || type == TYPE_PAIRING_REMOVED
         val isChatMessage = type == TYPE_CHAT_MESSAGE
@@ -202,16 +212,19 @@ class CoPlanlyMessagingService : FirebaseMessagingService() {
             isPairingEvent -> Intent(Intent.ACTION_VIEW, Uri.parse(PAIRING_DEEP_LINK)).apply {
                 setPackage(packageName)
             }
-            isChatMessage -> Intent(Intent.ACTION_VIEW, Uri.parse(ChatUri.build(conversationId))).apply {
+            isChatMessage -> Intent(Intent.ACTION_VIEW, Uri.parse(ChatUri.build(target.conversationId))).apply {
                 setPackage(packageName)
             }
             else -> packageManager.getLaunchIntentForPackage(packageName)
         }
+        target.familyId?.let { intent?.putExtra(PushPayload.FAMILY_ID, it) }
 
         // Distinct per notification type so a pairing-accepted notification's
         // tap target can never overwrite a differently-typed one's PendingIntent
-        // (PendingIntent identity is request code + intent action/data/component).
-        val requestCode = type?.hashCode() ?: 0
+        // (PendingIntent identity is request code + intent action/data/component),
+        // and per family for the reason the KDoc gives. A push with no family keeps
+        // the type-only code it always had.
+        val requestCode = target.familyId?.let { listOf(type, it).hashCode() } ?: type?.hashCode() ?: 0
         val pendingIntent = PendingIntent.getActivity(
             this,
             requestCode,
@@ -220,8 +233,8 @@ class CoPlanlyMessagingService : FirebaseMessagingService() {
         )
 
         val notification = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle(title)
-            .setContentText(body)
+            .setContentTitle(target.text.title)
+            .setContentText(target.text.body)
             // android.R.drawable.ic_dialog_info is a framework placeholder and
             // renders as a grey blob in the status bar.
             .setSmallIcon(R.drawable.ic_notification)
@@ -262,6 +275,21 @@ class CoPlanlyMessagingService : FirebaseMessagingService() {
 
     /** A composed notification, ready to render. */
     private data class PushText(val title: String, val body: String)
+
+    /**
+     * A notification and where tapping it leads.
+     *
+     * @property conversationId The `data["conversationId"]` read off the message; only
+     *   meaningful (and only ever non-null) for [TYPE_CHAT_MESSAGE].
+     * @property familyId The family the push belongs to ([PushPayload.FAMILY_ID]), or null for
+     *   a payload from an older sender or one that names no family.
+     */
+    private data class NotificationTarget(
+        val text: PushText,
+        val type: String?,
+        val conversationId: String?,
+        val familyId: String?
+    )
 
     /** Which of the payload's names a body string takes, in order. */
     private enum class BodyArgs { ACTOR_AND_SUBJECT, ACTOR, DATE, DAY_COUNT, NONE }

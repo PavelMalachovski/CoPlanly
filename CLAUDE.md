@@ -117,6 +117,14 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     colour uses `chipFill` (the deep tone) with `ParentColors.onFill(...)` for the text, never
     white on the full hue (4.35:1 on pink). The picker (Settings → Family, onboarding profile
     step) was hidden behind `PARENT_COLOUR_PICKER_ENABLED` until this landed; the flag is gone.
+13. **The family switcher is one state and one dialog, and it appears at two** (M-8, September
+    2026). `presentation/common/FamilySwitcher.kt` holds `FamilySwitcherChip` (Home and Expenses
+    top bars, beside the gear) and `FamilySwitcherDialog`, which the Settings row opens too; both
+    read `FamilySwitcherViewModel`, observed off the signed-in Room row. Don't give Settings its
+    own copy of the family list again — two sources for "which family is on screen" is how they
+    come to disagree. With one co-parent the chip renders nothing. It is deliberately not on the
+    Calendar header (item 5's fixed four) or on Chat (see the known issue on chat and the first
+    co-parent).
 
 ## UX/UI overhaul (July 2026 design review) — implemented, keep consistent
 
@@ -522,6 +530,14 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     from any of them is a push that silently never appears. This is also why service-layer
     string extraction (**CQ-14**) was *not* a prerequisite: the string is read on the receiving
     device, which has a `Context` and all five translations.
+    **A push also names its family** (`PushPayload.FAMILY_ID`, M-8) — a *field*, which every type
+    may carry and an older build ignores, so the four-place rule does not apply to it.
+    `FcmService.queueNotificationForUser` stamps it for every client push (a pair is a family, so
+    it is derived there, never by each payload builder), the functions stamp `chat_message` and
+    `pairing_accepted`, and `firestore.rules`' `isPushFamily` bounds it and requires the sender
+    and the addressee both to be in it. The tap carries it as an intent extra **and** in the
+    PendingIntent request code, and `MainActivity.readLaunchIntent` switches the family **before**
+    arming any deep link — arming first would let `NavGraph` open the target on the wrong family.
 16. **`sharedWith` is computed at upload time and never recomputed for a row already marked
     synced.** An event created while the account was unpaired is uploaded with an audience of
     one uid, and nothing revisits it — so it stays unreadable by a co-parent who arrives later.
@@ -792,6 +808,18 @@ whatever you were doing; a stale "known issue" costs more than a missing one.
   uncaught failure in `viewModelScope.launch` terminates the process — and don't make the retry
   unbounded: a genuinely broken rule would then reconnect for the life of the process, and any
   test of the give-up path spins on the virtual clock instead of finishing.
+
+- **Chat follows the *first* co-parent, not the selected family** (found in M-8, September 2026).
+  `ChatViewModel.coParentLink`/`unreadCount` and `ChatMirror` key on
+  `PairingRepository.observePairingState()`, which reads the **server's** `users/{uid}.partnerId`
+  (`partnersOf(...)[0]`) rather than the local projection `SelectedFamilySource` writes. For a
+  one-family account the two are the same uid and nothing is wrong. With two families the Chat
+  tab, its badge and the process-wide mirror stay on the first family whatever the switcher says;
+  the second family's thread fills only while it is open, and is reached from the conversation
+  list or its push (which now switches the family on tap). This is also why cross-family badges
+  were **not** built: a Room count across conversations would silently undercount the family
+  nothing mirrors. The fix and its order are in `docs/ROADMAP.md` M-8 — don't paper over it with a
+  count.
 
 - **Cross-time-zone chat is implemented but never verified on two devices.** The August 2026
   chat sync moved message times to epoch millis specifically so two parents in different zones

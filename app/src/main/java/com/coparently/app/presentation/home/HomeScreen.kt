@@ -81,6 +81,7 @@ import com.coparently.app.domain.home.WeekEntry
 import com.coparently.app.domain.model.FamilyKind
 import com.coparently.app.presentation.calendar.components.DayAgendaCard
 import com.coparently.app.presentation.changerequests.ChangeRequestViewModel
+import com.coparently.app.presentation.common.FamilySwitcherChip
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.PillChip
 import com.coparently.app.presentation.common.SectionGroup
@@ -226,6 +227,8 @@ fun HomeScreen(
                     }
                 },
                 actions = {
+                    // Only with two families or more (M-8); nothing at all with one.
+                    FamilySwitcherChip()
                     IconButton(onClick = onOpenSettings) {
                         Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.nav_settings))
                     }

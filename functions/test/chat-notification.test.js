@@ -98,6 +98,8 @@ describe('notifyOfChatMessage', () => {
     assert.strictEqual(db._added[0].collection, 'notification_queue');
     assert.strictEqual(db._added[0].data.targetUserId, 'bob');
     assert.strictEqual(db._added[0].data.data.type, 'chat_message');
+    // M-8: the tap switches to this family before it opens the thread.
+    assert.strictEqual(db._added[0].data.data.familyId, 'alice__bob');
   });
 
   it('queues nothing when the recipient has already read past the message', async () => {

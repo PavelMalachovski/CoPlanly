@@ -91,7 +91,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
-import com.coparently.app.data.family.FamilyOption
 import com.coparently.app.data.repository.RatioSubmission
 import com.coparently.app.data.sync.SyncStatus
 import com.coparently.app.domain.expenses.SplitRatio
@@ -100,6 +99,8 @@ import com.coparently.app.domain.model.FamilyKind
 import com.coparently.app.domain.money.SupportedCurrency
 import com.coparently.app.domain.telemetry.TelemetryConsent
 import com.coparently.app.presentation.common.ConfirmationDialog
+import com.coparently.app.presentation.common.FamilySwitcherDialog
+import com.coparently.app.presentation.common.FamilySwitcherViewModel
 import com.coparently.app.presentation.common.GroupLabel
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.PillChip
@@ -112,6 +113,7 @@ import com.coparently.app.presentation.common.animations.sectionEnter
 import com.coparently.app.presentation.common.animations.sectionExit
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.coverageNote
+import com.coparently.app.presentation.common.familyLabel
 import com.coparently.app.presentation.common.labelRes
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.consent.TelemetryConsentViewModel
@@ -203,11 +205,11 @@ fun SettingsScreen(
     var showCountryPicker by rememberSaveable { mutableStateOf(false) }
     val country by settingsViewModel.country.collectAsState()
     var showFamilySwitcher by rememberSaveable { mutableStateOf(false) }
-    val families by settingsViewModel.families.collectAsState()
-    val selectedFamilyId by settingsViewModel.selectedFamilyId.collectAsState()
-    // On entry, and again after a switch. The set changes only on a pairing transition, so a
-    // listener would pay a Firestore read per relationship on every unrelated redraw.
-    LaunchedEffect(Unit) { settingsViewModel.refreshFamilies() }
+    // The same state and the same switch as the top-bar chip (M-8), so the two entry points
+    // cannot disagree about which family is on screen. Observed off the signed-in row rather
+    // than reloaded on entry; the co-parents' names are the one remote read, and it is cached.
+    val familySwitcherViewModel: FamilySwitcherViewModel = hiltViewModel()
+    val familySwitcher by familySwitcherViewModel.state.collectAsState()
     var showSplitPicker by rememberSaveable { mutableStateOf(false) }
 
     if (showSplitPicker) {
@@ -234,10 +236,10 @@ fun SettingsScreen(
     }
     if (showFamilySwitcher) {
         FamilySwitcherDialog(
-            families = families,
-            selectedFamilyId = selectedFamilyId,
+            families = familySwitcher.families,
+            selectedFamilyId = familySwitcher.selectedFamilyId,
             onSelect = { familyId ->
-                settingsViewModel.selectFamily(familyId)
+                familySwitcherViewModel.select(familyId)
                 showFamilySwitcher = false
             },
             onDismiss = { showFamilySwitcher = false }
@@ -420,15 +422,11 @@ fun SettingsScreen(
                     // **At two, not at one.** A parent with a single co-parent sees the screen
                     // they always saw; a picker for a set of one is design item 8 in miniature.
                     // The same rule the child filter follows.
-                    if (families.size > 1) {
+                    if (familySwitcher.canSwitch) {
                         SectionRow(
                             icon = Icons.Default.SwapHoriz,
                             title = stringResource(R.string.settings_family_shown),
-                            supporting = families
-                                .firstOrNull { it.familyId == selectedFamilyId }
-                                ?.partnerName
-                                ?.takeIf { it.isNotBlank() }
-                                ?: stringResource(R.string.settings_family_unnamed),
+                            supporting = familyLabel(familySwitcher.selected),
                             onClick = {
                                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 showFamilySwitcher = true
@@ -1284,69 +1282,6 @@ private fun caresForSummary(kinds: Set<FamilyKind>): String {
     }
 }
 
-/**
- * Changes what the family co-parents.
- *
- * A dialog rather than a second screen: two checkboxes and a confirm is the whole interaction,
- * and it is reached from a row that already says the current answer. Confirm is disabled with
- * nothing ticked — a family that co-parents neither is not a state this product has, and an OK
- * that silently did nothing would be worse than one that is plainly unavailable.
- *
- * @param selected What is currently agreed, as the union of both parents' answers.
- * @param onConfirm Called with the new set; only this parent's own record is written.
- * @param onDismiss Closes without changing anything.
- */
-/**
- * Which family this device is showing.
- *
- * Named by the co-parent, because that is what a parent recognises — the family id is a pair of
- * uids and means nothing to anyone. A relationship whose profile could not be read shows as
- * unnamed rather than being dropped: a switcher missing a row is worse than one with a row the
- * parent can still recognise by position.
- */
-@Composable
-private fun FamilySwitcherDialog(
-    families: List<FamilyOption>,
-    selectedFamilyId: String?,
-    onSelect: (String) -> Unit,
-    onDismiss: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.settings_family_switch)) },
-        text = {
-            Column {
-                families.forEach { family ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .selectable(
-                                selected = family.familyId == selectedFamilyId,
-                                role = Role.RadioButton
-                            ) { onSelect(family.familyId) }
-                            .padding(vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = family.familyId == selectedFamilyId,
-                            onClick = null
-                        )
-                        Text(
-                            family.partnerName.takeIf { it.isNotBlank() }
-                                ?: stringResource(R.string.settings_family_unnamed)
-                        )
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.settings_family_kind_cancel))
-            }
-        }
-    )
-}
-
 @Composable
 private fun ParentColorDialog(
     selected: ParentColorChoice?,
@@ -1475,6 +1410,18 @@ private fun CountryDialog(
     )
 }
 
+/**
+ * Changes what the family co-parents.
+ *
+ * A dialog rather than a second screen: two checkboxes and a confirm is the whole interaction,
+ * and it is reached from a row that already says the current answer. Confirm is disabled with
+ * nothing ticked — a family that co-parents neither is not a state this product has, and an OK
+ * that silently did nothing would be worse than one that is plainly unavailable.
+ *
+ * @param selected What is currently agreed, as the union of both parents' answers.
+ * @param onConfirm Called with the new set; only this parent's own record is written.
+ * @param onDismiss Closes without changing anything.
+ */
 @Composable
 private fun FamilyKindDialog(
     selected: Set<FamilyKind>,
