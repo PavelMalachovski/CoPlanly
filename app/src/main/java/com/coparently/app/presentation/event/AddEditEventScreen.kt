@@ -118,7 +118,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
-import java.time.ZoneId
+import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.util.UUID
 
@@ -1294,8 +1294,12 @@ fun AddEditEventScreen(
                                 )
                             }
                         }
+                        val importantLabel = stringResource(R.string.event_form_important_title)
                         Switch(
                             checked = isImportant,
+                            // Named for TalkBack: a bare switch beside its label reads as
+                            // "Switch, off" with nothing to say what it toggles.
+                            modifier = Modifier.semantics { contentDescription = importantLabel },
                             onCheckedChange = {
                                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 isImportant = it
@@ -1346,8 +1350,13 @@ fun AddEditEventScreen(
                             style = MaterialTheme.typography.titleSmall,
                             modifier = Modifier.weight(1f)
                         )
+                        val participatesLabel = stringResource(
+                            R.string.friend_event_participates,
+                            friend.name
+                        )
                         Switch(
                             checked = friendParticipates == friend.friendUid,
+                            modifier = Modifier.semantics { contentDescription = participatesLabel },
                             onCheckedChange = { on ->
                                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 friendParticipates = if (on) friend.friendUid else null
@@ -1393,8 +1402,10 @@ fun AddEditEventScreen(
                             )
                         }
                     }
+                    val privateLabel = stringResource(R.string.event_form_private_title)
                     Switch(
                         checked = isPrivate,
+                        modifier = Modifier.semantics { contentDescription = privateLabel },
                         onCheckedChange = {
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             isPrivate = it
@@ -1504,7 +1515,7 @@ fun AddEditEventScreen(
     if (showRecurrenceEndPicker) {
         val recurrenceEndPickerState = rememberDatePickerState(
             initialSelectedDateMillis = (recurrenceEndDate ?: startDate.plusMonths(3))
-                .atStartOfDay(ZoneId.systemDefault())
+                .atStartOfDay(ZoneOffset.UTC)
                 .toInstant()
                 .toEpochMilli()
         )
@@ -1515,9 +1526,10 @@ fun AddEditEventScreen(
                 TextButton(
                     onClick = {
                         recurrenceEndPickerState.selectedDateMillis?.let { millis ->
-                            // LocalDate.ofInstant requires API 34; atZone works from minSdk 26
+                            // LocalDate.ofInstant requires API 34; atZone works from minSdk 26.
+                            // UTC, not the system zone: DatePickerState speaks UTC-midnight millis.
                             recurrenceEndDate = Instant.ofEpochMilli(millis)
-                                .atZone(ZoneId.systemDefault())
+                                .atZone(ZoneOffset.UTC)
                                 .toLocalDate()
                         }
                         showRecurrenceEndPicker = false
@@ -1539,7 +1551,7 @@ fun AddEditEventScreen(
     // Date Picker Dialog
     if (showDatePicker) {
         val datePickerState = rememberDatePickerState(
-            initialSelectedDateMillis = startDate.atStartOfDay(ZoneId.systemDefault())
+            initialSelectedDateMillis = startDate.atStartOfDay(ZoneOffset.UTC)
                 .toInstant()
                 .toEpochMilli()
         )
@@ -1550,9 +1562,10 @@ fun AddEditEventScreen(
                 TextButton(
                     onClick = {
                         datePickerState.selectedDateMillis?.let { millis ->
-                            // LocalDate.ofInstant requires API 34; atZone works from minSdk 26
+                            // LocalDate.ofInstant requires API 34; atZone works from minSdk 26.
+                            // UTC, not the system zone: DatePickerState speaks UTC-midnight millis.
                             startDate = Instant.ofEpochMilli(millis)
-                                .atZone(ZoneId.systemDefault())
+                                .atZone(ZoneOffset.UTC)
                                 .toLocalDate()
                         }
                         showDatePicker = false

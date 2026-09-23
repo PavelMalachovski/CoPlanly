@@ -3,57 +3,6 @@ package com.coparently.app.presentation.theme
 import androidx.compose.ui.unit.dp
 
 /**
- * App-wide constants for animations, timings, and configurations.
- * Following Material 3 guidelines and Android best practices.
- */
-object AnimationConstants {
-    /**
-     * Fast animation duration for quick transitions and feedback.
-     * Used for: ripples, quick fades, micro-interactions
-     */
-    const val FAST_ANIMATION_DURATION = 150
-
-    /**
-     * Normal animation duration for standard UI transitions.
-     * Used for: standard slides, crossfades, scale animations
-     */
-    const val NORMAL_ANIMATION_DURATION = 200
-
-    /**
-     * Slow animation duration for emphasized transitions.
-     * Used for: emphasized reveals, complex transitions
-     */
-    const val SLOW_ANIMATION_DURATION = 300
-
-    /**
-     * Very slow animation for special effects.
-     * Used for: pulsing animations, icon rotations
-     */
-    const val VERY_SLOW_ANIMATION_DURATION = 2000
-
-    /**
-     * Ripple alpha value for Material Design ripple effects.
-     */
-    const val RIPPLE_ALPHA = 0.12f
-
-    /**
-     * Disabled alpha value for disabled UI elements.
-     * Following Material Design accessibility guidelines.
-     */
-    const val DISABLED_ALPHA = 0.38f
-
-    /**
-     * Hover alpha value for hover states.
-     */
-    const val HOVER_ALPHA = 0.08f
-
-    /**
-     * Light background alpha for tinted backgrounds.
-     */
-    const val LIGHT_BACKGROUND_ALPHA = 0.2f
-}
-
-/**
  * Layout constants for consistent spacing and sizing across the app.
  * Following Material 3 guidelines for touch targets and visual density.
  */

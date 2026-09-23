@@ -22,7 +22,8 @@
 # `node tools/check-r8-mapping.js` here as CI does, because a release that renames a Gson field
 # ships a child's medical profile as an empty object (audit §2.8).
 #
-# Not automated on purpose: the `versionCode` bump, the Play upload and the closed-track roll-out
+# `versionCode` is 100 + the run number (passed as -PCOPLANLY_VERSION_CODE).
+# Not automated on purpose: the Play upload and the closed-track roll-out
 # are decisions, and REL-7 (install the build, confirm a medical profile reaches the co-parent
 # non-empty) is a test only a device can run.
 
@@ -58,42 +59,58 @@ jobs:
 
       # Decoded into the working directory, which is discarded with the runner. Nothing here is
       # written to a path Gradle caches.
+      #
+      # The guards are in the shell, not in a step-level `if:` — an `if:` is evaluated before the
+      # step's own `env:` exists, so `if: env.X != ''` against a variable defined in that same
+      # step is always false and the step never runs.
       - name: Restore google-services.json
-        if: ${{ env.GOOGLE_SERVICES_JSON_BASE64 != '' }}
         env:
           GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
-        run: echo "$GOOGLE_SERVICES_JSON_BASE64" | base64 -d > app/google-services.json
+        run: |
+          if [ -z "$GOOGLE_SERVICES_JSON_BASE64" ]; then
+            echo "::error::GOOGLE_SERVICES_JSON_BASE64 is not set — a bundle without Firebase config crashes at launch"
+            exit 1
+          fi
+          echo "$GOOGLE_SERVICES_JSON_BASE64" | base64 -d > app/google-services.json
 
       - name: Restore the upload keystore
-        if: ${{ env.KEYSTORE_BASE64 != '' }}
         env:
           KEYSTORE_BASE64: ${{ secrets.COPLANLY_UPLOAD_KEYSTORE_BASE64 }}
         run: |
-          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/coplanly-upload.jks"
-          echo "COPLANLY_RELEASE_STORE_FILE=$RUNNER_TEMP/coplanly-upload.jks" >> "$GITHUB_ENV"
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/coplanly-upload.jks"
+            echo "COPLANLY_RELEASE_STORE_FILE=$RUNNER_TEMP/coplanly-upload.jks" >> "$GITHUB_ENV"
+          fi
 
       - name: Build the release bundle
         env:
           COPLANLY_RELEASE_STORE_PASSWORD: ${{ secrets.COPLANLY_RELEASE_STORE_PASSWORD }}
           COPLANLY_RELEASE_KEY_ALIAS: ${{ secrets.COPLANLY_RELEASE_KEY_ALIAS }}
           COPLANLY_RELEASE_KEY_PASSWORD: ${{ secrets.COPLANLY_RELEASE_KEY_PASSWORD }}
-        run: ./gradlew bundleRelease
+        # Every upload to Play needs a higher versionCode than the last. The run number only
+        # grows, and the offset keeps it above the hard-coded default in app/build.gradle.kts.
+        run: ./gradlew bundleRelease -PCOPLANLY_VERSION_CODE=$(( 100 + ${{ github.run_number }} ))
 
       - name: Verify R8 kept the Gson field names
         run: node tools/check-r8-mapping.js
 
       - name: Say whether the bundle is signed
+        env:
+          STORE_PASSWORD: ${{ secrets.COPLANLY_RELEASE_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.COPLANLY_RELEASE_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.COPLANLY_RELEASE_KEY_PASSWORD }}
         run: |
           {
             echo "## Release bundle"
             echo
-            if [ -n "${COPLANLY_RELEASE_STORE_FILE:-}" ]; then
+            if [ -n "${COPLANLY_RELEASE_STORE_FILE:-}" ] && [ -n "$STORE_PASSWORD" ] \
+              && [ -n "$KEY_ALIAS" ] && [ -n "$KEY_PASSWORD" ]; then
               echo "- Signing: **signed with the upload key**"
             else
               echo "- Signing: **UNSIGNED** — one or more of the four COPLANLY_RELEASE_* secrets is missing"
             fi
             echo "- Note: ${{ github.event.inputs.track_note }}"
-            echo "- versionName / versionCode: $(grep -E 'versionName|versionCode' app/build.gradle.kts | tr -s ' ' | tr '\n' ' ')"
+            echo "- versionCode: $(( 100 + ${{ github.run_number }} )), versionName: $(grep -E 'versionName' app/build.gradle.kts | tr -s ' ')"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload the bundle

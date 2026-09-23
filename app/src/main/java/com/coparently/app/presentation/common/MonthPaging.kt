@@ -25,7 +25,7 @@ import java.time.YearMonth
  * it is that both places use the *same* number. Two constants half a codebase apart drift the
  * first time somebody tunes one of them.
  */
-const val MONTH_PAGING_MS = 500
+const val MONTH_PAGING_MS = com.coparently.app.presentation.theme.Motion.LONG_MS
 
 /** The month-change animation: one calm, direction-independent tween. */
 fun <T> monthPagingTween(): FiniteAnimationSpec<T> =

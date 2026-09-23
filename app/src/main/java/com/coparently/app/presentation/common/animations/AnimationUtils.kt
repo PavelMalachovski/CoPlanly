@@ -2,9 +2,6 @@ package com.coparently.app.presentation.common.animations
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.TransformOrigin
 
 /**
@@ -15,20 +12,17 @@ import androidx.compose.ui.graphics.TransformOrigin
 /**
  * Standard duration for short animations (150ms).
  */
-/**
- * Standard duration for short animations (150ms).
- */
-const val ANIMATION_DURATION_SHORT = com.coparently.app.utils.AnimationConstants.FAST
+const val ANIMATION_DURATION_SHORT = com.coparently.app.presentation.theme.Motion.SHORT_MS
 
 /**
  * Standard duration for medium animations (300ms).
  */
-const val ANIMATION_DURATION_MEDIUM = com.coparently.app.utils.AnimationConstants.NORMAL
+const val ANIMATION_DURATION_MEDIUM = com.coparently.app.presentation.theme.Motion.MEDIUM_MS
 
 /**
  * Standard duration for long animations (500ms).
  */
-const val ANIMATION_DURATION_LONG = com.coparently.app.utils.AnimationConstants.SLOW
+const val ANIMATION_DURATION_LONG = com.coparently.app.presentation.theme.Motion.LONG_MS
 
 /**
  * Standard easing for emphasized animations (deceleration).
@@ -45,51 +39,6 @@ val EmphasizedAccelerateEasing = CubicBezierEasing(0.3f, 0.0f, 0.8f, 0.15f)
  * Standard easing for emphasized decelerate.
  */
 val EmphasizedDecelerateEasing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1.0f)
-
-/**
- * Creates a spring animation spec with standard dampening.
- */
-fun <T> standardSpring(
-    dampingRatio: Float = Spring.DampingRatioMediumBouncy,
-    stiffness: Float = Spring.StiffnessLow
-): SpringSpec<T> = spring(
-    dampingRatio = dampingRatio,
-    stiffness = stiffness
-)
-
-/**
- * Creates a tween animation spec with emphasized easing.
- */
-fun <T> emphasizedTween(
-    durationMillis: Int = ANIMATION_DURATION_MEDIUM
-): TweenSpec<T> = tween(
-    durationMillis = durationMillis,
-    easing = EmphasizedEasing
-)
-
-/**
- * Standard enter transition: Fade in + Slide up.
- */
-fun fadeInSlideUp(
-    durationMillis: Int = ANIMATION_DURATION_MEDIUM
-): EnterTransition = fadeIn(
-    animationSpec = tween(durationMillis, easing = EmphasizedEasing)
-) + slideInVertically(
-    animationSpec = tween(durationMillis, easing = EmphasizedEasing),
-    initialOffsetY = { it / 4 }
-)
-
-/**
- * Standard exit transition: Fade out + Slide down.
- */
-fun fadeOutSlideDown(
-    durationMillis: Int = ANIMATION_DURATION_MEDIUM
-): ExitTransition = fadeOut(
-    animationSpec = tween(durationMillis, easing = EmphasizedEasing)
-) + slideOutVertically(
-    animationSpec = tween(durationMillis, easing = EmphasizedEasing),
-    targetOffsetY = { it / 4 }
-)
 
 /**
  * Standard enter transition: Fade in + Scale up.
@@ -166,46 +115,29 @@ fun slideOutToRight(
 )
 
 /**
- * Composable modifier for animated visibility with fade.
+ * How long a fade-through's outgoing half lasts; the incoming half takes the rest of
+ * [ANIMATION_DURATION_MEDIUM], starting as this one ends.
  */
-@Composable
-fun Modifier.animatedFade(
-    visible: Boolean,
-    durationMillis: Int = ANIMATION_DURATION_MEDIUM
-): Modifier {
-    val alphaState = animateFloatAsState(
-        targetValue = if (visible) 1f else 0f,
-        animationSpec = tween(durationMillis, easing = EmphasizedEasing),
-        label = "fade"
-    )
-    return this.alpha(alphaState.value)
-}
+private const val FADE_THROUGH_OUT_MS = 90
+
+/** Material's fade-through starting scale for the incoming screen. */
+private const val FADE_THROUGH_INITIAL_SCALE = 0.92f
 
 /**
- * Returns an infinite transition for shimmer/loading effects.
+ * Fade-through, incoming half: the transition for peer destinations (the bottom-bar tabs),
+ * which have no "forward" and so should not slide like a push.
  */
-@Composable
-fun rememberInfiniteShimmerTransition(): InfiniteTransition {
-    return rememberInfiniteTransition(label = "shimmer")
+fun fadeThroughIn(): EnterTransition {
+    val spec = tween<Float>(
+        durationMillis = ANIMATION_DURATION_MEDIUM - FADE_THROUGH_OUT_MS,
+        delayMillis = FADE_THROUGH_OUT_MS,
+        easing = LinearOutSlowInEasing
+    )
+    return fadeIn(animationSpec = spec) +
+        scaleIn(animationSpec = spec, initialScale = FADE_THROUGH_INITIAL_SCALE)
 }
 
-/**
- * Creates a shimmer animation value (0f to 1f).
- */
-@Composable
-fun rememberShimmerAnimation(): androidx.compose.runtime.State<Float> {
-    val infiniteTransition = rememberInfiniteShimmerTransition()
-    return infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(
-                durationMillis = 1000,
-                easing = LinearEasing
-            ),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "shimmer_value"
-    )
-}
+/** Fade-through, outgoing half: a quick fade with no movement. */
+fun fadeThroughOut(): ExitTransition =
+    fadeOut(animationSpec = tween(FADE_THROUGH_OUT_MS, easing = FastOutLinearInEasing))
 

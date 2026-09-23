@@ -268,7 +268,7 @@ fun ConversationItem(
                 overflow = TextOverflow.Ellipsis,
                 style = if (hasUnread) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.bodySmall,
                 color = if (hasUnread) {
-                    MaterialTheme.typography.bodyLarge.color
+                    MaterialTheme.colorScheme.onSurface
                 } else {
                     MaterialTheme.colorScheme.onSurfaceVariant
                 }

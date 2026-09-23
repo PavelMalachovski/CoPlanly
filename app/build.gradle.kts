@@ -93,7 +93,9 @@ android {
         applicationId = "app.coplanly"
         minSdk = 26
         targetSdk = 36
-        versionCode = 2
+        // Overridden per upload by the release workflow (-PCOPLANLY_VERSION_CODE), because Play
+        // refuses a second bundle with the same versionCode.
+        versionCode = (project.findProperty("COPLANLY_VERSION_CODE") as String?)?.toInt() ?: 2
         versionName = "1.1.0"
 
         testInstrumentationRunner = "com.coparently.app.HiltTestRunner"
@@ -127,6 +129,7 @@ android {
             // succeeds. See `canSignRelease`.
             signingConfig = if (canSignRelease) signingConfigs.getByName("release") else null
             isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -143,6 +146,15 @@ android {
 
     kotlinOptions {
         jvmTarget = "17"
+    }
+
+    bundle {
+        // Keep every locale in the base APK. Play otherwise splits the AAB by language and
+        // installs only the device's languages, so picking another one in Settings → Language
+        // (AppCompat per-app locales) would silently fall back to English.
+        language {
+            enableSplit = false
+        }
     }
 
     buildFeatures {

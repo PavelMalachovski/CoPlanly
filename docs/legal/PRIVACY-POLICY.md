@@ -84,13 +84,18 @@ Every such grant carries an expiry, is visible to both parents, and can be revok
 - **Crash reports** (Firebase Crashlytics) and **usage analytics** (Firebase Analytics) in
   release builds. These carry no message content, no event titles and no records about your
   child. They record which screens are opened and which actions succeed or fail.
-  {{CONSENT_SENTENCE_ONCE_CONSENT_SCREEN_SHIPS}}
+  Both are **off until you agree** on the screen shown before sign-in, and you can change your
+  answer at any time in Settings → App.
 
 ### Google Calendar, if you connect it
 
 If you connect a Google account, we request access to your calendars so events can be
-imported and exported. We store the resulting access and refresh tokens **encrypted on your
-device only** — they are never sent to our servers. Disconnecting in Settings deletes them.
+imported and exported. The resulting access and refresh tokens are **stored encrypted on your
+device only**. To obtain and renew them, the one-time authorisation code and, on each renewal,
+the refresh token pass through our server (a Google Cloud Function), which forwards them to
+Google and does not keep them. The server keeps only a one-way fingerprint (a SHA-256 hash) of
+your refresh token, linked to your account, so that a token stolen from somebody else cannot be
+renewed through our service. Disconnecting in Settings deletes the tokens from your device.
 
 ## What happens on your device and goes nowhere
 
@@ -110,7 +115,6 @@ We do not sell personal data, and we do not use it for advertising.
 | **Guests and calendar friends you invite** | Only the record or calendar you granted, until the grant expires | Because you granted it |
 | Google (Firebase) | Account data, all synced content, files, push tokens, crash and usage data | Our hosting, database, file storage and messaging provider |
 | Google (Calendar API) | Only your calendar, only if you connect it | The integration you enabled |
-| {{MAIL_PROVIDER}} | The recipient's email address and the invitation text | To deliver invitation emails |
 
 Google processes data both inside and outside the EU. Transfers outside the EEA rely on the
 European Commission's Standard Contractual Clauses. {{FIRESTORE_REGION_SENTENCE}}

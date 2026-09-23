@@ -1,7 +1,10 @@
 package com.coparently.app.presentation.navigation
 
 import android.net.Uri
+import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -21,15 +24,18 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
+import com.coparently.app.R
 import com.coparently.app.domain.telemetry.TelemetryConsent
 import com.coparently.app.presentation.LocalGoogleSignInCallback
 import com.coparently.app.presentation.auth.AuthScreen
@@ -140,7 +146,14 @@ fun NavGraph(
         NavHost(
             navController = navController,
             startDestination = startDestination,
-            modifier = Modifier.padding(innerPadding)
+            modifier = Modifier.padding(innerPadding),
+            // The standard push for any route that names no transitions of its own. Without
+            // these, such a route got Navigation's own 700 ms crossfade — more than twice as
+            // slow as every other screen.
+            enterTransition = { slideInFromRight() },
+            exitTransition = { slideOutToLeft() },
+            popEnterTransition = { slideInFromLeft() },
+            popExitTransition = { slideOutToRight() }
         ) {
             // Loading screen while checking authentication
             composable(
@@ -203,7 +216,9 @@ fun NavGraph(
             composable(
                 route = Screen.Auth.route,
                 enterTransition = { slideInFromRight() },
-                exitTransition = { slideOutToLeft() }
+                exitTransition = { slideOutToLeft() },
+                popEnterTransition = { slideInFromLeft() },
+                popExitTransition = { slideOutToRight() }
             ) {
                 AuthScreen(
                     onAuthSuccess = {
@@ -229,10 +244,10 @@ fun NavGraph(
             // Home / overview dashboard — first screen (MVP 2)
             composable(
                 route = Screen.Home.route,
-                enterTransition = { slideInFromRight() },
-                exitTransition = { slideOutToLeft() },
-                popEnterTransition = { slideInFromLeft() },
-                popExitTransition = { slideOutToRight() }
+                enterTransition = { tabEnter(forward = true) },
+                exitTransition = { tabExit(forward = true) },
+                popEnterTransition = { tabEnter(forward = false) },
+                popExitTransition = { tabExit(forward = false) }
             ) {
                 com.coparently.app.presentation.home.HomeScreen(
                     onOpenEvent = { eventId ->
@@ -270,10 +285,10 @@ fun NavGraph(
 
             composable(
                 route = Screen.Calendar.route,
-                enterTransition = { slideInFromRight() },
-                exitTransition = { slideOutToLeft() },
-                popEnterTransition = { slideInFromLeft() },
-                popExitTransition = { slideOutToRight() }
+                enterTransition = { tabEnter(forward = true) },
+                exitTransition = { tabExit(forward = true) },
+                popEnterTransition = { tabEnter(forward = false) },
+                popExitTransition = { tabExit(forward = false) }
             ) {
                 CalendarScreen(
                     onEventClick = { eventId ->
@@ -759,10 +774,10 @@ fun NavGraph(
                         defaultValue = ""
                     }
                 ),
-                enterTransition = { slideInFromRight() },
-                exitTransition = { slideOutToLeft() },
-                popEnterTransition = { slideInFromLeft() },
-                popExitTransition = { slideOutToRight() }
+                enterTransition = { tabEnter(forward = true) },
+                exitTransition = { tabExit(forward = true) },
+                popEnterTransition = { tabEnter(forward = false) },
+                popExitTransition = { tabExit(forward = false) }
             ) { backStackEntry ->
                 val draft = backStackEntry.arguments
                     ?.getString(Screen.Conversations.ARG_DRAFT).orEmpty()
@@ -838,10 +853,10 @@ fun NavGraph(
             // Expenses & Budget
             composable(
                 route = Screen.Expenses.route,
-                enterTransition = { slideInFromRight() },
-                exitTransition = { slideOutToLeft() },
-                popEnterTransition = { slideInFromLeft() },
-                popExitTransition = { slideOutToRight() }
+                enterTransition = { tabEnter(forward = true) },
+                exitTransition = { tabExit(forward = true) },
+                popEnterTransition = { tabEnter(forward = false) },
+                popExitTransition = { tabExit(forward = false) }
             ) {
                 com.coparently.app.presentation.expenses.ExpenseScreen(
                     onAddExpense = {
@@ -1150,7 +1165,7 @@ private fun LoadingScreen() {
         ) {
             CircularProgressIndicator()
             Text(
-                text = "Checking authentication...",
+                text = stringResource(R.string.navigation_loading),
                 style = MaterialTheme.typography.bodyLarge,
                 textAlign = TextAlign.Center
             )
@@ -1361,3 +1376,27 @@ sealed class Screen(val route: String) {
         fun createRoute(eventId: String): String = "request_change/$eventId"
     }
 }
+
+/** True when both ends of the transition are bottom-bar tabs. */
+private fun AnimatedContentTransitionScope<NavBackStackEntry>.isTabSwitch(): Boolean =
+    initialState.destination.route in BottomNavDestination.topLevelRoutes &&
+        targetState.destination.route in BottomNavDestination.topLevelRoutes
+
+/**
+ * A tab's enter transition: fade-through between two tabs (peers have no direction), the
+ * standard push when arriving from or returning past a detail screen.
+ */
+private fun AnimatedContentTransitionScope<NavBackStackEntry>.tabEnter(forward: Boolean): EnterTransition =
+    when {
+        isTabSwitch() -> fadeThroughIn()
+        forward -> slideInFromRight()
+        else -> slideInFromLeft()
+    }
+
+/** A tab's exit transition; the counterpart of [tabEnter]. */
+private fun AnimatedContentTransitionScope<NavBackStackEntry>.tabExit(forward: Boolean): ExitTransition =
+    when {
+        isTabSwitch() -> fadeThroughOut()
+        forward -> slideOutToLeft()
+        else -> slideOutToRight()
+    }

@@ -248,7 +248,7 @@ class MainActivity : AppCompatActivity() {
                         AnimatedVisibility(
                             visible = showSplash,
                             enter = androidx.compose.animation.EnterTransition.None,
-                            exit = fadeOut(animationSpec = tween(500))
+                            exit = fadeOut(animationSpec = tween(com.coparently.app.presentation.theme.Motion.LONG_MS))
                         ) {
                             SplashScreen(onFinished = { showSplash = false })
                         }

@@ -82,6 +82,8 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
@@ -105,6 +107,7 @@ import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.consent.TelemetryConsentViewModel
 import com.coparently.app.presentation.sync.GoogleCalendarSyncState
 import com.coparently.app.presentation.sync.SyncViewModel
+import com.coparently.app.presentation.theme.PARENT_COLOUR_PICKER_ENABLED
 import com.coparently.app.presentation.theme.ParentColorChoice
 import kotlinx.coroutines.launch
 import java.time.format.DateTimeFormatter
@@ -412,36 +415,42 @@ fun SettingsScreen(
                         )
                         Divider()
                     }
-                    // The parent's own colour. In the Family group rather than under App
-                    // preferences because it is how this person is identified to the other one —
-                    // the same kind of fact as their name, not a device setting like the theme.
-                    SectionRow(
-                        icon = Icons.Default.Palette,
-                        title = stringResource(R.string.settings_parent_color),
-                        supporting = stringResource(R.string.settings_parent_color_desc),
-                        onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            showColorPicker = true
-                        },
-                        trailing = {
-                            // The swatch rather than a chevron: one trailing control, and the
-                            // colour itself says more than an arrow would.
-                            Box(
-                                modifier = Modifier
-                                    .size(24.dp)
-                                    .clip(CircleShape)
-                                    .background(
-                                        (
-                                            ParentColorChoice.fromStored(parents.me?.colorCode)
-                                                ?: ParentColorChoice.defaultFor(
-                                                    parents.me?.slot.orEmpty()
-                                                )
-                                            ).fill
-                                    )
-                            )
-                        }
-                    )
-                    Divider()
+                    // Hidden until the chosen palette actually reaches the screens (UX-15, audit
+                    // 2026-09): every calendar, chip and ledger still draws the default pink and
+                    // blue, so a picker here would promise a feature that does not exist (design
+                    // item 8). Flip PARENT_COLOUR_PICKER_ENABLED once the palette is plumbed.
+                    if (PARENT_COLOUR_PICKER_ENABLED) {
+                        // The parent's own colour. In the Family group rather than under App
+                        // preferences because it is how this person is identified to the other one —
+                        // the same kind of fact as their name, not a device setting like the theme.
+                        SectionRow(
+                            icon = Icons.Default.Palette,
+                            title = stringResource(R.string.settings_parent_color),
+                            supporting = stringResource(R.string.settings_parent_color_desc),
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                showColorPicker = true
+                            },
+                            trailing = {
+                                // The swatch rather than a chevron: one trailing control, and the
+                                // colour itself says more than an arrow would.
+                                Box(
+                                    modifier = Modifier
+                                        .size(24.dp)
+                                        .clip(CircleShape)
+                                        .background(
+                                            (
+                                                ParentColorChoice.fromStored(parents.me?.colorCode)
+                                                    ?: ParentColorChoice.defaultFor(
+                                                        parents.me?.slot.orEmpty()
+                                                    )
+                                                ).fill
+                                        )
+                                )
+                            }
+                        )
+                        Divider()
+                    }
                     // Beside the colour rather than under App preferences: both are answers about
                     // this parent — how they are marked and where they are — while the language
                     // and the theme are answers about this device.
@@ -711,8 +720,11 @@ fun SettingsScreen(
                         title = stringResource(R.string.settings_telemetry_title),
                         supporting = stringResource(R.string.settings_telemetry_description),
                         trailing = {
+                            val telemetryLabel = stringResource(R.string.settings_telemetry_title)
                             Switch(
                                 checked = telemetryConsent == TelemetryConsent.GRANTED,
+                                // Named for TalkBack, which otherwise reads only "Switch, on".
+                                modifier = Modifier.semantics { contentDescription = telemetryLabel },
                                 onCheckedChange = { granted ->
                                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                     telemetryConsentViewModel.answer(granted)
@@ -729,7 +741,9 @@ fun SettingsScreen(
                         title = stringResource(R.string.settings_push_notifications),
                         supporting = stringResource(R.string.settings_push_notifications_description),
                         trailing = {
+                            val pushLabel = stringResource(R.string.settings_push_notifications)
                             Switch(
+                                modifier = Modifier.semantics { contentDescription = pushLabel },
                                 checked = settingsUiState.notificationsEnabled &&
                                     com.coparently.app.presentation.common.hasNotificationPermission(context),
                                 onCheckedChange = { enabled ->
@@ -992,12 +1006,14 @@ private fun GoogleCalendarActions(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
+            val syncLabel = stringResource(R.string.settings_gcal_enable_sync)
             Text(
-                text = stringResource(R.string.settings_gcal_enable_sync),
+                text = syncLabel,
                 style = MaterialTheme.typography.bodyLarge
             )
             Switch(
                 checked = isSyncEnabled,
+                modifier = Modifier.semantics { contentDescription = syncLabel },
                 onCheckedChange = onToggleSync,
                 enabled = isSignedIn || !isSyncEnabled
             )

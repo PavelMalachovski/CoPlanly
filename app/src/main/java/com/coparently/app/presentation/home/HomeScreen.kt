@@ -165,6 +165,25 @@ fun HomeScreen(
         }
     }
 
+    // An event tapped anywhere on the dashboard opens its preview first, like the calendar.
+    val openEvent: (String) -> Unit = { eventId ->
+        viewModel.openPreview(eventId, onMissing = { onOpenEvent(eventId) })
+    }
+    val previewEvent by viewModel.previewEvent.collectAsState()
+    previewEvent?.let { event ->
+        com.coparently.app.presentation.event.EventPreviewSheet(
+            event = event,
+            parentNames = parentNames,
+            onEdit = {
+                viewModel.closePreview()
+                onOpenEvent(event.id)
+            },
+            // No delete here: Home has no delete-with-undo, and the editor one tap away does.
+            onDelete = null,
+            onDismiss = viewModel::closePreview
+        )
+    }
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
@@ -210,7 +229,7 @@ fun HomeScreen(
                     parentNames = parentNames,
                     hasPendingProposal = pendingProposal != null,
                     contentPadding = padding,
-                    onOpenEvent = onOpenEvent,
+                    onOpenEvent = openEvent,
                     onOpenChangeRequests = onOpenChangeRequests,
                     onOpenContacts = onOpenContacts,
                     onOpenChildInfo = onOpenChildInfo,

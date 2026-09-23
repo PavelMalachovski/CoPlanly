@@ -7,6 +7,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 
 /**
+ * Whether the app offers the parent-colour picker (Settings → Family, onboarding profile step).
+ *
+ * Off until the chosen [ParentPalette] reaches the screens: every `ParentColors` call still takes
+ * the default palette and about twenty sites use the raw pink/blue, so a picker would promise a
+ * feature that does not exist (design item 8; ROADMAP UX-15, audit 2026-09). Turn it on in the
+ * same change that threads the palette through.
+ */
+const val PARENT_COLOUR_PICKER_ENABLED = false
+
+/**
  * Parent identity colours, resolved for the theme that is actually being painted.
  *
  * A colour identifies a *parent*, not a role: the app no longer shows the words Mom and Dad,
@@ -61,6 +71,15 @@ object ParentColors {
     @ReadOnlyComposable
     fun text(parent: String, palette: ParentPalette = ParentPalette.Default): Color =
         palette.of(parent).let { if (isDarkTheme) it.light else it.dark }
+
+    /**
+     * The calendar friend's teal as a **text-grade** foreground for the current theme. The raw
+     * [CoPlanlyColors.FriendTeal] is 3.36:1 on the dark surface, so dark theme takes the light
+     * partner — the same rule [text] applies to the two parent hues.
+     */
+    val friendText: Color
+        @Composable @ReadOnlyComposable
+        get() = if (isDarkTheme) CoPlanlyColors.FriendTealLight else CoPlanlyColors.FriendTeal
 
     /**
      * A soft container tint in the parent's hue, for chips and hero backgrounds that carry

@@ -38,7 +38,7 @@ import com.coparently.app.presentation.common.AccountAvatar
 import com.coparently.app.presentation.common.ConfirmationDialog
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
-import com.coparently.app.presentation.theme.CoPlanlyColors
+import com.coparently.app.presentation.theme.ParentColors
 
 /**
  * A friend, as the two parents read them: their face, what they are to the family, and the two
@@ -117,7 +117,7 @@ fun FriendDetailScreen(
                         Text(
                             text = stringResource(role.detailLabelRes()),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = CoPlanlyColors.FriendTeal
+                            color = ParentColors.friendText
                         )
                     }
                 }

@@ -36,6 +36,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -351,8 +354,19 @@ private fun SwipeToDeleteRow(
         }
     )
 
+    // A swipe is invisible to TalkBack and Switch Access, so the same delete is offered as a
+    // custom accessibility action — otherwise those users could not remove an expense at all.
+    val deleteLabel = stringResource(R.string.expenses_delete)
     SwipeToDismissBox(
         state = dismissState,
+        modifier = Modifier.semantics {
+            customActions = listOf(
+                CustomAccessibilityAction(deleteLabel) {
+                    onDelete()
+                    true
+                }
+            )
+        },
         enableDismissFromStartToEnd = false,
         backgroundContent = {
             Box(

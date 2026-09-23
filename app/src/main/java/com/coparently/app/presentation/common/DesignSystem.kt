@@ -84,7 +84,8 @@ fun GroupLabel(
  * surface for the whole group instead of one per row.
  *
  * @param modifier Modifier applied to the container
- * @param content Rows to render; dividers are inserted automatically between them
+ * @param content Rows to render; call [SectionGroupScope.Divider] between rows — nothing is
+ *   inserted automatically
  */
 @Composable
 fun SectionGroup(
