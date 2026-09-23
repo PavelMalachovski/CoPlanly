@@ -145,6 +145,15 @@ android {
         jvmTarget = "17"
     }
 
+    bundle {
+        // Keep every locale in the base APK. Play otherwise splits the AAB by language and
+        // installs only the device's languages, so picking another one in Settings → Language
+        // (AppCompat per-app locales) would silently fall back to English.
+        language {
+            enableSplit = false
+        }
+    }
+
     buildFeatures {
         compose = true
         // Keep BuildConfig enabled for feature flags
