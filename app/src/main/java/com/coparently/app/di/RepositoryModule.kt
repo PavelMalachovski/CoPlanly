@@ -2,6 +2,7 @@ package com.coparently.app.di
 
 import com.coparently.app.data.remote.firebase.FirebaseImageStorage
 import com.coparently.app.data.repository.BudgetRepositoryImpl
+import com.coparently.app.data.repository.CalendarFeedRepositoryImpl
 import com.coparently.app.data.repository.ChangeRequestRepositoryImpl
 import com.coparently.app.data.repository.ChildInfoRepositoryImpl
 import com.coparently.app.data.repository.EventRepositoryImpl
@@ -13,6 +14,7 @@ import com.coparently.app.data.repository.PairingRepositoryImpl
 import com.coparently.app.data.repository.PetRepositoryImpl
 import com.coparently.app.data.repository.PreferencesRepositoryImpl
 import com.coparently.app.domain.repository.BudgetRepository
+import com.coparently.app.domain.repository.CalendarFeedRepository
 import com.coparently.app.domain.repository.ChangeRequestRepository
 import com.coparently.app.domain.repository.ChildInfoRepository
 import com.coparently.app.domain.repository.EventImageStorage
@@ -143,6 +145,15 @@ abstract class RepositoryModule {
     abstract fun bindFriendRepository(
         friendRepositoryImpl: FriendRepositoryImpl
     ): FriendRepository
+
+    /**
+     * Provides CalendarFeedRepository implementation — the read-only calendar links (MON-17).
+     */
+    @Binds
+    @Singleton
+    abstract fun bindCalendarFeedRepository(
+        calendarFeedRepositoryImpl: CalendarFeedRepositoryImpl
+    ): CalendarFeedRepository
 
     /**
      * Provides PetRepository implementation.

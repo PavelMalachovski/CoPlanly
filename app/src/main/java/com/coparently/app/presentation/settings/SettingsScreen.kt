@@ -37,6 +37,7 @@ import androidx.compose.material.icons.filled.FamilyRestroom
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Palette
@@ -154,6 +155,8 @@ private val syncTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
  * @param onNavigateToPets Opens the pets list
  * @param onNavigateToPairing Opens co-parent pairing
  * @param onNavigateToFriends Opens the calendar-friend list (item 16)
+ * @param onNavigateToCalendarFeed Opens the read-only calendar links (MON-17); the row shows
+ *   only while the account is in a family, since a link serves one
  * @param onNavigateToCustodySetup Opens custody schedule setup
  * @param onNavigateToMyProfile Opens the signed-in user's own profile, editable
  * @param onNavigateToCoParentProfile Opens the co-parent's profile, read-only
@@ -175,6 +178,7 @@ fun SettingsScreen(
     onNavigateToPets: (() -> Unit)? = null,
     onNavigateToPairing: (() -> Unit)? = null,
     onNavigateToFriends: (() -> Unit)? = null,
+    onNavigateToCalendarFeed: (() -> Unit)? = null,
     onNavigateToCustodySetup: (() -> Unit)? = null,
     onNavigateToMyProfile: (() -> Unit)? = null,
     onNavigateToCoParentProfile: (() -> Unit)? = null,
@@ -703,6 +707,24 @@ fun SettingsScreen(
                             }
                         )
                     }
+                    // Read-only links for a parent on an iPhone (MON-17). Only with a family: a
+                    // link serves one family's calendar, and a row that could only answer "pair
+                    // first" would be design item 8's empty promise.
+                    onNavigateToCalendarFeed
+                        ?.takeIf { familySwitcher.selectedFamilyId != null }
+                        ?.let { navigate ->
+                            Divider()
+                            SectionRow(
+                                icon = Icons.Default.Link,
+                                title = stringResource(R.string.calendar_feed_settings_title),
+                                supporting = stringResource(R.string.calendar_feed_settings_description),
+                                onClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    navigate()
+                                },
+                                trailing = { Chevron() }
+                            )
+                        }
                     Divider()
                     // Inert on purpose, and present on purpose.
                     //

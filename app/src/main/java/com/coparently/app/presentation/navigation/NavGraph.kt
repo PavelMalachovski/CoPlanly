@@ -481,6 +481,9 @@ fun NavGraph(
                     onNavigateToFriends = {
                         navController.navigate(Screen.Friends.route)
                     },
+                    onNavigateToCalendarFeed = {
+                        navController.navigate(Screen.CalendarFeed.route)
+                    },
                     onNavigateToPairing = {
                         navController.navigate(Screen.Pairing.routeWithCode(null))
                     },
@@ -690,6 +693,13 @@ fun NavGraph(
                     onResolved = {
                         navController.popBackStack()
                     }
+                )
+            }
+
+            // Read-only calendar links for an iPhone (MON-17). A Settings detail route.
+            composable(route = Screen.CalendarFeed.route) {
+                com.coparently.app.presentation.settings.CalendarFeedScreen(
+                    onNavigateUp = { navController.popBackStack() }
                 )
             }
 
@@ -1252,6 +1262,9 @@ sealed class Screen(val route: String) {
 
     /** The parents' list of who outside the family can see the calendar (item 16). */
     data object Friends : Screen("friends")
+
+    /** Read-only calendar links for an iPhone or any other calendar app (MON-17). */
+    data object CalendarFeed : Screen("calendar_feed")
 
     /**
      * One friend as the parents read them — their face, phone number and blood group, and the
