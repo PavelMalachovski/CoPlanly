@@ -360,6 +360,7 @@ fun PillChip(
  * @param onAction The primary action; the button shows only when this and [actionLabel] are set.
  */
 @Composable
+@Suppress("LongParameterList") // one empty-state anatomy, expressed as one parameter list
 fun EmptyState(
     icon: ImageVector,
     title: String,

@@ -55,6 +55,8 @@ import kotlin.test.assertTrue
  * for someone's benefit must not lock them out of their calendar, so the only thing that blocks
  * progress is the one field the app genuinely cannot work without: a name to put on the events.
  */
+// One class per ViewModel, as elsewhere in the suite; the wizard has many steps to pin.
+@Suppress("LargeClass")
 @OptIn(ExperimentalCoroutinesApi::class)
 class OnboardingViewModelTest {
 

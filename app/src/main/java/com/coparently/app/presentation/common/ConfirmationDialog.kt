@@ -26,6 +26,7 @@ import com.coparently.app.R
  * @param isDestructive If true, uses error colors for confirm button
  */
 @Composable
+@Suppress("LongParameterList") // the dialog's whole anatomy; every caller names its arguments
 fun ConfirmationDialog(
     title: String,
     message: String,

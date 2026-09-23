@@ -1,3 +1,7 @@
+// One file for the dashboard: its sections are private composables, and their light/dark previews
+// (UX-13) must sit beside them to reach them, which is what takes the count past the threshold.
+@file:Suppress("TooManyFunctions")
+
 package com.coparently.app.presentation.home
 
 import android.text.format.DateFormat
