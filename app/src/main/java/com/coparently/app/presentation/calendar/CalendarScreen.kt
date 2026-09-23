@@ -71,6 +71,7 @@ import com.coparently.app.presentation.calendar.components.CustodyChangedBanner
 import com.coparently.app.presentation.calendar.components.DaySwapSheet
 import com.coparently.app.presentation.calendar.components.EventTypeFilterSheet
 import com.coparently.app.presentation.common.FamilyMemberChips
+import com.coparently.app.presentation.common.PickerDates
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.common.rememberToday
 import com.coparently.app.presentation.common.toggling
@@ -259,12 +260,10 @@ fun CalendarScreen(
 
     var showDatePicker by remember { mutableStateOf(false) }
     val datePickerState = rememberDatePickerState(
-        // Material3's DatePickerState speaks UTC-midnight millis, so the conversion must go
-        // through UTC — a system-zone start-of-day lands one day off west of Greenwich. Opens
+        // DatePickerState speaks UTC-midnight millis; PickerDates is the one conversion. Opens
         // on the selected day (or today), never on the 1st: "jump to a date" should start from
         // where the user is, and proposing the 1st is what read as "schedule from the 1st".
-        initialSelectedDateMillis = (selectedDate ?: today)
-            .atStartOfDay(java.time.ZoneOffset.UTC).toInstant().toEpochMilli(),
+        initialSelectedDateMillis = PickerDates.toPickerMillis(selectedDate ?: today),
         yearRange = IntRange(now.year - 5, now.year + 5)
     )
     val scope = rememberCoroutineScope()
@@ -364,14 +363,10 @@ fun CalendarScreen(
     // does not change for an afternoon. Only a window that says something is drawn — one naming
     // the parent who already has the day (the pattern gives it to them, or an accepted swap does)
     // is not an afternoon with anybody new, so it is skipped rather than painted over its own
-    // parent's tint.
+    // parent's tint. The rule lives in `CustodyResolver.contactWindowsResolver`, which Home's
+    // today card reads too, so the two surfaces cannot disagree about the same afternoon.
     val getContactWindows: (LocalDate) -> List<ContactWindow> = remember(custodyModel, getCustody) {
-        val model = custodyModel
-        if (model == null || model.contactWindows.isEmpty()) {
-            { _ -> emptyList() }
-        } else {
-            { date -> model.contactWindowsOn(date).filter { it.parent != getCustody(date) } }
-        }
+        CustodyResolver.contactWindowsResolver(custodyModel, getCustody)
     }
 
     // The dates a swap is being negotiated on. A pending swap has changed nothing about whose
@@ -886,12 +881,7 @@ fun CalendarScreen(
                 Button(
                     onClick = {
                         datePickerState.selectedDateMillis?.let { millis ->
-                            // LocalDate.ofInstant requires API 34; atZone works from minSdk 26.
-                            // The millis are UTC midnight (DatePickerState's contract), so read
-                            // them back in UTC — a system-zone read is a day early west of it.
-                            val pickedDate = java.time.Instant.ofEpochMilli(millis)
-                                .atZone(java.time.ZoneOffset.UTC)
-                                .toLocalDate()
+                            val pickedDate = PickerDates.fromPickerMillis(millis)
 
                             calendarViewModel.setSelectedDate(pickedDate)
                             if (viewMode != CalendarViewMode.MONTH) {

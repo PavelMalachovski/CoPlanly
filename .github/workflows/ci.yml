@@ -7,9 +7,8 @@
 #
 # Jobs run on every pull request, and on every push to `main`. A push to a feature branch
 # with no pull request open is therefore **not** built — open the pull request to get it
-# checked. The instrumented migration job is deliberately absent: `app/schemas/` stops at
-# v14 while the database is at v25, so it would be red from its first run for a reason
-# unrelated to any change. Add it once the schemas are restored (see docs/ROADMAP.md, CQ-1).
+# checked. The instrumented job runs on three emulators (API 26, 30 and 35 with 16 KB pages);
+# see its comment for what each level is there to catch.
 #
 # ## Why the Android work is three jobs and not one
 #
@@ -61,6 +60,10 @@ jobs:
     timeout-minutes: 5
     outputs:
       android: ${{ steps.filter.outputs.android }}
+      # The two-parent job also runs on Cloud Functions and rules changes: it is the only job that
+      # executes the pairing callable and the rules together, so those are exactly the pull
+      # requests that can break it without touching a line of Kotlin.
+      e2e: ${{ steps.filter.outputs.e2e }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -77,16 +80,19 @@ jobs:
           # wrongly listed here silently stops building real changes, which is worse than a
           # path wrongly absent, which merely costs a few runner minutes.
           NON_ANDROID='^(docs/|functions/|firestore-tests/|\.cursor/|[^/]*\.md$|.*\.rules(\.simple)?$|firestore\.indexes\.json$|firebase\.json$|\.gitignore$|LICENSE$)'
+          NON_E2E='^(docs/|\.cursor/|[^/]*\.md$|\.gitignore$|LICENSE$)'
 
           if [ "$EVENT_NAME" != "pull_request" ]; then
             echo "Not a pull request — building everything."
             echo "android=true" >> "$GITHUB_OUTPUT"
+            echo "e2e=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
           if ! changed=$(git diff --name-only "$BASE_SHA"...HEAD 2>/dev/null) || [ -z "$changed" ]; then
             echo "Could not determine the changed files — building everything."
             echo "android=true" >> "$GITHUB_OUTPUT"
+            echo "e2e=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
@@ -99,6 +105,12 @@ jobs:
           else
             echo "android=false" >> "$GITHUB_OUTPUT"
             echo "→ Nothing outside docs/functions/rules changed; skipping the Android jobs."
+          fi
+
+          if echo "$changed" | grep -qvE "$NON_E2E"; then
+            echo "e2e=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "e2e=false" >> "$GITHUB_OUTPUT"
           fi
 
   # `google-services.json` is gitignored, and `app/build.gradle.kts` applies the Google
@@ -116,6 +128,11 @@ jobs:
     if: needs.changes.outputs.android == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # `checks: write` is for the JUnit check run at the end; naming any permission drops the
+    # rest to none, so `contents: read` has to be restated for the checkout.
+    permissions:
+      contents: read
+      checks: write
     steps:
       - uses: actions/checkout@v4
 
@@ -169,6 +186,57 @@ jobs:
             app/build/test-results/
           if-no-files-found: ignore
           retention-days: 14
+
+      # --- Readable results: the steps below feed the check run and the `report` job's PR
+      # comment, so a result can be read without opening this log. ---
+
+      # Kover instruments the unit-test task above, so this reuses its run (the test task is
+      # up to date) and only writes the reports. Visibility, not a gate: there is no
+      # verification rule, and a failure to *report* coverage must not turn a green build red,
+      # which is the one place in this file `continue-on-error` is the right tool.
+      - name: Coverage report (Kover)
+        continue-on-error: true
+        run: ./gradlew koverXmlReportDebug koverHtmlReportDebug
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: app/build/reports/kover/
+          if-no-files-found: ignore
+          retention-days: 14
+
+      # For testers, one per pull request. **UI-only**: CI has no `google-services.json`, so
+      # this APK has no Firebase project — sign-in and sync do not work in it, and the summary
+      # comment says so. Uploaded even when a unit test failed: a screen can still be looked at.
+      - name: Upload debug APK
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coplanly-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Upload unit-test results (JUnit XML)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-unit
+          path: app/build/test-results/testDebugUnitTest/*.xml
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Publish unit-test check run
+        if: always()
+        uses: mikepenz/action-junit-report@v6
+        with:
+          check_name: Unit tests (JVM)
+          report_paths: app/build/test-results/testDebugUnitTest/*.xml
+          detailed_summary: true
+          # A job that died before writing results must not publish a green check.
+          require_tests: true
 
   static:
     name: Android — static analysis
@@ -276,12 +344,141 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
-  instrumented:
-    name: Android — instrumented tests (emulator)
+  # JVM screenshot tests: Roborazzi on Robolectric's native graphics, no emulator. The images are
+  # the way to review light theme, the four translations at 1.5x text and the chosen parent
+  # palette without a phone — download the `screenshots` artefact and open `index.html`.
+  #
+  # **Record mode only, deliberately.** Nothing is compared yet, so this job goes red only when a
+  # screenshot test cannot render at all. Verifying needs committed baselines, and baselines need
+  # recording on one fixed machine — Robolectric's native renderer is deterministic per platform
+  # and font set, not across them, so a baseline recorded on a laptop would fail here on pixels
+  # nobody changed. To switch, once the baselines exist:
+  #
+  #   TODO(screenshots): (1) set `roborazzi { outputDir.set(file("src/test/screenshots")) }` in
+  #   app/build.gradle.kts; (2) add `./gradlew recordRoborazziDebug` to the Regenerate workflow
+  #   and `app/src/test/screenshots` to the paths its commit step adds, so the baselines are
+  #   recorded on this same runner image and committed as a visible change; (3) replace
+  #   `recordRoborazziDebug` below with `verifyRoborazziDebug`, uploading Roborazzi's compare
+  #   directory (`roborazzi { compare { outputDir } }`) instead: the `_compare` diffs there are
+  #   what a failure is diagnosed from. Not done in the change that added this job because editing
+  #   regenerate.yml triggers it (its own path is on its push trigger), which would also have
+  #   regenerated the detekt baseline unasked.
+  #
+  # A Roborazzi task runs only the `com.coparently.app.screenshots` tests and `testDebugUnitTest`
+  # excludes them (see `roborazziRequested` in app/build.gradle.kts), so this job and
+  # `build-test` do not repeat each other's work, and a screenshot that cannot render does not
+  # turn the unit-test job red. The first run downloads Robolectric's SDK 34 jar (~100 MB); later
+  # runs take it from the Gradle cache `setup-gradle` restores.
+  screenshots:
+    name: Android — screenshots (Roborazzi, record)
     needs: changes
     if: needs.changes.outputs.android == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      # JDK 17 like the other Android jobs. The tests pin Robolectric to SDK 34 because SDK 36
+      # needs JDK 21 (`SCREENSHOT_SDK` in ScreenshotMatrix.kt says how to move both).
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: temurin
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Record screenshots
+        run: ./gradlew recordRoborazziDebug
+
+      - uses: actions/setup-node@v4
+        if: always()
+        with:
+          node-version: '20'
+
+      # One page, filterable by component, language, theme, font scale and palette. It is written
+      # into the directory it indexes, so the artefact is self-contained: unzip, open index.html.
+      # `always()` so a run where some tests failed still publishes the images the rest recorded.
+      - name: Build the gallery index
+        if: always()
+        run: node tools/screenshot-gallery.js app/build/outputs/roborazzi
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: app/build/outputs/roborazzi/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-reports-screenshots
+          path: |
+            app/build/reports/tests/
+            app/build/test-results/
+          if-no-files-found: ignore
+          retention-days: 14
+
+  # One emulator per API level, in parallel. Three levels because each catches something the
+  # others cannot:
+  #
+  #  * **26 — minSdk.** A call to an API newer than the device (`LocalDate.ofInstant` is 34+; the
+  #    CLAUDE.md hard rules name it) compiles against compileSdk 36 and only throws
+  #    `NoSuchMethodError` on an old device. Lint's NewApi catches most of it, not all — not a
+  #    library that does it for you. 32-bit x86 on purpose: it is a second ABI for SQLCipher's
+  #    native library, whose absence is exactly the failure `EncryptedDatabase.fallBackTo` handles.
+  #    **Caveat:** mockk only mocks *final* classes on API 28+, and `FakeFirebaseModule` mocks
+  #    Firebase types. If one of them is final, the Hilt UI tests fail on this leg and only here —
+  #    that is a finding about the test module (swap the mock for an open fake), not a reason to
+  #    drop the leg.
+  #  * **30 — the level this job was built and first made green on.**
+  #  * **35 with 16 KB memory pages** (`google_apis_ps16k`). Google Play requires 16 KB page
+  #    support for apps targeting Android 15+, and the one native library that decides whether
+  #    the app can open its own database is SQLCipher's. A `.so` not aligned for 16 KB pages fails
+  #    `System.loadLibrary` on such a device, and `EncryptedDatabaseTest` would say so here rather
+  #    than a Play pre-launch report later.
+  #
+  # `fail-fast: false` so one level's failure does not cancel the others' answers. The AVD is
+  # cached per level and arch, following the action's README: on a cache miss one boot creates
+  # the AVD and saves a snapshot, and every run after boots from it with `-no-snapshot-save`.
+  instrumented:
+    name: Android — instrumented tests (API ${{ matrix.api-level }}${{ matrix.label }})
+    needs: changes
+    if: needs.changes.outputs.android == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      checks: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - api-level: 26
+            target: default
+            arch: x86
+            label: ''
+            test-args: ''
+          - api-level: 30
+            target: default
+            arch: x86_64
+            label: ''
+            test-args: ''
+          # MockK's inline-mocking agent (libmockkjvmtiagent.so, test-only, never shipped) does
+          # not dlopen on 16 KB pages, and every Hilt test mocks through it in
+          # FakeFirebaseModule — so this leg runs the non-Hilt tests only. What it exists to
+          # prove, that the app's own native libraries load on 16 KB pages, is
+          # NativeLibrariesTest's job; the Hilt tests keep running on 26 and 30.
+          - api-level: 35
+            target: google_apis_ps16k
+            arch: x86_64
+            label: ', 16 KB pages'
+            test-args: -Pandroid.testInstrumentationRunnerArguments.notAnnotation=dagger.hilt.android.testing.HiltAndroidTest
     steps:
       - uses: actions/checkout@v4
 
@@ -303,14 +500,200 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
-      # CQ-1. Two things have never run anywhere until this job: the migration test against a
-      # real SQLite file, and — through `createAndroidComposeRule<MainActivity>()`, which builds
-      # the whole Hilt graph — the SQLCipher open path of SEC-2, whose calls had until now only
-      # ever been compiled. `app/schemas/` holds 11 to 14, which is what the migration test
-      # builds from; the versions between 14 and 33 are irrecoverable, so no test can reach
-      # them and this job does not pretend to.
-      - name: Run instrumented tests
+      - name: Cache the AVD
+        uses: actions/cache@v4
+        id: avd-cache
+        with:
+          path: |
+            ~/.android/avd/*
+            ~/.android/adb*
+          key: avd-${{ matrix.api-level }}-${{ matrix.target }}-${{ matrix.arch }}-pixel_2
+
+      - name: Create the AVD and its snapshot
+        if: steps.avd-cache.outputs.cache-hit != 'true'
         uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api-level }}
+          target: ${{ matrix.target }}
+          arch: ${{ matrix.arch }}
+          profile: pixel_2
+          ram-size: 4096M
+          force-avd-creation: false
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: false
+          script: echo "Generated the AVD snapshot for caching."
+
+      # CQ-1 and SEC-2. What runs here: the migration tests against real SQLite files (only the
+      # versions whose schemas exist — see CLAUDE.md for why eight of them are @Ignore'd), the
+      # Hilt UI tests, which build the whole graph with Room real, and `EncryptedDatabaseTest`,
+      # which builds every on-disk state `SqlCipherMigration` names — fresh install, plaintext
+      # upgrade, an interrupted export, a lost passphrase — and opens each through the production
+      # path. What it cannot prove is an upgrade over data an *older build* wrote, on a phone's
+      # hardware-backed Keystore: that stays docs/DEVICE-CHECKLIST.md §2.1.
+      #
+      # **The leg is decided by the next step, not by this one.** On the API 26 x86 image the
+      # emulator twice never exited after `adb emu kill` — 85 of 85 tests had passed, and the job
+      # sat until its 60-minute timeout. A detached `pkill` of the qemu process did not release
+      # it either. So this step has its own timeout and `continue-on-error`, the script writes
+      # the tests' exit status to a file, and "The instrumented tests finished and passed" fails
+      # the job unless that file exists and says 0. A test failure, or a hang before the tests
+      # finish, is still red; a hang after they passed costs 30 minutes, not 60, and a warning.
+      - name: Run instrumented tests
+        id: tests
+        timeout-minutes: 30
+        continue-on-error: true
+        env:
+          STATUS_FILE: ${{ runner.temp }}/instrumented-status
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api-level }}
+          target: ${{ matrix.target }}
+          arch: ${{ matrix.arch }}
+          profile: pixel_2
+          ram-size: 4096M
+          force-avd-creation: false
+          disable-animations: true
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          # Records the screen in 170 s segments while the tests run and pulls the MP4s after;
+          # the exit status is the tests', and a recorder that fails never fails the job.
+          script: bash tools/with-screen-recording.sh ./gradlew connectedDebugAndroidTest ${{ matrix.test-args }}
+
+      - name: The instrumented tests finished and passed
+        if: always()
+        env:
+          STATUS_FILE: ${{ runner.temp }}/instrumented-status
+          STEP_OUTCOME: ${{ steps.tests.outcome }}
+        run: |
+          if [ ! -f "$STATUS_FILE" ]; then
+            echo "::error::The instrumented tests did not finish: the emulator step died or timed out before they wrote an exit status."
+            exit 1
+          fi
+          status=$(cat "$STATUS_FILE")
+          if [ "$status" != "0" ]; then
+            echo "::error::connectedDebugAndroidTest exited with status $status."
+            exit 1
+          fi
+          if [ "$STEP_OUTCOME" != "success" ]; then
+            echo "::warning::The tests passed; the emulator step then failed while shutting the emulator down. That is not a test result."
+          fi
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-reports-instrumented-api${{ matrix.api-level }}-${{ matrix.target }}
+          path: |
+            app/build/reports/androidTests/
+            app/build/outputs/androidTest-results/
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Upload screen recording
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: emulator-video-api${{ matrix.api-level }}-${{ matrix.target }}
+          path: app/build/outputs/emulator-video/
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Upload instrumented-test results (JUnit XML)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-instrumented-api${{ matrix.api-level }}-${{ matrix.target }}
+          path: app/build/outputs/androidTest-results/connected/**/*.xml
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Publish instrumented-test check run
+        if: always()
+        uses: mikepenz/action-junit-report@v6
+        with:
+          check_name: Instrumented tests (API ${{ matrix.api-level }}${{ matrix.label }})
+          report_paths: app/build/outputs/androidTest-results/connected/**/*.xml
+          detailed_summary: true
+          # A job that died before writing results must not publish a green check.
+          require_tests: true
+
+  # Two parents, one process, the real backend's emulators (CQ-18 and the two-phone checklist, as
+  # far as a runner can take them). `app/src/androidTest/.../e2e` signs up two accounts on the
+  # Auth emulator, pairs them through the real `acceptPairingInvitation` on the Functions
+  # emulator, and drives the production repositories — events, a private event and a tombstone,
+  # chat across the date line, a shared expense, a second family — against the real
+  # `firestore.rules` on the Firestore emulator. Each parent is a named FirebaseApp with its own
+  # Room database; see `EmulatorParent`.
+  #
+  # Things that must stay true, each learned from something that did not:
+  #  * **No `google-services.json`, fake or otherwise.** The tests configure their FirebaseApps
+  #    from `FirebaseOptions` for the `demo-coplanly` project, which needs no credentials and
+  #    cannot reach production. The plugin gate in `app/build.gradle.kts` stays closed.
+  #  * **The `instrumented` job above is untouched.** These tests are not Hilt tests and install
+  #    no module; without the `coplanlyEmulatorHost` argument they skip themselves, so that job
+  #    reports them as skipped and keeps `FakeFirebaseModule` for everything else.
+  #  * **A skip is a failure here.** The last step reads the XML and fails on any skipped test,
+  #    so a missing argument cannot turn this job green by running nothing.
+  #  * **Two JDKs.** The emulators need 21+ on PATH (firestore-tests/README.md); Gradle builds on
+  #    17 through JAVA_HOME. JDK 21 is set up first and its path handed to the script, so the
+  #    second setup-java leaves JAVA_HOME and PATH on 17 for Gradle.
+  #  * **Host loopback, not 0.0.0.0.** The Android emulator reaches the runner's 127.0.0.1 as
+  #    `10.0.2.2`, so `firebase.json`'s default binding is already reachable. Cleartext to that
+  #    address is allowed in `app/src/debug/res/xml/network_security_config.xml` — debug only.
+  e2e:
+    name: Android — two parents on the Firebase emulators
+    needs: changes
+    if: needs.changes.outputs.e2e == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21 (Firebase emulators)
+        id: jdk21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: temurin
+
+      - name: Set up JDK 17 (Gradle)
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: temurin
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: |
+            functions/package-lock.json
+            firestore-tests/package-lock.json
+
+      # `functions/` is what the Functions emulator loads; `firestore-tests/` pins the Firebase
+      # CLI version the rules suite already runs on, so both jobs use one emulator build.
+      - name: Install the Cloud Functions and the Firebase CLI
+        run: |
+          npm ci --prefix functions
+          npm ci --prefix firestore-tests
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      # Built before the emulator boots, so the boot's minutes are not also spent compiling.
+      - name: Build the app and test APKs
+        run: ./gradlew assembleDebug assembleDebugAndroidTest
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Run the two-parent tests
+        uses: reactivecircus/android-emulator-runner@v2
+        env:
+          FIREBASE_JAVA_HOME: ${{ steps.jdk21.outputs.path }}
         with:
           api-level: 30
           arch: x86_64
@@ -319,16 +702,37 @@ jobs:
           ram-size: 4096M
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
-          script: ./gradlew connectedDebugAndroidTest
+          script: bash tools/e2e/run-two-parent-tests.sh
+
+      - name: Every two-parent test ran — none skipped
+        run: |
+          set -euo pipefail
+          # The runner names its file "TEST-emulator-5554 - 11-_app-.xml": spaces, so never
+          # word-split a list of paths — grep the directory recursively instead.
+          dir=app/build/outputs/androidTest-results
+          if [ -z "$(find "$dir" -name '*.xml' 2>/dev/null || true)" ]; then
+            echo "::error::No instrumentation results were written."
+            exit 1
+          fi
+          if ! grep -rq --include='*.xml' 'classname="com.coparently.app.e2e.' "$dir"; then
+            echo "::error::No test in com.coparently.app.e2e ran."
+            exit 1
+          fi
+          if grep -rq --include='*.xml' '<skipped' "$dir"; then
+            echo "::error::A two-parent test was skipped — the emulator host argument did not arrive."
+            exit 1
+          fi
 
       - name: Upload reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: android-reports-instrumented
+          name: android-reports-e2e
           path: |
             app/build/reports/androidTests/
             app/build/outputs/androidTest-results/
+            firebase-debug.log
+            firestore-debug.log
           if-no-files-found: ignore
           retention-days: 14
 
@@ -356,10 +760,19 @@ jobs:
       - name: Check locale completeness, format arguments and push types
         run: node tools/check-invariants.js
 
+      # The CI report's own scripts: the path → DEVICE-CHECKLIST.md mapping (including that
+      # every section it names still exists) and the JUnit/coverage parsing. node:test, no deps.
+      - name: Test the CI report tools
+        if: always()
+        run: node --test tools/test/*.test.js
+
   functions:
     name: Cloud Functions
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: read
+      checks: write
     defaults:
       run:
         working-directory: functions
@@ -373,15 +786,42 @@ jobs:
           cache-dependency-path: functions/package-lock.json
 
       - run: npm ci
-      - run: npm test
+      # `npm test` plus a reporter that writes JUnit XML beside mocha's usual spec output
+      # (tools/mocha-ci-reporter.js, no dependency). Locally `npm test` is unchanged.
+      - name: npm test
+        env:
+          MOCHA_JUNIT_OUTPUT: ${{ runner.temp }}/junit/functions.xml
+        run: npm test -- --reporter ../tools/mocha-ci-reporter.js
       - name: Lint
         if: always()
         run: npm run lint
+
+      - name: Upload test results (JUnit XML)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-functions
+          path: ${{ runner.temp }}/junit/functions.xml
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Publish test check run
+        if: always()
+        uses: mikepenz/action-junit-report@v6
+        with:
+          check_name: Cloud Functions tests
+          report_paths: ${{ runner.temp }}/junit/functions.xml
+          detailed_summary: true
+          # A job that died before writing results must not publish a green check.
+          require_tests: true
 
   rules:
     name: Firestore security rules
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      contents: read
+      checks: write
     defaults:
       run:
         working-directory: firestore-tests
@@ -403,7 +843,102 @@ jobs:
           cache-dependency-path: firestore-tests/package-lock.json
 
       - run: npm ci
-      - run: npm test
+      # `test:ci` is `test` with tools/mocha-ci-reporter.js added, which also writes JUnit XML.
+      - name: npm test
+        env:
+          MOCHA_JUNIT_OUTPUT: ${{ runner.temp }}/junit/rules.xml
+        run: npm run test:ci
       - name: Lint
         if: always()
         run: npm run lint
+
+      - name: Upload test results (JUnit XML)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-rules
+          path: ${{ runner.temp }}/junit/rules.xml
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Publish test check run
+        if: always()
+        uses: mikepenz/action-junit-report@v6
+        with:
+          check_name: Firestore and Storage rules tests
+          report_paths: ${{ runner.temp }}/junit/rules.xml
+          detailed_summary: true
+          # A job that died before writing results must not publish a green check.
+          require_tests: true
+
+  # One sticky comment per pull request, edited on every run, saying what CI found — so a result
+  # can be read without opening a log, by a person or by an assistant reading the PR through the
+  # API (the comment also carries the facts as JSON in an HTML comment; see tools/ci-report.js).
+  #
+  # It lists the run's jobs from the API rather than from `needs`, so a job added to this file
+  # later shows up without touching this one — but it only *waits* for the jobs in `needs`. Add a
+  # new job there too, or its row may read "in progress". `if: always()` because a failed run is
+  # exactly when the comment matters; the job itself never fails over the report. On a push to
+  # `main` there is no pull request: the summary goes to the run's job summary only.
+  report:
+    name: CI report
+    needs: [changes, build-test, static, release, screenshots, instrumented, e2e, invariants, functions, rules]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read        # list the run's jobs and artifacts
+      pull-requests: write # the sticky comment
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # No test results is a real state (a docs-only PR skips the Android jobs), not an error.
+      - name: Download test results
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          pattern: junit-*
+          path: ci-artifacts
+
+      - name: Download coverage
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-report
+          path: ci-artifacts/coverage-report
+
+      - name: Manual test plan from the changed paths
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          node tools/manual-test-plan.js --base "$BASE_SHA" --head "$HEAD_SHA" --ref "$HEAD_SHA" \
+            --out "$RUNNER_TEMP/manual-test-plan.md" \
+            || echo "::warning::Could not build the manual test plan."
+
+      - name: Build the summary
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          REPORT_JOB_NAME: CI report
+        run: |
+          node tools/ci-report.js --artifacts ci-artifacts \
+            --plan "$RUNNER_TEMP/manual-test-plan.md" --out "$RUNNER_TEMP/ci-summary.md"
+
+      # Fork pull requests get a read-only token and cannot comment; the job summary above
+      # still has everything, so a refusal here is not a failure.
+      - name: Post or update the sticky PR comment
+        if: github.event_name == 'pull_request'
+        continue-on-error: true
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: ci-summary
+          path: ${{ runner.temp }}/ci-summary.md

@@ -1,9 +1,11 @@
 package com.coparently.app.domain.home
 
+import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.model.Event
 import org.junit.Test
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.LocalTime
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -188,6 +190,37 @@ class HomeWeekTest {
         )
 
         assertEquals("dad", agenda.dayParent)
+    }
+
+    @Test
+    fun `today's agenda carries today's contact windows and no other day's`() {
+        val window = ContactWindow(
+            dayIndex = 3,
+            start = LocalTime.parse("15:00"),
+            end = LocalTime.parse("19:00"),
+            parent = ContactWindow.SLOT_TWO
+        )
+        val agenda = HomeWeek.todayOf(
+            events = emptyList(),
+            today = now.toLocalDate(),
+            userId = "uid-mom",
+            custodyFor = { ContactWindow.SLOT_ONE },
+            contactWindowsFor = { date -> if (date == now.toLocalDate()) listOf(window) else emptyList() }
+        )
+
+        assertEquals(listOf(window), agenda.contactWindows)
+    }
+
+    @Test
+    fun `today's agenda has no contact windows when nothing supplies them`() {
+        val agenda = HomeWeek.todayOf(
+            events = emptyList(),
+            today = now.toLocalDate(),
+            userId = "uid-mom",
+            custodyFor = { null }
+        )
+
+        assertTrue(agenda.contactWindows.isEmpty())
     }
 
     @Test

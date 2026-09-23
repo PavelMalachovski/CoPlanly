@@ -74,8 +74,9 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
    navigating instead: that drops the tab route, hides the bottom bar, and makes Back bounce
    off a list that immediately forwards again.
 8. **No affordance may promise a feature that doesn't exist.** The composer's `+` was
-   captioned "attach" and opened message templates; templates are now a labelled chip and
-   there is no attach button until attachments actually ship. Same rule shaped the thread
+   captioned "attach" and opened message templates; templates are now a labelled chip, and the
+   attach button came back only when attachments shipped (MON-23, item 31) — a paperclip
+   *beside* `MessageInput`, which opens a real picker and a real upload. Same rule shaped the thread
    header (`ChatThreadHeader`): it shows the co-parent's initial, their name and whether
    **your own** messages left the device (derived from `Message.status`), not the mock's
    "Synced just now" — the app tracks no chat sync timestamp, so printing one would be the
@@ -127,8 +128,21 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     read `FamilySwitcherViewModel`, observed off the signed-in Room row. Don't give Settings its
     own copy of the family list again — two sources for "which family is on screen" is how they
     come to disagree. With one co-parent the chip renders nothing. It is deliberately not on the
-    Calendar header (item 5's fixed four) or on Chat (see the known issue on chat and the first
-    co-parent).
+    Calendar header (item 5's fixed four). It is not on Chat either — the original reason (chat
+    followed the first co-parent, whatever the switcher said) is fixed, and what remains is a
+    layout call: the tab renders the thread in place (item 7) and its header already names the
+    co-parent. **The chip and each dialog row carry a dot — never a count — when a family *not* on
+    screen has something waiting**: chat newer than my read mark (the conversation *document*),
+    a pending change request from that co-parent (a `limit(1)` query keyed on `requestedTo`, the
+    field the rule reads), or a schedule proposal or day swap awaiting me (`custody_models/{id}`
+    by **id** — `allow get` only, never a query). Only the selected family is mirrored, so no
+    figure for another family could be backed. `data/family/OtherFamiliesSignals` holds those
+    listeners per other family and reports which `FamilySignal` kinds are waiting; the chip's
+    content description and the dialog row's line name them. Shared process-wide (`shareIn`,
+    `WhileSubscribed`), **none at one family**, re-derived and cancelled on a switch, pairing
+    change or sign-out, and bounded like `reconnecting()` per listener. Don't turn the dot into a
+    number, don't attach a listener per composable, and don't let it create anything — it only
+    reads (ROADMAP M-8).
 
 ## UX/UI overhaul (July 2026 design review) — implemented, keep consistent
 
@@ -195,6 +209,8 @@ crash with "migration from 3 to 9 required but not found".
 ```bash
 cd functions && npm test && npm run lint    # Cloud Functions (mocha + eslint)
 cd firestore-tests && npm test              # firestore.rules + storage.rules on the emulators
+tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Functions emulators;
+                                            # needs a running Android emulator (see the e2e job)
 ```
 
 - **Never debug `firestore.rules` by deploying to production and watching a phone.** That
@@ -206,12 +222,16 @@ cd firestore-tests && npm test              # firestore.rules + storage.rules on
   prove the ruleset *in this repository*; only a deploy settles what the live bucket enforces,
   which is exactly the gap the `pet_photos` entry below describes.
 - Windows dev machine; Gradle wrapper works from Git Bash and PowerShell.
+- **What only a phone can prove** (SEC-2's conversion of real data, REL-7's Gson-after-R8, the
+  dark cold start, cross-time-zone chat, …) is one ordered script: `docs/DEVICE-CHECKLIST.md`.
+  Add a check there when you ship something CI cannot see.
 - `google-services.json` is required for the Google Services plugin, but the build
   degrades gracefully if it is missing (see the conditional apply in `app/build.gradle.kts`).
 - **GitHub CI runs on every pull request, and on every push to `main`** — a push to a
   feature branch with no PR open is not built (`.github/workflows/ci.yml`, added
-  August 2026 — this line used to say there was none). Eight jobs (this line used to say
-  seven, before `instrumented` was added): `changes` (a cheap gate,
+  August 2026 — this line used to say there was none). Ten jobs that test (this line used to say
+  eight, before `screenshots` and `e2e` were added, and seven before `instrumented`), plus
+  `report`, which only reads them (below): `changes` (a cheap gate,
   below), three Android ones — `build-test` (`assembleDebug` + `testDebugUnitTest` in a
   single invocation), `static` (`lint`, then `detekt`), `release` (`assembleRelease`, where
   R8 runs, and where `node tools/check-r8-mapping.js` then reads R8's own `mapping.txt` and
@@ -227,8 +247,22 @@ cd firestore-tests && npm test              # firestore.rules + storage.rules on
   red build green; fix the finding, or regenerate the baseline through the Regenerate workflow so
   that accepting debt is a visible commit. The **`instrumented` job** closes **CQ-1** as far as it
   can be closed, and the shape of "as far as" matters. `reactivecircus/android-emulator-runner`
-  with the KVM udev rule boots API 30 and runs `connectedDebugAndroidTest`; the first attempt
-  failed for two unrelated reasons, both older than the job and neither previously observed.
+  with the KVM udev rule runs `connectedDebugAndroidTest` as a **matrix of three emulators**
+  (`fail-fast: false`, AVD cached per level): **API 26** (minSdk, 32-bit x86 — a newer-API call
+  only throws on an old device, and it is a second ABI for SQLCipher's native library), **API 30**
+  (where the job was first made green), and **API 35 on `google_apis_ps16k`** (16 KB memory pages,
+  which Play requires; a misaligned `.so` fails `System.loadLibrary` there). **The 16 KB leg runs
+  no Hilt test** (`notAnnotation=…HiltAndroidTest` in the matrix's `test-args`): MockK's own
+  inline-mocking agent, `libmockkjvmtiagent.so`, does not dlopen on 16 KB pages even at 1.14.0
+  ("empty/missing DT_HASH/DT_GNU_HASH"), and every Hilt test mocks through it in
+  `FakeFirebaseModule` — a test-tool failure that says nothing about the app. What the leg exists
+  to prove is `NativeLibrariesTest`'s job, which is non-Hilt and mock-free: it loads SQLCipher and
+  writes an encrypted database, and runs ML Kit OCR and barcode scanning on a blank image. Lift
+  the filter only once a MockK release loads there. Every test check run sets `require_tests`, so
+  a job that died before writing results cannot publish a green check. One caveat on 26:
+  mockk mocks *final* classes only on API 28+, so if a Firebase type `FakeFirebaseModule` mocks is
+  final, the Hilt UI tests fail on that leg alone — replace that mock with an open fake, do not
+  drop the leg. When the job ran at API 30 alone, its first attempt failed for two unrelated reasons, both older than the job and neither previously observed.
   **(1) Firebase.** `AuthScreenTest` and `SettingsScreenTest` start the real `MainActivity`,
   whose Hilt graph reaches `FirebaseModule.provideFirebaseMessaging` →
   `FirebaseMessaging.getInstance()`, and CI has no `google-services.json` (it is gitignored), so
@@ -240,27 +274,84 @@ cd firestore-tests && npm test              # firestore.rules + storage.rules on
   Google Services and Crashlytics plugins apply only when that file is present, so adding one
   changes what every Android job builds in order to fix something that belongs to the tests.
   Room is deliberately left real, which is what makes this the first thing anywhere to execute
-  the SEC-2 SQLCipher open path rather than merely compile it.
-  **(2) Missing schemas.** `CoPlanlyDatabaseMigrationTest` holds 14 test methods and only the
-  six covering 11→12, 12→13 and 13→14 can run. The other eight name 14→15 through 24→25 and
-  need `15.json`–`24.json`, which do not exist and cannot be regenerated — `app/schemas/` holds
-  2–14, then 33 and 34. Those eight have **never passed anywhere**; they were written against
+  the SEC-2 SQLCipher open path rather than merely compile it. **`EncryptedDatabaseTest`** goes
+  further (September 2026): it builds every on-disk state `SqlCipherMigration` names — fresh
+  install, plaintext upgrade with and without a stored passphrase, a stale export beside the
+  original, an export whose rename never happened, a leftover beside an encrypted file, a lost
+  passphrase — and opens each through `buildCoPlanlyDatabase`, the builder `DatabaseModule`
+  itself calls, under a database name of its own. It snapshots and restores `DatabaseKey`'s
+  preferences around each case, because that store has one fixed name the UI tests' real
+  database also depends on; keep that if you add a case that forgets or mints a passphrase.
+  **(2) Missing schemas.** `CoPlanlyDatabaseMigrationTest` held 14 test methods when the job
+  was added, and only the six covering 11→12, 12→13 and 13→14 could run. The other eight name
+  14→15 through 24→25 and need `15.json`–`24.json`, which do not exist and cannot be
+  regenerated — `app/schemas/` holds 2–14, then 33, 34 and 36. Those eight have **never passed anywhere**; they were written against
   schemas that were already gone. They carry `@Ignore` naming the versions they want, so the
   job is green on what can run and the intent survives for whoever restores a schema. Do not
   read that as ordinary quarantine: an `@Ignore` normally hides a defect, and this one records
   missing data that no fix to the code can supply. The migrations a test can prove are those
-  six plus 34→35 (MON-13's region) and 35→36 (MON-6b's contact windows) — this line used to
-  credit a 33→34 test to MON-5, and none exists (it could be written: `33.json` and `34.json` are
-  both there). Those two new tests each run 34→36 through both migrations, because **`35.json`
-  does not exist**: the build exports only the current version, and v35 and v36 landed on the
+  six plus 33→34 (MON-5's parenting plan), 34→35 (MON-13's region) and 35→36 (MON-6b's contact
+  windows) — this line once credited a 33→34 test to MON-5 before one existed; it was written in
+  September 2026 from `33.json` and `34.json`. The last two each run 34→36 through both
+  migrations, because **`35.json` does not exist**: the build exports only the current version, and v35 and v36 landed on the
   same branch before the Regenerate workflow ran, so 35 was never current there. A schema
   version that is skipped this way is a new gap of the CQ-1 kind; run Regenerate after each
   version bump, not after a batch of them.
+  **(3) Device checks** (September 2026) run in the same job: every date picker in two UTC+ and
+  two UTC− zones (`PickerDatesTest`, `LocalDatePickerDialogTest` — which is why every `LocalDate`
+  picker opens `presentation/common/PickerDates.kt`'s `LocalDatePickerDialog`; don't give a screen
+  its own copy of the millis conversion again), the per-app locale switch, the export's files and
+  share intent, and a signed-in walk of the main screens with a basic accessibility sweep;
+  `docs/DEVICE-CHECKLIST.md` marks what they cover **[CI]**. Two things to know before adding one.
+  A test that launches `MainActivity` signs in through `androidTest`'s `testing/SignedInSession` —
+  a stubbed `currentUser` on the mocked `FirebaseAuth`, a real Room row with onboarding done, the
+  telemetry question answered "no", all undone in `@After` because the emulator's files outlive the
+  test — and **pauses the Compose clock** (`testing/PausedClock.kt`): the splash and the list
+  skeletons animate for as long as a screen waits on a Firestore that never answers, so with the
+  clock running every `waitForIdle` times out. And the accessibility sweep is a semantics check
+  (unnamed or sub-48 dp icon-only controls), not ATF: `enableAccessibilityChecks()` needs an
+  artifact this build does not declare.
   What stops the gap growing is a **step in `ci.yml`**: `git status --porcelain -- app/schemas`
   after the build, failing when the build produced a schema nobody committed. It is deliberately
   *not* `DatabaseSchemaExportTest`, which this line used to credit and which cannot do it — kapt
   writes that directory during the build immediately before the test reads it, so the file it
   looks for has just been created whether or not it is in the repository.
+
+  The **`e2e` job** ("Android — two parents on the Firebase emulators", September 2026) is the
+  two-phone round a runner *can* do. `app/src/androidTest/java/com/coparently/app/e2e/` runs two
+  parents in one process — each an `EmulatorParent`: a **named** `FirebaseApp` built from
+  `FirebaseOptions` for the credential-free `demo-coplanly` project, its own in-memory Room, and
+  the production data layer constructed by hand from the constructors Hilt calls (one process has
+  one `SingletonComponent`, and this needs two of everything). `tools/e2e/run-two-parent-tests.sh`
+  wraps `firebase emulators:exec --only auth,firestore,functions` around a Node smoke
+  (`tools/e2e/pairing-smoke.js`, which pairs two accounts over REST in seconds and fails with a
+  reason before an APK is installed) and `connectedDebugAndroidTest` filtered to that package with
+  `-e coplanlyEmulatorHost 10.0.2.2`. What it proves, all against the real `firestore.rules` and
+  the real `acceptPairingInvitation`: pairing on both phones (profiles, `families/{id}.slots`, the
+  Room projection, one conversation); an event readable through the sync's own `array-contains`
+  query, a private event absent from the server, a tombstone delivered as a tombstone; chat
+  **across the date line** (UTC+14 and UTC−11) reaching unread, DELIVERED and READ on the right
+  phones — **CQ-18's logic, closed as far as software can close it**; a shared expense that puts
+  half the amount on the *other* parent's balance (the `splitBetween` class); and M-8's second
+  family keeping its audience, `familyId` and announcement thread. Five things not to undo.
+  **No `google-services.json`** here either, for the reason given above. **The tests skip
+  themselves without the host argument**, so the `instrumented` job runs them as skipped and
+  keeps `FakeFirebaseModule` for everything else — and the `e2e` job fails on any skip, so the
+  same switch cannot turn it green by running nothing. **Cleartext to `10.0.2.2` and `127.0.0.1`
+  is allowed in `app/src/debug/res/xml/network_security_config.xml`, debug only**: Auth and
+  Functions reach their emulators over plain HTTP through the platform stack, and an
+  `androidTest` manifest cannot carry the exception because instrumentation runs under the
+  *app's* policy. **Two JDKs**: the emulators take 21 through `FIREBASE_JAVA_HOME`, Gradle stays
+  on 17 through `JAVA_HOME`. And the job is gated on its own `changes` output, `e2e`, which unlike
+  `android` stays true for `functions/` and rules changes — it is the one job that runs the
+  callable and the rules together. It found two defects on its first local run, both fixed in the
+  same branch: `admin.firestore.FieldValue` is `undefined` under the Functions emulator's proxy
+  (so `functions/index.js` now imports `FieldValue`/`Timestamp` from `firebase-admin/firestore`),
+  and `EventDocument` threw on the `""` `toFirestoreMap()` writes for a missing end time, so the
+  co-parent's sync skipped every event without one. **What it cannot do** stays on the device
+  checklist: real FCM delivery (no emulator exists for it — the queue document is written, the
+  push is not sent), anything drawn on screen, and the chat UI's family switch (`ChatPartnerSource`,
+  M-8), which the e2e job does not drive.
 
   **A second workflow file exists and is not part of CI**: `.github/workflows/regenerate.yml` runs
   `detektBaseline` and exports the Room schema, then commits both back to the branch it ran on.
@@ -272,8 +363,32 @@ cd firestore-tests && npm test              # firestore.rules + storage.rules on
   Still run the build locally before pushing — CI is a backstop, not a substitute.
   After switching branches, prefer `clean` — stale Hilt/kapt stubs from another branch cause
   errors like "Could not find class file for '…Application'".
+- **The `screenshots` job is how UI is reviewed without a phone** (September 2026). Roborazzi on
+  Robolectric's native graphics renders the tests in `app/src/test/java/com/coparently/app/
+  screenshots/` — Home's cards, the month grid with every `DayCellFills` layer, the calendar
+  banners, a Settings group, `EmptyState`, the Expenses summary header, a chat thread, the event
+  preview body, the consent screen and the family switcher chip — over a variant matrix of theme,
+  the five languages, 1.0×/1.5× font scale and the default vs a purple/orange parent palette
+  (`ScreenshotVariants`: nine variants for text-heavy components, four for the rest, 112 images).
+  **To view:** open the run's `screenshots` artefact, unzip, open `index.html`
+  (`tools/screenshot-gallery.js`, no dependencies, filters by component/language/theme/scale/
+  palette). Locally: `./gradlew recordRoborazziDebug`, images in `app/build/outputs/roborazzi/`.
+  Five things to know. **It records and does not compare** — no baselines are committed, because
+  they must be recorded on the CI runner to be pixel-stable; `ci.yml`'s `TODO(screenshots)` lists
+  the three steps to switch to `verifyRoborazziDebug` through the Regenerate workflow. **A
+  Roborazzi task runs only the screenshot package and `testDebugUnitTest` excludes it**
+  (`roborazziRequested` in `app/build.gradle.kts`), so `build-test` stays fast and a rendering
+  failure cannot redden it. **Robolectric runs SDK 34, not 36** (`SCREENSHOT_SDK`): 4.16.1
+  supports 36 but only on JDK 21, and every job builds on 17. **Roborazzi stays at 1.60.0**, the
+  last release built with Kotlin 2.0; later ones are built with Kotlin 2.3, whose metadata this Kotlin 2.1 compiler is
+  not guaranteed to read — upgrade the two together. And **a private composable a test needs becomes
+  `internal`**, never public (`HandoverHero`, `StatTiles`, `TimelineRow`, `ChatThreadHeader`), and
+  a sheet's body is split out of the sheet (`EventPreviewContent`), because a `ModalBottomSheet`
+  opens its own window that a node capture does not see. Every fixture date is pinned (May 2026,
+  `ScreenshotFixtures`) so an image does not change with the calendar — keep it that way, or the
+  suite can never move to verify.
 - **A docs/functions/rules-only pull request skips the Android jobs.** The `changes` job
-  diffs against the base and sets one output; the three Android jobs are `if:`-gated on it.
+  diffs against the base and sets one output; the Android jobs are `if:`-gated on it.
   Two things not to get wrong. The ignore list is deliberately conservative — a path wrongly
   *on* it silently stops building real changes, which is far worse than a path wrongly off it
   costing a few free runner minutes — and `.github/workflows/**` is deliberately **not** on
@@ -287,6 +402,43 @@ cd firestore-tests && npm test              # firestore.rules + storage.rules on
   `gradle.properties` and apply locally too; the build cache is local-only (there is no
   remote cache), so in CI it pays off on a re-run of the same branch, where `setup-gradle`'s
   per-job cache of `~/.gradle/caches` carries the previous run's task outputs forward.
+- **A CI result is meant to be read without opening a log** (September 2026). Three layers:
+  - **Check runs.** Each test job publishes its JUnit XML through
+    `mikepenz/action-junit-report@v6` as its own check run — "Unit tests (JVM)", "Instrumented
+    tests (API n)", "Cloud Functions tests", "Firestore and Storage rules tests" — with failures
+    as annotations. Mocha writes JUnit through `tools/mocha-ci-reporter.js` (spec output *and*
+    xunit, no dependency), enabled only in CI: `functions` passes `--reporter`, `firestore-tests`
+    has a `test:ci` script. Plain `npm test` is unchanged. Those jobs carry
+    `permissions: {contents: read, checks: write}`; naming one permission drops the rest to none,
+    which is why `contents: read` is restated.
+  - **The sticky PR comment.** The `report` job (`needs:` every other job, `if: always()`) runs
+    `tools/ci-report.js`, which reads the `junit-*` and `coverage-report` artifacts and the run's
+    jobs and artifacts through the API, and posts **one comment per PR, headed "CI summary",
+    edited on every run** (`marocchino/sticky-pull-request-comment@v2`, header `ci-summary`):
+    job → result, test counts per suite, failed tests with the first line of their message,
+    Kover line coverage, artifact links, and the manual plan below. The same facts sit in an
+    HTML comment as JSON (`<!-- ci-report-json … -->`) for an assistant reading the PR through
+    the API. On a push to `main` it goes to the run's job summary only. It lists jobs from the
+    API, so a new job appears without editing it — but **add a new job to `report`'s `needs`**,
+    or its row can read "in progress". It needs `actions: read` and `pull-requests: write`, and
+    never fails the run over the report.
+  - **Manual checks this PR needs.** `tools/manual-test-plan.js` maps the PR's changed paths to
+    sections of `docs/DEVICE-CHECKLIST.md` (the `RULES` table; unmapped app sources are listed,
+    not dropped) and the comment includes it. `node --test tools/test/*.test.js` runs in
+    `invariants` and fails when a rule names a section the checklist no longer has — renumbering
+    the checklist means updating `RULES` in the same commit.
+
+  **What testers download** (each linked from the comment, 14-day retention, GitHub login
+  needed): `coplanly-debug-apk` from `build-test` — **a UI-only build**: CI has no
+  `google-services.json` (and must not get one, see above), so sign-in and sync do not work in
+  it; for full testing build locally with the file. `emulator-video-api<n>-<target>` from each
+  `instrumented` leg — `tools/with-screen-recording.sh` records in 170 s segments around
+  `connectedDebugAndroidTest`, keeps the tests' exit status, and cannot fail the job.
+  `coverage-report` — Kover (`org.jetbrains.kotlinx.kover` 0.9.9, `app/build.gradle.kts`, Hilt/Room/
+  Compose-generated classes filtered out). Coverage is **visibility, not a gate**: there is no
+  verification rule, and its step is the one place in `ci.yml` where `continue-on-error` is
+  right, because failing to *report* a number must not turn a green build red. Screenshot and
+  e2e artifacts are described in the comment by name once those jobs upload them.
 
 ## Hard project rules
 
@@ -339,9 +491,12 @@ cd firestore-tests && npm test              # firestore.rules + storage.rules on
   initial-letter fallback is load-bearing, not decorative: an email/password account has no
   picture. Nothing here is ever overwritten by a later re-derivation — a friend who set their own
   picture keeps it. Not built: a photo **upload** (the field and rules admit one; the Storage
-  wiring does not exist, and a button that did nothing is the promise item 8 above forbids)
-  and a sweep for lapsed grants (nothing leaks — the rule refuses an expired read — but the row
-  lingers).
+  wiring does not exist, and a button that did nothing is the promise item 8 above forbids).
+  **Lapsed grants are swept** (September 2026): `sweepLapsedCalendarFriends` deletes a grant daily
+  at 05:00 UTC once `expiresAtMillis` has passed — cleanup, not enforcement, since the rule already
+  refuses an expired read at `request.time`. It is a range query, so a grant with no positive
+  numeric expiry is never deleted; the callable never writes one and the rule admits nothing
+  through it, so do not "fix" the sweep into treating a missing expiry as expired or as permanent.
 - **Only the signed-in user has a Room `users` row.** Nothing writes one for the co-parent, so
   `userRepository.getAllUsers()` can never answer "who is the other parent" — it returns one
   row, and on a device where two accounts have signed in over time it returns rows for accounts
@@ -411,7 +566,7 @@ cd firestore-tests && npm test              # firestore.rules + storage.rules on
 
 ```
 domain/    — models, repository interfaces, use cases, holidays, ReminderScheduler
-data/      — Room (v36 + migrations), Firestore/Google clients, repository impls, sync
+data/      — Room (v38 + migrations), Firestore/Google clients, repository impls, sync
 presentation/ — Compose screens per feature + ViewModels + theme
 di/        — Hilt modules (Database, Firebase, Google, UseCase, Notification, …)
 ```
@@ -445,7 +600,17 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
    silently would be design item 8's forbidden affordance. Czechia, Slovakia, Germany (the nine
    nationwide days, plus the chosen Land's own — below), Austria and Russia (statutory art. 112
    days, no annual transfer decree) have tables; **Ukraine deliberately has none** — its holidays are not days off under martial
-   law, and the row says so. Only Czechia has school vacations; do not invent them for the others.
+   law, and the row says so. **School vacations are sourced, never invented** (September 2026):
+   Czechia's are computed (`CzechHolidays`); Slovakia's and Austria's *nationwide* periods and each
+   German **Land's** list are dated tables (`SchoolVacation.kt`, `GermanSchoolVacations.kt`) from
+   the OpenHolidays dataset (`github.com/openpotato/openholidaysapi.data`, ODbL 1.0 — the official
+   KMK/BMBWF/MŠVVaM sites and the APIs are blocked from cloud sessions, the GitHub data repo is
+   not), read at a pinned commit by `tools/generate-school-vacation-fixture.py` and held period by
+   period by `SchoolVacationReferenceTest`. From school year 2025/26 to whatever the dataset
+   publishes — no extrapolation. What is set per region the app does not model stays out: Slovak
+   spring holidays (by kraj), Austrian semester and summer breaks (by Land; the dataset's later
+   ones are all `Provisional`), and Germany without a Land draws none. Russia has none. Only Day
+   view labels a school-vacation day today; the month grid has no marker (ROADMAP MON-13).
    The tables were written against the Python `holidays` library (September 2026, superseding the
    August decision to wait for verified data — this is that data) and are **pinned to it**:
    `HolidayReferenceTest` compares every date and name, 2020–2035, with a fixture generated by
@@ -462,9 +627,12 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
    `users.regionCode`, nullable = nationwide). `HolidayProvider.regions`/`forRegion` and
    `HolidayLocation` carry it; the calendar reads `HolidayLocation.provider`, and
    `HolidayCountry.regionOrNull` drops a code that is not the country's, so a parent who moved
-   from Germany to Austria never keeps drawing Bavaria. Only Germany has regions: Austria's
-   Länder add no *public* holiday in the reference data (the patron-saint days are bank
-   holidays), so it gets no picker — a row that changed nothing is item 8 again. The German
+   from Germany to Austria never keeps drawing Bavaria. Only Germany has regions, and a Land adds
+   both its public holidays and its school vacations. Austria's Länder add no *public* holiday in
+   the reference data (the patron-saint days are bank holidays) and no *final* school dates past
+   2025/26, so it gets no picker — a row that changed nothing is item 8 again. The picker's note
+   reads `HolidayCountry.coverageIn(region)`, so "school vacations" appears for Germany only
+   once a Land is chosen. The German
    states are pinned by a second fixture (`--regions`, only what each state *adds*), and the
    library's `catholic` category and the Augsburg pseudo-state are excluded on purpose —
    `GermanState`'s KDoc says why. The Room schema JSON for v36 (which carries this column) is exported by the Regenerate
@@ -508,7 +676,7 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     the conversation as `{uid: epochMillis}` maps — one write per event — and the ticks and
     unread badge are derived from them by `ChatReadState`, never stored per message.
     Message times are stored the same way: `Message.sentAtMillis`, epoch millis (Room
-    schema v13, since superseded — the database is at v36), not a naive `LocalDateTime`, so two
+    schema v13, since superseded — the database is at v38), not a naive `LocalDateTime`, so two
     parents in different time zones agree
     on what a mark means and on when a message was sent. The Firestore field keeps its name
     (`timestamp`) and the read path still accepts a legacy ISO string, so a co-parent on an
@@ -641,8 +809,11 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     **field-level encryption is not the smaller version of this**: `child_info` syncs and the key is
     device-bound, so an encrypted field arrives at the co-parent's phone as ciphertext their
     Keystore cannot open — `SensitiveMedicalData` was deleted for saying otherwise. The SQLCipher
-    calls have **never run**: there is no instrumented job (CQ-1) and no Android SDK in the sessions
-    that wrote them, so the first launch on a device holding real data is an acceptance step.
+    calls **run in CI on emulators** (API 26, 30 and 35 with 16 KB pages): `EncryptedDatabaseTest`
+    drives every state `SqlCipherMigration` names through the production builder. What that cannot
+    prove is an upgrade over a database an *older build* wrote, under a phone's hardware-backed
+    Keystore, so the first launch on a device holding real data is still an acceptance step
+    (`docs/DEVICE-CHECKLIST.md` §2.1).
 21. **A parenting plan is two halves and a derived agreement, and neither half may write the
     other** (MON-5, Aug 2026, schema 34). `parenting_plans/{familyId}` holds `answers`,
     `agreedTo`, `catalogueVersions` and `updatedAt` as maps keyed by uid, and `firestore.rules`
@@ -695,10 +866,23 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
       record and `SyncService.announceSharedRecords` queues one `RECORDS_SHARED` push at the end
       of the pass; before that every re-uploaded event arrived on the co-parent's phone as
       "created", years-old ones included. The push is also the wake-up the other phone needs.
-    Still open, and recorded in `docs/ROADMAP.md` rather than hidden: expenses and budgets
-    recorded before pairing are uploaded with `familyId: ""` and nothing re-stamps the *remote*
-    copy (`FamilyIdBackfill` is Room-only by design, item 18), so under the family-keyed rules the
-    co-parent will not see them until each is edited.
+    **Records uploaded before pairing are re-stamped server-side** (September 2026). They upload
+    with `familyId: ""` and the client never re-stamps the remote copy (`FamilyIdBackfill` is
+    Room-only by design, item 18), so under the family-keyed rules the co-parent never saw them.
+    `stampOwnBlankFamilyIds` (`functions/index.js`) is the remote half of `FamilyIdBackfill`, over
+    all six collections, run by the `onFamilyCreated` trigger when a pair forms and by
+    `backfillRecordFamilyIds` as the re-runnable backstop. Three things not to loosen. **It stamps
+    only when the family is not a guess**: exactly one live co-parent who names the author back
+    (`partnersOf`, never the singular `partnerId`, which since M-4 is just the family a phone is
+    showing), and no trace of an earlier relationship — an unfinished `pendingRevocationOf`, an
+    accepted co-parent invitation with somebody else, or one of the author's records naming
+    another family or adult. Anything else is skipped with a reason and its blanks counted as
+    `unresolved`; a stamp from an old household is exactly the move item 18 forbids. **It writes
+    only `familyId`, only where it is blank** — never a tombstone's deletion fields, never a
+    record that already names a family. And **it is not a per-record write trigger**: that would
+    bill every write, cannot help a record uploaded while unpaired, and races the budgets
+    `familyId` pin. Still open, in `docs/ROADMAP.md`: the `ambiguous`/`priorRelationship` blanks,
+    which only a person can assign.
 23. **A per-document audience is bound to the writer, server-side** (September 2026 audit).
     `firestore.rules` `isMyAudience` requires every uid in `sharedWith` (guests excepted, on
     `child_info`) to be the caller or one of their live co-parents, and `familyIsMineOrBlank`
@@ -736,7 +920,8 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     `momDayIndices`. **`getCustodyFor` stays whole-day** — do not teach it about windows: the
     grid's colour, the handover walk, swaps and every older build read it, and whose *day* it is
     does not move for an afternoon. `CustodyModel.contactWindowsOn(date)` is the separate question,
-    and `CalendarScreen.getContactWindows` drops a window naming the day's own parent. Four things
+    and `CustodyResolver.contactWindowsResolver` drops a window naming the day's own parent — the
+    one filter the grid and Home's today card both read, so don't re-inline it. Four things
     not to undo. **The wire form is `ContactWindowCodec` strings** (`"9|15:00|19:00|dad"`), never
     Gson over the data class, and `encodeAll` is canonical (sorted, de-duplicated). **A missing
     `contactWindows` key is not "none"**: an older build rewrites the whole document without it on
@@ -751,6 +936,229 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     was, and no saved schedule is converted between the two. On the grid a window is a band in the
     window parent's tint with a full-hue edge (Day/Week) and a full-hue corner triangle (Month),
     both over the `DayCellFills` layers rather than a new fill competing with them.
+
+25. **Every saved revision of a shared event is kept whole, and nobody can change it afterwards**
+    (MON-4, September 2026, owner decision; schema 37). `docs/DESIGN-court-record.md` §4 is the
+    design. Each create, update and delete of a non-private event through `EventRepositoryImpl`
+    queues one row in Room's `event_version_outbox` and `data/versions/EventVersionRecorder`
+    uploads it to the top-level `event_versions/{versionId}`: the event document exactly as
+    `toFirestoreMap()` built it for that save (plus the tombstone fields on a delete),
+    `editorUid`, `deviceTimeMillis`, and `recordedAt`, which the rule pins to `request.time`.
+    `data/versions/EventVersionDocument.kt` is the one definition of that wire form. Six things
+    not to undo. **`update` and `delete` stay `false` for every client** — that one line is the
+    guarantee the export sells; the only path that removes a revision is account deletion, as
+    admin, and only the departing parent's own. **`recordedAt` is written with
+    `FieldValue.serverTimestamp()`, never a client value** — the rule refuses anything else, and
+    the export labels the two clocks separately because they answer different questions (when the
+    parent acted; when the server saw it). **A revision is queued in Room before the event's own
+    upload, and deleted only once the server has it** — the event write paths discard their
+    `Result`, so a revision riding on them would be lost exactly when the phone was offline; a
+    `PERMISSION_DENIED` on a retry is checked with `exists()` against the server, because a second
+    `set()` of a landed id is an update the rule refuses. **`event_versions` is not in
+    `TOMBSTONED_COLLECTIONS`, and not in `SHARED_AUDIENCE_COLLECTIONS`** — a revision survives its
+    event's 90-day sweep (a deletion is the edit a dispute is about), and unpair does not narrow it
+    (the ex-partner keeps what they could see, as with the chat). **Private events produce no
+    revision** (item 3), checked by the callers *and* by `EventVersionRecorder.record`. And
+    **there is no stored revision number**: two phones offline would mint the same one and the
+    create-only rule would refuse the second for ever; order comes from the two clocks and the
+    export numbers revisions when it renders. Calendar friends cannot read revisions — the
+    history is the parents' communication record, not the calendar. Not done, and recorded in
+    ROADMAP MON-4: `Event.updatedAt` is still a naive `LocalDateTime` although `ConflictResolver`
+    compares it, and the events rule does not *require* a revision beside each write, so an older
+    build's edits go unrecorded.
+
+26. **The export is a communication record, says so on its face, and is made on the phone**
+    (MON-3, September 2026; the owner's MON-4 answer). Settings → Family → *Export the record*
+    (`presentation/export`) picks a period and writes a CSV or an A4 PDF to `cache/exports/`,
+    shared through the existing `FileProvider` (`file_paths.xml` → `exports/`). What goes in is
+    decided in pure Kotlin — `domain/export/CommunicationRecordBuilder` builds the model,
+    `CommunicationRecordCsv` and `RecordLayout` lay it out, `data/export/ExportFileWriter` only
+    draws with `android.graphics.pdf.PdfDocument` — so the JVM tests reach every rule. Seven things
+    not to undo. **The `export_statement_*` paragraphs are printed first in both formats** —
+    "a record of what the parents recorded and wrote … not of what happened" is the owner's
+    answer, not copy; don't shorten it, and a new format prints it too. **Revisions show both
+    clocks under their own labels**, a revision still in the outbox says "not yet received by the
+    server" rather than borrowing its device time, and an event saved before revisions existed is
+    printed as its *current state*, never dressed up as a "created" revision dated today. **Read
+    from the server with `Source.SERVER`, and say so when it failed** — `RecordSources.serverReached`
+    false prints `export_record_incomplete` on the face; a record assembled silently from the cache
+    is a record of one phone. **Never a private event, never a child's or pet's record** — the
+    source reads events, messages and expenses only, and the builder drops `isPrivate` again
+    whatever it is handed (item 3; design §4 on the medical profile). **Names, never roles** —
+    every uid and slot goes through `parentLabelByUid`/`parentLabel` (the hard rule above).
+    **CSV is RFC 4180 plus a formula guard** — CRLF, quoted fields with doubled quotes, one width
+    for every record (the preamble is padded), and a cell starting `= + - @ \t \r` gets a leading
+    apostrophe *inside* the quotes: half the file is the other parent's words. And **it is
+    ungated**: MON-1 has not set a price, so there is no entitlement check and none is to be faked
+    with a flag — the gate is MON-11's. Times use `RecordFormat` (fixed `Locale.ROOT` patterns
+    with the offset printed); event start/end are the naive wall-clock values the schema stores,
+    and the statement says so.
+    **A registered export carries a record ID the server holds its SHA-256 under** (MON-16,
+    `docs/DESIGN-court-record.md` §10; `functions/export-receipts.js`, `web/verify/`). Six more
+    things not to undo. **The ID is reserved before the file is rendered, and the hash is of the
+    exact bytes saved** — `ExportViewModel` reserves, renders with the ID, hashes, registers, then
+    saves those same bytes; `ExportFileWriter.render`/`save` are split for that and nothing may
+    touch the bytes between. **No file names an ID the server holds no hash for**: a phone that
+    cannot reserve renders `export_verify_not_registered` on the face (and in every PDF footer),
+    and one whose registration fails after a reservation renders the file *again* without the ID —
+    never "registered" by default (`CommunicationRecord.verification` defaults to `Unregistered`),
+    and the screen says so before the share sheet opens. **`verifyExport` is unauthenticated and
+    answers with the receipt alone** — registered at, period, format, size and the fixed words "one
+    of the family's parents"; never a name, a uid, a `familyId` or whether the account still exists.
+    **`export_receipts` is closed to every client** (`allow read, write: if false`); only the
+    callables touch it, as admin. **`recordedAt` is the function's clock** and a receipt is
+    create-once: a second hash under a registered ID is refused, the same hash returns the original
+    time. And **account deletion scrubs a registered receipt, never deletes it** — `generatorUid`
+    and `familyId` blanked, the hash kept — because erasing one parent must not un-verify evidence
+    the other has filed; reservations that never received a hash are deleted. The verification
+    address is `BuildConfig.EXPORT_VERIFY_URL`, blank until `web/verify/` is hosted, and blank omits
+    the line rather than printing a dead link. The chat immutability pin §4 called missing lives in
+    `firestore-tests/rules/event-versions.test.js`'s last block: both parents, every field,
+    `set()`, delete and a stranger, with `isRead` as the control.
+
+27. **A calendar-feed token is the whole authorisation, so it is hashed, scoped and never served
+    past what the app itself would show** (MON-17, September 2026). `functions/calendar-feed.js`
+    holds the pure half (token, RFC 5545 text, the custody port); `functions/index.js` the
+    `createCalendarFeed`/`listCalendarFeeds`/`revokeCalendarFeed` callables and the `calendarFeed`
+    HTTPS function; `presentation/settings/CalendarFeedScreen.kt` the one screen. Five things not
+    to undo. **Only `sha256(token)` is stored** — it is the `calendar_feeds` document id — and the
+    token leaves the server once, in `createCalendarFeed`'s URL; the app lists and revokes by a
+    separate random `feedId` and keeps nothing on the device. Never log a feed path or a token.
+    **`calendar_feeds` is closed to every client** (`allow read, write: if false`, pinned by
+    `firestore-tests/rules/calendar-feeds.test.js`): a readable collection says which families have
+    a link, a writable one mints a feed into somebody else's family. **A private event (item 3) and
+    a tombstoned one (item 14) are never served**, nor one whose `familyId` is not the feed's or
+    whose creator is not one of that family's two parents — the M-6 rule, and do not soften it with
+    a fallback for unstamped events. **Parents are named, never slotted**: titles come from
+    `users/{uid}.name`, the slot from `families/{id}.slots`, and a pair still sharing one slot gets
+    no custody layer rather than a guess. And **the custody port must agree with
+    `CustodyResolver`/`ContactWindowCodec`/`SeasonalLayerCodec`** — accepted swaps first, then the
+    deciding seasonal layer (item 30), then the whole-day pattern, windows dropped when they name
+    the day's own parent; change the Kotlin, add a fixture to
+    `functions/test/calendar-feed.test.js`. A link is served only while its family is live (both
+    profiles name each other); an unpair, an account deletion or 90 idle days end it with the same
+    404 as an unknown token.
+
+28. **Chat search reads this phone's Room copy of the open thread and nothing else; the pause
+    before sending never blocks and never keeps what it looked at** (MON-15, MON-19, September
+    2026). `ChatSearchRepository` has no Firestore branch on purpose — a server-side search would
+    need an index that shows message text to a service — and it is bounded by the conversation on
+    screen, which follows `ChatPartnerSource` (M-8). `MessageDao.searchCandidates` is only a
+    `LIKE … ESCAPE '\'` prefilter: SQLite folds ASCII case and nothing else, so the decision is
+    `domain/chat/ChatSearch` over `TextFold` (case and diacritics ignored, "cas" finds "čas"). Don't
+    "simplify" it into a bare `LIKE` — four of the five languages break — and don't add an FTS table
+    without the schema bump and Regenerate run that MON-15 describes. The hold (`SendHold`) keeps a
+    message out of Room and the outbox until the pause ends, which is what makes Undo real, and hands
+    a held message back to the draft store if the ViewModel is cleared rather than sending it. The
+    hint (`ToneCheck`) is three string tests computed while rendering: it never disables Send, is
+    never stored, logged or sent, and never calls itself "AI" — a tone model is MON-12.
+
+29. **A professional reads one family, with both parents' consent, until a date, and never the
+    chat** (MON-18, September 2026). A mediator, lawyer, guardian ad litem or therapist holds
+    `professional_grants/{familyId}__{proUid}`, written only by `acceptProfessionalInvitation` —
+    a **fourth** callable beside pairing, guest and calendar friend. `acceptPairingInvitation`
+    refuses `kind: 'professional'` by name (redeeming it there would make a mediator a parent of
+    the family they observe), and the guest and friend callables refuse it as not theirs; test all
+    three whenever a kind is added. Five things not to invert. **Two consents to open, one to
+    close**: `consents` is a `{parentUid: epochMillis}` map, the callable writes only the inviting
+    parent's key, the rules let each parent add **only their own** (the nested `hasOnly` of item
+    21), and `isProfessionalOf` admits nothing until the map `hasAll(familyParents)`; either parent
+    **deletes** the grant alone, and there is deliberately no "withdraw my consent" edit — a parent
+    who no longer consents revokes. **Always expiring**: the invitation rule refuses an end more
+    than 180 days out, the callable clamps to 180 days from redemption and refuses a missing end,
+    the rule compares `expiresAtMillis` against `request.time`, and `sweepLapsedProfessionalGrants`
+    only tidies the row afterwards (it shares `sweepLapsedByExpiry` with the friend sweep, so a
+    grant with no numeric expiry is never matched). **One family**: the grant id is built from the
+    record's `familyId` and the caller's uid, the stored `familyId`/`proUid` must repeat it, and
+    an event additionally needs its creator in `familyParents` — the same two checks as
+    `isCalendarFriendOf`, for the same reason (M-6). Unpair deletes the family's grants; account
+    deletion deletes both directions. **Read-only, and three collections only**: `events` (last
+    disjunct), `parenting_plans/{familyId}` and `custody_models/{familyId}` (`get`, including a
+    document not yet written). Never `conversations`/`messages`, `expenses`, `budgets`,
+    `child_info`, `pets`, `family_settings`, `families` or `users` — `professional-access.test.js`
+    pins each; don't widen it for an export, attach the export instead (MON-3/MON-16). **No Room
+    table**: grants and the professional's reads are Firestore listeners (`ProfessionalRepository`),
+    so a professional's phone never stores somebody else's family and the schema did not move. The
+    professional's calendar is a list that **names** whose day it is rather than colouring it —
+    this phone cannot know the palette each parent chose (design item 12). The push
+    `professional_access_requested` is server-only, like `pairing_accepted`, and says consent is
+    being asked for, never that access began.
+
+30. **A seasonal layer replaces the pattern for its dates, lives inside the one custody document,
+    and reaches the co-parent only as a proposal** (MON-14, September 2026; schema 38).
+    `domain/custody/SeasonalLayer.kt` is the one definition — `{id, name, from, to (inclusive),
+    patternDays, momDayIndices, startDate, contactWindows, priority}` — and
+    `CustodyModel.getCustodyFor` answers from the highest-precedence layer covering a date
+    (`SeasonalLayer.PRECEDENCE`: priority, then the later start, then the id) before the base
+    pattern; `CustodyResolver` still puts accepted swaps above both, and stays the one lookup.
+    `contactWindowsOn` answers from the deciding layer too — a layer replaces the whole pattern,
+    afternoons included — and item 24 holds inside it. Five things not to undo. **The wire form is
+    `SeasonalLayerCodec` strings** (`L1;id;priority;from;to;anchor;cycle;days;windows;name`, name
+    percent-encoded), never Gson over the data class, and `encodeAll` is canonical. **An entry this
+    build cannot read is kept verbatim** (`CustodyModel.unreadableLayers`), decides nothing and is
+    written back — dropping it would let an older build erase a newer one's summer. **Item 24's
+    three wire rules apply unchanged under the key `seasonalLayers`**: a missing key is an older
+    build's write and the mirror keeps its copy; a pattern write always writes the key (`[]` for
+    none); proposal and swap writes carry the stored list verbatim
+    (`SharedCustody.seasonalLayersWire`, `CustodyProposal.seasonalLayersWire`), and
+    `firestore.rules`' `seasonalLayersKeptOrDropped` refuses one that changes it. **Saving the base
+    pattern carries the agreed layers** (`CustodyModelRepository.withActiveLayers`) — the form
+    knows nothing of layers, and without that every fortnight edit would propose deleting the
+    summer. And **a layer change is a pattern change**: `submitSeasonalLayers` goes through
+    `submitPattern`, so a paired family gets a proposal, never an overwrite, and the section
+    refuses to send while the co-parent's own proposal waits (the repository's fallback there is
+    a local save). The grid shows a layer only through the custody band it already draws — **no
+    new colour, and no per-month banner** (the variable-height strip `CalendarScreen` removed for
+    school vacations). `functions/calendar-feed.js` ports the codec and the precedence; change the
+    Kotlin, change the fixture both suites share. **Holiday fairness (MON-20) only counts**:
+    `HolidayFairnessCalculator` reads the same resolver, so swaps and layers count as drawn and a
+    contact window is never a night; its "Propose a change" opens the layer editor.
+
+31. **A shared file is indexed in Firestore, stored in Storage under its family's path, and never
+    reached by a download URL** (MON-23, September 2026). Two surfaces: the **vault**,
+    `family_documents/{docId}` (Settings → Family → Documents, `presentation/documents`), with the
+    bytes at `family_documents/{familyId}/{docId}/{fileName}`; and **chat attachments**, bytes at
+    `chat_attachments/{conversationId}/{messageId}/{fileName}`, referenced from the message.
+    `domain/files/SharedFilePolicy` holds the cap (under 20 MB) and the types (PDF, JPEG, PNG,
+    HEIC/HEIF, WebP) that both rule files repeat — change all three together. Eight things not to
+    undo.
+    **No Room table, and none added quietly.** The vault is a Firestore listener
+    (`FamilyDocumentRepositoryImpl`, like the calendar-friend list), and a chat reference rides the
+    `attachments` list `Message` already had, as a `ChatAttachmentCodec` string
+    (`att1|path|type|size|sha256|name`) — never Gson over the data class, and never a new column.
+    A vault cache is a schema version (ROADMAP MON-23).
+    **The Storage gate is the path.** `storage.rules`' `isOneOfPair` splits the first segment —
+    `FamilyKey.of`, the two uids — so the emulator runs every case
+    (`firestore-tests/rules/storage-shared-files.test.js`); the cross-service `firestore.get()`
+    it cannot run is not used. The cost is written in the rule: a path names its pair for ever,
+    so an ex-partner who kept one can still fetch that file after an unpair, although the
+    vault's index narrows (`family_documents` is in `SHARED_AUDIENCE_COLLECTIONS`). Don't widen
+    a block to "signed in"; don't add `list`.
+    **No download URL, ever.** A token URL bypasses Storage rules for whoever holds it.
+    `SharedFileStorage` has no `downloadUrl` call; a reader downloads as themselves, and
+    `vaultKeysOnly` refuses a `downloadUrl` field.
+    **The digest is checked, not decorative.** Every upload stamps `uploader` and `sha256` in custom
+    metadata (the rule requires both), `SharedFileCache` renames a download into place only when
+    its SHA-256 matches, and the export lists attachments by name and SHA-256
+    (`RecordFormat.messageText`), never by their bytes. Nothing may overwrite a stored object
+    (`resource == null` in the rule — the emulator treated an overwrite as a create).
+    **A chat message is written only after its file is stored.** `MessageRepositoryImpl.deliver`
+    calls `AttachmentUploadGate.ensureUploaded` (`ChatAttachmentOutbox`) before the Firestore write,
+    so a message whose upload failed stays SENDING/ERROR, shows "Not uploaded yet" and no tick, and
+    the ordinary outbox retries it with its staged file in `files/chat_outbox/{messageId}/`. Don't
+    move the gate after the write. A bubble only opens a reference stored under its own message
+    (`ChatAttachmentCodec.belongsTo`).
+    **Shared by definition.** A vault document has no private form (item 3 does not apply), needs
+    a family (`isFamilyMember`, not `familyIsMineOrBlank`), and its audience is bounded by
+    `isMyAudience` *and* by the family id, so a parent with two families cannot file one family's
+    court order into the other's. The screen says so before anything is added.
+    **Only the uploader renames, re-files or deletes, and a delete is a tombstone** (item 14).
+    `sweepDeletedDocuments` removes a vault tombstone **and its file** after 90 days
+    (`FILES_SWEPT_WITH_TOMBSTONE`); no client can delete a chat file at all.
+    **Account deletion reaches both**: the departing parent's vault documents and their folders
+    (`AUTHORED_FILES.family_documents`, keyed on the stored `familyId`, never a blank prefix), and
+    every conversation's `chat_attachments/{id}/` with the thread.
+    None of it works live until `firebase deploy --only storage` — the known issue below.
 
 ## Known issues / do not "fix" silently
 
@@ -792,8 +1200,9 @@ whatever you were doing; a stale "known issue" costs more than a missing one.
   the entry gave still holds: never route the first agreement through `propose`.
 
 - **`storage.rules` has never been deployed past its July 2026 state, and that is why attaching a
-  photo to a pet fails.** The file in this repo covers `receipts/`, `event_images/`,
-  `medical_photos/` and `pet_photos/`; the live bucket, on the evidence, still covers only the
+  photo to a pet fails** — and why the MON-23 vault and chat attachments (item 31) cannot upload
+  anything live yet. The file in this repo covers `receipts/`, `event_images/`,
+  `medical_photos/`, `pet_photos/`, `family_documents/` and `chat_attachments/`; the live bucket, on the evidence, still covers only the
   first two, so `pet_photos/**` falls through to `match /{allPaths=**} { allow read, write: if
   false; }` and every pet — and, silently, every medical — photo upload is refused. The client
   path is sound and was ruled out end to end. **The fix is an ops action nobody has taken:
@@ -852,25 +1261,35 @@ whatever you were doing; a stale "known issue" costs more than a missing one.
   unbounded: a genuinely broken rule would then reconnect for the life of the process, and any
   test of the give-up path spins on the virtual clock instead of finishing.
 
-- **Chat follows the *first* co-parent, not the selected family** (found in M-8, September 2026).
-  `ChatViewModel.coParentLink`/`unreadCount` and `ChatMirror` key on
-  `PairingRepository.observePairingState()`, which reads the **server's** `users/{uid}.partnerId`
-  (`partnersOf(...)[0]`) rather than the local projection `SelectedFamilySource` writes. For a
-  one-family account the two are the same uid and nothing is wrong. With two families the Chat
-  tab, its badge and the process-wide mirror stay on the first family whatever the switcher says;
-  the second family's thread fills only while it is open, and is reached from the conversation
-  list or its push (which now switches the family on tap). This is also why cross-family badges
-  were **not** built: a Room count across conversations would silently undercount the family
-  nothing mirrors. The fix and its order are in `docs/ROADMAP.md` M-8 — don't paper over it with a
-  count.
+- ~~**Chat follows the *first* co-parent, not the selected family.**~~ **Fixed (M-8, September
+  2026).** `ChatViewModel.coParentLink`/`unreadCount` and `ChatMirror` used to key on
+  `PairingRepository.observePairingState()` — the **server's** `partnerId`, `partnersOf(...)[0]` —
+  so with two families the Chat tab, its badge and the process-wide mirror stayed on the first
+  family whatever the switcher said. Both now read `data/chat/ChatPartnerSource`, which splits the
+  question in two: the server decides **whether** there is a co-parent (`Loading` stays
+  `Resolving`, `NotPaired` stays `None`, so a stale projection cannot invent a thread), and the
+  projection `SelectedFamilySource` writes decides **which**, falling back to the server's partner
+  for the moment after a first pairing when the Room row has not caught up. A one-family account
+  resolves to the same uid either way and does not even re-emit. `ChatMirror` keeps every CQ-8
+  guarantee — `ensureConversation` awaited before either listener attaches, the outer restart
+  loop, the bounded inner retry, the `.catch` — and its `collectLatest` now also cancels the old
+  thread's listeners on a switch: **the process-wide mirror follows exactly one family.** That is
+  why cross-family badges *count* nothing: a Room `COUNT(*)` over a family nothing is mirroring
+  would say 0 when it is not. The honest version shipped instead — a conversation-document
+  listener per non-selected family and a **dot** on the switcher (design item 13) — so don't
+  paper over it with a count. Unverified on two
+  phones: see M-8's acceptance note.
 
-- **Cross-time-zone chat is implemented but never verified on two devices.** The August 2026
-  chat sync moved message times to epoch millis specifically so two parents in different zones
-  agree (see item 13 above), and it is covered by unit tests that drive the two zones explicitly
-  (`ChatReadStateTimeZoneTest`) plus a 12→13 migration test. The two-phone acceptance scenario —
-  set one phone's zone 2–3 hours apart, send a message, and confirm it counts as unread, the
-  badge clears on open, and the ticks reach READ — was **deferred, not run**. Backlog item for
-  the next review round. Everything else in that acceptance run passed on real devices.
+- **Cross-time-zone chat is verified between two clients, not yet on two screens.** The August
+  2026 chat sync moved message times to epoch millis specifically so two parents in different
+  zones agree (see item 13 above), and it is covered by unit tests that drive the two zones
+  explicitly (`ChatReadStateTimeZoneTest`) plus a 12→13 migration test. Since September 2026 the
+  `e2e` CI job runs the acceptance scenario's *logic* end to end: two accounts, the production
+  `MessageRepositoryImpl` on each, the real rules, one parent at UTC+14 and the other at UTC−11 —
+  the message arrives unread, the Room badge count is 1 and clears on `markRead`, and the
+  sender's ticks reach DELIVERED and then READ (`TwoParentChatTest`). What is still **not run** is
+  the part only phones show: the badge and ticks as drawn, the times as displayed, and the push
+  that wakes the other phone. Keep the device check for those; do not re-open the logic.
 
 - ~~**The shared custody schedule orders the two phones' writes by a naive local date-time.**~~
   **Fixed (SEC-4, schema 29).** `CustodyModelEntity.lastModifiedAtMillis` is epoch millis and

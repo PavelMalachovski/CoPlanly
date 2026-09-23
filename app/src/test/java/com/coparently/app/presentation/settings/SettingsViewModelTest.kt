@@ -11,6 +11,7 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -34,14 +35,17 @@ class SettingsViewModelTest {
 
     private val dispatcher = StandardTestDispatcher()
     private val fcmService = mockk<FcmService>(relaxed = true)
+    private val pauseBeforeSending = MutableStateFlow(false)
+    private val preferences = mockk<PreferencesRepository>(relaxed = true) {
+        every { getDarkThemeFlow() } returns flowOf(null)
+        every { getDefaultCurrencyFlow() } returns flowOf(SupportedCurrency.DEFAULT)
+        every { getPauseBeforeSendingFlow() } returns pauseBeforeSending
+        coEvery { setPauseBeforeSending(any()) } answers { pauseBeforeSending.value = firstArg() }
+    }
 
     private fun viewModel(): SettingsViewModel {
         val userRepository = mockk<UserRepository>(relaxed = true) {
             coEvery { getCurrentUser() } returns null
-        }
-        val preferences = mockk<PreferencesRepository>(relaxed = true) {
-            every { getDarkThemeFlow() } returns flowOf(null)
-            every { getDefaultCurrencyFlow() } returns flowOf(SupportedCurrency.DEFAULT)
         }
         return SettingsViewModel(
             fcmService = fcmService,
@@ -103,5 +107,18 @@ class SettingsViewModelTest {
 
         assertTrue(vm.operationState.value is UiState.Error)
         assertEquals(false, vm.settingsState.value.notificationsEnabled)
+    }
+
+    @Test
+    fun `pause before sending is off until turned on, and turning it on is stored`() = runTest(dispatcher) {
+        val vm = viewModel()
+        advanceUntilIdle()
+        assertFalse(vm.pauseBeforeSending.value)
+
+        vm.setPauseBeforeSending(true)
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) { preferences.setPauseBeforeSending(true) }
+        assertTrue(vm.pauseBeforeSending.value)
     }
 }

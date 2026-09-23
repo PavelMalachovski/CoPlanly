@@ -1,6 +1,8 @@
 package com.coparently.app.presentation.common
 
 import com.coparently.app.data.family.FamilyOption
+import com.coparently.app.data.family.FamilySignal
+import com.coparently.app.data.family.OtherFamiliesSignals
 import com.coparently.app.data.family.SelectedFamilySource
 import com.coparently.app.domain.repository.UserRepository
 import io.mockk.coEvery
@@ -29,7 +31,9 @@ import kotlin.test.assertTrue
  *
  * Two rules worth pinning: it is offered **at two, not at one**, and the co-parents' names — the
  * one remote read — are fetched once per co-parent rather than on every emission of a row that
- * re-emits whenever any column of it moves.
+ * re-emits whenever any column of it moves. And the cross-family dot: shown for a family not on
+ * screen with something waiting, never for the family on screen and never at one family, and
+ * naming which kind of news it is.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class FamilySwitcherViewModelTest {
@@ -38,6 +42,10 @@ class FamilySwitcherViewModelTest {
     private val families = MutableStateFlow(listOf(BOB_FAMILY))
     private val source = mockk<SelectedFamilySource>(relaxed = true)
     private val userRepository = mockk<UserRepository>()
+    private val waiting = MutableStateFlow<Map<String, Set<FamilySignal>>>(emptyMap())
+    private val signalsSource = mockk<OtherFamiliesSignals> {
+        every { signals } returns waiting
+    }
 
     @Before
     fun setUp() {
@@ -57,7 +65,7 @@ class FamilySwitcherViewModelTest {
 
     @Test
     fun `one family offers no switcher and costs no read`() = runTest(dispatcher) {
-        val vm = FamilySwitcherViewModel(source, userRepository)
+        val vm = FamilySwitcherViewModel(source, userRepository, signalsSource)
         backgroundScope.launch { vm.state.collect {} }
         advanceUntilIdle()
 
@@ -67,7 +75,7 @@ class FamilySwitcherViewModelTest {
 
     @Test
     fun `a second family offers the switcher, with both co-parents named`() = runTest(dispatcher) {
-        val vm = FamilySwitcherViewModel(source, userRepository)
+        val vm = FamilySwitcherViewModel(source, userRepository, signalsSource)
         backgroundScope.launch { vm.state.collect {} }
         families.value = listOf(BOB_FAMILY, CAROL_FAMILY)
         advanceUntilIdle()
@@ -80,7 +88,7 @@ class FamilySwitcherViewModelTest {
 
     @Test
     fun `a name is read once, not on every emission`() = runTest(dispatcher) {
-        val vm = FamilySwitcherViewModel(source, userRepository)
+        val vm = FamilySwitcherViewModel(source, userRepository, signalsSource)
         backgroundScope.launch { vm.state.collect {} }
         families.value = listOf(BOB_FAMILY, CAROL_FAMILY)
         advanceUntilIdle()
@@ -95,7 +103,7 @@ class FamilySwitcherViewModelTest {
 
     @Test
     fun `a switch goes through the one place that re-points the projection`() = runTest(dispatcher) {
-        val vm = FamilySwitcherViewModel(source, userRepository)
+        val vm = FamilySwitcherViewModel(source, userRepository, signalsSource)
 
         vm.select(CAROL_FAMILY.familyId)
         advanceUntilIdle()
@@ -103,10 +111,73 @@ class FamilySwitcherViewModelTest {
         coVerify { source.select(CAROL_FAMILY.familyId) }
     }
 
+    @Test
+    fun `another family's news raises the chip's dot and that family's row`() = runTest(dispatcher) {
+        val vm = FamilySwitcherViewModel(source, userRepository, signalsSource)
+        backgroundScope.launch { vm.state.collect {} }
+        families.value = listOf(BOB_FAMILY, CAROL_FAMILY)
+        advanceUntilIdle()
+        assertEquals(emptySet(), vm.state.value.otherFamilySignals)
+
+        waiting.value = mapOf(CAROL_FAMILY.familyId to setOf(FamilySignal.CHAT))
+        advanceUntilIdle()
+
+        val state = vm.state.value
+        assertEquals(setOf(FamilySignal.CHAT), state.otherFamilySignals)
+        assertEquals(setOf(FamilySignal.CHAT), state.signalsOf(CAROL_FAMILY.familyId))
+        assertEquals(emptySet(), state.signalsOf(BOB_FAMILY.familyId))
+    }
+
+    @Test
+    fun `the family on screen never raises the dot`() = runTest(dispatcher) {
+        // The source excludes it too; this is the guard for the moment a switch lands before
+        // the source has re-keyed its listeners.
+        waiting.value = mapOf(BOB_FAMILY.familyId to setOf(FamilySignal.CHAT, FamilySignal.SCHEDULE))
+        val vm = FamilySwitcherViewModel(source, userRepository, signalsSource)
+        backgroundScope.launch { vm.state.collect {} }
+        families.value = listOf(BOB_FAMILY, CAROL_FAMILY)
+        advanceUntilIdle()
+
+        assertEquals(emptySet(), vm.state.value.otherFamilySignals)
+        assertEquals(emptySet(), vm.state.value.signalsOf(BOB_FAMILY.familyId))
+    }
+
+    @Test
+    fun `one family shows no dot whatever the source says`() = runTest(dispatcher) {
+        waiting.value = mapOf(CAROL_FAMILY.familyId to setOf(FamilySignal.CHANGE_REQUEST))
+        val vm = FamilySwitcherViewModel(source, userRepository, signalsSource)
+        backgroundScope.launch { vm.state.collect {} }
+        advanceUntilIdle()
+
+        assertEquals(emptySet(), vm.state.value.otherFamilySignals)
+        assertEquals(emptySet(), vm.state.value.signalsOf(CAROL_FAMILY.familyId))
+    }
+
+    @Test
+    fun `the chip gathers every kind waiting across the families not on screen`() = runTest(dispatcher) {
+        val vm = FamilySwitcherViewModel(source, userRepository, signalsSource)
+        backgroundScope.launch { vm.state.collect {} }
+        families.value = listOf(BOB_FAMILY, CAROL_FAMILY, DAVE_FAMILY)
+        waiting.value = mapOf(
+            CAROL_FAMILY.familyId to setOf(FamilySignal.SCHEDULE),
+            DAVE_FAMILY.familyId to setOf(FamilySignal.CHANGE_REQUEST, FamilySignal.CHAT)
+        )
+        advanceUntilIdle()
+
+        val state = vm.state.value
+        // Declaration order, whatever order the families reported in: the description reads the same.
+        assertEquals(
+            listOf(FamilySignal.CHAT, FamilySignal.CHANGE_REQUEST, FamilySignal.SCHEDULE),
+            state.otherFamilySignals.toList()
+        )
+        assertEquals(setOf(FamilySignal.SCHEDULE), state.signalsOf(CAROL_FAMILY.familyId))
+    }
+
     private companion object {
         const val ALICE = "alice-uid"
         val BOB_FAMILY = FamilyOption("alice-uid__bob-uid", "bob-uid")
         val CAROL_FAMILY = FamilyOption("alice-uid__carol-uid", "carol-uid")
-        val NAMES = mapOf("bob-uid" to "Bob", "carol-uid" to "Carol")
+        val DAVE_FAMILY = FamilyOption("alice-uid__dave-uid", "dave-uid")
+        val NAMES = mapOf("bob-uid" to "Bob", "carol-uid" to "Carol", "dave-uid" to "Dave")
     }
 }

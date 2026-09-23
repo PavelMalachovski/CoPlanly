@@ -2,7 +2,7 @@
 <resources>
     <!-- MON-13: the country whose public holidays the calendar draws. -->
     <string name="country_label">Страна</string>
-    <string name="country_settings_summary">Определяет, какие праздники показывает календарь</string>
+    <string name="country_settings_summary">Определяет, какие праздники и школьные каникулы показывает календарь</string>
 
     <string name="country_cz">Чехия</string>
     <string name="country_sk">Словакия</string>
@@ -12,17 +12,19 @@
     <string name="country_ru">Россия</string>
     <string name="country_other">Другая</string>
 
-    <string name="country_holidays_supported">В календаре показываются государственные праздники и школьные каникулы.</string>
+    <string name="country_holidays_supported">В календаре показываются государственные праздники и школьные каникулы. Весенние каникулы зависят от района и не показываются.</string>
+    <string name="country_holidays_school_sk">В календаре показываются государственные праздники и школьные каникулы в том виде, в каком их публикует министерство. Весенние каникулы зависят от края и не показываются.</string>
+    <string name="country_holidays_school_at">В календаре показываются государственные праздники и школьные каникулы, общие для всей Австрии. Семестровые и летние каникулы зависят от федеральной земли и не показываются.</string>
     <string name="country_holidays_unavailable">Праздников для страны «%1$s» в приложении пока нет, поэтому они не показываются.</string>
     <string name="country_holidays_public_only">В календаре показываются общегосударственные праздники. Школьных каникул для страны «%1$s» в приложении нет.</string>
     <string name="country_holidays_suspended">Во время военного положения праздники в стране «%1$s» не являются выходными днями, поэтому они не показываются.</string>
 
     <!-- MON-13, regional half: the Land whose own public holidays are added. -->
     <string name="holiday_region_label_de">Федеральная земля</string>
-    <string name="holiday_region_settings_summary">Добавляет праздники этой федеральной земли</string>
+    <string name="holiday_region_settings_summary">Добавляет праздники и школьные каникулы этой федеральной земли</string>
     <string name="holiday_region_none">Только общегосударственные</string>
-    <string name="country_holidays_pick_region">В календаре показываются общегосударственные праздники; выберите федеральную землю, чтобы добавить её собственные. Школьных каникул для страны «%1$s» в приложении нет.</string>
-    <string name="country_holidays_with_region">В календаре показываются общегосударственные праздники и праздники земли «%1$s». Школьных каникул в приложении нет.</string>
+    <string name="country_holidays_pick_region">В календаре показываются общегосударственные праздники. Школьные каникулы устанавливает каждая федеральная земля: выберите её, чтобы добавить её каникулы и собственные праздники.</string>
+    <string name="country_holidays_with_region">В календаре показываются общегосударственные праздники, а также праздники и школьные каникулы земли «%1$s».</string>
 
     <string name="region_de_bb">Бранденбург</string>
     <string name="region_de_be">Берлин</string>

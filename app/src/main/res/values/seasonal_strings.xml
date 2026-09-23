@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Seasonal custody schedules (MON-14) and holiday fairness (MON-20). -->
+<resources>
+    <string name="seasonal_title">Seasonal schedules</string>
+    <string name="seasonal_hint">A seasonal schedule replaces the pattern above for a range of dates, such as the summer or Christmas. Each change is sent on its own; the Save button below saves only the pattern above.</string>
+    <string name="seasonal_needs_base_pattern">Save a schedule first. A seasonal schedule is laid over it.</string>
+    <string name="seasonal_add">Add a seasonal schedule</string>
+    <string name="seasonal_pending_theirs">%1$s has proposed a schedule change. Answer it before sending another.</string>
+    <string name="seasonal_pending_mine">Your last change is waiting for %1$s to accept it.</string>
+    <string name="seasonal_sent_for_approval">Sent to your co-parent for approval. Nothing changes until they accept.</string>
+    <string name="seasonal_saved">Seasonal schedule saved.</string>
+    <string name="seasonal_save_failed">The seasonal schedule could not be sent. Try again.</string>
+    <string name="seasonal_answer_pending_first">Your co-parent’s proposal is waiting for your answer. Answer it first.</string>
+    <string name="seasonal_dialog_add_title">New seasonal schedule</string>
+    <string name="seasonal_dialog_edit_title">Edit seasonal schedule</string>
+    <string name="seasonal_name_label">Name</string>
+    <string name="seasonal_from">From %1$s</string>
+    <string name="seasonal_to">To %1$s</string>
+    <string name="seasonal_fill_from_school">Fill from school holidays</string>
+    <string name="seasonal_shape_label">How the days are shared</string>
+    <string name="seasonal_shape_keep">Keep as it is</string>
+    <string name="seasonal_shape_all">All with one parent</string>
+    <string name="seasonal_shape_weeks">Alternating weeks</string>
+    <string name="seasonal_shape_half">Split in half</string>
+    <string name="seasonal_with">With</string>
+    <string name="seasonal_starts_with">Starts with</string>
+    <string name="seasonal_invalid_range">A seasonal schedule runs from its first day to its last, for at most 366 days.</string>
+    <string name="seasonal_confirm">Save</string>
+    <string name="seasonal_delete">Delete</string>
+    <string name="seasonal_cancel">Cancel</string>
+    <string name="seasonal_ok">OK</string>
+    <string name="fairness_title">Holiday fairness</string>
+    <string name="fairness_no_schedule">Save a schedule to see who has which holidays.</string>
+    <string name="fairness_nights">Nights</string>
+    <string name="fairness_christmas_eve">Christmas Eve</string>
+    <string name="fairness_christmas_day">Christmas Day</string>
+    <string name="fairness_new_year">New Year’s Day</string>
+    <string name="fairness_easter">Easter</string>
+    <string name="fairness_birthday">Birthday: %1$s</string>
+    <string name="fairness_show_holidays">Show other public holidays</string>
+    <string name="fairness_hide_holidays">Hide other public holidays</string>
+    <string name="fairness_not_set">Not set</string>
+    <string name="fairness_note">Counted as the calendar shows it, agreed swaps and seasonal schedules included. Contact afternoons are not nights.</string>
+    <string name="fairness_propose">Propose a change</string>
+    <string name="custody_diff_layers_changed">The seasonal schedules change too.</string>
+</resources>

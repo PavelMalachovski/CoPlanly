@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Files the two parents share (MON-23): the document vault (Settings → Family → Documents) and
+  chat attachments. The vault has no private documents, and the screen says so before anything is
+  added (documents_shared_notice) — keep that sentence plain.
+-->
+<resources>
+    <string name="documents_settings_title">Documents</string>
+    <string name="documents_settings_description">Court orders, school letters, ID scans — shared with your co-parent</string>
+    <string name="documents_title">Documents</string>
+    <string name="documents_shared_notice">Everything here is shared with your co-parent. There are no private documents: anything you add, they can open.</string>
+    <string name="documents_add_file">Add a file</string>
+    <string name="documents_take_photo">Take a photo</string>
+    <string name="documents_empty_title">No documents yet</string>
+    <string name="documents_empty_description">Add a PDF or a photo of a court order, a school letter or an ID. Your co-parent will see it too.</string>
+    <string name="documents_no_family_title">Link your co-parent first</string>
+    <string name="documents_no_family_description">Documents belong to a family: they are shared with both parents from the moment they are added.</string>
+    <string name="documents_unavailable">Documents can’t be loaded right now. Check your connection.</string>
+    <string name="documents_category_court_order">Court orders</string>
+    <string name="documents_category_school">School</string>
+    <string name="documents_category_medical">Medical</string>
+    <string name="documents_category_identity">Identity documents</string>
+    <string name="documents_category_other">Other</string>
+    <string name="documents_add_dialog_title">Add to documents</string>
+    <string name="documents_add_dialog_name_label">Name</string>
+    <string name="documents_add_dialog_category_label">Category</string>
+    <string name="documents_add_dialog_confirm">Upload and share</string>
+    <string name="documents_uploading">Uploading…</string>
+    <string name="documents_row_meta">%1$s · added by %2$s · %3$s</string>
+    <string name="documents_delete">Delete document</string>
+    <string name="documents_delete_confirm_title">Delete this document?</string>
+    <string name="documents_delete_confirm_body">It disappears from both parents’ documents. The file itself is removed from the server after 90 days.</string>
+    <string name="documents_delete_confirm">Delete</string>
+    <string name="documents_error_upload">The document could not be uploaded. Nothing was shared.</string>
+    <string name="documents_error_delete">The document could not be deleted.</string>
+    <string name="documents_camera_unavailable">No camera app is available.</string>
+
+    <string name="shared_file_cancel">Cancel</string>
+    <string name="shared_file_error_type">Only PDF, JPEG, PNG, HEIC and WebP files can be shared.</string>
+    <string name="shared_file_error_size">Files must be smaller than 20 MB.</string>
+    <string name="shared_file_error_open">The file could not be opened.</string>
+    <string name="shared_file_error_integrity">This file does not match the one that was shared, so it was not opened.</string>
+    <string name="shared_file_no_viewer">No app on this phone can open this file.</string>
+
+    <string name="chat_attach">Attach a photo or PDF</string>
+    <string name="chat_attach_confirm_title">Send this file?</string>
+    <string name="chat_attach_confirm_body">%1$s (%2$s) will be sent to your co-parent. Like every message, it stays in the chat and cannot be deleted later.</string>
+    <string name="chat_attach_send">Send</string>
+    <string name="chat_attach_uploading">Uploading…</string>
+    <string name="chat_attach_waiting">Not uploaded yet</string>
+    <string name="chat_attach_open">Open %1$s</string>
+    <string name="chat_attach_stage_error">The file could not be prepared for sending.</string>
+</resources>

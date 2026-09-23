@@ -4,6 +4,7 @@ import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.CustodyModelType
 import org.junit.Test
 import java.time.LocalDate
+import java.time.LocalTime
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
@@ -161,4 +162,54 @@ class CustodyResolverTest {
 
         assertEquals(LocalDate.of(2026, 9, 7), pending?.date)
     }
+
+    @Test
+    fun `a contact window with the parent who does not have the day is shown`() {
+        // momDay is index 2, slot 1's day: an afternoon with slot 2 is the news.
+        val afternoon = window(dayIndex = 2, parent = "dad")
+        val withWindows = model.copy(contactWindows = listOf(afternoon))
+
+        val windowsFor = CustodyResolver.contactWindowsResolver(withWindows, custodyFor(activeModel = withWindows))
+
+        assertEquals(listOf(afternoon), windowsFor(momDay))
+        assertTrue(windowsFor(momDay.plusDays(1)).isEmpty())
+    }
+
+    @Test
+    fun `a contact window naming the day's own parent is dropped`() {
+        val withWindows = model.copy(contactWindows = listOf(window(dayIndex = 2, parent = "mom")))
+
+        val windowsFor = CustodyResolver.contactWindowsResolver(withWindows, custodyFor(activeModel = withWindows))
+
+        assertTrue(windowsFor(momDay).isEmpty())
+    }
+
+    @Test
+    fun `an accepted swap that hands the day to the window's parent drops the window`() {
+        // The same rule the calendar grid followed inline before the lookup moved here: once the
+        // day is slot 2's, an afternoon with slot 2 is not an afternoon with anybody new.
+        val withWindows = model.copy(contactWindows = listOf(window(dayIndex = 2, parent = "dad")))
+        val overrides = mapOf(momDay.toString() to override("dad", DayOverrideStatus.ACCEPTED))
+
+        val windowsFor = CustodyResolver.contactWindowsResolver(
+            withWindows,
+            custodyFor(overrides, activeModel = withWindows)
+        )
+
+        assertTrue(windowsFor(momDay).isEmpty())
+    }
+
+    @Test
+    fun `no pattern means no contact windows`() {
+        val windowsFor = CustodyResolver.contactWindowsResolver(null, custodyFor(activeModel = null))
+
+        assertTrue(windowsFor(momDay).isEmpty())
+    }
+
+    private fun window(dayIndex: Int, parent: String) = ContactWindow(
+        dayIndex = dayIndex,
+        start = LocalTime.parse("15:00"),
+        end = LocalTime.parse("19:00"),
+        parent = parent
+    )
 }

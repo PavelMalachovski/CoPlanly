@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Seasonal custody schedules (MON-14) and holiday fairness (MON-20). -->
+<resources>
+    <string name="seasonal_title">Сезонні графіки</string>
+    <string name="seasonal_hint">Сезонний графік замінює шаблон вище на певний період — наприклад, літні канікули чи Різдво. Кожна зміна надсилається окремо; кнопка «Зберегти» внизу зберігає лише шаблон вище.</string>
+    <string name="seasonal_needs_base_pattern">Спочатку збережіть графік. Сезонний графік накладається поверх нього.</string>
+    <string name="seasonal_add">Додати сезонний графік</string>
+    <string name="seasonal_pending_theirs">%1$s пропонує змінити графік. Дайте відповідь, перш ніж надсилати нову пропозицію.</string>
+    <string name="seasonal_pending_mine">Ваша остання зміна чекає, поки %1$s її прийме.</string>
+    <string name="seasonal_sent_for_approval">Надіслано другому з батьків на погодження. Доки він не прийме, нічого не змінюється.</string>
+    <string name="seasonal_saved">Сезонний графік збережено.</string>
+    <string name="seasonal_save_failed">Не вдалося надіслати сезонний графік. Спробуйте ще раз.</string>
+    <string name="seasonal_answer_pending_first">Пропозиція другого з батьків чекає вашої відповіді. Спочатку дайте відповідь.</string>
+    <string name="seasonal_dialog_add_title">Новий сезонний графік</string>
+    <string name="seasonal_dialog_edit_title">Змінити сезонний графік</string>
+    <string name="seasonal_name_label">Назва</string>
+    <string name="seasonal_from">З %1$s</string>
+    <string name="seasonal_to">По %1$s</string>
+    <string name="seasonal_fill_from_school">Заповнити за шкільними канікулами</string>
+    <string name="seasonal_shape_label">Як діляться дні</string>
+    <string name="seasonal_shape_keep">Залишити як є</string>
+    <string name="seasonal_shape_all">Усе в одного з батьків</string>
+    <string name="seasonal_shape_weeks">Через тиждень</string>
+    <string name="seasonal_shape_half">Навпіл</string>
+    <string name="seasonal_with">У кого</string>
+    <string name="seasonal_starts_with">Починає</string>
+    <string name="seasonal_invalid_range">Сезонний графік триває з першого до останнього дня, не більше 366 днів.</string>
+    <string name="seasonal_confirm">Зберегти</string>
+    <string name="seasonal_delete">Видалити</string>
+    <string name="seasonal_cancel">Скасувати</string>
+    <string name="seasonal_ok">ОК</string>
+    <string name="fairness_title">Свята порівну</string>
+    <string name="fairness_no_schedule">Збережіть графік, щоб побачити, у кого які свята.</string>
+    <string name="fairness_nights">Ночі</string>
+    <string name="fairness_christmas_eve">Святвечір</string>
+    <string name="fairness_christmas_day">Різдво</string>
+    <string name="fairness_new_year">Новий рік</string>
+    <string name="fairness_easter">Великдень</string>
+    <string name="fairness_birthday">День народження: %1$s</string>
+    <string name="fairness_show_holidays">Показати інші свята</string>
+    <string name="fairness_hide_holidays">Сховати інші свята</string>
+    <string name="fairness_not_set">Не задано</string>
+    <string name="fairness_note">Підраховано так, як показує календар, з погодженими обмінами та сезонними графіками. Денний час спілкування ніччю не вважається.</string>
+    <string name="fairness_propose">Запропонувати зміну</string>
+    <string name="custody_diff_layers_changed">Сезонні графіки теж змінюються.</string>
+</resources>

@@ -1,0 +1,223 @@
+package com.coparently.app.e2e
+
+import android.content.Context
+import androidx.room.Room
+import com.coparently.app.data.family.SelectedFamilySource
+import com.coparently.app.data.local.CoPlanlyDatabase
+import com.coparently.app.data.local.preferences.EncryptedPreferences
+import com.coparently.app.data.remote.firebase.FcmService
+import com.coparently.app.data.remote.firebase.FirebaseAuthService
+import com.coparently.app.data.remote.firebase.FirestoreEventDataSource
+import com.coparently.app.data.remote.firebase.FirestoreEventVersionDataSource
+import com.coparently.app.data.remote.firebase.FirestoreExpenseDataSource
+import com.coparently.app.data.remote.firebase.FirestoreFamilyDataSource
+import com.coparently.app.data.remote.firebase.FirestoreMessageDataSource
+import com.coparently.app.data.remote.firebase.FirestoreUserDataSource
+import com.coparently.app.data.remote.firebase.PairingFunctions
+import com.coparently.app.data.repository.ConversationMigrator
+import com.coparently.app.data.repository.EventRepositoryImpl
+import com.coparently.app.data.repository.ExpenseRepositoryImpl
+import com.coparently.app.data.repository.MessageRepositoryImpl
+import com.coparently.app.data.repository.PairingRepositoryImpl
+import com.coparently.app.data.repository.PostPairingConversationSetup
+import com.coparently.app.data.repository.UserRepositoryImpl
+import com.coparently.app.data.sync.SyncRequester
+import com.coparently.app.data.versions.EventVersionRecorder
+import com.coparently.app.domain.activity.ActivityAnnouncer
+import com.coparently.app.domain.model.PairingState
+import com.coparently.app.presentation.common.ParentsSource
+import com.google.firebase.FirebaseApp
+import com.google.firebase.FirebaseOptions
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.UserProfileChangeRequest
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.FirebaseFirestoreSettings
+import com.google.firebase.firestore.MemoryCacheSettings
+import com.google.firebase.functions.FirebaseFunctions
+import io.mockk.mockk
+import kotlinx.coroutines.flow.filterIsInstance
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withTimeout
+import java.io.Closeable
+import java.util.UUID
+
+/**
+ * One parent's phone, in one process: a Firebase app of its own, a Room database of its own, and
+ * the production data layer wired over both.
+ *
+ * **Why not Hilt.** A process has one `SingletonComponent`, and the scenario needs two of
+ * everything — two signed-in accounts, two Firestore clients with separate caches, two Room
+ * files. So each parent is a *named* [FirebaseApp] (`FirebaseApp.initializeApp(context, options,
+ * name)`), and the repositories are built by hand from the same constructors Hilt calls. That
+ * leaves the ordinary instrumented job exactly as it was: nothing here is a Hilt module, so
+ * `FakeFirebaseModule` still replaces `FirebaseModule` for every `@HiltAndroidTest`, and no
+ * `google-services.json` is involved on either side.
+ *
+ * **What is real and what is not.** Every class that reads or writes Firestore, Auth, Functions or
+ * Room is the production class: the data sources, `EventRepositoryImpl`, `ExpenseRepositoryImpl`,
+ * `MessageRepositoryImpl`, `PairingRepositoryImpl` (which drives the real `acceptPairingInvitation`
+ * callable), `UserRepositoryImpl`, `SelectedFamilySource`, `ParentsSource` and `ActivityAnnouncer`.
+ * Two collaborators are stand-ins, both for things the emulator suite cannot provide: [FcmService]
+ * (a relaxed mock — `FirebaseMessaging` exists only for the default app, and push delivery cannot
+ * be emulated at all) and [SyncRequester] (a no-op — it enqueues WorkManager, whose `SyncService`
+ * would need the whole graph). The Room database is in memory and unencrypted, which is the one
+ * thing the `instrumented` job's SQLCipher coverage already owns.
+ *
+ * @property name The display name this parent signs up with, which becomes their profile name.
+ */
+class EmulatorParent private constructor(
+    val name: String,
+    private val context: Context,
+    val app: FirebaseApp
+) : Closeable {
+
+    val auth: FirebaseAuth = FirebaseAuth.getInstance(app)
+    val firestore: FirebaseFirestore = FirebaseFirestore.getInstance(app)
+    private val functions: FirebaseFunctions = FirebaseFunctions.getInstance(app)
+
+    /** This phone's Room database. In memory: each test starts from an empty install. */
+    val database: CoPlanlyDatabase =
+        Room.inMemoryDatabaseBuilder(context, CoPlanlyDatabase::class.java).build()
+
+    val authService = FirebaseAuthService(auth)
+    val eventDataSource = FirestoreEventDataSource(firestore)
+    private val userDataSource = FirestoreUserDataSource(firestore)
+    private val messageDataSource = FirestoreMessageDataSource(firestore)
+
+    val messageRepository = MessageRepositoryImpl(database.messageDao(), authService, messageDataSource)
+
+    val userRepository = UserRepositoryImpl(
+        userDao = database.userDao(),
+        firebaseAuthService = authService,
+        firestoreUserDataSource = userDataSource,
+        firestoreFamilyDataSource = FirestoreFamilyDataSource(firestore),
+        fcmService = mockk(relaxed = true)
+    )
+
+    private val announcer = ActivityAnnouncer(messageRepository, userRepository)
+
+    val eventRepository = EventRepositoryImpl(
+        eventDao = database.eventDao(),
+        userDao = database.userDao(),
+        firebaseAuthService = authService,
+        firestoreEventDataSource = eventDataSource,
+        activityAnnouncer = announcer,
+        eventVersionRecorder = EventVersionRecorder(
+            outboxDao = database.eventVersionOutboxDao(),
+            userDao = database.userDao(),
+            remote = FirestoreEventVersionDataSource(firestore)
+        )
+    )
+
+    val expenseRepository = ExpenseRepositoryImpl(
+        expenseDao = database.expenseDao(),
+        userDao = database.userDao(),
+        firebaseAuthService = authService,
+        firestoreExpenseDataSource = FirestoreExpenseDataSource(firestore),
+        activityAnnouncer = announcer
+    )
+
+    val selectedFamilySource = SelectedFamilySource(
+        userDao = database.userDao(),
+        firebaseAuthService = authService,
+        firestoreUserDataSource = userDataSource,
+        encryptedPreferences = EncryptedPreferences(context)
+    )
+
+    val pairingRepository = PairingRepositoryImpl(
+        firestore = firestore,
+        authService = authService,
+        pairingFunctions = PairingFunctions(functions),
+        postPairingConversationSetup = PostPairingConversationSetup(
+            messageRepository,
+            ConversationMigrator(database.messageDao(), messageDataSource)
+        ),
+        userDao = database.userDao(),
+        selectedFamilySource = selectedFamilySource,
+        syncRequester = NoSyncRequester,
+        context = context
+    )
+
+    val parentsSource = ParentsSource(userRepository, pairingRepository)
+
+    /** This parent's Firebase uid. Valid once [create] has returned. */
+    val uid: String
+        get() = checkNotNull(auth.currentUser) { "$name is not signed in" }.uid
+
+    /**
+     * Waits until this phone observes itself paired with [partnerUid], exactly as the app does.
+     *
+     * Collecting `observePairingState` is not a shortcut around the app: its `onEach` is where the
+     * pairing is mirrored into Room, the family projection is applied and the conversation is
+     * created. By the time a `Paired` value reaches this collector, that work has finished — the
+     * same state the app is in once the pairing screen shows the co-parent.
+     */
+    suspend fun awaitPairedWith(partnerUid: String): PairingState.Paired = withTimeout(WAIT_MS) {
+        pairingRepository.observePairingState()
+            .filterIsInstance<PairingState.Paired>()
+            .first { it.partner.id == partnerUid }
+    }
+
+    /** Signs out, closes Room and deletes the named Firebase app. */
+    override fun close() {
+        runCatching { auth.signOut() }
+        runCatching { database.close() }
+        runCatching { app.delete() }
+    }
+
+    private object NoSyncRequester : SyncRequester {
+        override fun requestSyncNow() = Unit
+    }
+
+    companion object {
+
+        /** How long any single cross-device wait may take before the test fails. */
+        const val WAIT_MS = 30_000L
+
+        private const val PASSWORD = "e2e-password-1"
+
+        /**
+         * Starts a phone for a brand-new account named [name] and signs it up.
+         *
+         * Emulator redirection happens before the first call on each SDK, which is the only time
+         * it is allowed. The profile is then written by `UserRepositoryImpl.ensureProfile` — the
+         * same call the app makes after sign-in — so the `users/{uid}` document the pairing
+         * callable requires is the one production writes, not a fixture.
+         */
+        suspend fun create(context: Context, name: String): EmulatorParent {
+            val host = EmulatorEnvironment.requireHost()
+            val options = FirebaseOptions.Builder()
+                .setProjectId(EmulatorEnvironment.PROJECT_ID)
+                .setApplicationId("1:000000000000:android:0000000000000000")
+                // Not a key: Firebase Installations (which Functions calls for a token) refuses
+                // any value that does not match `A[\w-]{38}`, emulator or not. Kept off the
+                // `AIza` shape so secret scanning never mistakes it for a Google API key.
+                .setApiKey("A-fake-key-for-the-firebase-emulators-x")
+                .build()
+            val app = FirebaseApp.initializeApp(context, options, "e2e-$name-${UUID.randomUUID()}")
+
+            FirebaseAuth.getInstance(app).useEmulator(host, EmulatorEnvironment.AUTH_PORT)
+            FirebaseFirestore.getInstance(app).apply {
+                useEmulator(host, EmulatorEnvironment.FIRESTORE_PORT)
+                // Memory only: a persisted cache would let a read be answered by this phone's
+                // own earlier write rather than by the server the other phone reads.
+                firestoreSettings = FirebaseFirestoreSettings.Builder()
+                    .setLocalCacheSettings(MemoryCacheSettings.newBuilder().build())
+                    .build()
+            }
+            FirebaseFunctions.getInstance(app).useEmulator(host, EmulatorEnvironment.FUNCTIONS_PORT)
+
+            val parent = EmulatorParent(name, context, app)
+            val email = "${name.lowercase()}-${UUID.randomUUID()}@e2e.coplanly.test"
+            val user = checkNotNull(
+                parent.auth.createUserWithEmailAndPassword(email, PASSWORD).await().user
+            )
+            user.updateProfile(
+                UserProfileChangeRequest.Builder().setDisplayName(name).build()
+            ).await()
+            parent.userRepository.ensureProfile()
+            return parent
+        }
+    }
+}

@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Seasonal custody schedules (MON-14) and holiday fairness (MON-20). -->
+<resources>
+    <string name="seasonal_title">Saisonale Pläne</string>
+    <string name="seasonal_hint">Ein saisonaler Plan ersetzt das obige Muster für einen Zeitraum, etwa die Sommerferien oder Weihnachten. Jede Änderung wird einzeln gesendet; die Schaltfläche Speichern unten speichert nur das Muster oben.</string>
+    <string name="seasonal_needs_base_pattern">Speichern Sie zuerst einen Plan. Ein saisonaler Plan wird darübergelegt.</string>
+    <string name="seasonal_add">Saisonalen Plan hinzufügen</string>
+    <string name="seasonal_pending_theirs">%1$s hat eine Planänderung vorgeschlagen. Beantworten Sie sie, bevor Sie eine weitere senden.</string>
+    <string name="seasonal_pending_mine">Ihre letzte Änderung wartet darauf, dass %1$s sie annimmt.</string>
+    <string name="seasonal_sent_for_approval">Zur Zustimmung an den anderen Elternteil gesendet. Bis zur Annahme ändert sich nichts.</string>
+    <string name="seasonal_saved">Saisonaler Plan gespeichert.</string>
+    <string name="seasonal_save_failed">Der saisonale Plan konnte nicht gesendet werden. Bitte erneut versuchen.</string>
+    <string name="seasonal_answer_pending_first">Der Vorschlag des anderen Elternteils wartet auf Ihre Antwort. Beantworten Sie ihn zuerst.</string>
+    <string name="seasonal_dialog_add_title">Neuer saisonaler Plan</string>
+    <string name="seasonal_dialog_edit_title">Saisonalen Plan bearbeiten</string>
+    <string name="seasonal_name_label">Name</string>
+    <string name="seasonal_from">Von %1$s</string>
+    <string name="seasonal_to">Bis %1$s</string>
+    <string name="seasonal_fill_from_school">Aus den Schulferien übernehmen</string>
+    <string name="seasonal_shape_label">Wie die Tage aufgeteilt werden</string>
+    <string name="seasonal_shape_keep">Unverändert lassen</string>
+    <string name="seasonal_shape_all">Alles bei einem Elternteil</string>
+    <string name="seasonal_shape_weeks">Wochenweise im Wechsel</string>
+    <string name="seasonal_shape_half">Zur Hälfte geteilt</string>
+    <string name="seasonal_with">Bei</string>
+    <string name="seasonal_starts_with">Beginnt bei</string>
+    <string name="seasonal_invalid_range">Ein saisonaler Plan reicht vom ersten bis zum letzten Tag, höchstens 366 Tage.</string>
+    <string name="seasonal_confirm">Speichern</string>
+    <string name="seasonal_delete">Löschen</string>
+    <string name="seasonal_cancel">Abbrechen</string>
+    <string name="seasonal_ok">OK</string>
+    <string name="fairness_title">Feiertage im Überblick</string>
+    <string name="fairness_no_schedule">Speichern Sie einen Plan, um zu sehen, wer welche Feiertage hat.</string>
+    <string name="fairness_nights">Nächte</string>
+    <string name="fairness_christmas_eve">Heiligabend</string>
+    <string name="fairness_christmas_day">Erster Weihnachtstag</string>
+    <string name="fairness_new_year">Neujahr</string>
+    <string name="fairness_easter">Ostern</string>
+    <string name="fairness_birthday">Geburtstag: %1$s</string>
+    <string name="fairness_show_holidays">Weitere Feiertage anzeigen</string>
+    <string name="fairness_hide_holidays">Weitere Feiertage ausblenden</string>
+    <string name="fairness_not_set">Nicht festgelegt</string>
+    <string name="fairness_note">Gezählt wie im Kalender, vereinbarte Tausche und saisonale Pläne eingeschlossen. Umgangsnachmittage zählen nicht als Nächte.</string>
+    <string name="fairness_propose">Änderung vorschlagen</string>
+    <string name="custody_diff_layers_changed">Auch die saisonalen Pläne ändern sich.</string>
+</resources>

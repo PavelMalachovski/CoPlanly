@@ -6,6 +6,16 @@
 
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
+// The sentinels and `Timestamp` come from the modular entry point, never through
+// `admin.firestore.FieldValue`. They are the same classes — `instanceof` against either holds, so
+// the tests are unaffected — but the Functions emulator wraps `firebase-admin` in a proxy that
+// hands out `admin.firestore` as a *bound copy* of the function, and a bound function carries none
+// of the original's static properties. Under the emulator `admin.firestore.FieldValue` was
+// therefore `undefined`, and `acceptPairingInvitation` died with "Cannot read properties of
+// undefined (reading 'arrayUnion')" — found the first time anything ran the callable end to end
+// (`tools/e2e/pairing-smoke.js`). Production never saw it, because production has no proxy.
+const {FieldValue, Timestamp} = require('firebase-admin/firestore');
+const exportReceipts = require('./export-receipts');
 
 // Инициализация Firebase Admin SDK
 admin.initializeApp();
@@ -113,7 +123,7 @@ exports.sendNotification = functions.firestore
           await snap.ref.update({
             status: 'skipped',
             error: 'No FCM token',
-            sentAt: admin.firestore.FieldValue.serverTimestamp(),
+            sentAt: FieldValue.serverTimestamp(),
           });
           return null;
         }
@@ -132,7 +142,7 @@ exports.sendNotification = functions.firestore
         // Обновление статуса в базе данных
         await snap.ref.update({
           status: 'sent',
-          sentAt: admin.firestore.FieldValue.serverTimestamp(),
+          sentAt: FieldValue.serverTimestamp(),
           messageId: response,
         });
 
@@ -144,7 +154,7 @@ exports.sendNotification = functions.firestore
         await snap.ref.update({
           status: 'failed',
           error: error.message,
-          sentAt: admin.firestore.FieldValue.serverTimestamp(),
+          sentAt: FieldValue.serverTimestamp(),
         });
 
         // Повторная попытка для определенных ошибок
@@ -155,7 +165,7 @@ exports.sendNotification = functions.firestore
               .collection('users')
               .doc(notificationData.targetUserId)
               .update({
-                fcmToken: admin.firestore.FieldValue.delete(),
+                fcmToken: FieldValue.delete(),
               });
         }
 
@@ -184,7 +194,7 @@ exports.cleanupOldNotifications = functions.pubsub
       // without bound.
       const queue = admin.firestore().collection('notification_queue');
       const [byTimestamp, byMillis] = await Promise.all([
-        queue.where('createdAt', '<', admin.firestore.Timestamp.fromDate(thirtyDaysAgo)).get(),
+        queue.where('createdAt', '<', Timestamp.fromDate(thirtyDaysAgo)).get(),
         queue.where('createdAt', '<', thirtyDaysAgo.getTime()).get(),
       ]);
       const oldNotificationsQuery = {docs: byTimestamp.docs.concat(byMillis.docs)};
@@ -272,7 +282,7 @@ exports.onEventCreated = functions.firestore
               eventId: eventId,
             },
             status: 'pending',
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            createdAt: FieldValue.serverTimestamp(),
           });
 
       console.log(`Notification queued for partner ${partnerId}`);
@@ -332,7 +342,7 @@ exports.onChildInfoUpdated = functions.firestore
               childInfoId: childInfoId,
             },
             status: 'pending',
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            createdAt: FieldValue.serverTimestamp(),
           });
 
       console.log(`Notification queued for partner ${partnerId}`);
@@ -390,6 +400,13 @@ async function acceptPairingInvitationImpl(db, acceptingUserId, acceptingEmail, 
     throw new functions.https.HttpsError(
         'failed-precondition', 'This is a friend invitation, not a co-parent invitation',
         {reason: 'friend-invitation'});
+  }
+  // And for a professional invitation (MON-18): a mediator redeeming here would become a parent
+  // of the family they were asked to observe, with a slot, a colour and write access to all of it.
+  if (invite.kind === PROFESSIONAL_INVITATION) {
+    throw new functions.https.HttpsError(
+        'failed-precondition', 'This is a professional invitation, not a co-parent invitation',
+        {reason: 'professional-invitation'});
   }
   if (invite.status !== 'pending') {
     throw new functions.https.HttpsError(
@@ -499,13 +516,13 @@ async function acceptPairingInvitationImpl(db, acceptingUserId, acceptingEmail, 
     // relationship — so it should keep showing the one it already knew rather than being
     // silently moved to a family it has never heard of. M-5 deletes the field.
     tx.update(inviterRef, {
-      partnerIds: admin.firestore.FieldValue.arrayUnion(acceptingUserId),
+      partnerIds: FieldValue.arrayUnion(acceptingUserId),
       partnerId: partnersOf(inviterSnap.data())[0] || acceptingUserId,
       pairedAt,
       role: slots.inviterRole,
     });
     tx.update(accepterRef, {
-      partnerIds: admin.firestore.FieldValue.arrayUnion(invite.fromUserId),
+      partnerIds: FieldValue.arrayUnion(invite.fromUserId),
       partnerId: partnersOf(accepterSnap.data())[0] || invite.fromUserId,
       pairedAt,
       role: slots.accepterRole,
@@ -533,7 +550,7 @@ async function acceptPairingInvitationImpl(db, acceptingUserId, acceptingEmail, 
       familyId: custodyModelKey(invite.fromUserId, acceptingUserId),
     },
     status: 'pending',
-    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    createdAt: FieldValue.serverTimestamp(),
   });
 
   return {partnerId: invite.fromUserId, role: slots.accepterRole};
@@ -729,7 +746,7 @@ async function acceptGuestInvitationImpl(db, acceptingUserId, acceptingEmail, re
       body: `${await guestName(accepterRef, acceptingEmail)} can now see this child's record`,
     },
     status: 'pending',
-    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    createdAt: FieldValue.serverTimestamp(),
   });
 
   return {childInfoId, expiresAtMillis};
@@ -954,7 +971,7 @@ async function acceptCalendarFriendInvitationImpl(db, acceptingUserId, accepting
         body: `${acceptingEmail || 'A friend'} can now see the family calendar`,
       },
       status: 'pending',
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      createdAt: FieldValue.serverTimestamp(),
     })));
 
   return {familyParents, familyId, expiresAtMillis};
@@ -986,6 +1003,236 @@ exports.acceptCalendarFriendInvitation = functions.https.onCall(async (data, con
   }
 
   return acceptCalendarFriendInvitationImpl(
+      admin.firestore(), context.auth.uid, verifiedEmailOf(context), {code, invitationId});
+});
+
+/**
+ * The `kind` marking an invitation as a **professional** invitation (MON-18): a mediator, lawyer,
+ * guardian ad litem or therapist admitted to read one family's calendar, parenting plan and
+ * custody schedule.
+ *
+ * A fourth kind rather than a flag on the friend one, because the two grants differ in the one
+ * property that matters most: a friend is let in by either parent, a professional by **both**.
+ * As with the other kinds, absent still means co-parent, and every other callable refuses this
+ * value by name.
+ */
+const PROFESSIONAL_INVITATION = 'professional';
+exports.PROFESSIONAL_INVITATION = PROFESSIONAL_INVITATION;
+
+/**
+ * The longest a professional grant may run, in days. The same ceiling is
+ * `professionalMaxMillis()` in firestore.rules and `ProfessionalGrantPolicy.MAX_DURATION_DAYS` on
+ * the client. A mediation is weeks, a custody case a few months; a grant that outlives the
+ * reason for it is exactly what "always expiring" is there to prevent.
+ */
+const PROFESSIONAL_MAX_DAYS = 180;
+exports.PROFESSIONAL_MAX_DAYS = PROFESSIONAL_MAX_DAYS;
+
+/** One day, in millis. */
+const DAY_MILLIS = 24 * 60 * 60 * 1000;
+
+/** The professions a grant may name. A label for the parents' list, never a permission. */
+const PROFESSIONAL_ROLES = ['mediator', 'lawyer', 'guardian_ad_litem', 'therapist', 'other'];
+exports.PROFESSIONAL_ROLES = PROFESSIONAL_ROLES;
+
+/**
+ * The id of a professional grant: the family, then the professional. The rule builds the same
+ * string from the record's `familyId` and the caller's uid, so it reads the grant in one `get()`.
+ *
+ * @param {string} familyId `FamilyKey.of` the two parents.
+ * @param {string} proUid The professional's uid.
+ * @return {string} The document id.
+ */
+function professionalGrantId(familyId, proUid) {
+  return `${familyId}__${proUid}`;
+}
+
+exports.professionalGrantId = professionalGrantId;
+
+/**
+ * Body of the `acceptProfessionalInvitation` callable — the **fourth** redemption path, beside
+ * pairing, guest and calendar friend (MON-18).
+ *
+ * Separate for the reason `acceptGuestInvitationImpl` gives: paths that grant different things
+ * must not be one `kind` branch apart. This one writes exactly one document,
+ * `professional_grants/{familyId}__{proUid}`, and touches no user, no event and no child record.
+ *
+ * **The grant it writes opens nothing yet.** It records the inviting parent's consent — making the
+ * invitation *is* that parent's yes — and the other parent's key is missing until they add it from
+ * their own phone; the rules admit a read only once `consents` holds both. That is why both
+ * parents are told, and the push says consent is needed rather than that access began.
+ *
+ * Four checks the client cannot be trusted with:
+ * - the family named on the invitation must still be a **live** pairing, seen from both sides — no
+ *   fallback to the family on screen, unlike the friend path, because no older build writes this
+ *   kind without a family;
+ * - the accepter must not be a parent of that family;
+ * - the role must be one of [PROFESSIONAL_ROLES];
+ * - the end is clamped to [PROFESSIONAL_MAX_DAYS] from **now**, and must be in the future. No
+ *   fallback duration: the one default this must never have is "forever".
+ *
+ * The parents' names and slots are copied in at acceptance, like a friend's name, because the
+ * professional may read neither parent's profile and still has to be told whose day it is.
+ *
+ * @param {FirebaseFirestore.Firestore} db Firestore instance.
+ * @param {string} acceptingUserId The signed-in caller's UID.
+ * @param {string} acceptingEmail The signed-in caller's email, or ''.
+ * @param {{code: ?string, invitationId: ?string}} ref Exactly one identifier.
+ * @param {number=} nowMillis The instant to judge expiry at; defaults to the clock.
+ * @return {Promise<{grantId: string, familyId: string, familyParents: !Array<string>,
+ *   expiresAtMillis: number}>} The grant written and when it ends.
+ */
+async function acceptProfessionalInvitationImpl(
+    db, acceptingUserId, acceptingEmail, ref, nowMillis) {
+  const now = typeof nowMillis === 'number' ? nowMillis : Date.now();
+  const inviteRef = await findInvitation(db, ref);
+  const invite = (await inviteRef.get()).data();
+
+  if (invite.kind !== PROFESSIONAL_INVITATION) {
+    throw new functions.https.HttpsError(
+        'failed-precondition', 'This is not a professional invitation',
+        {reason: 'not-a-professional-invitation'});
+  }
+  if (invite.status !== 'pending') {
+    throw new functions.https.HttpsError(
+        'failed-precondition', 'Invitation is no longer pending',
+        {reason: 'invitation-not-pending'});
+  }
+  if (typeof invite.expiresAt === 'number' && invite.expiresAt < now) {
+    throw new functions.https.HttpsError(
+        'failed-precondition', 'Invitation has expired', {reason: 'invitation-expired'});
+  }
+  if (invite.fromUserId === acceptingUserId) {
+    throw new functions.https.HttpsError(
+        'invalid-argument', 'You cannot accept your own invitation', {reason: 'self-pairing'});
+  }
+  if (invite.toEmail && invite.toEmail !== acceptingEmail) {
+    throw new functions.https.HttpsError(
+        'permission-denied', 'This invitation is addressed to somebody else',
+        {reason: 'wrong-recipient'});
+  }
+  if (!PROFESSIONAL_ROLES.includes(invite.professionalRole)) {
+    throw new functions.https.HttpsError(
+        'failed-precondition', 'Invitation names no profession',
+        {reason: 'invitation-malformed'});
+  }
+  const requested = typeof invite.professionalExpiresAt === 'number' ?
+    invite.professionalExpiresAt : 0;
+  const expiresAtMillis = Math.min(requested, now + PROFESSIONAL_MAX_DAYS * DAY_MILLIS);
+  if (expiresAtMillis <= now) {
+    throw new functions.https.HttpsError(
+        'failed-precondition', 'This access has already ended', {reason: 'grant-expired'});
+  }
+  const partnerId = partnerFromFamilyId(invite.familyId, invite.fromUserId);
+  if (!partnerId) {
+    throw new functions.https.HttpsError(
+        'failed-precondition', 'Invitation names no family', {reason: 'invitation-malformed'});
+  }
+  if (acceptingUserId === partnerId) {
+    throw new functions.https.HttpsError(
+        'failed-precondition', 'You are already a parent in this family',
+        {reason: 'already-entitled'});
+  }
+
+  const familyId = custodyModelKey(invite.fromUserId, partnerId);
+  const familyParents = [invite.fromUserId, partnerId].sort();
+  const inviterRef = db.collection('users').doc(invite.fromUserId);
+  const partnerRef = db.collection('users').doc(partnerId);
+  const familyRef = db.collection('families').doc(familyId);
+  const accepterRef = db.collection('users').doc(acceptingUserId);
+  const grantId = professionalGrantId(familyId, acceptingUserId);
+  const grantRef = db.collection('professional_grants').doc(grantId);
+  const name = await guestName(accepterRef, acceptingEmail);
+  const photo = await accepterPhoto(accepterRef);
+
+  await db.runTransaction(async (tx) => {
+    const [inviterSnap, partnerSnap, familySnap, inviteSnap] = await Promise.all([
+      tx.get(inviterRef), tx.get(partnerRef), tx.get(familyRef), tx.get(inviteRef),
+    ]);
+    // Re-read inside the transaction: two devices redeeming one code would otherwise both pass
+    // the check above.
+    if (inviteSnap.data().status !== 'pending') {
+      throw new functions.https.HttpsError(
+          'failed-precondition', 'Invitation is no longer pending',
+          {reason: 'invitation-not-pending'});
+    }
+    const inviter = inviterSnap.exists ? inviterSnap.data() : {};
+    const partner = partnerSnap.exists ? partnerSnap.data() : {};
+    // A live pairing, from both sides. A family id on an invitation is a claim, not proof: the
+    // relationship may have ended between generating the code and redeeming it.
+    if (!partnersOf(inviter).includes(partnerId) ||
+        !partnersOf(partner).includes(invite.fromUserId)) {
+      throw new functions.https.HttpsError(
+          'failed-precondition', 'Only a paired parent can invite a professional',
+          {reason: 'inviter-not-paired'});
+    }
+    const family = familySnap.exists && familySnap.data() ? familySnap.data() : {};
+    const storedSlots = family.slots && typeof family.slots === 'object' ? family.slots : {};
+    const slotOf = (uid, profile) => normalizedSlot(storedSlots[uid] || profile.role);
+    const nameOf = (profile) =>
+      (typeof profile.name === 'string' && profile.name.trim()) || '';
+
+    tx.set(grantRef, Object.assign({
+      familyId,
+      familyParents,
+      proUid: acceptingUserId,
+      role: invite.professionalRole,
+      name,
+      invitedBy: invite.fromUserId,
+      grantedAtMillis: now,
+      expiresAtMillis,
+      // The inviting parent's yes. The other key is the co-parent's to add, from their phone.
+      consents: {[invite.fromUserId]: now},
+      parentNames: {
+        [invite.fromUserId]: nameOf(inviter),
+        [partnerId]: nameOf(partner),
+      },
+      parentSlots: {
+        [invite.fromUserId]: slotOf(invite.fromUserId, inviter),
+        [partnerId]: slotOf(partnerId, partner),
+      },
+    }, photo));
+    tx.update(inviteRef, {status: 'accepted', acceptedBy: acceptingUserId, acceptedAt: now});
+  });
+
+  // Both parents are told, in the same words: the inviter learns the code was redeemed, the
+  // co-parent that their consent is asked for. A type, not a sentence (CLAUDE.md item 15).
+  await Promise.all(familyParents.map((parentUid) =>
+    db.collection('notification_queue').add({
+      targetUserId: parentUid,
+      data: {type: 'professional_access_requested', actorName: name, familyId},
+      status: 'pending',
+      createdAt: FieldValue.serverTimestamp(),
+    })));
+
+  return {grantId, familyId, familyParents, expiresAtMillis};
+}
+
+exports.acceptProfessionalInvitationImpl = acceptProfessionalInvitationImpl;
+
+/**
+ * Redeems a professional invitation identified either by its short code or by its id.
+ *
+ * Server-side because it must read both parents' `users` documents to prove the pairing is live
+ * — documents a professional may never read — and because no client may write a grant at all.
+ *
+ * @param {{code?: string, invitationId?: string}} data Exactly one identifier.
+ * @return {Promise<Object>} See [acceptProfessionalInvitationImpl].
+ */
+exports.acceptProfessionalInvitation = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'Sign in first');
+  }
+
+  const code = data && data.code ? String(data.code).trim().toUpperCase() : null;
+  const invitationId = data && data.invitationId ? String(data.invitationId) : null;
+
+  if ((!code && !invitationId) || (code && invitationId)) {
+    throw new functions.https.HttpsError(
+        'invalid-argument', 'Provide exactly one of code or invitationId');
+  }
+
+  return acceptProfessionalInvitationImpl(
       admin.firestore(), context.auth.uid, verifiedEmailOf(context), {code, invitationId});
 });
 
@@ -1071,7 +1318,7 @@ async function sweepExpiredGuestsImpl(db, nowMillis) {
     const update = {guests: kept};
     const fromAudience = expired.filter((uid) => uid !== data.createdByFirebaseUid);
     if (fromAudience.length > 0) {
-      update.sharedWith = admin.firestore.FieldValue.arrayRemove(...fromAudience);
+      update.sharedWith = FieldValue.arrayRemove(...fromAudience);
     }
 
     batch.update(doc.ref, update);
@@ -1112,6 +1359,136 @@ exports.sweepExpiredGuests = functions.pubsub
     });
 
 /**
+ * Body of the `sweepLapsedCalendarFriends` schedule — deletes calendar-friend grants whose
+ * `expiresAtMillis` has passed.
+ *
+ * The events read rule (`isCalendarFriendOf`) already refuses a lapsed friend from the instant
+ * `request.time` reaches the expiry, so this is cleanup, not enforcement — the same split as
+ * [sweepExpiredGuestsImpl]. What it cleans up is the row itself: until it goes, the parents'
+ * friends list keeps naming somebody who can no longer see anything, and the friend's own phone
+ * keeps believing it holds a grant. Deleting the document is exactly what a parent's "revoke"
+ * does (`FriendRepositoryImpl.revokeFriend`), so both phones already handle the outcome.
+ *
+ * **A query, not a scan**, unlike the guest sweep: the expiry is a top-level number here, so
+ * "lapsed" is a range on a field Firestore indexes by itself. Two properties of that range are
+ * the whole safety argument, and both are pinned by tests:
+ *
+ * - `<= nowMillis`, matching the rule's strict `request.time < expiresAtMillis`: a grant ending
+ *   at noon is refused at noon and swept at noon, never one before the other.
+ * - `> 0`, and a range filter only ever matches a document whose field **is a number** — so a
+ *   grant with no expiry at all (absent, null, or not a positive number) is never returned and
+ *   never deleted. The callable does not write such a grant (it refuses a missing
+ *   `friendExpiresAt`), and the rule reads a missing expiry as 0 and admits nothing through it,
+ *   so none should exist; if one does, deciding what it means is a person's call, not a
+ *   scheduled job's.
+ *
+ * @param {FirebaseFirestore.Firestore} db Firestore instance.
+ * @param {number} nowMillis The instant to sweep at.
+ * @return {Promise<number>} How many grants were deleted.
+ */
+async function sweepLapsedCalendarFriendsImpl(db, nowMillis) {
+  return sweepLapsedByExpiry(db, 'calendar_friends', nowMillis);
+}
+
+exports.sweepLapsedCalendarFriendsImpl = sweepLapsedCalendarFriendsImpl;
+
+/**
+ * Deletes every document in [collection] whose top-level `expiresAtMillis` is a positive number
+ * at or before [nowMillis] — the one query both grant sweeps run.
+ *
+ * Shared by the calendar-friend and professional sweeps because the safety argument is the
+ * same and must not drift between two copies: `<=` matches the rules' strict `<`, and `> 0`
+ * means a document with no numeric expiry is never matched and never deleted.
+ *
+ * @param {FirebaseFirestore.Firestore} db Firestore instance.
+ * @param {string} collection The grant collection.
+ * @param {number} nowMillis The instant to sweep at.
+ * @return {Promise<number>} How many documents were deleted.
+ */
+async function sweepLapsedByExpiry(db, collection, nowMillis) {
+  const snap = await db.collection(collection)
+      .where('expiresAtMillis', '>', 0)
+      .where('expiresAtMillis', '<=', nowMillis)
+      .get();
+
+  let batch = db.batch();
+  let pending = 0;
+  let removed = 0;
+
+  for (const doc of snap.docs) {
+    batch.delete(doc.ref);
+    pending++;
+    removed++;
+
+    if (pending === GUEST_SWEEP_BATCH_LIMIT) {
+      await batch.commit();
+      batch = db.batch();
+      pending = 0;
+    }
+  }
+
+  if (pending > 0) {
+    await batch.commit();
+  }
+
+  return removed;
+}
+
+exports.sweepLapsedByExpiry = sweepLapsedByExpiry;
+
+/**
+ * Daily removal of calendar-friend grants that have lapsed.
+ *
+ * At 05:00 UTC, an hour after `sweepDeletedDocuments`, keeping the scheduled jobs an hour apart
+ * as the others are. Daily for the reason the guest sweep is: access already ended at the expiry,
+ * so the only thing a day's delay costs is a row lingering in a list.
+ */
+exports.sweepLapsedCalendarFriends = functions.pubsub
+    .schedule('0 5 * * *')
+    .timeZone('UTC')
+    .onRun(async () => {
+      const removed = await sweepLapsedCalendarFriendsImpl(admin.firestore(), Date.now());
+      console.log(`Swept ${removed} lapsed calendar-friend grants`);
+      return null;
+    });
+
+/**
+ * Body of the `sweepLapsedProfessionalGrants` schedule — deletes professional grants (MON-18)
+ * whose `expiresAtMillis` has passed.
+ *
+ * Cleanup, not enforcement, exactly as for calendar friends: `isProfessionalOf` in
+ * firestore.rules refuses a lapsed grant from the instant `request.time` reaches its end, with or
+ * without this. What the sweep removes is the row — the parents' list would otherwise keep
+ * naming somebody who can see nothing, and the professional's phone keeps a dead entry. Deleting
+ * the document is exactly what a parent's revoke does, so both sides already handle it.
+ *
+ * A grant with no positive numeric expiry is never matched (see [sweepLapsedByExpiry]); the
+ * callable never writes one and the rule admits nothing through it.
+ *
+ * @param {FirebaseFirestore.Firestore} db Firestore instance.
+ * @param {number} nowMillis The instant to sweep at.
+ * @return {Promise<number>} How many grants were deleted.
+ */
+async function sweepLapsedProfessionalGrantsImpl(db, nowMillis) {
+  return sweepLapsedByExpiry(db, 'professional_grants', nowMillis);
+}
+
+exports.sweepLapsedProfessionalGrantsImpl = sweepLapsedProfessionalGrantsImpl;
+
+/**
+ * Daily removal of lapsed professional grants, at 06:00 UTC — an hour after the friend sweep, to
+ * keep the scheduled jobs an hour apart as the others are.
+ */
+exports.sweepLapsedProfessionalGrants = functions.pubsub
+    .schedule('0 6 * * *')
+    .timeZone('UTC')
+    .onRun(async () => {
+      const removed = await sweepLapsedProfessionalGrantsImpl(admin.firestore(), Date.now());
+      console.log(`Swept ${removed} lapsed professional grants`);
+      return null;
+    });
+
+/**
  * Collections whose documents are deleted by being tombstoned rather than removed (CQ-3, CQ-19).
  *
  * Each is read by the co-parent's phone through a filtered collection query, which is the
@@ -1126,10 +1503,30 @@ exports.sweepExpiredGuests = functions.pubsub
  *
  * A collection listed here without a client that writes tombstones sweeps nothing; a client that
  * writes tombstones into a collection *not* listed here keeps them for ever. Add to both halves.
+ *
+ * `family_documents` joined with the vault (MON-23). It is the one collection whose sweep also
+ * removes a file — see [FILES_SWEPT_WITH_TOMBSTONE].
  */
-const TOMBSTONED_COLLECTIONS = ['events', 'expenses', 'child_info', 'pets'];
+const TOMBSTONED_COLLECTIONS = ['events', 'expenses', 'child_info', 'pets', 'family_documents'];
 
 exports.TOMBSTONED_COLLECTIONS = TOMBSTONED_COLLECTIONS;
+
+/**
+ * Tombstoned collections whose file goes with the document when the sweep removes it.
+ *
+ * A vault document is nothing but the index of its file (MON-23), and the Storage rule lets no
+ * client delete a file the co-parent uploaded — so once the tombstone is swept nothing else
+ * could ever name the file again, and the bytes of a deleted court order would stay in the
+ * bucket for good. The file is removed **before** the document, for the reason
+ * [deleteAuthoredFiles] gives: the document is the only record of where the file is.
+ *
+ * The older collections are deliberately not listed. Their photos are addressed by download URL
+ * from the record, and whether a tombstoned event's photo should outlive the sweep has never
+ * been decided; listing them here would decide it silently.
+ */
+const FILES_SWEPT_WITH_TOMBSTONE = ['family_documents'];
+
+exports.FILES_SWEPT_WITH_TOMBSTONE = FILES_SWEPT_WITH_TOMBSTONE;
 
 /**
  * How long a tombstone is kept before the document is removed for good.
@@ -1164,9 +1561,11 @@ const TOMBSTONE_SWEEP_BATCH_LIMIT = 400;
  * @param {number} nowMillis The instant to sweep at.
  * @param {number=} retentionDays Override the retention window; defaults to
  *     [TOMBSTONE_RETENTION_DAYS].
+ * @param {?Object=} bucket The Storage bucket; when given, the files of
+ *     [FILES_SWEPT_WITH_TOMBSTONE] collections are removed with their documents.
  * @return {Promise<number>} How many documents were removed.
  */
-async function sweepDeletedDocumentsImpl(db, nowMillis, retentionDays) {
+async function sweepDeletedDocumentsImpl(db, nowMillis, retentionDays, bucket) {
   const days = typeof retentionDays === 'number' ? retentionDays :
     TOMBSTONE_RETENTION_DAYS;
   const cutoff = nowMillis - days * 24 * 60 * 60 * 1000;
@@ -1182,6 +1581,9 @@ async function sweepDeletedDocumentsImpl(db, nowMillis, retentionDays) {
     let pending = 0;
 
     for (const doc of snap.docs) {
+      if (bucket && FILES_SWEPT_WITH_TOMBSTONE.includes(collection)) {
+        await deleteFilesOf(bucket, collection, doc.id, doc.data());
+      }
       batch.delete(doc.ref);
       pending++;
       removed++;
@@ -1215,7 +1617,8 @@ exports.sweepDeletedDocuments = functions.pubsub
     .schedule('0 4 * * *')
     .timeZone('UTC')
     .onRun(async () => {
-      const removed = await sweepDeletedDocumentsImpl(admin.firestore(), Date.now());
+      const removed = await sweepDeletedDocumentsImpl(
+          admin.firestore(), Date.now(), undefined, admin.storage().bucket());
       console.log(`Swept ${removed} tombstoned documents`);
       return null;
     });
@@ -1230,7 +1633,7 @@ exports.sweepDeletedDocuments = functions.pubsub
  * immutable — whether an ended co-parent link should also erase the chat history is a
  * product decision, not a leak to close here.
  */
-const SHARED_AUDIENCE_COLLECTIONS = ['events', 'child_info', 'pets'];
+const SHARED_AUDIENCE_COLLECTIONS = ['events', 'child_info', 'pets', 'family_documents'];
 
 exports.SHARED_AUDIENCE_COLLECTIONS = SHARED_AUDIENCE_COLLECTIONS;
 
@@ -1288,7 +1691,7 @@ async function revokeSharedAudience(db, uidA, uidB) {
         }
 
         batch.update(doc.ref, {
-          sharedWith: admin.firestore.FieldValue.arrayRemove(removed),
+          sharedWith: FieldValue.arrayRemove(removed),
         });
         pending++;
         revoked++;
@@ -1509,7 +1912,11 @@ async function unpairCoParentImpl(db, callerUid, requestedPartnerId) {
       // No notification: there is no intact link, and the other side either does
       // not exist or is already paired with somebody else. The sweep still runs —
       // a half-torn link leaves the shared documents just as exposed.
-      return {unpairedFrom: null, revokeFrom: revokeFrom};
+      return {
+        unpairedFrom: null,
+        revokeFrom: revokeFrom,
+        endedFamilyId: custodyModelKey(callerUid, partnerId),
+      };
     }
 
     tx.update(callerRef, withPartnerRemoved(callerData, partnerId, {
@@ -1521,6 +1928,7 @@ async function unpairCoParentImpl(db, callerUid, requestedPartnerId) {
       unpairedFrom: partnerId,
       callerName: callerData.name || 'Your co-parent',
       revokeFrom: revokeFrom,
+      endedFamilyId: custodyModelKey(callerUid, partnerId),
     };
   });
 
@@ -1536,11 +1944,26 @@ async function unpairCoParentImpl(db, callerUid, requestedPartnerId) {
           actorName: result.callerName || '',
         },
         status: 'pending',
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        createdAt: FieldValue.serverTimestamp(),
       });
     } catch (err) {
       console.error(
           `Unpair notification could not be queued for ${result.unpairedFrom}`, err);
+    }
+  }
+
+  // The family's professional grants end with the family (MON-18). A mediator was admitted by
+  // two parents to one relationship; once it is gone there is nobody left to consent, and the
+  // events the grant reads still carry the old `familyId`. After the transaction because a
+  // query cannot run inside one here, and swallowed on failure for the reason the notice above
+  // is: a leftover grant must not abort the revocation of shared audiences behind it. The
+  // nightly sweep still bounds it by the grant's own expiry.
+  if (result.endedFamilyId) {
+    try {
+      await deleteQueryInBatches(db, db.collection('professional_grants')
+          .where('familyId', '==', result.endedFamilyId));
+    } catch (err) {
+      console.error(`Professional grants for ${result.endedFamilyId} were not removed`, err);
     }
   }
 
@@ -1554,7 +1977,7 @@ async function unpairCoParentImpl(db, callerUid, requestedPartnerId) {
       // undo the bookkeeping for the ones that already finished.
       await callerRef.update({
         pendingRevocationOf: remaining.length > 0 ?
-          remaining : admin.firestore.FieldValue.delete(),
+          remaining : FieldValue.delete(),
       });
     } catch (err) {
       console.error(`Shared-audience revocation failed for ${callerUid}`, err);
@@ -1707,7 +2130,7 @@ exports.assignSlots = assignSlots;
 function withPartnerRemoved(data, removedUid, extra) {
   const remaining = partnersOf(data).filter((uid) => uid !== removedUid);
   return Object.assign({
-    partnerIds: admin.firestore.FieldValue.arrayRemove(removedUid),
+    partnerIds: FieldValue.arrayRemove(removedUid),
     partnerId: remaining[0] || '',
     pairedAt: remaining.length > 0 ? (data || {}).pairedAt || null : null,
   }, extra);
@@ -2102,8 +2525,213 @@ exports.FAMILY_SCOPED_COLLECTIONS = FAMILY_SCOPED_COLLECTIONS;
 const FAMILY_ID_BATCH_LIMIT = 450;
 
 /**
- * Body of the `backfillRecordFamilyIds` callable — stamps `familyId` on the documents of every
- * live pair that predate the field.
+ * Whether a stored `familyId` is the "no family named" value: absent, `''`, or not a string.
+ *
+ * `''` is what a null becomes on the wire (`familyId ?: ""` on every client writer), so it is the
+ * shape a record written before its author paired actually carries.
+ *
+ * @param {*} stored The document's `familyId` field.
+ * @return {boolean} True when the record names no family.
+ */
+function isBlankFamilyId(stored) {
+  return typeof stored !== 'string' || stored === '';
+}
+
+exports.isBlankFamilyId = isBlankFamilyId;
+
+/**
+ * Whether one of [uid]'s own records carries evidence of a co-parenting relationship other than
+ * the one with [partnerId] — a second adult it names, or a family it is already stamped with.
+ *
+ * Read off records the caller has already fetched, so it costs nothing. Each signal is a field a
+ * client writes only while paired with that person:
+ *
+ * - a non-blank `familyId` naming any family but [familyId] (stamped at create since M-2);
+ * - an expense's `splitBetween` naming a third uid (`addExpense` names both parents);
+ * - an event's `sharedWith` naming a third uid (events carry no guests; unpair narrows the list,
+ *   but only once its sweep has run — `pendingRevocationOf` covers the window before that);
+ * - a change request addressed (`requestedTo`) to anybody but [partnerId].
+ *
+ * @param {string} collection The record's collection.
+ * @param {!Object} data The record.
+ * @param {string} uid The author.
+ * @param {string} partnerId The author's one current co-parent.
+ * @param {string} familyId `FamilyKey.of(uid, partnerId)`.
+ * @return {boolean} True when the record belongs to, or names, another relationship.
+ */
+function recordNamesAnotherRelationship(collection, data, uid, partnerId, familyId) {
+  if (!isBlankFamilyId(data.familyId) && data.familyId !== familyId) {
+    return true;
+  }
+  const outsider = (other) =>
+    typeof other === 'string' && other !== '' && other !== uid && other !== partnerId;
+  if (collection === 'expenses' && Array.isArray(data.splitBetween)) {
+    return data.splitBetween.some(outsider);
+  }
+  if (collection === 'events' && Array.isArray(data.sharedWith)) {
+    return data.sharedWith.some(outsider);
+  }
+  if (collection === 'change_requests') {
+    return outsider(data.requestedTo);
+  }
+  return false;
+}
+
+exports.recordNamesAnotherRelationship = recordNamesAnotherRelationship;
+
+/**
+ * Whether [uid] has an accepted co-parent invitation, in either direction, with anybody but
+ * [partnerId] — the one trace an ended relationship leaves once unpair has cleaned up after it.
+ *
+ * Guest and friend invitations are not co-parenting and are ignored, as are invitations that were
+ * never accepted. Accepted invitations are not deleted by anything but account deletion, which
+ * is what makes them worth asking.
+ *
+ * @param {FirebaseFirestore.Firestore} db Firestore instance.
+ * @param {string} uid The person.
+ * @param {string} partnerId Their one current co-parent.
+ * @return {Promise<boolean>} True when they have co-parented with somebody else before.
+ */
+async function hadAnotherCoParent(db, uid, partnerId) {
+  const [sent, accepted] = await Promise.all([
+    db.collection('invitations').where('fromUserId', '==', uid).get(),
+    db.collection('invitations').where('acceptedBy', '==', uid).get(),
+  ]);
+  return sent.docs.concat(accepted.docs).some((doc) => {
+    const invite = doc.data() || {};
+    if (invite.status !== 'accepted' ||
+        invite.kind === GUEST_INVITATION || invite.kind === FRIEND_INVITATION ||
+        invite.kind === PROFESSIONAL_INVITATION) {
+      return false;
+    }
+    const other = invite.fromUserId === uid ? invite.acceptedBy : invite.fromUserId;
+    return typeof other === 'string' && other !== '' && other !== uid && other !== partnerId;
+  });
+}
+
+exports.hadAnotherCoParent = hadAnotherCoParent;
+
+/**
+ * Stamps [uid]'s own unstamped records with the one family they can be said to belong to — or,
+ * when that family cannot be decided from what the server holds, stamps nothing and says why.
+ *
+ * **The policy is the client's, moved server-side.** `FamilyIdBackfill` stamps every null local
+ * row with the family the device knows of, the moment there is one: a record written while its
+ * author was unpaired is "mine alone" only until there is a family to share it with (CLAUDE.md
+ * items 18 and 22). What it never did is reach the remote copy, so an expense recorded before
+ * pairing stayed `familyId: ""` on the server and, under the family-keyed read rules, invisible
+ * to the co-parent. This is the remote half of the same step.
+ *
+ * **It stamps only when the answer is not a guess.** "The family" means exactly one live,
+ * mutual co-parent, and a person who has never been in another co-parenting relationship. In
+ * every other case nothing is written and the reason is returned:
+ *
+ * - `unpaired` — nobody to share with; a blank is the right value and is not counted.
+ * - `ambiguous` — more than one co-parent (`partnersOf` over `partnerIds` and `partnerId`).
+ *   "Which of their families is this about" has no server-side answer, and the wrong one hands a
+ *   record to a co-parent it was never about. `partnerId` alone is *not* consulted as a
+ *   tie-breaker: since M-4 it is the family a phone happens to be showing.
+ * - `missingAccount` / `notMutual` — the co-parent's profile is gone, or does not name this
+ *   person back (an interrupted unpair). Reviving a half-ended relationship is not ours to do.
+ * - `priorRelationship` — the person has one co-parent *now* but evidence of another before:
+ *   an unfinished `pendingRevocationOf`, an accepted co-parent invitation with somebody else, or
+ *   one of their own records naming another family or another adult. A blank record of theirs
+ *   may then date from the earlier relationship, and stamping it with the current one would move
+ *   an old household's expenses into a new household's ledger — the re-derivation item 18
+ *   forbids. Residual: a relationship that left none of those traces is indistinguishable from
+ *   none, and its unstamped records would be stamped. That is the same thing the client's
+ *   `FamilyIdBackfill` already does to its local copy on re-pairing.
+ *
+ * For every reason but `unpaired` the blank records left behind are counted as `unresolved`, so
+ * the operator sees how much a skip is costing rather than a bare "skipped".
+ *
+ * Only `familyId` is written — never `deletedAtMillis`/`deletedBy`, never `sharedWith` — and only
+ * on a record whose `familyId` is blank, so a record that already names a family keeps it
+ * (never re-derived) and a second run writes nothing. A tombstone is stamped like any record:
+ * the stamp is what lets the co-parent's family-keyed query collect the deletion.
+ *
+ * @param {FirebaseFirestore.Firestore} db Firestore instance.
+ * @param {string} uid The author whose records to stamp.
+ * @param {?Object} user Their `users/{uid}` data.
+ * @param {string=} expectedFamilyId When given, stamp only if the resolved family is this one
+ *     (the trigger passes the family that was just created); anything else is `otherFamily`.
+ * @return {Promise<{familyId: string, reason: string, stamped: number, unresolved: number,
+ *   perCollection: !Object<string, number>}>} What was done; `reason` is `''` when it stamped.
+ */
+async function stampOwnBlankFamilyIds(db, uid, user, expectedFamilyId) {
+  const result = {familyId: '', reason: '', stamped: 0, unresolved: 0, perCollection: {}};
+  FAMILY_SCOPED_COLLECTIONS.forEach(({name}) => {
+    result.perCollection[name] = 0;
+  });
+
+  const partners = partnersOf(user).filter((p) => p !== uid);
+  if (partners.length === 0) {
+    result.reason = 'unpaired';
+    return result;
+  }
+
+  // Every record of theirs, read once: the stamping needs the blanks, the evidence check needs the
+  // rest, and a skip needs the blanks counted.
+  const owned = [];
+  for (const {name, authorField} of FAMILY_SCOPED_COLLECTIONS) {
+    const snap = await db.collection(name).where(authorField, '==', uid).get();
+    snap.docs.forEach((d) => owned.push({name, doc: d, data: d.data() || {}}));
+  }
+  const blanks = owned.filter((r) => isBlankFamilyId(r.data.familyId));
+  const skip = (reason) => {
+    result.reason = reason;
+    result.unresolved = blanks.length;
+    return result;
+  };
+
+  if (partners.length > 1) {
+    return skip('ambiguous');
+  }
+  const partnerId = partners[0];
+  const partnerSnap = await db.collection('users').doc(partnerId).get();
+  if (!partnerSnap.exists) {
+    return skip('missingAccount');
+  }
+  if (!partnersOf(partnerSnap.data()).includes(uid)) {
+    return skip('notMutual');
+  }
+  const familyId = custodyModelKey(uid, partnerId);
+  if (expectedFamilyId && expectedFamilyId !== familyId) {
+    return skip('otherFamily');
+  }
+  if (pendingRevocations((user || {}).pendingRevocationOf).length > 0 ||
+      owned.some((r) => recordNamesAnotherRelationship(r.name, r.data, uid, partnerId, familyId))) {
+    return skip('priorRelationship');
+  }
+  if (blanks.length > 0 && await hadAnotherCoParent(db, uid, partnerId)) {
+    return skip('priorRelationship');
+  }
+
+  result.familyId = familyId;
+  let batch = db.batch();
+  let pending = 0;
+  for (const {name, doc} of blanks) {
+    batch.update(doc.ref, {familyId});
+    pending++;
+    result.perCollection[name]++;
+    result.stamped++;
+    if (pending === FAMILY_ID_BATCH_LIMIT) {
+      await batch.commit();
+      batch = db.batch();
+      pending = 0;
+    }
+  }
+  if (pending > 0) {
+    await batch.commit();
+  }
+  return result;
+}
+
+exports.stampOwnBlankFamilyIds = stampOwnBlankFamilyIds;
+
+/**
+ * Body of the `backfillRecordFamilyIds` callable — stamps `familyId` on every record whose author
+ * now has exactly one family, whether the record predates the field or predates the pairing.
  *
  * **This must finish before the family-scoped rules are deployed, not after.** `expenses` and
  * `budgets` are read by membership of the record's own family, with no fallback to "a co-parent
@@ -2113,28 +2741,28 @@ const FAMILY_ID_BATCH_LIMIT = 450;
  * second family's documents. A document with no `familyId` is therefore readable only by its
  * author, and a co-parent's whole expense history reads as empty until this has run.
  *
- * The client stamps every record it writes from now on (`FamilyIdBackfill` does the same for
- * Room), so this is a one-time pass over history, not an ongoing repair.
+ * It is also the **repair for the pre-pairing records of CLAUDE.md item 22**: an expense or a
+ * budget recorded while its author was unpaired uploads with `familyId: ""`, and the client never
+ * re-uploads it after `FamilyIdBackfill` stamps its local row. The `onFamilyCreated` trigger
+ * stamps those at the moment a pair forms; this callable is the backstop for anything that trigger
+ * missed (a pair formed before it was deployed, a failed run, an upload that raced it), and is
+ * safe to re-run at any time.
+ *
+ * Which records are stamped, and which are left and counted, is [stampOwnBlankFamilyIds]'s
+ * decision — read it before changing anything here. In short: only when the author has exactly
+ * one live, mutual co-parent and no trace of another relationship. Everything else is skipped
+ * with a reason, and the blank records it leaves behind are summed into `unresolved`.
  *
  * It also stamps the calendar-friend grants (M-6) — see [backfillCalendarFriendFamilyIds]. Those
  * are in here rather than in a callable of their own so the ops runbook keeps four steps: a fifth
  * one is a step somebody skips.
  *
- * **A person with more than one family is skipped, not guessed at.** Today that is nobody —
- * pairing still refuses a second — but the moment it is somebody, "which of their families does
- * this record belong to" has no answer here, and stamping the wrong one would hand a record to a
- * co-parent it was never about. `partnerId` is read live and both sides must name each other,
- * so an interrupted unpair cannot revive a relationship either.
- *
- * Documents that already carry a `familyId` are left alone, so a second run is a no-op and a run
- * interrupted halfway resumes cleanly.
- *
  * @param {FirebaseFirestore.Firestore} db Firestore instance.
  * @return {Promise<{users: number, stamped: number, skipped: number, failed: number,
- *   perCollection: !Object<string, number>, skippedReasons: {notMutual: number,
- *   missingAccount: number, unpaired: number},
- *   calendarFriends: {stamped: number, skipped: number, alreadyStamped: number}}>} What the
- *   migration did.
+ *   unresolved: number, perCollection: !Object<string, number>, skippedReasons: {notMutual:
+ *   number, missingAccount: number, unpaired: number, ambiguous: number,
+ *   priorRelationship: number}, calendarFriends: {stamped: number, skipped: number,
+ *   alreadyStamped: number}}>} What the migration did.
  */
 async function backfillRecordFamilyIdsImpl(db) {
   const summary = {
@@ -2142,8 +2770,11 @@ async function backfillRecordFamilyIdsImpl(db) {
     stamped: 0,
     skipped: 0,
     failed: 0,
+    unresolved: 0,
     perCollection: {},
-    skippedReasons: {notMutual: 0, missingAccount: 0, unpaired: 0},
+    skippedReasons: {
+      notMutual: 0, missingAccount: 0, unpaired: 0, ambiguous: 0, priorRelationship: 0,
+    },
     calendarFriends: {stamped: 0, skipped: 0, alreadyStamped: 0},
   };
   FAMILY_SCOPED_COLLECTIONS.forEach(({name}) => {
@@ -2154,58 +2785,19 @@ async function backfillRecordFamilyIdsImpl(db) {
 
   for (const doc of users.docs) {
     const uid = doc.id;
-    const partnerId = (doc.data() || {}).partnerId;
-
-    if (typeof partnerId !== 'string' || !partnerId || partnerId === uid) {
-      summary.skipped++;
-      summary.skippedReasons.unpaired++;
-      continue;
-    }
-
     try {
-      const partnerSnap = await db.collection('users').doc(partnerId).get();
-      if (!partnerSnap.exists) {
+      const outcome = await stampOwnBlankFamilyIds(db, uid, doc.data() || {});
+      if (outcome.reason) {
         summary.skipped++;
-        summary.skippedReasons.missingAccount++;
+        summary.skippedReasons[outcome.reason]++;
+        summary.unresolved += outcome.unresolved;
         continue;
       }
-      if ((partnerSnap.data() || {}).partnerId !== uid) {
-        summary.skipped++;
-        summary.skippedReasons.notMutual++;
-        continue;
-      }
-
-      const familyId = custodyModelKey(uid, partnerId);
       summary.users++;
-
-      for (const {name, authorField} of FAMILY_SCOPED_COLLECTIONS) {
-        const owned = await db.collection(name).where(authorField, '==', uid).get();
-
-        // Filtered here rather than in the query: "the field is absent" is not something a
-        // Firestore `where` can ask, and a document written by a newer client already carries
-        // the value this would otherwise overwrite.
-        const needing = owned.docs.filter((d) => {
-          const stored = (d.data() || {}).familyId;
-          return typeof stored !== 'string' || stored === '';
-        });
-
-        let batch = db.batch();
-        let pending = 0;
-        for (const d of needing) {
-          batch.update(d.ref, {familyId});
-          pending++;
-          summary.perCollection[name]++;
-          summary.stamped++;
-          if (pending === FAMILY_ID_BATCH_LIMIT) {
-            await batch.commit();
-            batch = db.batch();
-            pending = 0;
-          }
-        }
-        if (pending > 0) {
-          await batch.commit();
-        }
-      }
+      summary.stamped += outcome.stamped;
+      Object.keys(outcome.perCollection).forEach((name) => {
+        summary.perCollection[name] += outcome.perCollection[name];
+      });
     } catch (err) {
       console.error(`backfillRecordFamilyIds failed for ${uid}`, err);
       summary.failed++;
@@ -2217,6 +2809,84 @@ async function backfillRecordFamilyIdsImpl(db) {
 }
 
 exports.backfillRecordFamilyIdsImpl = backfillRecordFamilyIdsImpl;
+
+/**
+ * Body of the `onFamilyCreated` trigger — stamps both members' pre-pairing records with the family
+ * that was just formed.
+ *
+ * This is what makes item 22's repair automatic rather than an operator's chore. A family document
+ * is created only by Admin code (`acceptPairingInvitation`, `backfillFamilyDocuments`; the rules
+ * refuse every client create), so the trigger's input is trusted, and it is created in the same
+ * transaction that writes the two profiles' `partnerIds` — by the time it fires, the pairing it
+ * describes is already visible to [stampOwnBlankFamilyIds].
+ *
+ * Each member is decided separately and with the same policy as the callable. The common case —
+ * two people who each had nobody before — stamps both. A member for whom this is a second family
+ * comes out `ambiguous` and keeps their blanks; the other member, whose only family this is, is
+ * still stamped. `expectedFamilyId` guards the one race the trigger adds: if the pair has already
+ * unpaired and re-paired elsewhere by the time it runs, nothing is stamped with a family that is
+ * no longer theirs.
+ *
+ * @param {FirebaseFirestore.Firestore} db Firestore instance.
+ * @param {string} familyId The id of the family document that was created.
+ * @param {?Object} family Its data.
+ * @return {Promise<!Object<string, {reason: string, stamped: number, unresolved: number}>>} The
+ *   outcome per member uid; empty when the document does not describe a pair.
+ */
+async function stampFamilyOnCreateImpl(db, familyId, family) {
+  const members = family && Array.isArray(family.members) ? family.members : [];
+  const outcomes = {};
+  if (members.length !== 2 || members[0] === members[1] ||
+      custodyModelKey(members[0], members[1]) !== familyId) {
+    return outcomes;
+  }
+  for (const uid of members) {
+    const snap = await db.collection('users').doc(uid).get();
+    if (!snap.exists) {
+      outcomes[uid] = {reason: 'missingAccount', stamped: 0, unresolved: 0};
+      continue;
+    }
+    const outcome = await stampOwnBlankFamilyIds(db, uid, snap.data() || {}, familyId);
+    outcomes[uid] = {
+      reason: outcome.reason, stamped: outcome.stamped, unresolved: outcome.unresolved,
+    };
+  }
+  return outcomes;
+}
+
+exports.stampFamilyOnCreateImpl = stampFamilyOnCreateImpl;
+
+/**
+ * Stamps a new pair's pre-pairing records with their family (item 22). See
+ * [stampFamilyOnCreateImpl].
+ *
+ * Deliberately a trigger on `families/{id}` and **not** on the six record collections. A per-record
+ * `onWrite` that stamped every blank upload was considered and rejected: it would bill a function
+ * invocation and a profile read on every event and expense write for the life of the app; it could
+ * not help the case that matters, because a record uploaded while its author was unpaired has no
+ * family to be stamped with at write time and nothing writes it again after pairing; and it would
+ * race the budgets update rule, which pins `familyId` to the stored value — a client that read the
+ * document, then had the trigger stamp it, then wrote back the value it had read would be refused.
+ * The family's creation is the one moment the answer changes, so that is the moment to act. That
+ * race does not vanish here, it shrinks to one instant: a parent editing a budget in the very
+ * milliseconds between the client's read and write at pairing time has that edit refused
+ * remotely, kept in Room by `BudgetRepositoryImpl`'s guard, and published on their next edit.
+ *
+ * Best-effort: a failure is logged and not retried (1st-gen triggers do not retry by default), and
+ * `backfillRecordFamilyIds` repairs anything it left.
+ */
+exports.onFamilyCreated = functions.runWith({timeoutSeconds: 540}).firestore
+    .document('families/{familyId}')
+    .onCreate(async (snap, context) => {
+      try {
+        const outcomes = await stampFamilyOnCreateImpl(
+            admin.firestore(), context.params.familyId, snap.data());
+        console.log(`Family ${context.params.familyId} stamped: ${JSON.stringify(outcomes)}`);
+      } catch (err) {
+        console.error(`onFamilyCreated failed for ${context.params.familyId}`, err);
+      }
+      return null;
+    });
 
 /**
  * Stamps `familyId` on every calendar-friend grant that predates M-6.
@@ -2275,16 +2945,19 @@ async function backfillCalendarFriendFamilyIds(db) {
 exports.backfillCalendarFriendFamilyIds = backfillCalendarFriendFamilyIds;
 
 /**
- * Stamps `familyId` on the records of every live pair that predate the field.
+ * Stamps `familyId` on every record whose author has exactly one family and none before it —
+ * records that predate the field, and records uploaded before their author paired (item 22).
  *
  * Operator-only on the same allow-list as the other backfills, and 540 seconds for the same
- * reason: a one-time pass over a historical, bounded set. Run it **after**
- * `backfillFamilyDocuments` and **before** deploying the family-scoped rules — see
- * docs/DESIGN-multi-family.md, M-4, for the ordered steps and what each one costs if skipped.
+ * reason: a pass over a bounded set. Run it **after** `backfillFamilyDocuments` and **before**
+ * deploying the family-scoped rules — see docs/DESIGN-multi-family.md, M-4, for the ordered steps
+ * and what each one costs if skipped. Idempotent, and safe to re-run at any time afterwards as
+ * the backstop for `onFamilyCreated`.
  *
  * @return {Promise<{users: number, stamped: number, skipped: number, failed: number,
- *   perCollection: !Object<string, number>, skippedReasons: {notMutual: number,
- *   missingAccount: number, unpaired: number}}>} See [backfillRecordFamilyIdsImpl].
+ *   unresolved: number, perCollection: !Object<string, number>, skippedReasons: {notMutual:
+ *   number, missingAccount: number, unpaired: number, ambiguous: number,
+ *   priorRelationship: number}}>} See [backfillRecordFamilyIdsImpl].
  */
 exports.backfillRecordFamilyIds = functions.runWith({timeoutSeconds: 540}).https.onCall(
     async (data, context) => {
@@ -2482,7 +3155,7 @@ async function notifyOfChatMessage(db, message) {
       preview: String(message.content || '').slice(0, CHAT_MESSAGE_PREVIEW_LENGTH),
     },
     status: 'pending',
-    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    createdAt: FieldValue.serverTimestamp(),
   });
 }
 
@@ -2513,9 +3186,101 @@ const ACCOUNT_DELETE_BATCH_LIMIT = 400;
  * parent. See [deleteAccountDataImpl] for what that costs the co-parent and why it is still
  * the right default.
  */
-const AUTHORED_COLLECTIONS = ['events', 'child_info', 'pets', 'expenses', 'budgets'];
+const AUTHORED_COLLECTIONS =
+  ['events', 'child_info', 'pets', 'expenses', 'budgets', 'family_documents'];
 
 exports.AUTHORED_COLLECTIONS = AUTHORED_COLLECTIONS;
+
+/**
+ * Where each authored collection keeps its files in Cloud Storage, keyed by the document id.
+ *
+ * Mirrors `FirebaseImageStorage` on the client, which derives every path from the id of the
+ * record the file belongs to: one object per event photo and per receipt, and a folder of
+ * UUID-named objects per child's medical notes and per pet. `budgets` has no files. A layout
+ * added on the client without an entry here is a file an erased account leaves behind.
+ */
+const AUTHORED_FILES = {
+  events: {object: (id) => `event_images/${id}.jpg`},
+  expenses: {object: (id) => `receipts/${id}.jpg`},
+  child_info: {prefix: (id) => `medical_photos/${id}/`},
+  pets: {prefix: (id) => `pet_photos/${id}/`},
+  // The vault (MON-23) keys its folder by family as well as by document, so the layout reads the
+  // stored `familyId`. A document without one cannot exist under the create rule; the guard in
+  // [deleteFilesOf] is for a hand-edited one, which must not become a prefix of the whole vault.
+  family_documents: {prefix: (id, data) => `family_documents/${data.familyId}/${id}/`},
+};
+
+exports.AUTHORED_FILES = AUTHORED_FILES;
+
+/**
+ * Deletes the Storage files belonging to the records [uid] authored.
+ *
+ * Runs **before** the documents go, because the documents are the only index of which files
+ * exist: once `events/{id}` is deleted nothing names `event_images/{id}.jpg` any more, and a
+ * child's medical photographs would stay in the bucket under an id nobody can look up. A missing
+ * object is not an error — most events have no photo — but any other failure propagates, so the
+ * callable fails while the documents still exist and a retry can find the files again.
+ *
+ * @param {FirebaseFirestore.Firestore} db Firestore instance.
+ * @param {?Object} bucket A `@google-cloud/storage` bucket, or null to skip (tests that do not
+ *     exercise Storage).
+ * @param {string} uid The account being erased.
+ * @return {Promise<number>} How many objects or folders were deleted.
+ */
+async function deleteAuthoredFiles(db, bucket, uid) {
+  if (!bucket) return 0;
+  let deleted = 0;
+  for (const collection of Object.keys(AUTHORED_FILES)) {
+    const snap = await db.collection(collection)
+        .where('createdByFirebaseUid', '==', uid)
+        .get();
+    for (const doc of snap.docs) {
+      if (await deleteFilesOf(bucket, collection, doc.id, doc.data())) deleted++;
+    }
+  }
+  return deleted;
+}
+
+exports.deleteAuthoredFiles = deleteAuthoredFiles;
+
+/**
+ * Deletes the file or folder [AUTHORED_FILES] names for one record.
+ *
+ * @param {!Object} bucket A `@google-cloud/storage` bucket.
+ * @param {string} collection The record's collection.
+ * @param {string} id The record's document id.
+ * @param {!Object} data The record's data; the vault's layout reads `familyId` from it.
+ * @return {Promise<boolean>} Whether anything was asked to go (false for a record whose layout
+ *     cannot be derived).
+ */
+async function deleteFilesOf(bucket, collection, id, data) {
+  const layout = AUTHORED_FILES[collection];
+  if (!layout) return false;
+  if (layout.object) {
+    await bucket.file(layout.object(id, data || {})).delete({ignoreNotFound: true});
+    return true;
+  }
+  if (collection === 'family_documents' && !(data && data.familyId)) return false;
+  await bucket.deleteFiles({prefix: layout.prefix(id, data || {}), force: true});
+  return true;
+}
+
+/**
+ * Deletes every file sent in a conversation (MON-23), `chat_attachments/{conversationId}/`.
+ *
+ * Chat is erased whole with an account (see [deleteAccountDataImpl]), so its files go whole too,
+ * whichever parent sent them — the same reasoning, and no client can delete one (the Storage rule
+ * refuses it), so this is the only path that ever does.
+ *
+ * @param {?Object} bucket The Storage bucket, or null to skip.
+ * @param {string} conversationId The thread being erased.
+ * @return {Promise<number>} 1 when the folder was asked to go, 0 when skipped.
+ */
+async function deleteChatAttachments(bucket, conversationId) {
+  if (!bucket || !conversationId) return 0;
+  await bucket.deleteFiles({prefix: `chat_attachments/${conversationId}/`, force: true});
+  return 1;
+}
 
 /**
  * Deletes every document a query returns, in batches below the write cap.
@@ -2576,7 +3341,7 @@ async function scrubFromAudiences(db, uid) {
         continue;
       }
       batch.update(doc.ref, {
-        sharedWith: admin.firestore.FieldValue.arrayRemove(uid),
+        sharedWith: FieldValue.arrayRemove(uid),
       });
       pending++;
       narrowed++;
@@ -2595,6 +3360,50 @@ async function scrubFromAudiences(db, uid) {
 }
 
 exports.scrubFromAudiences = scrubFromAudiences;
+
+/**
+ * Removes [uid] from the audience of every event revision somebody else saved (MON-4).
+ *
+ * Separate from [scrubFromAudiences] because a revision's author is `editorUid`, not
+ * `createdByFirebaseUid`, and because [SHARED_AUDIENCE_COLLECTIONS] also drives the unpair
+ * sweep — which must **not** narrow revisions: an ex-partner keeps the history they could see,
+ * as they keep the chat. Erasure is different: the account is gone and its uid is personal data.
+ *
+ * @param {FirebaseFirestore.Firestore} db Firestore instance.
+ * @param {string} uid The departing account.
+ * @return {Promise<number>} How many revisions were narrowed.
+ */
+async function scrubRevisionAudiences(db, uid) {
+  const snap = await db.collection('event_versions')
+      .where('sharedWith', 'array-contains', uid)
+      .get();
+
+  let batch = db.batch();
+  let pending = 0;
+  let narrowed = 0;
+
+  for (const doc of snap.docs) {
+    if (doc.data().editorUid === uid) {
+      continue;
+    }
+    batch.update(doc.ref, {
+      sharedWith: FieldValue.arrayRemove(uid),
+    });
+    pending++;
+    narrowed++;
+    if (pending === ACCOUNT_DELETE_BATCH_LIMIT) {
+      await batch.commit();
+      batch = db.batch();
+      pending = 0;
+    }
+  }
+  if (pending > 0) {
+    await batch.commit();
+  }
+  return narrowed;
+}
+
+exports.scrubRevisionAudiences = scrubRevisionAudiences;
 
 /**
  * Erases everything an account holds, and returns a per-collection tally.
@@ -2629,11 +3438,20 @@ exports.scrubFromAudiences = scrubFromAudiences;
  * Takes `db` as a parameter for the reason every other `*Impl` in this file does: it is the
  * only way to exercise the batching and the ordering without a live Firestore.
  *
+ * **Files go with their records.** Event photos, receipts, a child's medical photographs and pet
+ * photographs live in Cloud Storage under paths derived from the record's id, and are deleted
+ * through [deleteAuthoredFiles] before the records that name them. Until September 2026 they
+ * were not: the documents went and the files stayed, which the deletion page promised otherwise.
+ * The document vault (MON-23) is an authored collection like the others — this parent's filings
+ * and their files go, the co-parent's stay — and files sent in chat go with the chat, whole.
+ *
  * @param {FirebaseFirestore.Firestore} db Firestore instance.
  * @param {string} uid The account being erased.
+ * @param {?Object=} bucket The Storage bucket holding the account's files; omitted in tests that
+ *     do not exercise Storage, in which case no file is touched.
  * @return {Promise<!Object>} Counts per collection, plus `unpairedFrom`.
  */
-async function deleteAccountDataImpl(db, uid) {
+async function deleteAccountDataImpl(db, uid, bucket) {
   const removed = {};
 
   // Every co-parent, read before any of the links come down: unpairing clears the list this
@@ -2672,12 +3490,36 @@ async function deleteAccountDataImpl(db, uid) {
   // refresh token issued to an account that no longer exists has no reason to remain.
   await db.collection('google_oauth').doc(uid).delete();
 
+  // Files first: the documents deleted next are the only record of which files exist.
+  removed.storage = await deleteAuthoredFiles(db, bucket || null, uid);
+
   for (const collection of AUTHORED_COLLECTIONS) {
     removed[collection] = await deleteQueryInBatches(
         db, db.collection(collection).where('createdByFirebaseUid', '==', uid));
   }
 
   removed.sharedWithScrubbed = await scrubFromAudiences(db, uid);
+
+  // Event revisions (MON-4). The ones this parent saved are their words and go; the co-parent's
+  // stay — including revisions of events this parent created, which are the co-parent's record
+  // of what they changed — with the departing uid taken out of their audience. Clients can never
+  // delete a revision (`firestore.rules`), so this is the one path that does.
+  removed.event_versions = await deleteQueryInBatches(
+      db, db.collection('event_versions').where('editorUid', '==', uid));
+  removed.event_versions_scrubbed = await scrubRevisionAudiences(db, uid);
+
+  // Export receipts (MON-16): scrubbed, never deleted once registered — the hash may already be
+  // vouching for a file in front of a court, and erasing one parent must not un-verify the other
+  // parent's evidence. Runs before the conversations go, because a surviving thread's id is one
+  // of the ways a family this account was once in can still be named.
+  const threads = await db.collection('conversations')
+      .where('participants', 'array-contains', uid)
+      .get();
+  const receipts = await exportReceipts.scrubReceipts(db, uid,
+      partners.map((partnerId) => custodyModelKey(uid, partnerId))
+          .concat(threads.docs.map((doc) => doc.id)));
+  removed.export_receipts_scrubbed = receipts.scrubbed;
+  removed.export_receipts_deleted = receipts.deleted;
 
   // Change requests name their two parties directly rather than through an audience array.
   removed.change_requests =
@@ -2689,7 +3531,11 @@ async function deleteAccountDataImpl(db, uid) {
       .where('participants', 'array-contains', uid)
       .get();
   removed.messages = 0;
+  removed.chat_attachments = 0;
   for (const conversation of conversations.docs) {
+    // The files first, while the messages that name them still exist — the same order as
+    // [deleteAuthoredFiles], and a failure here leaves the thread for a retry to find.
+    removed.chat_attachments += await deleteChatAttachments(bucket || null, conversation.id);
     removed.messages += await deleteQueryInBatches(
         db, db.collection('messages').where('conversationId', '==', conversation.id));
   }
@@ -2710,8 +3556,21 @@ async function deleteAccountDataImpl(db, uid) {
   await db.collection('calendar_friends').doc(uid).delete();
   await db.collection('friend_profiles').doc(uid).delete();
 
+  // Both directions of professional access (MON-18): grants over this user's families, and the
+  // grants this user holds as a professional over somebody else's.
+  removed.professional_grants = await deleteQueryInBatches(
+      db, db.collection('professional_grants').where('familyParents', 'array-contains', uid));
+  removed.professional_grants += await deleteQueryInBatches(
+      db, db.collection('professional_grants').where('proUid', '==', uid));
+
   removed.invitations = await deleteQueryInBatches(
       db, db.collection('invitations').where('fromUserId', '==', uid));
+
+  // Every calendar-feed link into a family this account was in (MON-17), whoever made it: a
+  // co-parent's link would stop serving on its own (the family is gone), but its record names
+  // this uid and has no reason to outlive the account.
+  removed.calendar_feeds = await deleteQueryInBatches(
+      db, db.collection('calendar_feeds').where('familyMembers', 'array-contains', uid));
 
   // Queued pushes addressed to an account that is going away would otherwise be delivered to
   // whatever device still holds its FCM token.
@@ -2750,7 +3609,8 @@ exports.deleteAccount = functions.runWith({timeoutSeconds: 540}).https.onCall(
       }
       const uid = context.auth.uid;
 
-      const removed = await deleteAccountDataImpl(admin.firestore(), uid);
+      const removed = await deleteAccountDataImpl(
+          admin.firestore(), uid, admin.storage().bucket());
 
       try {
         await admin.auth().deleteUser(uid);
@@ -3010,3 +3870,460 @@ exports.refreshGoogleAccessToken = functions.https.onCall(async (data, context) 
       admin.firestore(), requireGoogleOAuthConfig(), postToGoogleToken,
       context.auth.uid, refreshToken);
 });
+
+// ── Calendar feed (MON-17) ─────────────────────────────────────────────────────────────────
+//
+// A read-only iCalendar subscription for a parent whose phone cannot run the app — an iPhone,
+// today. The token in the URL is the whole authorisation, so four things hold it up:
+//
+// - **Only a hash is stored.** `calendar_feeds/{sha256(token)}`; the token is returned once, to
+//   the parent who asked, and never written anywhere. No client may read or write the collection
+//   (`firestore.rules`), so the callables below are its only door.
+// - **A link names one family and one owner**, and is served only while that family is live —
+//   both profiles present and naming each other. An unpair, or either account's deletion, ends it.
+// - **What is served is what the owner could read in the app, minus what must never leave it**:
+//   custody days and contact windows, and the family's shared events — never a private event
+//   (item 3), never a tombstone (item 14), never another family's record (M-6). No chat, no
+//   expenses, no children's records.
+// - **Parents are named, never "Mom"/"Dad"**: the slots are resolved to the names on the two
+//   `users/{uid}` documents.
+//
+// The pure half — the custody port and the RFC 5545 text — is `calendar-feed.js`.
+
+const calendarFeed = require('./calendar-feed');
+
+/**
+ * Where feed URLs point: `CALENDAR_FEED_BASE_URL` when a deployment sets one (a Hosting rewrite
+ * or a custom domain), otherwise the function's own default URL.
+ *
+ * @return {string} The base URL, without a trailing slash.
+ */
+function calendarFeedBaseUrl() {
+  const configured = process.env.CALENDAR_FEED_BASE_URL || '';
+  if (configured) return configured.replace(/\/+$/, '');
+  let projectId = process.env.GCLOUD_PROJECT || '';
+  if (!projectId && process.env.FIREBASE_CONFIG) {
+    try {
+      projectId = JSON.parse(process.env.FIREBASE_CONFIG).projectId || '';
+    } catch (err) {
+      projectId = '';
+    }
+  }
+  return `https://us-central1-${projectId}.cloudfunctions.net/calendarFeed`;
+}
+
+exports.calendarFeedBaseUrl = calendarFeedBaseUrl;
+
+/**
+ * The family's two members and their profiles, when [uid] is live in [familyId] — both profiles
+ * exist and name each other — or null.
+ *
+ * An id is a claim about a relationship, not proof it still exists (see [partnerFromFamilyId]),
+ * so both sides are read: a one-sided `partnerIds` is what an interrupted unpair leaves.
+ *
+ * @param {FirebaseFirestore.Firestore} db Firestore instance.
+ * @param {*} familyId The family the caller named.
+ * @param {string} uid The parent.
+ * @return {Promise<?{members: !Array<string>, profiles: !Object<string, !Object>}>} The family.
+ */
+async function liveFamily(db, familyId, uid) {
+  const partner = partnerFromFamilyId(familyId, uid);
+  if (!partner) return null;
+  const [mine, theirs] = await Promise.all([
+    db.collection('users').doc(uid).get(),
+    db.collection('users').doc(partner).get(),
+  ]);
+  if (!mine.exists || !theirs.exists) return null;
+  const myData = mine.data() || {};
+  const theirData = theirs.data() || {};
+  if (!partnersOf(myData).includes(partner) || !partnersOf(theirData).includes(uid)) return null;
+  return {members: [uid, partner], profiles: {[uid]: myData, [partner]: theirData}};
+}
+
+exports.liveFamily = liveFamily;
+
+/**
+ * Whether a feed has gone unused for [calendarFeed.FEED_IDLE_EXPIRY_DAYS].
+ *
+ * @param {!Object} feed The stored record.
+ * @param {number} nowMillis Now.
+ * @return {boolean} True when it must no longer be served.
+ */
+function calendarFeedExpired(feed, nowMillis) {
+  const last = Number(feed.lastUsedAtMillis || feed.createdAtMillis || 0);
+  return nowMillis - last > calendarFeed.FEED_IDLE_EXPIRY_DAYS * calendarFeed.DAY_MS;
+}
+
+exports.calendarFeedExpired = calendarFeedExpired;
+
+/**
+ * Slot → display name for the two parents, or null when they cannot be told apart.
+ *
+ * The slot comes from `families/{id}.slots` (M-3), falling back to each profile's `role` the way
+ * the client's `ParentsSource` does; a pair still sharing one slot gets no custody layer, because
+ * naming either parent for a day would be a guess. A blank name reads as the neutral "Parent" in
+ * the feed's language — never "Mom" or "Dad".
+ *
+ * @param {?Object} family The family document's data.
+ * @param {!{members: !Array<string>, profiles: !Object<string, !Object>}} live From [liveFamily].
+ * @param {string} locale The feed's language.
+ * @return {?Object<string, string>} `{mom: name, dad: name}`, or null.
+ */
+function calendarFeedNames(family, live, locale) {
+  const slots = family && family.slots && typeof family.slots === 'object' ? family.slots : {};
+  const slotOf = (uid) => (slots[uid] === 'mom' || slots[uid] === 'dad' ?
+    slots[uid] : normalizedSlot(live.profiles[uid].role));
+  const nameOf = (uid) => {
+    const stored = live.profiles[uid].name;
+    return (typeof stored === 'string' && stored.trim()) || calendarFeed.label(locale, 'parent');
+  };
+  const [a, b] = live.members;
+  if (slotOf(a) === slotOf(b)) return null;
+  return {[slotOf(a)]: nameOf(a), [slotOf(b)]: nameOf(b)};
+}
+
+exports.calendarFeedNames = calendarFeedNames;
+
+/**
+ * Body of `createCalendarFeed`: mints a link to [familyId]'s calendar for the caller.
+ *
+ * The token is returned **once**, inside the URL, and only its hash is stored. `feedId` is a
+ * separate random id the client lists and revokes by, so nothing the app keeps can fetch a feed.
+ *
+ * @param {FirebaseFirestore.Firestore} db Firestore instance.
+ * @param {string} callerUid The signed-in parent.
+ * @param {*} familyId The family the link is for; the caller must be live in it.
+ * @param {*} locale The app language, for the few words the feed writes itself.
+ * @param {number} nowMillis Now.
+ * @param {string=} token Injected by tests; minted otherwise.
+ * @return {Promise<{feedId: string, familyId: string, url: string, webcalUrl: string,
+ *   createdAtMillis: number}>} The new link.
+ */
+async function createCalendarFeedImpl(db, callerUid, familyId, locale, nowMillis, token) {
+  const live = await liveFamily(db, familyId, callerUid);
+  if (!live) {
+    throw new functions.https.HttpsError(
+        'permission-denied', 'Not a parent in this family', {reason: 'not-in-family'});
+  }
+  const owned = await db.collection(calendarFeed.FEED_COLLECTION)
+      .where('ownerUid', '==', callerUid).get();
+  const liveCount = owned.docs.filter((doc) => !calendarFeedExpired(doc.data(), nowMillis)).length;
+  if (liveCount >= calendarFeed.MAX_FEEDS_PER_OWNER) {
+    throw new functions.https.HttpsError(
+        'resource-exhausted', 'Too many calendar links', {reason: 'too-many-feeds'});
+  }
+
+  const secret = token || calendarFeed.newFeedToken();
+  const feedId = require('crypto').randomBytes(12).toString('hex');
+  await db.collection(calendarFeed.FEED_COLLECTION).doc(calendarFeed.feedTokenHash(secret)).set({
+    feedId,
+    familyId,
+    familyMembers: live.members.slice().sort(),
+    ownerUid: callerUid,
+    locale: calendarFeed.feedLocale(locale),
+    createdAtMillis: nowMillis,
+    lastUsedAtMillis: nowMillis,
+  });
+
+  const url = `${calendarFeedBaseUrl()}/${secret}.ics`;
+  return {feedId, familyId, url, webcalUrl: url.replace(/^https?:/, 'webcal:'), createdAtMillis: nowMillis};
+}
+
+exports.createCalendarFeedImpl = createCalendarFeedImpl;
+
+/**
+ * Body of `listCalendarFeeds`: the caller's links, newest first, **without their tokens** —
+ * there are none to return, only hashes. An idle-expired link is deleted on the way.
+ *
+ * @param {FirebaseFirestore.Firestore} db Firestore instance.
+ * @param {string} callerUid The signed-in parent.
+ * @param {number} nowMillis Now.
+ * @return {Promise<{feeds: !Array<{feedId: string, familyId: string, createdAtMillis: number,
+ *   lastUsedAtMillis: number}>}>} The links.
+ */
+async function listCalendarFeedsImpl(db, callerUid, nowMillis) {
+  const snap = await db.collection(calendarFeed.FEED_COLLECTION)
+      .where('ownerUid', '==', callerUid).get();
+  const feeds = [];
+  for (const doc of snap.docs) {
+    const data = doc.data() || {};
+    if (calendarFeedExpired(data, nowMillis)) {
+      await doc.ref.delete();
+      continue;
+    }
+    feeds.push({
+      feedId: String(data.feedId || ''),
+      familyId: String(data.familyId || ''),
+      createdAtMillis: Number(data.createdAtMillis || 0),
+      lastUsedAtMillis: Number(data.lastUsedAtMillis || 0),
+    });
+  }
+  feeds.sort((a, b) => b.createdAtMillis - a.createdAtMillis);
+  return {feeds};
+}
+
+exports.listCalendarFeedsImpl = listCalendarFeedsImpl;
+
+/**
+ * Body of `revokeCalendarFeed`: deletes the caller's link [feedId]. Idempotent — revoking a link
+ * that is already gone is not an error, since the outcome the parent asked for holds.
+ *
+ * @param {FirebaseFirestore.Firestore} db Firestore instance.
+ * @param {string} callerUid The signed-in parent; only their own links match.
+ * @param {*} feedId The link to revoke.
+ * @return {Promise<{revoked: number}>} How many records went.
+ */
+async function revokeCalendarFeedImpl(db, callerUid, feedId) {
+  if (typeof feedId !== 'string' || !feedId) {
+    throw new functions.https.HttpsError('invalid-argument', 'feedId is required');
+  }
+  const snap = await db.collection(calendarFeed.FEED_COLLECTION)
+      .where('ownerUid', '==', callerUid)
+      .where('feedId', '==', feedId)
+      .get();
+  for (const doc of snap.docs) {
+    await doc.ref.delete();
+  }
+  return {revoked: snap.docs.length};
+}
+
+exports.revokeCalendarFeedImpl = revokeCalendarFeedImpl;
+
+/**
+ * Serves one feed request: `{status, body}` for the HTTPS handler to send.
+ *
+ * Order matters. The rate limit comes before any read, so a hammering client costs no Firestore.
+ * The record is read on **every** request, so a revoked link stops at once; only the render —
+ * the family, custody and events reads — is cached, per token, for
+ * [calendarFeed.CACHE_TTL_MS]. Every way a token can fail to name a live feed — unknown,
+ * revoked, idle-expired, family ended — answers the same 404, and an ended one is deleted.
+ *
+ * @param {FirebaseFirestore.Firestore} db Firestore instance.
+ * @param {?string} token The token from the path, or null when the path was not a feed URL.
+ * @param {number} nowMillis Now.
+ * @param {!Object} cache A [calendarFeed.ttlCache].
+ * @param {!Object} limiter A [calendarFeed.rateLimiter].
+ * @return {Promise<{status: number, body: string}>} The response.
+ */
+async function serveCalendarFeedImpl(db, token, nowMillis, cache, limiter) {
+  const notFound = {status: 404, body: 'Not found\n'};
+  if (!token) return notFound;
+  const hash = calendarFeed.feedTokenHash(token);
+  if (!limiter.allow(hash, nowMillis)) return {status: 429, body: 'Too many requests\n'};
+
+  const ref = db.collection(calendarFeed.FEED_COLLECTION).doc(hash);
+  const snap = await ref.get();
+  if (!snap.exists) {
+    cache.delete(hash);
+    return notFound;
+  }
+  const feed = snap.data() || {};
+  if (calendarFeedExpired(feed, nowMillis)) {
+    await ref.delete();
+    cache.delete(hash);
+    return notFound;
+  }
+  if (nowMillis - Number(feed.lastUsedAtMillis || 0) >= calendarFeed.LAST_USED_WRITE_INTERVAL_MS) {
+    await ref.update({lastUsedAtMillis: nowMillis});
+  }
+
+  const cached = cache.get(hash, nowMillis);
+  if (cached !== undefined) return {status: 200, body: cached};
+
+  const live = await liveFamily(db, feed.familyId, feed.ownerUid);
+  if (!live) {
+    await ref.delete();
+    return notFound;
+  }
+  const [family, custody, events] = await Promise.all([
+    db.collection('families').doc(feed.familyId).get(),
+    db.collection('custody_models').doc(feed.familyId).get(),
+    db.collection('events').where('familyId', '==', feed.familyId).get(),
+  ]);
+  const body = calendarFeed.buildFeed({
+    familyId: feed.familyId,
+    members: live.members,
+    ownerUid: feed.ownerUid,
+    locale: feed.locale,
+    nowMillis,
+    custody: custody.exists ? calendarFeed.parseCustodyModel(custody.data()) : null,
+    names: calendarFeedNames(family.exists ? family.data() : null, live, feed.locale),
+    events: events.docs.map((doc) => doc.data() || {}),
+  });
+  cache.set(hash, body, nowMillis);
+  return {status: 200, body};
+}
+
+exports.serveCalendarFeedImpl = serveCalendarFeedImpl;
+
+/**
+ * Body of the daily sweep: deletes every link unused for [calendarFeed.FEED_IDLE_EXPIRY_DAYS].
+ * Housekeeping, not enforcement — a request already refuses an idle link.
+ *
+ * @param {FirebaseFirestore.Firestore} db Firestore instance.
+ * @param {number} nowMillis Now.
+ * @return {Promise<number>} How many went.
+ */
+async function sweepIdleCalendarFeedsImpl(db, nowMillis) {
+  const cutoff = nowMillis - calendarFeed.FEED_IDLE_EXPIRY_DAYS * calendarFeed.DAY_MS;
+  return deleteQueryInBatches(
+      db, db.collection(calendarFeed.FEED_COLLECTION).where('lastUsedAtMillis', '<', cutoff));
+}
+
+exports.sweepIdleCalendarFeedsImpl = sweepIdleCalendarFeedsImpl;
+
+/** Per-instance render cache and rate limit for [exports.calendarFeed]. */
+const calendarFeedCache = calendarFeed.ttlCache(calendarFeed.CACHE_TTL_MS);
+const calendarFeedLimiter = calendarFeed.rateLimiter(calendarFeed.RATE_LIMIT, calendarFeed.RATE_WINDOW_MS);
+
+/**
+ * `GET /calendarFeed/<token>.ics` — the subscription itself. No sign-in: the token is the
+ * authorisation, and it is never logged.
+ */
+exports.calendarFeed = functions.https.onRequest(async (req, res) => {
+  res.set('X-Content-Type-Options', 'nosniff');
+  res.set('Referrer-Policy', 'no-referrer');
+  if (req.method !== 'GET' && req.method !== 'HEAD') {
+    res.set('Allow', 'GET, HEAD');
+    res.set('Cache-Control', 'no-store');
+    res.status(405).send('Method not allowed\n');
+    return;
+  }
+  try {
+    const result = await serveCalendarFeedImpl(
+        admin.firestore(), calendarFeed.tokenFromPath(req.path), Date.now(),
+        calendarFeedCache, calendarFeedLimiter);
+    if (result.status === 200) {
+      res.set('Content-Type', 'text/calendar; charset=utf-8');
+      res.set('Content-Disposition', 'inline; filename="coplanly.ics"');
+      res.set('Cache-Control', `private, max-age=${Math.round(calendarFeed.CACHE_TTL_MS / 1000)}`);
+    } else {
+      res.set('Content-Type', 'text/plain; charset=utf-8');
+      res.set('Cache-Control', 'no-store');
+      if (result.status === 429) {
+        res.set('Retry-After', String(Math.round(calendarFeed.RATE_WINDOW_MS / 1000)));
+      }
+    }
+    res.status(result.status).send(req.method === 'HEAD' ? '' : result.body);
+  } catch (err) {
+    // The message only: an error object can carry the request, and the request carries the token.
+    console.error('Calendar feed failed', err && err.message);
+    res.set('Content-Type', 'text/plain; charset=utf-8');
+    res.set('Cache-Control', 'no-store');
+    res.status(500).send('Error\n');
+  }
+});
+
+/** Creates a feed link. See [createCalendarFeedImpl]. */
+exports.createCalendarFeed = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'Sign in first');
+  }
+  const familyId = data && typeof data.familyId === 'string' ? data.familyId : '';
+  if (!familyId) {
+    throw new functions.https.HttpsError('invalid-argument', 'familyId is required');
+  }
+  return createCalendarFeedImpl(
+      admin.firestore(), context.auth.uid, familyId, data && data.locale, Date.now());
+});
+
+/** Lists the caller's feed links. See [listCalendarFeedsImpl]. */
+exports.listCalendarFeeds = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'Sign in first');
+  }
+  return listCalendarFeedsImpl(admin.firestore(), context.auth.uid, Date.now());
+});
+
+/** Revokes one of the caller's feed links. See [revokeCalendarFeedImpl]. */
+exports.revokeCalendarFeed = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'Sign in first');
+  }
+  return revokeCalendarFeedImpl(admin.firestore(), context.auth.uid, data && data.feedId);
+});
+
+/** Deletes idle links daily, after the other sweeps. See [sweepIdleCalendarFeedsImpl]. */
+exports.sweepIdleCalendarFeeds = functions.pubsub
+    .schedule('30 4 * * *')
+    .timeZone('UTC')
+    .onRun(async () => {
+      const removed = await sweepIdleCalendarFeedsImpl(admin.firestore(), Date.now());
+      console.log(`Swept ${removed} idle calendar feeds`);
+      return null;
+    });
+
+// ---- Verifiable exports (MON-16) --------------------------------------------------------------
+//
+// The logic lives in `export-receipts.js`; these wrappers only authenticate, rate-limit and
+// translate its `ReceiptError` into an `HttpsError` carrying a stable `reason`.
+
+const reserveLimiter = exportReceipts.rateLimiter(
+    exportReceipts.RESERVE_RATE_LIMIT, exportReceipts.RATE_WINDOW_MS);
+const verifyLimiter = exportReceipts.rateLimiter(
+    exportReceipts.VERIFY_RATE_LIMIT, exportReceipts.RATE_WINDOW_MS);
+
+/** The receipts' server clock: the function's own, as a Firestore timestamp. */
+const receiptDeps = {now: () => Timestamp.now()};
+
+/**
+ * Runs a receipt implementation and turns its refusals into `HttpsError`s.
+ *
+ * @param {function(): !Promise<*>} run The implementation call.
+ * @return {!Promise<*>} Its result.
+ */
+async function asCallable(run) {
+  try {
+    return await run();
+  } catch (err) {
+    if (err instanceof exportReceipts.ReceiptError) {
+      throw new functions.https.HttpsError(err.code, err.message, {reason: err.reason});
+    }
+    throw err;
+  }
+}
+
+/**
+ * Mints the record id an export prints on its face, before the file is rendered. Signed-in
+ * parents only. See `export-receipts.js` for why the id comes first.
+ */
+exports.reserveExportRecordId = functions
+    .runWith({maxInstances: exportReceipts.MAX_INSTANCES})
+    .https.onCall(async (data, context) => {
+      if (!context.auth) {
+        throw new functions.https.HttpsError('unauthenticated', 'Sign in first');
+      }
+      if (!reserveLimiter.allow(context.auth.uid, Date.now())) {
+        throw new functions.https.HttpsError('resource-exhausted', 'Too many exports',
+            {reason: 'rate-limited'});
+      }
+      return asCallable(() => exportReceipts.reserveImpl(
+          admin.firestore(), context.auth.uid, data, receiptDeps));
+    });
+
+/**
+ * Registers the SHA-256 of a rendered export under the id it prints. Create-once; the caller
+ * must be the parent who reserved the id.
+ */
+exports.registerExportReceipt = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'Sign in first');
+  }
+  return asCallable(() => exportReceipts.registerImpl(
+      admin.firestore(), context.auth.uid, data, receiptDeps));
+});
+
+/**
+ * Answers the verification page: was this hash (or this record id) registered, and when.
+ * **Callable without signing in** — a lawyer has no account — and therefore rate-limited per
+ * address and deployed with an instance cap, and answering with nothing that identifies anybody.
+ */
+exports.verifyExport = functions
+    .runWith({maxInstances: exportReceipts.MAX_INSTANCES})
+    .https.onCall(async (data, context) => {
+      if (!verifyLimiter.allow(exportReceipts.clientKey(context), Date.now())) {
+        throw new functions.https.HttpsError('resource-exhausted', 'Too many lookups; try again later',
+            {reason: 'rate-limited'});
+      }
+      return asCallable(() => exportReceipts.verifyImpl(admin.firestore(), data));
+    });

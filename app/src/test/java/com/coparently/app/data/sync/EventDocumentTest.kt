@@ -3,6 +3,7 @@ package com.coparently.app.data.sync
 import com.coparently.app.domain.family.FamilyMemberRef
 import org.junit.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 
 /**
  * The events wire format, at the one field that crosses between two builds in both directions.
@@ -48,6 +49,25 @@ class EventDocumentTest {
         // The column is NOT NULL with a '[]' default, so this should be unreachable — but it is
         // read on the path that draws the grid, and a throw there takes the calendar down.
         assertEquals(emptyList(), EventDocument.storedMembers("not json"))
+    }
+
+    @Test
+    fun `an event with no end time is read, not skipped`() {
+        // `EventRepositoryImpl.toFirestoreMap()` writes "" for a missing end, and the reader used
+        // to parse that as a date-time and throw — so the co-parent's sync dropped the event.
+        val document = mapOf<String, Any?>(
+            "id" to "e1",
+            "title" to "Pickup",
+            "startDateTime" to "2026-09-24T15:00:00",
+            "endDateTime" to "",
+            "eventType" to "pickup",
+            "parentOwner" to "mom",
+            "createdAt" to "2026-09-23T09:00:00",
+            "updatedAt" to "2026-09-23T09:00:00"
+        )
+        val entity = EventDocument.toEntity(document)
+        assertEquals("e1", entity.id)
+        assertNull(entity.endDateTime)
     }
 
     @Test

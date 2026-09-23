@@ -8,6 +8,13 @@
 > Sources: `firestore.rules`, `storage.rules`, `data/local/entity/`, `di/FirebaseModule.kt`,
 > `data/analytics/AnalyticsManager.kt`, `data/crashlytics/CrashlyticsManager.kt`,
 > `data/mlkit/`, `functions/index.js`.
+>
+> ### Owner must fill
+>
+> | Placeholder | What goes in |
+> | --- | --- |
+> | `{{DECIDE}}` | The Families-policy answer below. The recommendation is written next to it; the decision is yours, because it shapes the target-audience section of the Play Console |
+> | `{{WEB_DELETION_URL}}` | Where `web/delete-account/` is hosted — Play asks for it in the data-deletion section |
 
 ## Summary answers
 
@@ -16,7 +23,8 @@
 | Does your app collect or share any of the required user data types? | **Yes** | |
 | Is all data encrypted in transit? | **Yes** | Firebase SDKs use TLS throughout |
 | Is data encrypted at rest on the device? | **Yes, for the app's database** | Room opens through SQLCipher; the passphrase is wrapped by an Android Keystore key (SEC-2). The Firebase SDK's offline cache and Coil's image cache are plaintext files under Android's file-based encryption only — the privacy policy says so (September 2026). Play does not ask this question — the row is here because the privacy policy makes the claim and something has to say what backs it |
-| Do you provide a way for users to request that their data is deleted? | **Yes** | Settings → Account → Delete account, backed by the `deleteAccount` callable |
+| Do you provide a way for users to request that their data is deleted? | **Yes** | Settings → Account → Delete account, backed by the `deleteAccount` callable, which also removes the Storage files of every record it deletes (September 2026). The web route Play requires is `web/delete-account/`, at {{WEB_DELETION_URL}} |
+| Is some data kept after a deletion request? | **Yes, for a bounded time** | A record deleted *individually* is a tombstone for 90 days (`TOMBSTONE_RETENTION_DAYS`) before the sweep removes it. An *account* deletion hard-deletes at once, tombstones included. Copies already downloaded to the co-parent's phone stay there — the privacy policy says so |
 | Is data collection required, or can users choose? | **Required** for the account and shared content; **optional** for the medical profile, photos, Google Calendar, and — since REL-5 — analytics and crash reporting |
 | Have you committed to Play's Families policy? | {{DECIDE}} — the app is for parents, not children, and offers no child accounts. Audit 2026-09 recommends: target audience **18+ only**, **not** in the Families programme, no child imagery or "kids" wording in the listing |
 
@@ -35,7 +43,8 @@ our processor are declared.
 | Other info | Yes | No | **Yes** | App functionality — a child's date of birth, school and activity details |
 | Device or other IDs | Yes | No | No | App functionality (the FCM push token stored on `users/{uid}`) and, with consent, analytics/crash reporting (Firebase installation ID) |
 | User IDs | Yes | No | No | Account management |
-| Photos | Yes | No | Yes | App functionality — receipts, event images, medical and pet photos |
+| Photos | Yes | No | Yes | App functionality — receipts, event images, medical and pet photos, photos in the document vault and sent in chat |
+| Files and docs | Yes | No | Yes | App functionality — the family document vault and PDFs sent in chat (MON-23). Always shared with the co-parent by design; optional to use |
 | Calendar events | Yes | No | No | App functionality |
 | Messages (in-app) | Yes | No | No | App functionality |
 | Health info | Yes | No | Yes | App functionality — the child's medical profile |
@@ -59,7 +68,10 @@ optional**.
 cannot read Firestore, so a photograph's URL is protected by being unguessable rather than by
 a rule that knows who a parent is. This is documented at length in `storage.rules`. It does
 not change the declaration, but it is the honest state of the control and should be fixed
-before this ships (see `docs/ROADMAP.md`, **SEC-1**).
+before this ships (see `docs/ROADMAP.md`, **SEC-1**). **The vault and chat attachments
+(MON-23) are the exception**: their rules gate on the family id in the path, which names the
+family's two parents, so only those two can download them — with the one caveat `storage.rules`
+states, that the path still names an ex-partner after an unpair.
 
 **Receipt OCR is on-device.** ML Kit's bundled model recognises receipt text without the
 photograph or the text leaving the device. Nothing about it is collected or shared, and it is

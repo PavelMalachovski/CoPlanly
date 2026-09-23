@@ -49,9 +49,9 @@
     <string name="settings_account_delete">Delete account</string>
     <string name="settings_account_delete_description">Erase this account and all its data</string>
     <string name="settings_account_delete_confirm_title">Delete this account?</string>
-    <string name="settings_account_delete_confirm_message">Everything you entered goes: your events, expenses, your child\'s records and the whole chat. Your co-parent keeps only what they created themselves. This cannot be undone.</string>
+    <string name="settings_account_delete_confirm_message">Everything you entered is erased from our servers and from this phone: your events, expenses, your child\'s records and the whole chat. Your co-parent keeps what they created, and their phone keeps the copies it has already downloaded. This cannot be undone.</string>
     <string name="settings_account_delete_final_title">Delete permanently?</string>
-    <string name="settings_account_delete_final_message">There is no way back and no copy afterwards. If you only want to leave this device, sign out instead.</string>
+    <string name="settings_account_delete_final_message">There is no way back: we keep no copy to restore it from. If you only want to leave this device, sign out instead.</string>
     <string name="settings_account_delete_final_yes">Delete permanently</string>
     <string name="settings_account_delete_cancel">Keep my account</string>
     <string name="settings_account_delete_progress">Deleting your account…</string>
@@ -78,6 +78,15 @@
     <string name="settings_family_shown">Family shown</string>
     <string name="settings_family_switch">Switch family</string>
     <string name="settings_family_unnamed">Not named yet</string>
+    <!-- The family switcher's dot (M-8): another family has something waiting - chat newer than
+         this parent's read mark, a change request, or a schedule proposal or day swap to answer.
+         A dot, never a count; see OtherFamiliesSignals. -->
+    <string name="family_switcher_unread_other">New messages in another family</string>
+    <string name="family_switcher_unread_row">New messages</string>
+    <string name="family_switcher_request_other">A change request is waiting in another family</string>
+    <string name="family_switcher_request_row">A change request is waiting</string>
+    <string name="family_switcher_schedule_other">A schedule proposal is waiting in another family</string>
+    <string name="family_switcher_schedule_row">A schedule proposal is waiting</string>
     <!-- The Bakaláři / EduPage import row (MON-8). Inert until the import exists; see the
          comment at its call site in SettingsScreen for why an inert row is not the affordance
          design rule 8 forbids, and for the condition under which it has to come out. -->
@@ -88,4 +97,8 @@
 
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
     <string name="settings_sync_failed">Last sync failed</string>
+
+    <!-- MON-19: Settings → App. The argument is the pause, in seconds. -->
+    <string name="settings_pause_before_sending_title">Pause before sending</string>
+    <string name="settings_pause_before_sending_description">Hold each chat message for %1$d seconds with an Undo, and point out capitals, !!! and sharp words while you type. Checked on this phone only.</string>
 </resources>

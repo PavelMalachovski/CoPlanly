@@ -18,6 +18,7 @@ import com.coparently.app.domain.custody.CustodyTimestamp
 import com.coparently.app.domain.custody.CustodyWriteKind
 import com.coparently.app.domain.custody.DayOverride
 import com.coparently.app.domain.custody.DayOverrideStatus
+import com.coparently.app.domain.custody.SeasonalLayer
 import com.coparently.app.domain.custody.SharedCustody
 import com.coparently.app.domain.custody.SharedCustodyRead
 import com.coparently.app.domain.model.CustodyModel
@@ -260,7 +261,7 @@ class CustodyModelRepository(
         ) {
             Log.w(
                 TAG,
-                "Could not read custody_models/${pair.documentId}. Reported as Unavailable, not " +
+                "Could not read the shared custody document. Reported as Unavailable, not " +
                     "as an absent document: a caller that mistook the two would publish its own " +
                     "pattern over a co-parent's that is simply unreadable right now.",
                 e
@@ -314,7 +315,7 @@ class CustodyModelRepository(
             atIso = nowIso()
         ).getOrElse { return PatternSubmission.ACTIVATED.also { saveAndActivate(model) } }
 
-        val written = guarded("propose", pair.documentId) {
+        val written = guarded("propose") {
             firestoreCustodyDataSource.setCustody(pair.documentId, pair.participants, proposed)
         }
         if (written == null) {
@@ -367,7 +368,7 @@ class CustodyModelRepository(
         // `setCustody` returns Unit, so `guarded` yields `Unit?` — null on failure, and that is
         // all this value can say. It is the success sentinel the two sibling call sites also
         // treat it as; the thing to mirror is `next`, the document that was just written.
-        guarded("decide-proposal", pair.documentId) {
+        guarded("decide-proposal") {
             firestoreCustodyDataSource.setCustody(pair.documentId, pair.participants, next)
         } ?: return Result.failure(IllegalStateException("The decision could not be written"))
         mirrorIntoRoom(next)
@@ -479,7 +480,7 @@ class CustodyModelRepository(
             startDate = startDate,
             momFirst = momFirst
         )
-        return submitPattern(model.withWindows(contactWindows))
+        return submitPattern(withActiveLayers(model.withWindows(contactWindows)))
     }
 
     /**
@@ -502,7 +503,7 @@ class CustodyModelRepository(
             momIsResident = momIsResident,
             midweek = midweek
         )
-        return submitPattern(model.withWindows(contactWindows))
+        return submitPattern(withActiveLayers(model.withWindows(contactWindows)))
     }
 
     /**
@@ -518,7 +519,7 @@ class CustodyModelRepository(
             startDate = startDate,
             momStartsFirst = momStartsFirst
         )
-        return submitPattern(model.withWindows(contactWindows))
+        return submitPattern(withActiveLayers(model.withWindows(contactWindows)))
     }
 
     /**
@@ -534,7 +535,7 @@ class CustodyModelRepository(
             startDate = startDate,
             momStartsFirst = momStartsFirst
         )
-        return submitPattern(model.withWindows(contactWindows))
+        return submitPattern(withActiveLayers(model.withWindows(contactWindows)))
     }
 
     /**
@@ -552,7 +553,7 @@ class CustodyModelRepository(
             patternDays = patternDays,
             momDayIndices = momDayIndices
         )
-        return submitPattern(model.withWindows(contactWindows))
+        return submitPattern(withActiveLayers(model.withWindows(contactWindows)))
     }
 
     /**
@@ -562,6 +563,33 @@ class CustodyModelRepository(
      */
     private fun CustodyModel.withWindows(windows: List<ContactWindow>): CustodyModel =
         copy(contactWindows = ContactWindowCodec.canonical(windows.filter { it.dayIndex < patternDays }))
+
+    /**
+     * [model] carrying the active pattern's seasonal layers (MON-14).
+     *
+     * The pattern editor builds a fresh model from the base form, which knows nothing of layers;
+     * without this, saving the base pattern would propose deleting every layer the pair agreed —
+     * a change nobody asked for, riding on one somebody did. Unreadable entries travel too.
+     */
+    private suspend fun withActiveLayers(model: CustodyModel): CustodyModel {
+        val active = getActiveModelSync() ?: return model
+        return model.copy(seasonalLayers = active.seasonalLayers, unreadableLayers = active.unreadableLayers)
+    }
+
+    /**
+     * Submits a new set of seasonal layers over the active base pattern (MON-14).
+     *
+     * Through [submitPattern], so it takes the same road a base-pattern change does: applied
+     * directly on an unpaired account or before the pair has a shared schedule, and otherwise a
+     * **proposal** the co-parent accepts or declines — never written onto their calendar unasked.
+     * The base pattern and any layer entries this build cannot read are carried unchanged.
+     *
+     * @return How the change landed, or null when there is no base pattern to layer on.
+     */
+    suspend fun submitSeasonalLayers(layers: List<SeasonalLayer>): PatternSubmission? {
+        val active = getActiveModelSync() ?: return null
+        return submitPattern(active.copy(seasonalLayers = layers))
+    }
 
     /**
      * Deletes a custody model.
@@ -656,6 +684,13 @@ class CustodyModelRepository(
                 existing?.contactWindowsJson
             } else {
                 ContactWindowJson.encode(remote.model.contactWindows)
+            },
+            // The same rule for the seasonal layers (MON-14): a missing key is an older build's
+            // write, never "no layers".
+            seasonalLayersJson = if (remote.seasonalLayersWire == null) {
+                existing?.seasonalLayersJson
+            } else {
+                SeasonalLayerJson.encode(remote.model.seasonalLayers, remote.model.unreadableLayers)
             }
         )
         if (entity == existing) return
@@ -715,7 +750,7 @@ class CustodyModelRepository(
      */
     private suspend fun pushToFirestore(model: CustodyModel, entity: CustodyModelEntity) {
         val pair = currentPair() ?: return
-        guarded("write", pair.documentId) {
+        guarded("write") {
             val existing = firestoreCustodyDataSource.getCustody(pair.documentId)
             val existingCreatedAt = existing?.createdAt?.takeIf { it.isNotBlank() }
             firestoreCustodyDataSource.setCustody(
@@ -736,7 +771,9 @@ class CustodyModelRepository(
                     // Always the key, as `[]` for none: this is a pattern write, the one kind
                     // `firestore.rules` lets replace the list, and an explicit empty list is how
                     // a removal is told apart from an older build that never wrote the key.
-                    contactWindowsWire = ContactWindowCodec.encodeAll(model.contactWindows)
+                    contactWindowsWire = ContactWindowCodec.encodeAll(model.contactWindows),
+                    // The same for the seasonal layers (MON-14), unreadable entries included.
+                    seasonalLayersWire = model.seasonalLayersWire()
                 )
             )
         }
@@ -870,7 +907,7 @@ class CustodyModelRepository(
         // Guarded like the write below it. An unguarded read threw straight out of the caller's
         // `viewModelScope.launch` — neither ViewModel's `.onFailure` can catch a throw — and an
         // uncaught exception there terminates the process rather than showing a refusal.
-        val existing = guarded("swap read", pair.documentId) {
+        val existing = guarded("swap read") {
             firestoreCustodyDataSource.getCustody(pair.documentId)
         } ?: return Result.failure(IllegalStateException("The pair has no shared schedule yet"))
 
@@ -882,7 +919,7 @@ class CustodyModelRepository(
             // tell the other parent their schedule moved.
             return Result.success(SwapWrite(existing.dayOverrides, changed = false))
         }
-        val written = guarded("swap", pair.documentId) {
+        val written = guarded("swap") {
             firestoreCustodyDataSource.setCustody(
                 documentId = pair.documentId,
                 participants = pair.participants,
@@ -1033,11 +1070,7 @@ class CustodyModelRepository(
      * degrades to "local for now" rather than to an exception in the caller's coroutine.
      * Cancellation is rethrown — it is not a failure.
      */
-    private suspend fun <T> guarded(
-        operation: String,
-        documentId: String,
-        block: suspend () -> T
-    ): T? = try {
+    private suspend fun <T> guarded(operation: String, block: suspend () -> T): T? = try {
         block()
     } catch (e: CancellationException) {
         throw e
@@ -1046,7 +1079,7 @@ class CustodyModelRepository(
     ) {
         Log.w(
             TAG,
-            "Custody $operation failed for custody_models/$documentId. Room keeps the local " +
+            "Custody $operation failed for the shared custody document. Room keeps the local " +
                 "copy, which the mirror will not overwrite with the older document, and " +
                 "re-sends on the next snapshot.",
             e
@@ -1073,6 +1106,7 @@ class CustodyModelRepository(
             .map { it.trim().toInt() }
             .toSet()
 
+        val layers = SeasonalLayerJson.decode(seasonalLayersJson)
         return CustodyModel(
             id = id,
             modelType = CustodyModelType.fromString(modelType),
@@ -1080,7 +1114,9 @@ class CustodyModelRepository(
             momDayIndices = momDays,
             startDate = LocalDate.parse(startDate),
             isActive = isActive,
-            contactWindows = ContactWindowJson.decode(contactWindowsJson)
+            contactWindows = ContactWindowJson.decode(contactWindowsJson),
+            seasonalLayers = layers.layers,
+            unreadableLayers = layers.unreadable
         )
     }
 
@@ -1115,7 +1151,8 @@ class CustodyModelRepository(
             // guard in `mirrorIntoRoom` depends on to stay quiet.
             dayOverridesJson = DayOverrideJson.encode(dayOverrides),
             // Null for none, for the same reason.
-            contactWindowsJson = ContactWindowJson.encode(contactWindows)
+            contactWindowsJson = ContactWindowJson.encode(contactWindows),
+            seasonalLayersJson = SeasonalLayerJson.encode(seasonalLayers, unreadableLayers)
         )
     }
 

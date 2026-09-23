@@ -290,16 +290,25 @@ CLAUDE.md item 15.
 
 *As built (M-8, September 2026):* the chip is on Home and Expenses, not all four — the Calendar
 header's row is spoken for, and Chat turned out to follow the first co-parent rather than the
-selected family (ROADMAP M-8). `familyId` is a payload **field**, not a type, so item 15's four
+selected family (ROADMAP M-8; fixed in September 2026 — chat now follows the selection, and the
+chip stays off the Chat tab as a layout call). `familyId` is a payload **field**, not a type, so item 15's four
 places did not apply: one stamp in `FcmService`, two in the functions, a bound in the rule, and a
 switch before the deep link on tap. The cross-family badges above were not built, for the reason
-M-8 records: nothing mirrors the second family's chat while it is closed, so a count would lie.
+M-8 records: only the selected family's chat is mirrored, so a count for any other family would
+lie. The badge counts the selected family; the switcher shows no count, but a **dot** on the chip
+and on each dialog row when another family's conversation document says it moved after this
+parent's read mark, or a change request or a schedule proposal is waiting on this parent
+(`OtherFamiliesSignals`, up to three listeners per other family, none at one).
 
 #### Order of operations, and the ops steps it depends on
 
 `backfillRecordFamilyIds` stamps `familyId` on the documents of the six collections for every
-account that has exactly **one** family — a person with two is skipped rather than guessed at,
-which today is nobody, because pairing still refuses a second. It is required before the client
+account that has exactly **one** family and no trace of an earlier one — a person with two is
+skipped rather than guessed at. (This paragraph used to say that was already so and that nobody
+had two, because pairing refused a second. Pairing stopped refusing one in M-4, and the pass read
+the singular `partnerId`, so it did guess; fixed in September 2026 together with the
+`onFamilyCreated` trigger that runs the same policy when a pair forms — see
+`stampOwnBlankFamilyIds`.) It is required before the client
 query switch, not merely desirable: `whereEqualTo("familyId", …)` over documents that carry none
 returns nothing, and a co-parent's expense history would read as empty.
 

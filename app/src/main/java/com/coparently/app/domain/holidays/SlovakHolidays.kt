@@ -1,5 +1,9 @@
 package com.coparently.app.domain.holidays
 
+import com.coparently.app.domain.holidays.SchoolBreak.JESENNE_PRAZDNINY
+import com.coparently.app.domain.holidays.SchoolBreak.LETNE_PRAZDNINY
+import com.coparently.app.domain.holidays.SchoolBreak.VELKONOCNE_PRAZDNINY
+import com.coparently.app.domain.holidays.SchoolBreak.VIANOCNE_PRAZDNINY
 import java.time.LocalDate
 
 /**
@@ -18,9 +22,15 @@ import java.time.LocalDate
  * Only days off are drawn. A state holiday that is a working day — 28 October among them — is not
  * a day a parent plans a handover around, and drawing it would say otherwise.
  *
- * **No school vacations.** Slovakia's spring break is set per region, and the rest of the school
- * calendar is published per school year by the ministry rather than being computable; returning
- * none is the honest answer [HolidayProvider] allows, not a claim that there are none.
+ * **School vacations: the nationwide ones, as the ministry published them** (MŠVVaM SR,
+ * "Termíny prázdnin", per school year). They are not computable, so they are a dated table,
+ * [vacations], from school year 2025/26 to the last one published — the summer of 2028 at the
+ * dataset commit the fixture pins. Two things are deliberately missing. The **spring holidays**
+ * are set per region (kraj) in three staggered weeks, and the app has no Slovak region, so they
+ * are left out — the trade [CzechHolidays] makes for its district-dependent spring break. And the
+ * one-day **half-year holiday** (polročné prázdniny) is not in the source dataset, so it is not
+ * drawn rather than typed from memory. `SchoolVacationReferenceTest` holds the table to the
+ * fixture `tools/generate-school-vacation-fixture.py` writes from the OpenHolidays dataset.
  *
  * Names and dates are the Python `holidays` library's (v0.105), and `HolidayReferenceTest` holds
  * this table to it for every year of its fixture (2020–2035). Earlier years are not modelled —
@@ -31,7 +41,7 @@ object SlovakHolidays : HolidayProvider {
 
     override val localLanguage: String = "sk"
 
-    override val hasSchoolVacations: Boolean = false
+    override val hasSchoolVacations: Boolean = true
 
     /** Constitution Day is a working day from this year (Act 530/2023). */
     private const val CONSTITUTION_DAY_LAST_YEAR_OFF = 2023
@@ -98,6 +108,22 @@ object SlovakHolidays : HolidayProvider {
 
     override fun publicHolidays(year: Int): List<Holiday> = table.holidaysIn(year, localLanguage)
 
+    /** The nationwide school vacations; see the class KDoc for what is left out and why. */
+    private val vacations = listOf(
+        JESENNE_PRAZDNINY.on("2025-10-30", "2025-10-31"),
+        VIANOCNE_PRAZDNINY.on("2025-12-22", "2026-01-07"),
+        VELKONOCNE_PRAZDNINY.on("2026-04-02", "2026-04-07"),
+        LETNE_PRAZDNINY.on("2026-07-01", "2026-08-31"),
+        JESENNE_PRAZDNINY.on("2026-10-29", "2026-10-30"),
+        VIANOCNE_PRAZDNINY.on("2026-12-23", "2027-01-07"),
+        VELKONOCNE_PRAZDNINY.on("2027-03-25", "2027-03-30"),
+        LETNE_PRAZDNINY.on("2027-07-01", "2027-08-31"),
+        JESENNE_PRAZDNINY.on("2027-10-28", "2027-10-29"),
+        VIANOCNE_PRAZDNINY.on("2027-12-23", "2028-01-07"),
+        VELKONOCNE_PRAZDNINY.on("2028-04-13", "2028-04-18"),
+        LETNE_PRAZDNINY.on("2028-07-03", "2028-09-01")
+    )
+
     override fun schoolVacations(year: Int): List<Pair<ClosedRange<LocalDate>, Pair<String, String>>> =
-        emptyList()
+        vacations.overlapping(year)
 }

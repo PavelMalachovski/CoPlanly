@@ -59,4 +59,11 @@ class ChatWindowTest {
         // asserts they have not been quietly tied together.
         assertTrue(ChatWindow.INITIAL < 200, "the render window should stay under the mirror's")
     }
+
+    @Test
+    fun `reaching a search result grows the window and never shrinks it`() {
+        assertEquals(ChatWindow.INITIAL * 3, ChatWindow.reaching(ChatWindow.INITIAL, ChatWindow.INITIAL * 3))
+        // Already on screen: a jump must not throw away history the reader loaded.
+        assertEquals(ChatWindow.INITIAL * 2, ChatWindow.reaching(ChatWindow.INITIAL * 2, 5))
+    }
 }

@@ -53,6 +53,12 @@ import com.coparently.app.domain.model.CustodyModel
  *     older co-parent's ordinary swap erase the contact afternoons from this device's calendar,
  *     so the mirror keeps its own copy when the key is absent — and this build always writes the
  *     key, as `[]` when there are none, so a removal it makes is a real, explicit empty list.
+ * @property seasonalLayersWire The document's `seasonalLayers` list **exactly as stored**, or null
+ *   when the document has no such key (MON-14). The same two rules as [contactWindowsWire], for
+ *   the same reasons: a proposal or swap write sends it back byte for byte (`firestore.rules`'
+ *   `seasonalLayersKeptOrDropped`), and a missing key is an older build's write, never "no
+ *   layers" — the mirror keeps its own copy, and this build always writes the key on a pattern
+ *   write. [model]'s `seasonalLayers`/`unreadableLayers` are the decoded form.
  */
 data class SharedCustody(
     val model: CustodyModel,
@@ -65,7 +71,8 @@ data class SharedCustody(
     val dayOverrides: Map<String, DayOverride> = emptyMap(),
     val lastSwapDate: String? = null,
     val lastModifiedKind: CustodyWriteKind = CustodyWriteKind.PATTERN,
-    val contactWindowsWire: List<String>? = null
+    val contactWindowsWire: List<String>? = null,
+    val seasonalLayersWire: List<String>? = null
 )
 
 /**

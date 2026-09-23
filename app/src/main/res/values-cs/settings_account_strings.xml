@@ -48,9 +48,9 @@
     <string name="settings_account_delete">Smazat účet</string>
     <string name="settings_account_delete_description">Vymazat tento účet i všechna jeho data</string>
     <string name="settings_account_delete_confirm_title">Smazat tento účet?</string>
-    <string name="settings_account_delete_confirm_message">Zmizí vše, co jste zadali: události, výdaje, záznamy o dítěti i celý chat. Druhému rodiči zůstane jen to, co vytvořil sám. Tento krok nelze vrátit.</string>
+    <string name="settings_account_delete_confirm_message">Z našich serverů i z tohoto telefonu zmizí vše, co jste zadali: události, výdaje, záznamy o dítěti i celý chat. Druhému rodiči zůstane to, co vytvořil sám, a v jeho telefonu i kopie, které si už stáhl. Tento krok nelze vrátit.</string>
     <string name="settings_account_delete_final_title">Smazat nenávratně?</string>
-    <string name="settings_account_delete_final_message">Není cesty zpět a nezůstane žádná kopie. Pokud se chcete jen odhlásit z tohoto zařízení, použijte odhlášení.</string>
+    <string name="settings_account_delete_final_message">Není cesty zpět: žádnou kopii pro obnovení neuchováváme. Pokud se chcete jen odhlásit z tohoto zařízení, použijte odhlášení.</string>
     <string name="settings_account_delete_final_yes">Smazat nenávratně</string>
     <string name="settings_account_delete_cancel">Ponechat účet</string>
     <string name="settings_account_delete_progress">Mažeme váš účet…</string>
@@ -75,6 +75,12 @@
     <string name="settings_family_shown">Zobrazená rodina</string>
     <string name="settings_family_switch">Přepnout rodinu</string>
     <string name="settings_family_unnamed">Zatím bez jména</string>
+    <string name="family_switcher_unread_other">Nové zprávy v jiné rodině</string>
+    <string name="family_switcher_unread_row">Nové zprávy</string>
+    <string name="family_switcher_request_other">V jiné rodině čeká žádost o změnu</string>
+    <string name="family_switcher_request_row">Čeká žádost o změnu</string>
+    <string name="family_switcher_schedule_other">V jiné rodině čeká návrh rozvrhu péče</string>
+    <string name="family_switcher_schedule_row">Čeká návrh rozvrhu péče</string>
     <string name="settings_school_import_title">Import z Bakalářů a EduPage</string>
     <string name="settings_school_import_description">Školní rozvrh dítěte rovnou do kalendáře. Zatím není hotovo.</string>
     <string name="settings_school_import_planned">V plánu</string>
@@ -82,4 +88,8 @@
 
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
     <string name="settings_sync_failed">Poslední synchronizace se nezdařila</string>
+
+    <!-- MON-19: Settings → App. The argument is the pause, in seconds. -->
+    <string name="settings_pause_before_sending_title">Pauza před odesláním</string>
+    <string name="settings_pause_before_sending_description">Každou zprávu v chatu podrží %1$d sekund s možností Zpět a při psaní upozorní na velká písmena, !!! a ostrá slova. Kontroluje se jen v tomto telefonu.</string>
 </resources>

@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Экспорт записи общения (MON-3). Абзацы export_statement_* печатаются на каждом файле. -->
+<resources>
+    <string name="export_settings_title">Экспорт записи</string>
+    <string name="export_settings_description">Сообщения, история календаря и расходы в PDF или CSV</string>
+    <string name="export_title">Экспорт записи</string>
+    <string name="export_back">Назад</string>
+    <string name="export_intro">Создайте файл с тем, что вы и второй родитель записали и написали друг другу в CoPlanly, — для адвоката, медиатора или суда. Он создаётся на этом телефоне и попадает только туда, куда вы его отправите.</string>
+    <string name="export_range_label">Период</string>
+    <string name="export_from">С</string>
+    <string name="export_to">По</string>
+    <string name="export_pick_ok">ОК</string>
+    <string name="export_pick_cancel">Отмена</string>
+    <string name="export_what_it_says">Что файл сообщает о себе</string>
+    <string name="export_csv">Экспорт в CSV</string>
+    <string name="export_csv_supporting">Таблица: по строке на каждую версию, сообщение и расход</string>
+    <string name="export_pdf">Экспорт в PDF</string>
+    <string name="export_pdf_supporting">Документ для печати формата A4</string>
+    <string name="export_working">Подготовка…</string>
+    <string name="export_share_title">Поделиться записью</string>
+    <string name="export_error_failed">Не удалось экспортировать запись. Попробуйте ещё раз.</string>
+    <string name="export_error_signed_out">Войдите, чтобы экспортировать запись.</string>
+
+    <string name="export_record_title">Запись общения CoPlanly</string>
+    <string name="export_statement_what">Это запись того, что родители записали и написали друг другу в CoPlanly, и когда. Это не запись того, что произошло на самом деле, и она не утверждает, что написанное здесь правда.</string>
+    <string name="export_statement_messages">Отправленное сообщение не может изменить или удалить ни один из родителей. Время сообщения взято с часов устройства отправителя.</string>
+    <string name="export_statement_revisions">Каждая сохранённая версия записи календаря хранится целиком, и изменить её потом нельзя. У каждой два времени: когда её зафиксировало устройство редактировавшего родителя и когда её получил сервер.</string>
+    <string name="export_statement_limits">Время записей — это местное время, которое ввели родители, без часового пояса. Расходы показаны в их нынешнем виде. Записи, сохранённые до начала истории версий, показаны только в текущем виде. Личные записи и медицинские сведения о детях никогда не включаются.</string>
+    <string name="export_record_period">Период</string>
+    <string name="export_record_generated">Создано</string>
+    <string name="export_record_time_zone">Время указано в поясе</string>
+    <string name="export_record_parents">Родители</string>
+    <string name="export_record_incomplete">Сервер был недоступен. Эта запись содержит только то, что было на этом телефоне, и в ней может чего-то не хватать.</string>
+    <string name="export_record_section_events">Записи календаря</string>
+    <string name="export_record_section_messages">Сообщения</string>
+    <string name="export_record_section_expenses">Расходы</string>
+    <string name="export_record_nothing">За этот период ничего не записано.</string>
+    <string name="export_record_not_on_server">Сервер ещё не получил</string>
+    <string name="export_record_no_server_time">Не хранится</string>
+    <string name="export_record_revision">Версия</string>
+    <string name="export_record_page">Страница</string>
+
+    <string name="export_col_section">Раздел</string>
+    <string name="export_col_item">ID элемента</string>
+    <string name="export_col_revision">Версия</string>
+    <string name="export_col_action">Действие</string>
+    <string name="export_col_by">Кто записал</string>
+    <string name="export_col_device_time">Время устройства (когда родитель сохранил)</string>
+    <string name="export_col_server_time">Время сервера (когда сервер получил)</string>
+    <string name="export_col_text">Название или сообщение</string>
+    <string name="export_col_starts">Начало</string>
+    <string name="export_col_ends">Конец</string>
+    <string name="export_col_parent">Родитель (чей день или кто платил)</string>
+    <string name="export_col_notes">Заметки</string>
+    <string name="export_col_amount">Сумма</string>
+    <string name="export_col_currency">Валюта</string>
+
+    <string name="export_action_created">Создано</string>
+    <string name="export_action_updated">Изменено</string>
+    <string name="export_action_deleted">Удалено</string>
+    <string name="export_action_current">Текущий вид (без сохранённой истории)</string>
+    <string name="export_action_sent">Отправлено</string>
+    <string name="export_action_not_sent">Не отправлено</string>
+    <string name="export_action_recorded">Записано</string>
+
+    <!-- MON-16: the record id and whether the file can be verified. -->
+    <string name="export_verify_explainer">Если сервер доступен, файл регистрируется: сохраняются его идентификатор записи и отпечаток его точного содержимого, поэтому любой, у кого он есть, может проверить, что файл не изменён. С телефона уходит только отпечаток, никогда не сам файл.</string>
+    <string name="export_verify_record_id">Идентификатор записи</string>
+    <string name="export_verify_at">Проверить на</string>
+    <string name="export_verify_instruction">Чтобы проверить, что этот файл не изменён, откройте адрес выше и выберите файл. Даже один изменённый символ не пройдёт проверку.</string>
+    <string name="export_verify_instruction_no_url">Отпечаток этого файла был зарегистрирован в CoPlanly под этим идентификатором записи при его создании.</string>
+    <string name="export_verify_not_registered">Не зарегистрировано — проверка недоступна. При создании этого файла сервер был недоступен, поэтому его отпечаток не зарегистрирован и никто не сможет проверить его на изменения.</string>
+    <string name="export_verify_not_registered_short">Не зарегистрировано — проверка недоступна</string>
+    <string name="export_unregistered_title">Не зарегистрировано — проверка недоступна</string>
+    <string name="export_unregistered_body">Сервер был недоступен, поэтому этот файл не зарегистрирован и никто не сможет проверить его на изменения. Файл говорит об этом в начале. Можно всё равно поделиться им или экспортировать снова, когда появится сеть.</string>
+    <string name="export_unregistered_share">Всё равно поделиться</string>
+    <string name="export_unregistered_not_now">Не сейчас</string>
+</resources>

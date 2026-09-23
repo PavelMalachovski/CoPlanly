@@ -48,6 +48,18 @@ sealed interface PairingError {
     data object NotFriendInvitation : PairingError
 
     /**
+     * A professional invitation (MON-18) was offered to the co-parent pairing path — refused by
+     * name, because redeeming it there would make a mediator a parent of the family they observe.
+     */
+    data object ProfessionalInvitation : PairingError
+
+    /** Any other kind of code offered to the professional path. */
+    data object NotProfessionalInvitation : PairingError
+
+    /** The family the invitation names is no longer a live pairing. */
+    data object InviterNotPaired : PairingError
+
+    /**
      * A guest invitation whose access window ended before it was redeemed.
      *
      * Distinct from [Expired], which is the *offer* running out. Both mean "too late", but

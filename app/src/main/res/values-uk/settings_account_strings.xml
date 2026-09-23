@@ -48,9 +48,9 @@
     <string name="settings_account_delete">Видалити акаунт</string>
     <string name="settings_account_delete_description">Стерти цей акаунт і всі його дані</string>
     <string name="settings_account_delete_confirm_title">Видалити цей акаунт?</string>
-    <string name="settings_account_delete_confirm_message">Зникне все, що ви вносили: події, витрати, записи про дитину та все листування. У другого з батьків залишиться лише те, що створив він сам. Скасувати це буде неможливо.</string>
+    <string name="settings_account_delete_confirm_message">З наших серверів і з цього телефона зникне все, що ви вносили: події, витрати, записи про дитину та все листування. У другого з батьків залишиться те, що створив він сам, а на його телефоні — копії, які вже були завантажені. Скасувати це буде неможливо.</string>
     <string name="settings_account_delete_final_title">Видалити безповоротно?</string>
-    <string name="settings_account_delete_final_message">Шляху назад немає, копії не залишиться. Якщо ви хочете просто вийти на цьому пристрої, скористайтеся виходом з акаунта.</string>
+    <string name="settings_account_delete_final_message">Шляху назад немає: копій для відновлення ми не зберігаємо. Якщо ви хочете просто вийти на цьому пристрої, скористайтеся виходом з акаунта.</string>
     <string name="settings_account_delete_final_yes">Видалити безповоротно</string>
     <string name="settings_account_delete_cancel">Залишити акаунт</string>
     <string name="settings_account_delete_progress">Видаляємо ваш акаунт…</string>
@@ -75,6 +75,12 @@
     <string name="settings_family_shown">Показана сім\'я</string>
     <string name="settings_family_switch">Перемкнути сім\'ю</string>
     <string name="settings_family_unnamed">Поки без імені</string>
+    <string name="family_switcher_unread_other">Нові повідомлення в іншій сім\'ї</string>
+    <string name="family_switcher_unread_row">Нові повідомлення</string>
+    <string name="family_switcher_request_other">В іншій сім\'ї чекає запит на зміну</string>
+    <string name="family_switcher_request_row">Чекає запит на зміну</string>
+    <string name="family_switcher_schedule_other">В іншій сім\'ї чекає пропозиція щодо розкладу опіки</string>
+    <string name="family_switcher_schedule_row">Чекає пропозиція щодо розкладу опіки</string>
     <string name="settings_school_import_title">Імпорт із Bakaláři та EduPage</string>
     <string name="settings_school_import_description">Шкільний розклад дитини одразу в календар. Поки не зроблено.</string>
     <string name="settings_school_import_planned">У планах</string>
@@ -82,4 +88,8 @@
 
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
     <string name="settings_sync_failed">Остання синхронізація не вдалася</string>
+
+    <!-- MON-19: Settings → App. The argument is the pause, in seconds. -->
+    <string name="settings_pause_before_sending_title">Пауза перед надсиланням</string>
+    <string name="settings_pause_before_sending_description">Затримує кожне повідомлення в чаті на %1$d секунд із можливістю скасування й під час набору підказує про великі літери, !!! та різкі слова. Перевірка — лише на цьому телефоні.</string>
 </resources>

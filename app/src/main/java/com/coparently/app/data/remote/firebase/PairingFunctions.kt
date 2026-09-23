@@ -157,6 +157,43 @@ class PairingFunctions @Inject constructor(
     }
 
     /**
+     * Redeems a **professional** invitation (MON-18) by [code] or by [invitationId] — exactly one.
+     *
+     * Reaches `acceptProfessionalInvitation`, the fourth callable. The pairing one refuses this
+     * `kind` by name and the friend and guest ones refuse it as not theirs, so a mediator's code
+     * can never become a parent slot or a friend's single-consent grant.
+     *
+     * @return the grant written and when it ends. The grant opens nothing until the co-parent
+     *   consents; the result says only that the code was redeemed.
+     * @throws IllegalArgumentException if both or neither of [code] and [invitationId] are given.
+     */
+    suspend fun acceptProfessionalInvitation(
+        code: String? = null,
+        invitationId: String? = null
+    ): Result<AcceptProfessionalResult> {
+        require((code == null) != (invitationId == null)) {
+            "acceptProfessionalInvitation requires exactly one of code or invitationId, got " +
+                "code=$code, invitationId=$invitationId"
+        }
+        val payload = buildMap<String, Any> {
+            code?.let { put("code", it) }
+            invitationId?.let { put("invitationId", it) }
+        }
+        return call("acceptProfessionalInvitation", payload) { data ->
+            val grantId = (data["grantId"] as? String)?.takeIf { it.isNotBlank() }
+            val expiresAtMillis = (data["expiresAtMillis"] as? Number)?.toLong() ?: 0L
+            AcceptProfessionalResult(
+                grantId = checkNotNull(grantId) {
+                    "acceptProfessionalInvitation succeeded but returned no grantId"
+                },
+                expiresAtMillis = expiresAtMillis.also {
+                    check(it > 0L) { "acceptProfessionalInvitation succeeded but returned no expiry" }
+                }
+            )
+        }
+    }
+
+    /**
      * Removes the co-parent link.
      *
      * @return the former partner's UID, or null when there was no link.
@@ -202,6 +239,9 @@ class PairingFunctions @Inject constructor(
                 "not-a-guest-invitation" -> PairingError.NotGuestInvitation
                 "friend-invitation" -> PairingError.FriendInvitation
                 "not-a-friend-invitation" -> PairingError.NotFriendInvitation
+                "professional-invitation" -> PairingError.ProfessionalInvitation
+                "not-a-professional-invitation" -> PairingError.NotProfessionalInvitation
+                "inviter-not-paired" -> PairingError.InviterNotPaired
                 "grant-expired" -> PairingError.GrantEnded
                 "inviter-not-entitled" -> PairingError.InviterNotEntitled
                 "already-entitled" -> PairingError.AlreadyEntitled
@@ -259,5 +299,17 @@ data class AcceptGuestResult(val childInfoId: String, val expiresAtMillis: Long)
  */
 data class AcceptCalendarFriendResult(
     val familyParents: List<String>,
+    val expiresAtMillis: Long
+)
+
+/**
+ * What `acceptProfessionalInvitation` returns (MON-18).
+ *
+ * @property grantId The grant's document id, `{familyId}__{proUid}`.
+ * @property expiresAtMillis When the access ends, epoch millis, always positive. The access has
+ *   not begun: it opens only once both parents have consented.
+ */
+data class AcceptProfessionalResult(
+    val grantId: String,
     val expiresAtMillis: Long
 )

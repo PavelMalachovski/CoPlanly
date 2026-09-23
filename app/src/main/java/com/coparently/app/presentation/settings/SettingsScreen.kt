@@ -25,17 +25,23 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Balance
 import androidx.compose.material.icons.filled.ChildCare
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.DeleteForever
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Diversity3
 import androidx.compose.material.icons.filled.EventAvailable
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.FamilyRestroom
+import androidx.compose.material.icons.filled.FolderShared
+import androidx.compose.material.icons.filled.Gavel
 import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.HourglassTop
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Palette
@@ -43,6 +49,7 @@ import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PersonOutline
 import androidx.compose.material.icons.filled.Pets
+import androidx.compose.material.icons.filled.PrivacyTip
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.School
@@ -84,6 +91,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -98,12 +106,14 @@ import com.coparently.app.domain.holidays.HolidayCountry
 import com.coparently.app.domain.model.FamilyKind
 import com.coparently.app.domain.money.SupportedCurrency
 import com.coparently.app.domain.telemetry.TelemetryConsent
+import com.coparently.app.presentation.chat.SendHold
 import com.coparently.app.presentation.common.ConfirmationDialog
 import com.coparently.app.presentation.common.FamilySwitcherDialog
 import com.coparently.app.presentation.common.FamilySwitcherViewModel
 import com.coparently.app.presentation.common.GroupLabel
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.PillChip
+import com.coparently.app.presentation.common.PrivacyPolicyLink
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.SignedInAsRow
@@ -148,8 +158,13 @@ private val syncTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
  * @param onNavigateToChildInfo Opens child information
  * @param onNavigateToParentingPlan Opens the parenting plan (MON-5)
  * @param onNavigateToPets Opens the pets list
+ * @param onNavigateToExport Opens the communication-record export (MON-3)
+ * @param onNavigateToDocuments Opens the family document vault (MON-23)
  * @param onNavigateToPairing Opens co-parent pairing
  * @param onNavigateToFriends Opens the calendar-friend list (item 16)
+ * @param onNavigateToCalendarFeed Opens the read-only calendar links (MON-17); the row shows
+ *   only while the account is in a family, since a link serves one
+ * @param onNavigateToProfessionals Opens professional access (MON-18)
  * @param onNavigateToCustodySetup Opens custody schedule setup
  * @param onNavigateToMyProfile Opens the signed-in user's own profile, editable
  * @param onNavigateToCoParentProfile Opens the co-parent's profile, read-only
@@ -168,9 +183,13 @@ fun SettingsScreen(
     onNavigateUp: (() -> Unit)? = null,
     onNavigateToChildInfo: (() -> Unit)? = null,
     onNavigateToParentingPlan: (() -> Unit)? = null,
+    onNavigateToExport: (() -> Unit)? = null,
+    onNavigateToDocuments: (() -> Unit)? = null,
     onNavigateToPets: (() -> Unit)? = null,
     onNavigateToPairing: (() -> Unit)? = null,
     onNavigateToFriends: (() -> Unit)? = null,
+    onNavigateToCalendarFeed: (() -> Unit)? = null,
+    onNavigateToProfessionals: (() -> Unit)? = null,
     onNavigateToCustodySetup: (() -> Unit)? = null,
     onNavigateToMyProfile: (() -> Unit)? = null,
     onNavigateToCoParentProfile: (() -> Unit)? = null,
@@ -185,6 +204,7 @@ fun SettingsScreen(
     val telemetryConsent by telemetryConsentViewModel.consent.collectAsState()
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
+    val uriHandler = LocalUriHandler.current
 
     val isSignedIn by syncViewModel.isSignedIn.collectAsState()
     val isSyncEnabled by syncViewModel.isSyncEnabled.collectAsState()
@@ -242,6 +262,7 @@ fun SettingsScreen(
         FamilySwitcherDialog(
             families = familySwitcher.families,
             selectedFamilyId = familySwitcher.selectedFamilyId,
+            signalsOf = familySwitcher::signalsOf,
             onSelect = { familyId ->
                 familySwitcherViewModel.select(familyId)
                 showFamilySwitcher = false
@@ -285,6 +306,7 @@ fun SettingsScreen(
     val darkTheme by settingsViewModel.darkThemeFlow.collectAsState()
     val account by settingsViewModel.account.collectAsState()
     val defaultCurrency by settingsViewModel.defaultCurrency.collectAsState()
+    val pauseBeforeSending by settingsViewModel.pauseBeforeSending.collectAsState()
 
     var showCurrencyPicker by remember { mutableStateOf(false) }
     var showLanguagePicker by remember { mutableStateOf(false) }
@@ -413,6 +435,21 @@ fun SettingsScreen(
                             icon = Icons.Default.Diversity3,
                             title = stringResource(R.string.friend_section_title),
                             supporting = stringResource(R.string.friend_section_supporting),
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                navigate()
+                            },
+                            trailing = { Chevron() }
+                        )
+                        Divider()
+                    }
+                    // A mediator or lawyer (MON-18), beside the friend: both are somebody outside
+                    // the pair reading the family, and a parent looks for them in the same place.
+                    onNavigateToProfessionals?.let { navigate ->
+                        SectionRow(
+                            icon = Icons.Default.Gavel,
+                            title = stringResource(R.string.professional_section_title),
+                            supporting = stringResource(R.string.professional_section_supporting),
                             onClick = {
                                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 navigate()
@@ -589,6 +626,36 @@ fun SettingsScreen(
                         )
                         Divider()
                     }
+                    // Beside the plan: the other document two parents may hand to a court. In
+                    // Family rather than Account because it is the family's record, not a
+                    // setting of this login — and it is where a parent who needs it will look.
+                    onNavigateToExport?.let { navigate ->
+                        SectionRow(
+                            icon = Icons.Default.Description,
+                            title = stringResource(R.string.export_settings_title),
+                            supporting = stringResource(R.string.export_settings_description),
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                navigate()
+                            },
+                            trailing = { Chevron() }
+                        )
+                        Divider()
+                    }
+                    // The vault (MON-23) sits with the record: both are the family's papers.
+                    onNavigateToDocuments?.let { navigate ->
+                        SectionRow(
+                            icon = Icons.Default.FolderShared,
+                            title = stringResource(R.string.documents_settings_title),
+                            supporting = stringResource(R.string.documents_settings_description),
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                navigate()
+                            },
+                            trailing = { Chevron() }
+                        )
+                        Divider()
+                    }
                     onNavigateToMyProfile?.let { navigate ->
                         SectionRow(
                             icon = Icons.Default.Person,
@@ -698,6 +765,24 @@ fun SettingsScreen(
                             }
                         )
                     }
+                    // Read-only links for a parent on an iPhone (MON-17). Only with a family: a
+                    // link serves one family's calendar, and a row that could only answer "pair
+                    // first" would be design item 8's empty promise.
+                    onNavigateToCalendarFeed
+                        ?.takeIf { familySwitcher.selectedFamilyId != null }
+                        ?.let { navigate ->
+                            Divider()
+                            SectionRow(
+                                icon = Icons.Default.Link,
+                                title = stringResource(R.string.calendar_feed_settings_title),
+                                supporting = stringResource(R.string.calendar_feed_settings_description),
+                                onClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    navigate()
+                                },
+                                trailing = { Chevron() }
+                            )
+                        }
                     Divider()
                     // Inert on purpose, and present on purpose.
                     //
@@ -754,6 +839,28 @@ fun SettingsScreen(
                         onClick = { showCurrencyPicker = true },
                         trailing = {
                             ValueLabel("${defaultCurrency.code} ${defaultCurrency.symbol}")
+                        }
+                    )
+                    Divider()
+                    // MON-19. Off by default: a pause and a hint are help a parent asks for, not
+                    // one the app imposes on every message.
+                    SectionRow(
+                        icon = Icons.Default.HourglassTop,
+                        title = stringResource(R.string.settings_pause_before_sending_title),
+                        supporting = stringResource(
+                            R.string.settings_pause_before_sending_description,
+                            SendHold.PAUSE_SECONDS
+                        ),
+                        trailing = {
+                            val pauseLabel = stringResource(R.string.settings_pause_before_sending_title)
+                            Switch(
+                                checked = pauseBeforeSending,
+                                modifier = Modifier.semantics { contentDescription = pauseLabel },
+                                onCheckedChange = { enabled ->
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    settingsViewModel.setPauseBeforeSending(enabled)
+                                }
+                            )
                         }
                     )
                     Divider()
@@ -836,6 +943,25 @@ fun SettingsScreen(
                         }
                     )
                     Divider()
+                    // REL-4: Play wants the policy reachable from inside an app that holds health
+                    // data. Absent until the policy is hosted — see PrivacyPolicyLink.
+                    if (PrivacyPolicyLink.url != null) {
+                        SectionRow(
+                            icon = Icons.Default.PrivacyTip,
+                            title = stringResource(R.string.privacy_policy_title),
+                            supporting = stringResource(R.string.privacy_policy_description),
+                            onClick = { PrivacyPolicyLink.open(uriHandler) },
+                            trailing = {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.OpenInNew,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        )
+                        Divider()
+                    }
                     // Destructive, so it stays at the very bottom of the screen. It reads as
                     // a red text row rather than a filled error button — but a row is easier
                     // to hit by accident than a deliberate button was, so it now confirms.

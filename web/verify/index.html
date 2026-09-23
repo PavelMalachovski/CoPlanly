@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Verify a CoPlanly record</title>
+<meta name="description" content="Check that a CoPlanly export has not been changed since it was made. The file is checked in your browser and never uploaded.">
+<!--
+  MON-16. The page a lawyer, a mediator, a court or the other parent opens to check an exported
+  CoPlanly record. Deliberately one self-contained file with no external CSS, fonts, scripts or
+  images, like the other pages in web/ — a verification page that loads a script from somewhere
+  else is a page whose answer depends on that somewhere else.
+
+  How it works, and what it must never do:
+  - The file is read and hashed (SHA-256) **in this browser**, with `crypto.subtle`. The file
+    itself is never sent anywhere; only its 64-character fingerprint is.
+  - The fingerprint (or a typed record ID) goes to the `verifyExport` Cloud Function, called the
+    way the Firebase SDK calls a callable: POST `{"data": {...}}` as JSON to
+    `<FUNCTIONS_BASE>/verifyExport`, answered with `{"result": {...}}` or `{"error": {...}}`.
+  - The function answers with the receipt only — when it was registered, the period, the format,
+    the length — and "one of the family's parents", never a name or an account id.
+    `functions/export-receipts.js` and docs/DESIGN-court-record.md §10 say why.
+  - Every value from the server is written with `textContent`, never as HTML.
+
+  See web/README.md for hosting. FUNCTIONS_BASE below is the one thing to change if the project
+  or the functions' region ever does.
+-->
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #ffffff;
+    --fg: #1b1b21;
+    --muted: #55555f;
+    --rule: #e2e2e8;
+    --accent: #4f46b8;
+    --ok-bg: #eef7ee;
+    --ok-fg: #1f5a26;
+    --warn-bg: #fdf3f3;
+    --warn-fg: #7a2020;
+    --field: #f4f4f8;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1b1b21;
+      --fg: #ecebf0;
+      --muted: #a9a8b3;
+      --rule: #33333c;
+      --accent: #c2c1ff;
+      --ok-bg: #1f3322;
+      --ok-fg: #b6e3b9;
+      --warn-bg: #3a2224;
+      --warn-fg: #ffb4ab;
+      --field: #26262e;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 2rem 1.25rem 4rem;
+    background: var(--bg);
+    color: var(--fg);
+    font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  main { max-width: 42rem; margin: 0 auto; }
+  h1 { font-size: 1.6rem; line-height: 1.25; margin: 0 0 .25rem; }
+  h2 { font-size: 1.2rem; margin: 2.25rem 0 .5rem; }
+  p, ul { margin: .5rem 0; }
+  ul { padding-left: 1.25rem; }
+  li { margin: .3rem 0; }
+  .lede { color: var(--muted); margin-bottom: 1.5rem; }
+  a { color: var(--accent); }
+  .lang { text-align: right; font-size: .875rem; margin-bottom: 1rem; }
+  .lang button { background: none; border: 0; color: var(--accent); cursor: pointer; font: inherit; padding: 0 .25rem; }
+  .lang button[aria-pressed="true"] { color: var(--fg); font-weight: 600; cursor: default; }
+  .panel { background: var(--field); border-radius: .75rem; padding: 1rem 1.1rem; margin: .75rem 0; }
+  label { display: block; font-weight: 600; margin-bottom: .35rem; }
+  input[type="text"] {
+    width: 100%;
+    font: 1rem ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    padding: .55rem .7rem;
+    border: 1px solid var(--rule);
+    border-radius: .5rem;
+    background: var(--bg);
+    color: var(--fg);
+    letter-spacing: .05em;
+  }
+  input[type="file"] { max-width: 100%; }
+  .hint { color: var(--muted); font-size: .875rem; margin-top: .35rem; }
+  .row { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; margin-top: .75rem; }
+  button.primary {
+    background: var(--accent); color: var(--bg); border: 0; border-radius: 999px;
+    padding: .55rem 1.2rem; font: inherit; font-weight: 600; cursor: pointer;
+  }
+  button.primary:disabled { opacity: .5; cursor: default; }
+  .result { border-radius: .5rem; padding: .9rem 1.1rem; margin: 1.25rem 0; }
+  .result.ok { background: var(--ok-bg); color: var(--ok-fg); }
+  .result.bad { background: var(--warn-bg); color: var(--warn-fg); }
+  .result.info { background: var(--field); }
+  .result h3 { margin: 0 0 .35rem; font-size: 1.05rem; }
+  .result dl { margin: .5rem 0 0; display: grid; grid-template-columns: max-content 1fr; gap: .2rem .9rem; }
+  .result dt { font-weight: 600; }
+  .result dd { margin: 0; overflow-wrap: anywhere; }
+  code, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .9em; overflow-wrap: anywhere; }
+  footer { color: var(--muted); font-size: .875rem; margin-top: 3rem; border-top: 1px solid var(--rule); padding-top: 1rem; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <div class="lang" role="group" aria-label="Language / Jazyk">
+    <button type="button" data-lang="en" aria-pressed="true">English</button> ·
+    <button type="button" data-lang="cs" aria-pressed="false">Čeština</button>
+  </div>
+
+  <h1 data-t="title"></h1>
+  <p class="lede" data-t="lede"></p>
+
+  <div class="result info">
+    <p><strong data-t="privacyHead"></strong> <span data-t="privacyBody"></span></p>
+  </div>
+
+  <h2 data-t="fileHead"></h2>
+  <div class="panel">
+    <label for="file" data-t="fileLabel"></label>
+    <input id="file" type="file" accept=".pdf,.csv,application/pdf,text/csv">
+    <p class="hint" data-t="fileHint"></p>
+    <label for="expected" style="margin-top: .9rem" data-t="expectedLabel"></label>
+    <input id="expected" type="text" autocomplete="off" spellcheck="false" placeholder="XXXX-XXXX-XXXX-XXXX">
+    <p class="hint" data-t="expectedHint"></p>
+    <div class="row">
+      <button id="checkFile" class="primary" type="button" disabled data-t="checkFile"></button>
+      <span id="fingerprint" class="hint mono"></span>
+    </div>
+  </div>
+
+  <h2 data-t="idHead"></h2>
+  <div class="panel">
+    <label for="recordId" data-t="idLabel"></label>
+    <input id="recordId" type="text" autocomplete="off" spellcheck="false" placeholder="XXXX-XXXX-XXXX-XXXX">
+    <p class="hint" data-t="idHint"></p>
+    <div class="row">
+      <button id="checkId" class="primary" type="button" disabled data-t="checkId"></button>
+    </div>
+  </div>
+
+  <div id="result" class="result" role="status" aria-live="polite" hidden></div>
+
+  <h2 data-t="whatHead"></h2>
+  <ul>
+    <li data-t="what1"></li>
+    <li data-t="what2"></li>
+    <li data-t="what3"></li>
+    <li data-t="what4"></li>
+  </ul>
+
+  <footer>
+    <p><span data-t="footer"></span>
+      <a href="../privacy/" data-t="privacyLink"></a></p>
+  </footer>
+</main>
+
+<script>
+'use strict';
+
+// Where the Cloud Functions live: https://<region>-<project>.cloudfunctions.net. The functions
+// are deployed without a region, which is us-central1. Change only if the project or region does.
+const FUNCTIONS_BASE = 'https://us-central1-coparently-a39c9.cloudfunctions.net';
+
+const TEXT = {
+  en: {
+    title: 'Verify a CoPlanly record',
+    lede: 'Check that a CoPlanly export — a PDF or CSV of what two parents recorded and wrote in the app — is exactly the file that was made, unchanged by even a single byte.',
+    privacyHead: 'Your file stays on this computer.',
+    privacyBody: 'It is read and fingerprinted (SHA-256) here, in your browser. Only the 64-character fingerprint is sent to CoPlanly, never the file or anything in it.',
+    fileHead: 'Check a file',
+    fileLabel: 'The exported file (PDF or CSV)',
+    fileHint: 'Choose the file exactly as you received it. Opening and re-saving it, printing it to PDF again or editing it in a spreadsheet changes its bytes, and it will then not match.',
+    expectedLabel: 'Record ID printed on it (optional)',
+    expectedHint: 'If you enter it, the page also checks that the file is the one registered under that ID.',
+    checkFile: 'Check the file',
+    idHead: 'Look up a record ID',
+    idLabel: 'Record ID',
+    idHint: 'Shows what was registered under the ID — when, the period and the format — without comparing any file.',
+    checkId: 'Look it up',
+    whatHead: 'What a match does and does not mean',
+    what1: 'A match means this file is byte for byte the one registered when it was made, at the time shown — no entry, message or date in it has been changed since.',
+    what2: 'It does not mean that anything in the file is true. The file is a record of what the parents recorded and wrote in the app, and it says so at the top; the fingerprint proves only that the file has not changed since it was registered.',
+    what3: 'A file marked "Not registered" was made while the phone could not reach the server. It may be genuine, but it cannot be checked here.',
+    what4: 'The answer never names a person. It says the file was made by one of the family\'s parents, because a verifier needs to know the file is unchanged, not whose account made it.',
+    footer: 'CoPlanly record verification.',
+    privacyLink: 'Privacy policy',
+    reading: 'Reading and fingerprinting the file in this browser…',
+    asking: 'Asking CoPlanly whether this was registered…',
+    fingerprint: 'SHA-256: ',
+    matchHead: 'Match — this file is unchanged',
+    matchBody: 'This exact file was registered with CoPlanly when it was made.',
+    idFoundHead: 'Registered',
+    idFoundBody: 'A file was registered under this record ID. This lookup does not compare any file — to check a file, use the first section.',
+    mismatchIdHead: 'Registered — but under a different record ID',
+    mismatchIdBody: 'This file is unchanged, but it was registered under the ID shown below, not the one you entered. Check you are comparing the right document.',
+    noMatchHead: 'No match',
+    noMatchBody: 'No registered file has this fingerprint. Either the file was changed after it was made — even by one byte, which re-saving it can do — or it was never registered. A file made offline says "Not registered" on its face.',
+    noIdHead: 'Not found',
+    noIdBody: 'Nothing was registered under this record ID. Check it was typed correctly; the letters I, L, O and U are never used, so O is read as zero and I or L as one.',
+    badId: 'A record ID has 16 letters and digits, usually written as four groups of four.',
+    limited: 'Too many checks from this connection. Please wait a few minutes and try again.',
+    failed: 'The check could not be completed. Check your connection and try again.',
+    noCrypto: 'This browser cannot compute the fingerprint here (the page must be opened over https).',
+    recordId: 'Record ID',
+    registeredAt: 'Registered at',
+    period: 'Period covered',
+    format: 'Format',
+    size: 'Registered size',
+    yourSize: 'Your file',
+    madeBy: 'Made by',
+    madeByValue: 'one of the family\'s parents',
+    bytes: ' bytes',
+  },
+  cs: {
+    title: 'Ověření záznamu CoPlanly',
+    lede: 'Ověřte, že export z CoPlanly — PDF nebo CSV s tím, co dva rodiče v aplikaci zaznamenali a napsali — je přesně ten soubor, který vznikl, beze změny jediného bajtu.',
+    privacyHead: 'Váš soubor zůstává v tomto počítači.',
+    privacyBody: 'Načte se a spočítá se jeho otisk (SHA-256) přímo zde, ve vašem prohlížeči. Do CoPlanly se odešle jen 64znakový otisk, nikdy soubor ani nic z jeho obsahu.',
+    fileHead: 'Ověřit soubor',
+    fileLabel: 'Exportovaný soubor (PDF nebo CSV)',
+    fileHint: 'Vyberte soubor přesně tak, jak jste ho dostali. Otevření a nové uložení, nový tisk do PDF nebo úprava v tabulkovém editoru změní jeho bajty a pak se neshoduje.',
+    expectedLabel: 'ID záznamu uvedené v souboru (nepovinné)',
+    expectedHint: 'Pokud ho zadáte, stránka ověří i to, že je soubor zaregistrován právě pod tímto ID.',
+    checkFile: 'Ověřit soubor',
+    idHead: 'Vyhledat ID záznamu',
+    idLabel: 'ID záznamu',
+    idHint: 'Ukáže, co bylo pod tímto ID zaregistrováno — kdy, za jaké období a v jakém formátu — bez porovnání souboru.',
+    checkId: 'Vyhledat',
+    whatHead: 'Co shoda znamená a co ne',
+    what1: 'Shoda znamená, že tento soubor je bajt po bajtu ten, který byl zaregistrován při svém vzniku v uvedený čas — žádný záznam, zpráva ani datum v něm od té doby nebyly změněny.',
+    what2: 'Neznamená, že cokoli v souboru je pravda. Soubor je záznamem toho, co rodiče v aplikaci zaznamenali a napsali, a uvádí to hned na začátku; otisk dokazuje jen to, že se soubor od registrace nezměnil.',
+    what3: 'Soubor označený „Nezaregistrováno“ vznikl, když telefon nemohl dosáhnout na server. Může být pravý, ale zde ho ověřit nelze.',
+    what4: 'Odpověď nikdy nejmenuje konkrétní osobu. Uvádí, že soubor vytvořil jeden z rodičů rodiny, protože ověřovatel potřebuje vědět, že je soubor beze změny, ne čí účet ho vytvořil.',
+    footer: 'Ověření záznamů CoPlanly.',
+    privacyLink: 'Zásady ochrany osobních údajů',
+    reading: 'Načítání a výpočet otisku v tomto prohlížeči…',
+    asking: 'Dotaz na CoPlanly, zda byl soubor zaregistrován…',
+    fingerprint: 'SHA-256: ',
+    matchHead: 'Shoda — soubor je beze změny',
+    matchBody: 'Přesně tento soubor byl při svém vzniku zaregistrován v CoPlanly.',
+    idFoundHead: 'Zaregistrováno',
+    idFoundBody: 'Pod tímto ID záznamu byl zaregistrován soubor. Toto vyhledání žádný soubor neporovnává — soubor ověříte v první části.',
+    mismatchIdHead: 'Zaregistrováno — ale pod jiným ID záznamu',
+    mismatchIdBody: 'Soubor je beze změny, ale byl zaregistrován pod ID uvedeným níže, ne pod tím, které jste zadali. Ověřte, že porovnáváte správný dokument.',
+    noMatchHead: 'Neshoduje se',
+    noMatchBody: 'Žádný zaregistrovaný soubor nemá tento otisk. Buď byl soubor po vzniku změněn — třeba jen o jeden bajt, což umí i nové uložení — nebo nebyl nikdy zaregistrován. Soubor vytvořený offline uvádí „Nezaregistrováno“ přímo na sobě.',
+    noIdHead: 'Nenalezeno',
+    noIdBody: 'Pod tímto ID záznamu nebylo nic zaregistrováno. Zkontrolujte, zda je správně opsané; písmena I, L, O a U se nepoužívají, takže O se čte jako nula a I nebo L jako jednička.',
+    badId: 'ID záznamu má 16 písmen a číslic, obvykle zapsaných jako čtyři skupiny po čtyřech.',
+    limited: 'Z tohoto připojení bylo provedeno příliš mnoho ověření. Počkejte několik minut a zkuste to znovu.',
+    failed: 'Ověření se nepodařilo dokončit. Zkontrolujte připojení a zkuste to znovu.',
+    noCrypto: 'Tento prohlížeč zde nedokáže spočítat otisk (stránka musí být otevřena přes https).',
+    recordId: 'ID záznamu',
+    registeredAt: 'Zaregistrováno',
+    period: 'Období',
+    format: 'Formát',
+    size: 'Zaregistrovaná velikost',
+    yourSize: 'Váš soubor',
+    madeBy: 'Vytvořil',
+    madeByValue: 'jeden z rodičů rodiny',
+    bytes: ' bajtů',
+  },
+};
+
+let lang = (navigator.language || 'en').toLowerCase().startsWith('cs') ? 'cs' : 'en';
+let chosen = null;
+let lastRender = null;
+
+const $ = (id) => document.getElementById(id);
+const t = (key) => TEXT[lang][key];
+
+function applyLanguage() {
+  document.documentElement.lang = lang;
+  document.title = t('title');
+  document.querySelectorAll('[data-t]').forEach((el) => {
+    el.textContent = t(el.dataset.t);
+  });
+  document.querySelectorAll('[data-lang]').forEach((b) => {
+    b.setAttribute('aria-pressed', String(b.dataset.lang === lang));
+  });
+  if (lastRender) lastRender();
+}
+
+/** The canonical record id, or '' — the same folding `normalizeRecordId` does on the server. */
+function normalizeId(input) {
+  const folded = String(input || '').toUpperCase().replace(/[\s-]/g, '')
+      .replace(/O/g, '0').replace(/[IL]/g, '1');
+  return /^[0-9ABCDEFGHJKMNPQRSTVWXYZ]{16}$/.test(folded) ? folded : '';
+}
+
+const grouped = (id) => id.match(/.{4}/g).join('-');
+
+async function sha256Hex(buffer) {
+  const digest = await crypto.subtle.digest('SHA-256', buffer);
+  return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+/** Calls a Firebase callable over plain HTTPS, the way the SDK does. */
+async function callVerify(data) {
+  const response = await fetch(`${FUNCTIONS_BASE}/verifyExport`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({data}),
+  });
+  const body = await response.json().catch(() => ({}));
+  if (body.error) {
+    const error = new Error(body.error.message || 'error');
+    error.status = body.error.status;
+    throw error;
+  }
+  if (!response.ok || !body.result) throw new Error(`HTTP ${response.status}`);
+  return body.result;
+}
+
+function show(kind, head, text, rows) {
+  const box = $('result');
+  box.className = `result ${kind}`;
+  box.replaceChildren();
+  if (head) {
+    const h = document.createElement('h3');
+    h.textContent = head;
+    box.appendChild(h);
+  }
+  const p = document.createElement('p');
+  p.textContent = text;
+  box.appendChild(p);
+  if (rows && rows.length) {
+    const dl = document.createElement('dl');
+    rows.forEach(([k, v]) => {
+      const dt = document.createElement('dt');
+      dt.textContent = k;
+      const dd = document.createElement('dd');
+      dd.textContent = v;
+      dl.append(dt, dd);
+    });
+    box.appendChild(dl);
+  }
+  box.hidden = false;
+}
+
+function when(result) {
+  const date = new Date(result.recordedAtMillis);
+  const local = date.toLocaleString(lang, {dateStyle: 'long', timeStyle: 'long'});
+  return `${local} (${result.recordedAt})`;
+}
+
+function receiptRows(result, fileSize) {
+  const rows = [
+    [t('recordId'), grouped(result.recordId)],
+    [t('registeredAt'), when(result)],
+    [t('period'), `${result.fromDate} – ${result.toDate}`],
+    [t('format'), String(result.format || '').toUpperCase()],
+    [t('size'), `${result.byteLength}${t('bytes')}`],
+  ];
+  if (fileSize !== undefined) rows.push([t('yourSize'), `${fileSize}${t('bytes')}`]);
+  rows.push([t('madeBy'), t('madeByValue')]);
+  return rows;
+}
+
+function failure(err) {
+  const limited = err && err.status === 'RESOURCE_EXHAUSTED';
+  lastRender = () => show('bad', '', t(limited ? 'limited' : 'failed'));
+  lastRender();
+}
+
+async function checkFile() {
+  if (!chosen) return;
+  if (!(window.crypto && crypto.subtle)) {
+    lastRender = () => show('bad', '', t('noCrypto'));
+    return lastRender();
+  }
+  const typed = $('expected').value.trim();
+  const expected = typed ? normalizeId(typed) : '';
+  if (typed && !expected) {
+    lastRender = () => show('bad', '', t('badId'));
+    return lastRender();
+  }
+  $('checkFile').disabled = true;
+  show('info', '', t('reading'));
+  try {
+    const hash = await sha256Hex(await chosen.arrayBuffer());
+    $('fingerprint').textContent = t('fingerprint') + hash;
+    show('info', '', t('asking'));
+    const result = await callVerify({sha256: hash});
+    const size = chosen.size;
+    if (!result.found) {
+      lastRender = () => show('bad', t('noMatchHead'), t('noMatchBody'));
+    } else if (expected && result.recordId !== expected) {
+      lastRender = () => show('bad', t('mismatchIdHead'), t('mismatchIdBody'), receiptRows(result, size));
+    } else {
+      lastRender = () => show('ok', t('matchHead'), t('matchBody'), receiptRows(result, size));
+    }
+    lastRender();
+  } catch (err) {
+    failure(err);
+  } finally {
+    $('checkFile').disabled = !chosen;
+  }
+}
+
+async function checkId() {
+  const id = normalizeId($('recordId').value);
+  if (!id) {
+    lastRender = () => show('bad', '', t('badId'));
+    return lastRender();
+  }
+  $('checkId').disabled = true;
+  show('info', '', t('asking'));
+  try {
+    const result = await callVerify({recordId: id});
+    lastRender = result.found ?
+      () => show('info', t('idFoundHead'), t('idFoundBody'), receiptRows(result)) :
+      () => show('bad', t('noIdHead'), t('noIdBody'));
+    lastRender();
+  } catch (err) {
+    failure(err);
+  } finally {
+    $('checkId').disabled = !$('recordId').value.trim();
+  }
+}
+
+$('file').addEventListener('change', (e) => {
+  chosen = e.target.files && e.target.files[0] ? e.target.files[0] : null;
+  $('fingerprint').textContent = '';
+  $('checkFile').disabled = !chosen;
+});
+$('recordId').addEventListener('input', () => {
+  $('checkId').disabled = !$('recordId').value.trim();
+});
+$('recordId').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') checkId();
+});
+$('checkFile').addEventListener('click', checkFile);
+$('checkId').addEventListener('click', checkId);
+document.querySelectorAll('[data-lang]').forEach((b) => {
+  b.addEventListener('click', () => {
+    lang = b.dataset.lang;
+    applyLanguage();
+  });
+});
+
+applyLanguage();
+</script>
+</body>
+</html>

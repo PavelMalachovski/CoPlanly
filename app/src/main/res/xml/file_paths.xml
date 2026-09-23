@@ -3,4 +3,11 @@
     <!-- Receipt photos taken in-app land in the cache; they are uploaded to
          Firebase Storage and the local copy is disposable. -->
     <cache-path name="receipts" path="receipts/" />
+    <!-- A communication record the parent exported (MON-3). Cleared on every new export, and
+         reachable only through the share sheet's one-off read grant. -->
+    <cache-path name="exports" path="exports/" />
+    <!-- Vault documents and chat attachments (MON-23), downloaded and checked against their
+         SHA-256 before a viewer app is handed a one-off read grant; also the camera's target
+         when a parent photographs a document for the vault. The server holds the record. -->
+    <cache-path name="shared_files" path="shared_files/" />
 </paths>

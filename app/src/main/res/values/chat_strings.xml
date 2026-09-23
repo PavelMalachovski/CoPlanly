@@ -78,4 +78,41 @@
     <string name="chat_template_schedule_change_content">I need to change the schedule for [date]. Could we swap? I would take [alternative date].</string>
     <string name="chat_failed_to_send_retry">Not sent — tap to retry</string>
     <string name="chat_load_earlier">Load earlier messages</string>
+
+    <!-- MON-15: search inside the open conversation. Local to this phone; never a server. -->
+    <string name="chat_search">Search this conversation</string>
+    <string name="chat_search_close">Close search</string>
+    <string name="chat_search_clear">Clear</string>
+    <string name="chat_search_placeholder">Search messages</string>
+    <string name="chat_search_prompt_title">Search this conversation</string>
+    <string name="chat_search_prompt_description">Searches the messages already on this phone. Nothing you type here leaves it.</string>
+    <string name="chat_search_no_results_title">No matching messages</string>
+    <string name="chat_search_no_results_description">Nothing in this conversation matches “%1$s”.</string>
+    <string name="chat_search_failed_title">Search did not work</string>
+    <string name="chat_search_failed_description">Nothing was searched. Try again in a moment.</string>
+    <string name="chat_search_truncated">Showing the %1$d newest matches. Add a word to narrow them down.</string>
+    <string name="chat_search_result_meta">%1$s · %2$s</string>
+    <string name="chat_search_show_in_thread">Show in conversation</string>
+    <!-- MON-19: pause before sending. A held message, with its countdown in seconds. -->
+    <string name="chat_pending_send">Sending in %1$d s…</string>
+    <string name="chat_pending_send_undo">Undo</string>
+    <!-- MON-19: the lexical hint over the composer. Plain observations of what was typed, never a verdict. -->
+    <string name="chat_nudge_shouting">Capitals can read as shouting.</string>
+    <string name="chat_nudge_punctuation">Repeated !!! or ??? can read as a raised voice.</string>
+    <string name="chat_nudge_listed_words">Words like %1$s can land harder than you mean.</string>
+    <!-- MON-19: a short, mild list of words that tend to land harder than meant. Matching ignores
+         case and accents; an entry ending in * matches every word starting with it, so an
+         inflected word is listed once. Keep it short and mild: this is a nudge, not a filter. -->
+    <string-array name="chat_nudge_words">
+        <item>always</item>
+        <item>never</item>
+        <item>ridiculous</item>
+        <item>stupid</item>
+        <item>pathetic</item>
+        <item>useless</item>
+        <item>whatever</item>
+        <item>typical</item>
+        <item>selfish</item>
+        <item>irresponsible</item>
+    </string-array>
 </resources>

@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Общие файлы (MON-23): хранилище документов и вложения в чате. -->
+<resources>
+    <string name="documents_settings_title">Документы</string>
+    <string name="documents_settings_description">Решения суда, письма из школы, копии документов — общие со вторым родителем</string>
+    <string name="documents_title">Документы</string>
+    <string name="documents_shared_notice">Всё здесь видно второму родителю. Личных документов нет: всё, что вы добавите, он тоже сможет открыть.</string>
+    <string name="documents_add_file">Добавить файл</string>
+    <string name="documents_take_photo">Сфотографировать</string>
+    <string name="documents_empty_title">Документов пока нет</string>
+    <string name="documents_empty_description">Добавьте PDF или фото решения суда, письма из школы или удостоверения личности. Второй родитель тоже его увидит.</string>
+    <string name="documents_no_family_title">Сначала свяжитесь со вторым родителем</string>
+    <string name="documents_no_family_description">Документы принадлежат семье: с момента добавления они доступны обоим родителям.</string>
+    <string name="documents_unavailable">Сейчас не удаётся загрузить документы. Проверьте подключение.</string>
+    <string name="documents_category_court_order">Решения суда</string>
+    <string name="documents_category_school">Школа</string>
+    <string name="documents_category_medical">Здоровье</string>
+    <string name="documents_category_identity">Удостоверения личности</string>
+    <string name="documents_category_other">Другое</string>
+    <string name="documents_add_dialog_title">Добавить в документы</string>
+    <string name="documents_add_dialog_name_label">Название</string>
+    <string name="documents_add_dialog_category_label">Категория</string>
+    <string name="documents_add_dialog_confirm">Загрузить и поделиться</string>
+    <string name="documents_uploading">Загрузка…</string>
+    <string name="documents_row_meta">%1$s · добавил(а) %2$s · %3$s</string>
+    <string name="documents_delete">Удалить документ</string>
+    <string name="documents_delete_confirm_title">Удалить этот документ?</string>
+    <string name="documents_delete_confirm_body">Он исчезнет из документов обоих родителей. Сам файл будет удалён с сервера через 90 дней.</string>
+    <string name="documents_delete_confirm">Удалить</string>
+    <string name="documents_error_upload">Не удалось загрузить документ. Ничего не было отправлено.</string>
+    <string name="documents_error_delete">Не удалось удалить документ.</string>
+    <string name="documents_camera_unavailable">Нет приложения камеры.</string>
+
+    <string name="shared_file_cancel">Отмена</string>
+    <string name="shared_file_error_type">Можно делиться только файлами PDF, JPEG, PNG, HEIC и WebP.</string>
+    <string name="shared_file_error_size">Файл должен быть меньше 20 МБ.</string>
+    <string name="shared_file_error_open">Не удалось открыть файл.</string>
+    <string name="shared_file_error_integrity">Этот файл не совпадает с тем, которым поделились, поэтому он не был открыт.</string>
+    <string name="shared_file_no_viewer">На этом телефоне нет приложения, которое может открыть этот файл.</string>
+
+    <string name="chat_attach">Прикрепить фото или PDF</string>
+    <string name="chat_attach_confirm_title">Отправить этот файл?</string>
+    <string name="chat_attach_confirm_body">%1$s (%2$s) будет отправлен второму родителю. Как и любое сообщение, он останется в чате, и удалить его потом нельзя.</string>
+    <string name="chat_attach_send">Отправить</string>
+    <string name="chat_attach_uploading">Загрузка…</string>
+    <string name="chat_attach_waiting">Ещё не загружен</string>
+    <string name="chat_attach_open">Открыть %1$s</string>
+    <string name="chat_attach_stage_error">Не удалось подготовить файл к отправке.</string>
+</resources>

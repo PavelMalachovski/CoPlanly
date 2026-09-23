@@ -60,4 +60,6 @@
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
     <string name="push_channel_name">CoPlanly-Benachrichtigungen</string>
     <string name="push_channel_description">Benachrichtigungen zu Terminen, Anfragen und Nachrichten des anderen Elternteils</string>
+    <string name="push_professional_access_requested_title">Zugang für Fachperson angefragt</string>
+    <string name="push_professional_access_requested_body">%1$s hat eine Einladung angenommen, den Familienkalender und den Elternplan zu lesen. Er öffnet sich erst mit der Zustimmung beider Eltern.</string>
 </resources>

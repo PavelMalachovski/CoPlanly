@@ -1,5 +1,8 @@
 package com.coparently.app.data.chat
 
+import com.coparently.app.data.family.FamilyOption
+import com.coparently.app.data.family.SelectedFamilySource
+import com.coparently.app.domain.chat.ConversationKey
 import com.coparently.app.domain.model.Conversation
 import com.coparently.app.domain.model.Message
 import com.coparently.app.domain.model.PairingState
@@ -8,6 +11,7 @@ import com.coparently.app.domain.repository.MessageRepository
 import com.coparently.app.domain.repository.PairingRepository
 import com.coparently.app.domain.repository.UserRepository
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.CancellationException
@@ -54,10 +58,19 @@ class ChatMirrorTest {
     /** A flow that never emits and never ends — a listener that is simply healthy. */
     private fun <T> idleFlow(): Flow<T> = flow { awaitCancellation() }
 
+    private val secondPartnerUid = "uid-carol"
+
+    /** What the family switcher has projected onto the signed-in Room row. */
+    private val projected = MutableStateFlow<FamilyOption?>(null)
+
+    private val messageRepository = mockk<MessageRepository>(relaxed = true)
+
+    private fun family(partner: String) = FamilyOption(ConversationKey.of(myUid, partner), partner)
+
     private fun mirrorWith(
         pairing: PairingState,
-        messages: () -> Flow<List<Message>> = { idleFlow() },
-        ensure: suspend () -> String = { "conv-id" }
+        messages: (conversationId: String) -> Flow<List<Message>> = { idleFlow() },
+        ensure: suspend (partnerUid: String) -> String = { "conv-id" }
     ): ChatMirror {
         val userRepository = mockk<UserRepository>(relaxed = true) {
             every { observeCurrentUserId() } returns MutableStateFlow(myUid)
@@ -65,12 +78,14 @@ class ChatMirrorTest {
         val pairingRepository = mockk<PairingRepository>(relaxed = true) {
             every { observePairingState() } returns MutableStateFlow(pairing)
         }
-        val messageRepository = mockk<MessageRepository>(relaxed = true) {
-            coEvery { ensureConversation(any(), any(), any()) } coAnswers { ensure() }
-            every { observeMessages(any()) } answers { messages() }
-            every { observeConversation(any()) } answers { idleFlow<Conversation?>() }
+        val selectedFamilySource = mockk<SelectedFamilySource>(relaxed = true) {
+            every { observe(myUid) } returns projected
         }
-        return ChatMirror(userRepository, pairingRepository, messageRepository)
+        coEvery { messageRepository.ensureConversation(any(), any(), any()) } coAnswers { ensure(secondArg()) }
+        every { messageRepository.observeMessages(any()) } answers { messages(firstArg()) }
+        every { messageRepository.observeConversation(any()) } answers { idleFlow<Conversation?>() }
+        val partners = ChatPartnerSource(userRepository, pairingRepository, selectedFamilySource)
+        return ChatMirror(userRepository, partners, messageRepository)
     }
 
     /**
@@ -190,5 +205,60 @@ class ChatMirrorTest {
         runMirror(mirror)
 
         assertEquals(0, attaches)
+    }
+
+    // ---- M-8: the mirror follows the family on screen, not the server's first co-parent ----
+
+    @Test
+    fun `a one-family account mirrors its only co-parent, projected or not`() = runTest {
+        // The projection lags a first pairing by a moment. Before and after it lands the thread is
+        // the same one, so the mirror must not even restart: a one-family account sees no change.
+        val mirror = mirrorWith(paired(), ensure = { ConversationKey.of(myUid, it) })
+
+        val job = launch { mirror.mirror { throw CancellationException("no restarts in this test") } }
+        advanceUntilIdle()
+        projected.value = family(partnerUid)
+        advanceUntilIdle()
+        job.cancel()
+
+        coVerify(exactly = 1) { messageRepository.ensureConversation(myUid, partnerUid, any()) }
+        coVerify(exactly = 0) { messageRepository.ensureConversation(myUid, secondPartnerUid, any()) }
+    }
+
+    @Test
+    fun `switching family re-keys the mirror and releases the old thread's listener`() = runTest {
+        // The server still names the *first* co-parent — `partnersOf(...)[0]` — which is what this
+        // class used to follow whatever the switcher said.
+        projected.value = family(partnerUid)
+        val attached = mutableListOf<String>()
+        val released = mutableListOf<String>()
+        val mirror = mirrorWith(
+            paired(),
+            messages = { conversationId ->
+                flow {
+                    attached += conversationId
+                    try {
+                        awaitCancellation()
+                    } finally {
+                        released += conversationId
+                    }
+                }
+            },
+            ensure = { ConversationKey.of(myUid, it) }
+        )
+        val first = ConversationKey.of(myUid, partnerUid)
+        val second = ConversationKey.of(myUid, secondPartnerUid)
+
+        val job = launch { mirror.mirror { throw CancellationException("no restarts in this test") } }
+        advanceUntilIdle()
+        assertEquals(listOf(first), attached)
+
+        projected.value = family(secondPartnerUid)
+        advanceUntilIdle()
+
+        assertEquals(listOf(first, second), attached, "the selected family's thread should attach")
+        assertEquals(listOf(first), released, "the old thread's listener must be released, not leaked")
+        coVerify { messageRepository.ensureConversation(myUid, secondPartnerUid, any()) }
+        job.cancel()
     }
 }

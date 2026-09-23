@@ -1,6 +1,8 @@
 package com.coparently.app.domain.model
 
 import com.coparently.app.domain.custody.ContactWindow
+import com.coparently.app.domain.custody.SeasonalLayer
+import com.coparently.app.domain.custody.SeasonalLayerCodec
 import java.time.DayOfWeek
 import java.time.LocalDate
 
@@ -18,6 +20,12 @@ import java.time.LocalDate
  *   (MON-6b) — "every Wednesday 15:00–19:00 with the other parent". Overlaid on the whole-day
  *   pattern, never folded into it: [getCustodyFor] ignores them, and [contactWindowsOn] is the
  *   one question they answer. See [ContactWindow].
+ * @property seasonalLayers Date ranges on which another pattern replaces this one (MON-14) —
+ *   the summer, Christmas. [getCustodyFor] and [contactWindowsOn] resolve the highest-priority
+ *   layer covering a date first and this pattern second. See [SeasonalLayer].
+ * @property unreadableLayers Stored layer entries this build cannot read, verbatim. They decide
+ *   nothing here and are written back unchanged, so an older build never erases a layer a newer
+ *   one wrote (see `DecodedLayers.unreadable`).
  */
 data class CustodyModel(
     val id: String,
@@ -26,20 +34,44 @@ data class CustodyModel(
     val momDayIndices: Set<Int>,
     val startDate: LocalDate,
     val isActive: Boolean = true,
-    val contactWindows: List<ContactWindow> = emptyList()
+    val contactWindows: List<ContactWindow> = emptyList(),
+    val seasonalLayers: List<SeasonalLayer> = emptyList(),
+    val unreadableLayers: List<String> = emptyList()
 ) {
     /**
      * Determines which parent has custody on the given date.
+     *
+     * A seasonal layer covering [date] answers first (MON-14); the base pattern answers every
+     * other date. One-off swaps sit above both, in `CustodyResolver` — this is the pattern, and a
+     * swap is a fact about the shared document.
      *
      * @param date The date to check
      * @return "mom" or "dad"
      */
     fun getCustodyFor(date: LocalDate): String {
+        layerOn(date)?.let { return it.custodyFor(date) }
+        return baseCustodyFor(date)
+    }
+
+    /**
+     * The seasonal layer that decides [date], or null when the base pattern does — the highest
+     * priority among the layers covering it, by [SeasonalLayer.PRECEDENCE].
+     */
+    fun layerOn(date: LocalDate): SeasonalLayer? {
+        if (seasonalLayers.isEmpty()) return null
+        return seasonalLayers.filter { date in it }.minWithOrNull(SeasonalLayer.PRECEDENCE)
+    }
+
+    /** The base pattern's answer for [date], ignoring every layer. */
+    fun baseCustodyFor(date: LocalDate): String {
         val daysSinceStart = java.time.temporal.ChronoUnit.DAYS.between(startDate, date).toInt()
         // Handle negative days (dates before start)
         val adjustedDays = ((daysSinceStart % patternDays) + patternDays) % patternDays
         return if (momDayIndices.contains(adjustedDays)) "mom" else "dad"
     }
+
+    /** The layers as their canonical wire list, unreadable entries included (see [SeasonalLayerCodec]). */
+    fun seasonalLayersWire(): List<String> = SeasonalLayerCodec.encodeAll(seasonalLayers, unreadableLayers)
 
     /**
      * The contact windows that fall on [date], earliest first (MON-6b).
@@ -53,8 +85,12 @@ data class CustodyModel(
      * says anything (the calendar skips it, and it skips a window on a day an accepted swap
      * handed to the window's own parent for the same reason). Empty for a pattern with no cycle
      * to reduce into, rather than the division by zero [getCustodyFor] would raise.
+     *
+     * Inside a seasonal layer the layer's own windows are the answer and the base pattern's are
+     * not: the layer replaces the whole pattern for its dates, afternoons included.
      */
     fun contactWindowsOn(date: LocalDate): List<ContactWindow> {
+        layerOn(date)?.let { return it.contactWindowsOn(date) }
         if (patternDays <= 0 || contactWindows.isEmpty()) return emptyList()
         val daysSinceStart = java.time.temporal.ChronoUnit.DAYS.between(startDate, date)
         val index = Math.floorMod(daysSinceStart, patternDays.toLong()).toInt()
@@ -85,9 +121,11 @@ data class CustodyModel(
         if (patternDays <= 0) return this
         // Contact windows name a slot too, so they flip with the days: the afternoon that was
         // the co-parent's must still be the co-parent's after this device changes slot.
+        // Layers flip too. Unreadable entries cannot be re-expressed and are kept as they are.
         return copy(
             momDayIndices = (0 until patternDays).toSet() - momDayIndices,
-            contactWindows = contactWindows.map { it.withOtherParent() }
+            contactWindows = contactWindows.map { it.withOtherParent() },
+            seasonalLayers = seasonalLayers.map { it.withOtherParent() }
         )
     }
 
@@ -116,12 +154,34 @@ data class CustodyModel(
         }
         val window = lcm(patternDays, other.patternDays)
         val from = minOf(startDate, other.startDate)
-        return (0 until window).all { offset ->
+        val basesAgree = (0 until window).all { offset ->
             val date = from.plusDays(offset)
+            baseCustodyFor(date) == other.baseCustodyFor(date) &&
+                sameContactWindows(baseWindowsOn(date), other.baseWindowsOn(date))
+        }
+        return basesAgree && layersAgree(other)
+    }
+
+    /**
+     * Whether the two models' seasonal layers produce the same days on every date either of them
+     * covers (MON-14). By outcome, like the base comparison; unreadable entries must match
+     * verbatim, since nothing here can say what they mean. Bounded: a model decodes at most
+     * `SeasonalLayerCodec.MAX_LAYERS` layers of at most a year each.
+     */
+    private fun layersAgree(other: CustodyModel): Boolean {
+        if (unreadableLayers.toSet() != other.unreadableLayers.toSet()) return false
+        val dates = (seasonalLayers + other.seasonalLayers).flatMap { layer ->
+            (0 until layer.spanDays).map { layer.fromDate.plusDays(it) }
+        }.toSet()
+        return dates.all { date ->
             getCustodyFor(date) == other.getCustodyFor(date) &&
                 sameContactWindows(contactWindowsOn(date), other.contactWindowsOn(date))
         }
     }
+
+    /** The base pattern's windows on [date], ignoring every layer. */
+    private fun baseWindowsOn(date: LocalDate): List<ContactWindow> =
+        copy(seasonalLayers = emptyList()).contactWindowsOn(date)
 
     companion object {
         /**

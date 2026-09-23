@@ -4,6 +4,7 @@ import android.util.Log
 import com.coparently.app.data.local.dao.MessageDao
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestoreMessageDataSource
+import com.coparently.app.domain.chat.AttachmentUploadGate
 import com.coparently.app.domain.chat.ChatReadState
 import com.coparently.app.domain.chat.ConversationKey
 import com.coparently.app.domain.model.Conversation
@@ -52,7 +53,8 @@ import javax.inject.Singleton
 class MessageRepositoryImpl @Inject constructor(
     private val messageDao: MessageDao,
     private val firebaseAuthService: FirebaseAuthService,
-    private val firestoreMessageDataSource: FirestoreMessageDataSource
+    private val firestoreMessageDataSource: FirestoreMessageDataSource,
+    private val attachmentGate: AttachmentUploadGate = AttachmentUploadGate.None
 ) : MessageRepository {
 
     /**
@@ -64,12 +66,11 @@ class MessageRepositoryImpl @Inject constructor(
     override fun observeConversation(conversationId: String): Flow<Conversation?> {
         val mirror = firestoreMessageDataSource.observeConversation(conversationId)
             .onEach { remote -> mirrorConversation(conversationId, remote) }
-            .reconnecting("Conversation", conversationId)
+            .reconnecting("Conversation")
             .catch { e ->
                 Log.w(
                     TAG,
-                    "Conversation observe failed for conversationId=$conversationId " +
-                        "(conversations/$conversationId document listener). " +
+                    "Conversation observe failed (conversations/{id} document listener). " +
                         "This is a single-document listener, so no index is involved — a " +
                         "PERMISSION_DENIED here means the deployed conversations rule, " +
                         "check firestore.rules. Keeping the local Room copy.",
@@ -97,12 +98,11 @@ class MessageRepositoryImpl @Inject constructor(
     override fun observeMessages(conversationId: String, limit: Int): Flow<List<Message>> {
         val mirror = firestoreMessageDataSource.getMessages(conversationId)
             .onEach { documents -> mirrorMessages(documents) }
-            .reconnecting("Messages", conversationId)
+            .reconnecting("Messages")
             .catch { e ->
                 Log.w(
                     TAG,
-                    "Message observe failed for conversationId=$conversationId " +
-                        "(messages: conversationId ==, orderBy timestamp ASC). " +
+                    "Message observe failed (messages: conversationId ==, orderBy timestamp ASC). " +
                         "A FAILED_PRECONDITION here means a missing Firestore index — " +
                         "check firestore.indexes.json. Keeping the local Room copy.",
                     e
@@ -162,7 +162,7 @@ class MessageRepositoryImpl @Inject constructor(
         // name for the other parent, so writing it to a document both parents read made each
         // of them relabel the other's thread with their own name on every open, flip-flopping
         // forever. Each device derives its own title from the partner's profile instead.
-        runRemote("ensureConversation", conversationId) {
+        runRemote("ensureConversation") {
             firestoreMessageDataSource.setConversation(
                 conversationId,
                 mapOf(
@@ -225,6 +225,10 @@ class MessageRepositoryImpl @Inject constructor(
      * @param message The message to deliver, exactly as it is stored.
      */
     private suspend fun deliver(message: Message) {
+        // Files first (MON-23): a message is written only once every file it names is stored, so
+        // a failure here leaves it SENDING/ERROR in the outbox instead of delivering a reference
+        // the co-parent cannot open. See [AttachmentUploadGate].
+        attachmentGate.ensureUploaded(message)
         try {
             firestoreMessageDataSource.sendMessage(message.id, message.toFirestoreMap())
         } catch (e: CancellationException) {
@@ -239,7 +243,7 @@ class MessageRepositoryImpl @Inject constructor(
         messageDao.insertMessage(
             message.copy(syncedToFirestore = true, status = MessageSendStatus.SENT).toEntity()
         )
-        runRemote("lastMessageAt bump", message.conversationId) {
+        runRemote("lastMessageAt bump") {
             firestoreMessageDataSource.bumpLastMessageAt(message.conversationId, message.sentAtMillis)
         }
     }
@@ -274,7 +278,7 @@ class MessageRepositoryImpl @Inject constructor(
         } catch (
             @Suppress("TooGenericExceptionCaught") e: Exception
         ) {
-            Log.w(TAG, "Re-publishing conversation $conversationId failed", e)
+            Log.w(TAG, "Re-publishing the conversation failed", e)
             false
         }
     }
@@ -325,7 +329,7 @@ class MessageRepositoryImpl @Inject constructor(
                 lastReadAt = ChatReadState.advancedMark(conversation.lastReadAt, myUid, atMillis)
             )
         }
-        runRemote("markRead", conversationId) {
+        runRemote("markRead") {
             firestoreMessageDataSource.markRead(conversationId, myUid, atMillis)
         }
     }
@@ -337,7 +341,7 @@ class MessageRepositoryImpl @Inject constructor(
                 lastDeliveredAt = ChatReadState.advancedMark(conversation.lastDeliveredAt, myUid, atMillis)
             )
         }
-        runRemote("markDelivered", conversationId) {
+        runRemote("markDelivered") {
             firestoreMessageDataSource.markDelivered(conversationId, myUid, atMillis)
         }
     }
@@ -466,15 +470,11 @@ class MessageRepositoryImpl @Inject constructor(
      * degrades to "local for now, retried on the next open" rather than to an exception in
      * the caller's coroutine. Cancellation is rethrown — it is not a failure.
      *
-     * @param operation Short description, used as the log context.
-     * @param conversationId The conversation the write targets.
+     * @param operation Short description, used as the log context. Deliberately not the
+     *   conversation id: that is two Firebase uids joined, and a `Log.w` survives R8.
      * @param block The remote write.
      */
-    private suspend fun runRemote(
-        operation: String,
-        conversationId: String,
-        block: suspend () -> Unit
-    ) {
+    private suspend fun runRemote(operation: String, block: suspend () -> Unit) {
         try {
             block()
         } catch (e: CancellationException) {
@@ -484,7 +484,7 @@ class MessageRepositoryImpl @Inject constructor(
         ) {
             Log.w(
                 TAG,
-                "Chat $operation failed for conversationId=$conversationId. " +
+                "Chat $operation failed. " +
                     "Room keeps the local copy and the next open retries.",
                 e
             )
@@ -520,7 +520,7 @@ class MessageRepositoryImpl @Inject constructor(
      *
      * A [CancellationException] is never retried: it is the collector going away, not a failure.
      */
-    private fun <T> Flow<T>.reconnecting(what: String, conversationId: String): Flow<T> =
+    private fun <T> Flow<T>.reconnecting(what: String): Flow<T> =
         retryWhen { cause, attempt ->
             if (cause is CancellationException || attempt >= MAX_RECONNECT_ATTEMPTS) {
                 return@retryWhen false
@@ -529,7 +529,7 @@ class MessageRepositoryImpl @Inject constructor(
                 .coerceAtMost(RECONNECT_MAX_DELAY_MS)
             Log.w(
                 TAG,
-                "$what listener failed for conversationId=$conversationId; reconnecting in " +
+                "$what listener failed; reconnecting in " +
                     "${backoffMs}ms (attempt ${attempt + 1} of $MAX_RECONNECT_ATTEMPTS).",
                 cause
             )

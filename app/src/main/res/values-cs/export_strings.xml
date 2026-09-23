@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Export záznamu komunikace (MON-3). Odstavce export_statement_* jsou vytištěny na každém souboru. -->
+<resources>
+    <string name="export_settings_title">Export záznamu</string>
+    <string name="export_settings_description">Zprávy, historie kalendáře a výdaje jako PDF nebo CSV</string>
+    <string name="export_title">Export záznamu</string>
+    <string name="export_back">Zpět</string>
+    <string name="export_intro">Vytvořte soubor s tím, co jste vy a druhý rodič v CoPlanly zaznamenali a napsali si — pro advokáta, mediátora nebo soud. Vzniká v tomto telefonu a dostane se jen tam, kam ho sami pošlete.</string>
+    <string name="export_range_label">Období</string>
+    <string name="export_from">Od</string>
+    <string name="export_to">Do</string>
+    <string name="export_pick_ok">OK</string>
+    <string name="export_pick_cancel">Zrušit</string>
+    <string name="export_what_it_says">Co soubor sám o sobě uvádí</string>
+    <string name="export_csv">Exportovat jako CSV</string>
+    <string name="export_csv_supporting">Tabulka: jeden řádek na každou verzi, zprávu a výdaj</string>
+    <string name="export_pdf">Exportovat jako PDF</string>
+    <string name="export_pdf_supporting">Dokument k tisku ve formátu A4</string>
+    <string name="export_working">Připravuje se…</string>
+    <string name="export_share_title">Sdílet záznam</string>
+    <string name="export_error_failed">Záznam se nepodařilo exportovat. Zkuste to znovu.</string>
+    <string name="export_error_signed_out">Pro export záznamu se přihlaste.</string>
+
+    <string name="export_record_title">Záznam komunikace CoPlanly</string>
+    <string name="export_statement_what">Toto je záznam toho, co rodiče v CoPlanly zaznamenali a napsali si, a kdy. Není to záznam toho, co se skutečně stalo, a neuvádí, zda je cokoli zde napsané pravda.</string>
+    <string name="export_statement_messages">Odeslanou zprávu nemůže žádný z rodičů upravit ani smazat. Čas zprávy pochází z hodin zařízení odesílatele.</string>
+    <string name="export_statement_revisions">Každá uložená verze záznamu v kalendáři se uchovává celá a nelze ji dodatečně změnit. U každé jsou dva časy: kdy ji zaznamenalo zařízení rodiče, který ji upravil, a kdy ji přijal server.</string>
+    <string name="export_statement_limits">Časy záznamů jsou místní časy, které rodiče zadali, bez časového pásma. Výdaje jsou uvedeny v dnešní podobě. Záznamy uložené před začátkem historie verzí mají jen svou současnou podobu. Soukromé záznamy a zdravotní údaje dětí nejsou nikdy zahrnuty.</string>
+    <string name="export_record_period">Období</string>
+    <string name="export_record_generated">Vytvořeno</string>
+    <string name="export_record_time_zone">Časy uvedeny v pásmu</string>
+    <string name="export_record_parents">Rodiče</string>
+    <string name="export_record_incomplete">Server nebyl dostupný. Tento záznam obsahuje jen to, co měl tento telefon, a může v něm něco chybět.</string>
+    <string name="export_record_section_events">Záznamy v kalendáři</string>
+    <string name="export_record_section_messages">Zprávy</string>
+    <string name="export_record_section_expenses">Výdaje</string>
+    <string name="export_record_nothing">V tomto období nebylo nic zaznamenáno.</string>
+    <string name="export_record_not_on_server">Server zatím nepřijal</string>
+    <string name="export_record_no_server_time">Neuchováno</string>
+    <string name="export_record_revision">Verze</string>
+    <string name="export_record_page">Strana</string>
+
+    <string name="export_col_section">Oddíl</string>
+    <string name="export_col_item">ID položky</string>
+    <string name="export_col_revision">Verze</string>
+    <string name="export_col_action">Akce</string>
+    <string name="export_col_by">Zaznamenal(a)</string>
+    <string name="export_col_device_time">Čas zařízení (kdy rodič uložil)</string>
+    <string name="export_col_server_time">Čas serveru (kdy server přijal)</string>
+    <string name="export_col_text">Název nebo zpráva</string>
+    <string name="export_col_starts">Začátek</string>
+    <string name="export_col_ends">Konec</string>
+    <string name="export_col_parent">Rodič (čí je den, nebo kdo platil)</string>
+    <string name="export_col_notes">Poznámky</string>
+    <string name="export_col_amount">Částka</string>
+    <string name="export_col_currency">Měna</string>
+
+    <string name="export_action_created">Vytvořeno</string>
+    <string name="export_action_updated">Změněno</string>
+    <string name="export_action_deleted">Smazáno</string>
+    <string name="export_action_current">Současná podoba (bez uložené historie)</string>
+    <string name="export_action_sent">Odesláno</string>
+    <string name="export_action_not_sent">Neodesláno</string>
+    <string name="export_action_recorded">Zaznamenáno</string>
+
+    <!-- MON-16: the record id and whether the file can be verified. -->
+    <string name="export_verify_explainer">Když je server dostupný, soubor se zaregistruje: uloží se jeho ID záznamu a otisk jeho přesného obsahu, takže kdokoli, kdo ho má, může ověřit, že nebyl změněn. Z telefonu odchází jen otisk, nikdy soubor.</string>
+    <string name="export_verify_record_id">ID záznamu</string>
+    <string name="export_verify_at">Ověření na</string>
+    <string name="export_verify_instruction">Chcete-li ověřit, že tento soubor nebyl změněn, otevřete adresu výše a vyberte soubor. Jediný změněný znak ověření neprojde.</string>
+    <string name="export_verify_instruction_no_url">Otisk tohoto souboru byl při jeho vytvoření zaregistrován v CoPlanly pod tímto ID záznamu.</string>
+    <string name="export_verify_not_registered">Nezaregistrováno — ověření není k dispozici. Při vytváření tohoto souboru nebyl server dostupný, takže jeho otisk nebyl zaregistrován a nikdo nemůže ověřit, zda byl změněn.</string>
+    <string name="export_verify_not_registered_short">Nezaregistrováno — ověření není k dispozici</string>
+    <string name="export_unregistered_title">Nezaregistrováno — ověření není k dispozici</string>
+    <string name="export_unregistered_body">Server nebyl dostupný, takže tento soubor nebyl zaregistrován a nikdo nebude moci ověřit, zda byl změněn. Soubor to uvádí na začátku. Můžete ho přesto sdílet, nebo ho exportovat znovu, až budete online.</string>
+    <string name="export_unregistered_share">Přesto sdílet</string>
+    <string name="export_unregistered_not_now">Teď ne</string>
+</resources>

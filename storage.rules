@@ -6,9 +6,10 @@ rules_version = '2';
 // authentication; download URLs embedded in Firestore documents carry an access
 // token and keep working for the paired parent regardless of these read rules.
 //
-// None of these blocks can tell one signed-in user from another: none of them knows who a parent
-// of what is. See the medical_photos block, which says at length what that costs and why it was
-// accepted there.
+// The four photo blocks cannot tell one signed-in user from another: none of them knows who a
+// parent of what is. See the medical_photos block, which says at length what that costs and why
+// it was accepted there. The two MON-23 blocks at the end (`family_documents`, `chat_attachments`)
+// are the exception — they key on the family id in the path; read their comment for the cost.
 //
 // **The reason given for that used to be wrong.** This file said "Storage rules cannot read
 // Firestore", and so did SEC-1 in the backlog. They can: cross-service Security Rules
@@ -118,6 +119,68 @@ service firebase.storage {
         && (request.resource == null
             || (request.resource.size < 5 * 1024 * 1024
                 && request.resource.contentType == 'image/jpeg'));
+    }
+
+    // ---- MON-23: the document vault and chat attachments ----------------------------------
+    //
+    // **The first two blocks in this file that know who a parent is**, and they do it without
+    // the cross-service call the header describes. The first path segment is a family id —
+    // `FamilyKey.of(uidA, uidB)`, the two uids sorted and joined with `__` — and a conversation
+    // id is the same string (`ConversationKey`). So "is the caller one of this family's parents"
+    // is a question about the path, answered with no document read, exactly as
+    // `firestore.rules`' `isFamilyMember` answers it. That is the approach chosen, over a custom
+    // claim or a `firestore.get()`, because it is the one the Storage emulator can execute:
+    // `firestore-tests/rules/storage-shared-files.test.js` runs every branch for real.
+    //
+    // **What it costs, stated so nobody mistakes it for more.** A path names its pair for ever,
+    // so the gate does not move at unpair: an ex-partner who kept a path can still fetch that
+    // file. The vault's Firestore index narrows at unpair (`SHARED_AUDIENCE_COLLECTIONS`), so
+    // the app stops *showing* it, but the bytes stay readable to both uids —
+    // the same posture as the chat history, which the ex-partner also keeps. The stronger rule
+    // is `firestore.exists(/databases/(default)/documents/users/$(request.auth.uid))` with a
+    // live-partner check; it cannot be tested here (firebase-js-sdk#6803), and this file already
+    // records why an untested rule is not deployed.
+    //
+    // Common to both: a create must stamp `uploader` (the caller) and `sha256` in custom
+    // metadata, the type must be a PDF or one of five image types, and the size must be under
+    // 20 MB. Nothing may be listed (`list` is never granted; the Firestore documents are the
+    // index) and nothing may be overwritten — the digest a record carries has to keep
+    // describing the bytes at its path.
+    function isOneOfPair(pairId) {
+      return request.auth != null &&
+             pairId.split('__').size() == 2 &&
+             request.auth.uid in pairId.split('__');
+    }
+
+    // `resource == null` is stated rather than left to the `create`/`update` split: the Storage
+    // emulator evaluated an overwrite of an existing object as a `create`, and a rule that
+    // relies on the split alone let the uploader replace the bytes a stored digest describes.
+    function isAcceptableSharedFile() {
+      return resource == null &&
+             request.resource.size > 0 &&
+             request.resource.size < 20 * 1024 * 1024 &&
+             request.resource.contentType in ['application/pdf', 'image/jpeg', 'image/png',
+                                              'image/heic', 'image/heif', 'image/webp'] &&
+             request.resource.metadata.uploader == request.auth.uid &&
+             request.resource.metadata.sha256.matches('^[0-9a-f]{64}$');
+    }
+
+    // The vault: family_documents/{familyId}/{docId}/{fileName}. The uploader may delete their
+    // own file (a failed index write leaves an orphan the client cleans up); the co-parent may
+    // not. After a tombstone the file stays until `sweepDeletedDocuments` removes both.
+    match /family_documents/{familyId}/{docId}/{fileName} {
+      allow get: if isOneOfPair(familyId);
+      allow create: if isOneOfPair(familyId) && isAcceptableSharedFile();
+      allow delete: if isOneOfPair(familyId) &&
+                      resource.metadata.uploader == request.auth.uid;
+    }
+
+    // Chat: chat_attachments/{conversationId}/{messageId}/{fileName}. No delete for anybody: a
+    // message cannot be deleted or edited (`firestore.rules`), and the file is part of it. Only
+    // account deletion removes these, as admin, with the rest of the thread.
+    match /chat_attachments/{conversationId}/{messageId}/{fileName} {
+      allow get: if isOneOfPair(conversationId);
+      allow create: if isOneOfPair(conversationId) && isAcceptableSharedFile();
     }
 
     // Everything else is closed by default.

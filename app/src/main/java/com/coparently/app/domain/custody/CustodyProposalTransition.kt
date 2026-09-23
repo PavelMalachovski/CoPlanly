@@ -56,7 +56,9 @@ object CustodyProposalTransition {
                     proposedAt = atIso,
                     // Always written, even empty: this build's proposal says what the windows
                     // become, and "none" is an answer (see CustodyProposal.contactWindowsWire).
-                    contactWindowsWire = ContactWindowCodec.encodeAll(model.contactWindows)
+                    contactWindowsWire = ContactWindowCodec.encodeAll(model.contactWindows),
+                    // The same rule for the seasonal layers (MON-14): the proposal states them.
+                    seasonalLayersWire = model.seasonalLayersWire()
                 )
             )
         )
@@ -98,6 +100,7 @@ object CustodyProposalTransition {
                 // The accepted pattern's windows become the agreed ones, written explicitly —
                 // this is a pattern write, the one kind that may replace the stored list.
                 contactWindowsWire = ContactWindowCodec.encodeAll(pending.model.contactWindows),
+                seasonalLayersWire = pending.model.seasonalLayersWire(),
                 proposal = null,
                 lastDecision = CustodyDecision(
                     outcome = CustodyDecisionOutcome.ACCEPTED,

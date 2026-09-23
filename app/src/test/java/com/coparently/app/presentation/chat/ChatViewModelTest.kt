@@ -1,6 +1,9 @@
 package com.coparently.app.presentation.chat
 
 import app.cash.turbine.test
+import com.coparently.app.data.chat.ChatPartnerSource
+import com.coparently.app.data.family.FamilyOption
+import com.coparently.app.data.family.SelectedFamilySource
 import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.domain.chat.ConversationKey
 import com.coparently.app.domain.model.Conversation
@@ -12,6 +15,7 @@ import com.coparently.app.domain.model.PartnerSummary
 import com.coparently.app.domain.repository.EventRepository
 import com.coparently.app.domain.repository.MessageRepository
 import com.coparently.app.domain.repository.PairingRepository
+import com.coparently.app.domain.repository.PreferencesRepository
 import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.presentation.common.Loadable
 import io.mockk.coEvery
@@ -24,6 +28,8 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runCurrent
@@ -54,9 +60,11 @@ class ChatViewModelTest {
 
     private lateinit var pairingState: MutableStateFlow<PairingState>
     private lateinit var signedInUid: MutableStateFlow<String?>
+    private lateinit var projectedFamily: MutableStateFlow<FamilyOption?>
     private lateinit var conversationInRoom: MutableStateFlow<Conversation?>
     private lateinit var messageRepository: MessageRepository
     private lateinit var userRepository: UserRepository
+    private lateinit var pauseBeforeSending: MutableStateFlow<Boolean>
 
     @Before
     fun setUp() {
@@ -64,7 +72,9 @@ class ChatViewModelTest {
 
         pairingState = MutableStateFlow(PairingState.Loading)
         signedInUid = MutableStateFlow<String?>(UID)
+        projectedFamily = MutableStateFlow(null)
         conversationInRoom = MutableStateFlow(null)
+        pauseBeforeSending = MutableStateFlow(false)
 
         messageRepository = mockk(relaxed = true) {
             every { observeConversation(any()) } returns conversationInRoom
@@ -399,6 +409,98 @@ class ChatViewModelTest {
         verify(exactly = 0) { messageRepository.observeUnreadCount(any(), any()) }
     }
 
+    // ---- M-8: chat follows the family on screen, not the server's first co-parent ----------
+    //
+    // The server's `partnerId` is `partnersOf(...)[0]`, and with two families it keeps naming the
+    // first one whatever the switcher says. `pairingState` below stays on PARTNER throughout; only
+    // the projection the switcher writes onto the Room row moves.
+
+    @Test
+    fun `switching family re-keys the co-parent link`() = runTest {
+        pairingState.value = PairingState.Paired(partner())
+        projectedFamily.value = family(PARTNER)
+        val viewModel = createViewModel()
+
+        viewModel.coParentLink.test {
+            assertEquals(CoParentLink.Resolving, awaitItem())
+            assertEquals(CoParentLink.Linked(PARTNER), awaitItem())
+
+            projectedFamily.value = family(SECOND_PARTNER)
+
+            assertEquals(CoParentLink.Linked(SECOND_PARTNER), awaitItem())
+        }
+    }
+
+    @Test
+    fun `switching family re-keys the thread and the unread badge`() = runTest {
+        pairingState.value = PairingState.Paired(partner())
+        projectedFamily.value = family(PARTNER)
+        every { messageRepository.observeUnreadCount(CONVERSATION, UID) } returns flowOf(3)
+        every { messageRepository.observeUnreadCount(SECOND_CONVERSATION, UID) } returns flowOf(5)
+        val viewModel = createViewModel()
+
+        viewModel.unreadCount.test {
+            advanceUntilIdle()
+            assertEquals(3, expectMostRecentItem())
+
+            projectedFamily.value = family(SECOND_PARTNER)
+            advanceUntilIdle()
+
+            // The badge is the selected family's, and only that family's — the other one is not
+            // mirrored while it is not on screen, so its count would be a guess.
+            assertEquals(5, expectMostRecentItem())
+        }
+        viewModel.conversations.test {
+            awaitItem()
+            advanceUntilIdle()
+            cancelAndIgnoreRemainingEvents()
+        }
+        verify { messageRepository.observeConversation(SECOND_CONVERSATION) }
+    }
+
+    @Test
+    fun `the co-parent action opens the selected family's thread`() = runTest {
+        pairingState.value = PairingState.Paired(partner())
+        projectedFamily.value = family(SECOND_PARTNER)
+        val viewModel = createViewModel()
+        var opened: String? = null
+
+        viewModel.startConversationWithPartner { opened = it }
+        runCurrent()
+
+        assertEquals(SECOND_CONVERSATION, opened)
+        coVerify(exactly = 0) { messageRepository.ensureConversation(UID, PARTNER, any()) }
+    }
+
+    @Test
+    fun `a one-family account reads the same thread before and after the projection lands`() = runTest {
+        pairingState.value = PairingState.Paired(partner())
+        val viewModel = createViewModel()
+
+        viewModel.coParentLink.test {
+            assertEquals(CoParentLink.Resolving, awaitItem())
+            assertEquals(CoParentLink.Linked(PARTNER), awaitItem())
+
+            projectedFamily.value = family(PARTNER)
+            advanceUntilIdle()
+
+            // Not even a re-emission: nothing on a one-family account may flicker.
+            expectNoEvents()
+        }
+    }
+
+    @Test
+    fun `a stale projection does not invent a co-parent for an unpaired account`() = runTest {
+        pairingState.value = PairingState.NotPaired()
+        projectedFamily.value = family(SECOND_PARTNER)
+        val viewModel = createViewModel()
+
+        viewModel.coParentLink.test {
+            assertEquals(CoParentLink.Resolving, awaitItem())
+            assertEquals(CoParentLink.NotPaired, awaitItem())
+        }
+    }
+
     // ---- the draft belongs to the composer, not to the send's outcome ----
 
     @Test
@@ -439,6 +541,106 @@ class ChatViewModelTest {
         assertEquals("", viewModel.draftFor(CONVERSATION))
     }
 
+    // ---- MON-19: pause before sending ---------------------------------
+
+    @Test
+    fun `with the pause off a message goes straight to the repository`() = runTest {
+        val viewModel = openedThread()
+
+        viewModel.sendMessage(DRAFT)
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) { messageRepository.sendMessage(match { it.content == DRAFT }) }
+        assertNull(viewModel.pendingSend.value)
+    }
+
+    @Test
+    fun `with the pause on a message waits, counting down, before it is sent`() = runTest {
+        pauseBeforeSending.value = true
+        val viewModel = openedThread()
+
+        viewModel.sendMessage(DRAFT)
+        runCurrent()
+        assertEquals(PendingSend(CONVERSATION, DRAFT, SendHold.PAUSE_SECONDS), viewModel.pendingSend.value)
+
+        advanceTimeBy(SendHold.TICK_MS * 2)
+        runCurrent()
+        assertEquals(SendHold.PAUSE_SECONDS - 2, viewModel.pendingSend.value?.secondsLeft)
+        coVerify(exactly = 0) { messageRepository.sendMessage(any()) }
+
+        advanceTimeBy(SendHold.TICK_MS * (SendHold.PAUSE_SECONDS - 2))
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) {
+            messageRepository.sendMessage(match { it.content == DRAFT && it.conversationId == CONVERSATION })
+        }
+        assertNull(viewModel.pendingSend.value)
+    }
+
+    @Test
+    fun `undo inside the pause sends nothing and gives the text back`() = runTest {
+        pauseBeforeSending.value = true
+        val viewModel = openedThread()
+
+        viewModel.sendMessage(DRAFT)
+        advanceTimeBy(SendHold.TICK_MS)
+        val restored = viewModel.undoPendingSend(composerText = "")
+        advanceUntilIdle()
+
+        assertEquals(DRAFT, restored)
+        assertNull(viewModel.pendingSend.value)
+        // Back in the draft store too, so leaving the thread now does not lose it.
+        assertEquals(DRAFT, viewModel.draftFor(CONVERSATION))
+        coVerify(exactly = 0) { messageRepository.sendMessage(any()) }
+    }
+
+    @Test
+    fun `undo keeps what was typed since, after the restored message`() = runTest {
+        pauseBeforeSending.value = true
+        val viewModel = openedThread()
+
+        viewModel.sendMessage(DRAFT)
+        runCurrent()
+
+        assertEquals("$DRAFT\nand one more thing", viewModel.undoPendingSend("and one more thing"))
+    }
+
+    @Test
+    fun `undo after the pause has nothing to take back`() = runTest {
+        pauseBeforeSending.value = true
+        val viewModel = openedThread()
+
+        viewModel.sendMessage(DRAFT)
+        advanceUntilIdle()
+
+        assertNull(viewModel.undoPendingSend(""))
+        coVerify(exactly = 1) { messageRepository.sendMessage(any()) }
+    }
+
+    @Test
+    fun `a second message sends the held one at once, keeping the order`() = runTest {
+        pauseBeforeSending.value = true
+        val viewModel = openedThread()
+
+        viewModel.sendMessage(DRAFT)
+        runCurrent()
+        viewModel.sendMessage("second")
+        runCurrent()
+
+        coVerify(exactly = 1) { messageRepository.sendMessage(match { it.content == DRAFT }) }
+        coVerify(exactly = 0) { messageRepository.sendMessage(match { it.content == "second" }) }
+        assertEquals("second", viewModel.pendingSend.value?.text)
+    }
+
+    /** A ViewModel with [CONVERSATION] open and everything it started on construction settled. */
+    private fun TestScope.openedThread(): ChatViewModel {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+        viewModel.onThreadOpened(CONVERSATION)
+        advanceUntilIdle()
+        return viewModel
+    }
+
     private fun createViewModel(
         preferences: EncryptedPreferences = draftStore()
     ): ChatViewModel {
@@ -448,13 +650,19 @@ class ChatViewModelTest {
         val pairingRepository = mockk<PairingRepository> {
             every { observePairingState() } returns pairingState
         }
-        coEvery { userRepository.getUserById(PARTNER) } returns null
+        val selectedFamilySource = mockk<SelectedFamilySource> {
+            every { observe(any()) } returns projectedFamily
+        }
+        coEvery { userRepository.getUserById(any()) } returns null
         return ChatViewModel(
             messageRepository,
             userRepository,
             eventRepository,
-            pairingRepository,
-            preferences
+            ChatPartnerSource(userRepository, pairingRepository, selectedFamilySource),
+            preferences,
+            mockk<PreferencesRepository> {
+                every { getPauseBeforeSendingFlow() } returns pauseBeforeSending
+            }
         )
     }
 
@@ -462,6 +670,8 @@ class ChatViewModelTest {
     private fun draftStore() = mockk<EncryptedPreferences>(relaxed = true) {
         every { getChatDraft(any()) } returns ""
     }
+
+    private fun family(partnerUid: String) = FamilyOption(ConversationKey.of(UID, partnerUid), partnerUid)
 
     private fun partner() = PartnerSummary(
         id = PARTNER,
@@ -494,6 +704,12 @@ class ChatViewModelTest {
         /** What `ConversationKey.of(UID, PARTNER)` derives; kept literal so the test pins it. */
         const val CONVERSATION = "user-a__user-b"
         const val OTHER_CONVERSATION = "conversation-2"
+
+        /** A second co-parent, in a second family. */
+        const val SECOND_PARTNER = "user-c"
+
+        /** What `ConversationKey.of(UID, SECOND_PARTNER)` derives. */
+        const val SECOND_CONVERSATION = "user-a__user-c"
 
         /** Unsent text in the composer. */
         const val DRAFT = "are you free on Friday?"

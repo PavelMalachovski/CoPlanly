@@ -2,7 +2,7 @@
 <resources>
     <!-- MON-13: the country whose public holidays the calendar draws. -->
     <string name="country_label">Країна</string>
-    <string name="country_settings_summary">Визначає, які свята показує календар</string>
+    <string name="country_settings_summary">Визначає, які свята та шкільні канікули показує календар</string>
 
     <string name="country_cz">Чехія</string>
     <string name="country_sk">Словаччина</string>
@@ -12,17 +12,19 @@
     <string name="country_ru">Росія</string>
     <string name="country_other">Інша</string>
 
-    <string name="country_holidays_supported">У календарі показуються державні свята та шкільні канікули.</string>
+    <string name="country_holidays_supported">У календарі показуються державні свята та шкільні канікули. Весняні канікули залежать від району й не показуються.</string>
+    <string name="country_holidays_school_sk">У календарі показуються державні свята та шкільні канікули в тому вигляді, в якому їх публікує міністерство. Весняні канікули залежать від краю й не показуються.</string>
+    <string name="country_holidays_school_at">У календарі показуються державні свята та шкільні канікули, спільні для всієї Австрії. Семестрові та літні канікули залежать від федеральної землі й не показуються.</string>
     <string name="country_holidays_unavailable">Свят для країни «%1$s» у застосунку ще немає, тому вони не показуються.</string>
     <string name="country_holidays_public_only">У календарі показуються загальнодержавні свята. Шкільних канікул для країни «%1$s» у застосунку немає.</string>
     <string name="country_holidays_suspended">Під час воєнного стану свята в країні «%1$s» не є вихідними днями, тому вони не показуються.</string>
 
     <!-- MON-13, regional half: the Land whose own public holidays are added. -->
     <string name="holiday_region_label_de">Федеральна земля</string>
-    <string name="holiday_region_settings_summary">Додає свята цієї федеральної землі</string>
+    <string name="holiday_region_settings_summary">Додає свята та шкільні канікули цієї федеральної землі</string>
     <string name="holiday_region_none">Лише загальнодержавні</string>
-    <string name="country_holidays_pick_region">У календарі показуються загальнодержавні свята; виберіть федеральну землю, щоб додати її власні. Шкільних канікул для країни «%1$s» у застосунку немає.</string>
-    <string name="country_holidays_with_region">У календарі показуються загальнодержавні свята та свята землі «%1$s». Шкільних канікул у застосунку немає.</string>
+    <string name="country_holidays_pick_region">У календарі показуються загальнодержавні свята. Шкільні канікули встановлює кожна федеральна земля: виберіть її, щоб додати її канікули та власні свята.</string>
+    <string name="country_holidays_with_region">У календарі показуються загальнодержавні свята, а також свята та шкільні канікули землі «%1$s».</string>
 
     <string name="region_de_bb">Бранденбург</string>
     <string name="region_de_be">Берлін</string>

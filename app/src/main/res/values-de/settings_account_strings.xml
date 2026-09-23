@@ -48,9 +48,9 @@
     <string name="settings_account_delete">Konto löschen</string>
     <string name="settings_account_delete_description">Dieses Konto und alle Daten löschen</string>
     <string name="settings_account_delete_confirm_title">Dieses Konto löschen?</string>
-    <string name="settings_account_delete_confirm_message">Alles, was Sie eingetragen haben, wird gelöscht: Termine, Ausgaben, die Daten Ihres Kindes und der gesamte Chat. Dem anderen Elternteil bleibt nur, was er selbst erstellt hat. Das lässt sich nicht rückgängig machen.</string>
+    <string name="settings_account_delete_confirm_message">Alles, was Sie eingetragen haben, wird von unseren Servern und von diesem Telefon gelöscht: Termine, Ausgaben, die Daten Ihres Kindes und der gesamte Chat. Dem anderen Elternteil bleibt, was er selbst erstellt hat, und auf seinem Telefon bleiben die Kopien, die es bereits geladen hat. Das lässt sich nicht rückgängig machen.</string>
     <string name="settings_account_delete_final_title">Endgültig löschen?</string>
-    <string name="settings_account_delete_final_message">Es gibt keinen Weg zurück und keine Kopie. Wenn Sie sich nur von diesem Gerät abmelden möchten, nutzen Sie stattdessen die Abmeldung.</string>
+    <string name="settings_account_delete_final_message">Es gibt keinen Weg zurück: Wir bewahren keine Kopie zur Wiederherstellung auf. Wenn Sie sich nur von diesem Gerät abmelden möchten, nutzen Sie stattdessen die Abmeldung.</string>
     <string name="settings_account_delete_final_yes">Endgültig löschen</string>
     <string name="settings_account_delete_cancel">Konto behalten</string>
     <string name="settings_account_delete_progress">Konto wird gelöscht…</string>
@@ -75,6 +75,12 @@
     <string name="settings_family_shown">Angezeigte Familie</string>
     <string name="settings_family_switch">Familie wechseln</string>
     <string name="settings_family_unnamed">Noch ohne Namen</string>
+    <string name="family_switcher_unread_other">Neue Nachrichten in einer anderen Familie</string>
+    <string name="family_switcher_unread_row">Neue Nachrichten</string>
+    <string name="family_switcher_request_other">In einer anderen Familie wartet eine Änderungsanfrage</string>
+    <string name="family_switcher_request_row">Eine Änderungsanfrage wartet</string>
+    <string name="family_switcher_schedule_other">In einer anderen Familie wartet ein Vorschlag zum Betreuungsplan</string>
+    <string name="family_switcher_schedule_row">Ein Vorschlag zum Betreuungsplan wartet</string>
     <string name="settings_school_import_title">Import aus Bakaláři und EduPage</string>
     <string name="settings_school_import_description">Der Stundenplan Ihres Kindes direkt in den Kalender. Diese Funktion gibt es noch nicht.</string>
     <string name="settings_school_import_planned">Geplant</string>
@@ -82,4 +88,8 @@
 
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
     <string name="settings_sync_failed">Letzte Synchronisierung fehlgeschlagen</string>
+
+    <!-- MON-19: Settings → App. The argument is the pause, in seconds. -->
+    <string name="settings_pause_before_sending_title">Pause vor dem Senden</string>
+    <string name="settings_pause_before_sending_description">Hält jede Chatnachricht %1$d Sekunden mit „Rückgängig“ zurück und weist beim Tippen auf Großbuchstaben, !!! und scharfe Wörter hin. Geprüft wird nur auf diesem Telefon.</string>
 </resources>

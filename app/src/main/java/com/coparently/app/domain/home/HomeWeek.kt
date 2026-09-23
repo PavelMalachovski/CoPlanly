@@ -1,5 +1,6 @@
 package com.coparently.app.domain.home
 
+import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.model.Event
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -35,11 +36,16 @@ data class WeekEntry(
  * @property date The day being described — always today at build time.
  * @property events Every event touching [date], in start order.
  * @property dayParent The slot whose custody day it is, or null when no arrangement answers.
+ * @property contactWindows The contact windows today carries (MON-6b), earliest first — only the
+ *   ones naming the parent who does **not** have the day, the same set the calendar grid draws.
+ *   Kept beside [dayParent] rather than folded into it: whose day it is does not change because
+ *   the other parent has the child for an afternoon.
  */
 data class TodayAgenda(
     val date: LocalDate,
     val events: List<Event>,
-    val dayParent: String?
+    val dayParent: String?,
+    val contactWindows: List<ContactWindow> = emptyList()
 )
 
 /**
@@ -101,19 +107,24 @@ object HomeWeek {
      * @param today The day the screen is being drawn on.
      * @param userId This device's Firebase UID, or blank while the session is unresolved.
      * @param custodyFor Whose day a date is; bind through `CustodyResolver` as [of] asks.
+     * @param contactWindowsFor The contact windows a date carries; bind through
+     *   `CustodyResolver.contactWindowsResolver` with the same [custodyFor], which is what the
+     *   calendar grid draws from. Defaults to none, for a caller with no pattern to ask.
      */
     fun todayOf(
         events: List<Event>,
         today: LocalDate,
         userId: String,
-        custodyFor: (LocalDate) -> String?
+        custodyFor: (LocalDate) -> String?,
+        contactWindowsFor: (LocalDate) -> List<ContactWindow> = { emptyList() }
     ): TodayAgenda = TodayAgenda(
         date = today,
         events = events
             .filter { it.covers(today) }
             .filter { it.isVisibleTo(userId) }
             .sortedBy { it.startDateTime },
-        dayParent = custodyFor(today)
+        dayParent = custodyFor(today),
+        contactWindows = contactWindowsFor(today)
     )
 
     /** Whether this event touches [day] — start and end dates inclusive. */

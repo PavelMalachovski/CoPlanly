@@ -232,6 +232,53 @@ service cloud.firestore {
                  .data.get('expiresAtMillis', 0);
     }
 
+    // True when the caller holds an **active** professional grant (MON-18) over [familyId]: a
+    // mediator, lawyer, guardian ad litem or therapist admitted to read this one family's
+    // calendar, parenting plan and custody schedule — never its chat, money or child records.
+    //
+    // Keyed `professional_grants/{familyId}__{callerUid}`, so the rule builds the path from what
+    // it already holds and reads one document. The id alone is not trusted: the stored
+    // `familyId` and `proUid` must repeat it.
+    //
+    // **Active means both parents said yes.** `consents` is a map keyed by parent uid, each
+    // parent adds only their own key (the update rule below), and the grant opens nothing until
+    // it holds *both* of `familyParents`. The asymmetry with revocation is the point: letting a
+    // professional in needs two people, ending it needs one — either parent deletes the grant.
+    //
+    // **Always expiring**: a missing or past `expiresAtMillis` reads as 0 and admits nothing,
+    // compared against `request.time` so access ends the instant the grant lapses, with no sweep
+    // in the path. Like `isCalendarFriendOf`, this is only ever reached on a *last* disjunct, so
+    // a parent's own read never pays for the `get()`.
+    function isProfessionalOf(familyId) {
+      return isAuthenticated() &&
+             familyId is string &&
+             familyId.size() > 0 &&
+             exists(/databases/$(database)/documents/professional_grants/$(familyId + '__' + request.auth.uid)) &&
+             professionalGrantActive(
+               get(/databases/$(database)/documents/professional_grants/$(familyId + '__' + request.auth.uid)).data,
+               familyId);
+    }
+
+    // The stored half of [isProfessionalOf]: the grant names this family and this caller, has
+    // exactly two parents, both of whom have consented, and has not run out.
+    function professionalGrantActive(grant, familyId) {
+      return grant.get('familyId', '') == familyId &&
+             grant.get('proUid', '') == request.auth.uid &&
+             grant.get('familyParents', []).size() == 2 &&
+             grant.get('consents', {}).keys().hasAll(grant.get('familyParents', [])) &&
+             request.time.toMillis() < grant.get('expiresAtMillis', 0);
+    }
+
+    // [isProfessionalOf] for a record: the record names the family, and its creator is one of
+    // that family's two parents. The second check is the one `isCalendarFriendOf` keeps for the
+    // same reason — an event's `familyId` is client-written, so without it any account could put
+    // a family's id on its own event and have it appear in the professional's view.
+    function isProfessionalOfRecord(ownerUid, familyId) {
+      return isProfessionalOf(familyId) &&
+             ownerUid in get(/databases/$(database)/documents/professional_grants/$(familyId + '__' + request.auth.uid))
+                          .data.get('familyParents', []);
+    }
+
     // True when the map at `key` differs between `before` and `after` in at most the
     // caller's own uid. `get(key, {})` is load-bearing: a conversation created before
     // this change has no such field, and reading a missing key in Firestore Rules is an
@@ -325,8 +372,9 @@ service cloud.firestore {
     function swapWriteTouchesOnlyTheSwap(before, after) {
       return after.diff(before).affectedKeys()
                   .hasOnly(['dayOverrides', 'lastSwapDate', 'lastModifiedBy', 'lastModifiedKind',
-                            'contactWindows']) &&
-             contactWindowsKeptOrDropped(before, after);
+                            'contactWindows', 'seasonalLayers']) &&
+             contactWindowsKeptOrDropped(before, after) &&
+             seasonalLayersKeptOrDropped(before, after);
     }
 
     // True when a write leaves `contactWindows` (MON-6b) exactly as it was, or drops the key.
@@ -348,6 +396,20 @@ service cloud.firestore {
              !after.diff(before).affectedKeys().hasAny(['contactWindows']);
     }
 
+    // True when a write leaves `seasonalLayers` (MON-14) exactly as it was, or drops the key.
+    //
+    // The same rule as `contactWindowsKeptOrDropped`, for the same two reasons. A seasonal layer
+    // is part of the agreed pattern — it decides whose day a whole summer is — so a swap or a
+    // proposal write may not change it: only a pattern write, which stamps `lastModifiedBy` and
+    // is announced, may. And a build that predates the field rewrites the whole document without
+    // the key, so dropping it must stay allowed or every swap and proposal from an older
+    // co-parent would be denied the moment the pair had a layer; a current build reads a missing
+    // key as "written by an older build" and keeps its own copy.
+    function seasonalLayersKeptOrDropped(before, after) {
+      return !('seasonalLayers' in after) ||
+             !after.diff(before).affectedKeys().hasAny(['seasonalLayers']);
+    }
+
     // True when a write only puts, clears, or records the outcome of a custody *proposal* (item
     // 7) — it never touches the agreed pattern, its dates, or `lastModifiedBy`. That is the whole
     // safety property: a proposal write can never move anyone's calendar, so it is allowed
@@ -356,8 +418,10 @@ service cloud.firestore {
     // echo and swallow its banner). Accepting a proposal is a different write — it changes the
     // model and stamps the accepter — and passes the normal pattern branch below, not this one.
     function proposalWriteTouchesOnlyProposal(before, after) {
-      return after.diff(before).affectedKeys().hasOnly(['proposal', 'lastDecision', 'contactWindows']) &&
-             contactWindowsKeptOrDropped(before, after);
+      return after.diff(before).affectedKeys()
+                  .hasOnly(['proposal', 'lastDecision', 'contactWindows', 'seasonalLayers']) &&
+             contactWindowsKeptOrDropped(before, after) &&
+             seasonalLayersKeptOrDropped(before, after);
     }
 
     // The canonical pair id for a 2-element participants list — the same sorted-join formula
@@ -468,6 +532,19 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // ---- Calendar feeds (MON-17) ---------------------------------------------
+    // `calendar_feeds/{sha256(token)}` — one read-only iCalendar link each: the family it
+    // serves, who made it, and when it was last fetched. **No client may touch it, in either
+    // direction**, for the reason `google_oauth` above is closed. The document id is the hash of
+    // the only credential the feed has, so a client that could list the collection could learn
+    // which families have a link, and one that could write it could mint a feed into somebody
+    // else's family, point an existing one at another family, or keep a revoked one alive.
+    // `createCalendarFeed`, `listCalendarFeeds`, `revokeCalendarFeed` and the `calendarFeed`
+    // HTTPS function run on Admin credentials and are its only door.
+    match /calendar_feeds/{feedHash} {
+      allow read, write: if false;
+    }
+
     // ---- Friend profiles ------------------------------------------------
     // A trusted third person (guardian, friend, grandparent — item 16) authors their own
     // profile; the two parents read it but never write it, so nobody puts words in a
@@ -546,6 +623,52 @@ service cloud.firestore {
                       request.auth.uid in resource.data.get('familyParents', []);
     }
 
+    // ---- Professional grants (MON-18) ------------------------------------
+    // A mediator, lawyer, guardian ad litem or therapist admitted to read one family's calendar,
+    // parenting plan and custody schedule. Id `{familyId}__{proUid}`, so `isProfessionalOf` reads
+    // it in one `get()` built from what the rule already holds.
+    //
+    // Three writers, and each may do exactly one thing:
+    //   - `acceptProfessionalInvitation` (Admin, bypasses this rule) creates it, with the
+    //     inviting parent's consent already in `consents`;
+    //   - the **other** parent adds their own consent — the second key that makes it active;
+    //   - **either** parent deletes it, alone, at any time. Revocation needs one person because
+    //     a parent who wants a stranger out of the family's calendar must not need the other's
+    //     agreement to get them out.
+    // The professional writes nothing. They cannot grant themselves anything, extend their own
+    // expiry, or consent on a parent's behalf — and they cannot delete the grant either, so a
+    // parent's list never loses a row that the parent did not remove.
+    match /professional_grants/{grantId} {
+      // `list` on the same terms: the professional's query filters `proUid == me`, a parent's
+      // `familyParents array-contains me`, and Firestore validates either by its structure.
+      allow read: if isAuthenticated() && (
+        resource.data.get('proUid', '') == request.auth.uid ||
+        request.auth.uid in resource.data.get('familyParents', [])
+      );
+
+      allow create: if false;
+
+      // A parent adds or re-stamps their **own** consent and touches nothing else: the outer
+      // `hasOnly` keeps the write off the expiry, the parents and the professional; the inner one
+      // keeps one parent from consenting for the other. The value must be a positive number
+      // (epoch millis), so removing one's own key — which `get` reads as 0 —
+      // is refused rather than silently turning consent into its absence; a parent who no longer
+      // consents revokes. An expired grant cannot be consented to: it would open nothing, and a
+      // parent seeing "active" beside it would be told something false.
+      allow update: if isAuthenticated() &&
+                      request.auth.uid in resource.data.get('familyParents', []) &&
+                      request.time.toMillis() < resource.data.get('expiresAtMillis', 0) &&
+                      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['consents']) &&
+                      request.resource.data.get('consents', {})
+                        .diff(resource.data.get('consents', {}))
+                        .affectedKeys().hasOnly([request.auth.uid]) &&
+                      request.resource.data.get('consents', {}).get(request.auth.uid, 0) is number &&
+                      request.resource.data.get('consents', {}).get(request.auth.uid, 0) > 0;
+
+      allow delete: if isAuthenticated() &&
+                      request.auth.uid in resource.data.get('familyParents', []);
+    }
+
     // ---- Events --------------------------------------------------------
     // Owners and shared partners have access. Date fields are ISO strings, so
     // no timestamp-type or ordering checks here (that is enforced app-side).
@@ -556,7 +679,12 @@ service cloud.firestore {
         resource.data.createdByFirebaseUid == request.auth.uid ||
         request.auth.uid in resource.data.get('sharedWith', []) ||
         isCalendarFriendOf(resource.data.createdByFirebaseUid,
-                           resource.data.get('familyId', ''))
+                           resource.data.get('familyId', '')) ||
+        // A professional with an active, two-consent grant over this event's family (MON-18).
+        // Last, after the friend, so neither a parent's nor a friend's read pays for it. A
+        // private event never reaches Firestore (item 3), so there is nothing private to admit.
+        isProfessionalOfRecord(resource.data.createdByFirebaseUid,
+                               resource.data.get('familyId', ''))
       );
 
       // Presence-based validation only — the real document carries the full
@@ -600,6 +728,86 @@ service cloud.firestore {
 
       allow delete: if isAuthenticated() &&
                       resource.data.createdByFirebaseUid == request.auth.uid;
+    }
+
+    // ---- Event revisions (MON-4) ----------------------------------------
+    // One immutable document per saved revision of a non-private event: the whole event as the
+    // editing device saved it, who saved it, when their device says they did, and when the server
+    // received it. docs/DESIGN-court-record.md §4 is the design; CLAUDE.md item 25 the invariants.
+    //
+    // **Create only, for everybody, for ever.** That is the whole guarantee the export sells: a
+    // revision, once written, can be changed or removed by neither parent. `update` and `delete`
+    // are false with no exception — an account deletion runs as admin and bypasses this, which
+    // is the one path meant to remove them.
+
+    // True when the caller may edit the event document [ev] — its creator, or a co-parent the
+    // event is shared with under `read_write`. The same two branches as the events update rule.
+    function mayEditEvent(ev) {
+      return ev.get('createdByFirebaseUid', '') == request.auth.uid ||
+             (request.auth.uid in ev.get('sharedWith', []) &&
+              ev.get('permissions', '') == 'read_write');
+    }
+
+    // True when the caller may record a revision of [eventId].
+    //
+    // A missing event does not refuse it, deliberately. The revision comes from a device outbox,
+    // and the event may not have landed yet (created offline) or may already be gone (created and
+    // deleted offline, or swept 90 days after its tombstone); refusing either would strand the
+    // outbox for ever. It grants nothing: the author is the caller and the audience is bound to
+    // the caller's own family below, so a revision of a missing event is the caller's own words
+    // under their own name — which is what creating an event already is.
+    function mayRecordRevisionOf(eventId) {
+      return !exists(/databases/$(database)/documents/events/$(eventId)) ||
+             mayEditEvent(get(/databases/$(database)/documents/events/$(eventId)).data);
+    }
+
+    match /event_versions/{versionId} {
+      // The revision's own audience, frozen when it was saved. Not the event's current one and
+      // not `calendar_friends`: a friend sees the calendar as it stands, and the history of how
+      // the two parents edited it is theirs. Unpair does not narrow it either — the ex-partner
+      // keeps the revisions they could see, as they keep the chat thread.
+      allow read: if isAuthenticated() &&
+                    request.auth.uid in resource.data.get('sharedWith', []);
+
+      allow create: if isAuthenticated() &&
+                      request.resource.data.keys().hasOnly(
+                        ['eventId', 'kind', 'editorUid', 'deviceTimeMillis', 'recordedAt',
+                         'sharedWith', 'familyId', 'event', 'formatVersion']) &&
+                      request.resource.data.keys().hasAll(
+                        ['eventId', 'kind', 'editorUid', 'deviceTimeMillis', 'recordedAt',
+                         'sharedWith', 'familyId', 'event', 'formatVersion']) &&
+                      request.resource.data.editorUid == request.auth.uid &&
+                      // The server's clock, and only the server's: the client writes
+                      // `FieldValue.serverTimestamp()`, which is exactly `request.time`.
+                      request.resource.data.recordedAt == request.time &&
+                      request.resource.data.deviceTimeMillis is int &&
+                      request.resource.data.kind in ['created', 'updated', 'deleted'] &&
+                      request.resource.data.formatVersion is int &&
+                      request.resource.data.eventId is string &&
+                      request.resource.data.event is map &&
+                      request.resource.data.event.get('id', '') == request.resource.data.eventId &&
+                      request.resource.data.sharedWith is list &&
+                      request.auth.uid in request.resource.data.sharedWith &&
+                      isMyAudience(request.resource.data.sharedWith) &&
+                      familyIsMineOrBlank(request.resource.data.familyId) &&
+                      mayRecordRevisionOf(request.resource.data.eventId);
+
+      allow update, delete: if false;
+    }
+
+    // `export_receipts/{recordId}` — the SHA-256 of an exported file, registered under the record
+    // id the file prints (MON-16, docs/DESIGN-court-record.md §10).
+    //
+    // **Closed to every client, in both directions.** The callables in `functions/` are the only
+    // readers and writers, as admin: `reserveExportRecordId` mints the id, `registerExportReceipt`
+    // records the hash once, and `verifyExport` answers a verifier with a fixed, identity-free
+    // view. A client that could write here could register a hash for a file the app never made,
+    // or re-date one it did; a client that could read here could learn who exported what and
+    // when — `generatorUid` and `familyId` are exactly what `verifyExport` refuses to disclose.
+    // Firestore denies by default, so this block changes nothing at runtime; it exists so the
+    // intent is stated and `firestore-tests/rules/export-receipts.test.js` has something to pin.
+    match /export_receipts/{recordId} {
+      allow read, write: if false;
     }
 
     // ---- Child info ----------------------------------------------------
@@ -752,6 +960,92 @@ service cloud.firestore {
                       resource.data.createdByFirebaseUid == request.auth.uid;
     }
 
+    // ---- Family documents (the vault, MON-23) ---------------------------
+    // One document per file a parent filed for the family: a court order, a school letter, a
+    // passport scan. The document is the *index* of a file in Cloud Storage; the bytes live at
+    // `storagePath`, gated by `storage.rules`' `family_documents` block, and this document never
+    // carries a download URL — a token URL bypasses Storage rules entirely, so the field is
+    // refused by `vaultKeysOnly`.
+    //
+    // **Shared by definition.** There is no private vault document (item 3 has no counterpart
+    // here), so the family is required, not `familyIsMineOrBlank`, and the audience is bounded
+    // twice: by `isMyAudience` like every per-document audience since item 23, and by the family
+    // id itself, so a parent with two co-parents cannot show one family's court order to the
+    // other family's parent.
+    //
+    // After creation only the title, the category and the tombstone move, and only the uploader
+    // moves them. The co-parent reads and can open the file but cannot rename, re-file or delete
+    // what the other parent filed: in a product whose records settle disagreements, "who filed
+    // this, and is it still what they filed" has to stay answerable. A delete is a tombstone
+    // (item 14); `sweepDeletedDocuments` removes the document and its file after 90 days.
+    function vaultContentTypes() {
+      return ['application/pdf', 'image/jpeg', 'image/png', 'image/heic', 'image/heif',
+              'image/webp'];
+    }
+
+    function vaultKeysOnly(data) {
+      return data.keys().hasOnly(['id', 'familyId', 'createdByFirebaseUid', 'sharedWith',
+                                  'title', 'category', 'fileName', 'storagePath',
+                                  'contentType', 'sizeBytes', 'sha256', 'createdAtMillis',
+                                  'deletedAtMillis', 'deletedBy']);
+    }
+
+    function validVaultCategory(category) {
+      return category in ['court_order', 'school', 'medical', 'identity', 'other'];
+    }
+
+    function validVaultFile(data, docId) {
+      return isValidLength(data.fileName, 1, 120) &&
+             !data.fileName.matches('.*[/|].*') &&
+             data.storagePath ==
+               'family_documents/' + data.familyId + '/' + docId + '/' + data.fileName &&
+             data.contentType in vaultContentTypes() &&
+             data.sizeBytes is int &&
+             data.sizeBytes > 0 &&
+             data.sizeBytes < 20 * 1024 * 1024 &&
+             data.sha256 is string &&
+             data.sha256.matches('^[0-9a-f]{64}$') &&
+             data.createdAtMillis is int;
+    }
+
+    match /family_documents/{docId} {
+      allow read: if isAuthenticated() &&
+                    request.auth.uid in resource.data.get('sharedWith', []);
+
+      allow create: if isAuthenticated() &&
+                      vaultKeysOnly(request.resource.data) &&
+                      !('deletedAtMillis' in request.resource.data) &&
+                      !('deletedBy' in request.resource.data) &&
+                      request.resource.data.id == docId &&
+                      request.resource.data.createdByFirebaseUid == request.auth.uid &&
+                      isFamilyMember(request.resource.data.familyId) &&
+                      request.auth.uid in request.resource.data.sharedWith &&
+                      isMyAudience(request.resource.data.sharedWith) &&
+                      request.resource.data.sharedWith.toSet()
+                        .difference(request.resource.data.familyId.split('__').toSet())
+                        .size() == 0 &&
+                      isValidLength(request.resource.data.title, 1, 200) &&
+                      validVaultCategory(request.resource.data.category) &&
+                      validVaultFile(request.resource.data, docId);
+
+      allow update: if isAuthenticated() &&
+                      resource.data.createdByFirebaseUid == request.auth.uid &&
+                      vaultKeysOnly(request.resource.data) &&
+                      (
+                        (request.resource.data.diff(resource.data).affectedKeys()
+                           .hasOnly(['title', 'category']) &&
+                         isValidLength(request.resource.data.title, 1, 200) &&
+                         validVaultCategory(request.resource.data.category)) ||
+                        (request.resource.data.diff(resource.data).affectedKeys()
+                           .hasOnly(['deletedAtMillis', 'deletedBy']) &&
+                         request.resource.data.deletedBy == request.auth.uid &&
+                         request.resource.data.deletedAtMillis is int)
+                      );
+
+      // Tombstones only (item 14). The sweep and account deletion run as admin.
+      allow delete: if false;
+    }
+
     // ---- Expenses (receipt sync) --------------------------------------
     // The one collection where "a co-parent of the author" was standing in for "in the same
     // family", and the only real leak a second co-parent opens (docs/DESIGN-multi-family.md,
@@ -897,6 +1191,9 @@ service cloud.firestore {
     // guest kind, this only stops a malformed document existing;
     // `acceptCalendarFriendInvitation` re-checks everything with Admin credentials, including
     // the thing rules cannot cheaply check: that the inviter is a *paired parent*.
+    // A **professional** invitation (MON-18) names the family it opens — one the inviter is in —
+    // the profession, and an end no more than 180 days out. `acceptProfessionalInvitation`
+    // re-checks all of it, clamps the end again, and checks the family is still a live pairing.
     function validInvitationKind(data) {
       return !data.keys().hasAny(['kind']) || (
         data.kind == 'guest' &&
@@ -910,7 +1207,28 @@ service cloud.firestore {
         data.keys().hasAll(['friendExpiresAt']) &&
         data.friendExpiresAt is number &&
         data.friendExpiresAt > request.time.toMillis()
+      ) || (
+        data.kind == 'professional' &&
+        data.keys().hasAll(['professionalRole', 'professionalExpiresAt', 'familyId']) &&
+        isProfessionalRole(data.professionalRole) &&
+        data.professionalExpiresAt is number &&
+        data.professionalExpiresAt > request.time.toMillis() &&
+        data.professionalExpiresAt <= request.time.toMillis() + professionalMaxMillis() &&
+        isFamilyMember(data.familyId)
       );
+    }
+
+    // The professions a `professional` invitation may name (MON-18). A label, not a permission:
+    // every role reads the same two things. Listed so the stored value is one the app can word.
+    function isProfessionalRole(role) {
+      return role in ['mediator', 'lawyer', 'guardian_ad_litem', 'therapist', 'other'];
+    }
+
+    // The longest a professional grant may run: 180 days, in millis. The same constant is
+    // `PROFESSIONAL_MAX_DAYS` in functions/index.js and `ProfessionalGrantPolicy.MAX_DURATION_DAYS`
+    // on the client; the callable clamps to it again, so this only stops a malformed offer.
+    function professionalMaxMillis() {
+      return 180 * 24 * 60 * 60 * 1000;
     }
 
     // True when the caller's token carries an address Firebase has actually verified.
@@ -1192,7 +1510,9 @@ service cloud.firestore {
     match /parenting_plans/{planId} {
       // Split from `list` deliberately: nothing queries this collection, and a rule that keys on
       // the document id cannot constrain a query, so allowing `list` would be allowing a scan.
-      allow get: if isFamilyMember(planId);
+      // A professional with an active grant over this family reads it too (MON-18), and writes
+      // nothing: `planHalfIsMine` below keys every write on the caller being a family member.
+      allow get: if isFamilyMember(planId) || isProfessionalOf(planId);
 
       // Create and update are the same intent expressed twice, because `resource` is null on a
       // create and reading through it there is an evaluation error, not null — the hazard this
@@ -1237,7 +1557,11 @@ service cloud.firestore {
                      : (request.auth.uid in resource.data.participants &&
                         (isPartnerOf(resource.data.participants[0]) ||
                          isPartnerOf(resource.data.participants[1])))
-                 );
+                 ) ||
+                 // A professional with an active grant over this family (MON-18) reads the
+                 // schedule — present or not yet written, so their listener starts cleanly —
+                 // and can write none of it: every write below requires a participant.
+                 isProfessionalOf(modelId);
 
       // The id must be the canonical id of the document's own participants. Without this, any
       // authenticated account could create custody_models/{momUid}__{dadUid} with unrelated
@@ -1466,8 +1790,12 @@ service cloud.firestore {
       // `conversations` create and `custody_models` get already apply. Unpair keeps the thread
       // for its history but must end the writing: without this an ex-partner kept posting, and
       // `onChatMessageCreated` kept pushing it to the other parent's lock screen.
+      // `attachments` is bounded because since MON-23 it carries file references
+      // (`ChatAttachmentCodec`) as well as the one event id a change-request card names; ten is
+      // far above what any client writes and keeps a message document a message.
       allow create: if isAuthenticated() &&
                       request.resource.data.senderId == request.auth.uid &&
+                      request.resource.data.get('attachments', []).size() <= 10 &&
                       request.auth.uid in
                         get(/databases/$(database)/documents/conversations/$(request.resource.data.conversationId))
                           .data.participants &&

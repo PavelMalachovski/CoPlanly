@@ -178,6 +178,11 @@ function family() {
     ],
     custody_models: [{id: `${ALICE}__${BOB}`, participants: [ALICE, BOB]}],
     calendar_friends: [],
+    calendar_feeds: [
+      {id: 'hash-alice', ownerUid: ALICE, familyMembers: [ALICE, BOB]},
+      {id: 'hash-bob', ownerUid: BOB, familyMembers: [ALICE, BOB]},
+      {id: 'hash-other', ownerUid: 'carol', familyMembers: ['carol', 'dave']},
+    ],
     friend_profiles: [],
     invitations: [{id: 'inv-1', fromUserId: ALICE, status: 'pending'}],
     notification_queue: [{id: 'n-1', targetUserId: ALICE}],
@@ -189,6 +194,13 @@ describe('deleteAccountDataImpl', () => {
 
   before(() => {
     myFunctions = require('../index');
+  });
+
+  // MON-17: a feed link into a family this account was in names the account, whoever made it.
+  it('removes every calendar-feed link into the departing parent\'s families', async () => {
+    const db = fakeDb(family());
+    await myFunctions.deleteAccountDataImpl(db, ALICE);
+    assert.deepStrictEqual(db._store.calendar_feeds.map((f) => f.id), ['hash-other']);
   });
 
   it('removes the account profile itself', async () => {
@@ -219,6 +231,25 @@ describe('deleteAccountDataImpl', () => {
     const survivor = db._store.events.find((e) => e.id === 'ev-bob');
     assert.ok(!survivor.sharedWith.includes(ALICE), 'ex-account still in sharedWith');
     assert.ok(survivor.sharedWith.includes(BOB), 'the author lost their own audience');
+  });
+
+  // MON-4. A revision is the one document no client may ever delete, so this is the only path
+  // that removes one — and it must remove exactly the departing parent's, not the co-parent's
+  // record of what *they* changed on the departing parent's event.
+  it('deletes the revisions the user saved and narrows the co-parent\'s', async () => {
+    const db = fakeDb(Object.assign(family(), {
+      event_versions: [
+        {id: 'v-alice', eventId: 'ev-alice', editorUid: ALICE, sharedWith: [ALICE, BOB]},
+        {id: 'v-bob', eventId: 'ev-alice', editorUid: BOB, sharedWith: [ALICE, BOB]},
+      ],
+    }));
+
+    const removed = await myFunctions.deleteAccountDataImpl(db, ALICE);
+
+    assert.deepStrictEqual(db._store.event_versions.map((v) => v.id), ['v-bob']);
+    assert.deepStrictEqual(db._store.event_versions[0].sharedWith, [BOB]);
+    assert.strictEqual(removed.event_versions, 1);
+    assert.strictEqual(removed.event_versions_scrubbed, 1);
   });
 
   it('deletes the conversation and every message in it', async () => {
@@ -335,4 +366,152 @@ describe('deleteAccountDataImpl', () => {
         'a grant naming the deleted family, or held by it, survived');
     assert.deepStrictEqual(db._store.friend_profiles, []);
   });
+
+  it('removes professional grants in both directions (MON-18)', async () => {
+    const seed = family();
+    seed.professional_grants = [
+      {id: 'alice__bob__med', familyId: 'alice__bob', familyParents: [ALICE, BOB], proUid: 'med',
+        expiresAtMillis: 4102444800000},
+      {id: 'x__y__alice', familyId: 'x__y', familyParents: ['x', 'y'], proUid: ALICE,
+        expiresAtMillis: 4102444800000},
+      {id: 'x__y__med', familyId: 'x__y', familyParents: ['x', 'y'], proUid: 'med',
+        expiresAtMillis: 4102444800000},
+    ];
+    const db = fakeDb(seed);
+
+    await myFunctions.deleteAccountDataImpl(db, ALICE);
+
+    assert.deepStrictEqual(db._store.professional_grants.map((g) => g.id), ['x__y__med'],
+        'only a grant that neither names nor is held by the deleted account may survive');
+  });
+
+  // The documents were erased and the files they named were not: a child's medical photographs
+  // stayed in the bucket under ids nothing could look up any more. The files have to go first,
+  // while the documents still say which files exist.
+  it('deletes the files of authored records, and only those', async () => {
+    const seed = family();
+    seed.pets = [{id: 'pet-1', createdByFirebaseUid: ALICE, sharedWith: [ALICE, BOB]}];
+    const db = fakeDb(seed);
+    const bucket = fakeBucket();
+
+    const result = await myFunctions.deleteAccountDataImpl(db, ALICE, bucket);
+
+    assert.deepStrictEqual(bucket.deletedObjects.sort(),
+        ['event_images/ev-alice.jpg', 'receipts/ex-1.jpg']);
+    assert.deepStrictEqual(bucket.deletedPrefixes.sort(),
+        [`chat_attachments/${ALICE}__${BOB}/`, 'medical_photos/ch-1/', 'pet_photos/pet-1/']);
+    assert.ok(!bucket.deletedObjects.includes('event_images/ev-bob.jpg'),
+        'the co-parent\'s event photo was deleted');
+    assert.strictEqual(result.storage, 4);
+    assert.strictEqual(result.chat_attachments, 1);
+  });
+
+  // MON-23. The vault's files are the departing parent's uploads, and its documents are authored
+  // records like any other; the co-parent's own filings stay, with the departing uid scrubbed.
+  it('deletes the vault files this parent filed, and only those', async () => {
+    const seed = family();
+    const fam = `${ALICE}__${BOB}`;
+    seed.family_documents = [
+      {id: 'vd-alice', familyId: fam, createdByFirebaseUid: ALICE, sharedWith: [ALICE, BOB]},
+      {id: 'vd-bob', familyId: fam, createdByFirebaseUid: BOB, sharedWith: [ALICE, BOB]},
+    ];
+    const db = fakeDb(seed);
+    const bucket = fakeBucket();
+
+    const result = await myFunctions.deleteAccountDataImpl(db, ALICE, bucket);
+
+    assert.ok(bucket.deletedPrefixes.includes(`family_documents/${fam}/vd-alice/`));
+    assert.ok(!bucket.deletedPrefixes.includes(`family_documents/${fam}/vd-bob/`),
+        'the co-parent\'s filing was deleted');
+    assert.strictEqual(result.family_documents, 1);
+    assert.deepStrictEqual(db._store.family_documents.map((d) => d.id), ['vd-bob']);
+    assert.deepStrictEqual(db._store.family_documents[0].sharedWith, [BOB]);
+  });
+
+  it('never turns a vault document without a family into a prefix of the whole vault',
+      async () => {
+        const seed = family();
+        seed.family_documents = [
+          {id: 'vd-odd', familyId: '', createdByFirebaseUid: ALICE, sharedWith: [ALICE]},
+        ];
+        const bucket = fakeBucket();
+
+        await myFunctions.deleteAccountDataImpl(fakeDb(seed), ALICE, bucket);
+
+        assert.ok(!bucket.deletedPrefixes.some((p) => p.startsWith('family_documents/')),
+            'a blank familyId produced a vault-wide prefix');
+      });
+
+  it('erases the chat files of every thread with the rest of the chat', async () => {
+    const db = fakeDb(family());
+    const bucket = fakeBucket();
+
+    await myFunctions.deleteAccountDataImpl(db, ALICE, bucket);
+
+    assert.ok(bucket.deletedPrefixes.includes(`chat_attachments/${ALICE}__${BOB}/`));
+    assert.deepStrictEqual(db._store.messages, []);
+  });
+
+  it('keeps the documents when a file cannot be deleted, so a retry finds it', async () => {
+    const db = fakeDb(family());
+    const bucket = fakeBucket({failOn: 'receipts/ex-1.jpg'});
+
+    await assert.rejects(myFunctions.deleteAccountDataImpl(db, ALICE, bucket));
+
+    assert.deepStrictEqual(db._store.expenses.map((e) => e.id), ['ex-1']);
+    assert.ok(db._store.users.some((u) => u.id === ALICE), 'the profile went before the files');
+  });
+
+  // MON-16. A receipt vouches for a file that may already be evidence; erasing the parent who
+  // made it must not un-verify it. What goes is what identifies them.
+  it('scrubs export receipts rather than deleting them, and drops unused reservations', async () => {
+    const seedDocs = Object.assign(family(), {
+      export_receipts: [
+        {id: 'R-ALICE', state: 'registered', generatorUid: ALICE, familyId: `${ALICE}__${BOB}`,
+          sha256: 'a'.repeat(64)},
+        {id: 'R-PENDING', state: 'reserved', generatorUid: ALICE, familyId: `${ALICE}__${BOB}`},
+        {id: 'R-BOB', state: 'registered', generatorUid: BOB, familyId: `${ALICE}__${BOB}`,
+          sha256: 'b'.repeat(64)},
+      ],
+    });
+    const db = fakeDb(seedDocs);
+    const removed = await myFunctions.deleteAccountDataImpl(db, ALICE);
+
+    const byId = (id) => db._store.export_receipts.find((r) => r.id === id);
+    assert.strictEqual(byId('R-PENDING'), undefined);
+    assert.deepStrictEqual(
+        [byId('R-ALICE').generatorUid, byId('R-ALICE').familyId, byId('R-ALICE').sha256],
+        ['', '', 'a'.repeat(64)]);
+    assert.deepStrictEqual([byId('R-BOB').generatorUid, byId('R-BOB').familyId], [BOB, '']);
+    assert.strictEqual(removed.export_receipts_deleted, 1);
+    assert.ok(!JSON.stringify(db._store.export_receipts).includes(ALICE), 'the erased uid survived');
+  });
 });
+
+/**
+ * A Storage bucket that records what it was asked to delete.
+ *
+ * @param {{failOn: (string|undefined)}=} options An object path whose delete throws.
+ * @return {!Object} The fake, exposing `deletedObjects` and `deletedPrefixes`.
+ */
+function fakeBucket(options) {
+  const failOn = options && options.failOn;
+  const deletedObjects = [];
+  const deletedPrefixes = [];
+  return {
+    deletedObjects,
+    deletedPrefixes,
+    file(path) {
+      return {
+        async delete(opts) {
+          assert.ok(opts && opts.ignoreNotFound, 'a missing photo must not fail the erasure');
+          if (path === failOn) throw new Error(`storage unavailable for ${path}`);
+          deletedObjects.push(path);
+        },
+      };
+    },
+    async deleteFiles(opts) {
+      deletedPrefixes.push(opts.prefix);
+    },
+  };
+}

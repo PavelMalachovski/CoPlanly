@@ -10,6 +10,23 @@
 > third parties the code really talks to — rather than from a template. If the code changes,
 > this changes with it. See `docs/legal/DATA-SAFETY.md` for the same facts in the shape the
 > Play Console asks for.
+>
+> ### Owner must fill
+>
+> Everything else in this document was filled from the code (September 2026). These are the
+> facts only the owner can supply; each is a `{{PLACEHOLDER}}` in the text below.
+>
+> | Placeholder | What goes in |
+> | --- | --- |
+> | `{{DATE}}` (twice) | The publication date, and the date the policy takes effect |
+> | `{{LEGAL_ENTITY_NAME}}`, `{{REGISTERED_ADDRESS}}`, `{{COMPANY_ID}}` | The controller: a person or a company, its address, and its registration number (IČO) |
+> | `{{PRIVACY_CONTACT_EMAIL}}` | An address somebody actually reads — it is the only route for a person who has uninstalled the app |
+> | `{{DPO_PARAGRAPH_IF_APPOINTED}}` | Whether a Data Protection Officer is appointed. Large-scale processing of health data can make one mandatory (Art. 37(1)(c)); this is the lawyer's question. Delete the line if none is |
+> | `{{FIRESTORE_REGION}}` | The Firestore and Cloud Storage location of the production project, from the Firebase console (Firestore → Settings). The functions' region is already stated: they run in `us-central1`, because `functions/index.js` names no other |
+> | `{{WEB_DELETION_URL}}` | Where `web/delete-account/` is hosted |
+>
+> Delete this whole box before publishing; `tools/wrap-legal-page.js` keeps a draft banner on
+> the page until the last placeholder is gone.
 
 **Last updated:** {{DATE}}
 **Effective:** {{DATE}}
@@ -48,18 +65,52 @@ decide what each of you may read. **Legal basis:** performance of our contract w
 ### What you enter about your family
 
 - **Calendar events** — titles, times, locations, notes, event types, and optional photos.
+  Every saved version of an event you share is kept, with who saved it and when, so the two of
+  you can export the history of your calendar. Neither parent can edit or delete a saved
+  version; the versions you saved are removed when you delete your account. Private events
+  have no saved versions.
 - **The custody schedule** — the pattern you agree and any one-off day swaps.
 - **Expenses and budgets** — amounts, currencies, categories, and optional receipt photos.
 - **Records about your child** — name, date of birth, school and activity details, emergency
   contacts, and a medical profile: allergies, medications, conditions, blood group,
   vaccinations, doctors' notes and photographs you attach to them.
 - **Records about a pet**, in the same shape.
-- **Messages** between you and your co-parent.
+- **Messages** between you and your co-parent, and the **photos and PDF files** either of you
+  sends in them. A file sent in a message stays in the thread like the message itself: neither of
+  you can edit or delete it afterwards.
+- **Family documents** — files you add to the family's document store (a court order, a school
+  letter, a scan of an identity document), with the name and category you give them. **A
+  document is always shared with your co-parent**: there are no private documents. Only the
+  parent who added a document can rename or delete it; a deleted document disappears from both
+  of your lists at once, and its file is removed from our servers 90 days later.
+
+For every shared file we also keep its size, its type and a **SHA-256 fingerprint** of its
+contents, so that the app can check a downloaded file is the one that was shared, and so that an
+export can list the files a message carried by name and fingerprint (the files themselves are
+never put into an export). Files are stored in Cloud Storage under your family, and only the two
+parents of that family can download them; we never create a public link to one.
 
 **Why:** these are the contents of the service. **Legal basis:** performance of our contract
 with you (Art. 6(1)(b)). For the medical profile, which is health data under Art. 9, we rely
 on your **explicit consent** (Art. 9(2)(a)): the medical fields are optional, you choose
 whether to fill them, and you can delete them at any time. The app works without them.
+
+### Exports you make
+
+You can export the record of what you and your co-parent wrote and recorded as a PDF or CSV
+file. **The file is made on your phone and is not sent to us.** When your phone can reach our
+server at that moment, we keep a **receipt** for it: a record ID printed on the file, a SHA-256
+fingerprint of the file (a one-way value from which the file cannot be reconstructed), its size
+and format, the period it covers, when it was registered, your account, and the family it was
+made for. Anyone who holds the file — or only its record ID — can ask our verification page
+whether it was registered and when. The answer gives the time, the period, the format and the
+size, and says the file was made by "one of the family's parents"; it never names you or
+identifies your account. The verification page fingerprints the file in the checker's own
+browser and sends us only the fingerprint.
+
+**Why:** so that a lawyer, a mediator or a court can check that an export you handed over has not
+been altered. **Legal basis:** performance of our contract with you (Art. 6(1)(b)) — verification
+is part of the export you asked for.
 
 ### Data about a child
 
@@ -71,12 +122,31 @@ child's records rather than on the child's consent.
 
 ### People you invite
 
-- **Your co-parent**: their email address, if you invite them by email.
+- **Your co-parent**: nothing, until they accept. An invitation is a code you pass on
+  yourself; it carries your name and email address so that the person redeeming it can see who
+  invited them, and we never ask for theirs.
 - **A guest** (for example a grandparent) whom you grant time-limited access to one child's
   record.
 - **A calendar friend** whom you grant time-limited read access to the family calendar.
+- **A professional** — a mediator, lawyer, guardian ad litem or therapist — whom **both** parents
+  let read the family calendar, custody schedule and parenting plan, read-only, for at most 180
+  days. They never see your messages, expenses or records about your child. Access starts only
+  once each parent has consented in the app, and either parent can end it alone at any time. The
+  professional sees the two parents' names; you see theirs and, if they signed in with Google,
+  their profile picture.
 
 Every such grant carries an expiry, is visible to both parents, and can be revoked at any time.
+
+### Calendar links you create
+
+You can create a **read-only calendar link** (Settings → Sync) so that a calendar app — for
+example Apple Calendar on an iPhone — can show your family's custody days and shared events.
+Anyone who has the link can read what it shows, so share it only with the person it is for. It
+never includes private events, deleted events, chat, expenses or children's records. We store a
+one-way fingerprint (a SHA-256 hash) of the link, never the link itself, together with the family
+it belongs to, who created it and when a calendar last fetched it. You can revoke a link at any
+time; a link no calendar has fetched for **90 days** is deleted automatically, and every link into
+a family ends when the co-parents unlink or either account is deleted.
 
 ### Technical data
 
@@ -86,6 +156,10 @@ Every such grant carries an expiry, is visible to both parents, and can be revok
   child. They record which screens are opened and which actions succeed or fail.
   Both are **off until you agree** on the screen shown before sign-in, and you can change your
   answer at any time in Settings → App.
+- **The verification page's rate limit.** When somebody checks an export on the verification
+  page, our server uses their IP address to limit how many checks one connection can make. The
+  address is held in the server's memory for at most ten minutes and is never written to our
+  database or logs.
 
 ### Google Calendar, if you connect it
 
@@ -113,39 +187,76 @@ We do not sell personal data, and we do not use it for advertising.
 | --- | --- | --- |
 | **Your co-parent** | Everything you share — which is most of it | The purpose of the service |
 | **Guests and calendar friends you invite** | Only the record or calendar you granted, until the grant expires | Because you granted it |
+| **Whoever holds a calendar link you created** | Custody days and shared events, read-only, until you revoke the link | Because you created and shared it |
+| **Anyone holding an export you made, or its record ID** | Whether it was registered, when, the period, the format and the size — never who made it | So the export can be verified |
+| **A professional both parents admit** | The calendar, custody schedule and parenting plan of that one family, read-only, until the grant expires | Because both of you consented |
 | Google (Firebase) | Account data, all synced content, files, push tokens, crash and usage data | Our hosting, database, file storage and messaging provider |
 | Google (Calendar API) | Only your calendar, only if you connect it | The integration you enabled |
 
 Google processes data both inside and outside the EU. Transfers outside the EEA rely on the
-European Commission's Standard Contractual Clauses. {{FIRESTORE_REGION_SENTENCE}}
+European Commission's Standard Contractual Clauses. Our database and file storage are located
+in {{FIRESTORE_REGION}}. Our server functions — which link co-parents, send notifications,
+renew Google Calendar access and delete accounts — run in Google's `us-central1` region in the
+United States, so the data each of them handles is processed there.
 
 We disclose data to authorities only where the law requires it.
 
 ## How long we keep it
 
 We keep what you enter for as long as your account exists. When you delete your account
-(below), it is removed as described there. Guest and friend grants expire automatically on the
-date set when they were issued, and a daily job removes lapsed ones. Old queued notifications
-are deleted after 30 days.
+(below), it is removed as described there.
+
+When you delete a single event, expense, child record or pet, the record is marked as deleted
+rather than removed at once, so that your co-parent's phone learns of the deletion the next time
+it syncs. A daily job removes it for good **90 days** after you deleted it.
+
+A guest's access to a child's record ends on the date set when it was granted, and a daily job
+removes lapsed grants. A calendar friend's and a professional's access also end on their expiry
+date, and a daily job removes the lapsed grant. A professional's access also ends when the two
+parents unlink. Queued
+notifications are deleted after **30 days**.
+
+An export's receipt is kept for as long as it can vouch for a file somebody may still rely on,
+which has no natural end: it is kept after your account is deleted too, but without your account
+or your family in it (see below). A record ID reserved for an export that was never registered —
+because the phone lost its connection half-way — is deleted with your account.
 
 ## Deleting your account
 
 **Settings → Account → Delete account.** This is irreversible and, once confirmed, it:
 
-- deletes your profile, your events, your expenses and budgets, the records you entered about
-  your child and pet, your custody schedule, your invitations, and the whole message thread
-  with your co-parent;
-- removes you from the audience of anything your co-parent created;
+- deletes your profile, your events and the saved revisions of events you edited, your expenses
+  and budgets, the records you entered about your child and pet, your custody schedule and agreed
+  expense split, your parenting plan, your invitations, and the whole message thread with your
+  co-parent;
+- deletes the photographs attached to those records — event photos, receipts, and medical and
+  pet photographs — the family documents you added, and every photo and PDF file sent in the
+  message thread, whichever of you sent it;
+- removes you from the audience of anything your co-parent created, and ends any guest,
+  calendar-friend or professional access you granted or held;
+- deletes every read-only calendar link into your families, whichever of you created it;
 - unlinks the two of you, so their access ends immediately;
+- deletes the fingerprint of your Google Calendar authorisation, if you connected one, and
+  any notifications still queued for you;
+- removes your account and your family from the receipts of exports you or your co-parent made.
+  The fingerprint, period, format, size and registration time stay, so that an export already
+  handed to a lawyer or a court can still be verified — but nothing left in a receipt identifies
+  you. Record IDs reserved for exports that were never registered are deleted;
 - deletes your authentication account;
 - wipes the local copy on the device you did it from.
 
-One consequence, stated plainly because it surprises people: **records your co-parent entered
-remain in their account, and records you entered disappear from theirs.** Deleting your data
-means deleting it everywhere, including from the calendar you shared.
+It happens at once. We do not keep a copy of a deleted account to restore later.
 
-If you no longer have the app installed, write to {{PRIVACY_CONTACT_EMAIL}} and we will delete
-the account for you. {{WEB_DELETION_URL}}
+Two consequences, stated plainly because they surprise people. First: **records your co-parent
+entered remain in their account, and records you entered disappear from it** — including from
+the calendar you shared. Second: **we can only delete what is on our servers and on the phone
+you delete from.** A copy your co-parent's phone had already downloaded stays on that phone
+until they delete it or uninstall the app, and the same is true of any other phone you were
+signed in on.
+
+If you no longer have the app installed, write to {{PRIVACY_CONTACT_EMAIL}} from the address
+your account uses and we will delete the account for you within 30 days. The same steps are on
+our account-deletion page: {{WEB_DELETION_URL}}.
 
 ## Your rights
 

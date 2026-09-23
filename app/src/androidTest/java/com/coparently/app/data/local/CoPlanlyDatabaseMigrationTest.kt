@@ -630,6 +630,76 @@ class CoPlanlyDatabaseMigrationTest {
     }
 
     /**
+     * 33-to-34 adds `parenting_plan_entries` (MON-5) and touches nothing that already exists.
+     *
+     * The migration only creates a table, so the row worth carrying across is one it must *not*
+     * disturb: the parent's own `users` row, country included. Past that, three things are
+     * asserted rather than assumed. The new table starts empty — a pair with no plan has no row,
+     * and a seeded one would read as an answer nobody gave. It takes both halves of one family,
+     * one per author. And the composite key `(familyId, authorUid)` really is the key: a second
+     * row for the same author in the same family is refused, which is what keeps the signed-in
+     * parent's half from ever being confused with the co-parent's mirrored one.
+     * `runMigrationsAndValidate` checks the table's shape against `34.json` on top of this.
+     */
+    @Test
+    fun migration33To34_addsAnEmptyPlanTableAndKeepsTheParent() {
+        val db = helper.createDatabase(TEST_DB, VERSION_33)
+        db.execSQL(
+            """
+            INSERT INTO users (id, email, name, role, colorCode, googleCalendarSyncEnabled,
+                               partnerIdsJson, allergiesJson, medicalProfileJson, countryCode)
+            VALUES ('u1', 'a@example.com', 'Anna', 'mom', '#FF4081', 0, '["u2"]', '[]', '{}', 'SK')
+            """.trimIndent()
+        )
+        db.close()
+
+        val migrated = helper.runMigrationsAndValidate(
+            TEST_DB, VERSION_34, true, DatabaseMigrations.MIGRATION_33_34
+        )
+
+        migrated.query("SELECT name, partnerIdsJson, countryCode FROM users").use {
+            assertTrue(it.moveToFirst())
+            assertEquals("Anna", it.getString(0))
+            assertEquals("[\"u2\"]", it.getString(1))
+            assertEquals("SK", it.getString(2))
+        }
+        migrated.query("SELECT COUNT(*) FROM parenting_plan_entries").use {
+            assertTrue(it.moveToFirst())
+            assertEquals("a pair with no plan has no row", 0, it.getInt(0))
+        }
+
+        migrated.execSQL(
+            """
+            INSERT INTO parenting_plan_entries (familyId, authorUid, catalogueVersion, answersJson,
+                                                agreedToJson, updatedAtMillis, syncedToFirestore)
+            VALUES ('u1_u2', 'u1', 1, '{"q1":"Alternate weeks"}', '{}', 1785578400000, 0),
+                   ('u1_u2', 'u2', 1, '{"q1":"Alternate weeks"}', '{"q1":"Alternate weeks"}',
+                    1785578400000, 1)
+            """.trimIndent()
+        )
+        migrated.execSQL(
+            """
+            INSERT OR IGNORE INTO parenting_plan_entries (familyId, authorUid, catalogueVersion,
+                                                          answersJson, agreedToJson,
+                                                          updatedAtMillis, syncedToFirestore)
+            VALUES ('u1_u2', 'u1', 1, '{"q1":"Every weekend"}', '{}', 1785578500000, 0)
+            """.trimIndent()
+        )
+        migrated.query(
+            "SELECT authorUid, answersJson FROM parenting_plan_entries ORDER BY authorUid"
+        ).use {
+            assertEquals("one row per parent per family", 2, it.count)
+            assertTrue(it.moveToFirst())
+            assertEquals("u1", it.getString(0))
+            assertEquals(
+                "a second row for the same author is refused by the composite key",
+                "{\"q1\":\"Alternate weeks\"}",
+                it.getString(1)
+            )
+        }
+    }
+
+    /**
      * 34-to-35 adds a parent's holiday region (MON-13, regional half) and gives every existing
      * row none.
      *
@@ -706,6 +776,95 @@ class CoPlanlyDatabaseMigrationTest {
         }
     }
 
+    /**
+     * 36-to-37 adds the outbox for event revisions (MON-4) and leaves every event alone.
+     *
+     * The history starts on the day this ships: nothing is backfilled, because a "created"
+     * revision minted from today's state would be a record of the upgrade dated as the parent's.
+     * So an existing event must come through untouched and the new table must be empty — and
+     * usable, which is what the insert at the end proves.
+     */
+    @Test
+    fun migration36To37_addsAnEmptyRevisionOutbox() {
+        val db = helper.createDatabase(TEST_DB, VERSION_36)
+        db.execSQL(
+            """
+            INSERT INTO custody_models (id, modelType, patternDays, momDaysPattern, startDate,
+                                        isActive, repeatYearly, createdAt, lastModifiedAt,
+                                        lastModifiedAtMillis, dayOverridesJson, contactWindowsJson)
+            VALUES ('m1', 'week_on_week_off', 14, '[0,1,2,3,4,5,6]',
+                    '2026-08-03', 1, 1, '2026-08-01T09:00:00', '', 1785578400000, NULL, NULL)
+            """.trimIndent()
+        )
+        db.close()
+
+        val migrated = helper.runMigrationsAndValidate(
+            TEST_DB,
+            VERSION_37,
+            true,
+            DatabaseMigrations.MIGRATION_36_37
+        )
+
+        migrated.query("SELECT momDaysPattern FROM custody_models").use {
+            assertTrue(it.moveToFirst())
+            assertEquals("[0,1,2,3,4,5,6]", it.getString(0))
+        }
+        migrated.query("SELECT COUNT(*) FROM event_version_outbox").use {
+            assertTrue(it.moveToFirst())
+            assertEquals("nothing is backfilled", 0, it.getInt(0))
+        }
+        migrated.execSQL(
+            """
+            INSERT INTO event_version_outbox (id, eventId, kind, editorUid, deviceTimeMillis,
+                                              snapshotJson, audienceJson, familyId, attempts)
+            VALUES ('v1', 'e1', 'created', 'alice', 1787000000000, '{}', '[]', NULL, 0)
+            """.trimIndent()
+        )
+        migrated.query("SELECT kind, familyId FROM event_version_outbox").use {
+            assertTrue(it.moveToFirst())
+            assertEquals("created", it.getString(0))
+            assertTrue("an unshared event's revision has no family", it.isNull(1))
+        }
+    }
+
+    /**
+     * 37-to-38 adds seasonal layers to the custody pattern (MON-14) and gives every existing
+     * pattern none.
+     *
+     * The pattern and its contact windows must come through untouched, and the new column must be
+     * null rather than `[]`, which keeps a row with no layers byte-identical to the mirror's own
+     * output. Needs `38.json`, which the Regenerate workflow exports (`.github/regenerate-request`).
+     */
+    @Test
+    fun migration37To38_keepsThePatternAndAddsNoLayers() {
+        val db = helper.createDatabase(TEST_DB, VERSION_37)
+        db.execSQL(
+            """
+            INSERT INTO custody_models (id, modelType, patternDays, momDaysPattern, startDate,
+                                        isActive, repeatYearly, createdAt, lastModifiedAt,
+                                        lastModifiedAtMillis, dayOverridesJson, contactWindowsJson)
+            VALUES ('m1', 'week_on_week_off', 14, '[0,1,2,3,4,5,6]',
+                    '2026-08-03', 1, 1, '2026-08-01T09:00:00', '', 1785578400000, NULL,
+                    '["2|15:00|19:00|dad"]')
+            """.trimIndent()
+        )
+        db.close()
+
+        val migrated = helper.runMigrationsAndValidate(
+            TEST_DB,
+            VERSION_38,
+            true,
+            DatabaseMigrations.MIGRATION_37_38
+        )
+
+        migrated.query("SELECT momDaysPattern, contactWindowsJson, seasonalLayersJson FROM custody_models").use {
+            assertTrue(it.moveToFirst())
+            assertEquals("[0,1,2,3,4,5,6]", it.getString(0))
+            assertEquals("[\"2|15:00|19:00|dad\"]", it.getString(1))
+            assertTrue("an existing pattern has no seasonal layers", it.isNull(2))
+        }
+    }
+
     private companion object {
         const val TEST_DB = "coplanly-migration-test.db"
         const val VERSION_11 = 11
@@ -721,8 +880,11 @@ class CoPlanlyDatabaseMigrationTest {
         const val VERSION_21 = 21
         const val VERSION_24 = 24
         const val VERSION_25 = 25
+        const val VERSION_33 = 33
         const val VERSION_34 = 34
         const val VERSION_36 = 36
+        const val VERSION_37 = 37
+        const val VERSION_38 = 38
 
         /** 2026-08-01T12:00:00 at UTC+05:30, i.e. 06:30:00Z. */
         const val NOON_AT_PLUS_FIVE_THIRTY_MILLIS = 1_785_565_800_000L

@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Seasonal custody schedules (MON-14) and holiday fairness (MON-20). -->
+<resources>
+    <string name="seasonal_title">Сезонные графики</string>
+    <string name="seasonal_hint">Сезонный график заменяет шаблон выше на период — например, летние каникулы или Рождество. Каждое изменение отправляется отдельно; кнопка «Сохранить» внизу сохраняет только шаблон выше.</string>
+    <string name="seasonal_needs_base_pattern">Сначала сохраните график. Сезонный график накладывается поверх него.</string>
+    <string name="seasonal_add">Добавить сезонный график</string>
+    <string name="seasonal_pending_theirs">%1$s предлагает изменить график. Ответьте на предложение, прежде чем отправлять новое.</string>
+    <string name="seasonal_pending_mine">Ваше последнее изменение ждёт, пока %1$s его примет.</string>
+    <string name="seasonal_sent_for_approval">Отправлено второму родителю на согласование. Пока он не примет, ничего не меняется.</string>
+    <string name="seasonal_saved">Сезонный график сохранён.</string>
+    <string name="seasonal_save_failed">Не удалось отправить сезонный график. Попробуйте ещё раз.</string>
+    <string name="seasonal_answer_pending_first">Предложение второго родителя ждёт вашего ответа. Сначала ответьте на него.</string>
+    <string name="seasonal_dialog_add_title">Новый сезонный график</string>
+    <string name="seasonal_dialog_edit_title">Изменить сезонный график</string>
+    <string name="seasonal_name_label">Название</string>
+    <string name="seasonal_from">С %1$s</string>
+    <string name="seasonal_to">По %1$s</string>
+    <string name="seasonal_fill_from_school">Заполнить по школьным каникулам</string>
+    <string name="seasonal_shape_label">Как делятся дни</string>
+    <string name="seasonal_shape_keep">Оставить как есть</string>
+    <string name="seasonal_shape_all">Всё у одного родителя</string>
+    <string name="seasonal_shape_weeks">Через неделю</string>
+    <string name="seasonal_shape_half">Пополам</string>
+    <string name="seasonal_with">У кого</string>
+    <string name="seasonal_starts_with">Начинает</string>
+    <string name="seasonal_invalid_range">Сезонный график длится с первого по последний день, не больше 366 дней.</string>
+    <string name="seasonal_confirm">Сохранить</string>
+    <string name="seasonal_delete">Удалить</string>
+    <string name="seasonal_cancel">Отмена</string>
+    <string name="seasonal_ok">ОК</string>
+    <string name="fairness_title">Праздники поровну</string>
+    <string name="fairness_no_schedule">Сохраните график, чтобы увидеть, у кого какие праздники.</string>
+    <string name="fairness_nights">Ночи</string>
+    <string name="fairness_christmas_eve">Сочельник</string>
+    <string name="fairness_christmas_day">Рождество</string>
+    <string name="fairness_new_year">Новый год</string>
+    <string name="fairness_easter">Пасха</string>
+    <string name="fairness_birthday">День рождения: %1$s</string>
+    <string name="fairness_show_holidays">Показать другие праздники</string>
+    <string name="fairness_hide_holidays">Скрыть другие праздники</string>
+    <string name="fairness_not_set">Не задано</string>
+    <string name="fairness_note">Подсчитано так, как показывает календарь, с согласованными обменами и сезонными графиками. Дневное время общения ночью не считается.</string>
+    <string name="fairness_propose">Предложить изменение</string>
+    <string name="custody_diff_layers_changed">Сезонные графики тоже меняются.</string>
+</resources>

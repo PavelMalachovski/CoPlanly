@@ -15,4 +15,8 @@
     <string name="consent_decline">No, send nothing</string>
     <string name="settings_telemetry_title">Usage statistics</string>
     <string name="settings_telemetry_description">Anonymous statistics and crash reports. Never your family\'s data.</string>
+    <!-- REL-4. Shown only once BuildConfig.PRIVACY_POLICY_URL is set (PrivacyPolicyLink). -->
+    <string name="privacy_policy_title">Privacy policy</string>
+    <string name="privacy_policy_description">What CoPlanly stores about your family, and why</string>
+    <string name="consent_privacy_policy_link">Read the privacy policy</string>
 </resources>

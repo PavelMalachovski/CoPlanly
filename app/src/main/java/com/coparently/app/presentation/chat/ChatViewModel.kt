@@ -3,6 +3,8 @@ package com.coparently.app.presentation.chat
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.coparently.app.data.chat.ChatPartner
+import com.coparently.app.data.chat.ChatPartnerSource
 import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.domain.chat.ChatReadState
 import com.coparently.app.domain.chat.ChatWindow
@@ -12,10 +14,9 @@ import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.model.Message
 import com.coparently.app.domain.model.MessageSendStatus
 import com.coparently.app.domain.model.MessageType
-import com.coparently.app.domain.model.PairingState
 import com.coparently.app.domain.repository.EventRepository
 import com.coparently.app.domain.repository.MessageRepository
-import com.coparently.app.domain.repository.PairingRepository
+import com.coparently.app.domain.repository.PreferencesRepository
 import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.presentation.common.Loadable
 import com.coparently.app.presentation.common.valueOrNull
@@ -90,19 +91,21 @@ sealed interface ChatEvent {
  *
  * Everything session-dependent here is a *stream*, never a value captured in `init`.
  * The identity ([currentUserId]) follows Firebase Auth and the co-parent link
- * ([coParentLink]) follows [PairingRepository.observePairingState], so a pairing that is
- * established — or ended — while this screen is open is reflected without recreating the
- * ViewModel. The previous version read both once from a Room row that a freshly paired
- * device does not have yet, which left the "chat with my co-parent" action permanently
- * dead for that ViewModel instance.
+ * ([coParentLink]) follows [ChatPartnerSource.observe], so a pairing that is established — or
+ * ended — while this screen is open is reflected without recreating the ViewModel, and so is a
+ * switch of family (M-8): the link names the co-parent of the family the device is *showing*,
+ * not the server's first one. The previous version read both once from a Room row that a
+ * freshly paired device does not have yet, which left the "chat with my co-parent" action
+ * permanently dead for that ViewModel instance.
  */
 @HiltViewModel
 class ChatViewModel @Inject constructor(
     private val messageRepository: MessageRepository,
     private val userRepository: UserRepository,
     private val eventRepository: EventRepository,
-    private val pairingRepository: PairingRepository,
-    private val preferences: EncryptedPreferences
+    private val chatPartnerSource: ChatPartnerSource,
+    private val preferences: EncryptedPreferences,
+    private val preferencesRepository: PreferencesRepository
 ) : ViewModel() {
 
     private val _currentConversationId = MutableStateFlow<String?>(null)
@@ -134,6 +137,25 @@ class ChatViewModel @Inject constructor(
     /** The pending debounced write, cancelled and rescheduled on each keystroke. */
     private var draftWriteJob: Job? = null
 
+    /** The "Pause before sending" hold (MON-19). See [SendHold]. */
+    private val sendHold = SendHold(viewModelScope)
+
+    /**
+     * The message waiting out its pause, or null. The screen shows it as "Sending in N s…" with
+     * an Undo; it is not in the thread yet because it is not anywhere yet.
+     */
+    val pendingSend: StateFlow<PendingSend?> = sendHold.pending
+
+    /**
+     * Whether "Pause before sending" is on, for the composer's hint. Eagerly started: it is one
+     * in-memory flow, and the composer reads it on its first frame.
+     *
+     * Only the *hint* reads this. [sendMessage] asks the repository afresh on every send rather
+     * than trusting a value a subscriber may never have started (CLAUDE.md item 17).
+     */
+    val pauseBeforeSending: StateFlow<Boolean> = preferencesRepository.getPauseBeforeSendingFlow()
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
     private val _events = MutableSharedFlow<ChatEvent>(extraBufferCapacity = 1)
 
     /** One-shot outcomes the screen renders as a snackbar. See [ChatEvent]. */
@@ -162,7 +184,7 @@ class ChatViewModel @Inject constructor(
         )
 
     /** Whether there is a co-parent to chat with. See [CoParentLink]. */
-    val coParentLink: StateFlow<CoParentLink> = pairingRepository.observePairingState()
+    val coParentLink: StateFlow<CoParentLink> = chatPartnerSource.observe()
         .map { it.toCoParentLink() }
         .stateIn(
             scope = viewModelScope,
@@ -396,6 +418,11 @@ class ChatViewModel @Inject constructor(
      *
      * Kept as an independent subscription from [messages] — mirroring `HomeViewModel.unreadCount`'s
      * Home-tile figure — so a failure in one cannot blank the other.
+     *
+     * **The selected family's count, and only that one** (M-8). It follows [coParentLink], so a
+     * family switch re-keys it; and it deliberately does not sum the other families'
+     * conversations, because `ChatMirror` mirrors only the family on screen — a `COUNT(*)` over a
+     * thread nothing is filling would say 0 when it is not (docs/ROADMAP.md M-8).
      */
     @OptIn(ExperimentalCoroutinesApi::class)
     val unreadCount: StateFlow<Int> = combine(currentUserId, coParentLink) { uid, link -> uid to link }
@@ -569,10 +596,25 @@ class ChatViewModel @Inject constructor(
     }
 
     override fun onCleared() {
+        // The scope — and with it the hold's countdown — is already cancelled here, so a held
+        // message would simply vanish. It goes back to the draft store instead: the reader who
+        // switched tabs mid-pause finds it in the composer, unsent, rather than finding it sent
+        // after they could no longer undo it, or not at all.
+        sendHold.undo()?.let { held ->
+            drafts[held.conversationId] = SendHold.restore(held.text, drafts[held.conversationId].orEmpty())
+            pendingDraft = held.conversationId
+        }
         flushDraft()
         super.onCleared()
     }
 
+    /**
+     * Sends [content] to the open thread — after a pause with an Undo, when "Pause before
+     * sending" is on (MON-19).
+     *
+     * Only a text message is held; anything else (a change-request card) is the output of its own
+     * confirmed flow.
+     */
     fun sendMessage(content: String, type: MessageType = MessageType.TEXT, attachments: List<String> = emptyList()) {
         val conversationId = _currentConversationId.value
         if (conversationId == null) {
@@ -595,23 +637,61 @@ class ChatViewModel @Inject constructor(
         // is the record of what was sent; `flushOutbox` is what retries it.
         clearDraft(conversationId)
 
-        launchGuarded("send message") {
-            val user = userRepository.getCurrentUser()
-            val senderName = user?.name ?: "Unknown"
+        // Built when it is actually sent, so a held message carries the time it left rather than
+        // the time it was typed.
+        val send = {
+            launchGuarded("send message") {
+                val user = userRepository.getCurrentUser()
+                val senderName = user?.name ?: "Unknown"
 
-            val message = Message(
-                id = UUID.randomUUID().toString(),
-                conversationId = conversationId,
-                senderId = userId,
-                senderName = senderName,
-                content = content,
-                sentAtMillis = System.currentTimeMillis(),
-                messageType = type,
-                attachments = attachments,
-                status = MessageSendStatus.SENDING
-            )
-            messageRepository.sendMessage(message)
+                val message = Message(
+                    id = UUID.randomUUID().toString(),
+                    conversationId = conversationId,
+                    senderId = userId,
+                    senderName = senderName,
+                    content = content,
+                    sentAtMillis = System.currentTimeMillis(),
+                    messageType = type,
+                    attachments = attachments,
+                    status = MessageSendStatus.SENDING
+                )
+                messageRepository.sendMessage(message)
+            }
         }
+        if (type != MessageType.TEXT) {
+            send()
+            return
+        }
+        launchGuarded("hold message") {
+            if (preferencesRepository.getPauseBeforeSendingFlow().first()) {
+                sendHold.hold(conversationId, content, send)
+            } else {
+                send()
+            }
+        }
+    }
+
+    /**
+     * Cancels the message waiting out its pause and gives its text back to the composer.
+     *
+     * @param composerText What the composer holds now — kept, on a line after the restored text.
+     * @return The composer's new text, or null when nothing was held (the pause had already
+     *   ended, and the message is on its way).
+     */
+    fun undoPendingSend(composerText: String): String? {
+        val held = sendHold.undo() ?: return null
+        val restored = SendHold.restore(held.text, composerText)
+        onDraftChanged(held.conversationId, restored)
+        return restored
+    }
+
+    /**
+     * Widens the thread's window to hold at least [messageCount] of its newest messages, so a
+     * search result that far back can be scrolled to (MON-15). It only ever grows, as
+     * [loadEarlier]'s does; `ChatSearchViewModel` works out the count.
+     */
+    fun showAtLeast(messageCount: Int) {
+        _messageWindow.value = ChatWindow.reaching(_messageWindow.value, messageCount)
     }
 
     /**
@@ -719,21 +799,6 @@ class ChatViewModel @Inject constructor(
             )
         }
 
-    /**
-     * The pairing state as the chat entry point needs to see it.
-     *
-     * A [PairingState.Paired] carrying a blank partner id is what the pairing repository
-     * falls back to when the partner's profile document cannot be read. There is nothing
-     * to start a conversation with in that case, so it reads as [CoParentLink.NotPaired].
-     */
-    private fun PairingState.toCoParentLink(): CoParentLink = when (this) {
-        PairingState.Loading -> CoParentLink.Resolving
-        is PairingState.NotPaired -> CoParentLink.NotPaired
-        is PairingState.Paired ->
-            partner.id.takeIf { it.isNotBlank() }?.let { CoParentLink.Linked(it) }
-                ?: CoParentLink.NotPaired
-    }
-
     private companion object {
         const val UPCOMING_DAYS = 30L
         const val TAG = "ChatViewModel"
@@ -758,4 +823,14 @@ class ChatViewModel @Inject constructor(
         /** Backoff before retrying the read/delivered re-assert collector after a failure. */
         const val MARK_RETRY_DELAY_MS = 2000L
     }
+}
+
+/**
+ * The chat partner as the chat entry point needs to see it. [ChatPartnerSource.resolve] has
+ * already turned a paired state with no usable partner id into [ChatPartner.None].
+ */
+private fun ChatPartner.toCoParentLink(): CoParentLink = when (this) {
+    ChatPartner.Resolving -> CoParentLink.Resolving
+    ChatPartner.None -> CoParentLink.NotPaired
+    is ChatPartner.Linked -> CoParentLink.Linked(partnerUid)
 }

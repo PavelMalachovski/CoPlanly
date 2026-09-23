@@ -26,11 +26,17 @@ import com.coparently.app.domain.model.CustodyModel
  *   swap write re-sends the proposal too, and must not change it. [model]'s windows are the
  *   decoded list, or, when this is null, the agreed pattern's own windows — a proposal that could
  *   not express windows is not a proposal to remove them.
+ * @property seasonalLayersWire The proposal's own `seasonalLayers` list exactly as stored, or null
+ *   when the sub-map has none — a proposal from a build that predates MON-14. Same rule as
+ *   [contactWindowsWire]: carried verbatim by a swap write, and when null [model]'s layers are
+ *   the agreed pattern's, because a proposal that could not express layers is not a proposal to
+ *   remove them.
  */
 data class CustodyProposal(
     val model: CustodyModel,
     val repeatYearly: Boolean,
     val proposedBy: String,
     val proposedAt: String,
-    val contactWindowsWire: List<String>? = null
+    val contactWindowsWire: List<String>? = null,
+    val seasonalLayersWire: List<String>? = null
 )

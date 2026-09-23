@@ -45,8 +45,10 @@ import com.coparently.app.presentation.childinfo.ChildInfoScreen
 import com.coparently.app.presentation.common.animations.*
 import com.coparently.app.presentation.consent.TelemetryConsentScreen
 import com.coparently.app.presentation.consent.TelemetryConsentViewModel
+import com.coparently.app.presentation.documents.FamilyDocumentsScreen
 import com.coparently.app.presentation.event.AddEditEventScreen
 import com.coparently.app.presentation.event.EventListScreen
+import com.coparently.app.presentation.export.ExportScreen
 import com.coparently.app.presentation.onboarding.OnboardingScreen
 import com.coparently.app.presentation.pairing.PairingScreen
 import com.coparently.app.presentation.parentingplan.ParentingPlanScreen
@@ -481,6 +483,12 @@ fun NavGraph(
                     onNavigateToFriends = {
                         navController.navigate(Screen.Friends.route)
                     },
+                    onNavigateToCalendarFeed = {
+                        navController.navigate(Screen.CalendarFeed.route)
+                    },
+                    onNavigateToProfessionals = {
+                        navController.navigate(Screen.Professionals.route)
+                    },
                     onNavigateToPairing = {
                         navController.navigate(Screen.Pairing.routeWithCode(null))
                     },
@@ -489,6 +497,12 @@ fun NavGraph(
                     },
                     onNavigateToParentingPlan = {
                         navController.navigate(Screen.ParentingPlan.route)
+                    },
+                    onNavigateToExport = {
+                        navController.navigate(Screen.Export.route)
+                    },
+                    onNavigateToDocuments = {
+                        navController.navigate(Screen.Documents.route)
                     },
                     onNavigateToMyProfile = {
                         navController.navigate(Screen.MyProfile.route)
@@ -516,6 +530,30 @@ fun NavGraph(
                 popExitTransition = { slideOutToRight() }
             ) {
                 ParentingPlanScreen(onNavigateBack = { navController.popBackStack() })
+            }
+
+            // The communication record (MON-3), off Settings beside the parenting plan: both are
+            // documents two parents may hand to a court, and neither is a tab's daily business.
+            composable(
+                route = Screen.Export.route,
+                enterTransition = { slideInFromRight() },
+                exitTransition = { slideOutToLeft() },
+                popEnterTransition = { slideInFromLeft() },
+                popExitTransition = { slideOutToRight() }
+            ) {
+                ExportScreen(onNavigateBack = { navController.popBackStack() })
+            }
+
+            // The document vault (MON-23), beside the export: the family's papers, shared with both
+            // parents, opened from Settings → Family like the other family records.
+            composable(
+                route = Screen.Documents.route,
+                enterTransition = { slideInFromRight() },
+                exitTransition = { slideOutToLeft() },
+                popEnterTransition = { slideInFromLeft() },
+                popExitTransition = { slideOutToRight() }
+            ) {
+                FamilyDocumentsScreen(onNavigateUp = { navController.popBackStack() })
             }
 
             composable(
@@ -693,6 +731,13 @@ fun NavGraph(
                 )
             }
 
+            // Read-only calendar links for an iPhone (MON-17). A Settings detail route.
+            composable(route = Screen.CalendarFeed.route) {
+                com.coparently.app.presentation.settings.CalendarFeedScreen(
+                    onNavigateUp = { navController.popBackStack() }
+                )
+            }
+
             // The parents' friend list, and the friend's own profile. Detail routes: the
             // bottom bar hides and an up-arrow returns, like every other Settings destination.
             composable(route = Screen.Friends.route) {
@@ -726,6 +771,42 @@ fun NavGraph(
 
             composable(route = Screen.FriendProfile.route) {
                 com.coparently.app.presentation.friends.FriendProfileScreen(
+                    onNavigateUp = { navController.popBackStack() }
+                )
+            }
+
+            // Professional access (MON-18): the parents' list and, on a professional's phone, the
+            // families they read. The two read-only views are detail routes keyed by grant id.
+            composable(route = Screen.Professionals.route) {
+                com.coparently.app.presentation.professionals.ProfessionalsScreen(
+                    onNavigateUp = { navController.popBackStack() },
+                    onOpenCalendar = { grantId ->
+                        navController.navigate(Screen.ProfessionalCalendar.createRoute(grantId))
+                    },
+                    onOpenPlan = { grantId ->
+                        navController.navigate(Screen.ProfessionalPlan.createRoute(grantId))
+                    }
+                )
+            }
+
+            composable(
+                route = Screen.ProfessionalCalendar.route,
+                arguments = listOf(
+                    navArgument(Screen.ProfessionalCalendar.ARG_GRANT_ID) { type = NavType.StringType }
+                )
+            ) {
+                com.coparently.app.presentation.professionals.ProfessionalCalendarScreen(
+                    onNavigateUp = { navController.popBackStack() }
+                )
+            }
+
+            composable(
+                route = Screen.ProfessionalPlan.route,
+                arguments = listOf(
+                    navArgument(Screen.ProfessionalPlan.ARG_GRANT_ID) { type = NavType.StringType }
+                )
+            ) {
+                com.coparently.app.presentation.professionals.ProfessionalPlanScreen(
                     onNavigateUp = { navController.popBackStack() }
                 )
             }
@@ -1218,6 +1299,8 @@ sealed class Screen(val route: String) {
     data object Settings : Screen("settings")
     data object ChildInfo : Screen("child_info")
     data object ParentingPlan : Screen("parenting_plan")
+    data object Export : Screen("export")
+    data object Documents : Screen("family_documents")
     data object Pets : Screen("pets")
     data object Pairing : Screen("pairing?code={code}&enter={enter}") {
         /** Optional invite code carried by a `coplanly://pair` deep link. */
@@ -1253,6 +1336,9 @@ sealed class Screen(val route: String) {
     /** The parents' list of who outside the family can see the calendar (item 16). */
     data object Friends : Screen("friends")
 
+    /** Read-only calendar links for an iPhone or any other calendar app (MON-17). */
+    data object CalendarFeed : Screen("calendar_feed")
+
     /**
      * One friend as the parents read them — their face, phone number and blood group, and the
      * control that ends their access.
@@ -1270,6 +1356,27 @@ sealed class Screen(val route: String) {
 
     /** The friend's own profile, authored by them and read by the two parents. */
     data object FriendProfile : Screen("friend_profile")
+
+    /** Professional access (MON-18): the parents' grants and a professional's families. */
+    data object Professionals : Screen("professionals")
+
+    /** A professional's read-only calendar of one family, by grant id. */
+    data object ProfessionalCalendar : Screen("professional_calendar/{grantId}") {
+        /** Which grant; read by `ProfessionalCalendarViewModel` from its `SavedStateHandle`. */
+        const val ARG_GRANT_ID = "grantId"
+
+        /** Builds the route for [grantId]. */
+        fun createRoute(grantId: String): String = "professional_calendar/$grantId"
+    }
+
+    /** A professional's read-only parenting plan of one family, by grant id. */
+    data object ProfessionalPlan : Screen("professional_plan/{grantId}") {
+        /** Which grant; read by `ProfessionalPlanViewModel` from its `SavedStateHandle`. */
+        const val ARG_GRANT_ID = "grantId"
+
+        /** Builds the route for [grantId]. */
+        fun createRoute(grantId: String): String = "professional_plan/$grantId"
+    }
 
     data object CustodySetup : Screen("custody_setup")
 
