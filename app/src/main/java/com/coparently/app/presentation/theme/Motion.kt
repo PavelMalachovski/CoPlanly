@@ -39,4 +39,3 @@ fun rememberReducedMotion(): Boolean {
         Settings.Global.getFloat(resolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
     }
 }
-

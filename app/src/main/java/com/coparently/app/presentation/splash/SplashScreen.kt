@@ -170,4 +170,3 @@ private const val SPLASH_SETTLE_MS = 400
 
 /** How long the finished splash stays before the app shows. */
 private const val SPLASH_HOLD_MS = 300L
-
