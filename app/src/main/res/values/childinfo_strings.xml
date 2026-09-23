@@ -115,4 +115,10 @@
     <string name="childinfo_load_failed">Could not load the children\'s details. Please try again.</string>
     <string name="childinfo_delete_failed">Could not delete the child\'s details. Please try again.</string>
     <string name="childinfo_sync_failed">Could not sync the children\'s details. Please try again.</string>
+
+    <!-- School "Clear" confirmation, and the detail screen of a child deleted while it was open. -->
+    <string name="childinfo_school_clear_title">Clear school details?</string>
+    <string name="childinfo_school_clear_message">This empties the school, teacher and contact fields.</string>
+    <string name="childinfo_record_gone_title">This record no longer exists</string>
+    <string name="childinfo_record_gone_description">It was deleted on this phone or on your co-parent’s.</string>
 </resources>

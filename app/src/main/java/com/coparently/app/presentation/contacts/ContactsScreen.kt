@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.Contacts
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -37,6 +38,7 @@ import com.coparently.app.R
 import com.coparently.app.domain.contacts.ContactDirectory
 import com.coparently.app.domain.contacts.ContactGroup
 import com.coparently.app.domain.contacts.DirectoryContact
+import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.GroupLabel
 import com.coparently.app.presentation.common.ListSkeleton
 import com.coparently.app.presentation.common.Loadable
@@ -63,12 +65,16 @@ private const val NUMBER_SEPARATOR = " · "
  * a trade this app should make.
  *
  * @param onNavigateUp Goes back
+ * @param onAddContact Opens the children's details, which is where a contact is added — this
+ *   screen never writes, see [ContactsViewModel]. Offered from the empty state, which used to be
+ *   two grey sentences and no way forward on the one screen a parent opens in a hurry.
  * @param viewModel Screen state
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ContactsScreen(
     onNavigateUp: () -> Unit,
+    onAddContact: () -> Unit,
     viewModel: ContactsViewModel = hiltViewModel()
 ) {
     val groupsState by viewModel.groups.collectAsState()
@@ -81,19 +87,7 @@ fun ContactsScreen(
     val noDialerMessage = stringResource(R.string.contacts_no_dialer)
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.contacts_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateUp) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.contacts_back)
-                        )
-                    }
-                }
-            )
-        },
+        topBar = { ContactsTopBar(onNavigateUp = onNavigateUp) },
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
         if (groupsState is Loadable.Loading) {
@@ -101,24 +95,16 @@ fun ContactsScreen(
             // are no contacts a frame before being shown them.
             ListSkeleton(modifier = Modifier.padding(padding), rows = 4)
         } else if (groups.isEmpty()) {
-            Column(
+            EmptyState(
+                icon = Icons.Default.Contacts,
+                title = stringResource(R.string.contacts_empty),
+                description = stringResource(R.string.contacts_empty_hint),
+                actionLabel = stringResource(R.string.contacts_empty_action),
+                onAction = onAddContact,
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)
-                    .padding(24.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text(
-                    text = stringResource(R.string.contacts_empty),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = stringResource(R.string.contacts_empty_hint),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            )
             return@Scaffold
         }
 
@@ -141,6 +127,23 @@ fun ContactsScreen(
             }
         }
     }
+}
+
+/** The screen's title and its up arrow. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ContactsTopBar(onNavigateUp: () -> Unit) {
+    TopAppBar(
+        title = { Text(stringResource(R.string.contacts_title)) },
+        navigationIcon = {
+            IconButton(onClick = onNavigateUp) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = stringResource(R.string.contacts_back)
+                )
+            }
+        }
+    )
 }
 
 /**

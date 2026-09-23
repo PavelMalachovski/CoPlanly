@@ -69,8 +69,6 @@ invocation is yours.
 | **M-5** | Multi-family cleanup: delete `partnerId`, `User.role`, `Event.sharedWith`, `isPartnerOf` — **after** the ops steps in REL-3 | P2 | M |
 | **M-8** | M-4's last leftover: badges across families — and chat still follows the *first* co-parent, not the selected family (the chip and `familyId` on pushes are done) | P2 | M |
 | **CQ-17** | Six dependencies worth moving | P3 | S |
-| **UX-9** | Five different empty-state anatomies, one of which renders under the top bar | P2 | M |
-| **UX-14** | Four different brand purples | P3 | S |
 | **MON-2** | Verify the market facts — most of them are public pages | P0 | S |
 | **MON-3** | Export to PDF/CSV — the first paid feature (needs MON-4 first) | P1 | M |
 | **MON-4** | The paper is written; three answers are owed by the owner, and MON-3 waits on them | P1 | S |
@@ -96,7 +94,7 @@ invocation is yours.
 | **SEC-1 §1** | Storage rules keyed on Firestore state (cross-service rules — the "this needs the proxy" claim was a factual error) | The **Storage emulator does not resolve cross-service calls**, so `firestore-tests/` cannot cover it. Settle the verification story — a staging bucket against a real project — before writing the rule. |
 | **SEC-5** | `androidx.security:security-crypto` is on an alpha holding OAuth tokens | A dependency bump compiles in CI; whether tokens survive it is a sign-in on a real device. |
 | **UX-8** | The second half: two surfaces colour a chip from two different sources | An owner's answer to "what does a chip's colour mean" — the event's owner, or whose day it falls on. |
-| **UX-13** | Light theme is unverifiable rather than incomplete | Six previews across 148 UI files, none on a main screen; and a white flash on a dark cold start that only a device shows. |
+| **UX-13** | Light theme is unverifiable rather than incomplete — the cloud half is done (night window background, light+dark previews on the main screens' pieces) | Whether a dark cold start still flashes: only a device shows the window before Compose's first frame. |
 | **FAM-5** | The event chip does not say who it is about | Chips are single-line with ellipsis and every colour channel is spent. Worth an owner's eye on a real device rather than a treatment invented blind. |
 | **M-4 (shipped, unseen)** | The colour palette, the family switcher, the second-co-parent invite | Kotlin compiled in CI; nobody has looked at it. |
 
@@ -966,9 +964,25 @@ chip colours from `event.parentOwner`, so one visual channel carries two meaning
 cards. That is a question about what a chip's colour *means* — the event's owner, or whose day it
 falls on — and it wants an answer before either call site changes.
 
-### UX-9 · P2 · M · Five different empty-state anatomies
+### UX-9 · **DONE** · P2 · M · Five different empty-state anatomies
 
 **Where:** ☁️ cloud.
+
+**Done (September 2026).** One composable, `EmptyState` in `presentation/common/DesignSystem.kt`:
+an icon on a tonal disc, a title, an optional description and an optional primary action. It takes
+a `modifier` (every caller now passes its Scaffold padding), and it scrolls when its height is
+bounded and it does not fit, so it no longer clips at large font scales; inside a parent that
+already scrolls it wraps instead. Every variant below renders through it — Contacts, ChildInfo
+(and the child-detail "record no longer exists" state, which now has its own sentence), Pets,
+Friends, Home's week and recent-changes cards, Conversations, the message thread, Budgets,
+Expenses and EventList. `AnimatedEmptyState` is deleted, and with it the only use of
+`lottie-compose` and `res/raw/empty_state_animation.json` — whose Lottie file had **no layers**,
+so the "animation" was a 200 dp blank square above every empty state. **Contacts** now offers "Add
+a contact", which opens the children's list (a contact lives on a child's record, and
+`ContactsViewModel` never writes); **Home's empty week** offers "Add event". Not yet seen on a
+device, including the pets-only family, for whom Contacts' action lands on an empty child list.
+
+What it replaced:
 
 `AnimatedEmptyState` in five places, plus bespoke variants in Contacts, ChildInfo, Pets, Friends and
 Home — Home's being the `Card { Text }` pattern the August refresh explicitly outlawed. The previous
@@ -997,15 +1011,36 @@ silently removes the undo snackbar. Fix the branch first, then the strings.
 
 **Where:** 👁 cloud writes the previews and the theme fix; only a device shows the flash.
 
+**Cloud half done (September 2026).** `Theme.CoPlanly` is now `Theme.AppCompat.DayNight.NoActionBar`
+(still AppCompat, as per-app locales require) with `android:windowBackground` =
+`@color/window_background`, which `values-night/colors.xml` overrides with `DarkBackground`. It
+follows the *system* night mode: the in-app choice lives in Compose and is not known before the
+first frame. Previews: `PreviewWrapper` defaulted `darkTheme` to `false`, so **every "Dark Mode"
+preview in the project rendered the light theme** — it now follows the preview's `uiMode`.
+New `@LightDarkPreviews` cover a piece of each main screen that previews without a ViewModel:
+`SectionGroup`/`SectionRow`/`PillChip` and `EmptyState` (Settings, Home, Chat, Expenses),
+`DayAgendaCard` (Calendar and Home), `HandoverHero` and `StatTiles` (Home), `ChatThreadHeader`
+(Chat), beside the existing `ExpenseSummaryHeader` and `CalendarHeader`. detekt's
+`UnusedPrivateMember` now ignores `@Preview`/`@LightDarkPreviews` functions, which it used to
+report as unused. **Left for a device:** whether the dark cold start still flashes.
+
 `LightColorScheme` is complete and correct and the setting works — but there are six
 `LightDarkPreviews` across 148 UI files, two of them on dead components, and **none on any of the
 six main screens**. There is no `values-night/`, and `themes.xml` uses an AppCompat *Light* parent
 regardless of theme, so a cold start in dark mode flashes a white window before Compose draws.
 Audit §9.15.
 
-### UX-14 · P3 · S · Four different brand purples
+### UX-14 · **DONE** · P3 · S · Four different brand purples
 
 **Where:** ☁️ cloud; the launcher icon wants a glance on a device.
+
+**Done (September 2026).** `CoPlanlyColors.BrandPrimary` `#4F46E5` — the light theme's `primary` —
+is the one brand colour and its source of truth. `@color/brand_primary` (system splash) now holds
+the same value, `@color/ic_launcher_background` aliases it, the launcher background drawable is a
+flat fill of it instead of the `#6750A4 → #4F46E5` gradient, and the Compose splash draws it flat
+instead of the same gradient. XML cannot read a Kotlin constant, so `Color.kt` and `colors.xml`
+each say the other must match. The dark theme's `#C2C1FF` primary is the same hue at a light tone,
+not a second brand colour. Not seen on a device: the launcher icon and the splash hand-off.
 
 `brand_primary` `#6750A4` (system splash), `BrandPrimary` `#4F46E5` (Compose), launcher background
 `#6200EE`, and a splash gradient between the first two. Icon, system splash, Compose splash and app
@@ -1622,7 +1657,7 @@ Not a wish-list ordering — a dependency ordering. Each block assumes the one a
 
 14. **CQ-5**, and **CQ-6 + CQ-8** together. All three grow worse with tenure, so they land on your
     longest-standing users first.
-15. **UX-9**, **M-5**. (**CQ-14**, **UX-12** and **CQ-13**, which used to open this line, are done.)
+15. **M-5**. (**CQ-14**, **UX-12**, **CQ-13** and **UX-9**, which used to open this line, are done.)
 
 **One thread runs through this document.** The security holes, the release-only Gson corruption, the
 plaintext refresh token, the two-year recurrence bug, thirty unit tests failing against a

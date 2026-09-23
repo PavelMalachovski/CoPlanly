@@ -262,6 +262,15 @@ data class OnboardingUiState(
     val coParent: CoParentLink = CoParentLink.Unknown,
     val fetch: CoParentFetch = CoParentFetch.Idle,
     val custodyType: CustodyModelType? = null,
+    /**
+     * The step the parent last typed into, cleared whenever a step is left forwards.
+     *
+     * A flag of intent rather than a comparison of the drafts: those also fill in from Room — the
+     * co-parent's children arriving after the link — and a Skip over records that are already
+     * stored loses nothing, so a comparison would ask "discard your changes?" about changes
+     * nobody made.
+     */
+    val editedStep: OnboardingStep? = null,
     val isSaving: Boolean = false,
     val isFinished: Boolean = false
 ) {
@@ -328,6 +337,15 @@ data class OnboardingUiState(
     val canSkip: Boolean
         get() = step.isSkippable &&
             !(step == OnboardingStep.CoParent && coParent is CoParentLink.Linked)
+
+    /**
+     * True when Skip would leave something this parent typed on this step unsaved.
+     *
+     * Skip writes nothing (see [OnboardingViewModel.skip]), which is right for an unanswered
+     * question and wrong for an answered one the parent then pressed the wrong button on, so the
+     * screen asks before it lets typing go.
+     */
+    val skipDiscardsEdits: Boolean get() = canSkip && editedStep == step
 
     /**
      * Whether the relatives step can accept contacts yet.
@@ -845,19 +863,26 @@ class OnboardingViewModel @Inject constructor(
     /** Applies [transform] to the one child with [id], leaving the rest of the list alone. */
     private fun updateChild(id: String, transform: (ChildDraft) -> ChildDraft) =
         _uiState.update { state ->
-            state.copy(children = state.children.map { if (it.id == id) transform(it) else it })
+            state.copy(
+                children = state.children.map { if (it.id == id) transform(it) else it },
+                editedStep = state.step
+            )
         }
 
     /** Applies [transform] to the one pet with [id]. See [updateChild]. */
     private fun updatePet(id: String, transform: (PetDraft) -> PetDraft) =
         _uiState.update { state ->
-            state.copy(pets = state.pets.map { if (it.id == id) transform(it) else it })
+            state.copy(pets = state.pets.map { if (it.id == id) transform(it) else it }, editedStep = state.step)
         }
 
     /** The split step's slider: this parent's share, as a whole percent. */
     fun setSplitMyPercent(value: Int) {
         _uiState.update {
-            it.copy(splitMyPercent = value.coerceIn(0, WHOLE_PERCENT), splitTouched = true)
+            it.copy(
+                splitMyPercent = value.coerceIn(0, WHOLE_PERCENT),
+                splitTouched = true,
+                editedStep = it.step
+            )
         }
     }
 
@@ -913,7 +938,7 @@ class OnboardingViewModel @Inject constructor(
         _uiState.update { state ->
             val steps = state.steps
             val following = steps.getOrNull(steps.indexOf(step) + 1)
-            following?.let { state.copy(step = it) } ?: state
+            following?.let { state.copy(step = it, editedStep = null) } ?: state
         }
         if (_uiState.value.step == OnboardingStep.Split) {
             viewModelScope.launch { refreshSplitFromPair() }

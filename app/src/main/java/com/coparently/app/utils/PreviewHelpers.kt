@@ -1,6 +1,7 @@
 package com.coparently.app.utils
 
 import android.content.res.Configuration
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -9,6 +10,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import com.coparently.app.domain.model.Event
+import com.coparently.app.presentation.common.NamedParent
+import com.coparently.app.presentation.common.ParentNames
+import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.theme.CoPlanlyTheme
 import java.time.LocalDateTime
 import java.util.UUID
@@ -183,7 +187,9 @@ class SampleEventProvider : PreviewParameterProvider<Event> {
  * Preview wrapper that applies CoPlanly theme and surface.
  * Use this to wrap all composable previews for consistent styling.
  *
- * @param darkTheme Whether to use dark theme, default false (light theme)
+ * @param darkTheme Whether to use dark theme. Defaults to the preview's own `uiMode`, which is
+ *   what makes [LightDarkPreviews]' "Dark Mode" preview dark: this used to default to `false`,
+ *   so every dark preview in the project rendered the light theme twice (UX-13).
  * @param content The composable content to preview
  *
  * @sample
@@ -199,7 +205,7 @@ class SampleEventProvider : PreviewParameterProvider<Event> {
  */
 @Composable
 fun PreviewWrapper(
-    darkTheme: Boolean = false,
+    darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
     CoPlanlyTheme(darkTheme = darkTheme) {
@@ -370,3 +376,18 @@ fun createSampleEvent(
     )
 }
 
+/**
+ * Two named parents in the two slots — the shape a paired device renders — for previews of
+ * anything that labels a parent. Names, never "Mom"/"Dad" (see `ParentLabels.kt`).
+ */
+val previewParentNames: ParentNames = ParentNames(
+    parents = Parents(
+        me = NamedParent(uid = "u1", slot = "mom", name = "Olya"),
+        coParent = NamedParent(uid = "u2", slot = "dad", name = "Pavel"),
+        isPaired = true,
+        loaded = true
+    ),
+    youFallback = "You",
+    coParentFallback = "Co-parent",
+    unknownFallback = "Parent"
+)

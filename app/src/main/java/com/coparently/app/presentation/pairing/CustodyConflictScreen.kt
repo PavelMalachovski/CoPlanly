@@ -10,7 +10,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -308,7 +308,7 @@ private fun FortnightPreview(model: CustodyModel) {
 private fun DayCell(date: LocalDate, slot: String, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
-            .height(DAY_CELL_HEIGHT)
+            .heightIn(min = DAY_CELL_MIN_HEIGHT)
             .clip(MaterialTheme.shapes.extraSmall)
             .background(ParentColors.container(slot)),
         contentAlignment = Alignment.Center
@@ -417,8 +417,11 @@ private const val FORTNIGHT_DAYS = 14
 /** Days per preview row. */
 private const val DAYS_PER_ROW = 7
 
-/** Height of one preview day cell. */
-private val DAY_CELL_HEIGHT = 40.dp
+/**
+ * The least height of one preview day cell. A minimum, not a height: the cell stacks two lines of
+ * text, and a fixed 40 dp clipped the day number at large font scales.
+ */
+private val DAY_CELL_MIN_HEIGHT = 40.dp
 
 /** Gap between preview day cells, horizontally and vertically. */
 private val DAY_CELL_GAP = 4.dp

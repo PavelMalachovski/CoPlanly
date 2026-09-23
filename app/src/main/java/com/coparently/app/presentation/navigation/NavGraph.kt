@@ -279,6 +279,11 @@ fun NavGraph(
                     },
                     onOpenChat = {
                         navController.navigateToTab(BottomNavDestination.CHAT)
+                    },
+                    // The empty week's action: the same form the calendar opens, with no date
+                    // preset, so the form starts from its own default.
+                    onAddEvent = {
+                        navController.navigate(Screen.AddEvent.createRoute())
                     }
                 )
             }
@@ -399,7 +404,9 @@ fun NavGraph(
                 popExitTransition = { slideOutToRight() }
             ) {
                 com.coparently.app.presentation.contacts.ContactsScreen(
-                    onNavigateUp = { navController.popBackStack() }
+                    onNavigateUp = { navController.popBackStack() },
+                    // A contact lives on a child's record, so adding one starts at the children.
+                    onAddContact = { navController.navigate(Screen.ChildInfo.route) }
                 )
             }
 

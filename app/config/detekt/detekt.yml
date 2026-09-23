@@ -482,6 +482,8 @@ style:
   UnusedPrivateMember:
     active: true
     allowedNames: ''
+    # A private @Preview is called by Android Studio, not by the code, so it always looks unused.
+    ignoreAnnotated: ['Preview', 'LightDarkPreviews']
   UnusedPrivateProperty:
     active: true
   UseAnyOrNoneInsteadOfFind:

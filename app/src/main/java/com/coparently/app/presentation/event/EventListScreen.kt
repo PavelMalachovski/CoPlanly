@@ -46,8 +46,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.domain.events.CalendarVisibility
 import com.coparently.app.domain.model.Event
+import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.ParentNames
-import com.coparently.app.presentation.common.animations.AnimatedEmptyState
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.theme.ParentColors
@@ -161,12 +161,15 @@ fun EventListScreen(
             is EventUiState.OperationSuccess,
             is EventUiState.Success -> {
                 if (events.isEmpty() && awaitingCoParent.isEmpty()) {
-                    AnimatedEmptyState(
+                    EmptyState(
                         icon = Icons.Default.Event,
                         title = stringResource(R.string.event_list_empty_title),
                         description = stringResource(R.string.event_list_empty_description),
-                        actionText = stringResource(R.string.event_list_empty_action),
-                        onActionClick = onAddEventClick
+                        actionLabel = stringResource(R.string.event_list_empty_action),
+                        onAction = onAddEventClick,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(paddingValues)
                     )
                 } else {
                     LazyColumn(

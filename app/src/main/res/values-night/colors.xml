@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Dark-mode overrides for the few colours the platform draws before Compose does (UX-13).
+     A night qualifier, not a locale: it holds no strings, and tools/check-invariants.js, which
+     compares the five locale folders, deliberately does not look here. -->
+<resources>
+    <!-- CoPlanlyColors.DarkBackground: the window a dark-mode cold start shows before the first
+         Compose frame, instead of AppCompat Light's white. -->
+    <color name="window_background">#131318</color>
+</resources>

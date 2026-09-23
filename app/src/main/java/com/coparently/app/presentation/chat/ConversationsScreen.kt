@@ -43,9 +43,9 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.domain.model.Conversation
+import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.ListSkeleton
 import com.coparently.app.presentation.common.Loadable
-import com.coparently.app.presentation.common.animations.AnimatedEmptyState
 import com.coparently.app.presentation.common.valueOrNull
 import java.time.format.DateTimeFormatter
 
@@ -181,12 +181,15 @@ fun ConversationsScreen(
             ListSkeleton(modifier = Modifier.padding(padding), rows = 3)
         } else if (conversations.isEmpty()) {
             // Issue 8.2: Empty state for conversations
-            AnimatedEmptyState(
+            EmptyState(
                 icon = Icons.Default.Chat,
                 title = stringResource(R.string.chat_empty_title),
                 description = stringResource(R.string.chat_empty_description),
-                actionText = stringResource(R.string.chat_new_conversation),
-                onActionClick = startChat
+                actionLabel = stringResource(R.string.chat_new_conversation),
+                onAction = startChat,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
             )
         } else {
             LazyColumn(

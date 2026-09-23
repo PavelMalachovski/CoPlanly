@@ -35,7 +35,11 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
 1. **Shared UI primitives** live in `presentation/common/DesignSystem.kt`: `SectionGroup`
    (one tonal container per run of rows; call its scope's `Divider()` between rows — this line
    used to say they were inserted for you, and they are not), `SectionRow` (icon,
-   title, status/value, **at most one** trailing control), `GroupLabel`, `PillChip`. Home,
+   title, status/value, **at most one** trailing control), `GroupLabel`, `PillChip`, and
+   `EmptyState` (UX-9, September 2026: icon on a tonal disc, title, optional description, optional
+   primary action; takes the caller's `modifier` so Scaffold padding applies, and scrolls when its
+   height is bounded — every empty list renders through it, so don't add a bespoke column or a
+   `Card { Text }` for one, and don't pass an action that does nothing). Home,
    Settings, Expenses and Chat all render through these — do not reintroduce
    `Card { ListItem { … } }` per row, which is what the audit called "double surfaces".
 2. **Parent colours go through `presentation/theme/ParentColors.kt`**: `fill()` for dots,
@@ -969,8 +973,11 @@ Ukrainian** (`values-cs/`, `values-de/`, `values-ru/`, `values-uk/`). Rules:
   source of truth.
 - **Infra invariants**: `MainActivity`/`QRScannerActivity` must stay `AppCompatActivity`
   (not `ComponentActivity`) and `Theme.CoPlanly` must stay an AppCompat theme — per-app
-  locales silently stop working otherwise. `res/xml/locales_config.xml`, the `AppLanguage`
-  enum, and the `values-*` folders must list the same locale set.
+  locales silently stop working otherwise. (It is `Theme.AppCompat.DayNight.NoActionBar` since
+  UX-13, with a per-theme `@color/window_background` so a dark cold start does not flash white;
+  `values-night/` is a night qualifier holding that colour, not a locale, and holds no strings.)
+  `res/xml/locales_config.xml`, the `AppLanguage` enum, and the `values-<language>` folders must
+  list the same locale set.
 - **Adding a string** = add the key to the feature's base `values/<feature>_strings.xml`
   AND to all four locale variants of that file. Missing translations fall back to English
   at runtime. **Lint will not catch a missing one**: `MissingTranslation` is switched off

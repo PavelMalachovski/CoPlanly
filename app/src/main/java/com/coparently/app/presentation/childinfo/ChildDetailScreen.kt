@@ -1,15 +1,14 @@
 package com.coparently.app.presentation.childinfo
 
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ChildCare
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -20,16 +19,15 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.presentation.childinfo.components.GuestInviteSheet
+import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.ListSkeleton
 
 /**
@@ -123,19 +121,18 @@ fun ChildDetailScreen(
                     onInviteGuest = { viewModel.openGuestInvite(childInfo.id) },
                     onRevokeGuest = { uid -> viewModel.revokeGuest(childInfo, uid) }
                 )
-                else -> Column(
-                    modifier = Modifier
-                        .align(Alignment.Center)
-                        .padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    // The record was deleted, here or on the co-parent's phone, while this screen
-                    // was open. Saying so beats an empty page that looks like a failed load.
-                    Text(
-                        text = stringResource(R.string.childinfo_empty_state),
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                }
+                // The record was deleted, here or on the co-parent's phone, while this screen was
+                // open. Saying so beats an empty page that looks like a failed load — and it is
+                // its own sentence: "No child information yet" read as though the child had
+                // never been added.
+                else -> EmptyState(
+                    icon = Icons.Default.ChildCare,
+                    title = stringResource(R.string.childinfo_record_gone_title),
+                    description = stringResource(R.string.childinfo_record_gone_description),
+                    actionLabel = stringResource(R.string.childinfo_back),
+                    onAction = onNavigateBack,
+                    modifier = Modifier.fillMaxSize()
+                )
             }
         }
     }

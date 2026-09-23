@@ -161,6 +161,9 @@ private fun EmergencyContactCard(
 
 /**
  * Form for adding or editing an emergency contact.
+ *
+ * Name, relationship and phone each say "Required" under the field: Save stays disabled until all
+ * three are filled, and a button that will not press without saying why is a guessing game.
  */
 @Composable
 private fun EmergencyContactForm(
@@ -198,6 +201,7 @@ private fun EmergencyContactForm(
                 value = name,
                 onValueChange = { name = it },
                 label = { Text(stringResource(R.string.childinfo_name_label)) },
+                supportingText = { Text(stringResource(R.string.common_required)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
@@ -206,6 +210,7 @@ private fun EmergencyContactForm(
                 value = relationship,
                 onValueChange = { relationship = it },
                 label = { Text(stringResource(R.string.childinfo_relationship_label)) },
+                supportingText = { Text(stringResource(R.string.common_required)) },
                 placeholder = { Text(stringResource(R.string.childinfo_relationship_placeholder)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
@@ -215,6 +220,7 @@ private fun EmergencyContactForm(
                 value = phone,
                 onValueChange = { phone = it },
                 label = { Text(stringResource(R.string.childinfo_phone_number_label)) },
+                supportingText = { Text(stringResource(R.string.common_required)) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true

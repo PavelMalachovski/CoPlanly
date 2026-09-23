@@ -248,6 +248,22 @@ class OnboardingViewModelTest {
     }
 
     @Test
+    fun `Skip asks first only when something was typed on this step`() = runTest(dispatcher) {
+        walkTo(OnboardingStep.Child)
+        advanceUntilIdle()
+        assertFalse(viewModel.uiState.value.skipDiscardsEdits, "an untouched step skips silently")
+
+        viewModel.updateChildName(firstChildId(), "Mia")
+        assertTrue(viewModel.uiState.value.skipDiscardsEdits)
+
+        // Leaving forwards settles the question; the next step starts clean.
+        viewModel.next()
+        advanceUntilIdle()
+        assertEquals(OnboardingStep.Relatives, viewModel.uiState.value.step)
+        assertFalse(viewModel.uiState.value.skipDiscardsEdits)
+    }
+
+    @Test
     fun `back never leaves the wizard from its first step`() = runTest(dispatcher) {
         advanceUntilIdle()
         viewModel.back()

@@ -2,8 +2,16 @@
 <resources>
     <!-- Main app theme. AppCompat parent is required by AppCompatActivity, which in turn
          is required for per-app language support (AppCompatDelegate.setApplicationLocales);
-         all real theming happens in Compose (CoPlanlyTheme). -->
-    <style name="Theme.CoPlanly" parent="Theme.AppCompat.Light.NoActionBar" />
+         all real theming happens in Compose (CoPlanlyTheme).
+
+         DayNight, not Light, with a per-theme window background (UX-13): the window is what
+         shows between the splash and Compose's first frame, and a Light parent painted it
+         white on every dark-mode cold start. @color/window_background is overridden in
+         values-night/colors.xml. It follows the *system* night mode — the in-app theme choice
+         lives in Compose and is not known until the Activity has started. -->
+    <style name="Theme.CoPlanly" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="android:windowBackground">@color/window_background</item>
+    </style>
 
     <!-- Splash Screen theme for Android 12+ -->
     <!-- Based on Material3 SplashScreen API -->

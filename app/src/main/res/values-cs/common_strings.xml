@@ -49,4 +49,9 @@
     <string name="common_error_server">Server není dostupný. Zkuste to prosím později.</string>
     <string name="common_error_permission">K této akci nemáte oprávnění.</string>
     <string name="common_error_invalid_input">Některé údaje chybí nebo nejsou platné. Zkontrolujte je a zkuste to znovu.</string>
+    <!-- Audit leftovers (Sept 2026): required-field marker and the discard-changes dialog. -->
+    <string name="common_required">Povinné</string>
+    <string name="common_keep_editing">Pokračovat v úpravách</string>
+    <string name="common_discard">Zahodit</string>
+    <string name="common_discard_changes_title">Zahodit změny?</string>
 </resources>

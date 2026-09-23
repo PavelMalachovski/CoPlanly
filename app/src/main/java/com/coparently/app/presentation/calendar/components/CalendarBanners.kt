@@ -38,6 +38,10 @@ import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.theme.CoPlanlyColors
 import com.coparently.app.presentation.theme.LayoutConstants
 import com.coparently.app.presentation.theme.ParentColors
+import com.coparently.app.utils.LightDarkPreviews
+import com.coparently.app.utils.PreviewWrapper
+import com.coparently.app.utils.createSampleEvent
+import com.coparently.app.utils.previewParentNames
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -342,5 +346,38 @@ private fun agendaTime(event: Event, formatter: DateTimeFormatter): String {
         stringResource(R.string.calendar_agenda_time_range, start, end)
     } else {
         start
+    }
+}
+
+@LightDarkPreviews
+@Composable
+private fun DayAgendaCardPreview() {
+    PreviewWrapper {
+        DayAgendaCard(
+            date = LocalDate.now(),
+            events = listOf(
+                createSampleEvent(title = "School pickup", parentOwner = "mom"),
+                createSampleEvent(title = "Dentist", parentOwner = "dad")
+            ),
+            custody = "mom",
+            parentNames = previewParentNames,
+            onEventClick = {},
+            modifier = Modifier.padding(16.dp)
+        )
+    }
+}
+
+@LightDarkPreviews
+@Composable
+private fun DayAgendaCardEmptyPreview() {
+    PreviewWrapper {
+        DayAgendaCard(
+            date = LocalDate.now(),
+            events = emptyList(),
+            custody = "dad",
+            parentNames = previewParentNames,
+            onEventClick = {},
+            modifier = Modifier.padding(16.dp)
+        )
     }
 }

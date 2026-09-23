@@ -296,9 +296,6 @@ dependencies {
     // Gson for JSON - Updated to latest
     implementation("com.google.code.gson:gson:2.11.0")
 
-    // Lottie for Compose - Animations library
-    implementation("com.airbnb.android:lottie-compose:6.5.2")
-
     // ZXing for QR code generation
     implementation("com.google.zxing:core:3.5.3")
 

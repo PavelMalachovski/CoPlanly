@@ -7,7 +7,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import com.coparently.app.R
 
 /**
  * Reusable confirmation dialog component.
@@ -15,8 +17,9 @@ import androidx.compose.ui.text.font.FontWeight
  *
  * @param title Dialog title
  * @param message Confirmation message
- * @param confirmText Text for confirm button (default: "Confirm")
- * @param dismissText Text for dismiss button (default: "Cancel")
+ * @param confirmText Text for confirm button (default: `common_confirm`, localised — these defaults
+ *   used to be English literals, which every caller that forgot to pass one showed as-is)
+ * @param dismissText Text for dismiss button (default: `common_dialog_cancel`, localised)
  * @param onConfirm Callback when user confirms
  * @param onDismiss Callback when user dismisses
  * @param modifier Optional modifier
@@ -26,8 +29,8 @@ import androidx.compose.ui.text.font.FontWeight
 fun ConfirmationDialog(
     title: String,
     message: String,
-    confirmText: String = "Confirm",
-    dismissText: String = "Cancel",
+    confirmText: String = stringResource(R.string.common_confirm),
+    dismissText: String = stringResource(R.string.common_dialog_cancel),
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,

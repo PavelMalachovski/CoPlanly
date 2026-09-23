@@ -49,4 +49,9 @@
     <string name="common_error_server">Сервер недоступен. Попробуйте позже.</string>
     <string name="common_error_permission">У вас нет прав на это действие.</string>
     <string name="common_error_invalid_input">Некоторые данные не заполнены или неверны. Проверьте их и попробуйте ещё раз.</string>
+    <!-- Audit leftovers (Sept 2026): required-field marker and the discard-changes dialog. -->
+    <string name="common_required">Обязательно</string>
+    <string name="common_keep_editing">Продолжить редактирование</string>
+    <string name="common_discard">Не сохранять</string>
+    <string name="common_discard_changes_title">Не сохранять изменения?</string>
 </resources>

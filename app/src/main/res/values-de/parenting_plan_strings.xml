@@ -52,4 +52,7 @@
     <string name="parenting_plan_q_money_extraordinary">Wie teilen Sie einmalige Kosten — Brille, Klassenfahrt, Laptop?</string>
     <string name="parenting_plan_q_communication_between_parents">Wie geben Sie Informationen über das Kind weiter, und wie schnell erwarten Sie eine Antwort?</string>
     <string name="parenting_plan_q_communication_disagreement">Was tun Sie, wenn Sie sich nicht einigen können?</string>
+
+    <!-- Asked when the question sheet is closed with an edited, unsaved answer. -->
+    <string name="parenting_plan_discard_message">Deine Antwort ist nicht gespeichert. Wenn du die Frage jetzt schließt, geht der Text verloren.</string>
 </resources>

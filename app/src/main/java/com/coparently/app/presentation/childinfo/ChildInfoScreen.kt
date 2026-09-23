@@ -29,6 +29,7 @@ import com.coparently.app.domain.model.SchoolInfo
 import com.coparently.app.domain.model.Vaccination
 import com.coparently.app.presentation.childinfo.components.MedicalPhotoStrip
 import com.coparently.app.presentation.common.ConfirmationDialog
+import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.GroupLabel
 import com.coparently.app.presentation.common.ListSkeleton
 import com.coparently.app.presentation.common.SectionGroup
@@ -151,26 +152,16 @@ fun ChildInfoScreen(
                 }
                 is ChildInfoUiState.Success -> {
                     if (state.childInfoList.isEmpty()) {
-                        Column(
-                            modifier = Modifier
-                                .align(Alignment.Center)
-                                .padding(16.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                text = stringResource(R.string.childinfo_empty_state),
-                                style = MaterialTheme.typography.bodyLarge
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Button(onClick = {
+                        EmptyState(
+                            icon = Icons.Default.ChildCare,
+                            title = stringResource(R.string.childinfo_empty_state),
+                            actionLabel = stringResource(R.string.childinfo_title_add),
+                            onAction = {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 onAddChild()
-                            }) {
-                                Icon(Icons.Default.Add, contentDescription = null)
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(stringResource(R.string.childinfo_title_add))
-                            }
-                        }
+                            },
+                            modifier = Modifier.fillMaxSize()
+                        )
                     } else {
                         ChildrenList(children = state.childInfoList, onOpenChild = onOpenChild)
                     }

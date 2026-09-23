@@ -12,6 +12,8 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SheetState
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -19,6 +21,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -26,6 +29,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.coparently.app.R
 import com.coparently.app.data.repository.ParentingPlanPair
+import com.coparently.app.presentation.common.ConfirmationDialog
 
 /**
  * One question, both answers, and the tick that turns them into an agreement (MON-5).
@@ -45,8 +49,9 @@ import com.coparently.app.data.repository.ParentingPlanPair
 @Composable
 // One callback per action the sheet offers, plus both halves and the name to label the other
 // with. Collapsing them into a state object would hide which of the two halves is editable,
-// which is the one thing this screen exists to make visible.
-@Suppress("LongParameterList")
+// which is the one thing this screen exists to make visible. Its length is the one sheet laid
+// out top to bottom, plus the discard guard every edit of it needs.
+@Suppress("LongParameterList", "LongMethod")
 fun PlanQuestionSheet(
     questionId: String,
     plan: ParentingPlanPair,
@@ -59,12 +64,28 @@ fun PlanQuestionSheet(
     val theirAnswer = plan.theirs?.answerTo(questionId)
     // Seeded once per question rather than tracked: re-seeding on every emission would take the
     // cursor away mid-sentence when the co-parent's own write arrives through the listener.
-    var draft by remember(questionId) { mutableStateOf(plan.yours.answers[questionId].orEmpty()) }
+    val seeded = remember(questionId) { plan.yours.answers[questionId].orEmpty() }
+    var draft by remember(questionId) { mutableStateOf(seeded) }
     val agreed = theirAnswer != null && plan.yours.agreedTo[questionId] == theirAnswer
+
+    var confirmDiscard by remember { mutableStateOf(false) }
+    val sheetState = rememberGuardedSheetState(
+        unsaved = draft != seeded,
+        onRefused = { confirmDiscard = true }
+    )
+    if (confirmDiscard) {
+        DiscardAnswerDialog(
+            onKeep = { confirmDiscard = false },
+            onDiscard = {
+                confirmDiscard = false
+                onDismiss()
+            }
+        )
+    }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        sheetState = sheetState
     ) {
         Column(
             modifier = Modifier
@@ -99,24 +120,61 @@ fun PlanQuestionSheet(
     }
 }
 
-/** The half this parent may edit, labelled in the theme's primary so the pair is obvious. */
+/**
+ * A sheet state that will not hide while [unsaved] is true, calling [onRefused] instead.
+ *
+ * A swipe down, a tap outside or Back used to close the sheet and drop whatever had been typed;
+ * all three go through `confirmValueChange`. [unsaved] is read through `rememberUpdatedState`
+ * because the sheet state keeps the lambda it was created with.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun rememberGuardedSheetState(unsaved: Boolean, onRefused: () -> Unit): SheetState {
+    val currentUnsaved by rememberUpdatedState(unsaved)
+    val currentOnRefused by rememberUpdatedState(onRefused)
+    return rememberModalBottomSheetState(
+        skipPartiallyExpanded = true,
+        confirmValueChange = { target ->
+            val refuse = target == SheetValue.Hidden && currentUnsaved
+            if (refuse) currentOnRefused()
+            !refuse
+        }
+    )
+}
+
+/** Asks before an edited answer is thrown away. */
+@Composable
+private fun DiscardAnswerDialog(onKeep: () -> Unit, onDiscard: () -> Unit) {
+    ConfirmationDialog(
+        title = stringResource(R.string.common_discard_changes_title),
+        message = stringResource(R.string.parenting_plan_discard_message),
+        confirmText = stringResource(R.string.common_discard),
+        dismissText = stringResource(R.string.common_keep_editing),
+        isDestructive = true,
+        onDismiss = onKeep,
+        onConfirm = onDiscard
+    )
+}
+
+/**
+ * The half this parent may edit.
+ *
+ * "Your answer" is the field's own `label`, not a caption above it, so TalkBack announces the
+ * field by what it is for; a free-standing caption was read as a separate item and the field
+ * itself as an unnamed edit box. The label takes the theme's primary while the field is focused,
+ * which keeps the editable half visibly apart from the co-parent's.
+ */
 @Composable
 private fun YourAnswerField(draft: String, onDraftChange: (String) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(
-            text = stringResource(R.string.parenting_plan_your_answer),
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.primary
-        )
-        OutlinedTextField(
-            value = draft,
-            onValueChange = onDraftChange,
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = 120.dp),
-            placeholder = { Text(stringResource(R.string.parenting_plan_answer_hint)) }
-        )
-    }
+    OutlinedTextField(
+        value = draft,
+        onValueChange = onDraftChange,
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 120.dp),
+        label = { Text(stringResource(R.string.parenting_plan_your_answer)) },
+        placeholder = { Text(stringResource(R.string.parenting_plan_answer_hint)) }
+    )
 }
 
 @Composable

@@ -116,14 +116,22 @@ object CoPlanlyColors {
     val NeutralOnSecondaryDark = Color(0xFF2E2F42) // container text on dark
     val NeutralSecondaryContainerDark = Color(0xFF434559) // dark indigo container - fill-only
 
-    // Brand colors for app theme
+    // Brand colors for app theme.
+    // BrandPrimary is THE brand colour (UX-14) and the source of truth for it: the light theme's
+    // `primary`, the Compose splash background, and — as `@color/brand_primary` in
+    // res/values/colors.xml, which must hold the same value — the system splash and the launcher
+    // icon background. XML cannot read a Kotlin constant, so the two copies are kept equal by
+    // hand; change both or neither. The dark theme's primary (#C2C1FF) is the same hue at a light
+    // tone, as Material's tonal system intends, not a second brand colour.
     val BrandPrimary = Color(0xFF4F46E5) // Indigo 600 - 6.29:1 on white / 2.73:1 on DarkSurface (light theme only)
     val BrandPrimaryContainer = Color(0xFFE2E0FF) // Soft indigo container - fill-only
     val BrandOnPrimaryContainer = Color(0xFF1A1650) // Deep indigo for container text
     val BrandSecondary = Color(0xFF7C3AED) // Purple 600 - 5.70:1 on white / 3.01:1 on DarkSurface (light theme only)
     val BrandAccent = Color(0xFF059669) // Green 600 - 3.77:1 on white / 4.55:1 on DarkSurface (dark theme only)
 
-    // Light theme colors - subtle indigo-tinted neutrals for a modern tonal look
+    // Light theme colors - subtle indigo-tinted neutrals for a modern tonal look.
+    // LightBackground and DarkBackground are mirrored by hand as `@color/window_background` in
+    // res/values and res/values-night (UX-13): the window a cold start paints before Compose.
     val LightBackground = Color(0xFFFCFBFF)
     val LightSurface = Color(0xFFFFFFFF)
     val LightOnSurface = Color(0xFF1B1B21) // 15.9:1 on white - text-grade in light theme
