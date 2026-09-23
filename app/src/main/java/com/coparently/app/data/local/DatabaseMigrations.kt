@@ -792,6 +792,37 @@ object DatabaseMigrations {
     }
 
     /**
+     * v36 -> v37: the outbox for event revisions (MON-4).
+     *
+     * Every saved revision of a shared event is queued here in the same call that saves the
+     * event, and uploaded to the immutable `event_versions` collection — see
+     * `EventVersionOutboxEntity` for why a revision needs its own retry rather than riding the
+     * event's.
+     *
+     * Nothing to backfill, and deliberately so: the history starts on the day this ships. An
+     * event saved before it has no revisions, and the export says so rather than inventing a
+     * "created" revision out of today's state — that would be a record of the upgrade, dated as
+     * if it were the parent's.
+     */
+    val MIGRATION_36_37 = object : Migration(36, 37) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL(
+                "CREATE TABLE IF NOT EXISTS event_version_outbox (" +
+                    "id TEXT NOT NULL, " +
+                    "eventId TEXT NOT NULL, " +
+                    "kind TEXT NOT NULL, " +
+                    "editorUid TEXT NOT NULL, " +
+                    "deviceTimeMillis INTEGER NOT NULL, " +
+                    "snapshotJson TEXT NOT NULL, " +
+                    "audienceJson TEXT NOT NULL, " +
+                    "familyId TEXT, " +
+                    "attempts INTEGER NOT NULL, " +
+                    "PRIMARY KEY(id))"
+            )
+        }
+    }
+
+    /**
      * List of all migrations in order.
      */
     val ALL_MIGRATIONS = arrayOf(
@@ -825,6 +856,7 @@ object DatabaseMigrations {
         MIGRATION_32_33,
         MIGRATION_33_34,
         MIGRATION_34_35,
-        MIGRATION_35_36
+        MIGRATION_35_36,
+        MIGRATION_36_37
     )
 }

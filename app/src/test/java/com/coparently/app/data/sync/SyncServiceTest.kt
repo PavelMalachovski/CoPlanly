@@ -155,7 +155,9 @@ class SyncServiceTest {
             // a column these tests never assert on, and a real one would need Firebase Auth.
             mockk(relaxed = true),
             accountSwitchGuard,
-            custodyModelRepository
+            custodyModelRepository,
+            // The revision outbox (MON-4); its own suite covers it.
+            mockk(relaxed = true)
         )
     }
 

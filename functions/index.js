@@ -2975,6 +2975,50 @@ async function scrubFromAudiences(db, uid) {
 exports.scrubFromAudiences = scrubFromAudiences;
 
 /**
+ * Removes [uid] from the audience of every event revision somebody else saved (MON-4).
+ *
+ * Separate from [scrubFromAudiences] because a revision's author is `editorUid`, not
+ * `createdByFirebaseUid`, and because [SHARED_AUDIENCE_COLLECTIONS] also drives the unpair
+ * sweep — which must **not** narrow revisions: an ex-partner keeps the history they could see,
+ * as they keep the chat. Erasure is different: the account is gone and its uid is personal data.
+ *
+ * @param {FirebaseFirestore.Firestore} db Firestore instance.
+ * @param {string} uid The departing account.
+ * @return {Promise<number>} How many revisions were narrowed.
+ */
+async function scrubRevisionAudiences(db, uid) {
+  const snap = await db.collection('event_versions')
+      .where('sharedWith', 'array-contains', uid)
+      .get();
+
+  let batch = db.batch();
+  let pending = 0;
+  let narrowed = 0;
+
+  for (const doc of snap.docs) {
+    if (doc.data().editorUid === uid) {
+      continue;
+    }
+    batch.update(doc.ref, {
+      sharedWith: admin.firestore.FieldValue.arrayRemove(uid),
+    });
+    pending++;
+    narrowed++;
+    if (pending === ACCOUNT_DELETE_BATCH_LIMIT) {
+      await batch.commit();
+      batch = db.batch();
+      pending = 0;
+    }
+  }
+  if (pending > 0) {
+    await batch.commit();
+  }
+  return narrowed;
+}
+
+exports.scrubRevisionAudiences = scrubRevisionAudiences;
+
+/**
  * Erases everything an account holds, and returns a per-collection tally.
  *
  * **Why this exists at all.** `FirebaseAuthService.deleteCurrentUser()` on the client removes
@@ -3066,6 +3110,14 @@ async function deleteAccountDataImpl(db, uid, bucket) {
   }
 
   removed.sharedWithScrubbed = await scrubFromAudiences(db, uid);
+
+  // Event revisions (MON-4). The ones this parent saved are their words and go; the co-parent's
+  // stay — including revisions of events this parent created, which are the co-parent's record
+  // of what they changed — with the departing uid taken out of their audience. Clients can never
+  // delete a revision (`firestore.rules`), so this is the one path that does.
+  removed.event_versions = await deleteQueryInBatches(
+      db, db.collection('event_versions').where('editorUid', '==', uid));
+  removed.event_versions_scrubbed = await scrubRevisionAudiences(db, uid);
 
   // Change requests name their two parties directly rather than through an audience array.
   removed.change_requests =

@@ -65,6 +65,10 @@ decide what each of you may read. **Legal basis:** performance of our contract w
 ### What you enter about your family
 
 - **Calendar events** — titles, times, locations, notes, event types, and optional photos.
+  Every saved version of an event you share is kept, with who saved it and when, so the two of
+  you can export the history of your calendar. Neither parent can edit or delete a saved
+  version; the versions you saved are removed when you delete your account. Private events
+  have no saved versions.
 - **The custody schedule** — the pattern you agree and any one-off day swaps.
 - **Expenses and budgets** — amounts, currencies, categories, and optional receipt photos.
 - **Records about your child** — name, date of birth, school and activity details, emergency
@@ -161,9 +165,10 @@ notifications are deleted after **30 days**.
 
 **Settings → Account → Delete account.** This is irreversible and, once confirmed, it:
 
-- deletes your profile, your events, your expenses and budgets, the records you entered about
-  your child and pet, your custody schedule and agreed expense split, your parenting plan,
-  your invitations, and the whole message thread with your co-parent;
+- deletes your profile, your events and the saved revisions of events you edited, your expenses
+  and budgets, the records you entered about your child and pet, your custody schedule and agreed
+  expense split, your parenting plan, your invitations, and the whole message thread with your
+  co-parent;
 - deletes the photographs attached to those records — event photos, receipts, and medical and
   pet photographs;
 - removes you from the audience of anything your co-parent created, and ends any guest or

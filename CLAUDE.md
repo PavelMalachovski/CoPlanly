@@ -426,7 +426,7 @@ cd firestore-tests && npm test              # firestore.rules + storage.rules on
 
 ```
 domain/    — models, repository interfaces, use cases, holidays, ReminderScheduler
-data/      — Room (v36 + migrations), Firestore/Google clients, repository impls, sync
+data/      — Room (v37 + migrations), Firestore/Google clients, repository impls, sync
 presentation/ — Compose screens per feature + ViewModels + theme
 di/        — Hilt modules (Database, Firebase, Google, UseCase, Notification, …)
 ```
@@ -523,7 +523,7 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     the conversation as `{uid: epochMillis}` maps — one write per event — and the ticks and
     unread badge are derived from them by `ChatReadState`, never stored per message.
     Message times are stored the same way: `Message.sentAtMillis`, epoch millis (Room
-    schema v13, since superseded — the database is at v36), not a naive `LocalDateTime`, so two
+    schema v13, since superseded — the database is at v37), not a naive `LocalDateTime`, so two
     parents in different time zones agree
     on what a mark means and on when a message was sent. The Firestore field keeps its name
     (`timestamp`) and the read path still accepts a legacy ISO string, so a co-parent on an
@@ -780,6 +780,63 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     was, and no saved schedule is converted between the two. On the grid a window is a band in the
     window parent's tint with a full-hue edge (Day/Week) and a full-hue corner triangle (Month),
     both over the `DayCellFills` layers rather than a new fill competing with them.
+
+25. **Every saved revision of a shared event is kept whole, and nobody can change it afterwards**
+    (MON-4, September 2026, owner decision; schema 37). `docs/DESIGN-court-record.md` §4 is the
+    design. Each create, update and delete of a non-private event through `EventRepositoryImpl`
+    queues one row in Room's `event_version_outbox` and `data/versions/EventVersionRecorder`
+    uploads it to the top-level `event_versions/{versionId}`: the event document exactly as
+    `toFirestoreMap()` built it for that save (plus the tombstone fields on a delete),
+    `editorUid`, `deviceTimeMillis`, and `recordedAt`, which the rule pins to `request.time`.
+    `data/versions/EventVersionDocument.kt` is the one definition of that wire form. Six things
+    not to undo. **`update` and `delete` stay `false` for every client** — that one line is the
+    guarantee the export sells; the only path that removes a revision is account deletion, as
+    admin, and only the departing parent's own. **`recordedAt` is written with
+    `FieldValue.serverTimestamp()`, never a client value** — the rule refuses anything else, and
+    the export labels the two clocks separately because they answer different questions (when the
+    parent acted; when the server saw it). **A revision is queued in Room before the event's own
+    upload, and deleted only once the server has it** — the event write paths discard their
+    `Result`, so a revision riding on them would be lost exactly when the phone was offline; a
+    `PERMISSION_DENIED` on a retry is checked with `exists()` against the server, because a second
+    `set()` of a landed id is an update the rule refuses. **`event_versions` is not in
+    `TOMBSTONED_COLLECTIONS`, and not in `SHARED_AUDIENCE_COLLECTIONS`** — a revision survives its
+    event's 90-day sweep (a deletion is the edit a dispute is about), and unpair does not narrow it
+    (the ex-partner keeps what they could see, as with the chat). **Private events produce no
+    revision** (item 3), checked by the callers *and* by `EventVersionRecorder.record`. And
+    **there is no stored revision number**: two phones offline would mint the same one and the
+    create-only rule would refuse the second for ever; order comes from the two clocks and the
+    export numbers revisions when it renders. Calendar friends cannot read revisions — the
+    history is the parents' communication record, not the calendar. Not done, and recorded in
+    ROADMAP MON-4: `Event.updatedAt` is still a naive `LocalDateTime` although `ConflictResolver`
+    compares it, and the events rule does not *require* a revision beside each write, so an older
+    build's edits go unrecorded.
+
+26. **The export is a communication record, says so on its face, and is made on the phone**
+    (MON-3, September 2026; the owner's MON-4 answer). Settings → Family → *Export the record*
+    (`presentation/export`) picks a period and writes a CSV or an A4 PDF to `cache/exports/`,
+    shared through the existing `FileProvider` (`file_paths.xml` → `exports/`). What goes in is
+    decided in pure Kotlin — `domain/export/CommunicationRecordBuilder` builds the model,
+    `CommunicationRecordCsv` and `RecordLayout` lay it out, `data/export/ExportFileWriter` only
+    draws with `android.graphics.pdf.PdfDocument` — so the JVM tests reach every rule. Seven things
+    not to undo. **The `export_statement_*` paragraphs are printed first in both formats** —
+    "a record of what the parents recorded and wrote … not of what happened" is the owner's
+    answer, not copy; don't shorten it, and a new format prints it too. **Revisions show both
+    clocks under their own labels**, a revision still in the outbox says "not yet received by the
+    server" rather than borrowing its device time, and an event saved before revisions existed is
+    printed as its *current state*, never dressed up as a "created" revision dated today. **Read
+    from the server with `Source.SERVER`, and say so when it failed** — `RecordSources.serverReached`
+    false prints `export_record_incomplete` on the face; a record assembled silently from the cache
+    is a record of one phone. **Never a private event, never a child's or pet's record** — the
+    source reads events, messages and expenses only, and the builder drops `isPrivate` again
+    whatever it is handed (item 3; design §4 on the medical profile). **Names, never roles** —
+    every uid and slot goes through `parentLabelByUid`/`parentLabel` (the hard rule above).
+    **CSV is RFC 4180 plus a formula guard** — CRLF, quoted fields with doubled quotes, one width
+    for every record (the preamble is padded), and a cell starting `= + - @ \t \r` gets a leading
+    apostrophe *inside* the quotes: half the file is the other parent's words. And **it is
+    ungated**: MON-1 has not set a price, so there is no entitlement check and none is to be faked
+    with a flag — the gate is MON-11's. Times use `RecordFormat` (fixed `Locale.ROOT` patterns
+    with the offset printed); event start/end are the naive wall-clock values the schema stores,
+    and the statement says so.
 
 ## Known issues / do not "fix" silently
 

@@ -47,6 +47,7 @@ import com.coparently.app.presentation.consent.TelemetryConsentScreen
 import com.coparently.app.presentation.consent.TelemetryConsentViewModel
 import com.coparently.app.presentation.event.AddEditEventScreen
 import com.coparently.app.presentation.event.EventListScreen
+import com.coparently.app.presentation.export.ExportScreen
 import com.coparently.app.presentation.onboarding.OnboardingScreen
 import com.coparently.app.presentation.pairing.PairingScreen
 import com.coparently.app.presentation.parentingplan.ParentingPlanScreen
@@ -490,6 +491,9 @@ fun NavGraph(
                     onNavigateToParentingPlan = {
                         navController.navigate(Screen.ParentingPlan.route)
                     },
+                    onNavigateToExport = {
+                        navController.navigate(Screen.Export.route)
+                    },
                     onNavigateToMyProfile = {
                         navController.navigate(Screen.MyProfile.route)
                     },
@@ -516,6 +520,18 @@ fun NavGraph(
                 popExitTransition = { slideOutToRight() }
             ) {
                 ParentingPlanScreen(onNavigateBack = { navController.popBackStack() })
+            }
+
+            // The communication record (MON-3), off Settings beside the parenting plan: both are
+            // documents two parents may hand to a court, and neither is a tab's daily business.
+            composable(
+                route = Screen.Export.route,
+                enterTransition = { slideInFromRight() },
+                exitTransition = { slideOutToLeft() },
+                popEnterTransition = { slideInFromLeft() },
+                popExitTransition = { slideOutToRight() }
+            ) {
+                ExportScreen(onNavigateBack = { navController.popBackStack() })
             }
 
             composable(
@@ -1218,6 +1234,7 @@ sealed class Screen(val route: String) {
     data object Settings : Screen("settings")
     data object ChildInfo : Screen("child_info")
     data object ParentingPlan : Screen("parenting_plan")
+    data object Export : Screen("export")
     data object Pets : Screen("pets")
     data object Pairing : Screen("pairing?code={code}&enter={enter}") {
         /** Optional invite code carried by a `coplanly://pair` deep link. */

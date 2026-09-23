@@ -19,6 +19,7 @@ import com.coparently.app.data.repository.LocalDateJsonAdapter
 import com.coparently.app.data.repository.ParentSlotMigrator
 import com.coparently.app.data.repository.ParentingPlanRepository
 import com.coparently.app.data.session.AccountSwitchGuard
+import com.coparently.app.data.versions.EventVersionRecorder
 import com.coparently.app.domain.guests.GuestGrantPolicy
 import com.coparently.app.domain.repository.ChangeRequestRepository
 import com.coparently.app.domain.repository.MessageRepository
@@ -67,7 +68,8 @@ class SyncService @Inject constructor(
     private val familyIdBackfill: FamilyIdBackfill,
     private val selectedFamilySource: SelectedFamilySource,
     private val accountSwitchGuard: AccountSwitchGuard,
-    private val custodyModelRepository: CustodyModelRepository
+    private val custodyModelRepository: CustodyModelRepository,
+    private val eventVersionRecorder: EventVersionRecorder
 ) {
     // `LocalDate::class.java` needs the same adapter `ChildInfoRepositoryImpl` and
     // `UserRepositoryImpl` register: `Vaccination.date` is a `LocalDate`, and a document read
@@ -117,6 +119,10 @@ class SyncService @Inject constructor(
             // at the end rather than once per record.
             _syncStatus.value = SyncStatus.Syncing(40, 100)
             val requeuedEvents = syncEvents(currentUser.uid)
+            // Event revisions (MON-4), after the events themselves so a create's revision goes up
+            // behind the event it describes. Its own outbox, because the event paths' remote
+            // writes are best-effort and a revision must not be lost with one.
+            eventVersionRecorder.flush(currentUser.uid)
 
             // Step 4: Sync child info
             _syncStatus.value = SyncStatus.Syncing(70, 100)

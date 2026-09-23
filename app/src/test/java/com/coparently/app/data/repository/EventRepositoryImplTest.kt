@@ -6,6 +6,8 @@ import com.coparently.app.data.local.entity.EventEntity
 import com.coparently.app.data.local.entity.UserEntity
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestoreEventDataSource
+import com.coparently.app.data.versions.EventVersionKind
+import com.coparently.app.data.versions.EventVersionRecorder
 import com.coparently.app.domain.activity.ActivityAnnouncer
 import com.coparently.app.domain.events.EventAcceptance
 import com.coparently.app.domain.model.Event
@@ -24,6 +26,7 @@ import org.junit.Before
 import org.junit.Test
 import java.time.LocalDateTime
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 /**
  * Unit tests for [EventRepositoryImpl], focused on the entity<->domain mappers.
@@ -42,6 +45,7 @@ class EventRepositoryImplTest {
     private lateinit var firebaseAuthService: FirebaseAuthService
     private lateinit var firestoreEventDataSource: FirestoreEventDataSource
     private lateinit var activityAnnouncer: ActivityAnnouncer
+    private lateinit var eventVersionRecorder: EventVersionRecorder
     private lateinit var repository: EventRepositoryImpl
 
     private val now = LocalDateTime.of(2026, 7, 23, 10, 0)
@@ -56,12 +60,14 @@ class EventRepositoryImplTest {
         // interfere with what we assert about the persisted entity.
         every { firebaseAuthService.getCurrentUser() } returns null
         activityAnnouncer = mockk(relaxed = true)
+        eventVersionRecorder = mockk(relaxed = true)
         repository = EventRepositoryImpl(
             eventDao,
             userDao,
             firebaseAuthService,
             firestoreEventDataSource,
-            activityAnnouncer
+            activityAnnouncer,
+            eventVersionRecorder
         )
     }
 
@@ -207,6 +213,94 @@ class EventRepositoryImplTest {
         repository.insertEvent(baseDomain().copy(isPrivate = true))
 
         coVerify(exactly = 0) { firestoreEventDataSource.insertEvent(any(), any()) }
+    }
+
+    @Test
+    fun `a create records its revision as the very document it uploads`() = runTest {
+        signIn(uid = "uidA", partnerId = "uidB")
+        val uploaded = slot<Map<String, Any?>>()
+        coEvery { firestoreEventDataSource.insertEvent(any(), capture(uploaded)) } returns Result.success(Unit)
+        val recorded = slot<Map<String, Any?>>()
+
+        repository.insertEvent(baseDomain())
+
+        coVerify {
+            eventVersionRecorder.record(
+                eventId = "e1",
+                kind = EventVersionKind.CREATED,
+                editorUid = "uidA",
+                isPrivate = false,
+                audience = listOf("uidA", "uidB"),
+                familyId = any(),
+                snapshot = capture(recorded),
+                deviceTimeMillis = any()
+            )
+        }
+        // Not a second mapping of the event: the revision is what was written.
+        assertEquals(uploaded.captured, recorded.captured)
+    }
+
+    @Test
+    fun `an edit by the co-parent records a revision under the editor's uid`() = runTest {
+        signIn(uid = "uidB", partnerId = "uidA")
+        coEvery { firestoreEventDataSource.updateEvent(any(), any()) } returns Result.success(Unit)
+
+        repository.updateEvent(
+            baseDomain().copy(createdByFirebaseUid = "uidA", sharedWith = listOf("uidA"), syncedToFirestore = true)
+        )
+
+        coVerify {
+            eventVersionRecorder.record(
+                eventId = "e1",
+                kind = EventVersionKind.UPDATED,
+                editorUid = "uidB",
+                isPrivate = false,
+                audience = listOf("uidA", "uidB"),
+                familyId = any(),
+                snapshot = any(),
+                deviceTimeMillis = any()
+            )
+        }
+    }
+
+    @Test
+    fun `a delete records a revision carrying the event and its tombstone`() = runTest {
+        signIn(uid = "uidA", partnerId = "uidB")
+        coEvery { firestoreEventDataSource.tombstoneEvent(any(), any(), any()) } returns Result.success(Unit)
+        val recorded = slot<Map<String, Any?>>()
+
+        repository.deleteEvent(baseDomain().copy(createdByFirebaseUid = "uidA", title = "Dentist"))
+
+        coVerify {
+            eventVersionRecorder.record(
+                eventId = "e1",
+                kind = EventVersionKind.DELETED,
+                editorUid = "uidA",
+                isPrivate = false,
+                audience = any(),
+                familyId = any(),
+                snapshot = capture(recorded),
+                deviceTimeMillis = any()
+            )
+        }
+        // What was deleted, not merely that something was.
+        assertEquals("Dentist", recorded.captured["title"])
+        assertEquals("uidA", recorded.captured["deletedBy"])
+        assertTrue((recorded.captured["deletedAtMillis"] as Long) > 0L)
+    }
+
+    @Test
+    fun `a private event never records a revision, on any path`() = runTest {
+        signIn(uid = "uidA", partnerId = "uidB")
+        val private = baseDomain().copy(isPrivate = true, createdByFirebaseUid = "uidA")
+
+        repository.insertEvent(private)
+        repository.updateEvent(private)
+        repository.deleteEvent(private)
+
+        coVerify(exactly = 0) {
+            eventVersionRecorder.record(any(), any(), any(), any(), any(), any(), any(), any())
+        }
     }
 
     @Test

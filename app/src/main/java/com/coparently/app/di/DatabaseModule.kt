@@ -7,6 +7,7 @@ import com.coparently.app.data.local.dao.BudgetDao
 import com.coparently.app.data.local.dao.ChildInfoDao
 import com.coparently.app.data.local.dao.CustodyScheduleDao
 import com.coparently.app.data.local.dao.EventDao
+import com.coparently.app.data.local.dao.EventVersionOutboxDao
 import com.coparently.app.data.local.dao.ExpenseDao
 import com.coparently.app.data.local.dao.MessageDao
 import com.coparently.app.data.local.dao.ParentingPlanDao
@@ -164,5 +165,13 @@ object DatabaseModule {
     @Provides
     fun provideParentingPlanDao(database: CoPlanlyDatabase): ParentingPlanDao {
         return database.parentingPlanDao()
+    }
+
+    /**
+     * Provides EventVersionOutboxDao.
+     */
+    @Provides
+    fun provideEventVersionOutboxDao(database: CoPlanlyDatabase): EventVersionOutboxDao {
+        return database.eventVersionOutboxDao()
     }
 }
