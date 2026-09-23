@@ -372,7 +372,10 @@ dependencies {
     // MockK for mocking - Latest stable
     testImplementation("io.mockk:mockk:1.13.13")
     testImplementation("io.mockk:mockk-android:1.13.13")
-    androidTestImplementation("io.mockk:mockk-android:1.13.13")
+    // 1.14.0 is the first release whose inline-mocking agent (libmockkjvmtiagent.so) is 16 KB
+    // page-aligned; 1.13.x fails to dlopen on the API 35 16 KB emulator leg, before any test
+    // runs. The JVM unit tests above do not load the agent and stay on 1.13.13.
+    androidTestImplementation("io.mockk:mockk-android:1.14.0")
 
     // Coroutines Test - Latest stable
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
