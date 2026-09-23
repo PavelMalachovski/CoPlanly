@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.ui.unit.dp
 import com.coparently.app.data.family.FamilyOption
+import com.coparently.app.data.family.FamilySignal
 import com.coparently.app.presentation.common.FamilySwitcherChip
 import com.coparently.app.presentation.common.FamilySwitcherState
 import com.coparently.app.presentation.common.FamilySwitcherViewModel
@@ -43,7 +44,11 @@ class FamilySwitcherScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(v
         )
         val viewModel = mockk<FamilySwitcherViewModel> {
             every { state } returns MutableStateFlow(
-                FamilySwitcherState(families, selectedFamilyId = "f1", unreadFamilyIds = setOf("f2"))
+                FamilySwitcherState(
+                    families,
+                    selectedFamilyId = "f1",
+                    signals = mapOf("f2" to setOf(FamilySignal.CHAT))
+                )
             )
         }
         snap("common_family_switcher") {
