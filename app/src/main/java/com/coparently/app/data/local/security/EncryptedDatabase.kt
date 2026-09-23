@@ -40,16 +40,18 @@ import javax.inject.Singleton
  * The one ordering that must never change: the plaintext database is deleted only after a
  * *verified* encrypted copy exists beside it under a different name.
  *
- * **Unverified on a device at the time of writing.** The project has no instrumented test job
- * (CQ-1) and the sessions that produced this have no Android SDK, so the pure decision layer is
- * unit-tested and the SQLCipher calls are not exercised at all. What *was* checked is that they
- * exist and mean what they say: every signature here was read off the AAR's own bytecode rather
- * than from memory, including the two that decide whether this is safe — `SQLiteConnection`
- * applies a key only when the passphrase array is non-empty (so the empty one below really does
- * open a plaintext file), and the default `DatabaseErrorHandler` **deletes** the database it is
- * handed, which is why [KeepOnCorruption] is passed to every open. The app is not published, so
- * no install but the developer's own is at stake — but the first run on a phone with real data is
- * an acceptance step somebody has to perform, and it belongs in REL-7's list.
+ * **Run on emulators, not yet on a phone with real data.** The pure decision layer is unit-tested
+ * (`SqlCipherMigrationTest`), and `EncryptedDatabaseTest` — an instrumented test the CI
+ * `instrumented` job runs on API 26, 30 and 35 with 16 KB pages — builds every on-disk state that
+ * layer names and opens each through this class: a fresh install, a plaintext upgrade, an
+ * interrupted export, a leftover copy and a lost passphrase. When this was written the sessions
+ * producing it had no Android SDK, so every signature here was read off the AAR's own bytecode,
+ * including the two that decide whether this is safe — `SQLiteConnection` applies a key only when
+ * the passphrase array is non-empty (so the empty one below really does open a plaintext file),
+ * and the default `DatabaseErrorHandler` **deletes** the database it is handed, which is why
+ * [KeepOnCorruption] is passed to every open. What an emulator cannot stand in for is an upgrade
+ * over a database an *older build* wrote, under a phone's hardware-backed Keystore: that first run
+ * is an acceptance step, `docs/DEVICE-CHECKLIST.md` §2.1.
  */
 @Singleton
 class EncryptedDatabase @Inject constructor(
