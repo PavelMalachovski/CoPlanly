@@ -82,7 +82,7 @@ invocation is yours.
 | **MON-8** | Bakaláři / EduPage school import — the parsing, once you supply a real export | P2 | L |
 | **MON-11** | Payments (MVP 3) — the entitlement model, after MON-1 decides the price | P2 | L |
 | **MON-12** | Intelligent suggestions (MVP 3) — behind SEC-1's proxy, never with a key in the client | P3 | M |
-| **MON-13** | The tables and Germany's Länder are done (five countries; Ukraine's holidays are suspended by martial law) — left: school vacations outside Czechia, and whether Austria's patron-saint days are drawn at all | P2 | M |
+| **MON-13** | The tables, Germany's Länder and sourced school vacations (Slovakia and Austria nationwide, Germany per Land) are done — left: Austria's per-Land breaks, Slovakia's regional spring holidays, a grid marker for school vacations, whether Austria's patron-saint days are drawn at all, and ODbL attribution | P2 | M |
 | **FAM-4** | Custody per child | P2 | L |
 | **MON-14** | Seasonal schedule layers (summer / school holidays override the base pattern), with "fill from school holidays" | P1 | M |
 | **MON-15 (FTS)** | Chat search ships on `LIKE` plus a Kotlin fold; the FTS4 table is the later schema change, once the schema is free | P3 | S |
@@ -171,7 +171,7 @@ shipped, and a plan that describes work already done is worse than no plan.
 | Reoccurrence | Clear | S | High | **Done.** `RecurrenceExpander`; CQ-4 removed the two-year cliff |
 | Confirm pickup | Other side sees it is picked up | S | High | **Done.** `pickupConfirmedBy` / `pickupConfirmedAt` |
 | Notifications | 30 min or 1 h before pickup | M | High | **Done.** `ReminderScheduler` + WorkManager; the permission is asked contextually, never on cold start |
-| Holidays and vacations by country | Clear | S | High | **Done for holidays, partly for vacations.** The country is asked for and stored (MON-13), and Czechia, Slovakia, Germany (with a Land setting for its state holidays), Austria and Russia each have a computed table verified against the Python `holidays` library; Ukraine's holidays are suspended under martial law and the picker says so. School vacations exist for Czechia only — the others are regional |
+| Holidays and vacations by country | Clear | S | High | **Done for holidays, partly for vacations.** The country is asked for and stored (MON-13), and Czechia, Slovakia, Germany (with a Land setting for its state holidays), Austria and Russia each have a computed table verified against the Python `holidays` library; Ukraine's holidays are suspended under martial law and the picker says so. School vacations: Czechia (computed), Slovakia and Austria (nationwide periods) and each German Land, from the OpenHolidays dataset for 2025/26 onward; regional parts (Slovak spring, Austrian semester/summer) are left out |
 | Add events only you can see | Related to switching views | S | High | **Done.** `isPrivate`, filtered out of every sync path |
 | Sat/Sun a different colour | Clear | S | High | **Done.** `DayCellFills` draws the weekend as a base layer under custody, never instead of it |
 
@@ -1570,11 +1570,13 @@ verdict is discoverable material in a custody dispute, which makes it a liabilit
 than a feature. Anything resembling emotion inference deserves a legal read under the EU AI Act
 before launch.
 
-### MON-13 · **TABLES AND REGIONS DONE** · P2 · M · Holidays by country — school vacations are left
+### MON-13 · **TABLES, REGIONS AND SOURCED SCHOOL VACATIONS DONE** · P2 · M · Holidays by country — regional school breaks are left
 
 **Where:** ☁️ done: the setting, the registry, five tables verified against a maintained dataset,
-and Germany's sixteen Länder. What remains (school vacations outside Czechia, Austria's
-patron-saint days) is a product decision before it is code.
+Germany's sixteen Länder, and school vacations for Slovakia, Austria and every German Land from a
+second, pinned dataset. What remains is either data nobody publishes in final form yet (Austria's
+per-Land breaks), a region the app does not model (Slovakia's kraje), or a product decision
+(Austria's patron-saint days, a grid marker for school vacations).
 
 MVP 1 asked for "holidays and vacations by country" and shipped one country. There was **no country
 setting anywhere in the app** — no field, no picker, not even a constant — so `CalendarScreen`
@@ -1629,9 +1631,11 @@ against it rather than from memory.
   (`HolidayCountry.holidaysSuspended` → `country_holidays_suspended`) instead of "not in the app
   yet", which was true of the app and false of the country. When martial law ends, add the table
   the law then describes.
-- **The picker states coverage per country** (`HolidayCountry.coverage`): holidays and school
-  vacations (Czechia), public holidays only (four), suspended (Ukraine), none (Other). It is
-  derived from the provider, so it cannot promise school vacations a provider does not return.
+- **The picker states coverage per country** (`HolidayCountry.coverage`, and `coverageIn(region)`
+  since the school vacations below): holidays and school vacations (Czechia, Slovakia, Austria,
+  and Germany *with* a Land), public holidays only (Germany without a Land, Russia), suspended
+  (Ukraine), none (Other). It is derived from the calendar the grid would draw, so it cannot
+  promise school vacations a provider does not return.
   The calendar filter's "Czech holidays" title became "Holidays" in all five locales.
 
 **Done (September 2026): the region, for Germany.** `User.regionCode` (Room schema 35, nullable
@@ -1659,11 +1663,62 @@ nationwide only with a nudge to pick a state, or the state's days as well.
   if wanted:** draw the patron day as a separate, labelled kind of day, which needs its own name on
   the grid rather than passing as a public holiday.
 
-**Left.** No school vacations outside Czechia — Germany's and Austria's are set per state,
-Slovakia's spring break per region, Russia's per region or school — and none were invented. The
-region setting makes Germany's per-state school calendars *reachable* (the library carries them),
-but school vacations still follow the viewer rather than the child, so a per-family school
-calendar remains the honest fix for the per-viewer strips described above before any are drawn.
+**Done (September 2026): school vacations outside Czechia, from a sourced dataset.** Not
+computable — each ministry publishes them per school year — so they are dated tables
+(`SchoolVacation.kt`: ISO dates and a `SchoolBreak` enum of names), and nothing was typed from
+memory.
+- **Source.** The official publishers (kmk.org, bmbwf.gv.at / bmb.gv.at, minedu.sk) and the
+  aggregating APIs (ferien-api.de, openholidaysapi.org) are all blocked by the cloud session's
+  egress policy. The OpenHolidays project's **data repository** on GitHub
+  (`openpotato/openholidaysapi.data`, the source openholidaysapi.org serves; ODbL 1.0) is
+  reachable, and is read at a pinned commit. A sample was cross-checked against the official
+  pages through search-result excerpts before the tables were written: Bavaria 2025/26 (KMK
+  Ferienkalender, km.bayern.de), Austria's 2025/26 semester and summer breaks (bmb.gv.at), and
+  Slovakia's 2025/26 and 2026/27 periods (minedu.sk). All matched.
+- **How it is verified.** `tools/generate-school-vacation-fixture.py` reads the pinned CSVs,
+  applies the rules below, and writes `SchoolVacationReferenceFixture.kt`;
+  `SchoolVacationReferenceTest` compares every period and both names of every calendar (Slovakia,
+  Austria, the sixteen Länder) with it. The script exits on anything its rules did not
+  anticipate — an unknown name, a regional row of an unknown kind, two overlapping periods — so
+  a regeneration surfaces a decision instead of drawing it. Change a table by regenerating and
+  reading the diff.
+- **What is drawn.** Every period starting on or after 1 Sep 2025, up to whatever the dataset
+  publishes — no extrapolation, so a later year simply has none:
+  - **Germany, per Land only** (to summer 2030; Schleswig-Holstein to spring 2031). A parent who
+    has not named a Land sees none, and the note now asks for a Land "to add its school vacations
+    and its own public holidays". Each Land's own list, including its Land-wide single days
+    (Buß- und Bettag in Bavaria, the day after Ascension, …). Mecklenburg-Western Pomerania's
+    general schools only (not `MV-BBS`); Schleswig-Holstein's island exceptions dropped.
+  - **Austria, the nationwide periods** (autumn 27–31 Oct, All Souls' Day, Christmas, Easter,
+    Whitsun; to Christmas 2028/29).
+  - **Slovakia, the nationwide periods** (autumn, Christmas, Easter, summer; to summer 2028).
+- **Where they show.** Only in Day view's header label today: the month grid has had no
+  school-vacation marker since the banner was removed for the month-swipe height (see
+  `CalendarScreen`), and Week view shows none. That was already true of Czechia; a marker that
+  reserves its height in every month is a design task, not part of this item.
+
+**Left.**
+- **Austria's semester and summer breaks, per Land.** The dataset has final Land dates only for
+  2025/26 and marks every later one `Provisional`; at least one provisional grouping (the 2027
+  semester break) disagrees with bmb.gv.at's published 2026/27 list. So there is **no Austrian Land
+  picker** — it would add only a past school year (design rule 8). When a source with final Land
+  dates is reachable, add a regional table and the picker together.
+- **Slovakia's spring holidays** are set per kraj in three staggered weeks; the app has no Slovak
+  region, so they are not drawn (the Czech spring-break trade). The ministry's one-day
+  **half-year holiday** (polročné prázdniny) is **not in the dataset** and is therefore missing.
+- **Austria's patron-saint days** — school-free in their Land, bank holidays for employees — are
+  still not drawn at all; **owner call** above.
+- **Russia** — school vacations are set per region or per school; none.
+- **The data ends.** Each table runs out where its publisher stopped (SK 2028, AT early 2029,
+  DE 2030/31). Regenerate the fixture from a newer commit before then; nothing warns the user
+  when a year has no data.
+- **ODbL 1.0.** The dataset's licence asks for attribution wherever the data is used publicly
+  (and share-alike for a derived *database*). Before a Play release, name "OpenHolidays API
+  (openholidaysapi.org), ODbL 1.0" in the app's notices/licences screen; the source files and the
+  generator already carry the attribution.
+- **Per viewer, not per child.** School vacations still follow the viewer's country (and Land),
+  as the public holidays do. A per-family school calendar remains the honest fix for a child whose
+  school is not where the viewing parent lives.
 
 ---
 
@@ -1706,7 +1761,7 @@ day at a time.
   absent. Proposal and swap writes carry the stored list verbatim, and the rule refuses a
   proposal-only or swap write that changes it.
 - **The part AppClose does not have:** "Fill from school holidays". The Czech vacation table
-  (and the German Länder once MON-13 has school vacations) proposes the layer's dates; the
+  (and the Slovak, Austrian and German-Land tables MON-13 now has) proposes the layer's dates; the
   parents confirm. Never auto-applied — a proposal, like every other schedule change.
 - Holiday fairness (below, **MON-20**) reads these layers.
 

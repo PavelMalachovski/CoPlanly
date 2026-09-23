@@ -25,8 +25,9 @@ import java.time.temporal.TemporalAdjusters
  *   that is wrong for half the state" this project refuses nationally too.
  * - **Augsburg's Peace Festival (8 August)** is a *city* holiday. The library lists Augsburg as a
  *   pseudo-subdivision; it is not a Land and is not offered.
- * - **School holidays**, which the library also carries per state, are not drawn: MON-13 keeps
- *   school vacations Czech-only until a per-family school calendar exists.
+ * - **School holidays**, which the library also carries per state, are not taken from it: each
+ *   Land's school vacations are a separate table, [GERMAN_SCHOOL_VACATIONS], held to the
+ *   OpenHolidays dataset rather than to this library.
  *
  * Everything else the library's `public` category returns for a state is here, including the
  * two Sundays Brandenburg names by law (Easter and Whit Sunday — days off already, but the law
