@@ -7,3 +7,5 @@ firestore-tests/**/*.js text eol=lf
 firestore-tests/**/*.json text eol=lf
 *.gradle text eol=lf
 *.gradle.kts text eol=lf
+# Shell scripts run on the CI runner and under Git Bash alike; a CRLF shebang line does not run.
+tools/**/*.sh text eol=lf
