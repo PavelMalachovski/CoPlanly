@@ -667,6 +667,21 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // `export_receipts/{recordId}` — the SHA-256 of an exported file, registered under the record
+    // id the file prints (MON-16, docs/DESIGN-court-record.md §10).
+    //
+    // **Closed to every client, in both directions.** The callables in `functions/` are the only
+    // readers and writers, as admin: `reserveExportRecordId` mints the id, `registerExportReceipt`
+    // records the hash once, and `verifyExport` answers a verifier with a fixed, identity-free
+    // view. A client that could write here could register a hash for a file the app never made,
+    // or re-date one it did; a client that could read here could learn who exported what and
+    // when — `generatorUid` and `familyId` are exactly what `verifyExport` refuses to disclose.
+    // Firestore denies by default, so this block changes nothing at runtime; it exists so the
+    // intent is stated and `firestore-tests/rules/export-receipts.test.js` has something to pin.
+    match /export_receipts/{recordId} {
+      allow read, write: if false;
+    }
+
     // ---- Child info ----------------------------------------------------
     // Shared between a parent pair via the sharedWith list.
     // True when `guests` names the caller and their grant has run out — or carries no usable
