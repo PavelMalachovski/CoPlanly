@@ -78,7 +78,7 @@ class OtherFamiliesUnreadSource @Inject constructor(
     /** The unshared stream behind [unreadFamilyIds]; a test collects this directly. */
     internal fun observeUnread(): Flow<Set<String>> =
         userRepository.observeCurrentUserId()
-            .flatMapLatest { uid -> if (uid.isNullOrBlank()) flowOf(emptySet()) else unreadFor(uid) }
+            .flatMapLatest { uid -> if (uid.isNullOrBlank()) flowOf(emptySet<String>()) else unreadFor(uid) }
             .distinctUntilChanged()
 
     private fun unreadFor(myUid: String): Flow<Set<String>> =
