@@ -530,7 +530,20 @@ jobs:
       # upgrade, an interrupted export, a lost passphrase — and opens each through the production
       # path. What it cannot prove is an upgrade over data an *older build* wrote, on a phone's
       # hardware-backed Keystore: that stays docs/DEVICE-CHECKLIST.md §2.1.
+      #
+      # **The leg is decided by the next step, not by this one.** On the API 26 x86 image the
+      # emulator twice never exited after `adb emu kill` — 85 of 85 tests had passed, and the job
+      # sat until its 60-minute timeout. A detached `pkill` of the qemu process did not release
+      # it either. So this step has its own timeout and `continue-on-error`, the script writes
+      # the tests' exit status to a file, and "The instrumented tests finished and passed" fails
+      # the job unless that file exists and says 0. A test failure, or a hang before the tests
+      # finish, is still red; a hang after they passed costs 30 minutes, not 60, and a warning.
       - name: Run instrumented tests
+        id: tests
+        timeout-minutes: 30
+        continue-on-error: true
+        env:
+          STATUS_FILE: ${{ runner.temp }}/instrumented-status
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: ${{ matrix.api-level }}
@@ -544,6 +557,25 @@ jobs:
           # Records the screen in 170 s segments while the tests run and pulls the MP4s after;
           # the exit status is the tests', and a recorder that fails never fails the job.
           script: bash tools/with-screen-recording.sh ./gradlew connectedDebugAndroidTest ${{ matrix.test-args }}
+
+      - name: The instrumented tests finished and passed
+        if: always()
+        env:
+          STATUS_FILE: ${{ runner.temp }}/instrumented-status
+          STEP_OUTCOME: ${{ steps.tests.outcome }}
+        run: |
+          if [ ! -f "$STATUS_FILE" ]; then
+            echo "::error::The instrumented tests did not finish: the emulator step died or timed out before they wrote an exit status."
+            exit 1
+          fi
+          status=$(cat "$STATUS_FILE")
+          if [ "$status" != "0" ]; then
+            echo "::error::connectedDebugAndroidTest exited with status $status."
+            exit 1
+          fi
+          if [ "$STEP_OUTCOME" != "success" ]; then
+            echo "::warning::The tests passed; the emulator step then failed while shutting the emulator down. That is not a test result."
+          fi
 
       - name: Upload reports
         if: always()
