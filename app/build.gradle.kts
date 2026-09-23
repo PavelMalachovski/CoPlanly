@@ -69,6 +69,12 @@ val canSignRelease = run {
         file(store).exists()
 }
 
+/**
+ * The published privacy policy (REL-4). Empty until the owner hosts `web/privacy/` — see
+ * `web/README.md` — and then the one line to change.
+ */
+val publishedPrivacyPolicyUrl = ""
+
 android {
     // The Kotlin package, and therefore where `R` and `BuildConfig` are generated. Deliberately
     // *not* the same as `applicationId` below: renaming the package would touch every file in
@@ -99,6 +105,18 @@ android {
         versionName = "1.1.0"
 
         testInstrumentationRunner = "com.coparently.app.HiltTestRunner"
+
+        // REL-4. Where the hosted privacy policy lives, read by the Settings row and the
+        // telemetry consent screen. Blank until the policy is published, and blank hides both
+        // links: a link to a page that does not resolve is the affordance-promising-nothing
+        // design rule #8 forbids. Set `publishedPrivacyPolicyUrl` above once
+        // `firebase deploy --only hosting` has run (it is a public URL, not a secret), or pass
+        // -PCOPLANLY_PRIVACY_POLICY_URL to try one without committing it.
+        val privacyPolicyUrl = (project.findProperty("COPLANLY_PRIVACY_POLICY_URL") as String?)
+            ?.trim()
+            ?: publishedPrivacyPolicyUrl
+        buildConfigField("String", "PRIVACY_POLICY_URL", "\"$privacyPolicyUrl\"")
+
         vectorDrawables {
             useSupportLibrary = true
         }

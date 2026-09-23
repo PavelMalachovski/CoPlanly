@@ -15,4 +15,8 @@
     <string name="consent_decline">Ne, neodesílat nic</string>
     <string name="settings_telemetry_title">Statistiky používání</string>
     <string name="settings_telemetry_description">Anonymní statistiky a hlášení o pádech. Nikdy data vaší rodiny.</string>
+    <!-- REL-4. Shown only once BuildConfig.PRIVACY_POLICY_URL is set (PrivacyPolicyLink). -->
+    <string name="privacy_policy_title">Zásady ochrany osobních údajů</string>
+    <string name="privacy_policy_description">Co CoPlanly o vaší rodině ukládá a proč</string>
+    <string name="consent_privacy_policy_link">Přečíst zásady ochrany osobních údajů</string>
 </resources>
