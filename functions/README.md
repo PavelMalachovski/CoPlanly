@@ -292,10 +292,40 @@ functions shell), not from the CLI:
 | step | callable | what it writes |
 | --- | --- | --- |
 | 2 | `backfillFamilyDocuments` | `families/{id}`: `members`, `slots`, `caresFor` |
-| 3 | `backfillRecordFamilyIds` | `familyId` on events, expenses, budgets, child\_info, pets, change\_requests |
+| 3 | `backfillRecordFamilyIds` | `familyId` on events, expenses, budgets, child\_info, pets, change\_requests, and on calendar-friend grants |
 
 Both are idempotent — a second run reports everything as skipped — and both report per-reason
 counts rather than a bare "ok", so a pair they declined to touch is visible rather than silent.
+
+**Step 1 also deploys the `onFamilyCreated` trigger**, which stamps the pre-pairing records of both
+members whenever a `families/{id}` document is created. That includes the documents step 2
+creates, so by the time step 3 runs much of its work may already be done — expect its `stamped`
+count to be smaller than the history suggests. That is the trigger working, not step 3 failing;
+run step 3 anyway, because it is the only pass that also covers pairs whose family document
+already existed.
+
+#### What step 3 stamps, and what it deliberately leaves
+
+`backfillRecordFamilyIds` (and the trigger, which applies the same policy through
+`stampOwnBlankFamilyIds`) writes `familyId` only on a record whose `familyId` is absent or `""`,
+and only when its author's family is not a guess: **exactly one live, mutual co-parent, and no
+trace of an earlier one**. It never overwrites a stamped record and never touches
+`deletedAtMillis`/`deletedBy` on a tombstone. Everything else is skipped and counted:
+
+| `skippedReasons` | meaning | what to do |
+| --- | --- | --- |
+| `unpaired` | nobody to share with — `""` is the right value | nothing |
+| `ambiguous` | the author co-parents with two or more people, so a blank record could belong to either family | nothing server-side can decide this; these records stay visible to their author only (CLAUDE.md item 22) |
+| `priorRelationship` | one co-parent now, but an earlier one on the evidence (an unfinished `pendingRevocationOf`, an accepted co-parent invitation with somebody else, or a record naming another family or adult) | as `ambiguous`: stamping would move the old household's records into the new one |
+| `notMutual` / `missingAccount` | a half-ended pairing, or a deleted co-parent | finish the unpair; do not hand-stamp |
+
+`unresolved` is the total number of blank records those skips left behind, so the cost of a skip
+is visible rather than a bare count of people.
+
+**Re-running step 3 later is safe and is the repair path** for CLAUDE.md item 22 (expenses and
+budgets recorded before pairing uploaded with `familyId: ""`): anything the trigger missed — a
+pair formed before it was deployed, a failed run, a pre-pairing upload that landed after it —
+is stamped on the next run.
 
 **Run `backfillParentSlots` before step 2** if any pair still shares a slot. Step 2 records the
 slots the two profiles hold and counts how many pairs came out indistinct (`sameSlot`); it does
@@ -357,6 +387,23 @@ the accept flow) has reached users.** Re-slotting a pair on the server before th
 ships leaves the affected parent's app stamping new records with their *old* slot while the
 co-parent's app already sees the new one — the exact "history reads as my co-parent's"
 failure the accept-path re-stamp exists to prevent, delivered by this migration instead.
+
+## Scheduled sweeps
+
+Four daily jobs, an hour apart so they never contend (all UTC):
+
+| time | function | what it removes |
+| --- | --- | --- |
+| 02:00 | `cleanupOldNotifications` | `notification_queue` entries older than 30 days |
+| 03:00 | `sweepExpiredGuests` | expired guest grants on `child_info` (from `guests` and `sharedWith`) |
+| 04:00 | `sweepDeletedDocuments` | tombstones older than 90 days (do not shorten — CLAUDE.md item 14) |
+| 05:00 | `sweepLapsedCalendarFriends` | `calendar_friends/{uid}` grants whose `expiresAtMillis` has passed |
+
+None of them enforces anything: the rules already refuse an expired guest or friend from the
+instant the grant ends. They remove the rows that would otherwise linger in the parents' lists.
+`sweepLapsedCalendarFriends` never deletes a grant without a positive numeric `expiresAtMillis` —
+the callable does not write one, and the rule reads a missing expiry as 0 and admits nothing
+through it, so such a row is inert; deciding what it means is left to a person.
 
 ## Лицензия
 

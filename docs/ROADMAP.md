@@ -102,7 +102,7 @@ invocation is yours.
 
 | Id | What | Note |
 | --- | --- | --- |
-| **REL-3 ops** | `firebase deploy --only functions` → invoke `backfillFamilyDocuments` → invoke `backfillRecordFamilyIds` → `firebase deploy --only firestore:rules` | **The order matters.** PR #76's isolation is inert until this runs, and running the rules deploy before the record backfill leaves each co-parent's expenses looking empty on the other phone. `functions/README.md` has the runbook. |
+| **REL-3 ops** | `firebase deploy --only functions` → invoke `backfillFamilyDocuments` → invoke `backfillRecordFamilyIds` → `firebase deploy --only firestore:rules` | **The order matters.** PR #76's isolation is inert until this runs, and running the rules deploy before the record backfill leaves each co-parent's expenses looking empty on the other phone. The functions deploy also ships the `onFamilyCreated` re-stamp trigger and the `sweepLapsedCalendarFriends` schedule. `functions/README.md` has the runbook. |
 | **REL-3 storage** | `firebase deploy --only storage` | One command that fixes a live bug: every pet and medical photo upload is refused today because the bucket still runs the July rules. |
 | **REL-1** | Firebase console, Google Cloud console, a fresh `google-services.json`, the debug and release SHA-1 | A local build fails until this is done — deliberately, since `applicationId` changed to `app.coplanly`. |
 | **REL-2** | Generate the release keystore and back it up in two places | The single most irreversible item in this document. |
@@ -270,7 +270,11 @@ full-calendar disclosure (audit §2.1) and the whole of PR #76's family isolatio
 3. [ ] Invoke `backfillRecordFamilyIds` — every record gets its `familyId`
 4. [ ] `firebase deploy --only firestore:rules,firestore:indexes`
 
-Both callables are idempotent and report per-reason counts. **Running 4 before 3** leaves each
+Both callables are idempotent and report per-reason counts. Step 1 also deploys `onFamilyCreated`,
+which stamps a pair's pre-pairing records as their family document is created — including the ones
+step 2 creates, so step 3's `stamped` may come out smaller than expected; run it anyway. Step 3 is
+safe to re-run at any time afterwards and is the repair for anything the trigger missed; read its
+`skippedReasons` and `unresolved` (`functions/README.md` says what each one means). **Running 4 before 3** leaves each
 co-parent's expense and budget history looking empty on the other phone until 3 completes — nothing
 is lost, since Room is the source of truth, but it is alarming to watch.
 
@@ -530,11 +534,25 @@ Closed, each with a regression test on the emulator or in `functions/test`:
 
 Open, in the order they matter:
 
-- [ ] **Expenses and budgets recorded before pairing never reach the co-parent under the
-      family-keyed rules.** They upload with `familyId: ""` and nothing re-stamps the remote copy
-      (`FamilyIdBackfill` is Room-only, CLAUDE.md item 18). Needs an own-rows re-queue keyed on
-      the partner uid and an upload pass in `performFullSync` — the shape `markOwnEventsUnsynced`
-      has. Live only once REL-3 step 4 deploys, which is why it is here and not in a hotfix.
+- [x] **Expenses and budgets recorded before pairing never reached the co-parent under the
+      family-keyed rules** (September 2026). They upload with `familyId: ""` and the client never
+      re-stamps the remote copy (`FamilyIdBackfill` is Room-only, CLAUDE.md item 18). Fixed
+      server-side rather than by a client re-queue: `stampOwnBlankFamilyIds` in
+      `functions/index.js` stamps an author's blank records in all six collections, run by the
+      new `onFamilyCreated` trigger the moment a pair forms and by `backfillRecordFamilyIds` as
+      the re-runnable backstop. It stamps only when the family is not a guess — exactly one live,
+      mutual co-parent and no trace of an earlier one — and counts the rest as `unresolved`.
+      `backfillRecordFamilyIds` itself used to guess: it read the singular `partnerId`, so a
+      two-family author's blanks were stamped with whichever family that field named. Inert until
+      REL-3 step 1 deploys.
+- [ ] **What the re-stamp deliberately leaves**: blank records of an author with two co-parents
+      (`ambiguous`) or with evidence of an earlier one (`priorRelationship`) stay readable by their
+      author only, and no client path reliably stamps them later: a budget edit echoes the stored
+      `""` (the budgets update rule pins `familyId`), and an expense's download maps `""` back to a
+      null Room value that `FamilyIdBackfill`, having already run for that co-parent, does not
+      revisit. Deciding these needs a person — a
+      per-record "which family is this" prompt — not a server heuristic. Count them first:
+      `backfillRecordFamilyIds` reports `unresolved`, and today it is expected to be near zero.
 - [ ] Cloud Storage: any signed-in user can still overwrite or delete any object (audit §3.1,
       SEC-1 §1). The cross-service rule is drafted in the audit report; the emulator cannot
       evaluate `firestore.get()` from Storage rules, so it needs a staging bucket.
@@ -1605,6 +1623,12 @@ keeping:
   apart, and a parent with two families may be looking at the other one by then. The callable
   never trusts the id it is sent: it checks it against the inviter's live co-parents and falls
   back to the family they are showing, which is also what an invitation from an older build gets.
+
+**Lapsed grants are swept** (September 2026): `sweepLapsedCalendarFriends` deletes
+`calendar_friends/{uid}` daily at 05:00 UTC once `expiresAtMillis` has passed. Nothing leaked
+before it — the rule refuses an expired read at `request.time` — but the row lingered in the
+parents' list. A grant with no positive numeric expiry is never swept: the callable does not write
+one, and the rule admits nothing through it.
 
 ### M-7 · P3 · S · Which family does an imported calendar belong to
 

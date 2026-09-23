@@ -339,9 +339,12 @@ cd firestore-tests && npm test              # firestore.rules + storage.rules on
   initial-letter fallback is load-bearing, not decorative: an email/password account has no
   picture. Nothing here is ever overwritten by a later re-derivation — a friend who set their own
   picture keeps it. Not built: a photo **upload** (the field and rules admit one; the Storage
-  wiring does not exist, and a button that did nothing is the promise item 8 above forbids)
-  and a sweep for lapsed grants (nothing leaks — the rule refuses an expired read — but the row
-  lingers).
+  wiring does not exist, and a button that did nothing is the promise item 8 above forbids).
+  **Lapsed grants are swept** (September 2026): `sweepLapsedCalendarFriends` deletes a grant daily
+  at 05:00 UTC once `expiresAtMillis` has passed — cleanup, not enforcement, since the rule already
+  refuses an expired read at `request.time`. It is a range query, so a grant with no positive
+  numeric expiry is never deleted; the callable never writes one and the rule admits nothing
+  through it, so do not "fix" the sweep into treating a missing expiry as expired or as permanent.
 - **Only the signed-in user has a Room `users` row.** Nothing writes one for the co-parent, so
   `userRepository.getAllUsers()` can never answer "who is the other parent" — it returns one
   row, and on a device where two accounts have signed in over time it returns rows for accounts
@@ -695,10 +698,23 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
       record and `SyncService.announceSharedRecords` queues one `RECORDS_SHARED` push at the end
       of the pass; before that every re-uploaded event arrived on the co-parent's phone as
       "created", years-old ones included. The push is also the wake-up the other phone needs.
-    Still open, and recorded in `docs/ROADMAP.md` rather than hidden: expenses and budgets
-    recorded before pairing are uploaded with `familyId: ""` and nothing re-stamps the *remote*
-    copy (`FamilyIdBackfill` is Room-only by design, item 18), so under the family-keyed rules the
-    co-parent will not see them until each is edited.
+    **Records uploaded before pairing are re-stamped server-side** (September 2026). They upload
+    with `familyId: ""` and the client never re-stamps the remote copy (`FamilyIdBackfill` is
+    Room-only by design, item 18), so under the family-keyed rules the co-parent never saw them.
+    `stampOwnBlankFamilyIds` (`functions/index.js`) is the remote half of `FamilyIdBackfill`, over
+    all six collections, run by the `onFamilyCreated` trigger when a pair forms and by
+    `backfillRecordFamilyIds` as the re-runnable backstop. Three things not to loosen. **It stamps
+    only when the family is not a guess**: exactly one live co-parent who names the author back
+    (`partnersOf`, never the singular `partnerId`, which since M-4 is just the family a phone is
+    showing), and no trace of an earlier relationship — an unfinished `pendingRevocationOf`, an
+    accepted co-parent invitation with somebody else, or one of the author's records naming
+    another family or adult. Anything else is skipped with a reason and its blanks counted as
+    `unresolved`; a stamp from an old household is exactly the move item 18 forbids. **It writes
+    only `familyId`, only where it is blank** — never a tombstone's deletion fields, never a
+    record that already names a family. And **it is not a per-record write trigger**: that would
+    bill every write, cannot help a record uploaded while unpaired, and races the budgets
+    `familyId` pin. Still open, in `docs/ROADMAP.md`: the `ambiguous`/`priorRelationship` blanks,
+    which only a person can assign.
 23. **A per-document audience is bound to the writer, server-side** (September 2026 audit).
     `firestore.rules` `isMyAudience` requires every uid in `sharedWith` (guests excepted, on
     `child_info`) to be the caller or one of their live co-parents, and `familyIsMineOrBlank`
