@@ -15,6 +15,7 @@ import com.coparently.app.domain.model.PartnerSummary
 import com.coparently.app.domain.repository.EventRepository
 import com.coparently.app.domain.repository.MessageRepository
 import com.coparently.app.domain.repository.PairingRepository
+import com.coparently.app.domain.repository.PreferencesRepository
 import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.presentation.common.Loadable
 import io.mockk.coEvery
@@ -27,6 +28,8 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runCurrent
@@ -61,6 +64,7 @@ class ChatViewModelTest {
     private lateinit var conversationInRoom: MutableStateFlow<Conversation?>
     private lateinit var messageRepository: MessageRepository
     private lateinit var userRepository: UserRepository
+    private lateinit var pauseBeforeSending: MutableStateFlow<Boolean>
 
     @Before
     fun setUp() {
@@ -70,6 +74,7 @@ class ChatViewModelTest {
         signedInUid = MutableStateFlow<String?>(UID)
         projectedFamily = MutableStateFlow(null)
         conversationInRoom = MutableStateFlow(null)
+        pauseBeforeSending = MutableStateFlow(false)
 
         messageRepository = mockk(relaxed = true) {
             every { observeConversation(any()) } returns conversationInRoom
@@ -536,6 +541,106 @@ class ChatViewModelTest {
         assertEquals("", viewModel.draftFor(CONVERSATION))
     }
 
+    // ---- MON-19: pause before sending ---------------------------------
+
+    @Test
+    fun `with the pause off a message goes straight to the repository`() = runTest {
+        val viewModel = openedThread()
+
+        viewModel.sendMessage(DRAFT)
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) { messageRepository.sendMessage(match { it.content == DRAFT }) }
+        assertNull(viewModel.pendingSend.value)
+    }
+
+    @Test
+    fun `with the pause on a message waits, counting down, before it is sent`() = runTest {
+        pauseBeforeSending.value = true
+        val viewModel = openedThread()
+
+        viewModel.sendMessage(DRAFT)
+        runCurrent()
+        assertEquals(PendingSend(CONVERSATION, DRAFT, SendHold.PAUSE_SECONDS), viewModel.pendingSend.value)
+
+        advanceTimeBy(SendHold.TICK_MS * 2)
+        runCurrent()
+        assertEquals(SendHold.PAUSE_SECONDS - 2, viewModel.pendingSend.value?.secondsLeft)
+        coVerify(exactly = 0) { messageRepository.sendMessage(any()) }
+
+        advanceTimeBy(SendHold.TICK_MS * (SendHold.PAUSE_SECONDS - 2))
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) {
+            messageRepository.sendMessage(match { it.content == DRAFT && it.conversationId == CONVERSATION })
+        }
+        assertNull(viewModel.pendingSend.value)
+    }
+
+    @Test
+    fun `undo inside the pause sends nothing and gives the text back`() = runTest {
+        pauseBeforeSending.value = true
+        val viewModel = openedThread()
+
+        viewModel.sendMessage(DRAFT)
+        advanceTimeBy(SendHold.TICK_MS)
+        val restored = viewModel.undoPendingSend(composerText = "")
+        advanceUntilIdle()
+
+        assertEquals(DRAFT, restored)
+        assertNull(viewModel.pendingSend.value)
+        // Back in the draft store too, so leaving the thread now does not lose it.
+        assertEquals(DRAFT, viewModel.draftFor(CONVERSATION))
+        coVerify(exactly = 0) { messageRepository.sendMessage(any()) }
+    }
+
+    @Test
+    fun `undo keeps what was typed since, after the restored message`() = runTest {
+        pauseBeforeSending.value = true
+        val viewModel = openedThread()
+
+        viewModel.sendMessage(DRAFT)
+        runCurrent()
+
+        assertEquals("$DRAFT\nand one more thing", viewModel.undoPendingSend("and one more thing"))
+    }
+
+    @Test
+    fun `undo after the pause has nothing to take back`() = runTest {
+        pauseBeforeSending.value = true
+        val viewModel = openedThread()
+
+        viewModel.sendMessage(DRAFT)
+        advanceUntilIdle()
+
+        assertNull(viewModel.undoPendingSend(""))
+        coVerify(exactly = 1) { messageRepository.sendMessage(any()) }
+    }
+
+    @Test
+    fun `a second message sends the held one at once, keeping the order`() = runTest {
+        pauseBeforeSending.value = true
+        val viewModel = openedThread()
+
+        viewModel.sendMessage(DRAFT)
+        runCurrent()
+        viewModel.sendMessage("second")
+        runCurrent()
+
+        coVerify(exactly = 1) { messageRepository.sendMessage(match { it.content == DRAFT }) }
+        coVerify(exactly = 0) { messageRepository.sendMessage(match { it.content == "second" }) }
+        assertEquals("second", viewModel.pendingSend.value?.text)
+    }
+
+    /** A ViewModel with [CONVERSATION] open and everything it started on construction settled. */
+    private fun TestScope.openedThread(): ChatViewModel {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+        viewModel.onThreadOpened(CONVERSATION)
+        advanceUntilIdle()
+        return viewModel
+    }
+
     private fun createViewModel(
         preferences: EncryptedPreferences = draftStore()
     ): ChatViewModel {
@@ -554,7 +659,10 @@ class ChatViewModelTest {
             userRepository,
             eventRepository,
             ChatPartnerSource(userRepository, pairingRepository, selectedFamilySource),
-            preferences
+            preferences,
+            mockk<PreferencesRepository> {
+                every { getPauseBeforeSendingFlow() } returns pauseBeforeSending
+            }
         )
     }
 

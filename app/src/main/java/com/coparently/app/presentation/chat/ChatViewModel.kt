@@ -16,6 +16,7 @@ import com.coparently.app.domain.model.MessageSendStatus
 import com.coparently.app.domain.model.MessageType
 import com.coparently.app.domain.repository.EventRepository
 import com.coparently.app.domain.repository.MessageRepository
+import com.coparently.app.domain.repository.PreferencesRepository
 import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.presentation.common.Loadable
 import com.coparently.app.presentation.common.valueOrNull
@@ -103,7 +104,8 @@ class ChatViewModel @Inject constructor(
     private val userRepository: UserRepository,
     private val eventRepository: EventRepository,
     private val chatPartnerSource: ChatPartnerSource,
-    private val preferences: EncryptedPreferences
+    private val preferences: EncryptedPreferences,
+    private val preferencesRepository: PreferencesRepository
 ) : ViewModel() {
 
     private val _currentConversationId = MutableStateFlow<String?>(null)
@@ -134,6 +136,25 @@ class ChatViewModel @Inject constructor(
 
     /** The pending debounced write, cancelled and rescheduled on each keystroke. */
     private var draftWriteJob: Job? = null
+
+    /** The "Pause before sending" hold (MON-19). See [SendHold]. */
+    private val sendHold = SendHold(viewModelScope)
+
+    /**
+     * The message waiting out its pause, or null. The screen shows it as "Sending in N s…" with
+     * an Undo; it is not in the thread yet because it is not anywhere yet.
+     */
+    val pendingSend: StateFlow<PendingSend?> = sendHold.pending
+
+    /**
+     * Whether "Pause before sending" is on, for the composer's hint. Eagerly started: it is one
+     * in-memory flow, and the composer reads it on its first frame.
+     *
+     * Only the *hint* reads this. [sendMessage] asks the repository afresh on every send rather
+     * than trusting a value a subscriber may never have started (CLAUDE.md item 17).
+     */
+    val pauseBeforeSending: StateFlow<Boolean> = preferencesRepository.getPauseBeforeSendingFlow()
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     private val _events = MutableSharedFlow<ChatEvent>(extraBufferCapacity = 1)
 
@@ -575,10 +596,25 @@ class ChatViewModel @Inject constructor(
     }
 
     override fun onCleared() {
+        // The scope — and with it the hold's countdown — is already cancelled here, so a held
+        // message would simply vanish. It goes back to the draft store instead: the reader who
+        // switched tabs mid-pause finds it in the composer, unsent, rather than finding it sent
+        // after they could no longer undo it, or not at all.
+        sendHold.undo()?.let { held ->
+            drafts[held.conversationId] = SendHold.restore(held.text, drafts[held.conversationId].orEmpty())
+            pendingDraft = held.conversationId
+        }
         flushDraft()
         super.onCleared()
     }
 
+    /**
+     * Sends [content] to the open thread — after a pause with an Undo, when "Pause before
+     * sending" is on (MON-19).
+     *
+     * Only a text message is held; anything else (a change-request card) is the output of its own
+     * confirmed flow.
+     */
     fun sendMessage(content: String, type: MessageType = MessageType.TEXT, attachments: List<String> = emptyList()) {
         val conversationId = _currentConversationId.value
         if (conversationId == null) {
@@ -601,23 +637,61 @@ class ChatViewModel @Inject constructor(
         // is the record of what was sent; `flushOutbox` is what retries it.
         clearDraft(conversationId)
 
-        launchGuarded("send message") {
-            val user = userRepository.getCurrentUser()
-            val senderName = user?.name ?: "Unknown"
+        // Built when it is actually sent, so a held message carries the time it left rather than
+        // the time it was typed.
+        val send = {
+            launchGuarded("send message") {
+                val user = userRepository.getCurrentUser()
+                val senderName = user?.name ?: "Unknown"
 
-            val message = Message(
-                id = UUID.randomUUID().toString(),
-                conversationId = conversationId,
-                senderId = userId,
-                senderName = senderName,
-                content = content,
-                sentAtMillis = System.currentTimeMillis(),
-                messageType = type,
-                attachments = attachments,
-                status = MessageSendStatus.SENDING
-            )
-            messageRepository.sendMessage(message)
+                val message = Message(
+                    id = UUID.randomUUID().toString(),
+                    conversationId = conversationId,
+                    senderId = userId,
+                    senderName = senderName,
+                    content = content,
+                    sentAtMillis = System.currentTimeMillis(),
+                    messageType = type,
+                    attachments = attachments,
+                    status = MessageSendStatus.SENDING
+                )
+                messageRepository.sendMessage(message)
+            }
         }
+        if (type != MessageType.TEXT) {
+            send()
+            return
+        }
+        launchGuarded("hold message") {
+            if (preferencesRepository.getPauseBeforeSendingFlow().first()) {
+                sendHold.hold(conversationId, content, send)
+            } else {
+                send()
+            }
+        }
+    }
+
+    /**
+     * Cancels the message waiting out its pause and gives its text back to the composer.
+     *
+     * @param composerText What the composer holds now — kept, on a line after the restored text.
+     * @return The composer's new text, or null when nothing was held (the pause had already
+     *   ended, and the message is on its way).
+     */
+    fun undoPendingSend(composerText: String): String? {
+        val held = sendHold.undo() ?: return null
+        val restored = SendHold.restore(held.text, composerText)
+        onDraftChanged(held.conversationId, restored)
+        return restored
+    }
+
+    /**
+     * Widens the thread's window to hold at least [messageCount] of its newest messages, so a
+     * search result that far back can be scrolled to (MON-15). It only ever grows, as
+     * [loadEarlier]'s does; `ChatSearchViewModel` works out the count.
+     */
+    fun showAtLeast(messageCount: Int) {
+        _messageWindow.value = ChatWindow.reaching(_messageWindow.value, messageCount)
     }
 
     /**
@@ -725,16 +799,6 @@ class ChatViewModel @Inject constructor(
             )
         }
 
-    /**
-     * The chat partner as the chat entry point needs to see it. [ChatPartnerSource.resolve] has
-     * already turned a paired state with no usable partner id into [ChatPartner.None].
-     */
-    private fun ChatPartner.toCoParentLink(): CoParentLink = when (this) {
-        ChatPartner.Resolving -> CoParentLink.Resolving
-        ChatPartner.None -> CoParentLink.NotPaired
-        is ChatPartner.Linked -> CoParentLink.Linked(partnerUid)
-    }
-
     private companion object {
         const val UPCOMING_DAYS = 30L
         const val TAG = "ChatViewModel"
@@ -759,4 +823,14 @@ class ChatViewModel @Inject constructor(
         /** Backoff before retrying the read/delivered re-assert collector after a failure. */
         const val MARK_RETRY_DELAY_MS = 2000L
     }
+}
+
+/**
+ * The chat partner as the chat entry point needs to see it. [ChatPartnerSource.resolve] has
+ * already turned a paired state with no usable partner id into [ChatPartner.None].
+ */
+private fun ChatPartner.toCoParentLink(): CoParentLink = when (this) {
+    ChatPartner.Resolving -> CoParentLink.Resolving
+    ChatPartner.None -> CoParentLink.NotPaired
+    is ChatPartner.Linked -> CoParentLink.Linked(partnerUid)
 }

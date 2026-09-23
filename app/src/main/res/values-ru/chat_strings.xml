@@ -78,4 +78,40 @@
     <string name="chat_template_schedule_change_content">Мне нужно изменить расписание на [дата]. Можем поменяться? Я возьму [другая дата].</string>
     <string name="chat_failed_to_send_retry">Не отправлено — нажмите, чтобы повторить</string>
     <string name="chat_load_earlier">Загрузить более ранние сообщения</string>
+
+    <!-- MON-15: search inside the open conversation. Local to this phone; never a server. -->
+    <string name="chat_search">Искать в переписке</string>
+    <string name="chat_search_close">Закрыть поиск</string>
+    <string name="chat_search_clear">Очистить</string>
+    <string name="chat_search_placeholder">Поиск по сообщениям</string>
+    <string name="chat_search_prompt_title">Поиск в этой переписке</string>
+    <string name="chat_search_prompt_description">Ищет среди сообщений, которые уже есть на этом телефоне. Ничего из введённого здесь его не покидает.</string>
+    <string name="chat_search_no_results_title">Подходящих сообщений нет</string>
+    <string name="chat_search_no_results_description">В этой переписке ничего не найдено по запросу «%1$s».</string>
+    <string name="chat_search_failed_title">Поиск не сработал</string>
+    <string name="chat_search_failed_description">Поиск не выполнен. Попробуйте ещё раз чуть позже.</string>
+    <string name="chat_search_truncated">Показаны самые новые совпадения: %1$d. Добавьте слово, чтобы сузить поиск.</string>
+    <string name="chat_search_result_meta">%1$s · %2$s</string>
+    <string name="chat_search_show_in_thread">Показать в переписке</string>
+    <!-- MON-19: pause before sending. A held message, with its countdown in seconds. -->
+    <string name="chat_pending_send">Отправка через %1$d с…</string>
+    <string name="chat_pending_send_undo">Отменить</string>
+    <!-- MON-19: the lexical hint over the composer. Plain observations of what was typed, never a verdict. -->
+    <string name="chat_nudge_shouting">Заглавные буквы могут читаться как крик.</string>
+    <string name="chat_nudge_punctuation">Повторяющиеся !!! или ??? могут читаться как повышенный тон.</string>
+    <string name="chat_nudge_listed_words">Слова вроде %1$s могут прозвучать резче, чем вы хотите.</string>
+    <!-- MON-19: a short, mild list of words that tend to land harder than meant. Matching ignores
+         case and accents; an entry ending in * matches every word starting with it, so an
+         inflected word is listed once. Keep it short and mild: this is a nudge, not a filter. -->
+    <string-array name="chat_nudge_words">
+        <item>всегда</item>
+        <item>никогда</item>
+        <item>нелеп*</item>
+        <item>глуп*</item>
+        <item>смешн*</item>
+        <item>бестолк*</item>
+        <item>эгоист*</item>
+        <item>безответствен*</item>
+        <item>типичн*</item>
+    </string-array>
 </resources>

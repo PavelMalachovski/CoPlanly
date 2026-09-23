@@ -334,6 +334,20 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { preferencesRepository.setDefaultCurrency(currency) }
     }
 
+    /** Whether chat holds each message briefly with an Undo, and shows the lexical hint (MON-19). */
+    val pauseBeforeSending: StateFlow<Boolean> =
+        preferencesRepository.getPauseBeforeSendingFlow()
+            .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    /**
+     * Turns "Pause before sending" on or off.
+     *
+     * @param enabled True to hold each chat message briefly with an Undo before it is sent
+     */
+    fun setPauseBeforeSending(enabled: Boolean) {
+        viewModelScope.launch { preferencesRepository.setPauseBeforeSending(enabled) }
+    }
+
     init {
         loadSettings()
     }

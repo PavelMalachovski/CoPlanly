@@ -82,4 +82,41 @@
     <string name="chat_template_schedule_change_content">Potřebuji změnit rozpis na [datum]. Mohli bychom si termíny vyměnit? Nabízím [náhradní datum].</string>
     <string name="chat_failed_to_send_retry">Neodesláno — klepnutím zkusíte znovu</string>
     <string name="chat_load_earlier">Načíst starší zprávy</string>
+
+    <!-- MON-15: search inside the open conversation. Local to this phone; never a server. -->
+    <string name="chat_search">Hledat v konverzaci</string>
+    <string name="chat_search_close">Zavřít hledání</string>
+    <string name="chat_search_clear">Vymazat</string>
+    <string name="chat_search_placeholder">Hledat ve zprávách</string>
+    <string name="chat_search_prompt_title">Hledat v této konverzaci</string>
+    <string name="chat_search_prompt_description">Prohledává zprávy, které už jsou v tomto telefonu. Nic, co sem napíšete, jej neopustí.</string>
+    <string name="chat_search_no_results_title">Žádné odpovídající zprávy</string>
+    <string name="chat_search_no_results_description">V této konverzaci nic neodpovídá „%1$s“.</string>
+    <string name="chat_search_failed_title">Hledání se nepovedlo</string>
+    <string name="chat_search_failed_description">Nic nebylo prohledáno. Zkuste to za chvíli znovu.</string>
+    <string name="chat_search_truncated">Zobrazeno %1$d nejnovějších výsledků. Dalším slovem je zúžíte.</string>
+    <string name="chat_search_result_meta">%1$s · %2$s</string>
+    <string name="chat_search_show_in_thread">Zobrazit v konverzaci</string>
+    <!-- MON-19: pause before sending. A held message, with its countdown in seconds. -->
+    <string name="chat_pending_send">Odeslání za %1$d s…</string>
+    <string name="chat_pending_send_undo">Zpět</string>
+    <!-- MON-19: the lexical hint over the composer. Plain observations of what was typed, never a verdict. -->
+    <string name="chat_nudge_shouting">Velká písmena mohou působit jako křik.</string>
+    <string name="chat_nudge_punctuation">Opakované !!! nebo ??? mohou působit jako zvýšený hlas.</string>
+    <string name="chat_nudge_listed_words">Slova jako %1$s mohou vyznít tvrději, než chcete.</string>
+    <!-- MON-19: a short, mild list of words that tend to land harder than meant. Matching ignores
+         case and accents; an entry ending in * matches every word starting with it, so an
+         inflected word is listed once. Keep it short and mild: this is a nudge, not a filter. -->
+    <string-array name="chat_nudge_words">
+        <item>vždy</item>
+        <item>vždycky</item>
+        <item>nikdy</item>
+        <item>směšn*</item>
+        <item>hloup*</item>
+        <item>trapn*</item>
+        <item>neschopn*</item>
+        <item>sobeck*</item>
+        <item>nezodpovědn*</item>
+        <item>typick*</item>
+    </string-array>
 </resources>
