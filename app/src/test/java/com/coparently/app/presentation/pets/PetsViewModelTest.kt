@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -57,11 +58,18 @@ class PetsViewModelTest {
         crashlyticsManager = mockk(relaxed = true)
     )
 
-    /** Collects the one-shot outcomes; a `SharedFlow` without replay drops what nobody hears. */
+    /**
+     * Collects the one-shot outcomes; a `SharedFlow` without replay drops what nobody hears.
+     *
+     * On an unconfined dispatcher, so the collector subscribes before this returns:
+     * `advanceUntilIdle()` does not run `backgroundScope` work, and a collector launched there on
+     * the standard dispatcher never subscribed — every outcome was emitted to nobody.
+     */
     private fun TestScope.outcomesOf(vm: PetsViewModel): List<PetSaveOutcome> {
         val outcomes = mutableListOf<PetSaveOutcome>()
-        backgroundScope.launch { vm.saveOutcome.collect { outcomes += it } }
-        advanceUntilIdle()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            vm.saveOutcome.collect { outcomes += it }
+        }
         return outcomes
     }
 
