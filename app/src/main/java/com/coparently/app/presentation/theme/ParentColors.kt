@@ -7,6 +7,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 
 /**
+ * Whether the app offers the parent-colour picker (Settings → Family, onboarding profile step).
+ *
+ * Off until the chosen [ParentPalette] reaches the screens: every `ParentColors` call still takes
+ * the default palette and about twenty sites use the raw pink/blue, so a picker would promise a
+ * feature that does not exist (design item 8; ROADMAP UX-15, audit 2026-09). Turn it on in the
+ * same change that threads the palette through.
+ */
+const val PARENT_COLOUR_PICKER_ENABLED = false
+
+/**
  * Parent identity colours, resolved for the theme that is actually being painted.
  *
  * A colour identifies a *parent*, not a role: the app no longer shows the words Mom and Dad,
