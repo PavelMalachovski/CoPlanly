@@ -261,11 +261,12 @@ describe('stampOwnBlankFamilyIds', () => {
       assert.strictEqual(db._docs.expenses.exA.familyId, '');
     });
 
-    it('but not a guest, a friend, or an invitation nobody accepted', async () => {
+    it('but not a guest, a friend, a professional, or an invitation nobody accepted', async () => {
       const db = fakeDb(pairSeed({
         invitations: {
           g: {fromUserId: 'alice', acceptedBy: 'gran', status: 'accepted', kind: 'guest'},
           f: {fromUserId: 'alice', acceptedBy: 'nina', status: 'accepted', kind: 'friend'},
+          m: {fromUserId: 'alice', acceptedBy: 'med', status: 'accepted', kind: 'professional'},
           p: {fromUserId: 'alice', status: 'pending'},
           now: {fromUserId: 'alice', acceptedBy: 'bob', status: 'accepted'},
         },
