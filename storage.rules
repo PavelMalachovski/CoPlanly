@@ -6,9 +6,10 @@ rules_version = '2';
 // authentication; download URLs embedded in Firestore documents carry an access
 // token and keep working for the paired parent regardless of these read rules.
 //
-// None of these blocks can tell one signed-in user from another: none of them knows who a parent
-// of what is. See the medical_photos block, which says at length what that costs and why it was
-// accepted there.
+// The four photo blocks cannot tell one signed-in user from another: none of them knows who a
+// parent of what is. See the medical_photos block, which says at length what that costs and why
+// it was accepted there. The two MON-23 blocks at the end (`family_documents`, `chat_attachments`)
+// are the exception — they key on the family id in the path; read their comment for the cost.
 //
 // **The reason given for that used to be wrong.** This file said "Storage rules cannot read
 // Firestore", and so did SEC-1 in the backlog. They can: cross-service Security Rules

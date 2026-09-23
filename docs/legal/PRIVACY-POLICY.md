@@ -75,7 +75,20 @@ decide what each of you may read. **Legal basis:** performance of our contract w
   contacts, and a medical profile: allergies, medications, conditions, blood group,
   vaccinations, doctors' notes and photographs you attach to them.
 - **Records about a pet**, in the same shape.
-- **Messages** between you and your co-parent.
+- **Messages** between you and your co-parent, and the **photos and PDF files** either of you
+  sends in them. A file sent in a message stays in the thread like the message itself: neither of
+  you can edit or delete it afterwards.
+- **Family documents** — files you add to the family's document store (a court order, a school
+  letter, a scan of an identity document), with the name and category you give them. **A
+  document is always shared with your co-parent**: there are no private documents. Only the
+  parent who added a document can rename or delete it; a deleted document disappears from both
+  of your lists at once, and its file is removed from our servers 90 days later.
+
+For every shared file we also keep its size, its type and a **SHA-256 fingerprint** of its
+contents, so that the app can check a downloaded file is the one that was shared, and so that an
+export can list the files a message carried by name and fingerprint (the files themselves are
+never put into an export). Files are stored in Cloud Storage under your family, and only the two
+parents of that family can download them; we never create a public link to one.
 
 **Why:** these are the contents of the service. **Legal basis:** performance of our contract
 with you (Art. 6(1)(b)). For the medical profile, which is health data under Art. 9, we rely
@@ -217,7 +230,8 @@ because the phone lost its connection half-way — is deleted with your account.
   expense split, your parenting plan, your invitations, and the whole message thread with your
   co-parent;
 - deletes the photographs attached to those records — event photos, receipts, and medical and
-  pet photographs;
+  pet photographs — the family documents you added, and every photo and PDF file sent in the
+  message thread, whichever of you sent it;
 - removes you from the audience of anything your co-parent created, and ends any guest,
   calendar-friend or professional access you granted or held;
 - deletes every read-only calendar link into your families, whichever of you created it;

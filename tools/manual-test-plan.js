@@ -149,6 +149,13 @@ const RULES = [
       'K/data/repository/**', 'K/data/remote/**', 'firestore.rules', 'functions/**'],
   },
   {
+    sections: ['5.5'],
+    why: 'the document vault or chat attachments',
+    paths: ['K/presentation/documents/**', 'K/domain/documents/**', 'K/data/documents/**',
+      'K/domain/files/**', 'K/data/files/**', 'K/**/*Attachment*', 'storage.rules',
+      'app/src/main/res/values*/shared_files_strings.xml'],
+  },
+  {
     sections: ['6'],
     why: 'export',
     paths: ['K/presentation/export/**', 'K/domain/export/**', 'K/data/export/**',

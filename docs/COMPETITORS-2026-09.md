@@ -86,13 +86,13 @@ has" below means "in the code", not "proven with users".
 | Schedule changes | swap requests, pick-up/drop-off requests | change requests with honest status, swaps and overrides, a custody proposal with accept/decline, pickup confirmation | even |
 | Calendar breadth | parenting calendar and events calendar kept separate | month/week/day with drag to reschedule, recurrence, private events, filters by parent and by child/pet, holidays for 5 countries + German Länder, Czech school vacations | **CoPlanly** |
 | External calendar | phone-calendar sync | Google Calendar API (create, update, delete) | even |
-| Messaging | unalterable, read time, search, groups, documents | 1:1 only; unalterable by the rules (no test pins it); ticks; templates; local search of the thread (MON-15, since this comparison); no groups or attachments | **AppClose** |
+| Messaging | unalterable, read time, search, groups, documents | 1:1 only; unalterable by the rules (no test pins it); ticks; templates; local search of the thread (MON-15, since this comparison); images and PDFs in the thread (MON-23, since this comparison, live after the storage deploy); no groups | **AppClose** |
 | Tone check / AI | Co-Parent Assist | none (MON-12, P3, only behind a proxy) | **AppClose** |
 | Calls | audio and video, recording with consent | none | **AppClose** |
 | Expenses | categories, documents, reimbursements | receipts with **on-device OCR**, budgets, per-child/pet tags, an **agreed split ratio frozen per expense**, balances per currency | **CoPlanly** on split logic |
 | Payments | ipayou (US identity only) | none (MON-11) | AppClose, though ipayou doesn't reach the EU |
 | Court export | **certified** records with a record ID and an affidavit; very broad coverage | MON-3 in PR #99: on-device PDF/CSV, full event versions, device and server clocks, labelled as a communication record, not certified | **AppClose**; in CZ/DE the gap is smaller (free evaluation of evidence) |
-| Child info | Co-Parent Hub + unlimited storage | profiles with a medical section, several children, pets, contacts, medical photos (broken until the storage deploy) | about even; we have no document vault |
+| Child info | Co-Parent Hub + unlimited storage | profiles with a medical section, several children, pets, contacts, medical photos (broken until the storage deploy); a family document vault (MON-23, since this comparison, live after the storage deploy) | about even; AppClose's storage is unlimited, ours caps a file at 20 MB |
 | Journal | yes | no | **AppClose** |
 | GPS check-in | yes | pickup confirmation only | **AppClose** |
 | Third parties | unlimited Circle, free Pro for professionals | calendar friend (read-only, expiring, one family); guest access to one child record; multi-family | **AppClose** for professionals |
@@ -115,13 +115,12 @@ has" below means "in the code", not "proven with users".
 3. **A tone check before sending.** Every paid competitor has one. It must never block and never be
    stored, and it needs an EU AI Act review. (MON-12, behind SEC-1's proxy.) The model-free half —
    an undo window and a lexical hint — has since shipped as MON-19.
-4. **Chat completeness:** search (local, shipped since as MON-15), attachments (the composer deliberately has none until they
-   ship), a journal and notes, and third-party threads.
+4. **Chat completeness:** search (local, shipped since as MON-15), attachments (shipped since as MON-23, images and PDFs), a journal and notes, and third-party threads.
 5. **Seasonal schedule layers:** a summer or school-holiday schedule that overrides the base
    pattern. It matters in CZ/DE, where summer care is split differently from term time.
 6. **Professional access** for mediators, who are the distribution channel (MON-9). AppClose
    and OFW give them free portals.
-7. **A document vault** for court orders, school reports and passports.
+7. **A document vault** for court orders, school reports and passports — shipped since as MON-23.
 8. GPS check-in (lower priority; sensitive under GDPR).
 9. Calls with recording (low: consent-based recording is legally delicate in the EU and
    expensive to build).

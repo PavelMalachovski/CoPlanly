@@ -120,6 +120,7 @@ invocation is yours.
 | **M-8 (chat, shipped, unseen)** | Chat, its badge and `ChatMirror` follow the selected family | Unit tests pin the re-key; only an account with two co-parents on real phones shows a switch landing the Chat tab on the other thread, the badge moving with it, and messages from the family *left* arriving again after switching back. |
 | **M-8 (dot, shipped, unseen)** | The switcher chip and dialog show a dot when a family not on screen has chat news, a change request or a schedule proposal / day swap waiting on this parent; the dialog row names which | Three accounts (a parent and two co-parents) on at least two phones: the co-parent of the family *not* on screen sends a message, then files a change request, then proposes a schedule — each raises the dot on the chip and on that row within seconds, the row's line names it, and TalkBack reads the kind; answering it (or opening the thread) clears that kind; news in the family on screen never raises it; a one-family account shows exactly what it did. Also: the first change-request dot must not fail with a missing-index error in logcat (`OtherFamiliesSignals`) — the query is equality-only and should need none. |
 | **MON-17 (built, unseen)** | The iCalendar feed: `calendarFeed` + three callables, the Settings → Sync row | The RFC 5545 text and the custody port are pinned by `functions/test/calendar-feed.test.js`; only Apple Calendar shows whether it *subscribes* (`webcal://` from the share sheet), draws the all-day custody bars and the contact windows at the right local times, refreshes within the hour, and stops updating after a revoke. Checklist in MON-17. |
+| **MON-23 (shipped, unseen)** | The document vault (Settings → Family → Documents) and chat attachments (the paperclip beside the composer) | Rules proved offline (`family-documents.test.js`, `storage-shared-files.test.js`), deletion and sweep in mocha, the Kotlin compiled by CI and seen by nobody. Two paired phones: A files a PDF and a camera photo, B sees both and opens them, B cannot delete A's; A sends an image and a PDF in chat, B sees the thumbnail and the chip and opens both; with A in flight mode the bubble says "Not uploaded yet" and never ticks, and delivers when the network returns. `docs/DEVICE-CHECKLIST.md` §5.5. **Needs `firebase deploy --only storage` first** — until then every upload is refused. |
 | **MON-18 (shipped, unseen)** | Professional access: invite, the co-parent's consent, the professional's read-only calendar and plan, revoke | The rules and the callable are proved offline (emulator suite, mocha); the Kotlin is compiled by CI and seen by nobody. Three accounts (A, B, a professional P): A invites, P redeems, P sees "waiting"; B consents from Settings → Family → Professionals; P reads the calendar and plan and nothing else; either parent revokes and P's views empty at once. `docs/DEVICE-CHECKLIST.md` §5.4. Needs the functions **and** rules deploy first. |
 
 ### 💻 Yours only — no session can do these
@@ -129,7 +130,8 @@ invocation is yours.
 | **REL-3 ops** | `firebase deploy --only functions` → invoke `backfillFamilyDocuments` → invoke `backfillRecordFamilyIds` → `firebase deploy --only firestore:rules` | **The order matters.** PR #76's isolation is inert until this runs, and running the rules deploy before the record backfill leaves each co-parent's expenses looking empty on the other phone. The functions deploy also ships the `onFamilyCreated` re-stamp trigger and the `sweepLapsedCalendarFriends` schedule. `functions/README.md` has the runbook. |
 | **MON-4 deploy** | `firebase deploy --only firestore:rules` (the `event_versions` block) and `firebase deploy --only functions` (account deletion reaches revisions); trigger the Regenerate workflow for `37.json` | Until the rules are deployed every revision upload is refused and stays queued on the phone — nothing is lost, but nothing is recorded server-side either. The schema export is the one artefact only a machine with an Android SDK can produce; CI's schema guard fails until it is committed. Fold the rules deploy into REL-3's order: after the record backfill, like every rules deploy. |
 | **MON-16 deploy** | `firebase deploy --only functions` (`reserveExportRecordId`, `registerExportReceipt`, `verifyExport`, and account deletion scrubbing receipts), `firebase deploy --only firestore:rules` (the closed `export_receipts` block), `firebase deploy --only hosting` (`web/verify/`); then set `publishedExportVerifyUrl` in `app/build.gradle.kts` | Until the functions are deployed every export says "not registered" — honestly, and nothing is lost. Until the page is hosted and the URL set, a registered file prints its record ID without an address. `verifyExport` must be publicly invokable (a callable is by default); check `allUsers` has the Cloud Functions Invoker role after the first deploy. Rules order as for MON-4: after REL-3's record backfill. |
-| **REL-3 storage** | `firebase deploy --only storage` | One command that fixes a live bug: every pet and medical photo upload is refused today because the bucket still runs the July rules. |
+| **REL-3 storage** | `firebase deploy --only storage` | One command that fixes a live bug: every pet and medical photo upload is refused today because the bucket still runs the July rules. **MON-23 needs the same deploy**: the vault and chat attachments live under `family_documents/` and `chat_attachments/`, which the live bucket refuses outright until it runs. |
+| **MON-23 deploy** | `firebase deploy --only storage`, `firebase deploy --only firestore:rules,firestore:indexes` (the `family_documents` block and its index, the `messages` attachment cap), `firebase deploy --only functions` (the vault in account deletion and the tombstone sweep, chat files erased with the chat) | Rules order as for MON-4: after REL-3's record backfill. Without the storage deploy nothing can be uploaded; without the rules the vault list and every filing are refused; without the functions an erased account leaves its vault files and chat files in the bucket. |
 | **REL-1** | Firebase console, Google Cloud console, a fresh `google-services.json`, the debug and release SHA-1 | A local build fails until this is done — deliberately, since `applicationId` changed to `app.coplanly`. |
 | **REL-2** | Generate the release keystore and back it up in two places | The single most irreversible item in this document. |
 | **REL-4 (legal)** | Fill the "Owner must fill" tables (identity, contact, Firestore region, dates, liability, law); a lawyer reads the drafts; the three pages get hosted; the URL goes into `publishedPrivacyPolicyUrl` | This app processes a child's health data. No template survives that unread. |
@@ -2054,6 +2056,46 @@ the plan's custody and holiday sections, offer to **propose** the matching sched
 pattern and MON-14 layers, through the normal proposal and accept flow. The agreement already
 records the exact wording (item 21), so the proposal can cite the answer it came from. Unique in
 CZ, and a reason for a mediator to recommend the app.
+
+### MON-23 · **SHIPPED, UNSEEN; LIVE ONLY AFTER `firebase deploy --only storage`** · P1 · M · A document vault and files in chat
+
+**Where:** ☁️ cloud (done) → 👁 a device → 💻 the storage deploy.
+
+**Answers:** AppClose's unlimited document storage and documents in chat
+(`docs/COMPETITORS-2026-09.md`). A court order, a school letter or a passport scan belongs where
+both parents can find it, and a photo of a prescription is a message, not an email.
+
+**What shipped** (CLAUDE.md item 31 holds the invariants):
+
+- **The vault**, Settings → Family → Documents. `family_documents/{docId}` is the index — family,
+  uploader, audience (both parents), title, one of five categories, file name, path, type, size,
+  SHA-256, time, and a tombstone — and the bytes live at
+  `family_documents/{familyId}/{docId}/{fileName}`. Shared by definition: there is no private
+  document, and the screen says so first. Only the uploader renames or deletes; a delete is a
+  tombstone, and `sweepDeletedDocuments` removes the document **and its file** after 90 days.
+- **Chat attachments**, a paperclip beside the composer: images and PDFs at
+  `chat_attachments/{conversationId}/{messageId}/{fileName}`, referenced from the message as an
+  `att1|…` string in the `attachments` list messages already carried. A message is written to
+  Firestore only after its file is stored (`AttachmentUploadGate`), so it stays "Not uploaded yet"
+  and unticked until then, and the ordinary outbox retries it.
+- **Storage rules that know who a parent is**, keyed on the family id in the path (the two uids),
+  so the emulator runs every case; a 20 MB cap; PDF, JPEG, PNG, HEIC/HEIF, WebP only; uploader and
+  digest stamped; no listing, no overwrite; chat files never deletable by a client.
+- **The export** lists each attachment by name and SHA-256; **account deletion** removes the
+  departing parent's vault files and the whole thread's chat files.
+
+**Not done, recorded rather than hidden:**
+
+- **No Room cache.** The vault is a Firestore listener; offline it says "unavailable". A cached
+  vault is a schema version — take it with the next bump (v38 is MON-14's), not on its own.
+- **The path gate outlives unpair.** An ex-partner who kept a path can still fetch that file;
+  the index narrows at unpair, the bytes do not. The stronger rule is cross-service
+  (`firestore.get` on the live pairing) and is untestable in the emulator (SEC-1 §1's problem).
+- **No caption on a file, one file per message.** The composer sends the file alone; the rule
+  admits up to ten references, the UI sends one.
+- **Staged chat files are app-private but not SQLCipher-encrypted** (item 20 covers the database
+  only), and live only until their upload lands.
+- **Not on a device yet** — see §1 and `docs/DEVICE-CHECKLIST.md` §5.5.
 
 ### MON-22 · P2 · M · A private journal
 

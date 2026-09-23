@@ -101,7 +101,9 @@ them the evening before, from the commit you will build the app from.
   until step 3 has run.
 - [ ] **REL-3 storage:** `firebase deploy --only storage`. Until this runs, **every pet and
       medical photo upload is refused**, because the bucket still enforces the July rules. That
-      is a known failure, not a finding (§3.10).
+      is a known failure, not a finding (§3.10). The same deploy is what lets the document vault
+      and chat attachments upload at all (§5.5): they live under `family_documents/` and
+      `chat_attachments/`, which the July rules refuse.
 - [ ] **REL-3 accounts:** set `GOOGLE_OAUTH_CLIENT_ID` and `GOOGLE_OAUTH_CLIENT_SECRET` in
       `functions/.env` before the functions deploy. Without them, connecting Google Calendar
       cannot work.
@@ -669,6 +671,37 @@ professional), signed in on its own phone or after A/B on the fallback phone.
 
 ---
 
+### 5.5 Document vault and chat attachments (MON-23) · 2P, 1P fallback
+
+Needs `firebase deploy --only storage` **and** the rules and indexes deploy (§0): before the
+storage deploy every upload is refused; before the rules deploy the vault list is refused.
+A and B paired.
+
+- [ ] A: Settings → Family → **Documents**. The first line says everything here is shared and
+      nothing is private. **Add a file** → pick a PDF → name it, choose *Court orders* → **Upload
+      and share**. "Uploading…" shows, then the row appears under *Court orders* with size, "added
+      by" A's name and the date.
+- [ ] A: **Take a photo** (grant the camera) of a paper → *School* → it appears under *School*.
+- [ ] A: try a `.zip` or a video from the picker if the provider offers one → refused with the
+      "Only PDF, JPEG, PNG, HEIC and WebP" sentence; a file over 20 MB → the size sentence.
+- [ ] B: the vault shows both within seconds, without a refresh. Tapping each opens it in a
+      viewer (PDF viewer, gallery). B has **no** delete button on A's rows.
+- [ ] A: delete the school photo → confirm → it leaves both phones' lists.
+- [ ] A, in Chat: the **paperclip** left of the composer → pick a photo → the dialog names the
+      file and size and says it cannot be deleted later → **Send**. The thumbnail appears above a
+      bubble carrying the file name; it ticks once it is sent.
+- [ ] Same for a PDF: a chip with the name and size. B sees the thumbnail and the chip; tapping
+      opens each. Image and PDF are also listed in an export (§6) as name + SHA-256.
+- [ ] A in **flight mode** → send a photo: "Not uploaded yet" under it, the clock tick, never a
+      check. Leave flight mode, pull to refresh: "Uploading…", then the tick. B receives it once.
+- [ ] Open the same attachment twice: the second time it opens without a download (cache).
+- **Fallback (1P):** do A's steps, sign in as B on the same phone and look.
+- **If it fails:** tag `FamilyDocuments` / `ChatAttachments` / `MessageRepo`; `storage.rules`
+  (`isOneOfPair`, `isAcceptableSharedFile`), `firestore.rules` `family_documents`,
+  `data/files/`, `data/chat/ChatAttachmentOutbox.kt`.
+
+---
+
 ## 6. Export (MON-3), landing in PR #99 · 1P [#99]
 
 **Verify against the merged PR; the details may differ.** Expected: event versions, plus a PDF
@@ -710,7 +743,8 @@ Preconditions:
 - functions deployed from a commit containing `6e4ec8e` [branch];
 - storage rules deployed;
 - the throwaway account has authored an event with a photo, an expense with a receipt, a child
-  with a medical photo and a pet with a photo (§3.10).
+  with a medical photo and a pet with a photo (§3.10) — and, if it is paired, a vault document
+  and a chat attachment (§5.5).
 
 In the Firebase console → Storage, note the paths `event_images/<eventId>.jpg`,
 `receipts/<expenseId>.jpg`, `medical_photos/<childId>/` and `pet_photos/<petId>/`.
@@ -721,7 +755,9 @@ In the Firebase console → Storage, note the paths `event_images/<eventId>.jpg`
 - [ ] In the Firebase console, the account's documents are gone from `events`, `expenses`,
       `child_info`, `pets` and `budgets`, and the Auth user is gone.
 - [ ] **Storage:** all four paths are **gone**. Without `6e4ec8e` deployed, they stay behind,
-      which is the defect that commit fixed.
+      which is the defect that commit fixed. So are `family_documents/<familyId>/<docId>/` for
+      the throwaway's own filings (the co-parent's stay) and the whole
+      `chat_attachments/<conversationId>/` folder (MON-23; the chat goes whole).
 - [ ] If the throwaway was paired, the co-parent's phone **keeps** records it had already
       downloaded (by design: nothing reconciles by absence). The web deletion page and the
       privacy policy say so.
