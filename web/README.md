@@ -3,7 +3,8 @@
 Two things Google Play requires of CoPlanly are URLs, not screens: a privacy policy and a route to
 delete an account that works **without the app installed**. This directory holds both, plus the
 terms of service: `delete-account/`, `privacy/` and `terms/`, one self-contained `index.html`
-each. The legal texts are still drafts (REL-4) — every page carries a banner saying so until the
+each. A fourth page, `verify/`, is not a Play requirement but belongs with them: it is where a
+lawyer or a court checks an exported record (MON-16). The legal texts are still drafts (REL-4) — every page carries a banner saying so until the
 last `{{PLACEHOLDER}}` is gone — but the pages exist so that hosting them is one command once a
 lawyer has been through the markdown.
 
@@ -73,6 +74,37 @@ all three do.** The one most likely to drift is the list of collections: the cal
 `invitations`, `notification_queue` and `users`, plus the Storage files `AUTHORED_FILES` maps
 (`event_images/`, `receipts/`, `medical_photos/`, `pet_photos/`), and adding a collection or a
 file layout to the app without adding it there leaves data behind that the page promises is gone.
+One collection is **scrubbed rather than deleted**, and all three documents say so:
+`export_receipts` (MON-16) keeps the hash of an export already handed to a court, with the
+departing account and its family taken out, so erasing one parent does not un-verify the other's
+evidence.
+
+## `verify/index.html` — checking an exported record (MON-16)
+
+The page a lawyer, a mediator, a court or the other parent opens to check that an exported PDF or
+CSV is byte for byte the file that was registered when it was made. Self-contained like the others
+(no external script — a verification page whose answer depends on a CDN is not one), in English and
+Czech behind a two-button switch, following the browser's language.
+
+- **The file never leaves the browser.** It is read with the File API and hashed with
+  `crypto.subtle.digest('SHA-256')`; only the 64-character fingerprint is sent. `crypto.subtle`
+  exists only in a secure context, so the page must be served over **https** (Firebase Hosting is),
+  and says so if it is not.
+- **It calls `verifyExport` without the Firebase SDK**, the way the SDK does it: `POST` JSON
+  `{"data": {"sha256": "…"}}` (or `{"recordId": "…"}`) to
+  `https://us-central1-<project>.cloudfunctions.net/verifyExport`, answered with `{"result": …}` or
+  `{"error": {"status": …}}`. The base URL is the `FUNCTIONS_BASE` constant at the top of the
+  script — the only line to change if the project or the functions' region does. CORS is handled
+  by the callable itself.
+- **A record ID can be looked up without a file**, and typed beside a file so the page also checks
+  that the file is the one registered under *that* ID.
+- **What the answer contains** is decided by the function, not the page: when, the period, the
+  format, the size, and "one of the family's parents" — never a name. Every value is written with
+  `textContent`. `docs/DESIGN-court-record.md` §10 says why each field is or is not there.
+
+Once hosted, its URL goes into `publishedExportVerifyUrl` in `app/build.gradle.kts`, and every
+registered export printed after that carries it. Until then a registered export prints its record
+ID without an address — deliberately, rather than a link that does not resolve.
 
 ### Hosting
 
@@ -84,8 +116,8 @@ exists in the Firebase project:
 firebase deploy --only hosting
 ```
 
-puts the three pages at `https://<site>/delete-account/`, `https://<site>/privacy/` and
-`https://<site>/terms/`. **Nothing has been deployed yet**, and deploying is a decision, not a
+puts the four pages at `https://<site>/delete-account/`, `https://<site>/privacy/`,
+`https://<site>/terms/` and `https://<site>/verify/`. **Nothing has been deployed yet**, and deploying is a decision, not a
 build step: the privacy policy in particular must not go live with a draft banner on it. The
 URLs then go in **three** places: the Play Console's data-deletion and privacy-policy fields,
 `{{WEB_DELETION_URL}}` and `{{PRIVACY_POLICY_URL}}` in the legal documents, and

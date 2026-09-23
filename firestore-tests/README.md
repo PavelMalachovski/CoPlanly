@@ -52,7 +52,8 @@ npm run test:only                                                    # terminal 
 | `rules/conversations-messages.test.js` | Chat: membership immutability and the `isRead`-only message update |
 | `rules/budgets-change-requests.test.js` | `budgets`, `expenses` (non-delete) and `change_requests` |
 | `rules/unpair-revocation.test.js` | What the ex-partner can still reach after `unpairCoParent` sweeps `sharedWith` |
-| `rules/event-versions.test.js` | MON-4: `event_versions` is create-only with a server-pinned `recordedAt`, and chat stays unalterable |
+| `rules/event-versions.test.js` | MON-4: `event_versions` is create-only with a server-pinned `recordedAt`, and chat stays unalterable — every field, both parents, `set()`, delete and a stranger (completed in MON-16) |
+| `rules/export-receipts.test.js` | MON-16: `export_receipts` is closed to every client — no read, no query by hash, no create, update or delete, even by the parent who made the export |
 
 Each test file uses its own emulator project id, so several rulesets can be loaded at
 once — that is what lets the incident reproduction run beside the shipped rules.

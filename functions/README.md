@@ -269,6 +269,33 @@ Two things worth knowing before touching this:
   use — trusting it would let whoever presents a stolen token first bind it to themselves. The
   app already prompts to reconnect when a refresh fails, so this surfaces as that prompt.
 
+## Verifiable exports (MON-16)
+
+`export-receipts.js` holds the logic, `index.js` the three callables. The design is
+`docs/DESIGN-court-record.md` §10; what follows is what an operator needs.
+
+| callable | auth | what it does |
+| --- | --- | --- |
+| `reserveExportRecordId({familyId, fromDate, toDate, format})` | a parent of `familyId` (decided from the id, not from a live pairing), or `''` for no co-parent; 20 per account per 10 minutes per instance | mints `export_receipts/{recordId}` in state `reserved`, bound to the caller, the family, the period and the format — **before** the phone renders the file, because the hash must cover the id it prints |
+| `registerExportReceipt({recordId, sha256, byteLength})` | the parent who reserved the id, within an hour | records the SHA-256 (64 lowercase hex characters) and the length, with `recordedAt` from the function's clock. Create-once: another hash is `already-exists`; the same hash returns the original time |
+| `verifyExport({sha256} \| {recordId})` | **none** — a lawyer has no account; 30 per address per 10 minutes per instance | `{found: false}`, or `recordId`, `recordedAt`/`recordedAtMillis`, `fromDate`, `toDate`, `format`, `byteLength` and `generatedBy: "one of the family's parents"`. **Never** a uid, a family id or a name |
+
+- **Deploy:** `firebase deploy --only functions` for the three callables and the account-deletion
+  change, `firebase deploy --only firestore:rules` for the closed `export_receipts` block, and
+  `firebase deploy --only hosting` for `web/verify/`. Until the functions exist every export says
+  "not registered", which is honest and loses nothing.
+- **`verifyExport` must be invokable by `allUsers`.** A 1st-gen callable deployed by the Firebase
+  CLI is public by default; if an organisation policy strips that, the verification page answers
+  every file with a network error. Check the Cloud Functions Invoker role after the first deploy.
+- **`maxInstances: 10`** on `reserveExportRecordId` and `verifyExport` is what makes the in-memory,
+  per-instance rate limits a bound on the service. Raising it raises the ceiling proportionally.
+  No address is stored anywhere.
+- **Account deletion scrubs receipts, never deletes a registered one** (`scrubReceipts`):
+  `generatorUid` and `familyId` are blanked and the hash is kept, so the other parent's filed
+  evidence still verifies. Reservations that never received a hash are deleted.
+- **Region.** The callables run in `us-central1` with every other function here; `web/verify/`
+  hard-codes that base URL (`FUNCTIONS_BASE`) and must change with it.
+
 ## Admin operations
 
 ### The multi-family migration (run these in order)

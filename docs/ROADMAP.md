@@ -86,7 +86,6 @@ invocation is yours.
 | **FAM-4** | Custody per child | P2 | L |
 | **MON-14** | Seasonal schedule layers (summer / school holidays override the base pattern), with "fill from school holidays" | P1 | M |
 | **MON-15** | Search in chat — local Room FTS, never a server index | P1 | S |
-| **MON-16** | Verifiable export: record ID + SHA-256 registered server-side, verified in the browser | P1 | S |
 | **MON-17** | ICS calendar feed for a co-parent on an iPhone (secret revocable token, no private events) | P1 | M |
 | **MON-18** | Free, expiring, two-consent access for a mediator or lawyer | P1 | M |
 | **MON-19** | A pause before sending (undo window + a lexical nudge, no AI) | P2 | S |
@@ -110,6 +109,7 @@ invocation is yours.
 | **UX-8** | The second half: two surfaces colour a chip from two different sources | An owner's answer to "what does a chip's colour mean" — the event's owner, or whose day it falls on. |
 | **UX-13** | Light theme is unverifiable rather than incomplete — the cloud half is done (night window background, light+dark previews on the main screens' pieces) | Whether a dark cold start still flashes: only a device shows the window before Compose's first frame. |
 | **FAM-5** | The event chip does not say who it is about | Chips are single-line with ellipsis and every colour channel is spent. Worth an owner's eye on a real device rather than a treatment invented blind. |
+| **MON-16 (shipped, unseen)** | A registered export: the record ID on the PDF's face and footer, the offline "not registered" dialog, and `web/verify/` answering for a real file | Export once online and once in flight mode; open the PDF (every page's footer names the record, or says "not registered"); upload the online one to the hosted `web/verify/` and see a match, then re-save it from a PDF viewer and see it fail. Only a device renders the footer, and only a deploy answers the page. |
 | **MON-3 (shipped, unseen)** | The PDF export and the share sheet | `PdfDocument` drawing, Cyrillic and Czech glyphs in the default typeface, page breaks, and whether the share sheet hands the file to a mail app — the layout is unit-tested, the drawing is not. |
 | **M-4 (shipped, unseen)** | The colour palette, the family switcher, the second-co-parent invite | Kotlin compiled in CI; nobody has looked at it. |
 | **M-8 (chat, shipped, unseen)** | Chat, its badge and `ChatMirror` follow the selected family | Unit tests pin the re-key; only an account with two co-parents on real phones shows a switch landing the Chat tab on the other thread, the badge moving with it, and messages from the family *left* arriving again after switching back. |
@@ -121,6 +121,7 @@ invocation is yours.
 | --- | --- | --- |
 | **REL-3 ops** | `firebase deploy --only functions` → invoke `backfillFamilyDocuments` → invoke `backfillRecordFamilyIds` → `firebase deploy --only firestore:rules` | **The order matters.** PR #76's isolation is inert until this runs, and running the rules deploy before the record backfill leaves each co-parent's expenses looking empty on the other phone. The functions deploy also ships the `onFamilyCreated` re-stamp trigger and the `sweepLapsedCalendarFriends` schedule. `functions/README.md` has the runbook. |
 | **MON-4 deploy** | `firebase deploy --only firestore:rules` (the `event_versions` block) and `firebase deploy --only functions` (account deletion reaches revisions); trigger the Regenerate workflow for `37.json` | Until the rules are deployed every revision upload is refused and stays queued on the phone — nothing is lost, but nothing is recorded server-side either. The schema export is the one artefact only a machine with an Android SDK can produce; CI's schema guard fails until it is committed. Fold the rules deploy into REL-3's order: after the record backfill, like every rules deploy. |
+| **MON-16 deploy** | `firebase deploy --only functions` (`reserveExportRecordId`, `registerExportReceipt`, `verifyExport`, and account deletion scrubbing receipts), `firebase deploy --only firestore:rules` (the closed `export_receipts` block), `firebase deploy --only hosting` (`web/verify/`); then set `publishedExportVerifyUrl` in `app/build.gradle.kts` | Until the functions are deployed every export says "not registered" — honestly, and nothing is lost. Until the page is hosted and the URL set, a registered file prints its record ID without an address. `verifyExport` must be publicly invokable (a callable is by default); check `allUsers` has the Cloud Functions Invoker role after the first deploy. Rules order as for MON-4: after REL-3's record backfill. |
 | **REL-3 storage** | `firebase deploy --only storage` | One command that fixes a live bug: every pet and medical photo upload is refused today because the bucket still runs the July rules. |
 | **REL-1** | Firebase console, Google Cloud console, a fresh `google-services.json`, the debug and release SHA-1 | A local build fails until this is done — deliberately, since `applicationId` changed to `app.coplanly`. |
 | **REL-2** | Generate the release keystore and back it up in two places | The single most irreversible item in this document. |
@@ -1705,24 +1706,45 @@ bump and a migration (run the Regenerate workflow after *this* bump, not after a
 CLAUDE.md on the missing `35.json`). Search in the export (MON-3) comes free with the same
 query.
 
-### MON-16 · P1 · S · A verifiable export, without anybody's affidavit
+### MON-16 · **SHIPPED** · P1 · S · A verifiable export, without anybody's affidavit
 
-**Where:** ☁️ cloud (functions + rules + client).
+**Where:** ☁️ built (functions + rules + client + `web/verify/`); 💻 three deploys; 👁 a PDF on a
+device and a file through the hosted page. `docs/DESIGN-court-record.md` §10 is the design.
 
 **Answers:** AppClose's "certified records" rest on the vendor's affidavit. This does the same job
 with arithmetic.
 
-Every generated export (MON-3) gets:
-- a **record ID** and a **SHA-256** of the exact file bytes;
-- both registered by a callable in `export_receipts/{id}` with `recordedAt = request.time`
-  (server clock, per MON-4's decision), the family id, the generating uid and the date range.
+**What ships.**
+- `functions/export-receipts.js` behind three callables. `reserveExportRecordId` mints a 16-character
+  Crockford base-32 record ID (80 random bits, nothing identifying in it) bound to the caller, the
+  family, the period and the format **before the file is rendered** — the hash has to cover the ID
+  it prints. `registerExportReceipt` records the SHA-256 of the file's exact bytes under it, once,
+  at the server's time (MON-4's clock decision). `verifyExport` needs **no account**, is rate-limited
+  per address with an instance cap, and answers by hash or by record ID with the receipt alone:
+  registered at, period, format, size, and "one of the family's parents" — never a name, a uid or a
+  family id. §10 gives the reasoning field by field.
+- `export_receipts/{recordId}` is closed to every client in `firestore.rules`, pinned by
+  `firestore-tests/rules/export-receipts.test.js`.
+- The app reserves, renders with the ID, hashes, registers, and saves the bytes it hashed. The PDF
+  prints the record ID and the verification address under the statement and in **every page's
+  footer**; the CSV in its preamble. Offline — or if registration fails after a reservation — the
+  file is rendered as **"Not registered — verification unavailable"** on its face and the screen
+  says the same before the share sheet opens. No file ever names an ID the server holds no hash for
+  (design item 8). The address is `BuildConfig.EXPORT_VERIFY_URL`, blank until hosted; blank omits
+  the line.
+- `web/verify/`: a self-contained page that hashes the file **in the browser** with `crypto.subtle`
+  and calls `verifyExport` over plain HTTPS; the file never leaves the verifier's machine. A record
+  ID can be looked up on its own, and entered beside a file to check the two belong together.
+- Account deletion **scrubs** receipts rather than deleting them — `generatorUid` and `familyId`
+  blanked, the hash kept — so erasing one parent does not un-verify the other's evidence; unused
+  reservations are deleted. The privacy policy and the deletion page say so.
+- The chat immutability pin DESIGN §4 called missing now covers both parents, every field, a
+  smuggled rewrite, `set()`, delete and a stranger (`firestore-tests/rules/event-versions.test.js`).
 
-The PDF footer prints the ID and a short verification instruction. A lawyer, or the other
-parent, uploads the file to a static verification page (hosted with the privacy policy, REL-4).
-The page hashes it **in the browser** and asks the callable whether that hash was registered, and
-when. The file itself never leaves the verifier's machine. A single altered byte fails. Pairs
-with a test that pins message immutability in `firestore.rules` (called out as missing in
-`DESIGN-court-record.md`).
+**Not built:** a signature over the hash (a verifier trusts CoPlanly's register, as they would a
+notary's; signing with a published key is the next step if a court asks), a sweep of reservations
+that never received a hash (harmless, deleted with the account), and registering an offline export
+after the fact (it would print a server time that is not when the file was made).
 
 ### MON-17 · P1 · M · A calendar feed for a co-parent on an iPhone
 
