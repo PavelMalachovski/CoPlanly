@@ -189,6 +189,17 @@ class CustodySetupViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(customMomDays = currentDays)
     }
 
+    /**
+     * Assigns every day in [days] to slot 1 ("mom"), leaving the rest of the pattern alone.
+     *
+     * The "Week N → name" shortcuts used to call [toggleCustomMomDay] per day, so on a partly
+     * assigned week they flipped each day instead of assigning the week.
+     */
+    fun assignCustomDaysToMom(days: IntRange) {
+        val inPattern = days.filter { it < _uiState.value.customPatternDays }
+        _uiState.value = _uiState.value.copy(customMomDays = _uiState.value.customMomDays + inPattern)
+    }
+
     /** Turns the midweek contact day on or off. */
     fun setMidweekEnabled(enabled: Boolean) {
         _uiState.value = _uiState.value.copy(midweekEnabled = enabled)

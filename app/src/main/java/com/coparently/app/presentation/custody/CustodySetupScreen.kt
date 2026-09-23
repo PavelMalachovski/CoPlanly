@@ -395,8 +395,7 @@ fun CustodySetupScreen(
                     ) {
                         TextButton(
                             onClick = {
-                                // Select first week for mom
-                                (0..6).forEach { viewModel.toggleCustomMomDay(it) }
+                                viewModel.assignCustomDaysToMom(0..6)
                             },
                             modifier = Modifier.weight(1f)
                         ) {
@@ -410,12 +409,7 @@ fun CustodySetupScreen(
                         }
                         TextButton(
                             onClick = {
-                                // Select second week for mom (if exists)
-                                if (uiState.customPatternDays > 7) {
-                                    (7..13.coerceAtMost(uiState.customPatternDays - 1)).forEach {
-                                        viewModel.toggleCustomMomDay(it)
-                                    }
-                                }
+                                viewModel.assignCustomDaysToMom(7..13)
                             },
                             modifier = Modifier.weight(1f)
                         ) {

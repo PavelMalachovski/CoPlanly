@@ -1,10 +1,12 @@
 package com.coparently.app.presentation.childinfo.components
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.coparently.app.R
 import com.coparently.app.domain.model.SchoolInfo
@@ -72,6 +74,7 @@ fun SchoolInfoEditor(
                         value = phone,
                         onValueChange = { phone = it },
                         label = { Text(stringResource(R.string.childinfo_school_phone_optional_label)) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
                     )
@@ -104,6 +107,7 @@ fun SchoolInfoEditor(
                         value = teacherEmail,
                         onValueChange = { teacherEmail = it },
                         label = { Text(stringResource(R.string.childinfo_teacher_email_optional_label)) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
                     )
