@@ -675,16 +675,18 @@ jobs:
       - name: Every two-parent test ran — none skipped
         run: |
           set -euo pipefail
-          results=$(find app/build/outputs/androidTest-results -name '*.xml' 2>/dev/null || true)
-          if [ -z "$results" ]; then
+          # The runner names its file "TEST-emulator-5554 - 11-_app-.xml": spaces, so never
+          # word-split a list of paths — grep the directory recursively instead.
+          dir=app/build/outputs/androidTest-results
+          if [ -z "$(find "$dir" -name '*.xml' 2>/dev/null || true)" ]; then
             echo "::error::No instrumentation results were written."
             exit 1
           fi
-          if ! grep -q 'classname="com.coparently.app.e2e.' $results; then
+          if ! grep -rq --include='*.xml' 'classname="com.coparently.app.e2e.' "$dir"; then
             echo "::error::No test in com.coparently.app.e2e ran."
             exit 1
           fi
-          if grep -q '<skipped' $results; then
+          if grep -rq --include='*.xml' '<skipped' "$dir"; then
             echo "::error::A two-parent test was skipped — the emulator host argument did not arrive."
             exit 1
           fi
