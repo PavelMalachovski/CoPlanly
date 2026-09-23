@@ -111,7 +111,7 @@ class ConversationMigrator @Inject constructor(
         ) {
             Log.w(
                 TAG,
-                "Chat merge: unexpected failure merging $legacyId into $canonicalId; " +
+                "Chat merge: unexpected failure merging a legacy thread into the canonical one; " +
                     "continuing with any other candidates, the next launch retries this one.",
                 e
             )
@@ -128,7 +128,7 @@ class ConversationMigrator @Inject constructor(
         if (messageIds == null) {
             Log.w(
                 TAG,
-                "Chat merge: could not determine the full set of messages in $legacyId " +
+                "Chat merge: could not determine the full set of messages in a legacy thread " +
                     "(the remote read failed); leaving it active so the next launch retries."
             )
             return
@@ -138,8 +138,8 @@ class ConversationMigrator @Inject constructor(
         if (!fullyRepointedRemotely) {
             Log.w(
                 TAG,
-                "Chat merge: not every message in $legacyId reached $canonicalId remotely; " +
-                    "leaving $legacyId active so the next launch retries the whole thread."
+                "Chat merge: not every message of a legacy thread reached the canonical one " +
+                    "remotely; leaving it active so the next launch retries the whole thread."
             )
             return
         }
@@ -181,7 +181,7 @@ class ConversationMigrator @Inject constructor(
         } catch (
             @Suppress("TooGenericExceptionCaught") e: Exception
         ) {
-            Log.w(TAG, "Chat merge: remote message read failed for $legacyId.", e)
+            Log.w(TAG, "Chat merge: remote message read failed for a legacy thread.", e)
             return null
         }
         return localIds + remoteIds
@@ -205,7 +205,7 @@ class ConversationMigrator @Inject constructor(
         } catch (
             @Suppress("TooGenericExceptionCaught") e: Exception
         ) {
-            Log.w(TAG, "Chat merge: failed to re-point message $messageId to $canonicalId.", e)
+            Log.w(TAG, "Chat merge: failed to re-point message $messageId.", e)
             false
         }
 
@@ -224,7 +224,7 @@ class ConversationMigrator @Inject constructor(
         } catch (
             @Suppress("TooGenericExceptionCaught") e: Exception
         ) {
-            Log.w(TAG, "Chat merge: failed to mark $legacyId archived remotely.", e)
+            Log.w(TAG, "Chat merge: failed to mark a legacy thread archived remotely.", e)
         }
     }
 

@@ -260,7 +260,7 @@ class CustodyModelRepository(
         ) {
             Log.w(
                 TAG,
-                "Could not read custody_models/${pair.documentId}. Reported as Unavailable, not " +
+                "Could not read the shared custody document. Reported as Unavailable, not " +
                     "as an absent document: a caller that mistook the two would publish its own " +
                     "pattern over a co-parent's that is simply unreadable right now.",
                 e
@@ -1046,7 +1046,7 @@ class CustodyModelRepository(
     ) {
         Log.w(
             TAG,
-            "Custody $operation failed for custody_models/$documentId. Room keeps the local " +
+            "Custody $operation failed for the shared custody document. Room keeps the local " +
                 "copy, which the mirror will not overwrite with the older document, and " +
                 "re-sends on the next snapshot.",
             e

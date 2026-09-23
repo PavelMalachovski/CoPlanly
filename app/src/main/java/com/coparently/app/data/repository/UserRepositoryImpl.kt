@@ -498,7 +498,7 @@ class UserRepositoryImpl @Inject constructor(
         }.onFailure { e ->
             android.util.Log.w(
                 "UserRepository",
-                "caresFor not mirrored to family $familyId; the profile copy stands",
+                "caresFor not mirrored to the family document; the profile copy stands",
                 e
             )
         }
