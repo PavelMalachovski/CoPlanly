@@ -77,6 +77,10 @@
     <string name="settings_family_unnamed">Zatím bez jména</string>
     <string name="family_switcher_unread_other">Nové zprávy v jiné rodině</string>
     <string name="family_switcher_unread_row">Nové zprávy</string>
+    <string name="family_switcher_request_other">V jiné rodině čeká žádost o změnu</string>
+    <string name="family_switcher_request_row">Čeká žádost o změnu</string>
+    <string name="family_switcher_schedule_other">V jiné rodině čeká návrh rozvrhu péče</string>
+    <string name="family_switcher_schedule_row">Čeká návrh rozvrhu péče</string>
     <string name="settings_school_import_title">Import z Bakalářů a EduPage</string>
     <string name="settings_school_import_description">Školní rozvrh dítěte rovnou do kalendáře. Zatím není hotovo.</string>
     <string name="settings_school_import_planned">V plánu</string>

@@ -2,8 +2,9 @@ package com.coparently.app.presentation.common
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.coparently.app.data.chat.OtherFamiliesUnreadSource
 import com.coparently.app.data.family.FamilyOption
+import com.coparently.app.data.family.FamilySignal
+import com.coparently.app.data.family.OtherFamiliesSignals
 import com.coparently.app.data.family.SelectedFamilySource
 import com.coparently.app.domain.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -25,14 +26,14 @@ import javax.inject.Inject
  * @property families Every family, each co-parent named where their profile could be read.
  *   Names are resolved only when there are at least two, because nothing shows them otherwise.
  * @property selectedFamilyId The family on screen, or null when the account is in none.
- * @property unreadFamilyIds Families whose chat moved after this parent's read mark, as
- *   [OtherFamiliesUnreadSource] reports them — read only through [hasUnread] and
- *   [otherFamilyHasUnread], which never let it speak for the family on screen or at one family.
+ * @property signals What is waiting in each family, as [OtherFamiliesSignals] reports it — read
+ *   only through [signalsOf] and [otherFamilySignals], which never let it speak for the family on
+ *   screen or at one family.
  */
 data class FamilySwitcherState(
     val families: List<FamilyOption> = emptyList(),
     val selectedFamilyId: String? = null,
-    val unreadFamilyIds: Set<String> = emptySet()
+    val signals: Map<String, Set<FamilySignal>> = emptyMap()
 ) {
     /** Whether a switcher should be offered at all: **at two, not at one** (FAM-1's rule). */
     val canSwitch: Boolean get() = families.size > 1
@@ -40,15 +41,24 @@ data class FamilySwitcherState(
     /** The family on screen, if it is one of [families]. */
     val selected: FamilyOption? get() = families.firstOrNull { it.familyId == selectedFamilyId }
 
-    /** Whether any family *not* on screen has something new in its chat: the chip's dot. */
-    val otherFamilyHasUnread: Boolean get() = families.any { hasUnread(it.familyId) }
+    /**
+     * Every kind of news waiting in some family *not* on screen: the chip draws a dot when this
+     * is not empty, and its content description names the kinds.
+     */
+    val otherFamilySignals: Set<FamilySignal>
+        get() = families.flatMapTo(sortedSetOf<FamilySignal>()) { signalsOf(it.familyId) }
 
     /**
-     * Whether [familyId]'s row in the switcher dialog carries a dot. Never the family on
-     * screen — its own badge is the Chat tab's — and never at one family, where nothing is drawn.
+     * What [familyId]'s row in the switcher dialog says is waiting, in declaration order. Always
+     * empty for the family on screen — its own news is on its own screens (the Chat tab's badge,
+     * the calendar's banners) — and at one family, where nothing is drawn.
      */
-    fun hasUnread(familyId: String): Boolean =
-        canSwitch && familyId != selectedFamilyId && familyId in unreadFamilyIds
+    fun signalsOf(familyId: String): Set<FamilySignal> =
+        if (canSwitch && familyId != selectedFamilyId) {
+            signals[familyId].orEmpty().toSortedSet()
+        } else {
+            emptySet()
+        }
 }
 
 /**
@@ -67,16 +77,16 @@ data class FamilySwitcherState(
  * when the list re-emits for an unrelated reason — which a tab that is left and re-entered makes
  * the ordinary case, since `WhileSubscribed` restarts the upstream each time.
  *
- * **The dot is the other exception**: one conversation-document listener per family *not* on
- * screen, owned by the shared [OtherFamiliesUnreadSource] rather than by this instance, and none
- * at all for a one-family account.
+ * **The dot is the other exception**: a conversation listener, a pending-change-request query
+ * and a custody-document listener per family *not* on screen, owned by the shared
+ * [OtherFamiliesSignals] rather than by this instance, and none at all for a one-family account.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class FamilySwitcherViewModel @Inject constructor(
     private val selectedFamilySource: SelectedFamilySource,
     userRepository: UserRepository,
-    otherFamiliesUnreadSource: OtherFamiliesUnreadSource
+    otherFamiliesSignals: OtherFamiliesSignals
 ) : ViewModel() {
 
     /** Co-parent uid → name, for the lifetime of this instance; see the class KDoc. */
@@ -93,9 +103,9 @@ class FamilySwitcherViewModel @Inject constructor(
                     selectedFamilySource.observe(uid),
                     // Its own listeners, shared across every switcher on screen; the start value
                     // keeps the chip from waiting on Firestore to draw its name.
-                    otherFamiliesUnreadSource.unreadFamilyIds.onStart { emit(emptySet()) }
-                ) { families, selected, unread ->
-                    FamilySwitcherState(families, selected?.familyId, unread)
+                    otherFamiliesSignals.signals.onStart { emit(emptyMap()) }
+                ) { families, selected, signals ->
+                    FamilySwitcherState(families, selected?.familyId, signals)
                 }
             }
         }

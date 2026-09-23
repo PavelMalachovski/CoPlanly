@@ -131,13 +131,17 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     followed the first co-parent, whatever the switcher said) is fixed, and what remains is a
     layout call: the tab renders the thread in place (item 7) and its header already names the
     co-parent. **The chip and each dialog row carry a dot — never a count — when a family *not* on
-    screen has chat news**: only the selected family's messages are mirrored, so no figure for
-    another family could be backed, but its conversation *document* can say "newer than my read
-    mark". `data/chat/OtherFamiliesUnreadSource` holds one such listener per other family, shared
-    process-wide (`shareIn`, `WhileSubscribed`), **none at one family**, re-derived and cancelled
-    on a switch, pairing change or sign-out, and bounded like `reconnecting()`. Don't turn the dot
-    into a number, don't attach the listener per composable, and don't let it create a
-    conversation — it only reads (ROADMAP M-8).
+    screen has something waiting**: chat newer than my read mark (the conversation *document*),
+    a pending change request from that co-parent (a `limit(1)` query keyed on `requestedTo`, the
+    field the rule reads), or a schedule proposal or day swap awaiting me (`custody_models/{id}`
+    by **id** — `allow get` only, never a query). Only the selected family is mirrored, so no
+    figure for another family could be backed. `data/family/OtherFamiliesSignals` holds those
+    listeners per other family and reports which `FamilySignal` kinds are waiting; the chip's
+    content description and the dialog row's line name them. Shared process-wide (`shareIn`,
+    `WhileSubscribed`), **none at one family**, re-derived and cancelled on a switch, pairing
+    change or sign-out, and bounded like `reconnecting()` per listener. Don't turn the dot into a
+    number, don't attach a listener per composable, and don't let it create anything — it only
+    reads (ROADMAP M-8).
 
 ## UX/UI overhaul (July 2026 design review) — implemented, keep consistent
 
