@@ -101,9 +101,8 @@ class ParentingPlanViewModel @Inject constructor(
     /**
      * Records this parent's answer to [questionId].
      *
-     * Reads the family from the flow's *current* value rather than from a `WhileSubscribed`
-     * stream that may never have been collected — this is a save path, and the screen that calls
-     * it is by definition collecting [uiState], so the answer it needs is already on screen.
+     * The family comes from a fresh read of the scope, and this parent's current half from the
+     * screen's value when it has loaded, else from the repository — see [edit].
      */
     fun answer(questionId: String, answer: String) = edit { entry, now ->
         entry.withAnswer(questionId, answer, now)
@@ -123,8 +122,12 @@ class ParentingPlanViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val planScope = scope.first() ?: return@launch
+                // The on-screen value when there is one; otherwise a fresh read, never an empty
+                // entry. `uiState` is `WhileSubscribed` (CLAUDE.md item 17): if an answer were
+                // saved before the plan had loaded, starting from `ParentingPlanEntry()` would
+                // overwrite every other answer this parent had written with that one.
                 val current = (uiState.value as? ParentingPlanUiState.Ready)?.plan?.yours
-                    ?: ParentingPlanEntry()
+                    ?: repository.observe(planScope.familyId, planScope.myUid).first().yours
                 repository.save(
                     familyId = planScope.familyId,
                     myUid = planScope.myUid,
