@@ -1,6 +1,9 @@
 package com.coparently.app.presentation.settings
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -28,7 +31,6 @@ import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Diversity3
 import androidx.compose.material.icons.filled.EventAvailable
-import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.FamilyRestroom
 import androidx.compose.material.icons.filled.Group
@@ -77,6 +79,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
@@ -104,11 +107,14 @@ import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.SignedInAsRow
 import com.coparently.app.presentation.common.UiState
+import com.coparently.app.presentation.common.animations.sectionEnter
+import com.coparently.app.presentation.common.animations.sectionExit
 import com.coparently.app.presentation.common.labelRes
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.consent.TelemetryConsentViewModel
 import com.coparently.app.presentation.sync.GoogleCalendarSyncState
 import com.coparently.app.presentation.sync.SyncViewModel
+import com.coparently.app.presentation.theme.Motion
 import com.coparently.app.presentation.theme.PARENT_COLOUR_PICKER_ENABLED
 import com.coparently.app.presentation.theme.ParentColorChoice
 import kotlinx.coroutines.launch
@@ -634,7 +640,7 @@ fun SettingsScreen(
                         // control a parent sets once.
                         trailing = { DisclosureChevron(expanded = googleExpanded) }
                     )
-                    AnimatedVisibility(visible = googleExpanded) {
+                    AnimatedVisibility(visible = googleExpanded, enter = sectionEnter(), exit = sectionExit()) {
                         GoogleCalendarActions(
                             isSignedIn = isSignedIn,
                             isSyncEnabled = isSyncEnabled,
@@ -947,17 +953,29 @@ fun SettingsScreen(
 /** The trailing chevron on a row that expands in place, showing which way it is now. */
 @Composable
 private fun DisclosureChevron(expanded: Boolean) {
+    // Turns with the section it opens, over the same duration, instead of swapping glyphs in one
+    // frame while the section below it animated.
+    val rotation by animateFloatAsState(
+        targetValue = if (expanded) HALF_TURN_DEGREES else 0f,
+        animationSpec = tween(Motion.MEDIUM_MS, easing = FastOutSlowInEasing),
+        label = "disclosure_chevron"
+    )
     Icon(
-        imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+        imageVector = Icons.Default.ExpandMore,
         // Named, unlike [Chevron]. A navigation chevron repeats what the row already
         // announces; this one carries the row's *state*, which nothing else says aloud.
         contentDescription = stringResource(
             if (expanded) R.string.settings_collapse else R.string.settings_expand
         ),
         tint = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.size(20.dp)
+        modifier = Modifier
+            .size(20.dp)
+            .rotate(rotation)
     )
 }
+
+/** A disclosure chevron pointing up: [Icons.Default.ExpandMore] turned half way round. */
+private const val HALF_TURN_DEGREES = 180f
 
 /** The trailing chevron on a row that navigates elsewhere. */
 @Composable

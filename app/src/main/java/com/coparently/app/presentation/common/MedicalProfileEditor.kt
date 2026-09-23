@@ -1,8 +1,6 @@
 package com.coparently.app.presentation.common
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -40,6 +38,8 @@ import androidx.compose.ui.unit.dp
 import com.coparently.app.R
 import com.coparently.app.domain.model.BloodType
 import com.coparently.app.domain.model.MedicalProfile
+import com.coparently.app.presentation.common.animations.sectionEnter
+import com.coparently.app.presentation.common.animations.sectionExit
 
 /**
  * Edits a [MedicalProfile], or renders one read-only.
@@ -272,7 +272,7 @@ private fun MedicalStringAddRow(hint: String, onAdd: (String) -> Unit, modifier:
     var newValue by remember { mutableStateOf("") }
 
     Column(modifier = modifier) {
-        AnimatedVisibility(visible = isAdding, enter = expandVertically(), exit = shrinkVertically()) {
+        AnimatedVisibility(visible = isAdding, enter = sectionEnter(), exit = sectionExit()) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),

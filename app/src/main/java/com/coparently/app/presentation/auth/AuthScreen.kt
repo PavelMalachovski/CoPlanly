@@ -7,10 +7,6 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -42,8 +38,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
+import com.coparently.app.presentation.common.animations.sectionEnter
+import com.coparently.app.presentation.common.animations.sectionExit
 import com.coparently.app.presentation.theme.CoPlanlyColors
 import com.coparently.app.presentation.theme.dimensions
+import com.coparently.app.presentation.theme.rememberReducedMotion
 import com.coparently.app.utils.findActivity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -98,7 +97,7 @@ fun AuthScreen(
             ) {
                 // Animated logo with pulse effect
                 val infiniteTransition = rememberInfiniteTransition(label = "pulse")
-                val pulse by infiniteTransition.animateFloat(
+                val pulsing by infiniteTransition.animateFloat(
                     initialValue = 0.95f,
                     targetValue = 1.05f,
                     animationSpec = infiniteRepeatable(
@@ -107,6 +106,8 @@ fun AuthScreen(
                     ),
                     label = "pulse"
                 )
+                // Decoration that loops forever stands still when animations are switched off.
+                val pulse = if (rememberReducedMotion()) 1f else pulsing
 
                 Icon(
                     imageVector = Icons.Default.ChildCare,
@@ -259,8 +260,8 @@ fun AuthScreen(
                     val resetSentTo = uiState.resetEmailSentTo
                     AnimatedVisibility(
                         visible = resetSentTo != null,
-                        enter = slideInVertically() + fadeIn(),
-                        exit = slideOutVertically() + fadeOut()
+                        enter = sectionEnter(),
+                        exit = sectionExit()
                     ) {
                         Card(
                             modifier = Modifier.fillMaxWidth(),
@@ -299,8 +300,8 @@ fun AuthScreen(
                     val errorRes = uiState.error?.messageRes()
                     AnimatedVisibility(
                         visible = errorRes != null,
-                        enter = slideInVertically() + fadeIn(),
-                        exit = slideOutVertically() + fadeOut()
+                        enter = sectionEnter(),
+                        exit = sectionExit()
                     ) {
                         Card(
                             modifier = Modifier.fillMaxWidth(),

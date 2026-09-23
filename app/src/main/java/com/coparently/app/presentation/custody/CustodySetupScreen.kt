@@ -2,10 +2,6 @@ package com.coparently.app.presentation.custody
 
 import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -78,6 +74,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.domain.model.CustodyModelType
 import com.coparently.app.presentation.common.ParentNames
+import com.coparently.app.presentation.common.animations.sectionEnter
+import com.coparently.app.presentation.common.animations.sectionExit
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.theme.CoPlanlyColors
 import com.coparently.app.presentation.theme.ParentColors
@@ -297,8 +295,8 @@ fun CustodySetupScreen(
             // Midweek contact — only `výhradní péče se stykem` has one.
             AnimatedVisibility(
                 visible = uiState.selectedModelType == CustodyModelType.EVERY_OTHER_WEEKEND,
-                enter = fadeIn() + slideInVertically(),
-                exit = fadeOut() + slideOutVertically()
+                enter = sectionEnter(),
+                exit = sectionExit()
             ) {
                 MidweekContactSection(
                     uiState = uiState,
@@ -311,8 +309,8 @@ fun CustodySetupScreen(
             // Custom pattern editor
             AnimatedVisibility(
                 visible = uiState.selectedModelType == CustodyModelType.CUSTOM,
-                enter = fadeIn() + slideInVertically(),
-                exit = fadeOut() + slideOutVertically()
+                enter = sectionEnter(),
+                exit = sectionExit()
             ) {
                 Column {
                     Text(

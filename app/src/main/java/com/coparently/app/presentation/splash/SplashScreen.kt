@@ -35,6 +35,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.coparently.app.R
+import com.coparently.app.presentation.theme.Motion
+import com.coparently.app.presentation.theme.rememberReducedMotion
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /**
  * Branded startup splash: a violet background with the CoPlanly wordmark and a
@@ -60,7 +65,7 @@ fun SplashScreen(
 
     // Subtle continuous pulse on the icon after it settles
     val infinite = rememberInfiniteTransition(label = "splashPulse")
-    val pulse by infinite.animateFloat(
+    val pulsing by infinite.animateFloat(
         initialValue = 1f,
         targetValue = 1.06f,
         animationSpec = infiniteRepeatable(
@@ -69,16 +74,32 @@ fun SplashScreen(
         ),
         label = "pulse"
     )
+    val pulse = if (rememberReducedMotion()) 1f else pulsing
 
+    val reducedMotion = rememberReducedMotion()
     LaunchedEffect(Unit) {
-        // Icon pops in
-        iconAlpha.animateTo(1f, tween(300, easing = LinearOutSlowInEasing))
-        iconScale.animateTo(1f, tween(450, easing = FastOutSlowInEasing))
-        // Wordmark fades up shortly after
-        textAlpha.animateTo(1f, tween(400))
-        textOffsetY.animateTo(0f, tween(400, easing = FastOutSlowInEasing))
-        // Hold briefly, then let the host dismiss the splash
-        kotlinx.coroutines.delay(700)
+        if (reducedMotion) {
+            // Animations are off: show the finished frame and get out of the way. The hold is a
+            // `delay`, which the system animator scale does not shorten.
+            iconAlpha.snapTo(1f)
+            iconScale.snapTo(1f)
+            textAlpha.snapTo(1f)
+            textOffsetY.snapTo(0f)
+            onFinished()
+            return@LaunchedEffect
+        }
+        // The icon's fade and settle run together, then the wordmark's fade and rise together.
+        // All four used to run one after another, with a 700 ms hold on top: about 2.25 s on
+        // every cold start before the app appeared.
+        coroutineScope {
+            launch { iconAlpha.animateTo(1f, tween(Motion.MEDIUM_MS, easing = LinearOutSlowInEasing)) }
+            launch { iconScale.animateTo(1f, tween(SPLASH_SETTLE_MS, easing = FastOutSlowInEasing)) }
+        }
+        coroutineScope {
+            launch { textAlpha.animateTo(1f, tween(SPLASH_SETTLE_MS)) }
+            launch { textOffsetY.animateTo(0f, tween(SPLASH_SETTLE_MS, easing = FastOutSlowInEasing)) }
+        }
+        delay(SPLASH_HOLD_MS)
         onFinished()
     }
 
@@ -143,3 +164,10 @@ fun SplashScreen(
         }
     }
 }
+
+/** How long the icon takes to settle and the wordmark to rise. */
+private const val SPLASH_SETTLE_MS = 400
+
+/** How long the finished splash stays before the app shows. */
+private const val SPLASH_HOLD_MS = 300L
+

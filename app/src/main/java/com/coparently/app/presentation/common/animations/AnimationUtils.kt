@@ -141,3 +141,21 @@ fun fadeThroughIn(): EnterTransition {
 fun fadeThroughOut(): ExitTransition =
     fadeOut(animationSpec = tween(FADE_THROUGH_OUT_MS, easing = FastOutLinearInEasing))
 
+/**
+ * A section appearing inside a screen — an inline add form, the Google Calendar row's actions,
+ * a conditional block of a form, an error line. The one anatomy for all of them: the space
+ * opens over [ANIMATION_DURATION_MEDIUM] while the content fades in over
+ * [ANIMATION_DURATION_SHORT].
+ *
+ * There used to be three: expand with no fade (the child-record editors), fade + expand
+ * (Settings), and fade + *slide* with no expand (custody setup, sign-in), where the block slid
+ * while everything below it jumped to its final place in one frame.
+ */
+fun sectionEnter(): EnterTransition =
+    fadeIn(animationSpec = tween(ANIMATION_DURATION_SHORT)) +
+        expandVertically(animationSpec = tween(ANIMATION_DURATION_MEDIUM, easing = FastOutSlowInEasing))
+
+/** The counterpart of [sectionEnter]. */
+fun sectionExit(): ExitTransition =
+    fadeOut(animationSpec = tween(ANIMATION_DURATION_SHORT)) +
+        shrinkVertically(animationSpec = tween(ANIMATION_DURATION_MEDIUM, easing = FastOutSlowInEasing))

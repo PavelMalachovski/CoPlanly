@@ -1,5 +1,10 @@
 package com.coparently.app.presentation.theme
 
+import android.provider.Settings
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
+
 /**
  * The app's motion durations — the one place a timing is chosen.
  *
@@ -18,3 +23,20 @@ object Motion {
     /** A month or page changing, and the splash exit. */
     const val LONG_MS = 500
 }
+
+/**
+ * True when the person has switched animations off (Developer options or Accessibility →
+ * Remove animations, both of which set the animator duration scale to 0).
+ *
+ * Compose tweens and springs already honour that scale; what does not is anything the app
+ * *times itself* — a `delay` — and decoration that loops forever. Those read this: the splash
+ * skips its entrance and its hold, and the decorative pulses stand still.
+ */
+@Composable
+fun rememberReducedMotion(): Boolean {
+    val resolver = LocalContext.current.contentResolver
+    return remember(resolver) {
+        Settings.Global.getFloat(resolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
+    }
+}
+
