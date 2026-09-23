@@ -29,6 +29,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.coparently.app.presentation.theme.LayoutConstants
 import java.util.Locale
@@ -310,7 +311,10 @@ fun PillChip(
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Medium,
             color = contentColor,
-            maxLines = 1
+            maxLines = 1,
+            // Ellipsised rather than clipped when a caller bounds the chip's width — a person's
+            // name in the family switcher (M-8) is the case that needs it.
+            overflow = TextOverflow.Ellipsis
         )
     }
 }

@@ -53,6 +53,7 @@ import com.coparently.app.R
 import com.coparently.app.domain.expenses.SplitRatioProposal
 import com.coparently.app.domain.model.Expense
 import com.coparently.app.presentation.common.FamilyMemberChips
+import com.coparently.app.presentation.common.FamilySwitcherChip
 import com.coparently.app.presentation.common.ListSkeleton
 import com.coparently.app.presentation.common.Loadable
 import com.coparently.app.presentation.common.animations.AnimatedEmptyState
@@ -202,6 +203,9 @@ fun ExpenseScreen(
                     // Budgets used to live behind an unlabelled piggy-bank icon here. They are
                     // now visible on the screen itself as a chip strip, so this action is gone
                     // rather than duplicated.
+                    // Only with two families or more (M-8). A ledger is the screen where being in
+                    // the wrong family costs most: an expense is recorded against the one shown.
+                    FamilySwitcherChip()
                     onOpenSettings?.let { openSettings ->
                         IconButton(onClick = openSettings) {
                             Icon(
