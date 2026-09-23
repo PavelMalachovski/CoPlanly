@@ -1,8 +1,6 @@
 package com.coparently.app.presentation.common
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -22,7 +20,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -35,10 +32,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.coparently.app.R
 import com.coparently.app.domain.model.BloodType
 import com.coparently.app.domain.model.MedicalProfile
+import com.coparently.app.presentation.common.animations.sectionEnter
+import com.coparently.app.presentation.common.animations.sectionExit
 
 /**
  * Edits a [MedicalProfile], or renders one read-only.
@@ -240,21 +241,21 @@ private fun MedicalStringChips(values: List<String>, onRemove: (Int) -> Unit, mo
         modifier = modifier.fillMaxWidth()
     ) {
         values.forEachIndexed { index, value ->
+            // The whole chip removes it: it used to be a chip whose own tap did nothing, holding a
+            // 20dp remove button — under half the 48dp minimum. The chip enforces the minimum, and
+            // TalkBack hears "Remove <item>" rather than the item alone.
+            val removeLabel = stringResource(R.string.medical_item_remove)
             AssistChip(
-                onClick = {},
+                onClick = { onRemove(index) },
                 label = { Text(value) },
                 trailingIcon = {
-                    IconButton(
-                        onClick = { onRemove(index) },
-                        modifier = Modifier.size(20.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = stringResource(R.string.medical_item_remove),
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-                }
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                },
+                modifier = Modifier.semantics { contentDescription = "$removeLabel $value" }
             )
         }
     }
@@ -271,7 +272,7 @@ private fun MedicalStringAddRow(hint: String, onAdd: (String) -> Unit, modifier:
     var newValue by remember { mutableStateOf("") }
 
     Column(modifier = modifier) {
-        AnimatedVisibility(visible = isAdding, enter = expandVertically(), exit = shrinkVertically()) {
+        AnimatedVisibility(visible = isAdding, enter = sectionEnter(), exit = sectionExit()) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),

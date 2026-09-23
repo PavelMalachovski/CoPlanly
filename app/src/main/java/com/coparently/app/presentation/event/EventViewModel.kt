@@ -2,16 +2,20 @@ package com.coparently.app.presentation.event
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.coparently.app.R
 import com.coparently.app.data.analytics.AnalyticsManager
 import com.coparently.app.data.crashlytics.CrashlyticsManager
 import com.coparently.app.data.local.preferences.EncryptedPreferences
+import com.coparently.app.domain.error.AppError
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.repository.EventImageStorage
 import com.coparently.app.domain.repository.EventRepository
-import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.FamilyMember
 import com.coparently.app.presentation.common.FamilyMembersSource
+import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.ParentsSource
+import com.coparently.app.presentation.common.UiText
+import com.coparently.app.presentation.common.toUiText
 import com.google.gson.Gson
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -137,12 +141,11 @@ class EventViewModel @Inject constructor(
                 // unguarded-suspend-work failure the comment above guards the when() against.
                 // Losing the wording of one error message is the cheaper outcome by far.
                 .catch { e ->
-                    // Falls back to the raw exception rather than a new literal: no string is
-                    // added that the five locales would then owe a translation for.
-                    val message = runCatching { errorHandler.handleError(e).userMessage }
+                    // Falls back to the generic wording, never to the raw exception text: that
+                    // is English, and often a stack-trace fragment no parent should read.
+                    val message = runCatching { errorHandler.handleError(e).toEventText() }
                         .getOrNull()
-                        ?: e.message
-                        ?: e.toString()
+                        ?: UiText.Res(R.string.common_error_generic)
                     _uiState.value = EventUiState.Error(message)
                 }
         }
@@ -197,12 +200,12 @@ class EventViewModel @Inject constructor(
             _uiState.value = EventUiState.Loading
             val result = eventUseCases.createEvent(event)
             result.onSuccess {
-                _uiState.value = EventUiState.OperationSuccess("Event created successfully")
+                _uiState.value = EventUiState.OperationSuccess(EventOperation.CREATED)
                 kotlinx.coroutines.delay(2000)
                 _uiState.value = EventUiState.Success(events.value)
             }.onFailure { error ->
                 val appError = errorHandler.handleError(error)
-                _uiState.value = EventUiState.Error(appError.userMessage)
+                _uiState.value = EventUiState.Error(appError.toEventText())
             }
         }
     }
@@ -214,12 +217,12 @@ class EventViewModel @Inject constructor(
         viewModelScope.launch {
             val result = eventUseCases.updateEvent(event)
             result.onSuccess {
-                _uiState.value = EventUiState.OperationSuccess("Event updated successfully")
+                _uiState.value = EventUiState.OperationSuccess(EventOperation.UPDATED)
                 kotlinx.coroutines.delay(2000)
                 _uiState.value = EventUiState.Success(events.value)
             }.onFailure { error ->
                 val appError = errorHandler.handleError(error)
-                _uiState.value = EventUiState.Error(appError.userMessage)
+                _uiState.value = EventUiState.Error(appError.toEventText())
             }
         }
     }
@@ -232,12 +235,12 @@ class EventViewModel @Inject constructor(
             val result = eventUseCases.deleteEvent(event)
             result.onSuccess {
                 if (event.imageUrl != null) deleteEventImage(event.id)
-                _uiState.value = EventUiState.OperationSuccess("Event deleted successfully")
+                _uiState.value = EventUiState.OperationSuccess(EventOperation.DELETED)
                 kotlinx.coroutines.delay(2000)
                 _uiState.value = EventUiState.Success(events.value)
             }.onFailure { error ->
                 val appError = errorHandler.handleError(error)
-                _uiState.value = EventUiState.Error(appError.userMessage)
+                _uiState.value = EventUiState.Error(appError.toEventText())
             }
         }
     }
@@ -249,12 +252,12 @@ class EventViewModel @Inject constructor(
         viewModelScope.launch {
             val result = eventUseCases.deleteEvent.deleteById(id)
             result.onSuccess {
-                _uiState.value = EventUiState.OperationSuccess("Event deleted successfully")
+                _uiState.value = EventUiState.OperationSuccess(EventOperation.DELETED)
                 kotlinx.coroutines.delay(2000)
                 _uiState.value = EventUiState.Success(events.value)
             }.onFailure { error ->
                 val appError = errorHandler.handleError(error)
-                _uiState.value = EventUiState.Error(appError.userMessage)
+                _uiState.value = EventUiState.Error(appError.toEventText())
             }
         }
     }
@@ -303,17 +306,17 @@ class EventViewModel @Inject constructor(
                 )
                 val result = eventUseCases.updateEvent(updatedEvent)
                 result.onSuccess {
-                    _uiState.value = EventUiState.OperationSuccess("Event rescheduled")
+                    _uiState.value = EventUiState.OperationSuccess(EventOperation.RESCHEDULED)
                     kotlinx.coroutines.delay(1500)
                     _uiState.value = EventUiState.Success(events.value)
                 }.onFailure { error ->
                     val appError = errorHandler.handleError(error)
-                    _uiState.value = EventUiState.Error(appError.userMessage)
+                    _uiState.value = EventUiState.Error(appError.toEventText())
                     lastMoveUndoInfo = null // Clear undo info on error
                 }
             } catch (e: Exception) {
                 val appError = errorHandler.handleError(e)
-                _uiState.value = EventUiState.Error(appError.userMessage)
+                _uiState.value = EventUiState.Error(appError.toEventText())
                 lastMoveUndoInfo = null // Clear undo info on error
             }
         }
@@ -341,16 +344,16 @@ class EventViewModel @Inject constructor(
                 val result = eventUseCases.updateEvent(restoredEvent)
                 result.onSuccess {
                     lastMoveUndoInfo = null // Clear undo info after successful undo
-                    _uiState.value = EventUiState.OperationSuccess("Move undone")
+                    _uiState.value = EventUiState.OperationSuccess(EventOperation.MOVE_UNDONE)
                     kotlinx.coroutines.delay(1500)
                     _uiState.value = EventUiState.Success(events.value)
                 }.onFailure { error ->
                     val appError = errorHandler.handleError(error)
-                    _uiState.value = EventUiState.Error(appError.userMessage)
+                    _uiState.value = EventUiState.Error(appError.toEventText())
                 }
             } catch (e: Exception) {
                 val appError = errorHandler.handleError(e)
-                _uiState.value = EventUiState.Error(appError.userMessage)
+                _uiState.value = EventUiState.Error(appError.toEventText())
             }
         }
     }
@@ -376,7 +379,7 @@ class EventViewModel @Inject constructor(
 
                 // Validate that end is after start
                 if (updatedEnd.isBefore(updatedStart) || updatedEnd.isEqual(updatedStart)) {
-                    _uiState.value = EventUiState.Error("End time must be after start time")
+                    _uiState.value = EventUiState.Error(UiText.Res(R.string.event_form_end_before_start))
                     return@launch
                 }
 
@@ -386,16 +389,16 @@ class EventViewModel @Inject constructor(
                 )
                 val result = eventUseCases.updateEvent(updatedEvent)
                 result.onSuccess {
-                    _uiState.value = EventUiState.OperationSuccess("Event resized")
+                    _uiState.value = EventUiState.OperationSuccess(EventOperation.RESIZED)
                     kotlinx.coroutines.delay(1500)
                     _uiState.value = EventUiState.Success(events.value)
                 }.onFailure { error ->
                     val appError = errorHandler.handleError(error)
-                    _uiState.value = EventUiState.Error(appError.userMessage)
+                    _uiState.value = EventUiState.Error(appError.toEventText())
                 }
             } catch (e: Exception) {
                 val appError = errorHandler.handleError(e)
-                _uiState.value = EventUiState.Error(appError.userMessage)
+                _uiState.value = EventUiState.Error(appError.toEventText())
             }
         }
     }
@@ -427,16 +430,16 @@ class EventViewModel @Inject constructor(
                 )
                 val result = eventUseCases.updateEvent(updated)
                 result.onSuccess {
-                    _uiState.value = EventUiState.OperationSuccess("Pickup confirmed")
+                    _uiState.value = EventUiState.OperationSuccess(EventOperation.PICKUP_CONFIRMED)
                     kotlinx.coroutines.delay(1500)
                     _uiState.value = EventUiState.Success(events.value)
                 }.onFailure { error ->
                     val appError = errorHandler.handleError(error)
-                    _uiState.value = EventUiState.Error(appError.userMessage)
+                    _uiState.value = EventUiState.Error(appError.toEventText())
                 }
             } catch (e: Exception) {
                 val appError = errorHandler.handleError(e)
-                _uiState.value = EventUiState.Error(appError.userMessage)
+                _uiState.value = EventUiState.Error(appError.toEventText())
             }
         }
     }
@@ -455,7 +458,7 @@ class EventViewModel @Inject constructor(
                 eventUseCases.updateEvent(updated)
             } catch (e: Exception) {
                 val appError = errorHandler.handleError(e)
-                _uiState.value = EventUiState.Error(appError.userMessage)
+                _uiState.value = EventUiState.Error(appError.toEventText())
             }
         }
     }
@@ -541,14 +544,37 @@ sealed class EventUiState {
     data class Success(val events: List<Event>) : EventUiState()
 
     /**
-     * Operation Success state - операция (создание/обновление/удаление) выполнена успешно
-     * Показываем Lottie Success анимацию
+     * An operation (create, update, delete, move, …) completed.
+     *
+     * Carries *which* operation, not a sentence. Nothing renders one, and the only reader
+     * branches on it — `CalendarScreen` offers Undo after [EventOperation.RESCHEDULED]. It used
+     * to carry English literals and that screen compared against `"Event rescheduled"`, so
+     * localising the string would have silently removed the Undo (UX-12).
      */
-    data class OperationSuccess(val message: String = "Operation completed successfully") : EventUiState()
+    data class OperationSuccess(val operation: EventOperation) : EventUiState()
 
-    /**
-     * Error state - произошла ошибка, показываем Lottie Error анимацию
-     */
-    data class Error(val message: String) : EventUiState()
+    /** An operation or a query failed. [message] is resolved in composition (CQ-14). */
+    data class Error(val message: UiText) : EventUiState()
+}
+
+/** Which event operation an [EventUiState.OperationSuccess] reports. */
+enum class EventOperation {
+    CREATED,
+    UPDATED,
+    DELETED,
+    RESCHEDULED,
+    MOVE_UNDONE,
+    RESIZED,
+    PICKUP_CONFIRMED
+}
+
+/**
+ * The text a failed event operation shows. A validation failure names the event field the
+ * validator reported, where the generic [toUiText] can only say "check the details".
+ */
+private fun AppError.toEventText(): UiText = when {
+    this is AppError.ValidationError && field == "title" -> UiText.Res(R.string.event_error_title_invalid)
+    this is AppError.ValidationError && field == "endDateTime" -> UiText.Res(R.string.event_form_end_before_start)
+    else -> toUiText()
 }
 

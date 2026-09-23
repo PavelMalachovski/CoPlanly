@@ -30,4 +30,16 @@
     <!-- CQ-20: this device has a write that has not reached Firestore yet. -->
     <string name="change_request_status_queued">В очереди</string>
     <string name="change_request_status_queued_desc">Ещё не отправлено — ждёт подключения</string>
+
+    <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
+    <string name="change_request_error_event_missing">Событие, к которому относится запрос, больше не существует.</string>
+    <string name="change_request_error_apply_failed">Не удалось применить изменение. Попробуйте ещё раз.</string>
+    <string name="change_request_error_offer_answered">На это предложение уже ответили.</string>
+    <string name="change_request_error_swap_failed">Не удалось ответить на обмен. Попробуйте ещё раз.</string>
+    <string name="change_request_error_proposal_accept_failed">Не удалось принять предложение. Попробуйте ещё раз.</string>
+    <string name="change_request_error_proposal_decline_failed">Не удалось отклонить предложение. Попробуйте ещё раз.</string>
+    <string name="change_request_error_answer_failed">Не удалось ответить. Попробуйте ещё раз.</string>
+    <string name="change_request_error_signed_out">Вы вышли из аккаунта. Войдите и попробуйте ещё раз.</string>
+    <string name="change_request_error_not_paired">Сначала свяжитесь со вторым родителем, чтобы отправлять запросы на изменение.</string>
+    <string name="change_request_error_send_failed">Не удалось отправить запрос на изменение. Попробуйте ещё раз.</string>
 </resources>

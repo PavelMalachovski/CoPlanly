@@ -61,4 +61,9 @@
     <string name="pet_photos_upload_failed">Fotografii se nepodařilo nahrát. Zkuste to prosím znovu.</string>
     <string name="pet_photos_delete_failed">Fotografii se nepodařilo odebrat. Stále je přiložena.</string>
     <string name="pet_save_failed">Mazlíčka se nepodařilo uložit. Zkuste to prosím znovu.</string>
+
+    <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
+    <string name="pets_load_failed">Domácí mazlíčky se nepodařilo načíst. Zkuste to prosím znovu.</string>
+    <string name="pets_delete_failed">Mazlíčka se nepodařilo smazat. Zkuste to prosím znovu.</string>
+    <string name="pets_sync_failed">Mazlíčky se nepodařilo synchronizovat. Zkuste to prosím znovu.</string>
 </resources>

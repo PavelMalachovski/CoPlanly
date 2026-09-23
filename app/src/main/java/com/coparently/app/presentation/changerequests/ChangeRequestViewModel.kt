@@ -1,7 +1,9 @@
 package com.coparently.app.presentation.changerequests
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.coparently.app.R
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.domain.custody.CustodyPatternDiff
 import com.coparently.app.domain.custody.CustodyProposal
@@ -19,6 +21,7 @@ import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.domain.usecase.EventUseCases
 import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.ParentsSource
+import com.coparently.app.presentation.common.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,6 +37,8 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.LocalDateTime
 import javax.inject.Inject
+
+private const val TAG = "ChangeRequestViewModel"
 
 /**
  * ViewModel for the inbox: event change requests, one-off day swaps, and the actions on both.
@@ -70,8 +75,12 @@ class ChangeRequestViewModel @Inject constructor(
     private val _currentUserId = MutableStateFlow("")
     val currentUserId: StateFlow<String> = _currentUserId.asStateFlow()
 
-    private val _errorMessage = MutableStateFlow<String?>(null)
-    val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
+    /**
+     * Why the last answer did not go through, or null. A [UiText] the screen resolves (CQ-14):
+     * this used to be English, and usually the refusing exception's own message.
+     */
+    private val _errorMessage = MutableStateFlow<UiText?>(null)
+    val errorMessage: StateFlow<UiText?> = _errorMessage.asStateFlow()
 
     // `changeRequests` starts at `initialValue = emptyList()` before Room's flow has emitted
     // even once, and that placeholder is structurally identical to a real, confirmed-empty
@@ -185,7 +194,7 @@ class ChangeRequestViewModel @Inject constructor(
             val request = changeRequestRepository.getChangeRequestById(requestId) ?: return@launch
             val event = resolveEvent(request.eventId)
             if (event == null) {
-                _errorMessage.value = "The event for this request no longer exists"
+                _errorMessage.value = UiText.Res(R.string.change_request_error_event_missing)
                 return@launch
             }
             val result = eventUseCases.updateEvent(
@@ -202,7 +211,8 @@ class ChangeRequestViewModel @Inject constructor(
                     changeRequestRepository.updateStatus(requestId, ChangeRequestStatus.ACCEPTED)
                 },
                 onFailure = { e ->
-                    _errorMessage.value = e.message ?: "Failed to apply the change"
+                    Log.w(TAG, "Applying change request failed", e)
+                    _errorMessage.value = UiText.Res(R.string.change_request_error_apply_failed)
                 }
             )
         }
@@ -266,7 +276,7 @@ class ChangeRequestViewModel @Inject constructor(
                 ?: return@launch
             val now = LocalDateTime.now().toString()
             if (!group.awaitsAnswerFrom(uid)) {
-                _errorMessage.value = "This offer has already been answered"
+                _errorMessage.value = UiText.Res(R.string.change_request_error_offer_answered)
                 return@launch
             }
             custodyModelRepository.applyDayOverridesForDates(group.dates) { current, date ->
@@ -280,7 +290,8 @@ class ChangeRequestViewModel @Inject constructor(
                     Result.success(current)
                 }
             }.onFailure { e ->
-                _errorMessage.value = e.message ?: "The swap could not be answered"
+                Log.w(TAG, "Answering a day swap failed", e)
+                _errorMessage.value = UiText.Res(R.string.change_request_error_swap_failed)
             }
         }
     }
@@ -334,7 +345,8 @@ class ChangeRequestViewModel @Inject constructor(
     fun acceptProposal() {
         viewModelScope.launch {
             custodyModelRepository.acceptProposal().onFailure { e ->
-                _errorMessage.value = e.message ?: "The proposal could not be accepted"
+                Log.w(TAG, "Accepting a custody proposal failed", e)
+                _errorMessage.value = UiText.Res(R.string.change_request_error_proposal_accept_failed)
             }
         }
     }
@@ -343,7 +355,8 @@ class ChangeRequestViewModel @Inject constructor(
     fun declineProposal() {
         viewModelScope.launch {
             custodyModelRepository.declineProposal().onFailure { e ->
-                _errorMessage.value = e.message ?: "The proposal could not be declined"
+                Log.w(TAG, "Declining a custody proposal failed", e)
+                _errorMessage.value = UiText.Res(R.string.change_request_error_proposal_decline_failed)
             }
         }
     }
@@ -375,7 +388,7 @@ class ChangeRequestViewModel @Inject constructor(
             // path at least printed.
             val fresh = resolveEvent(eventId)
             if (fresh == null) {
-                _errorMessage.value = "The event for this request no longer exists"
+                _errorMessage.value = UiText.Res(R.string.change_request_error_event_missing)
                 return@launch
             }
             val uid = _currentUserId.value.takeIf { it.isNotEmpty() }
@@ -389,7 +402,10 @@ class ChangeRequestViewModel @Inject constructor(
             }
             result.fold(
                 onSuccess = { eventRepository.updateEvent(it) },
-                onFailure = { e -> _errorMessage.value = e.message ?: "Could not answer that" }
+                onFailure = { e ->
+                    Log.w(TAG, "Answering an event failed", e)
+                    _errorMessage.value = UiText.Res(R.string.change_request_error_answer_failed)
+                }
             )
         }
     }

@@ -2,6 +2,7 @@ package com.coparently.app.presentation.calendar
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -72,6 +73,7 @@ import com.coparently.app.presentation.common.FamilyMemberChips
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.common.rememberToday
 import com.coparently.app.presentation.common.toggling
+import com.coparently.app.presentation.event.EventOperation
 import com.coparently.app.presentation.event.EventUiState
 import com.coparently.app.presentation.event.EventViewModel
 import com.coparently.app.presentation.theme.dimensions
@@ -194,7 +196,7 @@ internal fun eventsByDay(events: List<Event>): Map<LocalDate, List<Event>> {
 /**
  * Main calendar screen showing calendar view with events.
  * Supports Month, Week and Day view modes with parent and event type filters,
- * Czech holidays and custody indication.
+ * the parent's country's public holidays and custody indication.
  *
  * Restructured by the August 2026 design review: the header is one row (its four actions and
  * the segmented view-mode bar under it are now a title menu, a Today pill and one Filters
@@ -285,7 +287,7 @@ fun CalendarScreen(
         val known = familyMembers.map { it.ref }.toSet()
         memberFilter.filter { it in known }
     }
-    val typeFilterSheetState = rememberModalBottomSheetState()
+    val typeFilterSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     // Snackbar state for undo functionality
     val snackbarHostState = remember { SnackbarHostState() }
@@ -436,7 +438,9 @@ fun CalendarScreen(
     LaunchedEffect(uiState) {
         when (val state = uiState) {
             is EventUiState.OperationSuccess -> {
-                if (state.message == "Event rescheduled" && eventViewModel.hasUndoAction()) {
+                // Branches on the operation, never on its wording (UX-12): this compared the
+                // English literal "Event rescheduled", which localising would have broken.
+                if (state.operation == EventOperation.RESCHEDULED && eventViewModel.hasUndoAction()) {
                     val result = snackbarHostState.showSnackbar(
                         message = movedMessage,
                         actionLabel = undoMoveLabel,
@@ -644,15 +648,55 @@ fun CalendarScreen(
                 // `VacationBanner` itself is left in `CalendarBanners.kt`; the label helper
                 // that fed it is recoverable from this commit's parent.
 
-                // A custody proposal the co-parent must answer: a Review banner into the inbox.
-                proposalAwaitingMe?.let { proposal ->
-                    if (onChangeRequestsClick != null) {
+                // The banners share one container that animates its height, so a banner arriving
+                // or leaving moves the grid over the standard duration instead of shoving it in
+                // one frame (audit 2026-09 §3.3).
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .animateContentSize(
+                            tween(
+                                com.coparently.app.presentation.theme.Motion.MEDIUM_MS,
+                                easing = FastOutSlowInEasing
+                            )
+                        )
+                ) {
+                    // A custody proposal the co-parent must answer: a Review banner into the inbox.
+                    proposalAwaitingMe?.let { proposal ->
+                        if (onChangeRequestsClick != null) {
+                            ChangeRequestBanner(
+                                pendingCount = 1,
+                                message = stringResource(
+                                    R.string.custody_proposal_review,
+                                    parentNames.labelForUid(proposal.proposedBy)
+                                ),
+                                onReview = onChangeRequestsClick,
+                                modifier = Modifier.padding(
+                                    horizontal = dims.paddingMedium,
+                                    vertical = dims.paddingSmall / 2
+                                )
+                            )
+                        }
+                    }
+
+                    // The proposer's own view: a passive note that the change is not live yet.
+                    if (proposerWaiting) {
+                        Text(
+                            text = stringResource(R.string.custody_proposal_waiting),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(
+                                horizontal = dims.paddingMedium,
+                                vertical = dims.paddingSmall
+                            )
+                        )
+                    }
+
+                    // Change requests as a labelled banner rather than a badged glyph in the bar.
+                    // The count folds in day swaps awaiting this parent — see pendingSwapsAwaitingMe.
+                    if (pendingInboxCount > 0 && onChangeRequestsClick != null) {
                         ChangeRequestBanner(
-                            pendingCount = 1,
-                            message = stringResource(
-                                R.string.custody_proposal_review,
-                                parentNames.labelForUid(proposal.proposedBy)
-                            ),
+                            pendingCount = pendingInboxCount,
                             onReview = onChangeRequestsClick,
                             modifier = Modifier.padding(
                                 horizontal = dims.paddingMedium,
@@ -660,84 +704,58 @@ fun CalendarScreen(
                             )
                         )
                     }
-                }
 
-                // The proposer's own view: a passive note that the change is not live yet.
-                if (proposerWaiting) {
-                    Text(
-                        text = stringResource(R.string.custody_proposal_waiting),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(
-                            horizontal = dims.paddingMedium,
-                            vertical = dims.paddingSmall
+                    // Custody is last-write-wins with no consent step; this is what keeps a remote
+                    // change from landing silently. Never shown for this device's own write - see
+                    // CalendarViewModel.custodyChangeAnnouncement. Named via labelForUid, not a
+                    // slot lookup: a pair not yet migrated off a shared "mom" slot would otherwise
+                    // have the co-parent's write reported as the signed-in parent's own.
+                    custodyChangeAnnouncement?.let { announcement ->
+                        CustodyChangedBanner(
+                            byName = parentNames.labelForUid(announcement.lastModifiedBy),
+                            onDismiss = {
+                                calendarViewModel.dismissCustodyChange(announcement.lastModifiedAtMillis)
+                            },
+                            modifier = Modifier.padding(
+                                horizontal = dims.paddingMedium,
+                                vertical = dims.paddingSmall / 2
+                            )
                         )
-                    )
-                }
+                    }
 
-                // Change requests as a labelled banner rather than a badged glyph in the bar.
-                // The count folds in day swaps awaiting this parent — see pendingSwapsAwaitingMe.
-                if (pendingInboxCount > 0 && onChangeRequestsClick != null) {
-                    ChangeRequestBanner(
-                        pendingCount = pendingInboxCount,
-                        onReview = onChangeRequestsClick,
-                        modifier = Modifier.padding(
-                            horizontal = dims.paddingMedium,
-                            vertical = dims.paddingSmall / 2
-                        )
-                    )
-                }
-
-                // Custody is last-write-wins with no consent step; this is what keeps a remote
-                // change from landing silently. Never shown for this device's own write - see
-                // CalendarViewModel.custodyChangeAnnouncement. Named via labelForUid, not a
-                // slot lookup: a pair not yet migrated off a shared "mom" slot would otherwise
-                // have the co-parent's write reported as the signed-in parent's own.
-                custodyChangeAnnouncement?.let { announcement ->
-                    CustodyChangedBanner(
-                        byName = parentNames.labelForUid(announcement.lastModifiedBy),
-                        onDismiss = {
-                            calendarViewModel.dismissCustodyChange(announcement.lastModifiedAtMillis)
-                        },
+                    // Renders nothing below two members, so a family with one child sees the grid
+                    // they always saw. Placed with the banners rather than in the Filters sheet: the
+                    // question "what does Anya's week look like" is asked at a glance, and the
+                    // Expenses screen answers the same question the same way.
+                    FamilyMemberChips(
+                        members = familyMembers,
+                        selected = activeMemberFilter,
+                        onToggle = { memberFilter = activeMemberFilter.toggling(it) },
+                        label = R.string.calendar_filter_members,
                         modifier = Modifier.padding(
                             horizontal = dims.paddingMedium,
                             vertical = dims.paddingSmall / 2
                         )
                     )
-                }
 
-                // Renders nothing below two members, so a family with one child sees the grid
-                // they always saw. Placed with the banners rather than in the Filters sheet: the
-                // question "what does Anya's week look like" is asked at a glance, and the
-                // Expenses screen answers the same question the same way.
-                FamilyMemberChips(
-                    members = familyMembers,
-                    selected = activeMemberFilter,
-                    onToggle = { memberFilter = activeMemberFilter.toggling(it) },
-                    label = R.string.calendar_filter_members,
-                    modifier = Modifier.padding(
-                        horizontal = dims.paddingMedium,
-                        vertical = dims.paddingSmall / 2
-                    )
-                )
-
-                // While a swap selection is open, the grid needs a way out and a way to commit —
-                // predictive back is on, so a `BackHandler` clears it too. Shown only in MONTH:
-                // week and day views draw no swap markers at all, so a selection made there would
-                // be invisible.
-                if (swapSelection.isNotEmpty() && viewMode == CalendarViewMode.MONTH) {
-                    DaySwapSelectionBar(
-                        dayCount = swapSelection.size,
-                        onContinue = { swapSheetOpen = true },
-                        onCancel = {
-                            swapSelection = emptySet()
-                            swapAnchor = null
-                        },
-                        modifier = Modifier.padding(
-                            horizontal = dims.paddingMedium,
-                            vertical = dims.paddingSmall / 2
+                    // While a swap selection is open, the grid needs a way out and a way to commit —
+                    // predictive back is on, so a `BackHandler` clears it too. Shown only in MONTH:
+                    // week and day views draw no swap markers at all, so a selection made there would
+                    // be invisible.
+                    if (swapSelection.isNotEmpty() && viewMode == CalendarViewMode.MONTH) {
+                        DaySwapSelectionBar(
+                            dayCount = swapSelection.size,
+                            onContinue = { swapSheetOpen = true },
+                            onCancel = {
+                                swapSelection = emptySet()
+                                swapAnchor = null
+                            },
+                            modifier = Modifier.padding(
+                                horizontal = dims.paddingMedium,
+                                vertical = dims.paddingSmall / 2
+                            )
                         )
-                    )
+                    }
                 }
 
                 // No "Today with X" ribbon here. The day cells already say whose day it is, in

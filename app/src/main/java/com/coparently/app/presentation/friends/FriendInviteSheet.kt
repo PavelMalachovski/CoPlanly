@@ -53,7 +53,7 @@ fun FriendInviteSheet(
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState()
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ) {
         Column(
             modifier = Modifier
@@ -92,7 +92,8 @@ fun FriendInviteSheet(
                             } else {
                                 MaterialTheme.colorScheme.onSurfaceVariant
                             },
-                            onClick = { onChooseDuration(duration) }
+                            onClick = { onChooseDuration(duration) },
+                            selected = duration == state.duration
                         )
                     }
                 }

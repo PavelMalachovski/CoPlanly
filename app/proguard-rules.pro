@@ -69,7 +69,9 @@
 # keeps a future `Log.d("...", "$message")` out of a shipped APK.
 #
 # `Log.w` and `Log.e` are deliberately kept: they are what makes a production crash
-# report legible, and they are reviewed not to carry content.
+# report legible, and they are reviewed not to carry content — nor, since the September 2026
+# audit, account identifiers: uids and family ids (which embed two uids) were taken out of
+# every warning and error message.
 # Requires the optimizing configuration, which `proguard-android-optimize.txt`
 # (referenced from `build.gradle.kts`) supplies.
 -assumenosideeffects class android.util.Log {

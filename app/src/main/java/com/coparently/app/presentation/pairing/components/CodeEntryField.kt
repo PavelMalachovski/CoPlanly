@@ -3,6 +3,7 @@ package com.coparently.app.presentation.pairing.components
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
@@ -13,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -23,6 +25,10 @@ import com.coparently.app.domain.pairing.InviteCodeGenerator
  * Input for a code the user was given. Accepts a pasted pairing link or share
  * message too — the ViewModel extracts the code from it.
  *
+ * [onSubmit] null leaves out the built-in "Link accounts" button, for a caller whose submit
+ * means something else and carries its own wording and progress (the guest code screen used to
+ * show both buttons, the first one worded for pairing).
+ *
  * Always fills the width of its container, so unlike the other pairing
  * components it takes no `modifier` — adding one would push this composable
  * past detekt's parameter-count limit for no actual caller need.
@@ -31,7 +37,7 @@ import com.coparently.app.domain.pairing.InviteCodeGenerator
 fun CodeEntryField(
     value: String,
     onValueChange: (String) -> Unit,
-    onSubmit: () -> Unit,
+    onSubmit: (() -> Unit)?,
     errorText: String?,
     enabled: Boolean
 ) {
@@ -57,16 +63,23 @@ fun CodeEntryField(
                 letterSpacing = 6.sp
             ),
             keyboardOptions = KeyboardOptions(
-                capitalization = KeyboardCapitalization.Characters
+                capitalization = KeyboardCapitalization.Characters,
+                autoCorrectEnabled = false,
+                imeAction = ImeAction.Done
+            ),
+            keyboardActions = KeyboardActions(
+                onDone = { if (value.length == InviteCodeGenerator.LENGTH) onSubmit?.invoke() }
             ),
             modifier = Modifier.fillMaxWidth()
         )
-        Button(
-            onClick = onSubmit,
-            enabled = enabled && value.length == InviteCodeGenerator.LENGTH,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text(stringResource(R.string.pairing_link_accounts))
+        if (onSubmit != null) {
+            Button(
+                onClick = onSubmit,
+                enabled = enabled && value.length == InviteCodeGenerator.LENGTH,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(stringResource(R.string.pairing_link_accounts))
+            }
         }
     }
 }

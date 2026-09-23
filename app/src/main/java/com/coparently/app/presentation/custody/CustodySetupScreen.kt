@@ -2,10 +2,6 @@ package com.coparently.app.presentation.custody
 
 import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -67,6 +63,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -78,8 +75,10 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.domain.model.CustodyModelType
 import com.coparently.app.presentation.common.ParentNames
+import com.coparently.app.presentation.common.animations.sectionEnter
+import com.coparently.app.presentation.common.animations.sectionExit
+import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.rememberParentNames
-import com.coparently.app.presentation.theme.CoPlanlyColors
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.dimensions
 import java.time.DayOfWeek
@@ -108,9 +107,10 @@ fun CustodySetupScreen(
     var showDatePicker by remember { mutableStateOf(false) }
 
     // Show error snackbar
+    val context = LocalContext.current
     LaunchedEffect(uiState.error) {
         uiState.error?.let { error ->
-            snackbarHostState.showSnackbar(error)
+            snackbarHostState.showSnackbar(error.asString(context))
             viewModel.clearError()
         }
     }
@@ -272,7 +272,7 @@ fun CustodySetupScreen(
                             modifier = Modifier
                                 .size(12.dp)
                                 .background(
-                                    if (uiState.momFirst) CoPlanlyColors.MomPink else CoPlanlyColors.DadBlue,
+                                    ParentColors.fill(if (uiState.momFirst) "mom" else "dad"),
                                     CircleShape
                                 )
                         )
@@ -297,8 +297,8 @@ fun CustodySetupScreen(
             // Midweek contact — only `výhradní péče se stykem` has one.
             AnimatedVisibility(
                 visible = uiState.selectedModelType == CustodyModelType.EVERY_OTHER_WEEKEND,
-                enter = fadeIn() + slideInVertically(),
-                exit = fadeOut() + slideOutVertically()
+                enter = sectionEnter(),
+                exit = sectionExit()
             ) {
                 MidweekContactSection(
                     uiState = uiState,
@@ -311,8 +311,8 @@ fun CustodySetupScreen(
             // Custom pattern editor
             AnimatedVisibility(
                 visible = uiState.selectedModelType == CustodyModelType.CUSTOM,
-                enter = fadeIn() + slideInVertically(),
-                exit = fadeOut() + slideOutVertically()
+                enter = sectionEnter(),
+                exit = sectionExit()
             ) {
                 Column {
                     Text(
@@ -349,12 +349,14 @@ fun CustodySetupScreen(
                                     .size(40.dp)
                                     .clip(RoundedCornerShape(8.dp))
                                     .background(
-                                        if (isMomDay) CoPlanlyColors.MomPink.copy(alpha = 0.3f)
-                                        else CoPlanlyColors.DadBlue.copy(alpha = 0.3f)
+                                        ParentColors.container(
+                                            if (isMomDay) "mom" else "dad",
+                                            alpha = 0.3f
+                                        )
                                     )
                                     .border(
                                         width = 2.dp,
-                                        color = if (isMomDay) CoPlanlyColors.MomPink else CoPlanlyColors.DadBlue,
+                                        color = ParentColors.fill(if (isMomDay) "mom" else "dad"),
                                         shape = RoundedCornerShape(8.dp)
                                     )
                                     .clickable { viewModel.toggleCustomMomDay(dayIndex) },
@@ -468,8 +470,8 @@ fun CustodySetupScreen(
                             val date = uiState.startDate.plusDays(dayOffset.toLong())
                             val custody = tempModel?.getCustodyFor(date)
                             val color = when (custody) {
-                                "mom" -> CoPlanlyColors.MomPink
-                                "dad" -> CoPlanlyColors.DadBlue
+                                "mom" -> ParentColors.fill("mom")
+                                "dad" -> ParentColors.fill("dad")
                                 else -> Color.Gray
                             }
                             Box(
@@ -505,7 +507,7 @@ fun CustodySetupScreen(
                         Box(
                             modifier = Modifier
                                 .size(10.dp)
-                                .background(CoPlanlyColors.MomPink, CircleShape)
+                                .background(ParentColors.fill("mom"), CircleShape)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
@@ -520,7 +522,7 @@ fun CustodySetupScreen(
                         Box(
                             modifier = Modifier
                                 .size(10.dp)
-                                .background(CoPlanlyColors.DadBlue, CircleShape)
+                                .background(ParentColors.fill("dad"), CircleShape)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(

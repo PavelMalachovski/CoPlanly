@@ -53,7 +53,7 @@ class ParentingPlanRepository @Inject constructor(
                 // Ending the mirror leaves the local branch running, which is the whole point of
                 // Room being the source of truth. An uncaught failure here would instead reach
                 // the collector's `viewModelScope.launch` and take the process.
-                Log.w(TAG, "Parenting plan mirror ended for $familyId", e)
+                Log.w(TAG, "Parenting plan mirror ended", e)
                 crashlyticsManager.recordException(e)
             }
             .mirrorOnly<ParentingPlanPair>()
@@ -102,7 +102,7 @@ class ParentingPlanRepository @Inject constructor(
         } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
             // Not a failure the parent needs to see: the row stays in the outbox and the next
             // sync sends it. An uncaught one would crash the screen that called `save`.
-            Log.w(TAG, "Parenting plan half not uploaded for $familyId", e)
+            Log.w(TAG, "Parenting plan half not uploaded", e)
             crashlyticsManager.recordException(e)
         }
     }

@@ -110,4 +110,9 @@
     <string name="expenses_split_proposal_waiting_title">Čeká se na odpověď</string>
     <string name="expenses_split_proposal_waiting_body">Navrhli jste %1$d/%2$d. Druhý rodič zatím neodpověděl.</string>
     <string name="expenses_split_proposal_withdraw">Vzít zpět</string>
+
+    <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
+    <string name="expense_error_signed_out">Pro přidání výdaje musíte být přihlášeni.</string>
+    <string name="expense_warning_receipt_upload_failed">Nahrání účtenky selhalo — výdaj byl uložen bez účtenky</string>
+    <string name="expense_warning_new_receipt_upload_failed">Nahrání účtenky selhalo — výdaj byl uložen bez nové účtenky</string>
 </resources>

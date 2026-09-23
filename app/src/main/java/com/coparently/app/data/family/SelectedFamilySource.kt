@@ -120,7 +120,7 @@ class SelectedFamilySource @Inject constructor(
         val uid = currentUid() ?: return null
         val target = families().firstOrNull { it.familyId == familyId }
         if (target == null) {
-            Log.w(TAG, "Ignoring a switch to $familyId, which $uid is not part of")
+            Log.w(TAG, "Ignoring a switch to a family the signed-in user is not part of")
             return null
         }
         encryptedPreferences.putString(key(uid), familyId)

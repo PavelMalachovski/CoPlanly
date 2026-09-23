@@ -11,7 +11,10 @@ object PreferenceKeys {
     /** Pipe-separated list of user-defined event types. */
     const val CUSTOM_EVENT_TYPES = "calendar_custom_event_types"
 
-    /** Whether Czech holidays and school vacations are shown in the calendar. */
+    /**
+     * Whether the parent's country's public holidays (and school vacations, where the app has
+     * them) are shown in the calendar.
+     */
     const val SHOW_HOLIDAYS = "calendar_show_holidays"
 
     /**
@@ -36,6 +39,17 @@ object PreferenceKeys {
      * collects nothing, so nothing leaks in the gap.
      */
     const val TELEMETRY_CONSENT = "telemetry_consent"
+
+    /**
+     * Whether this person switched push notifications off in Settings: `"false"` when they did,
+     * absent otherwise. Read by `FcmService` on every token registration, because there are three
+     * of them (app start, token refresh, the Settings switch) and the switch used to be honoured
+     * by none — turning it off changed the switch and nothing else.
+     *
+     * Not exempt from `EncryptedPreferences.clear()`, for the reason [TELEMETRY_CONSENT] gives: it
+     * is one person's choice, and the next account on this device starts from the default.
+     */
+    const val PUSH_ENABLED = "push_enabled"
 
     /**
      * Prefix for the per-user events change cursor — the actual key is this prefix plus the

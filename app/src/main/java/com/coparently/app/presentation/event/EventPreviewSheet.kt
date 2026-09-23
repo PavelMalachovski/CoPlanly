@@ -28,6 +28,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -47,7 +48,7 @@ import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.common.FamilyMember
 import com.coparently.app.presentation.common.FullScreenImageDialog
 import com.coparently.app.presentation.common.ParentNames
-import com.coparently.app.presentation.theme.CoPlanlyColors
+import com.coparently.app.presentation.theme.ParentColors
 import java.time.format.DateTimeFormatter
 
 /**
@@ -74,13 +75,18 @@ fun EventPreviewSheet(
     onDismiss: () -> Unit
 ) {
     val parentColor = when (event.parentOwner) {
-        "mom" -> CoPlanlyColors.MomPink
-        "dad" -> CoPlanlyColors.DadBlue
+        "mom" -> ParentColors.fill("mom")
+        "dad" -> ParentColors.fill("dad")
         else -> MaterialTheme.colorScheme.tertiary
     }
     val parentLabel = parentNames.labelFor(event.parentOwner)
 
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        // Opens fully, like every other sheet in the app: a half-open action sheet is one more
+        // resting state to drag through (audit 2026-09 §3.3).
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -106,13 +112,20 @@ fun EventPreviewSheet(
             }
 
             PreviewRow(icon = Icons.Default.Schedule) {
-                val dateText = event.startDateTime
-                    .format(DateTimeFormatter.ofPattern("EEE, d MMM yyyy"))
+                val dateFormat = DateTimeFormatter.ofPattern("EEE, d MMM yyyy")
+                val timeFormat = DateTimeFormatter.ofPattern("HH:mm")
+                val dateText = event.startDateTime.format(dateFormat)
                 val timeText = buildString {
-                    append(event.startDateTime.format(DateTimeFormatter.ofPattern("HH:mm")))
-                    event.endDateTime?.let {
+                    append(event.startDateTime.format(timeFormat))
+                    event.endDateTime?.let { end ->
                         append(" – ")
-                        append(it.format(DateTimeFormatter.ofPattern("HH:mm")))
+                        // An overnight or multi-day event names its end day too; "22:00 – 07:00"
+                        // under the start date read as ending before it began.
+                        if (end.toLocalDate() != event.startDateTime.toLocalDate()) {
+                            append(end.format(dateFormat))
+                            append(' ')
+                        }
+                        append(end.format(timeFormat))
                     }
                 }
                 Text(

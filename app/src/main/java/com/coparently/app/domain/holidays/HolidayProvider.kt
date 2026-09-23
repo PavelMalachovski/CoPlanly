@@ -57,6 +57,15 @@ interface HolidayProvider {
     val localLanguage: String
 
     /**
+     * Whether [schoolVacations] ever returns anything for this country.
+     *
+     * Stated per provider rather than probed from the list, because it is what the country picker
+     * tells the user: "public holidays and school vacations" is a promise only Czechia keeps, and
+     * saying it for Germany would be design rule 8's affordance that does not exist.
+     */
+    val hasSchoolVacations: Boolean
+
+    /**
      * The holiday for [date] — a public holiday first, then a school vacation — or null on an
      * ordinary day.
      *

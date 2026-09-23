@@ -39,7 +39,7 @@
     <string name="calendar_filter_new_type_label">Nový typ události</string>
     <string name="calendar_filter_new_type_placeholder">např. Hudební kroužek</string>
     <string name="calendar_filter_add_button">Přidat</string>
-    <string name="calendar_filter_holidays_title">České svátky</string>
+    <string name="calendar_filter_holidays_title">Svátky</string>
     <string name="calendar_filter_holidays_subtitle">Státní svátky a školní prázdniny</string>
 
     <!-- Month grid accessibility -->

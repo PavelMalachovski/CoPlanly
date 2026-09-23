@@ -85,4 +85,7 @@
         <item quantity="other">%1$d days would move over the coming weeks.</item>
     </plurals>
     <string name="custody_diff_none">Nothing on the calendar would change.</string>
+
+    <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
+    <string name="custody_setup_save_failed">The schedule could not be saved. Try again.</string>
 </resources>

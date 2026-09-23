@@ -70,13 +70,10 @@ invocation is yours.
 | **M-8** | M-4's leftovers: badges that count across families, `familyId` on pushes, a switcher chip in the top bar | P2 | M |
 | **CQ-11** | The declared error model is not the one in use | P3 | S |
 | **CQ-13** | Fourteen of twenty-four ViewModels have no tests | P2 | M |
-| **CQ-14** | User-facing strings produced inside ViewModels and services | P2 | M |
 | **CQ-15** | The last of the dead code, and one decision about it | P3 | S |
 | **CQ-17** | Six dependencies worth moving | P3 | S |
 | **UX-9** | Five different empty-state anatomies, one of which renders under the top bar | P2 | M |
-| **UX-12** | Clerical English success messages — and a branch on the literal that will break when they are localised | P2 | S |
 | **UX-14** | Four different brand purples | P3 | S |
-| **UX-15** | Thread the chosen palette into `ParentColors` — the colour picker is built and hidden until this lands | P1 | M |
 | **UX-16** | Drag an event to reschedule it (MVP 3) | P3 | S |
 | **MON-2** | Verify the market facts — most of them are public pages | P0 | S |
 | **MON-3** | Export to PDF/CSV — the first paid feature (needs MON-4 first) | P1 | M |
@@ -86,7 +83,7 @@ invocation is yours.
 | **MON-8** | Bakaláři / EduPage school import — the parsing, once you supply a real export | P2 | L |
 | **MON-11** | Payments (MVP 3) — the entitlement model, after MON-1 decides the price | P2 | L |
 | **MON-12** | Intelligent suggestions (MVP 3) — behind SEC-1's proxy, never with a key in the client | P3 | M |
-| **MON-13** | Five of the six countries in the picker still have no holiday table (the country setting itself is done) | P2 | M |
+| **MON-13** | The tables are done (five countries; Ukraine's holidays are suspended by martial law) — left: a state/region setting for Germany's and Austria's regional holidays and school vacations | P2 | M |
 | **FAM-4** | Custody per child | P2 | L |
 | **REL-4 (drafting)** | Fill the placeholders in the legal drafts, write the web account-deletion page | P0 | S |
 | **REL-5** | An analytics consent gate for the EU | P0 | M |
@@ -133,14 +130,12 @@ In this order, and each is genuinely finishable in the cloud:
    lines of `docs/DESIGN-court-record.md` §9 that only the owner can write**: an export of a record
    nobody can vouch for is worth nothing to a lawyer. Fill the form in and this is a cloud task.
    The parenting plan is now one of the things worth exporting.
-2. **CQ-13** — seventeen of twenty-five ViewModels have no tests. `SettingsViewModel` is the one
-   to start with: it is named in `CLAUDE.md` as the gap to close when Settings is next touched.
-3. **MON-13** — five of the six countries in the holiday picker still draw no holidays, and the
-   picker says so on the row. Honest, and still a blank calendar for a German or Polish family.
-
+2. **CQ-13** — sixteen of twenty-five ViewModels have no tests. `SettingsViewModel` now has its
+   first (the push switch, September 2026); the rest of its surface is still uncovered.
 *(Everything that headed this list — **M-6**, **CQ-19**, **CQ-12**, **CQ-1**'s bleeding half,
-**CQ-5**, **CQ-6 + CQ-8**, **SEC-2**, and the three honesty gaps **CQ-20**, **UX-17**, **UX-18** —
-is done. **SEC-2** carries one caveat that is not a cloud task: see its entry.)*
+**CQ-5**, **CQ-6 + CQ-8**, **SEC-2**, the three honesty gaps **CQ-20**, **UX-17**, **UX-18**, and
+**UX-15**, which un-hid the colour picker, and the **MON-13** holiday tables — is done. **SEC-2**
+carries one caveat that is not a cloud task: see its entry.)*
 
 ---
 
@@ -163,7 +158,7 @@ shipped, and a plan that describes work already done is worse than no plan.
 | Reoccurrence | Clear | S | High | **Done.** `RecurrenceExpander`; CQ-4 removed the two-year cliff |
 | Confirm pickup | Other side sees it is picked up | S | High | **Done.** `pickupConfirmedBy` / `pickupConfirmedAt` |
 | Notifications | 30 min or 1 h before pickup | M | High | **Done.** `ReminderScheduler` + WorkManager; the permission is asked contextually, never on cold start |
-| Holidays and vacations by country | Clear | S | High | **Partly.** The country is now asked for and stored (MON-13), and `CzechHolidays` is computed and correct — but it is still the only table, so picking any other country draws no holidays rather than the wrong ones |
+| Holidays and vacations by country | Clear | S | High | **Done for holidays, partly for vacations.** The country is asked for and stored (MON-13), and Czechia, Slovakia, Germany, Austria and Russia each have a computed table verified against the Python `holidays` library; Ukraine's holidays are suspended under martial law and the picker says so. School vacations exist for Czechia only — the others are regional |
 | Add events only you can see | Related to switching views | S | High | **Done.** `isPrivate`, filtered out of every sync path |
 | Sat/Sun a different colour | Clear | S | High | **Done.** `DayCellFills` draws the weekend as a base layer under custody, never instead of it |
 
@@ -781,7 +776,7 @@ The first four CI runs are the argument: 30 unit tests were failing because thei
 stale against collaborators added months earlier, and nobody knew. Tests that do not run are not
 coverage.
 
-### CQ-14 · P2 · M · User-facing strings produced inside ViewModels and services
+### CQ-14 · **DONE** · P2 · M · User-facing strings produced inside ViewModels and services
 
 **Where:** ☁️ cloud.
 
@@ -789,24 +784,52 @@ coverage.
 hardcoded English, unreachable by `stringResource`. Extracting them needs a resource-provider
 abstraction. **Do not** inject `Context` into a ViewModel ad hoc to fix one. Blocks **UX-12**.
 
+**Done (September 2026), and the abstraction is a type rather than a provider.**
+`presentation/common/UiText.kt` holds *which* string — a resource with arguments, a plural, a date,
+or text that is already the user's own (a name) — and composition resolves it (`asString()`), or the
+Activity's `Context` does inside a snackbar or Toast lambda. A provider injected into the ViewModel
+was the rejected alternative: it resolves against the application's configuration, which under
+AppCompat's per-app locales can still be the previous language on older APIs, while composition
+follows the Activity. Where a screen *branches* on an outcome, the answer is still a typed code
+(`EventOperation`, `SyncFailure`, the existing `SwapError`), never a `UiText`.
+
+What moved, every one of them checked against a composable that actually renders it:
+`GoogleCalendarSyncState` (and `CalendarSyncRepository`'s `SyncResult`, which now reports facts —
+counts, the window as dates, a `SyncFailure` — instead of sentences), `EventUiState.Error`
+(`AppError` is mapped by type in `presentation/common/ErrorText.kt`; `userMessage` is logs-only now),
+`ChangeRequestViewModel.errorMessage` (inbox Toast and Home snackbar), `RequestChangeUiState.Error`,
+the child and pet list errors, the expense save error and receipt warnings, the custody-setup save
+error, the Co-parent sync row's error line, the event form's title/description validation, and the
+FCM notification channel's name and description (system Settings shows them). Every place on that
+list that used to print `e.message` — raw exception text, in English, sometimes a class name — now
+prints a localised sentence and logs the exception instead.
+
+Deliberately left, each for a stated reason: `UiError.message` and the `UiState.Loading/Success`
+messages (no screen renders them; Settings, the only collector, reads the state's type — the
+literals it passed were dropped), `SettingsUiState.successMessage` (never rendered; removed),
+`AppError.userMessage` (logs), `CredentialManagerService`'s error strings (logged, no longer shown),
+the unused validators in `utils/ValidationUtils.kt` (no caller), and three **stored** fallbacks —
+`"Untitled Event"` on a Google import, `"Unknown"` as a chat `senderName`, `"Co-parent"` as a
+conversation's partner name. Those are data written to Room and Firestore, not text drawn from a
+ViewModel; localising them would bake the writer's language into a record the other parent reads.
+
 It used to be recorded as blocking **SEC-3** too. It did not: push text moved to the *receiving*
 device, which has a `Context` and all five translations. Worth remembering when the next item
 claims to be blocked behind this one — the question to ask is which side of the wire the string is
 finally read on.
 
-### CQ-15 · **PARTLY DONE** · P3 · S · Dead code
+### CQ-15 · **DONE** · P3 · S · Dead code
 
 **Where:** ☁️ cloud.
 
 **Most of the original list was wrong, and it was measured rather than re-read** — three entries had
 consumers all along and two more had since been wired. 1,264 lines were deleted; the rest stays.
 
-**Still open, and it is a decision rather than a deletion:** `ErrorDisplay` and `CoPlanlySnackbarHost`
-are unreferenced, and this item originally asked for them to be *wired* rather than deleted. UX-2
-then decided that a failed list read stays a loaded empty value rather than an error surface, so
-the case for `ErrorDisplay` is weaker than when this was written. Decide it before doing either.
-Also: `presentation/common/animations/LoadingSkeleton.kt` duplicates `SkeletonBox` — one of the two
-files should go.
+**Closed in the September 2026 audit.** `ErrorDisplay` and `CoPlanlySnackbarHost` were deleted
+rather than wired: UX-2 had already decided a failed list read stays a loaded empty value, and both
+carried hardcoded English and literal colours. `LoadingSkeleton.kt`, the unused skeletons,
+`AnimatedTheme`/`CoPlanlyDynamicTheme` (no caller) and the Glance dependencies (no widget) went
+with them.
 
 **Not to be deleted**: the five `EventDao` methods including `getEventsForParentPaginated`, which is
 the thing CQ-5's Home-screen half would use. Deleting it now would be deleting the answer.
@@ -928,9 +951,14 @@ sentences and no action. Separately, `AnimatedEmptyState` takes no `modifier` an
 bar in `ConversationsScreen` and `BudgetScreen`; it also does not scroll, so it clips at large font
 scales. Audit §9.12.
 
-### UX-12 · P2 · S · Clerical English success messages
+### UX-12 · **DONE** · P2 · S · Clerical English success messages
 
 **Where:** ☁️ cloud. Blocked behind **CQ-14** for the ViewModel-side strings.
+
+**Done with CQ-14.** `EventUiState.OperationSuccess` carries an `EventOperation`, not a sentence, and
+`CalendarScreen` offers Undo on `EventOperation.RESCHEDULED` (`EventViewModelTest` pins it). None of
+the seven "… successfully" literals was ever rendered — they existed only to be compared — so no
+string replaced them.
 
 "Event created successfully", "Event rescheduled" and friends are still English literals — and
 `CalendarScreen` **branches on the literal** `"Event rescheduled"`, so localising that string
@@ -954,7 +982,45 @@ Audit §9.15.
 `#6200EE`, and a splash gradient between the first two. Icon, system splash, Compose splash and app
 do not agree. Audit §9.16.
 
-### UX-15 · P1 · M · Thread the chosen palette into `ParentColors` (was P3 · S)
+### UX-15 · **DONE** · Thread the chosen palette into `ParentColors` (was P1 · M)
+
+**Where:** ☁️ cloud wrote it; 👁 a device with two parents who picked two non-default colours is
+the acceptance check — nothing has seen it rendered yet.
+
+**What shipped (September 2026).** One `CompositionLocal`, provided once:
+
+- `LocalParentPalette` (`theme/ParentColors.kt`, `staticCompositionLocalOf`, default
+  `ParentPalette.Default`) is provided in `MainActivity` beside `LocalGoogleSignInCallback`, from
+  a new Activity-scoped `ParentPaletteViewModel` that maps `ParentsSource.observe()` to
+  `Parents.palette`. It is collected with `collectAsStateWithLifecycle`, so the shared
+  `ParentsSource` upstream still stops in the background. No new Firestore listener: it is the
+  same shared flow every `parents`-exposing ViewModel already subscribes to.
+- `ParentColors.fill`, `container` and `text` became `@Composable @ReadOnlyComposable` and take
+  `palette = LocalParentPalette.current` as their default, so the existing calls picked the
+  palette up with no change and no screen threads a parameter (no detekt `LongParameterList`
+  churn either). Every call site was already in composable scope.
+- Every raw `CoPlanlyColors.MomPink`/`DadBlue` outside `theme/` is gone: `MonthView` (custody
+  wash, handover triangle, proposal preview, event dots), `DayWeekView` (hour-cell wash, proposal
+  preview, event block fill/border/accent, the custody band), `AddEditEventScreen` (owner cards),
+  `EventPreviewSheet`, `EventListScreen` (the parent line was raw pink *as text* — now
+  `ParentColors.text`), `CalendarFilters`, `ExpenseSummaryHeader`'s split bar and
+  `CustodySetupScreen` (pattern grid, 14-day preview, legend, first-parent dot).
+- **The week view's custody band label now clears AA.** It was white `labelSmall` on the full
+  hue — 4.35:1 on pink. The band is drawn in the new `ParentColors.chipFill` (each choice's deep
+  tone, ≥ 5.6:1 under white for all four) and the label colour comes from
+  `ParentColors.onFill`, which picks black or white by WCAG contrast ratio so a future palette
+  entry cannot silently fail. `ParentColorsTest` pins both, per choice.
+- `PARENT_COLOUR_PICKER_ENABLED` and its two `if`s (Settings → Family, onboarding profile step)
+  were removed; the picker shows.
+
+Deliberately unchanged: the slot ids, the saturation rule (washes still go through `container`
+at the custody alpha, dots and bars through `fill` at full strength), the weekend/holiday/friend
+colours, and `DynamicTheme`'s use of the blue family as a *theme* colour. The Settings swatch
+shows the parent's own stored choice rather than the collision-resolved palette, which is what
+`ParentPalette.of` documents. Not done here: the white day numbers on `CustodySetupScreen`'s
+14-day preview sit on the hue at 70% alpha and have the same AA question the band had.
+
+*History:*
 
 **September 2026 audit:** worse than this item said. No composable reads `ParentsSource.palette`,
 so even the `ParentColors` calls take the default palette — the "My colour" picker changed nothing
@@ -1243,10 +1309,10 @@ verdict is discoverable material in a custody dispute, which makes it a liabilit
 than a feature. Anything resembling emotion inference deserves a legal read under the EU AI Act
 before launch.
 
-### MON-13 · **PARTLY DONE** · P2 · M · Holidays exist for Czechia only
+### MON-13 · **TABLES DONE** · P2 · M · Holidays by country — what is left is regional
 
-**Where:** ☁️ the setting and the registry are done; ⚙️/💻 the remaining tables need a source this
-environment cannot reach.
+**Where:** ☁️ done: the setting, the registry, and five tables verified against a maintained
+dataset. What remains (a state/region setting) is a product decision before it is code.
 
 MVP 1 asked for "holidays and vacations by country" and shipped one country. There was **no country
 setting anywhere in the app** — no field, no picker, not even a constant — so `CalendarScreen`
@@ -1266,20 +1332,51 @@ document said, and the reversal has a cost worth stating: the school-vacation st
 genuinely about the child's school, follow the viewer too. A per-family school calendar is the
 honest fix and is part of what is left.
 
-**Left: five of the six tables — and leaving them is an owner decision, not a deferral** (Aug
-2026). Offered the choice between authoring them from knowledge with a "needs a native check"
-marker and waiting for verified data, the owner chose to wait. So the five stay listed with no
-provider and the picker keeps saying so. Do not fill them in from memory on the way past.
+**Done (September 2026): the tables, from verified data.** In August the owner, offered a choice
+between authoring the five tables from memory with a "needs a native check" marker and waiting
+for verified data, chose to wait — a holiday table is a set of user-visible facts and a wrong date
+is worse than no date. That decision is **superseded, not overruled**: its condition was met. An
+independent, maintained dataset became obtainable — the Python `holidays` library (v0.105,
+MIT, community-maintained, citing the legislation behind each rule) — and the tables were written
+against it rather than from memory.
 
-`HolidayCountry` lists Slovakia, Germany, Austria, Ukraine and Russia with no provider, and the
-picker says so on the row — a country with no table draws **no** holidays, which is honest, rather than another country's, which was the bug. They are unimplemented
-for a stated reason: a holiday table is a set of user-visible facts and a wrong date is worse than
-no date. This environment's egress policy blocks every reference site, so they cannot be verified
-here, and one search while writing this already turned up a change memory would have got wrong —
-Slovakia's 2024–2026 consolidation packages moved several days off the non-working list while
-leaving their formal names in place. Each country wants a check against a source before its table
-lands. Germany's and Austria's school calendars are set per state and may never be computable at
-all, which is the same reason Czechia's district-dependent spring break is excluded.
+- **How it is verified.** The providers (`SlovakHolidays`, `GermanHolidays`, `AustrianHolidays`,
+  `RussianHolidays`) are plain computed Kotlin with no runtime dependency, written as rule tables
+  (`HolidayRule.kt`: ISO month-days and named Easter offsets from the shared
+  `gregorianEasterSunday`). `tools/generate-holiday-fixture.py` writes the library's output for
+  2020–2035 into `HolidayReferenceFixture.kt`, and `HolidayReferenceTest` compares every year —
+  dates and both names — with what the providers produce. Re-run the script when bumping the
+  library; a changed line is a law that changed or a library correction, and either way the
+  provider changes with it.
+- **Slovakia** — public holidays by year, which is exactly what memory would have got wrong:
+  1 September off until 2023 (Act 530/2023), 17 November until 2024, and 8 May and 15 September
+  working days in 2026 only (Act 261/2025). Only days off are drawn.
+- **Germany** — the nine **nationwide** holidays. The rest are state law and the app has no
+  Bundesland setting, so a Bavarian family sees fewer days off than it has; said in the KDoc, the
+  same trade Czechia's district-dependent spring break makes.
+- **Austria** — the thirteen nationwide holidays. Good Friday (Protestant-only until 2019), 24
+  and 31 December and the Länder patron-saint days are bank holidays in the reference data and
+  are not drawn.
+- **Russia** — the fourteen statutory days of Labour Code art. 112. The annual transfer decree
+  (bridge days, and the day in lieu of a holiday that fell on a weekend) is **not computable for a
+  future year** and is not drawn; the library lists it per decreed year only, and the generator
+  filters those rows out of the comparison with the reason written beside the filter.
+- **Ukraine** — deliberately **no provider**. Under martial law (since 24 Feb 2022) public
+  holidays are not days off, and the library returns none from 2023. Computing the pre-war list
+  would draw days off nobody has; the picker now says *why* nothing is drawn
+  (`HolidayCountry.holidaysSuspended` → `country_holidays_suspended`) instead of "not in the app
+  yet", which was true of the app and false of the country. When martial law ends, add the table
+  the law then describes.
+- **The picker states coverage per country** (`HolidayCountry.coverage`): holidays and school
+  vacations (Czechia), public holidays only (four), suspended (Ukraine), none (Other). It is
+  derived from the provider, so it cannot promise school vacations a provider does not return.
+  The calendar filter's "Czech holidays" title became "Holidays" in all five locales.
+
+**Left.** No school vacations outside Czechia — Germany's and Austria's are set per state,
+Slovakia's spring break per region, Russia's per region or school — and none were invented. A
+state/region setting would lift both that and Germany's missing state holidays (the reference
+library carries per-state data for both); whether it is worth a setting is an owner call. A
+per-family school calendar remains the honest fix for the per-viewer strips described above.
 
 ---
 
@@ -1436,7 +1533,7 @@ Not a wish-list ordering — a dependency ordering. Each block assumes the one a
 
 14. **CQ-5**, and **CQ-6 + CQ-8** together. All three grow worse with tenure, so they land on your
     longest-standing users first.
-15. **CQ-13**, **CQ-14** → **UX-12**, **UX-9**, **M-5**.
+15. **CQ-13** → **UX-9**, **M-5**. (**CQ-14** and **UX-12**, which used to open this line, are done.)
 
 **One thread runs through this document.** The security holes, the release-only Gson corruption, the
 plaintext refresh token, the two-year recurrence bug, thirty unit tests failing against a

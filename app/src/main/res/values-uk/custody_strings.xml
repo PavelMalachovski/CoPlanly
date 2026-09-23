@@ -78,4 +78,7 @@
         <item quantity="other">У найближчі тижні зміниться %1$d днів.</item>
     </plurals>
     <string name="custody_diff_none">У календарі нічого не зміниться.</string>
+
+    <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
+    <string name="custody_setup_save_failed">Графік не вдалося зберегти. Спробуйте ще раз.</string>
 </resources>

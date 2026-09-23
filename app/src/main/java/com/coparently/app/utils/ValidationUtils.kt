@@ -47,14 +47,15 @@ object ValidationUtils {
     private const val MIN_NAME_LENGTH = 2
 
     /**
-     * Максимальная длина заголовка события.
+     * Максимальная длина заголовка события. Public so the event form can name it in its own,
+     * localised error text: the `message` strings in this file are English (CQ-14).
      */
-    private const val MAX_TITLE_LENGTH = 100
+    const val MAX_TITLE_LENGTH = 100
 
     /**
-     * Максимальная длина описания.
+     * Максимальная длина описания. Public for the same reason as [MAX_TITLE_LENGTH].
      */
-    private const val MAX_DESCRIPTION_LENGTH = 500
+    const val MAX_DESCRIPTION_LENGTH = 500
 
     /**
      * Валидирует email адрес.

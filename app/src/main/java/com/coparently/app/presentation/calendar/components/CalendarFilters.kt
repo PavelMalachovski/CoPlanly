@@ -2,15 +2,16 @@ package com.coparently.app.presentation.calendar.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -39,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -46,6 +48,7 @@ import com.coparently.app.R
 import com.coparently.app.presentation.calendar.ParentFilter
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.theme.CoPlanlyColors
+import com.coparently.app.presentation.theme.LayoutConstants
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.dimensions
 import androidx.compose.foundation.layout.ExperimentalLayoutApi as FoundationExperimentalLayoutApi
@@ -239,7 +242,9 @@ private fun FilterPill(
                 color = if (selected) color else MaterialTheme.colorScheme.outlineVariant,
                 shape = RoundedCornerShape(50)
             )
-            .clickable(onClick = onClick)
+            // A checkbox to TalkBack — on/off was said by colour and weight alone — and 48dp tall.
+            .toggleable(value = selected, role = Role.Checkbox, onValueChange = { onClick() })
+            .heightIn(min = LayoutConstants.MIN_TOUCH_TARGET)
             .padding(horizontal = 14.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -272,8 +277,9 @@ private fun FilterPill(
  * a filter offering "Mom" and "Dad" told half the families using this app that one of them was
  * somebody they are not.
  *
- * Parent colours are applied directly from [CoPlanlyColors] rather than through the theme's
- * `secondary` slot: pink and blue mean parent identity in this product and nothing else.
+ * Parent colours come from [ParentColors] — the family's chosen palette — rather than through
+ * the theme's `secondary` slot: a parent colour means parent identity in this product and
+ * nothing else.
  *
  * @param selected Currently active filter
  * @param parentNames Resolves a slot to that parent's name
@@ -292,9 +298,9 @@ private fun ParentFilterSegments(
         data class Segment(val filter: ParentFilter, val label: String, val color: Color, val content: Color)
         val primary = MaterialTheme.colorScheme.primary
         val options = listOf(
-            Segment(ParentFilter.MOM, parentNames.labelFor("mom"), CoPlanlyColors.MomPink, ParentColors.text("mom")),
+            Segment(ParentFilter.MOM, parentNames.labelFor("mom"), ParentColors.fill("mom"), ParentColors.text("mom")),
             Segment(ParentFilter.BOTH, stringResource(R.string.calendar_filter_both), primary, primary),
-            Segment(ParentFilter.DAD, parentNames.labelFor("dad"), CoPlanlyColors.DadBlue, ParentColors.text("dad"))
+            Segment(ParentFilter.DAD, parentNames.labelFor("dad"), ParentColors.fill("dad"), ParentColors.text("dad"))
         )
         options.forEachIndexed { index, segment ->
             val filter = segment.filter

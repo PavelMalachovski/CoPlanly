@@ -1,5 +1,6 @@
 package com.coparently.app.presentation.home
 
+import android.text.format.DateFormat
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -84,22 +85,44 @@ import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.PillChip
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
+import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.common.rememberToday
 import com.coparently.app.presentation.components.SkeletonBox
 import com.coparently.app.presentation.custody.custodyDiffDescription
 import com.coparently.app.presentation.theme.ParentColors
 import java.text.NumberFormat
+import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.util.Currency
 import java.util.Locale
 import kotlin.math.abs
 
-private val activityFormatter = DateTimeFormatter.ofPattern("d MMM · HH:mm")
-private val timelineFormatter = DateTimeFormatter.ofPattern("EEE d · HH:mm")
-private val handoverDateFormatter = DateTimeFormatter.ofPattern("EEE, MMM d")
-private val todayFormatter = DateTimeFormatter.ofPattern("EEEE, MMM d")
+/**
+ * A date formatter in the current locale's own field order for [skeleton] (e.g. "EEEMMMd" is
+ * "Wed, Sep 23" in English and "St 23. 9." in Czech).
+ *
+ * Built per call, not held in a top-level `val`: those captured the locale once per process, so
+ * after Settings → Language the dashboard kept the previous language's day and month names. The
+ * fixed English patterns they used also put the month before the day in every language.
+ * Time is kept out of the skeleton on purpose — the platform's preferred-hour pattern can
+ * contain letters `java.time` on older Android cannot parse — and is appended from
+ * [shortTime]. Falls back to the medium date style if the platform pattern is refused anyway.
+ */
+private fun localizedDate(skeleton: String): DateTimeFormatter {
+    val locale = Locale.getDefault()
+    return runCatching {
+        DateTimeFormatter.ofPattern(DateFormat.getBestDateTimePattern(locale, skeleton), locale)
+    }.getOrElse { DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale) }
+}
+
+/** The locale's short time style: 24-hour or 12-hour as the language expects. */
+private val shortTime: DateTimeFormatter
+    get() = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withLocale(Locale.getDefault())
+
+private fun LocalDateTime.dateAndTime(skeleton: String): String =
+    "${format(localizedDate(skeleton))} · ${format(shortTime)}"
 
 /** Strength of the parent-hue wash behind the handover hero. */
 private const val HERO_TINT_ALPHA = 0.16f
@@ -158,9 +181,10 @@ fun HomeScreen(
     // closed either way — while the co-parent went on waiting.
     val snackbarHostState = remember { SnackbarHostState() }
     val changeRequestError by changeRequestViewModel.errorMessage.collectAsState()
+    val errorContext = LocalContext.current
     LaunchedEffect(changeRequestError) {
         changeRequestError?.let { message ->
-            snackbarHostState.showSnackbar(message)
+            snackbarHostState.showSnackbar(message.asString(errorContext))
             changeRequestViewModel.clearError()
         }
     }
@@ -195,7 +219,7 @@ fun HomeScreen(
                             style = MaterialTheme.typography.titleLarge
                         )
                         Text(
-                            text = today.format(todayFormatter),
+                            text = today.format(localizedDate("EEEEMMMMd")),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -814,7 +838,7 @@ private fun HandoverHero(
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 PillChip(
-                    label = info.date.format(handoverDateFormatter),
+                    label = info.date.format(localizedDate("EEEMMMd")),
                     container = ParentColors.container(info.toParent, alpha = 0.2f),
                     contentColor = ParentColors.text(info.toParent)
                 )
@@ -1032,7 +1056,7 @@ private fun TimelineRow(
                     overflow = TextOverflow.Ellipsis
                 )
             }
-            val timeLabel = event.startDateTime.format(timelineFormatter)
+            val timeLabel = event.startDateTime.dateAndTime("EEEd")
             Text(
                 text = entry.dayParent
                     ?.let { stringResource(R.string.home_timeline_meta, timeLabel, parentNames.labelFor(it)) }
@@ -1084,7 +1108,7 @@ private fun ActivityGroup(
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
-                        text = item.timestamp.format(activityFormatter),
+                        text = item.timestamp.dateAndTime("dMMM"),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

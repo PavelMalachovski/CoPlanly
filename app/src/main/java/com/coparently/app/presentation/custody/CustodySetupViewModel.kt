@@ -1,7 +1,9 @@
 package com.coparently.app.presentation.custody
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.coparently.app.R
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.PatternSubmission
 import com.coparently.app.domain.model.CustodyModel
@@ -9,6 +11,7 @@ import com.coparently.app.domain.model.CustodyModelType
 import com.coparently.app.domain.model.MidweekContact
 import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.ParentsSource
+import com.coparently.app.presentation.common.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -271,9 +274,11 @@ class CustodySetupViewModel @Inject constructor(
                 )
                 onSuccess()
             } catch (e: Exception) {
+                // The exception's own text is English and technical: it goes to the log.
+                Log.w("CustodySetupViewModel", "Saving the custody model failed", e)
                 _uiState.value = state.copy(
                     isLoading = false,
-                    error = e.message ?: "Failed to save custody model"
+                    error = UiText.Res(R.string.custody_setup_save_failed)
                 )
             }
         }
@@ -323,7 +328,8 @@ data class CustodySetupUiState(
     val isSaved: Boolean = false,
     /** True when the save was sent to the co-parent as a proposal rather than applied. */
     val proposedForApproval: Boolean = false,
-    val error: String? = null
+    /** Why the last save failed, resolved by the screen (CQ-14); null when nothing failed. */
+    val error: UiText? = null
 ) {
     /**
      * Validates the current state.

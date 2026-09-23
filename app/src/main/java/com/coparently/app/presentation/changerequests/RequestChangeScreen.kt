@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.domain.model.Event
+import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.components.TimePickerDialog
 import java.time.Instant
 import java.time.LocalDateTime
@@ -112,7 +113,7 @@ fun RequestChangeScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = state.message,
+                        text = state.message.asString(),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.error
                     )

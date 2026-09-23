@@ -61,4 +61,9 @@
     <string name="pet_photos_upload_failed">Could not upload the photo. Please try again.</string>
     <string name="pet_photos_delete_failed">Could not remove the photo. It is still attached.</string>
     <string name="pet_save_failed">Could not save the pet. Please try again.</string>
+
+    <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
+    <string name="pets_load_failed">Could not load your pets. Please try again.</string>
+    <string name="pets_delete_failed">Could not delete the pet. Please try again.</string>
+    <string name="pets_sync_failed">Could not sync your pets. Please try again.</string>
 </resources>

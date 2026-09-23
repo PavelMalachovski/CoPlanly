@@ -61,4 +61,9 @@
     <string name="pet_photos_upload_failed">Foto konnte nicht hochgeladen werden. Bitte versuche es erneut.</string>
     <string name="pet_photos_delete_failed">Foto konnte nicht entfernt werden. Es ist weiterhin angehängt.</string>
     <string name="pet_save_failed">Das Haustier konnte nicht gespeichert werden. Bitte versuche es erneut.</string>
+
+    <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
+    <string name="pets_load_failed">Die Haustiere konnten nicht geladen werden. Bitte versuche es erneut.</string>
+    <string name="pets_delete_failed">Das Haustier konnte nicht gelöscht werden. Bitte versuche es erneut.</string>
+    <string name="pets_sync_failed">Die Haustiere konnten nicht synchronisiert werden. Bitte versuche es erneut.</string>
 </resources>

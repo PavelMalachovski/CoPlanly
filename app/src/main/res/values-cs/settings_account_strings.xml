@@ -78,4 +78,8 @@
     <string name="settings_school_import_title">Import z Bakalářů a EduPage</string>
     <string name="settings_school_import_description">Školní rozvrh dítěte rovnou do kalendáře. Zatím není hotovo.</string>
     <string name="settings_school_import_planned">V plánu</string>
+    <string name="settings_operation_failed">Nepodařilo se to. Zkontrolujte připojení a zkuste to znovu.</string>
+
+    <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
+    <string name="settings_sync_failed">Poslední synchronizace se nezdařila</string>
 </resources>

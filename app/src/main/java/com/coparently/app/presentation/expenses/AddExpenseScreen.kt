@@ -86,6 +86,7 @@ import com.coparently.app.domain.money.SupportedCurrency
 import com.coparently.app.domain.receipts.ReceiptScan
 import com.coparently.app.presentation.common.FamilyMemberChips
 import com.coparently.app.presentation.common.FullScreenImageDialog
+import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.toggling
 import com.coparently.app.presentation.theme.CoPlanlyShapes
 import java.io.File
@@ -473,12 +474,12 @@ private fun ExpenseSaveEffect(
     LaunchedEffect(saveState) {
         when (val state = saveState) {
             is ExpenseSaveState.Saved -> {
-                state.warning?.let { Toast.makeText(context, it, Toast.LENGTH_LONG).show() }
+                state.warning?.let { Toast.makeText(context, it.asString(context), Toast.LENGTH_LONG).show() }
                 onConsumed()
                 onSaved()
             }
             is ExpenseSaveState.Error -> {
-                Toast.makeText(context, state.message, Toast.LENGTH_LONG).show()
+                Toast.makeText(context, state.message.asString(context), Toast.LENGTH_LONG).show()
                 onConsumed()
             }
             else -> Unit

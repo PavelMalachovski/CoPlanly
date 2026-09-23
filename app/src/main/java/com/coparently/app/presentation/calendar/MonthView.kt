@@ -69,6 +69,7 @@ import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.monthPagingTween
 import com.coparently.app.presentation.common.rememberToday
 import com.coparently.app.presentation.theme.CoPlanlyColors
+import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.dimensions
 import com.kizitonwose.calendar.compose.CalendarState
 import com.kizitonwose.calendar.compose.HorizontalCalendar
@@ -422,8 +423,8 @@ private fun DayCell(
     // keeps the band and gets it recessively — see `ADJACENT_MONTH_TINT_SCALE`.
     val custodyAlpha = CoPlanlyColors.CUSTODY_TINT_ALPHA * adjacentScale(fill.isAdjacentMonth)
     val overlayColor = when (fill.overlay) {
-        DayCellOverlay.CUSTODY_MOM -> CoPlanlyColors.MomPink.copy(alpha = custodyAlpha)
-        DayCellOverlay.CUSTODY_DAD -> CoPlanlyColors.DadBlue.copy(alpha = custodyAlpha)
+        DayCellOverlay.CUSTODY_MOM -> ParentColors.container("mom", alpha = custodyAlpha)
+        DayCellOverlay.CUSTODY_DAD -> ParentColors.container("dad", alpha = custodyAlpha)
         DayCellOverlay.PUBLIC_HOLIDAY -> CoPlanlyColors.HolidayRed.copy(alpha = HOLIDAY_TINT_ALPHA)
         DayCellOverlay.TODAY, DayCellOverlay.NONE -> Color.Transparent
     }
@@ -431,8 +432,8 @@ private fun DayCell(
     // The parent the child is coming *from* on a handover day, at the same custody alpha as the
     // overlay: the two triangles must read as one system, not as a tint and a competing block.
     val handoverColor = when (fill.handoverFrom) {
-        DayCellOverlay.CUSTODY_MOM -> CoPlanlyColors.MomPink.copy(alpha = custodyAlpha)
-        DayCellOverlay.CUSTODY_DAD -> CoPlanlyColors.DadBlue.copy(alpha = custodyAlpha)
+        DayCellOverlay.CUSTODY_MOM -> ParentColors.container("mom", alpha = custodyAlpha)
+        DayCellOverlay.CUSTODY_DAD -> ParentColors.container("dad", alpha = custodyAlpha)
         else -> null
     }
 
@@ -443,8 +444,8 @@ private fun DayCell(
     // the honest rendering of a day nobody has agreed on; the cell's description says so in
     // words.
     val proposalColor = when (fill.pendingProposalFor) {
-        DayCellOverlay.CUSTODY_MOM -> CoPlanlyColors.MomPink.copy(alpha = CoPlanlyColors.PROPOSAL_TINT_ALPHA)
-        DayCellOverlay.CUSTODY_DAD -> CoPlanlyColors.DadBlue.copy(alpha = CoPlanlyColors.PROPOSAL_TINT_ALPHA)
+        DayCellOverlay.CUSTODY_MOM -> ParentColors.container("mom", alpha = CoPlanlyColors.PROPOSAL_TINT_ALPHA)
+        DayCellOverlay.CUSTODY_DAD -> ParentColors.container("dad", alpha = CoPlanlyColors.PROPOSAL_TINT_ALPHA)
         else -> null
     }
 
@@ -787,8 +788,8 @@ private fun eventDotColor(
 ): Color {
     val base = when {
         friendParticipates -> CoPlanlyColors.FriendTeal
-        parentOwner == "mom" -> CoPlanlyColors.MomPink
-        parentOwner == "dad" -> CoPlanlyColors.DadBlue
+        parentOwner == "mom" -> ParentColors.fill("mom")
+        parentOwner == "dad" -> ParentColors.fill("dad")
         else -> MaterialTheme.colorScheme.tertiary
     }
     return if (isCurrentMonth) base else base.copy(alpha = OUTSIDE_MONTH_DOT_ALPHA)

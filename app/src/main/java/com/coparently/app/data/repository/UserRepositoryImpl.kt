@@ -169,7 +169,7 @@ class UserRepositoryImpl @Inject constructor(
         } catch (
             @Suppress("TooGenericExceptionCaught") e: Exception
         ) {
-            android.util.Log.e(TAG, "Failed to ensure the user profile for $uid", e)
+            android.util.Log.e(TAG, "Failed to ensure the user profile", e)
         }
     }
 
@@ -237,7 +237,7 @@ class UserRepositoryImpl @Inject constructor(
         } else {
             "Merging the fields that are known into the existing document."
         }
-        android.util.Log.w(TAG, "No name could be derived for $uid; $sources. $outcome")
+        android.util.Log.w(TAG, "No name could be derived; $sources. $outcome")
 
         if (remote != null) {
             val patch = buildMap<String, Any> {
@@ -249,7 +249,7 @@ class UserRepositoryImpl @Inject constructor(
             }
             if (patch.isNotEmpty()) {
                 firestoreUserDataSource.updateUser(uid, patch).onFailure {
-                    android.util.Log.e(TAG, "Failed to merge the name-less profile into Firestore for $uid", it)
+                    android.util.Log.e(TAG, "Failed to merge the name-less profile into Firestore", it)
                 }
             }
         }
@@ -319,7 +319,7 @@ class UserRepositoryImpl @Inject constructor(
         if (patch.isEmpty()) return
 
         firestoreUserDataSource.updateUser(uid, patch)
-            .onFailure { android.util.Log.e(TAG, "Failed to merge the profile into Firestore for $uid", it) }
+            .onFailure { android.util.Log.e(TAG, "Failed to merge the profile into Firestore", it) }
     }
 
     /**
@@ -507,7 +507,7 @@ class UserRepositoryImpl @Inject constructor(
             // Fetch user data from Firestore
             val firestoreData = firestoreUserDataSource.getUserById(firebaseUser.uid)
             if (firestoreData == null) {
-                android.util.Log.w("UserRepository", "No user data found in Firestore for user: ${firebaseUser.uid}")
+                android.util.Log.w("UserRepository", "No user data found in Firestore for the signed-in user")
                 return
             }
 
@@ -536,7 +536,7 @@ class UserRepositoryImpl @Inject constructor(
         } catch (
             @Suppress("TooGenericExceptionCaught") e: Exception
         ) {
-            android.util.Log.e(TAG, "Failed to read the remote profile for $uid", e)
+            android.util.Log.e(TAG, "Failed to read the remote profile", e)
             null
         }
     }

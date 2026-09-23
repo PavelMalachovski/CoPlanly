@@ -42,4 +42,12 @@
          and honestly numbers what is not. -->
     <string name="parent_label_slot_first">První rodič</string>
     <string name="parent_label_slot_second">Druhý rodič</string>
+
+    <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
+    <string name="common_error_generic">Něco se pokazilo. Zkuste to prosím znovu.</string>
+    <string name="common_error_offline">Nejste připojeni k internetu. Zkontrolujte připojení a zkuste to znovu.</string>
+    <string name="common_error_server">Server není dostupný. Zkuste to prosím později.</string>
+    <string name="common_error_permission">K této akci nemáte oprávnění.</string>
+    <string name="common_error_invalid_input">Některé údaje chybí nebo nejsou platné. Zkontrolujte je a zkuste to znovu.</string>
+    <string name="common_error_sync">Synchronizace se nezdařila. Zkuste to prosím znovu.</string>
 </resources>

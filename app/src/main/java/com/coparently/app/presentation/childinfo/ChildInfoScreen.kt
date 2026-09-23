@@ -34,6 +34,7 @@ import com.coparently.app.presentation.common.ListSkeleton
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionGroupScope
 import com.coparently.app.presentation.common.SectionRow
+import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.labelRes
 import java.time.Instant
 import java.time.ZoneId
@@ -135,7 +136,7 @@ fun ChildInfoScreen(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = state.message,
+                            text = state.message.asString(),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.error
                         )

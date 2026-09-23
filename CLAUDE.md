@@ -107,10 +107,16 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     fade); **the four tabs fade-through between each other** (`tabEnter`/`tabExit` in
     `NavGraph.kt`), because peers have no direction. Don't add a literal duration — pick a
     token, or add one here with its reason.
-12. **The parent-colour picker is hidden** behind `PARENT_COLOUR_PICKER_ENABLED`
-    (`theme/ParentColors.kt`), in Settings and in onboarding. No screen reads the chosen
-    palette yet (UX-15), so the picker changed nothing — design item 8. Turn the flag on in the
-    same change that threads `ParentsSource.palette` into `ParentColors`.
+12. **The chosen parent colour reaches every screen through one CompositionLocal** (UX-15,
+    September 2026). `MainActivity` provides `LocalParentPalette` (`theme/ParentColors.kt`) from
+    `ParentPaletteViewModel`, which maps `ParentsSource`'s `Parents.palette`; `ParentColors.fill`,
+    `text`, `container` and `chipFill` are `@Composable` and read it as their default argument.
+    So a render site needs no plumbing, and **a raw `CoPlanlyColors.MomPink`/`DadBlue` in a
+    screen is a bug** — it draws pink for a parent who chose purple. Resolve the colour in
+    composable scope before a draw lambda if you need it there. A label *on* a solid parent
+    colour uses `chipFill` (the deep tone) with `ParentColors.onFill(...)` for the text, never
+    white on the full hue (4.35:1 on pink). The picker (Settings → Family, onboarding profile
+    step) was hidden behind `PARENT_COLOUR_PICKER_ENABLED` until this landed; the flag is gone.
 
 ## UX/UI overhaul (July 2026 design review) — implemented, keep consistent
 
@@ -141,7 +147,8 @@ When touching the UI, keep these invariants:
    the editor is the second step — on Home too since September 2026 (`HomeViewModel.
    openPreview`; Home passes `onDelete = null` because it has no delete-with-undo). The event form has a sticky bottom Save button.
 6. **Color semantics**: Mom-pink/Dad-blue are parent identity ONLY, applied via
-   `CoPlanlyColors.MomPink/DadBlue` directly. The theme's `secondary` slot is a neutral
+   `ParentColors` (which resolves the family's chosen palette — design refresh item 12), never
+   `CoPlanlyColors.MomPink/DadBlue` directly in a screen. The theme's `secondary` slot is a neutral
    indigo (`CoPlanlyColors.Neutral*`), so generic Material selected states (FilterChips)
    are neutral — never wire pink through `colorScheme.secondary`. **Saturation rule** (so
    the day-cell wash and the event chip read as one system, not two pinks): a custody
@@ -279,8 +286,9 @@ cd firestore-tests && npm test              # firestore.rules + storage.rules on
   that person's name. `"mom"`/`"dad"` survive as the two *slot identifiers* in Room, in the
   Firestore document schema and in `firestore.rules`, and are never renamed — `Event.parentOwner`
   is part of the schema `EventRepositoryImpl.toFirestoreMap()` defines, and a co-parent on an
-  older build must keep reading it. Slot 1 is pink, slot 2 is blue; pairing assigns the slots
-  (`functions/index.js`, `assignSlots`), nobody chooses one.
+  older build must keep reading it. Pairing assigns the slots (`functions/index.js`,
+  `assignSlots`), nobody chooses one; the *colour* is each person's own choice
+  (`theme/ParentPalette.kt`), defaulting to pink for slot 1 and blue for slot 2.
 - **A calendar friend sits beside the two slots and never occupies one** (item 16, Aug 2026).
   A guardian/friend/grandparent with their own account reads the family's calendar through a
   **central** grant, `calendar_friends/{friendUid}` — never by being fanned out into every
@@ -413,9 +421,18 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
 8. **Holidays come from the parent's country** (MON-13). `domain/holidays/HolidayCountry` maps a
    stored `users.countryCode` (schema 33, `NOT NULL DEFAULT 'CZ'`, so every pre-existing account
    is Czechia) to a `HolidayProvider`; the calendar reads that, never a provider directly. Three
-   rules. **A country with no table draws no holidays** — five of the six do not have one, and
-   the picker says so on the row, because drawing Czech holidays for a German family is the bug
-   this replaced and drawing nothing silently would be design item 8's forbidden affordance.
+   rules. **A country with no table draws no holidays**, and the picker says what each country
+   draws (`HolidayCountry.coverage` → `coverageNote()`), because drawing Czech holidays for a
+   German family is the bug this replaced and drawing nothing — or less than the row implies —
+   silently would be design item 8's forbidden affordance. Czechia, Slovakia, Germany (the nine
+   nationwide days only), Austria and Russia (statutory art. 112 days, no annual transfer decree)
+   have tables; **Ukraine deliberately has none** — its holidays are not days off under martial
+   law, and the row says so. Only Czechia has school vacations; do not invent them for the others.
+   The tables were written against the Python `holidays` library (September 2026, superseding the
+   August decision to wait for verified data — this is that data) and are **pinned to it**:
+   `HolidayReferenceTest` compares every date and name, 2020–2035, with a fixture generated by
+   `tools/generate-holiday-fixture.py`. Change a table by regenerating the fixture, never by
+   editing both sides to agree.
    **The country is a property of the person, not the family**: two separated parents can live in
    two countries. The cost is that the school-vacation strips follow the viewer too, which is
    recorded rather than hidden. And **`Holiday.nameLocal` carries `localLanguage`** — the UI shows
@@ -869,16 +886,29 @@ whatever you were doing; a stale "known issue" costs more than a missing one.
   BuildConfig (`GOOGLE_CLIENT_SECRET` gradle property / env var). `GEMINI_API_KEY` is gone
   with the AI subsystem — don't reintroduce a model key in the client. Real secrets belong in
   `gradle.properties`/env vars only.
-- User-facing strings produced **inside ViewModels/services** (e.g.
-  `GoogleCalendarSyncState.message`, sync/status errors) are still hardcoded English —
-  extracting them needs a resource-provider abstraction and is a tracked follow-up of the
-  July 2026 localization pass. Don't inject `Context` into ViewModels ad hoc to "fix" one.
+- **Text a ViewModel or a service produces is a `UiText`, resolved in composition** (CQ-14,
+  September 2026). `presentation/common/UiText.kt` holds *which* string — `Res` with arguments,
+  `Plural`, `Date` (formatted in the reader's locale at resolution), or `Raw` for what is already
+  the user's own words — and the screen calls `asString()`, or `asString(context)` with the
+  **Activity's** `Context` inside a snackbar/Toast lambda. Still don't inject `Context` into a
+  ViewModel: the application's configuration can lag AppCompat's per-app locale on older APIs,
+  while composition follows the Activity. Three rules. **A screen that branches on an outcome
+  gets a typed code, not text** — `CalendarScreen` used to compare the literal
+  `"Event rescheduled"` to decide whether to offer Undo (UX-12); it now reads
+  `EventOperation.RESCHEDULED`. **Never render `e.message`**: it is English and sometimes a class
+  name — log it, and show a localised sentence (`AppError` maps by type in
+  `presentation/common/ErrorText.kt`; `AppError.userMessage` and `UiError.message` are logs-only).
+  **The data layer reports facts, not sentences** — `CalendarSyncRepository`'s `SyncResult`
+  carries counts, dates and a `SyncFailure`, and `SyncViewModel` words them. Stored fallbacks
+  (`"Untitled Event"` on an import, a chat `senderName` of `"Unknown"`) are data, not UI text,
+  and stay as they are: localising them would write one parent's language into a record the
+  other reads.
 - Calendar range/day queries now match multi-day & overnight events by overlap
   (`getSingleEventsByDateRange` / `getEventsByDate`), not start date only.
 - Unit tests for ChildInfo/Pairing/Settings/Sync ViewModels were once removed as stale (they
-  targeted long-gone APIs). **Three of the four are back**: `ChildInfoViewModelTest`,
-  `PairingViewModelTest` and `SyncServiceTest` all exist and run. Settings still has none —
-  that is the one to write when touching it.
+  targeted long-gone APIs). **All four are back**: `ChildInfoViewModelTest`,
+  `PairingViewModelTest`, `SyncServiceTest` and — since September 2026, starting with the push
+  switch — `SettingsViewModelTest`.
 
 - **`ChildInfoViewModel`'s editor state is loaded by id, never from the head of a list.**
   `loadChildInfo()` serves the list screen and touches nothing else; `loadChildInfoById()` is the
@@ -918,7 +948,9 @@ Ukrainian** (`values-cs/`, `values-de/`, `values-ru/`, `values-uk/`). Rules:
   translation's format arguments, since a dropped `%1$s` throws `IllegalFormatException` only on
   the device of whoever reads that language. CI runs it as the `invariants` job.
 - In composables use `stringResource(...)`; for text consumed inside non-composable
-  lambdas (snackbars, coroutines) capture the string in composable scope first. Language
+  lambdas (snackbars, coroutines) capture the string in composable scope first. Text that comes
+  from a ViewModel or a service is a `UiText` (`presentation/common/UiText.kt`, CQ-14) — never a
+  `String` built there. Language
   endonyms in the picker ("Čeština", "Русский", …) are `translatable="false"`.
 - Dates/day/month names come from `java.time` formatters with the default locale —
   never from string arrays.

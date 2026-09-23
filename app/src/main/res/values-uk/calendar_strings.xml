@@ -28,7 +28,7 @@
     <string name="calendar_filter_new_type_label">Новий тип події</string>
     <string name="calendar_filter_new_type_placeholder">напр., уроки музики</string>
     <string name="calendar_filter_add_button">Додати</string>
-    <string name="calendar_filter_holidays_title">Чеські свята</string>
+    <string name="calendar_filter_holidays_title">Свята</string>
     <string name="calendar_filter_holidays_subtitle">Державні свята та шкільні канікули</string>
 
     <string name="calendar_weekday_header_description">Заголовок днів тижня календаря</string>

@@ -42,4 +42,12 @@
          and honestly numbers what is not. -->
     <string name="parent_label_slot_first">Перший з батьків</string>
     <string name="parent_label_slot_second">Другий з батьків</string>
+
+    <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
+    <string name="common_error_generic">Щось пішло не так. Спробуйте ще раз.</string>
+    <string name="common_error_offline">Немає підключення до інтернету. Перевірте з’єднання та спробуйте ще раз.</string>
+    <string name="common_error_server">Сервер недоступний. Спробуйте пізніше.</string>
+    <string name="common_error_permission">У вас немає прав на цю дію.</string>
+    <string name="common_error_invalid_input">Деякі дані відсутні або неправильні. Перевірте їх і спробуйте ще раз.</string>
+    <string name="common_error_sync">Не вдалося синхронізувати. Спробуйте ще раз.</string>
 </resources>

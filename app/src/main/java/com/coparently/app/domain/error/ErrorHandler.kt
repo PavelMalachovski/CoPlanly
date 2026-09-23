@@ -36,7 +36,8 @@ class ErrorHandler @Inject constructor(
                 if (networkMonitor.isOnline()) {
                     AppError.NetworkError(
                         userMessage = "Server error occurred",
-                        originalException = error
+                        originalException = error,
+                        offline = false
                     )
                 } else {
                     AppError.NetworkError(

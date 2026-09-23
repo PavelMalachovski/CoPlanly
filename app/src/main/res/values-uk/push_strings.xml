@@ -62,4 +62,8 @@
     <string name="push_split_ratio_agreed_body">Пропорцію, за якою діляться витрати, було задано ще до об\'єднання. Відкрийте налаштування.</string>
     <string name="push_records_shared_title">Записи другого з батьків</string>
     <string name="push_records_shared_body">%1$s відкрив(ла) вам календар і сімейні записи</string>
+
+    <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
+    <string name="push_channel_name">Сповіщення CoPlanly</string>
+    <string name="push_channel_description">Сповіщення про події, запити й повідомлення від іншого батька</string>
 </resources>

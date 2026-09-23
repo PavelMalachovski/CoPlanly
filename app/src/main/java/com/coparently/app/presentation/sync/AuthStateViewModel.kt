@@ -106,7 +106,7 @@ class AuthStateViewModel @Inject constructor(
     } catch (
         @Suppress("TooGenericExceptionCaught") e: Exception
     ) {
-        android.util.Log.e(TAG, "Failed to decide whether onboarding is needed for $uid", e)
+        android.util.Log.e(TAG, "Failed to decide whether onboarding is needed", e)
         false
     }
 

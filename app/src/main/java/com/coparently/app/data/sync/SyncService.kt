@@ -754,7 +754,7 @@ class SyncService @Inject constructor(
                 parentSlotMigrator.reslotIfSlotChanged(myUid = userId, newRole = updatedUser.role)
             }.onFailure { e ->
                 if (e is CancellationException) throw e
-                Log.e(TAG, "Failed to react to a remote slot change for $userId", e)
+                Log.e(TAG, "Failed to react to a remote slot change", e)
             }
         }
     }
@@ -910,7 +910,8 @@ sealed class SyncStatus {
     /**
      * Sync failed with an error.
      *
-     * @property message Error message
+     * @property message The exception's own text, for logs only. The screen shows a localised
+     *   sentence instead (CQ-14) — this is English and often technical.
      */
     data class Error(val message: String) : SyncStatus()
 }

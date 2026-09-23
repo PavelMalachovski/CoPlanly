@@ -24,6 +24,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -37,6 +38,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -58,7 +60,10 @@ import java.util.Locale
 /** Alpha of the payer-tinted circle behind a row's leading icon. */
 private const val PAYER_TINT_ALPHA = 0.18f
 
-/** Leading tile / receipt thumbnail size — at or above the 44–48dp touch-target floor. */
+/**
+ * Leading tile / receipt thumbnail size. 40dp is the *drawn* size; the tappable receipt
+ * thumbnail is padded out to the 48dp minimum with `minimumInteractiveComponentSize`.
+ */
 private val TILE_SIZE = 40.dp
 
 /**
@@ -259,7 +264,7 @@ fun ExpenseItem(
         color = MaterialTheme.colorScheme.surfaceContainer,
         modifier = Modifier
             .fillMaxWidth()
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier)
     ) {
         Row(
             modifier = Modifier.padding(12.dp),
@@ -269,7 +274,7 @@ fun ExpenseItem(
             // A receipt photo, when present, keeps its own tappable thumbnail here: the viewer
             // is a working feature and losing its entry point to match a mockup would be a
             // regression. Without a photo the slot shows a payer-tinted category mark instead.
-            // 40dp, up from 30dp — the thumbnail was below the 44–48dp touch-target floor.
+            // Drawn at 40dp, up from 30dp, and tappable across 48dp.
             val receiptUrl = expense.receiptUrl
             if (receiptUrl != null) {
                 AsyncImage(
@@ -277,9 +282,10 @@ fun ExpenseItem(
                     contentDescription = stringResource(R.string.expenses_receipt_photo),
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
+                        .minimumInteractiveComponentSize()
                         .size(TILE_SIZE)
                         .clip(RoundedCornerShape(12.dp))
-                        .clickable { onReceiptClick(receiptUrl) }
+                        .clickable(role = Role.Button) { onReceiptClick(receiptUrl) }
                 )
             } else {
                 Box(

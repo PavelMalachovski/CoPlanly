@@ -110,4 +110,9 @@
     <string name="childinfo_delete_confirm">Smazat</string>
     <string name="childinfo_delete_cancel">Ponechat</string>
     <string name="childinfo_delete_action">Smazat dítě</string>
+
+    <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
+    <string name="childinfo_load_failed">Údaje o dětech se nepodařilo načíst. Zkuste to prosím znovu.</string>
+    <string name="childinfo_delete_failed">Údaje o dítěti se nepodařilo smazat. Zkuste to prosím znovu.</string>
+    <string name="childinfo_sync_failed">Údaje o dětech se nepodařilo synchronizovat. Zkuste to prosím znovu.</string>
 </resources>

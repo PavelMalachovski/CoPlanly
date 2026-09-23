@@ -1,8 +1,10 @@
 package com.coparently.app.presentation.settings
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,6 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -28,7 +31,6 @@ import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Diversity3
 import androidx.compose.material.icons.filled.EventAvailable
-import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.FamilyRestroom
 import androidx.compose.material.icons.filled.Group
@@ -77,11 +79,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -102,12 +106,18 @@ import com.coparently.app.presentation.common.PillChip
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.SignedInAsRow
+import com.coparently.app.presentation.common.UiState
+import com.coparently.app.presentation.common.UiText
+import com.coparently.app.presentation.common.animations.sectionEnter
+import com.coparently.app.presentation.common.animations.sectionExit
+import com.coparently.app.presentation.common.asString
+import com.coparently.app.presentation.common.coverageNote
 import com.coparently.app.presentation.common.labelRes
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.consent.TelemetryConsentViewModel
 import com.coparently.app.presentation.sync.GoogleCalendarSyncState
 import com.coparently.app.presentation.sync.SyncViewModel
-import com.coparently.app.presentation.theme.PARENT_COLOUR_PICKER_ENABLED
+import com.coparently.app.presentation.theme.Motion
 import com.coparently.app.presentation.theme.ParentColorChoice
 import kotlinx.coroutines.launch
 import java.time.format.DateTimeFormatter
@@ -285,6 +295,18 @@ fun SettingsScreen(
         }
     }
 
+    // Every other failure here — the push switch, loading the screen — lands in
+    // `operationState`, which nothing used to collect, so it failed without a word. It gets its
+    // own wording: the deletion snackbar above names an account that is still there.
+    val operationState by settingsViewModel.operationState.collectAsState()
+    val operationFailed = stringResource(R.string.settings_operation_failed)
+    LaunchedEffect(operationState) {
+        if (operationState is UiState.Error) {
+            snackbarHostState.showSnackbar(operationFailed)
+            settingsViewModel.clearMessages()
+        }
+    }
+
     // "Saved" and "sent to your co-parent to confirm" are different outcomes, and a parent told
     // the first when the second is true will spend against a split nobody has agreed.
     val splitApplied = stringResource(R.string.settings_split_ratio_applied)
@@ -415,42 +437,36 @@ fun SettingsScreen(
                         )
                         Divider()
                     }
-                    // Hidden until the chosen palette actually reaches the screens (UX-15, audit
-                    // 2026-09): every calendar, chip and ledger still draws the default pink and
-                    // blue, so a picker here would promise a feature that does not exist (design
-                    // item 8). Flip PARENT_COLOUR_PICKER_ENABLED once the palette is plumbed.
-                    if (PARENT_COLOUR_PICKER_ENABLED) {
-                        // The parent's own colour. In the Family group rather than under App
-                        // preferences because it is how this person is identified to the other one —
-                        // the same kind of fact as their name, not a device setting like the theme.
-                        SectionRow(
-                            icon = Icons.Default.Palette,
-                            title = stringResource(R.string.settings_parent_color),
-                            supporting = stringResource(R.string.settings_parent_color_desc),
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                showColorPicker = true
-                            },
-                            trailing = {
-                                // The swatch rather than a chevron: one trailing control, and the
-                                // colour itself says more than an arrow would.
-                                Box(
-                                    modifier = Modifier
-                                        .size(24.dp)
-                                        .clip(CircleShape)
-                                        .background(
-                                            (
-                                                ParentColorChoice.fromStored(parents.me?.colorCode)
-                                                    ?: ParentColorChoice.defaultFor(
-                                                        parents.me?.slot.orEmpty()
-                                                    )
-                                                ).fill
-                                        )
-                                )
-                            }
-                        )
-                        Divider()
-                    }
+                    // The parent's own colour. In the Family group rather than under App
+                    // preferences because it is how this person is identified to the other one —
+                    // the same kind of fact as their name, not a device setting like the theme.
+                    SectionRow(
+                        icon = Icons.Default.Palette,
+                        title = stringResource(R.string.settings_parent_color),
+                        supporting = stringResource(R.string.settings_parent_color_desc),
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            showColorPicker = true
+                        },
+                        trailing = {
+                            // The swatch rather than a chevron: one trailing control, and the
+                            // colour itself says more than an arrow would.
+                            Box(
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        (
+                                            ParentColorChoice.fromStored(parents.me?.colorCode)
+                                                ?: ParentColorChoice.defaultFor(
+                                                    parents.me?.slot.orEmpty()
+                                                )
+                                            ).fill
+                                    )
+                            )
+                        }
+                    )
+                    Divider()
                     // Beside the colour rather than under App preferences: both are answers about
                     // this parent — how they are marked and where they are — while the language
                     // and the theme are answers about this device.
@@ -620,7 +636,7 @@ fun SettingsScreen(
                         // control a parent sets once.
                         trailing = { DisclosureChevron(expanded = googleExpanded) }
                     )
-                    AnimatedVisibility(visible = googleExpanded) {
+                    AnimatedVisibility(visible = googleExpanded, enter = sectionEnter(), exit = sectionExit()) {
                         GoogleCalendarActions(
                             isSignedIn = isSignedIn,
                             isSyncEnabled = isSyncEnabled,
@@ -637,7 +653,7 @@ fun SettingsScreen(
                                         onStartGoogleSignIn(signInIntent)
                                     } else {
                                         syncViewModel.handleSignInCancellation(
-                                            context.getString(R.string.sync_google_sign_in_failed)
+                                            UiText.Res(R.string.sync_google_sign_in_failed)
                                         )
                                     }
                                 }
@@ -933,17 +949,29 @@ fun SettingsScreen(
 /** The trailing chevron on a row that expands in place, showing which way it is now. */
 @Composable
 private fun DisclosureChevron(expanded: Boolean) {
+    // Turns with the section it opens, over the same duration, instead of swapping glyphs in one
+    // frame while the section below it animated.
+    val rotation by animateFloatAsState(
+        targetValue = if (expanded) HALF_TURN_DEGREES else 0f,
+        animationSpec = tween(Motion.MEDIUM_MS, easing = FastOutSlowInEasing),
+        label = "disclosure_chevron"
+    )
     Icon(
-        imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+        imageVector = Icons.Default.ExpandMore,
         // Named, unlike [Chevron]. A navigation chevron repeats what the row already
         // announces; this one carries the row's *state*, which nothing else says aloud.
         contentDescription = stringResource(
             if (expanded) R.string.settings_collapse else R.string.settings_expand
         ),
         tint = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.size(20.dp)
+        modifier = Modifier
+            .size(20.dp)
+            .rotate(rotation)
     )
 }
+
+/** A disclosure chevron pointing up: [Icons.Default.ExpandMore] turned half way round. */
+private const val HALF_TURN_DEGREES = 180f
 
 /** The trailing chevron on a row that navigates elsewhere. */
 @Composable
@@ -1031,16 +1059,16 @@ private fun GoogleCalendarActions(
 
         when (syncState) {
             is GoogleCalendarSyncState.Syncing -> StatusLine(
-                text = syncState.message,
+                text = syncState.message.asString(),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 busy = true
             )
             is GoogleCalendarSyncState.Success -> StatusLine(
-                text = syncState.message,
+                text = syncState.message.asString(),
                 color = MaterialTheme.colorScheme.tertiary
             )
             is GoogleCalendarSyncState.Error -> StatusLine(
-                text = syncState.message,
+                text = syncState.message.asString(),
                 color = MaterialTheme.colorScheme.error
             )
             else -> Unit
@@ -1190,10 +1218,12 @@ private fun ChoiceRow(label: String, selected: Boolean, onSelect: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onSelect)
+            // One focus stop that announces itself as a radio button, instead of a clickable row
+            // and a second, separately focusable RadioButton inside it.
+            .selectable(selected = selected, role = Role.RadioButton, onClick = onSelect)
             .padding(vertical = 8.dp)
     ) {
-        RadioButton(selected = selected, onClick = onSelect)
+        RadioButton(selected = selected, onClick = null)
         Spacer(modifier = Modifier.width(8.dp))
         Text(text = label)
     }
@@ -1212,7 +1242,8 @@ private fun SyncStatus.summary(): String = when (this) {
     is SyncStatus.Syncing -> stringResource(R.string.settings_syncing)
     is SyncStatus.Success ->
         stringResource(R.string.settings_sync_last, lastSyncTime.format(syncTimeFormatter))
-    is SyncStatus.Error -> message
+    // Not `message`: that is the exception's own English text, kept for the log (CQ-14).
+    is SyncStatus.Error -> stringResource(R.string.settings_sync_failed)
 }
 
 /** Colour for [summary]; errors are the only state that shouts. */
@@ -1289,13 +1320,16 @@ private fun FamilySwitcherDialog(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { onSelect(family.familyId) }
+                            .selectable(
+                                selected = family.familyId == selectedFamilyId,
+                                role = Role.RadioButton
+                            ) { onSelect(family.familyId) }
                             .padding(vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         RadioButton(
                             selected = family.familyId == selectedFamilyId,
-                            onClick = { onSelect(family.familyId) }
+                            onClick = null
                         )
                         Text(
                             family.partnerName.takeIf { it.isNotBlank() }
@@ -1335,13 +1369,15 @@ private fun ParentColorDialog(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { chosen = choice.name }
+                            .selectable(selected = chosen == choice.name, role = Role.RadioButton) {
+                                chosen = choice.name
+                            }
                             .padding(vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         RadioButton(
                             selected = chosen == choice.name,
-                            onClick = { chosen = choice.name }
+                            onClick = null
                         )
                         Box(
                             modifier = Modifier
@@ -1383,8 +1419,8 @@ private fun ParentColorDialog(
  * choice here uses — colour, language, theme, currency — and a row of seven chips inside a
  * settings list would be the second interaction model in one group.
  *
- * It carries the same honesty the picker does: the note under the list says whether the chosen
- * country's holidays are actually in the app.
+ * It carries the same honesty the picker does, through the same [coverageNote]: the line under
+ * the list says what the chosen country's calendar actually contains.
  */
 @Composable
 private fun CountryDialog(
@@ -1404,27 +1440,22 @@ private fun CountryDialog(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { chosen = entry.name }
+                            .selectable(selected = chosen == entry.name, role = Role.RadioButton) {
+                                chosen = entry.name
+                            }
                             .padding(vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         RadioButton(
                             selected = chosen == entry.name,
-                            onClick = { chosen = entry.name }
+                            onClick = null
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(stringResource(entry.labelRes()))
                     }
                 }
                 Text(
-                    text = if (country.hasHolidays) {
-                        stringResource(R.string.country_holidays_supported)
-                    } else {
-                        stringResource(
-                            R.string.country_holidays_unavailable,
-                            stringResource(country.labelRes())
-                        )
-                    },
+                    text = country.coverageNote(),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 8.dp)

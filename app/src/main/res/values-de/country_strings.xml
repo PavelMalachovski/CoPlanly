@@ -14,4 +14,6 @@
 
     <string name="country_holidays_supported">Feiertage und Schulferien werden im Kalender angezeigt.</string>
     <string name="country_holidays_unavailable">Feiertage für %1$s sind noch nicht in der App, daher werden keine angezeigt.</string>
+    <string name="country_holidays_public_only">Bundesweite Feiertage werden im Kalender angezeigt. Schulferien für %1$s sind nicht in der App.</string>
+    <string name="country_holidays_suspended">Feiertage für %1$s sind unter dem Kriegsrecht keine arbeitsfreien Tage, daher werden keine angezeigt.</string>
 </resources>

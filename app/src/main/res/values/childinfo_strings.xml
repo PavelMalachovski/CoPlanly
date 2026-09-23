@@ -110,4 +110,9 @@
     <string name="childinfo_delete_confirm">Delete</string>
     <string name="childinfo_delete_cancel">Keep</string>
     <string name="childinfo_delete_action">Delete child</string>
+
+    <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
+    <string name="childinfo_load_failed">Could not load the children\'s details. Please try again.</string>
+    <string name="childinfo_delete_failed">Could not delete the child\'s details. Please try again.</string>
+    <string name="childinfo_sync_failed">Could not sync the children\'s details. Please try again.</string>
 </resources>

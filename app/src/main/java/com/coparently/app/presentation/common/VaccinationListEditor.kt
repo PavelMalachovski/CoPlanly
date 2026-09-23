@@ -1,8 +1,6 @@
 package com.coparently.app.presentation.common
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -31,6 +29,8 @@ import androidx.compose.ui.unit.dp
 import com.coparently.app.R
 import com.coparently.app.domain.model.Vaccination
 import com.coparently.app.presentation.childinfo.components.DatePickerDialog
+import com.coparently.app.presentation.common.animations.sectionEnter
+import com.coparently.app.presentation.common.animations.sectionExit
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
@@ -135,7 +135,7 @@ private fun VaccinationAddRow(
     }
 
     Column(modifier = modifier) {
-        AnimatedVisibility(visible = isAdding, enter = expandVertically(), exit = shrinkVertically()) {
+        AnimatedVisibility(visible = isAdding, enter = sectionEnter(), exit = sectionExit()) {
             Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
                     value = newName,

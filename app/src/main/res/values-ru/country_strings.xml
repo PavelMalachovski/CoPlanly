@@ -14,4 +14,6 @@
 
     <string name="country_holidays_supported">В календаре показываются государственные праздники и школьные каникулы.</string>
     <string name="country_holidays_unavailable">Праздников для страны «%1$s» в приложении пока нет, поэтому они не показываются.</string>
+    <string name="country_holidays_public_only">В календаре показываются общегосударственные праздники. Школьных каникул для страны «%1$s» в приложении нет.</string>
+    <string name="country_holidays_suspended">Во время военного положения праздники в стране «%1$s» не являются выходными днями, поэтому они не показываются.</string>
 </resources>

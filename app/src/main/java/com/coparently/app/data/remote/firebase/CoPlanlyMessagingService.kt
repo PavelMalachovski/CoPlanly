@@ -244,12 +244,15 @@ class CoPlanlyMessagingService : FirebaseMessagingService() {
      */
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            // The name and description are what system Settings shows for this channel, so they
+            // are resources (CQ-14). Re-creating an existing channel updates both, which is how
+            // a language change reaches it.
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                CHANNEL_NAME,
+                getString(R.string.push_channel_name),
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = CHANNEL_DESCRIPTION
+                description = getString(R.string.push_channel_description)
             }
 
             val notificationManager = getSystemService(NotificationManager::class.java)
@@ -279,8 +282,6 @@ class CoPlanlyMessagingService : FirebaseMessagingService() {
     companion object {
         private const val TAG = "CoPlanlyMessaging"
         private const val CHANNEL_ID = "coparently_notifications"
-        private const val CHANNEL_NAME = "CoPlanly Notifications"
-        private const val CHANNEL_DESCRIPTION = "Notifications for events and invitations"
 
         // The three server-only types, aliased from `PushPayload` rather than re-declared.
         // They were literals here and in the sending code, in the rules and in

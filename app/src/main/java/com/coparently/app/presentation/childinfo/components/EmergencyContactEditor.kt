@@ -1,8 +1,6 @@
 package com.coparently.app.presentation.childinfo.components
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -18,6 +16,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.coparently.app.R
 import com.coparently.app.domain.model.EmergencyContact
+import com.coparently.app.presentation.common.animations.sectionEnter
+import com.coparently.app.presentation.common.animations.sectionExit
 
 /**
  * Editor for managing emergency contacts.
@@ -47,8 +47,8 @@ fun EmergencyContactEditor(
         contacts.forEachIndexed { index, contact ->
             AnimatedVisibility(
                 visible = editingIndex != index,
-                enter = expandVertically(),
-                exit = shrinkVertically()
+                enter = sectionEnter(),
+                exit = sectionExit()
             ) {
                 EmergencyContactCard(
                     contact = contact,
@@ -73,8 +73,8 @@ fun EmergencyContactEditor(
         // Add new contact form
         AnimatedVisibility(
             visible = isAddingNew,
-            enter = expandVertically(),
-            exit = shrinkVertically()
+            enter = sectionEnter(),
+            exit = sectionExit()
         ) {
             EmergencyContactForm(
                 onSave = {

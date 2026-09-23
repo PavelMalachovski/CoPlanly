@@ -3,12 +3,14 @@ package com.coparently.app.presentation.pets
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.coparently.app.R
 import com.coparently.app.data.analytics.AnalyticsManager
 import com.coparently.app.data.crashlytics.CrashlyticsManager
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.domain.model.Pet
 import com.coparently.app.domain.repository.PetPhotoStorage
 import com.coparently.app.domain.repository.PetRepository
+import com.coparently.app.presentation.common.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -120,7 +122,8 @@ class PetsViewModel @Inject constructor(
             } catch (
                 @Suppress("TooGenericExceptionCaught") e: Exception
             ) {
-                _uiState.value = PetsUiState.Error(e.message ?: "Failed to load pets")
+                Log.w(TAG, "Loading pets failed", e)
+                _uiState.value = PetsUiState.Error(UiText.Res(R.string.pets_load_failed))
             }
         }
     }
@@ -289,7 +292,7 @@ class PetsViewModel @Inject constructor(
                     e,
                     mapOf("action" to "delete_pet", "pet_id" to pet.id)
                 )
-                _uiState.value = PetsUiState.Error(e.message ?: "Failed to delete pet")
+                _uiState.value = PetsUiState.Error(UiText.Res(R.string.pets_delete_failed))
             }
         }
     }
@@ -306,7 +309,8 @@ class PetsViewModel @Inject constructor(
             } catch (
                 @Suppress("TooGenericExceptionCaught") e: Exception
             ) {
-                _uiState.value = PetsUiState.Error(e.message ?: "Failed to sync pets")
+                Log.w(TAG, "Syncing pets failed", e)
+                _uiState.value = PetsUiState.Error(UiText.Res(R.string.pets_sync_failed))
             }
         }
     }
@@ -322,5 +326,7 @@ class PetsViewModel @Inject constructor(
 sealed class PetsUiState {
     data object Loading : PetsUiState()
     data class Success(val pets: List<Pet>) : PetsUiState()
-    data class Error(val message: String) : PetsUiState()
+
+    /** The list could not be shown; [message] is resolved by the screen (CQ-14). */
+    data class Error(val message: UiText) : PetsUiState()
 }
