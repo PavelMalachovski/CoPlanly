@@ -127,8 +127,12 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     read `FamilySwitcherViewModel`, observed off the signed-in Room row. Don't give Settings its
     own copy of the family list again — two sources for "which family is on screen" is how they
     come to disagree. With one co-parent the chip renders nothing. It is deliberately not on the
-    Calendar header (item 5's fixed four) or on Chat (see the known issue on chat and the first
-    co-parent).
+    Calendar header (item 5's fixed four). It is not on Chat either — the original reason (chat
+    followed the first co-parent, whatever the switcher said) is fixed, and what remains is a
+    layout call: the tab renders the thread in place (item 7) and its header already names the
+    co-parent. **Neither the chip nor its dialog shows an unread count or dot**: only the selected
+    family's chat is mirrored, so a figure for any other family could not be backed (see the
+    fixed known issue on chat and the first co-parent, and ROADMAP M-8).
 
 ## UX/UI overhaul (July 2026 design review) — implemented, keep consistent
 
@@ -852,17 +856,24 @@ whatever you were doing; a stale "known issue" costs more than a missing one.
   unbounded: a genuinely broken rule would then reconnect for the life of the process, and any
   test of the give-up path spins on the virtual clock instead of finishing.
 
-- **Chat follows the *first* co-parent, not the selected family** (found in M-8, September 2026).
-  `ChatViewModel.coParentLink`/`unreadCount` and `ChatMirror` key on
-  `PairingRepository.observePairingState()`, which reads the **server's** `users/{uid}.partnerId`
-  (`partnersOf(...)[0]`) rather than the local projection `SelectedFamilySource` writes. For a
-  one-family account the two are the same uid and nothing is wrong. With two families the Chat
-  tab, its badge and the process-wide mirror stay on the first family whatever the switcher says;
-  the second family's thread fills only while it is open, and is reached from the conversation
-  list or its push (which now switches the family on tap). This is also why cross-family badges
-  were **not** built: a Room count across conversations would silently undercount the family
-  nothing mirrors. The fix and its order are in `docs/ROADMAP.md` M-8 — don't paper over it with a
-  count.
+- ~~**Chat follows the *first* co-parent, not the selected family.**~~ **Fixed (M-8, September
+  2026).** `ChatViewModel.coParentLink`/`unreadCount` and `ChatMirror` used to key on
+  `PairingRepository.observePairingState()` — the **server's** `partnerId`, `partnersOf(...)[0]` —
+  so with two families the Chat tab, its badge and the process-wide mirror stayed on the first
+  family whatever the switcher said. Both now read `data/chat/ChatPartnerSource`, which splits the
+  question in two: the server decides **whether** there is a co-parent (`Loading` stays
+  `Resolving`, `NotPaired` stays `None`, so a stale projection cannot invent a thread), and the
+  projection `SelectedFamilySource` writes decides **which**, falling back to the server's partner
+  for the moment after a first pairing when the Room row has not caught up. A one-family account
+  resolves to the same uid either way and does not even re-emit. `ChatMirror` keeps every CQ-8
+  guarantee — `ensureConversation` awaited before either listener attaches, the outer restart
+  loop, the bounded inner retry, the `.catch` — and its `collectLatest` now also cancels the old
+  thread's listeners on a switch: **the process-wide mirror follows exactly one family.** That is
+  why cross-family badges are still **not** built, and why the switcher chip shows no count: a
+  Room `COUNT(*)` over a family nothing is mirroring would say 0 when it is not. The honest
+  version (a conversation-document listener per non-selected family, a dot rather than a count)
+  is recorded in `docs/ROADMAP.md` M-8 — don't paper over it with a count. Unverified on two
+  phones: see M-8's acceptance note.
 
 - **Cross-time-zone chat is implemented but never verified on two devices.** The August 2026
   chat sync moved message times to epoch millis specifically so two parents in different zones

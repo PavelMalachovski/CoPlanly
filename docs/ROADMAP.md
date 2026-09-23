@@ -67,7 +67,7 @@ invocation is yours.
 | Id | What | Pri | Size |
 | --- | --- | --- | --- |
 | **M-5** | Multi-family cleanup: delete `partnerId`, `User.role`, `Event.sharedWith`, `isPartnerOf` — **after** the ops steps in REL-3 | P2 | M |
-| **M-8** | M-4's last leftover: badges across families — and chat still follows the *first* co-parent, not the selected family (the chip and `familyId` on pushes are done) | P2 | M |
+| **M-8** | M-4's last leftover: badges across families. Chat now follows the selected family (done, September 2026); an honest cross-family signal needs a conversation-document listener per non-selected family — a dot, not a count | P2 | M |
 | **CQ-17** | Six dependencies worth moving | P3 | S |
 | **MON-2** | Verify the market facts — most of them are public pages | P0 | S |
 | **MON-3** | Export to PDF/CSV — the first paid feature (needs MON-4 first) | P1 | M |
@@ -97,6 +97,7 @@ invocation is yours.
 | **UX-13** | Light theme is unverifiable rather than incomplete — the cloud half is done (night window background, light+dark previews on the main screens' pieces) | Whether a dark cold start still flashes: only a device shows the window before Compose's first frame. |
 | **FAM-5** | The event chip does not say who it is about | Chips are single-line with ellipsis and every colour channel is spent. Worth an owner's eye on a real device rather than a treatment invented blind. |
 | **M-4 (shipped, unseen)** | The colour palette, the family switcher, the second-co-parent invite | Kotlin compiled in CI; nobody has looked at it. |
+| **M-8 (chat, shipped, unseen)** | Chat, its badge and `ChatMirror` follow the selected family | Unit tests pin the re-key; only an account with two co-parents on real phones shows a switch landing the Chat tab on the other thread, the badge moving with it, and messages from the family *left* arriving again after switching back. |
 
 ### 💻 Yours only — no session can do these
 
@@ -1619,7 +1620,7 @@ while looking at the wrong family. `CalendarSyncRepository` says so at the call 
 is where the answer goes. Related: **MON-8**, where a school import is the opposite case — it *is*
 about the child and must be shared.
 
-### M-8 · P2 · M · What M-4 deliberately left — two of three done, one documented
+### M-8 · P2 · M · What M-4 deliberately left — chip, pushes and chat done; cross-family badges open
 
 **Where:** ☁️ cloud for what is left; a phone with two paired accounts for acceptance.
 
@@ -1650,26 +1651,46 @@ about the child and must be shared.
   `SelectedFamilySource.select` **before** it arms any deep link, since `NavGraph` navigates the
   moment one appears. `select` refuses a family the account is not in, so a stale notification
   opens on whatever is showing.
-- **Not done — badges that count across families**, and the reason is a defect found on the way,
-  not cost alone. The chat badge is not even per *selected* family: `ChatViewModel.unreadCount`,
-  `coParentLink` and `ChatMirror` all key on `PairingRepository.observePairingState()`, which reads
-  the **server's** `users/{uid}.partnerId` — `partnersOf(...)[0]`, the *first* co-parent — not the
-  local projection `SelectedFamilySource` writes. So the Chat tab, its badge and the process-wide
-  mirror follow the first family whatever the switcher says; the second family's thread receives
-  messages into Room only while it is open (the thread's own `observeMessages` mirror), and is
-  reachable from the conversation list and, now, from its push. Two consequences for the badge
-  work. A Room `COUNT(*)` across every conversation — the cheap version — would **undercount the
-  second family silently**, because nothing mirrors its messages while it is closed; a badge that
-  says 0 when it is not is worse than none (design item 8). And the honest version needs, in order:
-  (1) `ChatMirror` and `ChatViewModel.coParentLink` moved from `observePairingState` to the
-  projection (`SelectedFamilySource.observe`) or to *every* family, which is CQ-8-sensitive code
-  and wants a phone; (2) one conversation-document listener per non-selected family, deriving
-  "has unread" from `lastMessageAt > lastReadAt[me]` — a dot on the switcher chip and its dialog
-  rows, not a count, since the messages themselves are not mirrored; (3) the same question asked
-  of change requests and custody proposals, whose queries resolve through the projected
-  `partnerId` and so see only the selected family by construction. Cost: N−1 extra snapshot
-  listeners for the process lifetime, zero for a one-family account. Until (1) lands, the chat
-  push is the cross-family signal, and it now switches the family on tap.
+- **Done (September 2026) — chat follows the selected family.** This was step (1) of the order
+  the badges bullet used to give, and a defect in its own right: `ChatViewModel.unreadCount`,
+  `coParentLink` and `ChatMirror` keyed on `PairingRepository.observePairingState()`, which reads
+  the **server's** `users/{uid}.partnerId` — `partnersOf(...)[0]`, the *first* co-parent — so the
+  Chat tab, its badge and the process-wide mirror followed the first family whatever the switcher
+  said. They now read `data/chat/ChatPartnerSource`, which joins the pairing state with
+  `SelectedFamilySource.observe`: the server decides **whether** there is a co-parent (`Loading`
+  → resolving, `NotPaired` → nobody, whatever a stale Room row says), the projection decides
+  **which**, and the server's partner is the fallback for the moment after a first pairing before
+  the row has caught up. A one-family account resolves to the same uid either way and does not
+  re-emit, so it sees exactly what it saw before. `ChatMirror` keeps every CQ-8 guarantee —
+  `ensureConversation` awaited before either listener, the outer five-minute restart loop, the
+  bounded eight-attempt inner retry, the `.catch` — and its `collectLatest` now cancels the old
+  thread's two listeners on a switch before the new thread's conversation is ensured, so the
+  mirror holds one family's listeners at a time, never an accumulating set. `ChatMirrorTest`
+  pins the re-key and the released listener; `ChatViewModelTest` pins the link, the thread, the
+  badge and the co-parent action moving with the selection, and a one-family account not
+  flickering; `ChatPartnerSourceTest` pins the rule. **Not seen on a device**: see §1's
+  "👁" table. The Chat tab still carries no switcher chip — the original reason is gone, but the
+  tab renders the thread in place (design item 7) and `ChatThreadHeader` already names the
+  co-parent, so adding one is a layout decision rather than a fix.
+- **Not done — badges that count across families, and after the chat fix the answer is still
+  no.** The open question was whether step (1) makes a cross-family count sound. It does not,
+  and the code says why: `ChatMirror` now mirrors **only** the selected family (a switch
+  cancels the previous one's listeners by design — the alternative is N listener pairs for the
+  process lifetime), and a thread's own `observeMessages` mirror runs only while that thread is
+  open, which a push tap now does *after* switching the family. So a non-selected family's
+  messages reach Room only when that family is selected again. A Room `COUNT(*)` across every
+  conversation — the cheap version — would therefore **undercount every family not on screen**,
+  silently; a badge that says 0 when it is not is worse than none (design item 8). What ships:
+  the bottom-bar and Home badges count the **selected** family only (both already key on the
+  projection — Home through the Room `partnerId`, Chat through `ChatPartnerSource`), and the
+  switcher chip and its dialog show **no** count or dot. The honest cross-family version still
+  needs, in order: (2) one conversation-document listener per non-selected family, deriving "has
+  unread" from `lastMessageAt > lastReadAt[me]` — a dot on the switcher chip and its dialog rows,
+  not a count, since the messages themselves are not mirrored; (3) the same question asked of
+  change requests and custody proposals, whose queries resolve through the projected `partnerId`
+  and so see only the selected family by construction. Cost: N−1 extra snapshot listeners for the
+  process lifetime, zero for a one-family account. Until (2) lands, the chat push is the
+  cross-family signal, and it switches the family on tap.
 
 ---
 
