@@ -35,6 +35,7 @@ import androidx.compose.material.icons.filled.Diversity3
 import androidx.compose.material.icons.filled.EventAvailable
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.FamilyRestroom
+import androidx.compose.material.icons.filled.Gavel
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.HourglassTop
 import androidx.compose.material.icons.filled.Info
@@ -161,6 +162,7 @@ private val syncTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
  * @param onNavigateToFriends Opens the calendar-friend list (item 16)
  * @param onNavigateToCalendarFeed Opens the read-only calendar links (MON-17); the row shows
  *   only while the account is in a family, since a link serves one
+ * @param onNavigateToProfessionals Opens professional access (MON-18)
  * @param onNavigateToCustodySetup Opens custody schedule setup
  * @param onNavigateToMyProfile Opens the signed-in user's own profile, editable
  * @param onNavigateToCoParentProfile Opens the co-parent's profile, read-only
@@ -184,6 +186,7 @@ fun SettingsScreen(
     onNavigateToPairing: (() -> Unit)? = null,
     onNavigateToFriends: (() -> Unit)? = null,
     onNavigateToCalendarFeed: (() -> Unit)? = null,
+    onNavigateToProfessionals: (() -> Unit)? = null,
     onNavigateToCustodySetup: (() -> Unit)? = null,
     onNavigateToMyProfile: (() -> Unit)? = null,
     onNavigateToCoParentProfile: (() -> Unit)? = null,
@@ -429,6 +432,21 @@ fun SettingsScreen(
                             icon = Icons.Default.Diversity3,
                             title = stringResource(R.string.friend_section_title),
                             supporting = stringResource(R.string.friend_section_supporting),
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                navigate()
+                            },
+                            trailing = { Chevron() }
+                        )
+                        Divider()
+                    }
+                    // A mediator or lawyer (MON-18), beside the friend: both are somebody outside
+                    // the pair reading the family, and a parent looks for them in the same place.
+                    onNavigateToProfessionals?.let { navigate ->
+                        SectionRow(
+                            icon = Icons.Default.Gavel,
+                            title = stringResource(R.string.professional_section_title),
+                            supporting = stringResource(R.string.professional_section_supporting),
                             onClick = {
                                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 navigate()

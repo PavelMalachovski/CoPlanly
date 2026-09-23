@@ -91,7 +91,7 @@ invocation is yours.
 | **MON-15 (FTS)** | Chat search ships on `LIKE` plus a Kotlin fold; the FTS4 table is the later schema change, once the schema is free | P3 | S |
 | **MON-16** | **Built** (callables, closed rules, record ID on every export, `web/verify/`); left: the functions, rules and hosting deploys, then `publishedExportVerifyUrl` | P1 | — |
 | **MON-17** | **Built** (functions, rules, Settings screen); left: the deploy and a subscription from a real iPhone — see the 👁 table | P1 | — |
-| **MON-18** | Free, expiring, two-consent access for a mediator or lawyer | P1 | M |
+| **MON-18** | **Built** (fourth callable, two-consent rules, screens); left: the functions and rules deploys and a three-account run — see the 👁 table | P1 | — |
 | **MON-20** | Holiday fairness at a glance (who has which holidays, nights per parent) | P2 | S |
 | **MON-21** | From the agreed parenting plan to a proposed schedule | P2 | M |
 | **MON-22** | A private, local-only journal that can be attached to an export | P2 | M |
@@ -120,6 +120,7 @@ invocation is yours.
 | **M-8 (chat, shipped, unseen)** | Chat, its badge and `ChatMirror` follow the selected family | Unit tests pin the re-key; only an account with two co-parents on real phones shows a switch landing the Chat tab on the other thread, the badge moving with it, and messages from the family *left* arriving again after switching back. |
 | **M-8 (dot, shipped, unseen)** | The switcher chip and dialog show a dot when a family not on screen has chat news, a change request or a schedule proposal / day swap waiting on this parent; the dialog row names which | Three accounts (a parent and two co-parents) on at least two phones: the co-parent of the family *not* on screen sends a message, then files a change request, then proposes a schedule — each raises the dot on the chip and on that row within seconds, the row's line names it, and TalkBack reads the kind; answering it (or opening the thread) clears that kind; news in the family on screen never raises it; a one-family account shows exactly what it did. Also: the first change-request dot must not fail with a missing-index error in logcat (`OtherFamiliesSignals`) — the query is equality-only and should need none. |
 | **MON-17 (built, unseen)** | The iCalendar feed: `calendarFeed` + three callables, the Settings → Sync row | The RFC 5545 text and the custody port are pinned by `functions/test/calendar-feed.test.js`; only Apple Calendar shows whether it *subscribes* (`webcal://` from the share sheet), draws the all-day custody bars and the contact windows at the right local times, refreshes within the hour, and stops updating after a revoke. Checklist in MON-17. |
+| **MON-18 (shipped, unseen)** | Professional access: invite, the co-parent's consent, the professional's read-only calendar and plan, revoke | The rules and the callable are proved offline (emulator suite, mocha); the Kotlin is compiled by CI and seen by nobody. Three accounts (A, B, a professional P): A invites, P redeems, P sees "waiting"; B consents from Settings → Family → Professionals; P reads the calendar and plan and nothing else; either parent revokes and P's views empty at once. `docs/DEVICE-CHECKLIST.md` §5.4. Needs the functions **and** rules deploy first. |
 
 ### 💻 Yours only — no session can do these
 
@@ -1956,9 +1957,43 @@ changes), and the settings text must say exactly that (design item 8).
    Subscribed Calendars → Fetch, or up to an hour): the change arrives.
 6. Revoke the link on Android: the iPhone stops receiving updates (its next fetch gets a 404).
 
-### MON-18 · P1 · M · Free, expiring access for a mediator or lawyer
+### MON-18 · **DONE (unseen on a device)** · P1 · M · Free, expiring access for a mediator or lawyer
 
-**Where:** ☁️ cloud; 📱 the invite flow.
+**Where:** 👁 shipped; the device pass is `docs/DEVICE-CHECKLIST.md` §5.4, after the REL-3 deploys.
+
+**What shipped (September 2026).** `professional_grants/{familyId}__{proUid}`, written only by a
+fourth callable, `acceptProfessionalInvitation`; CLAUDE.md item 29 has the invariants.
+In short:
+- **Two consents to open, one to close.** The grant is born carrying the inviting parent's consent
+  (`consents: {uid: epochMillis}`); the co-parent adds their own key from Settings → Family →
+  Professionals, and `firestore.rules` lets each parent write **only their own key** (the nested
+  `hasOnly` shape of item 21). Nothing is readable until the map holds both parents. Either parent
+  deletes the grant alone.
+- **Always expiring.** The invitation names the end; the rules refuse one more than 180 days out
+  and the callable clamps to 180 days from redemption. The rule compares against `request.time`;
+  `sweepLapsedProfessionalGrants` (06:00 UTC) removes the row afterwards. Unpair deletes the
+  family's grants; account deletion deletes both directions.
+- **One family, read-only, never chat.** `isProfessionalOf(familyId)` opens `events` (last
+  disjunct, with the creator checked against `familyParents`, as for a friend),
+  `parenting_plans/{familyId}` and `custody_models/{familyId}` — `get` only for the last two.
+  Chat, messages, expenses, budgets, child and pet records, family settings, families and user
+  profiles admit no professional; `professional-access.test.js` pins each one.
+- **The professional's view is new, not the friend's.** The brief assumed a calendar friend
+  already had a read-only calendar to reuse. It does not — a friend's app shows their grant and
+  their profile, nothing else — so the professional gets a list-shaped agenda (four weeks at a
+  time, whose day it is **named** rather than coloured, the family's shared events) and a
+  read-only parenting plan with both halves side by side. Both read Firestore live and write
+  nothing to Room: a professional's phone holds no copy of the family. Building the friend's
+  view on the same pieces is now a small change.
+- **A push, server-only**: `professional_access_requested` to both parents when a code is
+  redeemed. It says consent is being asked for, never that access began.
+
+**Left, deliberately.** Exports "the parents choose to share" wait for MON-3/MON-16. A web
+read-only view is still a later step. There is no in-app notice to the professional when the
+second consent lands — their list updates live; a push would need a fifth server type. The grant's
+copy of the parents' names and slots is taken at redemption and not refreshed.
+
+The original brief:
 
 **Answers:** AppClose Pro. Mediators are this product's distribution channel (MON-9), and a free
 portal is how AppClose earns their recommendation.

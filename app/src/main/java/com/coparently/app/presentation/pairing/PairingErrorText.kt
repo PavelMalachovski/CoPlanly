@@ -17,8 +17,9 @@ import com.coparently.app.domain.model.PairingError
  * @return the id of the localized message for whatever went wrong.
  */
 @StringRes
-fun Throwable.pairingMessageRes(): Int =
-    when ((this as? PairingException)?.error) {
+fun Throwable.pairingMessageRes(): Int {
+    val error = (this as? PairingException)?.error
+    return when (error) {
         PairingError.NotFound -> R.string.pairing_error_not_found
         PairingError.Expired -> R.string.pairing_error_expired
         PairingError.NotPending -> R.string.pairing_error_not_pending
@@ -26,7 +27,22 @@ fun Throwable.pairingMessageRes(): Int =
         PairingError.AlreadyPaired -> R.string.pairing_error_already_paired
         PairingError.WrongRecipient -> R.string.pairing_error_wrong_recipient
         PairingError.Network -> R.string.pairing_error_network
-        PairingError.FriendInvitation -> R.string.pairing_error_friend_invitation
-        PairingError.NotFriendInvitation -> R.string.pairing_error_not_friend_invitation
-        else -> R.string.pairing_error_unknown
+        else -> kindMessageRes(error)
     }
+}
+
+/**
+ * The half of [pairingMessageRes] about *which kind* of code was offered where, and about the
+ * grant it would have opened — split off so neither `when` grows past what one reader can hold.
+ */
+@StringRes
+private fun kindMessageRes(error: PairingError?): Int = when (error) {
+    PairingError.FriendInvitation -> R.string.pairing_error_friend_invitation
+    PairingError.NotFriendInvitation -> R.string.pairing_error_not_friend_invitation
+    PairingError.ProfessionalInvitation -> R.string.professional_error_is_professional_invitation
+    PairingError.NotProfessionalInvitation -> R.string.professional_error_not_professional_invitation
+    PairingError.InviterNotPaired -> R.string.professional_error_inviter_not_paired
+    PairingError.GrantEnded -> R.string.access_error_grant_ended
+    PairingError.AlreadyEntitled -> R.string.access_error_already_in_family
+    else -> R.string.pairing_error_unknown
+}

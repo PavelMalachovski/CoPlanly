@@ -640,6 +640,33 @@ Preconditions: A is paired with **both** B and C (two families). Invite C from S
 - [ ] REL-7 on both phones (§4.1).
 - [ ] The push opt-out end to end (§3.7).
 
+### 5.4 Professional access (MON-18) · 3A, 2P or 1P fallback
+
+Needs the REL-3 functions **and** rules deploys: without the functions the code does not redeem,
+without the rules the grant opens nothing. Accounts: A and B paired, P a third account (the
+professional), signed in on its own phone or after A/B on the fallback phone.
+
+- [ ] A: Settings → Family → **Professionals** → Invite. Role and length are chosen first; the
+      sheet says what is and is not shared. The code shares through the share sheet.
+- [ ] P: Settings → Professionals → enter the code. It says the code was accepted and that
+      reading starts once both parents consent. The family appears with Calendar and Parenting
+      plan **disabled** and "waiting for both parents' consent".
+- [ ] A and B each get the push "Professional access requested", in each phone's language.
+- [ ] A's row reads "waiting for your co-parent's consent"; B's reads "waiting for your consent".
+      B opens it → **I consent**. Both rows turn to "can read until {date}".
+- [ ] P: Calendar opens, four weeks per page, each day names whose day it is and lists the
+      shared events. No private event of A or B appears. Nothing can be tapped to edit.
+- [ ] P: Parenting plan shows both parents' answers side by side, "Agreed" where both ticked,
+      and the disclaimer. Nothing is editable.
+- [ ] P has no way to chat, see expenses or child records (there is no route to them at all).
+- [ ] A (not B) → the row → **End access** → confirm. P's calendar and plan show "nothing to
+      show" at once, and the row leaves both parents' lists.
+- [ ] Unpair A and B while a grant is active: the grant disappears from P's list.
+- **Fallback (1P):** do the steps as A, then B, then P by signing in and out. This cannot show
+  pushes arriving or P's view emptying live.
+- **If it fails:** tag `ProfessionalRepository`; `presentation/professionals/`,
+  `firestore.rules` `isProfessionalOf`, `functions/index.js` `acceptProfessionalInvitationImpl`.
+
 ---
 
 ## 6. Export (MON-3), landing in PR #99 · 1P [#99]

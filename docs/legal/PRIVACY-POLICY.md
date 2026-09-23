@@ -115,6 +115,12 @@ child's records rather than on the child's consent.
 - **A guest** (for example a grandparent) whom you grant time-limited access to one child's
   record.
 - **A calendar friend** whom you grant time-limited read access to the family calendar.
+- **A professional** — a mediator, lawyer, guardian ad litem or therapist — whom **both** parents
+  let read the family calendar, custody schedule and parenting plan, read-only, for at most 180
+  days. They never see your messages, expenses or records about your child. Access starts only
+  once each parent has consented in the app, and either parent can end it alone at any time. The
+  professional sees the two parents' names; you see theirs and, if they signed in with Google,
+  their profile picture.
 
 Every such grant carries an expiry, is visible to both parents, and can be revoked at any time.
 
@@ -170,6 +176,7 @@ We do not sell personal data, and we do not use it for advertising.
 | **Guests and calendar friends you invite** | Only the record or calendar you granted, until the grant expires | Because you granted it |
 | **Whoever holds a calendar link you created** | Custody days and shared events, read-only, until you revoke the link | Because you created and shared it |
 | **Anyone holding an export you made, or its record ID** | Whether it was registered, when, the period, the format and the size — never who made it | So the export can be verified |
+| **A professional both parents admit** | The calendar, custody schedule and parenting plan of that one family, read-only, until the grant expires | Because both of you consented |
 | Google (Firebase) | Account data, all synced content, files, push tokens, crash and usage data | Our hosting, database, file storage and messaging provider |
 | Google (Calendar API) | Only your calendar, only if you connect it | The integration you enabled |
 
@@ -191,8 +198,9 @@ rather than removed at once, so that your co-parent's phone learns of the deleti
 it syncs. A daily job removes it for good **90 days** after you deleted it.
 
 A guest's access to a child's record ends on the date set when it was granted, and a daily job
-removes lapsed grants. A calendar friend's access also ends on its expiry date; the lapsed grant
-stays on our servers, unusable, until a parent removes it or deletes their account. Queued
+removes lapsed grants. A calendar friend's and a professional's access also end on their expiry
+date, and a daily job removes the lapsed grant. A professional's access also ends when the two
+parents unlink. Queued
 notifications are deleted after **30 days**.
 
 An export's receipt is kept for as long as it can vouch for a file somebody may still rely on,
@@ -210,8 +218,8 @@ because the phone lost its connection half-way — is deleted with your account.
   co-parent;
 - deletes the photographs attached to those records — event photos, receipts, and medical and
   pet photographs;
-- removes you from the audience of anything your co-parent created, and ends any guest or
-  calendar-friend access you granted or held;
+- removes you from the audience of anything your co-parent created, and ends any guest,
+  calendar-friend or professional access you granted or held;
 - deletes every read-only calendar link into your families, whichever of you created it;
 - unlinks the two of you, so their access ends immediately;
 - deletes the fingerprint of your Google Calendar authorisation, if you connected one, and

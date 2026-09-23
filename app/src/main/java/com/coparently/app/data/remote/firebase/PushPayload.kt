@@ -181,6 +181,14 @@ object PushPayload {
     const val CHAT_MESSAGE = "chat_message"
 
     /**
+     * Queued by `acceptProfessionalInvitation` (MON-18) to **both** parents: a mediator, lawyer or
+     * therapist redeemed a code for this family. The actor is the professional's name. It says that
+     * consent is being asked for, never that access began — the grant opens only once the second
+     * parent consents, and a push claiming otherwise would be the forged frame item 15 forbids.
+     */
+    const val PROFESSIONAL_ACCESS_REQUESTED = "professional_access_requested"
+
+    /**
      * Every type a client is allowed to enqueue.
      *
      * Kept as an allow-list rather than a deny-list of the three server-only types, and the

@@ -367,6 +367,24 @@ describe('deleteAccountDataImpl', () => {
     assert.deepStrictEqual(db._store.friend_profiles, []);
   });
 
+  it('removes professional grants in both directions (MON-18)', async () => {
+    const seed = family();
+    seed.professional_grants = [
+      {id: 'alice__bob__med', familyId: 'alice__bob', familyParents: [ALICE, BOB], proUid: 'med',
+        expiresAtMillis: 4102444800000},
+      {id: 'x__y__alice', familyId: 'x__y', familyParents: ['x', 'y'], proUid: ALICE,
+        expiresAtMillis: 4102444800000},
+      {id: 'x__y__med', familyId: 'x__y', familyParents: ['x', 'y'], proUid: 'med',
+        expiresAtMillis: 4102444800000},
+    ];
+    const db = fakeDb(seed);
+
+    await myFunctions.deleteAccountDataImpl(db, ALICE);
+
+    assert.deepStrictEqual(db._store.professional_grants.map((g) => g.id), ['x__y__med'],
+        'only a grant that neither names nor is held by the deleted account may survive');
+  });
+
   // The documents were erased and the files they named were not: a child's medical photographs
   // stayed in the bucket under ids nothing could look up any more. The files have to go first,
   // while the documents still say which files exist.

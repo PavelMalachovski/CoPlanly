@@ -66,4 +66,6 @@
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
     <string name="push_channel_name">Oznámení CoPlanly</string>
     <string name="push_channel_description">Oznámení o událostech, žádostech a zprávách od druhého rodiče</string>
+    <string name="push_professional_access_requested_title">Žádost o přístup odborníka</string>
+    <string name="push_professional_access_requested_body">%1$s přijal/a pozvání číst kalendář a rodičovský plán rodiny. Otevře se až se souhlasem obou rodičů.</string>
 </resources>

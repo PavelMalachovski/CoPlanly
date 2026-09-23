@@ -401,6 +401,13 @@ async function acceptPairingInvitationImpl(db, acceptingUserId, acceptingEmail, 
         'failed-precondition', 'This is a friend invitation, not a co-parent invitation',
         {reason: 'friend-invitation'});
   }
+  // And for a professional invitation (MON-18): a mediator redeeming here would become a parent
+  // of the family they were asked to observe, with a slot, a colour and write access to all of it.
+  if (invite.kind === PROFESSIONAL_INVITATION) {
+    throw new functions.https.HttpsError(
+        'failed-precondition', 'This is a professional invitation, not a co-parent invitation',
+        {reason: 'professional-invitation'});
+  }
   if (invite.status !== 'pending') {
     throw new functions.https.HttpsError(
         'failed-precondition', 'Invitation is no longer pending',
@@ -999,6 +1006,236 @@ exports.acceptCalendarFriendInvitation = functions.https.onCall(async (data, con
       admin.firestore(), context.auth.uid, verifiedEmailOf(context), {code, invitationId});
 });
 
+/**
+ * The `kind` marking an invitation as a **professional** invitation (MON-18): a mediator, lawyer,
+ * guardian ad litem or therapist admitted to read one family's calendar, parenting plan and
+ * custody schedule.
+ *
+ * A fourth kind rather than a flag on the friend one, because the two grants differ in the one
+ * property that matters most: a friend is let in by either parent, a professional by **both**.
+ * As with the other kinds, absent still means co-parent, and every other callable refuses this
+ * value by name.
+ */
+const PROFESSIONAL_INVITATION = 'professional';
+exports.PROFESSIONAL_INVITATION = PROFESSIONAL_INVITATION;
+
+/**
+ * The longest a professional grant may run, in days. The same ceiling is
+ * `professionalMaxMillis()` in firestore.rules and `ProfessionalGrantPolicy.MAX_DURATION_DAYS` on
+ * the client. A mediation is weeks, a custody case a few months; a grant that outlives the
+ * reason for it is exactly what "always expiring" is there to prevent.
+ */
+const PROFESSIONAL_MAX_DAYS = 180;
+exports.PROFESSIONAL_MAX_DAYS = PROFESSIONAL_MAX_DAYS;
+
+/** One day, in millis. */
+const DAY_MILLIS = 24 * 60 * 60 * 1000;
+
+/** The professions a grant may name. A label for the parents' list, never a permission. */
+const PROFESSIONAL_ROLES = ['mediator', 'lawyer', 'guardian_ad_litem', 'therapist', 'other'];
+exports.PROFESSIONAL_ROLES = PROFESSIONAL_ROLES;
+
+/**
+ * The id of a professional grant: the family, then the professional. The rule builds the same
+ * string from the record's `familyId` and the caller's uid, so it reads the grant in one `get()`.
+ *
+ * @param {string} familyId `FamilyKey.of` the two parents.
+ * @param {string} proUid The professional's uid.
+ * @return {string} The document id.
+ */
+function professionalGrantId(familyId, proUid) {
+  return `${familyId}__${proUid}`;
+}
+
+exports.professionalGrantId = professionalGrantId;
+
+/**
+ * Body of the `acceptProfessionalInvitation` callable — the **fourth** redemption path, beside
+ * pairing, guest and calendar friend (MON-18).
+ *
+ * Separate for the reason `acceptGuestInvitationImpl` gives: paths that grant different things
+ * must not be one `kind` branch apart. This one writes exactly one document,
+ * `professional_grants/{familyId}__{proUid}`, and touches no user, no event and no child record.
+ *
+ * **The grant it writes opens nothing yet.** It records the inviting parent's consent — making the
+ * invitation *is* that parent's yes — and the other parent's key is missing until they add it from
+ * their own phone; the rules admit a read only once `consents` holds both. That is why both
+ * parents are told, and the push says consent is needed rather than that access began.
+ *
+ * Four checks the client cannot be trusted with:
+ * - the family named on the invitation must still be a **live** pairing, seen from both sides — no
+ *   fallback to the family on screen, unlike the friend path, because no older build writes this
+ *   kind without a family;
+ * - the accepter must not be a parent of that family;
+ * - the role must be one of [PROFESSIONAL_ROLES];
+ * - the end is clamped to [PROFESSIONAL_MAX_DAYS] from **now**, and must be in the future. No
+ *   fallback duration: the one default this must never have is "forever".
+ *
+ * The parents' names and slots are copied in at acceptance, like a friend's name, because the
+ * professional may read neither parent's profile and still has to be told whose day it is.
+ *
+ * @param {FirebaseFirestore.Firestore} db Firestore instance.
+ * @param {string} acceptingUserId The signed-in caller's UID.
+ * @param {string} acceptingEmail The signed-in caller's email, or ''.
+ * @param {{code: ?string, invitationId: ?string}} ref Exactly one identifier.
+ * @param {number=} nowMillis The instant to judge expiry at; defaults to the clock.
+ * @return {Promise<{grantId: string, familyId: string, familyParents: !Array<string>,
+ *   expiresAtMillis: number}>} The grant written and when it ends.
+ */
+async function acceptProfessionalInvitationImpl(
+    db, acceptingUserId, acceptingEmail, ref, nowMillis) {
+  const now = typeof nowMillis === 'number' ? nowMillis : Date.now();
+  const inviteRef = await findInvitation(db, ref);
+  const invite = (await inviteRef.get()).data();
+
+  if (invite.kind !== PROFESSIONAL_INVITATION) {
+    throw new functions.https.HttpsError(
+        'failed-precondition', 'This is not a professional invitation',
+        {reason: 'not-a-professional-invitation'});
+  }
+  if (invite.status !== 'pending') {
+    throw new functions.https.HttpsError(
+        'failed-precondition', 'Invitation is no longer pending',
+        {reason: 'invitation-not-pending'});
+  }
+  if (typeof invite.expiresAt === 'number' && invite.expiresAt < now) {
+    throw new functions.https.HttpsError(
+        'failed-precondition', 'Invitation has expired', {reason: 'invitation-expired'});
+  }
+  if (invite.fromUserId === acceptingUserId) {
+    throw new functions.https.HttpsError(
+        'invalid-argument', 'You cannot accept your own invitation', {reason: 'self-pairing'});
+  }
+  if (invite.toEmail && invite.toEmail !== acceptingEmail) {
+    throw new functions.https.HttpsError(
+        'permission-denied', 'This invitation is addressed to somebody else',
+        {reason: 'wrong-recipient'});
+  }
+  if (!PROFESSIONAL_ROLES.includes(invite.professionalRole)) {
+    throw new functions.https.HttpsError(
+        'failed-precondition', 'Invitation names no profession',
+        {reason: 'invitation-malformed'});
+  }
+  const requested = typeof invite.professionalExpiresAt === 'number' ?
+    invite.professionalExpiresAt : 0;
+  const expiresAtMillis = Math.min(requested, now + PROFESSIONAL_MAX_DAYS * DAY_MILLIS);
+  if (expiresAtMillis <= now) {
+    throw new functions.https.HttpsError(
+        'failed-precondition', 'This access has already ended', {reason: 'grant-expired'});
+  }
+  const partnerId = partnerFromFamilyId(invite.familyId, invite.fromUserId);
+  if (!partnerId) {
+    throw new functions.https.HttpsError(
+        'failed-precondition', 'Invitation names no family', {reason: 'invitation-malformed'});
+  }
+  if (acceptingUserId === partnerId) {
+    throw new functions.https.HttpsError(
+        'failed-precondition', 'You are already a parent in this family',
+        {reason: 'already-entitled'});
+  }
+
+  const familyId = custodyModelKey(invite.fromUserId, partnerId);
+  const familyParents = [invite.fromUserId, partnerId].sort();
+  const inviterRef = db.collection('users').doc(invite.fromUserId);
+  const partnerRef = db.collection('users').doc(partnerId);
+  const familyRef = db.collection('families').doc(familyId);
+  const accepterRef = db.collection('users').doc(acceptingUserId);
+  const grantId = professionalGrantId(familyId, acceptingUserId);
+  const grantRef = db.collection('professional_grants').doc(grantId);
+  const name = await guestName(accepterRef, acceptingEmail);
+  const photo = await accepterPhoto(accepterRef);
+
+  await db.runTransaction(async (tx) => {
+    const [inviterSnap, partnerSnap, familySnap, inviteSnap] = await Promise.all([
+      tx.get(inviterRef), tx.get(partnerRef), tx.get(familyRef), tx.get(inviteRef),
+    ]);
+    // Re-read inside the transaction: two devices redeeming one code would otherwise both pass
+    // the check above.
+    if (inviteSnap.data().status !== 'pending') {
+      throw new functions.https.HttpsError(
+          'failed-precondition', 'Invitation is no longer pending',
+          {reason: 'invitation-not-pending'});
+    }
+    const inviter = inviterSnap.exists ? inviterSnap.data() : {};
+    const partner = partnerSnap.exists ? partnerSnap.data() : {};
+    // A live pairing, from both sides. A family id on an invitation is a claim, not proof: the
+    // relationship may have ended between generating the code and redeeming it.
+    if (!partnersOf(inviter).includes(partnerId) ||
+        !partnersOf(partner).includes(invite.fromUserId)) {
+      throw new functions.https.HttpsError(
+          'failed-precondition', 'Only a paired parent can invite a professional',
+          {reason: 'inviter-not-paired'});
+    }
+    const family = familySnap.exists && familySnap.data() ? familySnap.data() : {};
+    const storedSlots = family.slots && typeof family.slots === 'object' ? family.slots : {};
+    const slotOf = (uid, profile) => normalizedSlot(storedSlots[uid] || profile.role);
+    const nameOf = (profile) =>
+      (typeof profile.name === 'string' && profile.name.trim()) || '';
+
+    tx.set(grantRef, Object.assign({
+      familyId,
+      familyParents,
+      proUid: acceptingUserId,
+      role: invite.professionalRole,
+      name,
+      invitedBy: invite.fromUserId,
+      grantedAtMillis: now,
+      expiresAtMillis,
+      // The inviting parent's yes. The other key is the co-parent's to add, from their phone.
+      consents: {[invite.fromUserId]: now},
+      parentNames: {
+        [invite.fromUserId]: nameOf(inviter),
+        [partnerId]: nameOf(partner),
+      },
+      parentSlots: {
+        [invite.fromUserId]: slotOf(invite.fromUserId, inviter),
+        [partnerId]: slotOf(partnerId, partner),
+      },
+    }, photo));
+    tx.update(inviteRef, {status: 'accepted', acceptedBy: acceptingUserId, acceptedAt: now});
+  });
+
+  // Both parents are told, in the same words: the inviter learns the code was redeemed, the
+  // co-parent that their consent is asked for. A type, not a sentence (CLAUDE.md item 15).
+  await Promise.all(familyParents.map((parentUid) =>
+    db.collection('notification_queue').add({
+      targetUserId: parentUid,
+      data: {type: 'professional_access_requested', actorName: name, familyId},
+      status: 'pending',
+      createdAt: FieldValue.serverTimestamp(),
+    })));
+
+  return {grantId, familyId, familyParents, expiresAtMillis};
+}
+
+exports.acceptProfessionalInvitationImpl = acceptProfessionalInvitationImpl;
+
+/**
+ * Redeems a professional invitation identified either by its short code or by its id.
+ *
+ * Server-side because it must read both parents' `users` documents to prove the pairing is live
+ * — documents a professional may never read — and because no client may write a grant at all.
+ *
+ * @param {{code?: string, invitationId?: string}} data Exactly one identifier.
+ * @return {Promise<Object>} See [acceptProfessionalInvitationImpl].
+ */
+exports.acceptProfessionalInvitation = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'Sign in first');
+  }
+
+  const code = data && data.code ? String(data.code).trim().toUpperCase() : null;
+  const invitationId = data && data.invitationId ? String(data.invitationId) : null;
+
+  if ((!code && !invitationId) || (code && invitationId)) {
+    throw new functions.https.HttpsError(
+        'invalid-argument', 'Provide exactly one of code or invitationId');
+  }
+
+  return acceptProfessionalInvitationImpl(
+      admin.firestore(), context.auth.uid, verifiedEmailOf(context), {code, invitationId});
+});
+
 /** Firestore caps a batched write at 500 operations; stay clear of the edge. */
 const GUEST_SWEEP_BATCH_LIMIT = 400;
 
@@ -1150,7 +1387,26 @@ exports.sweepExpiredGuests = functions.pubsub
  * @return {Promise<number>} How many grants were deleted.
  */
 async function sweepLapsedCalendarFriendsImpl(db, nowMillis) {
-  const snap = await db.collection('calendar_friends')
+  return sweepLapsedByExpiry(db, 'calendar_friends', nowMillis);
+}
+
+exports.sweepLapsedCalendarFriendsImpl = sweepLapsedCalendarFriendsImpl;
+
+/**
+ * Deletes every document in [collection] whose top-level `expiresAtMillis` is a positive number
+ * at or before [nowMillis] — the one query both grant sweeps run.
+ *
+ * Shared by the calendar-friend and professional sweeps because the safety argument is the
+ * same and must not drift between two copies: `<=` matches the rules' strict `<`, and `> 0`
+ * means a document with no numeric expiry is never matched and never deleted.
+ *
+ * @param {FirebaseFirestore.Firestore} db Firestore instance.
+ * @param {string} collection The grant collection.
+ * @param {number} nowMillis The instant to sweep at.
+ * @return {Promise<number>} How many documents were deleted.
+ */
+async function sweepLapsedByExpiry(db, collection, nowMillis) {
+  const snap = await db.collection(collection)
       .where('expiresAtMillis', '>', 0)
       .where('expiresAtMillis', '<=', nowMillis)
       .get();
@@ -1178,7 +1434,7 @@ async function sweepLapsedCalendarFriendsImpl(db, nowMillis) {
   return removed;
 }
 
-exports.sweepLapsedCalendarFriendsImpl = sweepLapsedCalendarFriendsImpl;
+exports.sweepLapsedByExpiry = sweepLapsedByExpiry;
 
 /**
  * Daily removal of calendar-friend grants that have lapsed.
@@ -1193,6 +1449,42 @@ exports.sweepLapsedCalendarFriends = functions.pubsub
     .onRun(async () => {
       const removed = await sweepLapsedCalendarFriendsImpl(admin.firestore(), Date.now());
       console.log(`Swept ${removed} lapsed calendar-friend grants`);
+      return null;
+    });
+
+/**
+ * Body of the `sweepLapsedProfessionalGrants` schedule — deletes professional grants (MON-18)
+ * whose `expiresAtMillis` has passed.
+ *
+ * Cleanup, not enforcement, exactly as for calendar friends: `isProfessionalOf` in
+ * firestore.rules refuses a lapsed grant from the instant `request.time` reaches its end, with or
+ * without this. What the sweep removes is the row — the parents' list would otherwise keep
+ * naming somebody who can see nothing, and the professional's phone keeps a dead entry. Deleting
+ * the document is exactly what a parent's revoke does, so both sides already handle it.
+ *
+ * A grant with no positive numeric expiry is never matched (see [sweepLapsedByExpiry]); the
+ * callable never writes one and the rule admits nothing through it.
+ *
+ * @param {FirebaseFirestore.Firestore} db Firestore instance.
+ * @param {number} nowMillis The instant to sweep at.
+ * @return {Promise<number>} How many grants were deleted.
+ */
+async function sweepLapsedProfessionalGrantsImpl(db, nowMillis) {
+  return sweepLapsedByExpiry(db, 'professional_grants', nowMillis);
+}
+
+exports.sweepLapsedProfessionalGrantsImpl = sweepLapsedProfessionalGrantsImpl;
+
+/**
+ * Daily removal of lapsed professional grants, at 06:00 UTC — an hour after the friend sweep, to
+ * keep the scheduled jobs an hour apart as the others are.
+ */
+exports.sweepLapsedProfessionalGrants = functions.pubsub
+    .schedule('0 6 * * *')
+    .timeZone('UTC')
+    .onRun(async () => {
+      const removed = await sweepLapsedProfessionalGrantsImpl(admin.firestore(), Date.now());
+      console.log(`Swept ${removed} lapsed professional grants`);
       return null;
     });
 
@@ -1594,7 +1886,11 @@ async function unpairCoParentImpl(db, callerUid, requestedPartnerId) {
       // No notification: there is no intact link, and the other side either does
       // not exist or is already paired with somebody else. The sweep still runs —
       // a half-torn link leaves the shared documents just as exposed.
-      return {unpairedFrom: null, revokeFrom: revokeFrom};
+      return {
+        unpairedFrom: null,
+        revokeFrom: revokeFrom,
+        endedFamilyId: custodyModelKey(callerUid, partnerId),
+      };
     }
 
     tx.update(callerRef, withPartnerRemoved(callerData, partnerId, {
@@ -1606,6 +1902,7 @@ async function unpairCoParentImpl(db, callerUid, requestedPartnerId) {
       unpairedFrom: partnerId,
       callerName: callerData.name || 'Your co-parent',
       revokeFrom: revokeFrom,
+      endedFamilyId: custodyModelKey(callerUid, partnerId),
     };
   });
 
@@ -1626,6 +1923,21 @@ async function unpairCoParentImpl(db, callerUid, requestedPartnerId) {
     } catch (err) {
       console.error(
           `Unpair notification could not be queued for ${result.unpairedFrom}`, err);
+    }
+  }
+
+  // The family's professional grants end with the family (MON-18). A mediator was admitted by
+  // two parents to one relationship; once it is gone there is nobody left to consent, and the
+  // events the grant reads still carry the old `familyId`. After the transaction because a
+  // query cannot run inside one here, and swallowed on failure for the reason the notice above
+  // is: a leftover grant must not abort the revocation of shared audiences behind it. The
+  // nightly sweep still bounds it by the grant's own expiry.
+  if (result.endedFamilyId) {
+    try {
+      await deleteQueryInBatches(db, db.collection('professional_grants')
+          .where('familyId', '==', result.endedFamilyId));
+    } catch (err) {
+      console.error(`Professional grants for ${result.endedFamilyId} were not removed`, err);
     }
   }
 
@@ -2262,7 +2574,8 @@ async function hadAnotherCoParent(db, uid, partnerId) {
   return sent.docs.concat(accepted.docs).some((doc) => {
     const invite = doc.data() || {};
     if (invite.status !== 'accepted' ||
-        invite.kind === GUEST_INVITATION || invite.kind === FRIEND_INVITATION) {
+        invite.kind === GUEST_INVITATION || invite.kind === FRIEND_INVITATION ||
+        invite.kind === PROFESSIONAL_INVITATION) {
       return false;
     }
     const other = invite.fromUserId === uid ? invite.acceptedBy : invite.fromUserId;
@@ -3172,6 +3485,13 @@ async function deleteAccountDataImpl(db, uid, bucket) {
       db, db.collection('calendar_friends').where('familyParents', 'array-contains', uid));
   await db.collection('calendar_friends').doc(uid).delete();
   await db.collection('friend_profiles').doc(uid).delete();
+
+  // Both directions of professional access (MON-18): grants over this user's families, and the
+  // grants this user holds as a professional over somebody else's.
+  removed.professional_grants = await deleteQueryInBatches(
+      db, db.collection('professional_grants').where('familyParents', 'array-contains', uid));
+  removed.professional_grants += await deleteQueryInBatches(
+      db, db.collection('professional_grants').where('proUid', '==', uid));
 
   removed.invitations = await deleteQueryInBatches(
       db, db.collection('invitations').where('fromUserId', '==', uid));
