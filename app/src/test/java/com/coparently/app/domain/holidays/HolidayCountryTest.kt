@@ -3,9 +3,9 @@ package com.coparently.app.domain.holidays
 import org.junit.Test
 import java.time.LocalDate
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 /**
  * The country a parent lives in, and the holiday calendar that follows (MON-13).
@@ -50,25 +50,59 @@ class HolidayCountryTest {
     }
 
     @Test
-    fun `Czechia is the one country whose holidays the app actually computes`() {
-        // Not an aspiration: `hasHolidays` is what the picker renders its note from, so this test
-        // failing means either a table landed (delete the assertion, the picker follows) or one
-        // was claimed without being written.
-        assertTrue(HolidayCountry.CZECHIA.hasHolidays)
-        assertNotNull(HolidayCountry.CZECHIA.provider)
+    fun `each country states exactly what it draws`() {
+        // Not an aspiration: `coverage` is what the picker renders its note from, so a change here
+        // is a change in what the app tells the user. Only Czechia has school vacations; Ukraine
+        // has no provider *because* its holidays are suspended, not because one is missing.
+        val expected = mapOf(
+            HolidayCountry.CZECHIA to HolidayCoverage.PUBLIC_AND_SCHOOL,
+            HolidayCountry.SLOVAKIA to HolidayCoverage.PUBLIC_ONLY,
+            HolidayCountry.GERMANY to HolidayCoverage.PUBLIC_ONLY,
+            HolidayCountry.AUSTRIA to HolidayCoverage.PUBLIC_ONLY,
+            HolidayCountry.UKRAINE to HolidayCoverage.SUSPENDED,
+            HolidayCountry.RUSSIA to HolidayCoverage.PUBLIC_ONLY,
+            HolidayCountry.OTHER to HolidayCoverage.NONE
+        )
 
-        HolidayCountry.entries.filter { it != HolidayCountry.CZECHIA }.forEach {
-            assertNull(it.provider, "${it.code} claims a holiday table it does not have")
+        assertEquals(HolidayCountry.entries.toSet(), expected.keys)
+        expected.forEach { (country, coverage) ->
+            assertEquals(coverage, country.coverage, country.code)
+        }
+    }
+
+    @Test
+    fun `a provider that says it has no school vacations returns none`() {
+        // The picker's "public holidays only" sentence is derived from the flag, so the flag must
+        // not disagree with the list it describes.
+        HolidayCountry.entries.mapNotNull { it.provider }.forEach { provider ->
+            (2024..2030).forEach { year ->
+                assertEquals(
+                    provider.hasSchoolVacations,
+                    provider.schoolVacations(year).isNotEmpty(),
+                    "${provider.localLanguage} $year"
+                )
+            }
         }
     }
 
     @Test
     fun `a country with no table draws no holidays at all`() {
         // The whole point. Drawing another country's was the defect; drawing none is honest, and
-        // the picker says so on the row.
-        val germany = HolidayCountry.GERMANY
+        // the picker says so on the row — with the reason, for Ukraine.
+        assertNull(HolidayCountry.UKRAINE.provider)
+        assertNull(HolidayCountry.OTHER.provider)
+        assertFalse(HolidayCountry.UKRAINE.hasHolidays)
+    }
 
-        assertNull(germany.provider)
+    @Test
+    fun `each provider names its holidays in its own country's language`() {
+        // The grid shows `nameLocal` when the device language equals `localLanguage`; a German
+        // provider tagged "cs" would show German names to Czech readers and English to Germans.
+        assertEquals("sk", HolidayCountry.SLOVAKIA.provider!!.localLanguage)
+        assertEquals("de", HolidayCountry.GERMANY.provider!!.localLanguage)
+        assertEquals("de", HolidayCountry.AUSTRIA.provider!!.localLanguage)
+        assertEquals("ru", HolidayCountry.RUSSIA.provider!!.localLanguage)
+        assertNotNull(HolidayCountry.CZECHIA.provider)
     }
 
     @Test

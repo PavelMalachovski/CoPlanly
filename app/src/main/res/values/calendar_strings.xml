@@ -45,7 +45,7 @@
     <string name="calendar_filter_new_type_label">New event type</string>
     <string name="calendar_filter_new_type_placeholder">e.g., Music lessons</string>
     <string name="calendar_filter_add_button">Add</string>
-    <string name="calendar_filter_holidays_title">Czech holidays</string>
+    <string name="calendar_filter_holidays_title">Holidays</string>
     <string name="calendar_filter_holidays_subtitle">Public holidays and school vacations</string>
 
     <!-- Month grid accessibility -->

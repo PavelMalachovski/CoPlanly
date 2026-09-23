@@ -11,7 +11,10 @@ object PreferenceKeys {
     /** Pipe-separated list of user-defined event types. */
     const val CUSTOM_EVENT_TYPES = "calendar_custom_event_types"
 
-    /** Whether Czech holidays and school vacations are shown in the calendar. */
+    /**
+     * Whether the parent's country's public holidays (and school vacations, where the app has
+     * them) are shown in the calendar.
+     */
     const val SHOW_HOLIDAYS = "calendar_show_holidays"
 
     /**

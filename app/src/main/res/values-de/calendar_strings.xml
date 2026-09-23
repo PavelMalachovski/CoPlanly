@@ -28,7 +28,7 @@
     <string name="calendar_filter_new_type_label">Neue Terminart</string>
     <string name="calendar_filter_new_type_placeholder">z. B. Musikunterricht</string>
     <string name="calendar_filter_add_button">Hinzufügen</string>
-    <string name="calendar_filter_holidays_title">Tschechische Feiertage</string>
+    <string name="calendar_filter_holidays_title">Feiertage</string>
     <string name="calendar_filter_holidays_subtitle">Gesetzliche Feiertage und Schulferien</string>
 
     <string name="calendar_weekday_header_description">Kalender-Wochentagsüberschrift</string>

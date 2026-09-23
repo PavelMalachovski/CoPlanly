@@ -194,7 +194,7 @@ internal fun eventsByDay(events: List<Event>): Map<LocalDate, List<Event>> {
 /**
  * Main calendar screen showing calendar view with events.
  * Supports Month, Week and Day view modes with parent and event type filters,
- * Czech holidays and custody indication.
+ * the parent's country's public holidays and custody indication.
  *
  * Restructured by the August 2026 design review: the header is one row (its four actions and
  * the segmented view-mode bar under it are now a title menu, a Today pill and one Filters

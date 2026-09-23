@@ -14,4 +14,6 @@
 
     <string name="country_holidays_supported">V kalendáři se zobrazují státní svátky a školní prázdniny.</string>
     <string name="country_holidays_unavailable">Svátky pro zemi %1$s zatím v aplikaci nejsou, proto se nezobrazují.</string>
+    <string name="country_holidays_public_only">V kalendáři se zobrazují celostátní svátky. Školní prázdniny pro zemi %1$s v aplikaci nejsou.</string>
+    <string name="country_holidays_suspended">Státní svátky v zemi %1$s nejsou během válečného stavu dny pracovního volna, proto se nezobrazují.</string>
 </resources>
