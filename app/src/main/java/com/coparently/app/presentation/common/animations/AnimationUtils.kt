@@ -113,3 +113,31 @@ fun slideOutToRight(
 ) + fadeOut(
     animationSpec = tween(durationMillis, easing = LinearEasing)
 )
+
+/**
+ * How long a fade-through's outgoing half lasts; the incoming half takes the rest of
+ * [ANIMATION_DURATION_MEDIUM], starting as this one ends.
+ */
+private const val FADE_THROUGH_OUT_MS = 90
+
+/** Material's fade-through starting scale for the incoming screen. */
+private const val FADE_THROUGH_INITIAL_SCALE = 0.92f
+
+/**
+ * Fade-through, incoming half: the transition for peer destinations (the bottom-bar tabs),
+ * which have no "forward" and so should not slide like a push.
+ */
+fun fadeThroughIn(): EnterTransition {
+    val spec = tween<Float>(
+        durationMillis = ANIMATION_DURATION_MEDIUM - FADE_THROUGH_OUT_MS,
+        delayMillis = FADE_THROUGH_OUT_MS,
+        easing = LinearOutSlowInEasing
+    )
+    return fadeIn(animationSpec = spec) +
+        scaleIn(animationSpec = spec, initialScale = FADE_THROUGH_INITIAL_SCALE)
+}
+
+/** Fade-through, outgoing half: a quick fade with no movement. */
+fun fadeThroughOut(): ExitTransition =
+    fadeOut(animationSpec = tween(FADE_THROUGH_OUT_MS, easing = FastOutLinearInEasing))
+

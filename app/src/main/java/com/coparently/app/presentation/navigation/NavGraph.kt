@@ -1,7 +1,10 @@
 package com.coparently.app.presentation.navigation
 
 import android.net.Uri
+import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -25,6 +28,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -240,10 +244,10 @@ fun NavGraph(
             // Home / overview dashboard — first screen (MVP 2)
             composable(
                 route = Screen.Home.route,
-                enterTransition = { slideInFromRight() },
-                exitTransition = { slideOutToLeft() },
-                popEnterTransition = { slideInFromLeft() },
-                popExitTransition = { slideOutToRight() }
+                enterTransition = { tabEnter(forward = true) },
+                exitTransition = { tabExit(forward = true) },
+                popEnterTransition = { tabEnter(forward = false) },
+                popExitTransition = { tabExit(forward = false) }
             ) {
                 com.coparently.app.presentation.home.HomeScreen(
                     onOpenEvent = { eventId ->
@@ -281,10 +285,10 @@ fun NavGraph(
 
             composable(
                 route = Screen.Calendar.route,
-                enterTransition = { slideInFromRight() },
-                exitTransition = { slideOutToLeft() },
-                popEnterTransition = { slideInFromLeft() },
-                popExitTransition = { slideOutToRight() }
+                enterTransition = { tabEnter(forward = true) },
+                exitTransition = { tabExit(forward = true) },
+                popEnterTransition = { tabEnter(forward = false) },
+                popExitTransition = { tabExit(forward = false) }
             ) {
                 CalendarScreen(
                     onEventClick = { eventId ->
@@ -770,10 +774,10 @@ fun NavGraph(
                         defaultValue = ""
                     }
                 ),
-                enterTransition = { slideInFromRight() },
-                exitTransition = { slideOutToLeft() },
-                popEnterTransition = { slideInFromLeft() },
-                popExitTransition = { slideOutToRight() }
+                enterTransition = { tabEnter(forward = true) },
+                exitTransition = { tabExit(forward = true) },
+                popEnterTransition = { tabEnter(forward = false) },
+                popExitTransition = { tabExit(forward = false) }
             ) { backStackEntry ->
                 val draft = backStackEntry.arguments
                     ?.getString(Screen.Conversations.ARG_DRAFT).orEmpty()
@@ -849,10 +853,10 @@ fun NavGraph(
             // Expenses & Budget
             composable(
                 route = Screen.Expenses.route,
-                enterTransition = { slideInFromRight() },
-                exitTransition = { slideOutToLeft() },
-                popEnterTransition = { slideInFromLeft() },
-                popExitTransition = { slideOutToRight() }
+                enterTransition = { tabEnter(forward = true) },
+                exitTransition = { tabExit(forward = true) },
+                popEnterTransition = { tabEnter(forward = false) },
+                popExitTransition = { tabExit(forward = false) }
             ) {
                 com.coparently.app.presentation.expenses.ExpenseScreen(
                     onAddExpense = {
@@ -1372,3 +1376,27 @@ sealed class Screen(val route: String) {
         fun createRoute(eventId: String): String = "request_change/$eventId"
     }
 }
+
+/** True when both ends of the transition are bottom-bar tabs. */
+private fun AnimatedContentTransitionScope<NavBackStackEntry>.isTabSwitch(): Boolean =
+    initialState.destination.route in BottomNavDestination.topLevelRoutes &&
+        targetState.destination.route in BottomNavDestination.topLevelRoutes
+
+/**
+ * A tab's enter transition: fade-through between two tabs (peers have no direction), the
+ * standard push when arriving from or returning past a detail screen.
+ */
+private fun AnimatedContentTransitionScope<NavBackStackEntry>.tabEnter(forward: Boolean): EnterTransition =
+    when {
+        isTabSwitch() -> fadeThroughIn()
+        forward -> slideInFromRight()
+        else -> slideInFromLeft()
+    }
+
+/** A tab's exit transition; the counterpart of [tabEnter]. */
+private fun AnimatedContentTransitionScope<NavBackStackEntry>.tabExit(forward: Boolean): ExitTransition =
+    when {
+        isTabSwitch() -> fadeThroughOut()
+        forward -> slideOutToLeft()
+        else -> slideOutToRight()
+    }
