@@ -381,10 +381,57 @@ describe('deleteAccountDataImpl', () => {
     assert.deepStrictEqual(bucket.deletedObjects.sort(),
         ['event_images/ev-alice.jpg', 'receipts/ex-1.jpg']);
     assert.deepStrictEqual(bucket.deletedPrefixes.sort(),
-        ['medical_photos/ch-1/', 'pet_photos/pet-1/']);
+        [`chat_attachments/${ALICE}__${BOB}/`, 'medical_photos/ch-1/', 'pet_photos/pet-1/']);
     assert.ok(!bucket.deletedObjects.includes('event_images/ev-bob.jpg'),
         'the co-parent\'s event photo was deleted');
     assert.strictEqual(result.storage, 4);
+    assert.strictEqual(result.chat_attachments, 1);
+  });
+
+  // MON-23. The vault's files are the departing parent's uploads, and its documents are authored
+  // records like any other; the co-parent's own filings stay, with the departing uid scrubbed.
+  it('deletes the vault files this parent filed, and only those', async () => {
+    const seed = family();
+    const fam = `${ALICE}__${BOB}`;
+    seed.family_documents = [
+      {id: 'vd-alice', familyId: fam, createdByFirebaseUid: ALICE, sharedWith: [ALICE, BOB]},
+      {id: 'vd-bob', familyId: fam, createdByFirebaseUid: BOB, sharedWith: [ALICE, BOB]},
+    ];
+    const db = fakeDb(seed);
+    const bucket = fakeBucket();
+
+    const result = await myFunctions.deleteAccountDataImpl(db, ALICE, bucket);
+
+    assert.ok(bucket.deletedPrefixes.includes(`family_documents/${fam}/vd-alice/`));
+    assert.ok(!bucket.deletedPrefixes.includes(`family_documents/${fam}/vd-bob/`),
+        'the co-parent\'s filing was deleted');
+    assert.strictEqual(result.family_documents, 1);
+    assert.deepStrictEqual(db._store.family_documents.map((d) => d.id), ['vd-bob']);
+    assert.deepStrictEqual(db._store.family_documents[0].sharedWith, [BOB]);
+  });
+
+  it('never turns a vault document without a family into a prefix of the whole vault',
+      async () => {
+        const seed = family();
+        seed.family_documents = [
+          {id: 'vd-odd', familyId: '', createdByFirebaseUid: ALICE, sharedWith: [ALICE]},
+        ];
+        const bucket = fakeBucket();
+
+        await myFunctions.deleteAccountDataImpl(fakeDb(seed), ALICE, bucket);
+
+        assert.ok(!bucket.deletedPrefixes.some((p) => p.startsWith('family_documents/')),
+            'a blank familyId produced a vault-wide prefix');
+      });
+
+  it('erases the chat files of every thread with the rest of the chat', async () => {
+    const db = fakeDb(family());
+    const bucket = fakeBucket();
+
+    await myFunctions.deleteAccountDataImpl(db, ALICE, bucket);
+
+    assert.ok(bucket.deletedPrefixes.includes(`chat_attachments/${ALICE}__${BOB}/`));
+    assert.deepStrictEqual(db._store.messages, []);
   });
 
   it('keeps the documents when a file cannot be deleted, so a retry finds it', async () => {

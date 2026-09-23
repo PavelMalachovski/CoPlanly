@@ -1201,10 +1201,30 @@ exports.sweepLapsedCalendarFriends = functions.pubsub
  *
  * A collection listed here without a client that writes tombstones sweeps nothing; a client that
  * writes tombstones into a collection *not* listed here keeps them for ever. Add to both halves.
+ *
+ * `family_documents` joined with the vault (MON-23). It is the one collection whose sweep also
+ * removes a file — see [FILES_SWEPT_WITH_TOMBSTONE].
  */
-const TOMBSTONED_COLLECTIONS = ['events', 'expenses', 'child_info', 'pets'];
+const TOMBSTONED_COLLECTIONS = ['events', 'expenses', 'child_info', 'pets', 'family_documents'];
 
 exports.TOMBSTONED_COLLECTIONS = TOMBSTONED_COLLECTIONS;
+
+/**
+ * Tombstoned collections whose file goes with the document when the sweep removes it.
+ *
+ * A vault document is nothing but the index of its file (MON-23), and the Storage rule lets no
+ * client delete a file the co-parent uploaded — so once the tombstone is swept nothing else
+ * could ever name the file again, and the bytes of a deleted court order would stay in the
+ * bucket for good. The file is removed **before** the document, for the reason
+ * [deleteAuthoredFiles] gives: the document is the only record of where the file is.
+ *
+ * The older collections are deliberately not listed. Their photos are addressed by download URL
+ * from the record, and whether a tombstoned event's photo should outlive the sweep has never
+ * been decided; listing them here would decide it silently.
+ */
+const FILES_SWEPT_WITH_TOMBSTONE = ['family_documents'];
+
+exports.FILES_SWEPT_WITH_TOMBSTONE = FILES_SWEPT_WITH_TOMBSTONE;
 
 /**
  * How long a tombstone is kept before the document is removed for good.
@@ -1239,9 +1259,11 @@ const TOMBSTONE_SWEEP_BATCH_LIMIT = 400;
  * @param {number} nowMillis The instant to sweep at.
  * @param {number=} retentionDays Override the retention window; defaults to
  *     [TOMBSTONE_RETENTION_DAYS].
+ * @param {?Object=} bucket The Storage bucket; when given, the files of
+ *     [FILES_SWEPT_WITH_TOMBSTONE] collections are removed with their documents.
  * @return {Promise<number>} How many documents were removed.
  */
-async function sweepDeletedDocumentsImpl(db, nowMillis, retentionDays) {
+async function sweepDeletedDocumentsImpl(db, nowMillis, retentionDays, bucket) {
   const days = typeof retentionDays === 'number' ? retentionDays :
     TOMBSTONE_RETENTION_DAYS;
   const cutoff = nowMillis - days * 24 * 60 * 60 * 1000;
@@ -1257,6 +1279,9 @@ async function sweepDeletedDocumentsImpl(db, nowMillis, retentionDays) {
     let pending = 0;
 
     for (const doc of snap.docs) {
+      if (bucket && FILES_SWEPT_WITH_TOMBSTONE.includes(collection)) {
+        await deleteFilesOf(bucket, collection, doc.id, doc.data());
+      }
       batch.delete(doc.ref);
       pending++;
       removed++;
@@ -1290,7 +1315,8 @@ exports.sweepDeletedDocuments = functions.pubsub
     .schedule('0 4 * * *')
     .timeZone('UTC')
     .onRun(async () => {
-      const removed = await sweepDeletedDocumentsImpl(admin.firestore(), Date.now());
+      const removed = await sweepDeletedDocumentsImpl(
+          admin.firestore(), Date.now(), undefined, admin.storage().bucket());
       console.log(`Swept ${removed} tombstoned documents`);
       return null;
     });
@@ -1305,7 +1331,7 @@ exports.sweepDeletedDocuments = functions.pubsub
  * immutable — whether an ended co-parent link should also erase the chat history is a
  * product decision, not a leak to close here.
  */
-const SHARED_AUDIENCE_COLLECTIONS = ['events', 'child_info', 'pets'];
+const SHARED_AUDIENCE_COLLECTIONS = ['events', 'child_info', 'pets', 'family_documents'];
 
 exports.SHARED_AUDIENCE_COLLECTIONS = SHARED_AUDIENCE_COLLECTIONS;
 
@@ -2837,7 +2863,8 @@ const ACCOUNT_DELETE_BATCH_LIMIT = 400;
  * parent. See [deleteAccountDataImpl] for what that costs the co-parent and why it is still
  * the right default.
  */
-const AUTHORED_COLLECTIONS = ['events', 'child_info', 'pets', 'expenses', 'budgets'];
+const AUTHORED_COLLECTIONS =
+  ['events', 'child_info', 'pets', 'expenses', 'budgets', 'family_documents'];
 
 exports.AUTHORED_COLLECTIONS = AUTHORED_COLLECTIONS;
 
@@ -2854,6 +2881,10 @@ const AUTHORED_FILES = {
   expenses: {object: (id) => `receipts/${id}.jpg`},
   child_info: {prefix: (id) => `medical_photos/${id}/`},
   pets: {prefix: (id) => `pet_photos/${id}/`},
+  // The vault (MON-23) keys its folder by family as well as by document, so the layout reads the
+  // stored `familyId`. A document without one cannot exist under the create rule; the guard in
+  // [deleteFilesOf] is for a hand-edited one, which must not become a prefix of the whole vault.
+  family_documents: {prefix: (id, data) => `family_documents/${data.familyId}/${id}/`},
 };
 
 exports.AUTHORED_FILES = AUTHORED_FILES;
@@ -2877,23 +2908,56 @@ async function deleteAuthoredFiles(db, bucket, uid) {
   if (!bucket) return 0;
   let deleted = 0;
   for (const collection of Object.keys(AUTHORED_FILES)) {
-    const layout = AUTHORED_FILES[collection];
     const snap = await db.collection(collection)
         .where('createdByFirebaseUid', '==', uid)
         .get();
     for (const doc of snap.docs) {
-      if (layout.object) {
-        await bucket.file(layout.object(doc.id)).delete({ignoreNotFound: true});
-      } else {
-        await bucket.deleteFiles({prefix: layout.prefix(doc.id), force: true});
-      }
-      deleted++;
+      if (await deleteFilesOf(bucket, collection, doc.id, doc.data())) deleted++;
     }
   }
   return deleted;
 }
 
 exports.deleteAuthoredFiles = deleteAuthoredFiles;
+
+/**
+ * Deletes the file or folder [AUTHORED_FILES] names for one record.
+ *
+ * @param {!Object} bucket A `@google-cloud/storage` bucket.
+ * @param {string} collection The record's collection.
+ * @param {string} id The record's document id.
+ * @param {!Object} data The record's data; the vault's layout reads `familyId` from it.
+ * @return {Promise<boolean>} Whether anything was asked to go (false for a record whose layout
+ *     cannot be derived).
+ */
+async function deleteFilesOf(bucket, collection, id, data) {
+  const layout = AUTHORED_FILES[collection];
+  if (!layout) return false;
+  if (layout.object) {
+    await bucket.file(layout.object(id, data || {})).delete({ignoreNotFound: true});
+    return true;
+  }
+  if (collection === 'family_documents' && !(data && data.familyId)) return false;
+  await bucket.deleteFiles({prefix: layout.prefix(id, data || {}), force: true});
+  return true;
+}
+
+/**
+ * Deletes every file sent in a conversation (MON-23), `chat_attachments/{conversationId}/`.
+ *
+ * Chat is erased whole with an account (see [deleteAccountDataImpl]), so its files go whole too,
+ * whichever parent sent them — the same reasoning, and no client can delete one (the Storage rule
+ * refuses it), so this is the only path that ever does.
+ *
+ * @param {?Object} bucket The Storage bucket, or null to skip.
+ * @param {string} conversationId The thread being erased.
+ * @return {Promise<number>} 1 when the folder was asked to go, 0 when skipped.
+ */
+async function deleteChatAttachments(bucket, conversationId) {
+  if (!bucket || !conversationId) return 0;
+  await bucket.deleteFiles({prefix: `chat_attachments/${conversationId}/`, force: true});
+  return 1;
+}
 
 /**
  * Deletes every document a query returns, in batches below the write cap.
@@ -3055,6 +3119,8 @@ exports.scrubRevisionAudiences = scrubRevisionAudiences;
  * photographs live in Cloud Storage under paths derived from the record's id, and are deleted
  * through [deleteAuthoredFiles] before the records that name them. Until September 2026 they
  * were not: the documents went and the files stayed, which the deletion page promised otherwise.
+ * The document vault (MON-23) is an authored collection like the others — this parent's filings
+ * and their files go, the co-parent's stay — and files sent in chat go with the chat, whole.
  *
  * @param {FirebaseFirestore.Firestore} db Firestore instance.
  * @param {string} uid The account being erased.
@@ -3129,7 +3195,11 @@ async function deleteAccountDataImpl(db, uid, bucket) {
       .where('participants', 'array-contains', uid)
       .get();
   removed.messages = 0;
+  removed.chat_attachments = 0;
   for (const conversation of conversations.docs) {
+    // The files first, while the messages that name them still exist — the same order as
+    // [deleteAuthoredFiles], and a failure here leaves the thread for a retry to find.
+    removed.chat_attachments += await deleteChatAttachments(bucket || null, conversation.id);
     removed.messages += await deleteQueryInBatches(
         db, db.collection('messages').where('conversationId', '==', conversation.id));
   }
