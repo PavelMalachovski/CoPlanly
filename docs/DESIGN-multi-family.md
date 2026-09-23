@@ -302,8 +302,12 @@ parent's read mark (`OtherFamiliesUnreadSource`, one listener per other family, 
 #### Order of operations, and the ops steps it depends on
 
 `backfillRecordFamilyIds` stamps `familyId` on the documents of the six collections for every
-account that has exactly **one** family — a person with two is skipped rather than guessed at,
-which today is nobody, because pairing still refuses a second. It is required before the client
+account that has exactly **one** family and no trace of an earlier one — a person with two is
+skipped rather than guessed at. (This paragraph used to say that was already so and that nobody
+had two, because pairing refused a second. Pairing stopped refusing one in M-4, and the pass read
+the singular `partnerId`, so it did guess; fixed in September 2026 together with the
+`onFamilyCreated` trigger that runs the same policy when a pair forms — see
+`stampOwnBlankFamilyIds`.) It is required before the client
 query switch, not merely desirable: `whereEqualTo("familyId", …)` over documents that carry none
 returns nothing, and a co-parent's expense history would read as empty.
 

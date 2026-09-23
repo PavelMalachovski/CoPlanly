@@ -1112,6 +1112,81 @@ exports.sweepExpiredGuests = functions.pubsub
     });
 
 /**
+ * Body of the `sweepLapsedCalendarFriends` schedule — deletes calendar-friend grants whose
+ * `expiresAtMillis` has passed.
+ *
+ * The events read rule (`isCalendarFriendOf`) already refuses a lapsed friend from the instant
+ * `request.time` reaches the expiry, so this is cleanup, not enforcement — the same split as
+ * [sweepExpiredGuestsImpl]. What it cleans up is the row itself: until it goes, the parents'
+ * friends list keeps naming somebody who can no longer see anything, and the friend's own phone
+ * keeps believing it holds a grant. Deleting the document is exactly what a parent's "revoke"
+ * does (`FriendRepositoryImpl.revokeFriend`), so both phones already handle the outcome.
+ *
+ * **A query, not a scan**, unlike the guest sweep: the expiry is a top-level number here, so
+ * "lapsed" is a range on a field Firestore indexes by itself. Two properties of that range are
+ * the whole safety argument, and both are pinned by tests:
+ *
+ * - `<= nowMillis`, matching the rule's strict `request.time < expiresAtMillis`: a grant ending
+ *   at noon is refused at noon and swept at noon, never one before the other.
+ * - `> 0`, and a range filter only ever matches a document whose field **is a number** — so a
+ *   grant with no expiry at all (absent, null, or not a positive number) is never returned and
+ *   never deleted. The callable does not write such a grant (it refuses a missing
+ *   `friendExpiresAt`), and the rule reads a missing expiry as 0 and admits nothing through it,
+ *   so none should exist; if one does, deciding what it means is a person's call, not a
+ *   scheduled job's.
+ *
+ * @param {FirebaseFirestore.Firestore} db Firestore instance.
+ * @param {number} nowMillis The instant to sweep at.
+ * @return {Promise<number>} How many grants were deleted.
+ */
+async function sweepLapsedCalendarFriendsImpl(db, nowMillis) {
+  const snap = await db.collection('calendar_friends')
+      .where('expiresAtMillis', '>', 0)
+      .where('expiresAtMillis', '<=', nowMillis)
+      .get();
+
+  let batch = db.batch();
+  let pending = 0;
+  let removed = 0;
+
+  for (const doc of snap.docs) {
+    batch.delete(doc.ref);
+    pending++;
+    removed++;
+
+    if (pending === GUEST_SWEEP_BATCH_LIMIT) {
+      await batch.commit();
+      batch = db.batch();
+      pending = 0;
+    }
+  }
+
+  if (pending > 0) {
+    await batch.commit();
+  }
+
+  return removed;
+}
+
+exports.sweepLapsedCalendarFriendsImpl = sweepLapsedCalendarFriendsImpl;
+
+/**
+ * Daily removal of calendar-friend grants that have lapsed.
+ *
+ * At 05:00 UTC, an hour after `sweepDeletedDocuments`, keeping the scheduled jobs an hour apart
+ * as the others are. Daily for the reason the guest sweep is: access already ended at the expiry,
+ * so the only thing a day's delay costs is a row lingering in a list.
+ */
+exports.sweepLapsedCalendarFriends = functions.pubsub
+    .schedule('0 5 * * *')
+    .timeZone('UTC')
+    .onRun(async () => {
+      const removed = await sweepLapsedCalendarFriendsImpl(admin.firestore(), Date.now());
+      console.log(`Swept ${removed} lapsed calendar-friend grants`);
+      return null;
+    });
+
+/**
  * Collections whose documents are deleted by being tombstoned rather than removed (CQ-3, CQ-19).
  *
  * Each is read by the co-parent's phone through a filtered collection query, which is the
@@ -2102,8 +2177,212 @@ exports.FAMILY_SCOPED_COLLECTIONS = FAMILY_SCOPED_COLLECTIONS;
 const FAMILY_ID_BATCH_LIMIT = 450;
 
 /**
- * Body of the `backfillRecordFamilyIds` callable — stamps `familyId` on the documents of every
- * live pair that predate the field.
+ * Whether a stored `familyId` is the "no family named" value: absent, `''`, or not a string.
+ *
+ * `''` is what a null becomes on the wire (`familyId ?: ""` on every client writer), so it is the
+ * shape a record written before its author paired actually carries.
+ *
+ * @param {*} stored The document's `familyId` field.
+ * @return {boolean} True when the record names no family.
+ */
+function isBlankFamilyId(stored) {
+  return typeof stored !== 'string' || stored === '';
+}
+
+exports.isBlankFamilyId = isBlankFamilyId;
+
+/**
+ * Whether one of [uid]'s own records carries evidence of a co-parenting relationship other than
+ * the one with [partnerId] — a second adult it names, or a family it is already stamped with.
+ *
+ * Read off records the caller has already fetched, so it costs nothing. Each signal is a field a
+ * client writes only while paired with that person:
+ *
+ * - a non-blank `familyId` naming any family but [familyId] (stamped at create since M-2);
+ * - an expense's `splitBetween` naming a third uid (`addExpense` names both parents);
+ * - an event's `sharedWith` naming a third uid (events carry no guests; unpair narrows the list,
+ *   but only once its sweep has run — `pendingRevocationOf` covers the window before that);
+ * - a change request addressed (`requestedTo`) to anybody but [partnerId].
+ *
+ * @param {string} collection The record's collection.
+ * @param {!Object} data The record.
+ * @param {string} uid The author.
+ * @param {string} partnerId The author's one current co-parent.
+ * @param {string} familyId `FamilyKey.of(uid, partnerId)`.
+ * @return {boolean} True when the record belongs to, or names, another relationship.
+ */
+function recordNamesAnotherRelationship(collection, data, uid, partnerId, familyId) {
+  if (!isBlankFamilyId(data.familyId) && data.familyId !== familyId) {
+    return true;
+  }
+  const outsider = (other) =>
+    typeof other === 'string' && other !== '' && other !== uid && other !== partnerId;
+  if (collection === 'expenses' && Array.isArray(data.splitBetween)) {
+    return data.splitBetween.some(outsider);
+  }
+  if (collection === 'events' && Array.isArray(data.sharedWith)) {
+    return data.sharedWith.some(outsider);
+  }
+  if (collection === 'change_requests') {
+    return outsider(data.requestedTo);
+  }
+  return false;
+}
+
+exports.recordNamesAnotherRelationship = recordNamesAnotherRelationship;
+
+/**
+ * Whether [uid] has an accepted co-parent invitation, in either direction, with anybody but
+ * [partnerId] — the one trace an ended relationship leaves once unpair has cleaned up after it.
+ *
+ * Guest and friend invitations are not co-parenting and are ignored, as are invitations that were
+ * never accepted. Accepted invitations are not deleted by anything but account deletion, which
+ * is what makes them worth asking.
+ *
+ * @param {FirebaseFirestore.Firestore} db Firestore instance.
+ * @param {string} uid The person.
+ * @param {string} partnerId Their one current co-parent.
+ * @return {Promise<boolean>} True when they have co-parented with somebody else before.
+ */
+async function hadAnotherCoParent(db, uid, partnerId) {
+  const [sent, accepted] = await Promise.all([
+    db.collection('invitations').where('fromUserId', '==', uid).get(),
+    db.collection('invitations').where('acceptedBy', '==', uid).get(),
+  ]);
+  return sent.docs.concat(accepted.docs).some((doc) => {
+    const invite = doc.data() || {};
+    if (invite.status !== 'accepted' ||
+        invite.kind === GUEST_INVITATION || invite.kind === FRIEND_INVITATION) {
+      return false;
+    }
+    const other = invite.fromUserId === uid ? invite.acceptedBy : invite.fromUserId;
+    return typeof other === 'string' && other !== '' && other !== uid && other !== partnerId;
+  });
+}
+
+exports.hadAnotherCoParent = hadAnotherCoParent;
+
+/**
+ * Stamps [uid]'s own unstamped records with the one family they can be said to belong to — or,
+ * when that family cannot be decided from what the server holds, stamps nothing and says why.
+ *
+ * **The policy is the client's, moved server-side.** `FamilyIdBackfill` stamps every null local
+ * row with the family the device knows of, the moment there is one: a record written while its
+ * author was unpaired is "mine alone" only until there is a family to share it with (CLAUDE.md
+ * items 18 and 22). What it never did is reach the remote copy, so an expense recorded before
+ * pairing stayed `familyId: ""` on the server and, under the family-keyed read rules, invisible
+ * to the co-parent. This is the remote half of the same step.
+ *
+ * **It stamps only when the answer is not a guess.** "The family" means exactly one live,
+ * mutual co-parent, and a person who has never been in another co-parenting relationship. In
+ * every other case nothing is written and the reason is returned:
+ *
+ * - `unpaired` — nobody to share with; a blank is the right value and is not counted.
+ * - `ambiguous` — more than one co-parent (`partnersOf` over `partnerIds` and `partnerId`).
+ *   "Which of their families is this about" has no server-side answer, and the wrong one hands a
+ *   record to a co-parent it was never about. `partnerId` alone is *not* consulted as a
+ *   tie-breaker: since M-4 it is the family a phone happens to be showing.
+ * - `missingAccount` / `notMutual` — the co-parent's profile is gone, or does not name this
+ *   person back (an interrupted unpair). Reviving a half-ended relationship is not ours to do.
+ * - `priorRelationship` — the person has one co-parent *now* but evidence of another before:
+ *   an unfinished `pendingRevocationOf`, an accepted co-parent invitation with somebody else, or
+ *   one of their own records naming another family or another adult. A blank record of theirs
+ *   may then date from the earlier relationship, and stamping it with the current one would move
+ *   an old household's expenses into a new household's ledger — the re-derivation item 18
+ *   forbids. Residual: a relationship that left none of those traces is indistinguishable from
+ *   none, and its unstamped records would be stamped. That is the same thing the client's
+ *   `FamilyIdBackfill` already does to its local copy on re-pairing.
+ *
+ * For every reason but `unpaired` the blank records left behind are counted as `unresolved`, so
+ * the operator sees how much a skip is costing rather than a bare "skipped".
+ *
+ * Only `familyId` is written — never `deletedAtMillis`/`deletedBy`, never `sharedWith` — and only
+ * on a record whose `familyId` is blank, so a record that already names a family keeps it
+ * (never re-derived) and a second run writes nothing. A tombstone is stamped like any record:
+ * the stamp is what lets the co-parent's family-keyed query collect the deletion.
+ *
+ * @param {FirebaseFirestore.Firestore} db Firestore instance.
+ * @param {string} uid The author whose records to stamp.
+ * @param {?Object} user Their `users/{uid}` data.
+ * @param {string=} expectedFamilyId When given, stamp only if the resolved family is this one
+ *     (the trigger passes the family that was just created); anything else is `otherFamily`.
+ * @return {Promise<{familyId: string, reason: string, stamped: number, unresolved: number,
+ *   perCollection: !Object<string, number>}>} What was done; `reason` is `''` when it stamped.
+ */
+async function stampOwnBlankFamilyIds(db, uid, user, expectedFamilyId) {
+  const result = {familyId: '', reason: '', stamped: 0, unresolved: 0, perCollection: {}};
+  FAMILY_SCOPED_COLLECTIONS.forEach(({name}) => {
+    result.perCollection[name] = 0;
+  });
+
+  const partners = partnersOf(user).filter((p) => p !== uid);
+  if (partners.length === 0) {
+    result.reason = 'unpaired';
+    return result;
+  }
+
+  // Every record of theirs, read once: the stamping needs the blanks, the evidence check needs the
+  // rest, and a skip needs the blanks counted.
+  const owned = [];
+  for (const {name, authorField} of FAMILY_SCOPED_COLLECTIONS) {
+    const snap = await db.collection(name).where(authorField, '==', uid).get();
+    snap.docs.forEach((d) => owned.push({name, doc: d, data: d.data() || {}}));
+  }
+  const blanks = owned.filter((r) => isBlankFamilyId(r.data.familyId));
+  const skip = (reason) => {
+    result.reason = reason;
+    result.unresolved = blanks.length;
+    return result;
+  };
+
+  if (partners.length > 1) {
+    return skip('ambiguous');
+  }
+  const partnerId = partners[0];
+  const partnerSnap = await db.collection('users').doc(partnerId).get();
+  if (!partnerSnap.exists) {
+    return skip('missingAccount');
+  }
+  if (!partnersOf(partnerSnap.data()).includes(uid)) {
+    return skip('notMutual');
+  }
+  const familyId = custodyModelKey(uid, partnerId);
+  if (expectedFamilyId && expectedFamilyId !== familyId) {
+    return skip('otherFamily');
+  }
+  if (pendingRevocations((user || {}).pendingRevocationOf).length > 0 ||
+      owned.some((r) => recordNamesAnotherRelationship(r.name, r.data, uid, partnerId, familyId))) {
+    return skip('priorRelationship');
+  }
+  if (blanks.length > 0 && await hadAnotherCoParent(db, uid, partnerId)) {
+    return skip('priorRelationship');
+  }
+
+  result.familyId = familyId;
+  let batch = db.batch();
+  let pending = 0;
+  for (const {name, doc} of blanks) {
+    batch.update(doc.ref, {familyId});
+    pending++;
+    result.perCollection[name]++;
+    result.stamped++;
+    if (pending === FAMILY_ID_BATCH_LIMIT) {
+      await batch.commit();
+      batch = db.batch();
+      pending = 0;
+    }
+  }
+  if (pending > 0) {
+    await batch.commit();
+  }
+  return result;
+}
+
+exports.stampOwnBlankFamilyIds = stampOwnBlankFamilyIds;
+
+/**
+ * Body of the `backfillRecordFamilyIds` callable — stamps `familyId` on every record whose author
+ * now has exactly one family, whether the record predates the field or predates the pairing.
  *
  * **This must finish before the family-scoped rules are deployed, not after.** `expenses` and
  * `budgets` are read by membership of the record's own family, with no fallback to "a co-parent
@@ -2113,28 +2392,28 @@ const FAMILY_ID_BATCH_LIMIT = 450;
  * second family's documents. A document with no `familyId` is therefore readable only by its
  * author, and a co-parent's whole expense history reads as empty until this has run.
  *
- * The client stamps every record it writes from now on (`FamilyIdBackfill` does the same for
- * Room), so this is a one-time pass over history, not an ongoing repair.
+ * It is also the **repair for the pre-pairing records of CLAUDE.md item 22**: an expense or a
+ * budget recorded while its author was unpaired uploads with `familyId: ""`, and the client never
+ * re-uploads it after `FamilyIdBackfill` stamps its local row. The `onFamilyCreated` trigger
+ * stamps those at the moment a pair forms; this callable is the backstop for anything that trigger
+ * missed (a pair formed before it was deployed, a failed run, an upload that raced it), and is
+ * safe to re-run at any time.
+ *
+ * Which records are stamped, and which are left and counted, is [stampOwnBlankFamilyIds]'s
+ * decision — read it before changing anything here. In short: only when the author has exactly
+ * one live, mutual co-parent and no trace of another relationship. Everything else is skipped
+ * with a reason, and the blank records it leaves behind are summed into `unresolved`.
  *
  * It also stamps the calendar-friend grants (M-6) — see [backfillCalendarFriendFamilyIds]. Those
  * are in here rather than in a callable of their own so the ops runbook keeps four steps: a fifth
  * one is a step somebody skips.
  *
- * **A person with more than one family is skipped, not guessed at.** Today that is nobody —
- * pairing still refuses a second — but the moment it is somebody, "which of their families does
- * this record belong to" has no answer here, and stamping the wrong one would hand a record to a
- * co-parent it was never about. `partnerId` is read live and both sides must name each other,
- * so an interrupted unpair cannot revive a relationship either.
- *
- * Documents that already carry a `familyId` are left alone, so a second run is a no-op and a run
- * interrupted halfway resumes cleanly.
- *
  * @param {FirebaseFirestore.Firestore} db Firestore instance.
  * @return {Promise<{users: number, stamped: number, skipped: number, failed: number,
- *   perCollection: !Object<string, number>, skippedReasons: {notMutual: number,
- *   missingAccount: number, unpaired: number},
- *   calendarFriends: {stamped: number, skipped: number, alreadyStamped: number}}>} What the
- *   migration did.
+ *   unresolved: number, perCollection: !Object<string, number>, skippedReasons: {notMutual:
+ *   number, missingAccount: number, unpaired: number, ambiguous: number,
+ *   priorRelationship: number}, calendarFriends: {stamped: number, skipped: number,
+ *   alreadyStamped: number}}>} What the migration did.
  */
 async function backfillRecordFamilyIdsImpl(db) {
   const summary = {
@@ -2142,8 +2421,11 @@ async function backfillRecordFamilyIdsImpl(db) {
     stamped: 0,
     skipped: 0,
     failed: 0,
+    unresolved: 0,
     perCollection: {},
-    skippedReasons: {notMutual: 0, missingAccount: 0, unpaired: 0},
+    skippedReasons: {
+      notMutual: 0, missingAccount: 0, unpaired: 0, ambiguous: 0, priorRelationship: 0,
+    },
     calendarFriends: {stamped: 0, skipped: 0, alreadyStamped: 0},
   };
   FAMILY_SCOPED_COLLECTIONS.forEach(({name}) => {
@@ -2154,58 +2436,19 @@ async function backfillRecordFamilyIdsImpl(db) {
 
   for (const doc of users.docs) {
     const uid = doc.id;
-    const partnerId = (doc.data() || {}).partnerId;
-
-    if (typeof partnerId !== 'string' || !partnerId || partnerId === uid) {
-      summary.skipped++;
-      summary.skippedReasons.unpaired++;
-      continue;
-    }
-
     try {
-      const partnerSnap = await db.collection('users').doc(partnerId).get();
-      if (!partnerSnap.exists) {
+      const outcome = await stampOwnBlankFamilyIds(db, uid, doc.data() || {});
+      if (outcome.reason) {
         summary.skipped++;
-        summary.skippedReasons.missingAccount++;
+        summary.skippedReasons[outcome.reason]++;
+        summary.unresolved += outcome.unresolved;
         continue;
       }
-      if ((partnerSnap.data() || {}).partnerId !== uid) {
-        summary.skipped++;
-        summary.skippedReasons.notMutual++;
-        continue;
-      }
-
-      const familyId = custodyModelKey(uid, partnerId);
       summary.users++;
-
-      for (const {name, authorField} of FAMILY_SCOPED_COLLECTIONS) {
-        const owned = await db.collection(name).where(authorField, '==', uid).get();
-
-        // Filtered here rather than in the query: "the field is absent" is not something a
-        // Firestore `where` can ask, and a document written by a newer client already carries
-        // the value this would otherwise overwrite.
-        const needing = owned.docs.filter((d) => {
-          const stored = (d.data() || {}).familyId;
-          return typeof stored !== 'string' || stored === '';
-        });
-
-        let batch = db.batch();
-        let pending = 0;
-        for (const d of needing) {
-          batch.update(d.ref, {familyId});
-          pending++;
-          summary.perCollection[name]++;
-          summary.stamped++;
-          if (pending === FAMILY_ID_BATCH_LIMIT) {
-            await batch.commit();
-            batch = db.batch();
-            pending = 0;
-          }
-        }
-        if (pending > 0) {
-          await batch.commit();
-        }
-      }
+      summary.stamped += outcome.stamped;
+      Object.keys(outcome.perCollection).forEach((name) => {
+        summary.perCollection[name] += outcome.perCollection[name];
+      });
     } catch (err) {
       console.error(`backfillRecordFamilyIds failed for ${uid}`, err);
       summary.failed++;
@@ -2217,6 +2460,84 @@ async function backfillRecordFamilyIdsImpl(db) {
 }
 
 exports.backfillRecordFamilyIdsImpl = backfillRecordFamilyIdsImpl;
+
+/**
+ * Body of the `onFamilyCreated` trigger — stamps both members' pre-pairing records with the family
+ * that was just formed.
+ *
+ * This is what makes item 22's repair automatic rather than an operator's chore. A family document
+ * is created only by Admin code (`acceptPairingInvitation`, `backfillFamilyDocuments`; the rules
+ * refuse every client create), so the trigger's input is trusted, and it is created in the same
+ * transaction that writes the two profiles' `partnerIds` — by the time it fires, the pairing it
+ * describes is already visible to [stampOwnBlankFamilyIds].
+ *
+ * Each member is decided separately and with the same policy as the callable. The common case —
+ * two people who each had nobody before — stamps both. A member for whom this is a second family
+ * comes out `ambiguous` and keeps their blanks; the other member, whose only family this is, is
+ * still stamped. `expectedFamilyId` guards the one race the trigger adds: if the pair has already
+ * unpaired and re-paired elsewhere by the time it runs, nothing is stamped with a family that is
+ * no longer theirs.
+ *
+ * @param {FirebaseFirestore.Firestore} db Firestore instance.
+ * @param {string} familyId The id of the family document that was created.
+ * @param {?Object} family Its data.
+ * @return {Promise<!Object<string, {reason: string, stamped: number, unresolved: number}>>} The
+ *   outcome per member uid; empty when the document does not describe a pair.
+ */
+async function stampFamilyOnCreateImpl(db, familyId, family) {
+  const members = family && Array.isArray(family.members) ? family.members : [];
+  const outcomes = {};
+  if (members.length !== 2 || members[0] === members[1] ||
+      custodyModelKey(members[0], members[1]) !== familyId) {
+    return outcomes;
+  }
+  for (const uid of members) {
+    const snap = await db.collection('users').doc(uid).get();
+    if (!snap.exists) {
+      outcomes[uid] = {reason: 'missingAccount', stamped: 0, unresolved: 0};
+      continue;
+    }
+    const outcome = await stampOwnBlankFamilyIds(db, uid, snap.data() || {}, familyId);
+    outcomes[uid] = {
+      reason: outcome.reason, stamped: outcome.stamped, unresolved: outcome.unresolved,
+    };
+  }
+  return outcomes;
+}
+
+exports.stampFamilyOnCreateImpl = stampFamilyOnCreateImpl;
+
+/**
+ * Stamps a new pair's pre-pairing records with their family (item 22). See
+ * [stampFamilyOnCreateImpl].
+ *
+ * Deliberately a trigger on `families/{id}` and **not** on the six record collections. A per-record
+ * `onWrite` that stamped every blank upload was considered and rejected: it would bill a function
+ * invocation and a profile read on every event and expense write for the life of the app; it could
+ * not help the case that matters, because a record uploaded while its author was unpaired has no
+ * family to be stamped with at write time and nothing writes it again after pairing; and it would
+ * race the budgets update rule, which pins `familyId` to the stored value — a client that read the
+ * document, then had the trigger stamp it, then wrote back the value it had read would be refused.
+ * The family's creation is the one moment the answer changes, so that is the moment to act. That
+ * race does not vanish here, it shrinks to one instant: a parent editing a budget in the very
+ * milliseconds between the client's read and write at pairing time has that edit refused
+ * remotely, kept in Room by `BudgetRepositoryImpl`'s guard, and published on their next edit.
+ *
+ * Best-effort: a failure is logged and not retried (1st-gen triggers do not retry by default), and
+ * `backfillRecordFamilyIds` repairs anything it left.
+ */
+exports.onFamilyCreated = functions.runWith({timeoutSeconds: 540}).firestore
+    .document('families/{familyId}')
+    .onCreate(async (snap, context) => {
+      try {
+        const outcomes = await stampFamilyOnCreateImpl(
+            admin.firestore(), context.params.familyId, snap.data());
+        console.log(`Family ${context.params.familyId} stamped: ${JSON.stringify(outcomes)}`);
+      } catch (err) {
+        console.error(`onFamilyCreated failed for ${context.params.familyId}`, err);
+      }
+      return null;
+    });
 
 /**
  * Stamps `familyId` on every calendar-friend grant that predates M-6.
@@ -2275,16 +2596,19 @@ async function backfillCalendarFriendFamilyIds(db) {
 exports.backfillCalendarFriendFamilyIds = backfillCalendarFriendFamilyIds;
 
 /**
- * Stamps `familyId` on the records of every live pair that predate the field.
+ * Stamps `familyId` on every record whose author has exactly one family and none before it —
+ * records that predate the field, and records uploaded before their author paired (item 22).
  *
  * Operator-only on the same allow-list as the other backfills, and 540 seconds for the same
- * reason: a one-time pass over a historical, bounded set. Run it **after**
- * `backfillFamilyDocuments` and **before** deploying the family-scoped rules — see
- * docs/DESIGN-multi-family.md, M-4, for the ordered steps and what each one costs if skipped.
+ * reason: a pass over a bounded set. Run it **after** `backfillFamilyDocuments` and **before**
+ * deploying the family-scoped rules — see docs/DESIGN-multi-family.md, M-4, for the ordered steps
+ * and what each one costs if skipped. Idempotent, and safe to re-run at any time afterwards as
+ * the backstop for `onFamilyCreated`.
  *
  * @return {Promise<{users: number, stamped: number, skipped: number, failed: number,
- *   perCollection: !Object<string, number>, skippedReasons: {notMutual: number,
- *   missingAccount: number, unpaired: number}}>} See [backfillRecordFamilyIdsImpl].
+ *   unresolved: number, perCollection: !Object<string, number>, skippedReasons: {notMutual:
+ *   number, missingAccount: number, unpaired: number, ambiguous: number,
+ *   priorRelationship: number}}>} See [backfillRecordFamilyIdsImpl].
  */
 exports.backfillRecordFamilyIds = functions.runWith({timeoutSeconds: 540}).https.onCall(
     async (data, context) => {
