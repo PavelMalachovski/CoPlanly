@@ -105,7 +105,8 @@ private fun GuestAcceptForm(state: GuestAcceptUiState, viewModel: GuestAcceptVie
     CodeEntryField(
         value = state.code,
         onValueChange = viewModel::onCodeChanged,
-        onSubmit = viewModel::accept,
+        // This screen's own button below says what accepting does and shows progress.
+        onSubmit = null,
         errorText = state.errorRes?.let { stringResource(it) },
         enabled = !state.isBusy
     )

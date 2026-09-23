@@ -66,7 +66,12 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -824,6 +829,8 @@ private fun EventChip(
         isLongPressing -> stringResource(R.string.calendar_event_long_pressed)
         else -> stringResource(R.string.calendar_event_chip_hint)
     }
+    val deleteActionLabel = stringResource(R.string.event_preview_delete)
+    val openChip = onClick
     val chipDescription = stringResource(
         R.string.calendar_event_chip_description,
         event.title,
@@ -915,6 +922,22 @@ private fun EventChip(
             }
             .semantics {
                 contentDescription = chipDescription
+                // Taps arrive through pointerInput, which TalkBack cannot activate, and the
+                // drag-to-delete gesture has no accessible form at all. Both as actions.
+                role = Role.Button
+                // `this.` because the chip's own `onClick` parameter shadows the semantics one.
+                this.onClick(label = null) {
+                    openChip()
+                    true
+                }
+                if (onDelete != null) {
+                    customActions = listOf(
+                        CustomAccessibilityAction(deleteActionLabel) {
+                            onDelete(event.id)
+                            true
+                        }
+                    )
+                }
             }
     ) {
         // Event content - center area for drag & drop
