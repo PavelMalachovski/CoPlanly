@@ -1112,6 +1112,81 @@ exports.sweepExpiredGuests = functions.pubsub
     });
 
 /**
+ * Body of the `sweepLapsedCalendarFriends` schedule — deletes calendar-friend grants whose
+ * `expiresAtMillis` has passed.
+ *
+ * The events read rule (`isCalendarFriendOf`) already refuses a lapsed friend from the instant
+ * `request.time` reaches the expiry, so this is cleanup, not enforcement — the same split as
+ * [sweepExpiredGuestsImpl]. What it cleans up is the row itself: until it goes, the parents'
+ * friends list keeps naming somebody who can no longer see anything, and the friend's own phone
+ * keeps believing it holds a grant. Deleting the document is exactly what a parent's "revoke"
+ * does (`FriendRepositoryImpl.revokeFriend`), so both phones already handle the outcome.
+ *
+ * **A query, not a scan**, unlike the guest sweep: the expiry is a top-level number here, so
+ * "lapsed" is a range on a field Firestore indexes by itself. Two properties of that range are
+ * the whole safety argument, and both are pinned by tests:
+ *
+ * - `<= nowMillis`, matching the rule's strict `request.time < expiresAtMillis`: a grant ending
+ *   at noon is refused at noon and swept at noon, never one before the other.
+ * - `> 0`, and a range filter only ever matches a document whose field **is a number** — so a
+ *   grant with no expiry at all (absent, null, or not a positive number) is never returned and
+ *   never deleted. The callable does not write such a grant (it refuses a missing
+ *   `friendExpiresAt`), and the rule reads a missing expiry as 0 and admits nothing through it,
+ *   so none should exist; if one does, deciding what it means is a person's call, not a
+ *   scheduled job's.
+ *
+ * @param {FirebaseFirestore.Firestore} db Firestore instance.
+ * @param {number} nowMillis The instant to sweep at.
+ * @return {Promise<number>} How many grants were deleted.
+ */
+async function sweepLapsedCalendarFriendsImpl(db, nowMillis) {
+  const snap = await db.collection('calendar_friends')
+      .where('expiresAtMillis', '>', 0)
+      .where('expiresAtMillis', '<=', nowMillis)
+      .get();
+
+  let batch = db.batch();
+  let pending = 0;
+  let removed = 0;
+
+  for (const doc of snap.docs) {
+    batch.delete(doc.ref);
+    pending++;
+    removed++;
+
+    if (pending === GUEST_SWEEP_BATCH_LIMIT) {
+      await batch.commit();
+      batch = db.batch();
+      pending = 0;
+    }
+  }
+
+  if (pending > 0) {
+    await batch.commit();
+  }
+
+  return removed;
+}
+
+exports.sweepLapsedCalendarFriendsImpl = sweepLapsedCalendarFriendsImpl;
+
+/**
+ * Daily removal of calendar-friend grants that have lapsed.
+ *
+ * At 05:00 UTC, an hour after `sweepDeletedDocuments`, keeping the scheduled jobs an hour apart
+ * as the others are. Daily for the reason the guest sweep is: access already ended at the expiry,
+ * so the only thing a day's delay costs is a row lingering in a list.
+ */
+exports.sweepLapsedCalendarFriends = functions.pubsub
+    .schedule('0 5 * * *')
+    .timeZone('UTC')
+    .onRun(async () => {
+      const removed = await sweepLapsedCalendarFriendsImpl(admin.firestore(), Date.now());
+      console.log(`Swept ${removed} lapsed calendar-friend grants`);
+      return null;
+    });
+
+/**
  * Collections whose documents are deleted by being tombstoned rather than removed (CQ-3, CQ-19).
  *
  * Each is read by the co-parent's phone through a filtered collection query, which is the
