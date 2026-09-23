@@ -4,6 +4,7 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.dagger.hilt.android")
     id("io.gitlab.arturbosch.detekt")
+    id("org.jetbrains.kotlinx.kover")
     kotlin("kapt")
 }
 
@@ -437,5 +438,43 @@ tasks.withType<Test>().configureEach {
         exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
         showStackTraces = true
         showCauses = true
+    }
+}
+
+// Unit-test coverage, for visibility only: CI runs `koverXmlReportDebug koverHtmlReportDebug`
+// after the unit tests and prints the line percentage in the PR summary comment. There is no
+// verification rule, deliberately — a gate on a number nobody has yet watched move would be
+// tuned to pass rather than to mean something.
+//
+// The exclusions are code nobody here writes: Hilt/Dagger's generated factories, injectors and
+// components, Room's `_Impl` DAOs and database, Compose's lambda singletons and previews, and
+// BuildConfig. Counting them would make the percentage mostly a measure of how much kapt emits.
+// In Kover's class filters `*` matches any characters, dots and `$` included.
+kover {
+    reports {
+        filters {
+            excludes {
+                classes(
+                    "*_Factory*",
+                    "*_MembersInjector",
+                    "*_HiltModules*",
+                    "*_HiltComponents*",
+                    "*_GeneratedInjector",
+                    "*_ComponentTreeDeps",
+                    "*Hilt_*",
+                    "*_Impl",
+                    "*_Impl$*",
+                    "*_AutoMigration_*",
+                    "*ComposableSingletons*",
+                    "*.BuildConfig",
+                )
+                packages("hilt_aggregated_deps", "dagger.hilt.internal.aggregatedroot.codegen")
+                annotatedBy(
+                    "androidx.compose.ui.tooling.preview.Preview",
+                    "javax.annotation.processing.Generated",
+                    "dagger.internal.DaggerGenerated",
+                )
+            }
+        }
     }
 }
