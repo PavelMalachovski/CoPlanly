@@ -480,6 +480,11 @@ class CoPlanlyMessagingService : FirebaseMessagingService() {
                 R.string.push_pairing_removed_title,
                 R.string.push_pairing_removed_body,
                 BodyArgs.ACTOR
+            ),
+            PushPayload.PROFESSIONAL_ACCESS_REQUESTED to PushTextSpec(
+                R.string.push_professional_access_requested_title,
+                R.string.push_professional_access_requested_body,
+                BodyArgs.ACTOR
             )
         )
     }

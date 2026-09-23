@@ -12,6 +12,7 @@ import com.coparently.app.data.repository.MessageRepositoryImpl
 import com.coparently.app.data.repository.PairingRepositoryImpl
 import com.coparently.app.data.repository.PetRepositoryImpl
 import com.coparently.app.data.repository.PreferencesRepositoryImpl
+import com.coparently.app.data.repository.ProfessionalRepositoryImpl
 import com.coparently.app.domain.repository.BudgetRepository
 import com.coparently.app.domain.repository.ChangeRequestRepository
 import com.coparently.app.domain.repository.ChildInfoRepository
@@ -26,6 +27,7 @@ import com.coparently.app.domain.repository.PairingRepository
 import com.coparently.app.domain.repository.PetPhotoStorage
 import com.coparently.app.domain.repository.PetRepository
 import com.coparently.app.domain.repository.PreferencesRepository
+import com.coparently.app.domain.repository.ProfessionalRepository
 import com.coparently.app.domain.repository.ReceiptStorage
 import dagger.Binds
 import dagger.Module
@@ -143,6 +145,16 @@ abstract class RepositoryModule {
     abstract fun bindFriendRepository(
         friendRepositoryImpl: FriendRepositoryImpl
     ): FriendRepository
+
+    /**
+     * Provides ProfessionalRepository — MON-18's two-consent, expiring professional access,
+     * bound apart from FriendRepository because the two are admitted by different rules.
+     */
+    @Binds
+    @Singleton
+    abstract fun bindProfessionalRepository(
+        professionalRepositoryImpl: ProfessionalRepositoryImpl
+    ): ProfessionalRepository
 
     /**
      * Provides PetRepository implementation.

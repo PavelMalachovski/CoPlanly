@@ -481,6 +481,9 @@ fun NavGraph(
                     onNavigateToFriends = {
                         navController.navigate(Screen.Friends.route)
                     },
+                    onNavigateToProfessionals = {
+                        navController.navigate(Screen.Professionals.route)
+                    },
                     onNavigateToPairing = {
                         navController.navigate(Screen.Pairing.routeWithCode(null))
                     },
@@ -726,6 +729,42 @@ fun NavGraph(
 
             composable(route = Screen.FriendProfile.route) {
                 com.coparently.app.presentation.friends.FriendProfileScreen(
+                    onNavigateUp = { navController.popBackStack() }
+                )
+            }
+
+            // Professional access (MON-18): the parents' list and, on a professional's phone, the
+            // families they read. The two read-only views are detail routes keyed by grant id.
+            composable(route = Screen.Professionals.route) {
+                com.coparently.app.presentation.professionals.ProfessionalsScreen(
+                    onNavigateUp = { navController.popBackStack() },
+                    onOpenCalendar = { grantId ->
+                        navController.navigate(Screen.ProfessionalCalendar.createRoute(grantId))
+                    },
+                    onOpenPlan = { grantId ->
+                        navController.navigate(Screen.ProfessionalPlan.createRoute(grantId))
+                    }
+                )
+            }
+
+            composable(
+                route = Screen.ProfessionalCalendar.route,
+                arguments = listOf(
+                    navArgument(Screen.ProfessionalCalendar.ARG_GRANT_ID) { type = NavType.StringType }
+                )
+            ) {
+                com.coparently.app.presentation.professionals.ProfessionalCalendarScreen(
+                    onNavigateUp = { navController.popBackStack() }
+                )
+            }
+
+            composable(
+                route = Screen.ProfessionalPlan.route,
+                arguments = listOf(
+                    navArgument(Screen.ProfessionalPlan.ARG_GRANT_ID) { type = NavType.StringType }
+                )
+            ) {
+                com.coparently.app.presentation.professionals.ProfessionalPlanScreen(
                     onNavigateUp = { navController.popBackStack() }
                 )
             }
@@ -1270,6 +1309,27 @@ sealed class Screen(val route: String) {
 
     /** The friend's own profile, authored by them and read by the two parents. */
     data object FriendProfile : Screen("friend_profile")
+
+    /** Professional access (MON-18): the parents' grants and a professional's families. */
+    data object Professionals : Screen("professionals")
+
+    /** A professional's read-only calendar of one family, by grant id. */
+    data object ProfessionalCalendar : Screen("professional_calendar/{grantId}") {
+        /** Which grant; read by `ProfessionalCalendarViewModel` from its `SavedStateHandle`. */
+        const val ARG_GRANT_ID = "grantId"
+
+        /** Builds the route for [grantId]. */
+        fun createRoute(grantId: String): String = "professional_calendar/$grantId"
+    }
+
+    /** A professional's read-only parenting plan of one family, by grant id. */
+    data object ProfessionalPlan : Screen("professional_plan/{grantId}") {
+        /** Which grant; read by `ProfessionalPlanViewModel` from its `SavedStateHandle`. */
+        const val ARG_GRANT_ID = "grantId"
+
+        /** Builds the route for [grantId]. */
+        fun createRoute(grantId: String): String = "professional_plan/$grantId"
+    }
 
     data object CustodySetup : Screen("custody_setup")
 

@@ -72,4 +72,6 @@
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
     <string name="push_channel_name">CoPlanly notifications</string>
     <string name="push_channel_description">Notifications about events, requests and messages from your co-parent</string>
+    <string name="push_professional_access_requested_title">Professional access requested</string>
+    <string name="push_professional_access_requested_body">%1$s redeemed an invitation to read the family calendar and parenting plan. It opens only when both parents consent.</string>
 </resources>
