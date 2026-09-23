@@ -15,4 +15,8 @@
     <string name="consent_decline">Ні, нічого не надсилати</string>
     <string name="settings_telemetry_title">Статистика використання</string>
     <string name="settings_telemetry_description">Анонімна статистика та звіти про збої. Ніколи — дані вашої родини.</string>
+    <!-- REL-4. Shown only once BuildConfig.PRIVACY_POLICY_URL is set (PrivacyPolicyLink). -->
+    <string name="privacy_policy_title">Політика конфіденційності</string>
+    <string name="privacy_policy_description">Що CoPlanly зберігає про вашу родину і навіщо</string>
+    <string name="consent_privacy_policy_link">Прочитати політику конфіденційності</string>
 </resources>

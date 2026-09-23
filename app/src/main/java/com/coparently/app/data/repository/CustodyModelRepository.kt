@@ -260,7 +260,7 @@ class CustodyModelRepository(
         ) {
             Log.w(
                 TAG,
-                "Could not read custody_models/${pair.documentId}. Reported as Unavailable, not " +
+                "Could not read the shared custody document. Reported as Unavailable, not " +
                     "as an absent document: a caller that mistook the two would publish its own " +
                     "pattern over a co-parent's that is simply unreadable right now.",
                 e
@@ -314,7 +314,7 @@ class CustodyModelRepository(
             atIso = nowIso()
         ).getOrElse { return PatternSubmission.ACTIVATED.also { saveAndActivate(model) } }
 
-        val written = guarded("propose", pair.documentId) {
+        val written = guarded("propose") {
             firestoreCustodyDataSource.setCustody(pair.documentId, pair.participants, proposed)
         }
         if (written == null) {
@@ -367,7 +367,7 @@ class CustodyModelRepository(
         // `setCustody` returns Unit, so `guarded` yields `Unit?` — null on failure, and that is
         // all this value can say. It is the success sentinel the two sibling call sites also
         // treat it as; the thing to mirror is `next`, the document that was just written.
-        guarded("decide-proposal", pair.documentId) {
+        guarded("decide-proposal") {
             firestoreCustodyDataSource.setCustody(pair.documentId, pair.participants, next)
         } ?: return Result.failure(IllegalStateException("The decision could not be written"))
         mirrorIntoRoom(next)
@@ -715,7 +715,7 @@ class CustodyModelRepository(
      */
     private suspend fun pushToFirestore(model: CustodyModel, entity: CustodyModelEntity) {
         val pair = currentPair() ?: return
-        guarded("write", pair.documentId) {
+        guarded("write") {
             val existing = firestoreCustodyDataSource.getCustody(pair.documentId)
             val existingCreatedAt = existing?.createdAt?.takeIf { it.isNotBlank() }
             firestoreCustodyDataSource.setCustody(
@@ -870,7 +870,7 @@ class CustodyModelRepository(
         // Guarded like the write below it. An unguarded read threw straight out of the caller's
         // `viewModelScope.launch` — neither ViewModel's `.onFailure` can catch a throw — and an
         // uncaught exception there terminates the process rather than showing a refusal.
-        val existing = guarded("swap read", pair.documentId) {
+        val existing = guarded("swap read") {
             firestoreCustodyDataSource.getCustody(pair.documentId)
         } ?: return Result.failure(IllegalStateException("The pair has no shared schedule yet"))
 
@@ -882,7 +882,7 @@ class CustodyModelRepository(
             // tell the other parent their schedule moved.
             return Result.success(SwapWrite(existing.dayOverrides, changed = false))
         }
-        val written = guarded("swap", pair.documentId) {
+        val written = guarded("swap") {
             firestoreCustodyDataSource.setCustody(
                 documentId = pair.documentId,
                 participants = pair.participants,
@@ -1033,11 +1033,7 @@ class CustodyModelRepository(
      * degrades to "local for now" rather than to an exception in the caller's coroutine.
      * Cancellation is rethrown — it is not a failure.
      */
-    private suspend fun <T> guarded(
-        operation: String,
-        documentId: String,
-        block: suspend () -> T
-    ): T? = try {
+    private suspend fun <T> guarded(operation: String, block: suspend () -> T): T? = try {
         block()
     } catch (e: CancellationException) {
         throw e
@@ -1046,7 +1042,7 @@ class CustodyModelRepository(
     ) {
         Log.w(
             TAG,
-            "Custody $operation failed for custody_models/$documentId. Room keeps the local " +
+            "Custody $operation failed for the shared custody document. Room keeps the local " +
                 "copy, which the mirror will not overwrite with the older document, and " +
                 "re-sends on the next snapshot.",
             e

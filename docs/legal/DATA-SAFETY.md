@@ -8,6 +8,13 @@
 > Sources: `firestore.rules`, `storage.rules`, `data/local/entity/`, `di/FirebaseModule.kt`,
 > `data/analytics/AnalyticsManager.kt`, `data/crashlytics/CrashlyticsManager.kt`,
 > `data/mlkit/`, `functions/index.js`.
+>
+> ### Owner must fill
+>
+> | Placeholder | What goes in |
+> | --- | --- |
+> | `{{DECIDE}}` | The Families-policy answer below. The recommendation is written next to it; the decision is yours, because it shapes the target-audience section of the Play Console |
+> | `{{WEB_DELETION_URL}}` | Where `web/delete-account/` is hosted — Play asks for it in the data-deletion section |
 
 ## Summary answers
 
@@ -16,7 +23,8 @@
 | Does your app collect or share any of the required user data types? | **Yes** | |
 | Is all data encrypted in transit? | **Yes** | Firebase SDKs use TLS throughout |
 | Is data encrypted at rest on the device? | **Yes, for the app's database** | Room opens through SQLCipher; the passphrase is wrapped by an Android Keystore key (SEC-2). The Firebase SDK's offline cache and Coil's image cache are plaintext files under Android's file-based encryption only — the privacy policy says so (September 2026). Play does not ask this question — the row is here because the privacy policy makes the claim and something has to say what backs it |
-| Do you provide a way for users to request that their data is deleted? | **Yes** | Settings → Account → Delete account, backed by the `deleteAccount` callable |
+| Do you provide a way for users to request that their data is deleted? | **Yes** | Settings → Account → Delete account, backed by the `deleteAccount` callable, which also removes the Storage files of every record it deletes (September 2026). The web route Play requires is `web/delete-account/`, at {{WEB_DELETION_URL}} |
+| Is some data kept after a deletion request? | **Yes, for a bounded time** | A record deleted *individually* is a tombstone for 90 days (`TOMBSTONE_RETENTION_DAYS`) before the sweep removes it. An *account* deletion hard-deletes at once, tombstones included. Copies already downloaded to the co-parent's phone stay there — the privacy policy says so |
 | Is data collection required, or can users choose? | **Required** for the account and shared content; **optional** for the medical profile, photos, Google Calendar, and — since REL-5 — analytics and crash reporting |
 | Have you committed to Play's Families policy? | {{DECIDE}} — the app is for parents, not children, and offers no child accounts. Audit 2026-09 recommends: target audience **18+ only**, **not** in the Families programme, no child imagery or "kids" wording in the listing |
 

@@ -25,6 +25,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Balance
 import androidx.compose.material.icons.filled.ChildCare
 import androidx.compose.material.icons.filled.DateRange
@@ -43,6 +44,7 @@ import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PersonOutline
 import androidx.compose.material.icons.filled.Pets
+import androidx.compose.material.icons.filled.PrivacyTip
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.School
@@ -84,6 +86,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -104,6 +107,7 @@ import com.coparently.app.presentation.common.FamilySwitcherViewModel
 import com.coparently.app.presentation.common.GroupLabel
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.PillChip
+import com.coparently.app.presentation.common.PrivacyPolicyLink
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.SignedInAsRow
@@ -185,6 +189,7 @@ fun SettingsScreen(
     val telemetryConsent by telemetryConsentViewModel.consent.collectAsState()
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
+    val uriHandler = LocalUriHandler.current
 
     val isSignedIn by syncViewModel.isSignedIn.collectAsState()
     val isSyncEnabled by syncViewModel.isSyncEnabled.collectAsState()
@@ -836,6 +841,25 @@ fun SettingsScreen(
                         }
                     )
                     Divider()
+                    // REL-4: Play wants the policy reachable from inside an app that holds health
+                    // data. Absent until the policy is hosted — see PrivacyPolicyLink.
+                    if (PrivacyPolicyLink.url != null) {
+                        SectionRow(
+                            icon = Icons.Default.PrivacyTip,
+                            title = stringResource(R.string.privacy_policy_title),
+                            supporting = stringResource(R.string.privacy_policy_description),
+                            onClick = { PrivacyPolicyLink.open(uriHandler) },
+                            trailing = {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.OpenInNew,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        )
+                        Divider()
+                    }
                     // Destructive, so it stays at the very bottom of the screen. It reads as
                     // a red text row rather than a filled error button — but a row is easier
                     // to hit by accident than a deliberate button was, so it now confirms.

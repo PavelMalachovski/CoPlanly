@@ -227,7 +227,7 @@ class ProfileViewModel @Inject constructor(
             } catch (
                 @Suppress("TooGenericExceptionCaught") e: Exception
             ) {
-                Log.e(TAG, "Failed to save the profile for ${draft.id}", e)
+                Log.e(TAG, "Failed to save the profile", e)
                 _uiState.update { it.copy(isSaving = false) }
             }
         }

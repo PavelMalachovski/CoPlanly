@@ -10,6 +10,23 @@
 > third parties the code really talks to — rather than from a template. If the code changes,
 > this changes with it. See `docs/legal/DATA-SAFETY.md` for the same facts in the shape the
 > Play Console asks for.
+>
+> ### Owner must fill
+>
+> Everything else in this document was filled from the code (September 2026). These are the
+> facts only the owner can supply; each is a `{{PLACEHOLDER}}` in the text below.
+>
+> | Placeholder | What goes in |
+> | --- | --- |
+> | `{{DATE}}` (twice) | The publication date, and the date the policy takes effect |
+> | `{{LEGAL_ENTITY_NAME}}`, `{{REGISTERED_ADDRESS}}`, `{{COMPANY_ID}}` | The controller: a person or a company, its address, and its registration number (IČO) |
+> | `{{PRIVACY_CONTACT_EMAIL}}` | An address somebody actually reads — it is the only route for a person who has uninstalled the app |
+> | `{{DPO_PARAGRAPH_IF_APPOINTED}}` | Whether a Data Protection Officer is appointed. Large-scale processing of health data can make one mandatory (Art. 37(1)(c)); this is the lawyer's question. Delete the line if none is |
+> | `{{FIRESTORE_REGION}}` | The Firestore and Cloud Storage location of the production project, from the Firebase console (Firestore → Settings). The functions' region is already stated: they run in `us-central1`, because `functions/index.js` names no other |
+> | `{{WEB_DELETION_URL}}` | Where `web/delete-account/` is hosted |
+>
+> Delete this whole box before publishing; `tools/wrap-legal-page.js` keeps a draft banner on
+> the page until the last placeholder is gone.
 
 **Last updated:** {{DATE}}
 **Effective:** {{DATE}}
@@ -71,7 +88,9 @@ child's records rather than on the child's consent.
 
 ### People you invite
 
-- **Your co-parent**: their email address, if you invite them by email.
+- **Your co-parent**: nothing, until they accept. An invitation is a code you pass on
+  yourself; it carries your name and email address so that the person redeeming it can see who
+  invited them, and we never ask for theirs.
 - **A guest** (for example a grandparent) whom you grant time-limited access to one child's
   record.
 - **A calendar friend** whom you grant time-limited read access to the family calendar.
@@ -117,35 +136,56 @@ We do not sell personal data, and we do not use it for advertising.
 | Google (Calendar API) | Only your calendar, only if you connect it | The integration you enabled |
 
 Google processes data both inside and outside the EU. Transfers outside the EEA rely on the
-European Commission's Standard Contractual Clauses. {{FIRESTORE_REGION_SENTENCE}}
+European Commission's Standard Contractual Clauses. Our database and file storage are located
+in {{FIRESTORE_REGION}}. Our server functions — which link co-parents, send notifications,
+renew Google Calendar access and delete accounts — run in Google's `us-central1` region in the
+United States, so the data each of them handles is processed there.
 
 We disclose data to authorities only where the law requires it.
 
 ## How long we keep it
 
 We keep what you enter for as long as your account exists. When you delete your account
-(below), it is removed as described there. Guest and friend grants expire automatically on the
-date set when they were issued, and a daily job removes lapsed ones. Old queued notifications
-are deleted after 30 days.
+(below), it is removed as described there.
+
+When you delete a single event, expense, child record or pet, the record is marked as deleted
+rather than removed at once, so that your co-parent's phone learns of the deletion the next time
+it syncs. A daily job removes it for good **90 days** after you deleted it.
+
+A guest's access to a child's record ends on the date set when it was granted, and a daily job
+removes lapsed grants. A calendar friend's access also ends on its expiry date; the lapsed grant
+stays on our servers, unusable, until a parent removes it or deletes their account. Queued
+notifications are deleted after **30 days**.
 
 ## Deleting your account
 
 **Settings → Account → Delete account.** This is irreversible and, once confirmed, it:
 
 - deletes your profile, your events, your expenses and budgets, the records you entered about
-  your child and pet, your custody schedule, your invitations, and the whole message thread
-  with your co-parent;
-- removes you from the audience of anything your co-parent created;
+  your child and pet, your custody schedule and agreed expense split, your parenting plan,
+  your invitations, and the whole message thread with your co-parent;
+- deletes the photographs attached to those records — event photos, receipts, and medical and
+  pet photographs;
+- removes you from the audience of anything your co-parent created, and ends any guest or
+  calendar-friend access you granted or held;
 - unlinks the two of you, so their access ends immediately;
+- deletes the fingerprint of your Google Calendar authorisation, if you connected one, and
+  any notifications still queued for you;
 - deletes your authentication account;
 - wipes the local copy on the device you did it from.
 
-One consequence, stated plainly because it surprises people: **records your co-parent entered
-remain in their account, and records you entered disappear from theirs.** Deleting your data
-means deleting it everywhere, including from the calendar you shared.
+It happens at once. We do not keep a copy of a deleted account to restore later.
 
-If you no longer have the app installed, write to {{PRIVACY_CONTACT_EMAIL}} and we will delete
-the account for you. {{WEB_DELETION_URL}}
+Two consequences, stated plainly because they surprise people. First: **records your co-parent
+entered remain in their account, and records you entered disappear from it** — including from
+the calendar you shared. Second: **we can only delete what is on our servers and on the phone
+you delete from.** A copy your co-parent's phone had already downloaded stays on that phone
+until they delete it or uninstall the app, and the same is true of any other phone you were
+signed in on.
+
+If you no longer have the app installed, write to {{PRIVACY_CONTACT_EMAIL}} from the address
+your account uses and we will delete the account for you within 30 days. The same steps are on
+our account-deletion page: {{WEB_DELETION_URL}}.
 
 ## Your rights
 

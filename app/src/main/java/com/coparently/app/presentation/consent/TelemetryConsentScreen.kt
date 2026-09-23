@@ -17,13 +17,16 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
+import com.coparently.app.presentation.common.PrivacyPolicyLink
 
 /**
  * The first-run question about analytics and crash reporting (REL-5).
@@ -88,6 +91,14 @@ fun TelemetryConsentScreen(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+        // The full account of what is processed, for whoever wants more than three sentences
+        // before answering (REL-4). Absent until the policy is hosted — see PrivacyPolicyLink.
+        if (PrivacyPolicyLink.url != null) {
+            val uriHandler = LocalUriHandler.current
+            TextButton(onClick = { PrivacyPolicyLink.open(uriHandler) }) {
+                Text(stringResource(R.string.consent_privacy_policy_link))
+            }
+        }
 
         Spacer(modifier = Modifier.size(8.dp))
 

@@ -100,7 +100,7 @@ class FirestoreUserDataSource @Inject constructor(
             android.util.Log.d("FirestoreUserDataSource", "Got invitation from ${if (snapshot.metadata.isFromCache) "cache" else "server"}: $invitationId")
             snapshot.data
         } catch (e: Exception) {
-            android.util.Log.e("FirestoreUserDataSource", "Failed to get invitation: $invitationId", e)
+            android.util.Log.e("FirestoreUserDataSource", "Failed to get an invitation", e)
             null
         }
     }

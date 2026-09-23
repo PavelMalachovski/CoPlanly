@@ -69,6 +69,12 @@ val canSignRelease = run {
         file(store).exists()
 }
 
+/**
+ * The published privacy policy (REL-4). Empty until the owner hosts `web/privacy/` — see
+ * `web/README.md` — and then the one line to change.
+ */
+val publishedPrivacyPolicyUrl = ""
+
 android {
     // The Kotlin package, and therefore where `R` and `BuildConfig` are generated. Deliberately
     // *not* the same as `applicationId` below: renaming the package would touch every file in
@@ -99,6 +105,18 @@ android {
         versionName = "1.1.0"
 
         testInstrumentationRunner = "com.coparently.app.HiltTestRunner"
+
+        // REL-4. Where the hosted privacy policy lives, read by the Settings row and the
+        // telemetry consent screen. Blank until the policy is published, and blank hides both
+        // links: a link to a page that does not resolve is the affordance-promising-nothing
+        // design rule #8 forbids. Set `publishedPrivacyPolicyUrl` above once
+        // `firebase deploy --only hosting` has run (it is a public URL, not a secret), or pass
+        // -PCOPLANLY_PRIVACY_POLICY_URL to try one without committing it.
+        val privacyPolicyUrl = (project.findProperty("COPLANLY_PRIVACY_POLICY_URL") as String?)
+            ?.trim()
+            ?: publishedPrivacyPolicyUrl
+        buildConfigField("String", "PRIVACY_POLICY_URL", "\"$privacyPolicyUrl\"")
+
         vectorDrawables {
             useSupportLibrary = true
         }
@@ -271,8 +289,10 @@ dependencies {
     // Coroutines - Updated to latest stable
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
 
-    // WorkManager for background tasks
-    implementation("androidx.work:work-runtime-ktx:2.9.0")
+    // WorkManager for background tasks. 2.10.x (CQ-17) for its Doze and foreground-service
+    // fixes, which is what the 15-minute periodic sync runs into; 2.11 raised minSdk and is a
+    // separate step.
+    implementation("androidx.work:work-runtime-ktx:2.10.5")
 
     // Calendar - Check for updates at https://github.com/kizitonwose/Calendar
     implementation("com.kizitonwose.calendar:compose:2.6.1")

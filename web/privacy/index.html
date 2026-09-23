@@ -82,7 +82,7 @@
 
 <div class="draft" role="note">
   <p><strong>Draft.</strong> This page has not been reviewed by a lawyer and is not in force.
-    Placeholders still to be filled in: <code>{{COMPANY_ID}}</code>, <code>{{DATE}}</code>, <code>{{DPO_PARAGRAPH_IF_APPOINTED}}</code>, <code>{{FIRESTORE_REGION_SENTENCE}}</code>, <code>{{LEGAL_ENTITY_NAME}}</code>, <code>{{PLACEHOLDER}}</code>, <code>{{PRIVACY_CONTACT_EMAIL}}</code>, <code>{{REGISTERED_ADDRESS}}</code>, <code>{{WEB_DELETION_URL}}</code>.</p>
+    Placeholders still to be filled in: <code>{{COMPANY_ID}}</code>, <code>{{DATE}}</code>, <code>{{DPO_PARAGRAPH_IF_APPOINTED}}</code>, <code>{{FIRESTORE_REGION}}</code>, <code>{{LEGAL_ENTITY_NAME}}</code>, <code>{{PLACEHOLDER}}</code>, <code>{{PRIVACY_CONTACT_EMAIL}}</code>, <code>{{REGISTERED_ADDRESS}}</code>, <code>{{WEB_DELETION_URL}}</code>.</p>
 </div>
 
 <h1>CoPlanly — Privacy Policy</h1>
@@ -95,6 +95,43 @@ that unread. Have a lawyer review it before it goes anywhere near a store listin
 third parties the code really talks to — rather than from a template. If the code changes,
 this changes with it. See <code>docs/legal/DATA-SAFETY.md</code> for the same facts in the shape the
 Play Console asks for.</p>
+<h3>Owner must fill</h3>
+<p>Everything else in this document was filled from the code (September 2026). These are the
+facts only the owner can supply; each is a <code>{{PLACEHOLDER}}</code> in the text below.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Placeholder</th>
+<th>What goes in</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>{{DATE}}</code> (twice)</td>
+<td>The publication date, and the date the policy takes effect</td>
+</tr>
+<tr>
+<td><code>{{LEGAL_ENTITY_NAME}}</code>, <code>{{REGISTERED_ADDRESS}}</code>, <code>{{COMPANY_ID}}</code></td>
+<td>The controller: a person or a company, its address, and its registration number (IČO)</td>
+</tr>
+<tr>
+<td><code>{{PRIVACY_CONTACT_EMAIL}}</code></td>
+<td>An address somebody actually reads — it is the only route for a person who has uninstalled the app</td>
+</tr>
+<tr>
+<td><code>{{DPO_PARAGRAPH_IF_APPOINTED}}</code></td>
+<td>Whether a Data Protection Officer is appointed. Large-scale processing of health data can make one mandatory (Art. 37(1)(c)); this is the lawyer&#39;s question. Delete the line if none is</td>
+</tr>
+<tr>
+<td><code>{{FIRESTORE_REGION}}</code></td>
+<td>The Firestore and Cloud Storage location of the production project, from the Firebase console (Firestore → Settings). The functions&#39; region is already stated: they run in <code>us-central1</code>, because <code>functions/index.js</code> names no other</td>
+</tr>
+<tr>
+<td><code>{{WEB_DELETION_URL}}</code></td>
+<td>Where <code>web/delete-account/</code> is hosted</td>
+</tr>
+</tbody></table></div>
+<p>Delete this whole box before publishing; <code>tools/wrap-legal-page.js</code> keeps a draft banner on
+the page until the last placeholder is gone.</p>
 </blockquote>
 <p><strong>Last updated:</strong> {{DATE}}
 <strong>Effective:</strong> {{DATE}}</p>
@@ -143,7 +180,9 @@ not offer accounts to anyone under 18, and we rely on the parent&#39;s own autho
 child&#39;s records rather than on the child&#39;s consent.</p>
 <h3>People you invite</h3>
 <ul>
-<li><strong>Your co-parent</strong>: their email address, if you invite them by email.</li>
+<li><strong>Your co-parent</strong>: nothing, until they accept. An invitation is a code you pass on
+yourself; it carries your name and email address so that the person redeeming it can see who
+invited them, and we never ask for theirs.</li>
 <li><strong>A guest</strong> (for example a grandparent) whom you grant time-limited access to one child&#39;s
 record.</li>
 <li><strong>A calendar friend</strong> whom you grant time-limited read access to the family calendar.</li>
@@ -206,29 +245,47 @@ not synced, and not visible to your co-parent.</li>
 </tr>
 </tbody></table></div>
 <p>Google processes data both inside and outside the EU. Transfers outside the EEA rely on the
-European Commission&#39;s Standard Contractual Clauses. {{FIRESTORE_REGION_SENTENCE}}</p>
+European Commission&#39;s Standard Contractual Clauses. Our database and file storage are located
+in {{FIRESTORE_REGION}}. Our server functions — which link co-parents, send notifications,
+renew Google Calendar access and delete accounts — run in Google&#39;s <code>us-central1</code> region in the
+United States, so the data each of them handles is processed there.</p>
 <p>We disclose data to authorities only where the law requires it.</p>
 <h2>How long we keep it</h2>
 <p>We keep what you enter for as long as your account exists. When you delete your account
-(below), it is removed as described there. Guest and friend grants expire automatically on the
-date set when they were issued, and a daily job removes lapsed ones. Old queued notifications
-are deleted after 30 days.</p>
+(below), it is removed as described there.</p>
+<p>When you delete a single event, expense, child record or pet, the record is marked as deleted
+rather than removed at once, so that your co-parent&#39;s phone learns of the deletion the next time
+it syncs. A daily job removes it for good <strong>90 days</strong> after you deleted it.</p>
+<p>A guest&#39;s access to a child&#39;s record ends on the date set when it was granted, and a daily job
+removes lapsed grants. A calendar friend&#39;s access also ends on its expiry date; the lapsed grant
+stays on our servers, unusable, until a parent removes it or deletes their account. Queued
+notifications are deleted after <strong>30 days</strong>.</p>
 <h2>Deleting your account</h2>
 <p><strong>Settings → Account → Delete account.</strong> This is irreversible and, once confirmed, it:</p>
 <ul>
 <li>deletes your profile, your events, your expenses and budgets, the records you entered about
-your child and pet, your custody schedule, your invitations, and the whole message thread
-with your co-parent;</li>
-<li>removes you from the audience of anything your co-parent created;</li>
+your child and pet, your custody schedule and agreed expense split, your parenting plan,
+your invitations, and the whole message thread with your co-parent;</li>
+<li>deletes the photographs attached to those records — event photos, receipts, and medical and
+pet photographs;</li>
+<li>removes you from the audience of anything your co-parent created, and ends any guest or
+calendar-friend access you granted or held;</li>
 <li>unlinks the two of you, so their access ends immediately;</li>
+<li>deletes the fingerprint of your Google Calendar authorisation, if you connected one, and
+any notifications still queued for you;</li>
 <li>deletes your authentication account;</li>
 <li>wipes the local copy on the device you did it from.</li>
 </ul>
-<p>One consequence, stated plainly because it surprises people: <strong>records your co-parent entered
-remain in their account, and records you entered disappear from theirs.</strong> Deleting your data
-means deleting it everywhere, including from the calendar you shared.</p>
-<p>If you no longer have the app installed, write to {{PRIVACY_CONTACT_EMAIL}} and we will delete
-the account for you. {{WEB_DELETION_URL}}</p>
+<p>It happens at once. We do not keep a copy of a deleted account to restore later.</p>
+<p>Two consequences, stated plainly because they surprise people. First: <strong>records your co-parent
+entered remain in their account, and records you entered disappear from it</strong> — including from
+the calendar you shared. Second: <strong>we can only delete what is on our servers and on the phone
+you delete from.</strong> A copy your co-parent&#39;s phone had already downloaded stays on that phone
+until they delete it or uninstall the app, and the same is true of any other phone you were
+signed in on.</p>
+<p>If you no longer have the app installed, write to {{PRIVACY_CONTACT_EMAIL}} from the address
+your account uses and we will delete the account for you within 30 days. The same steps are on
+our account-deletion page: {{WEB_DELETION_URL}}.</p>
 <h2>Your rights</h2>
 <p>Under the GDPR you may: access your data; correct it; delete it; restrict or object to its
 processing; receive it in a portable form; and withdraw a consent you have given, without

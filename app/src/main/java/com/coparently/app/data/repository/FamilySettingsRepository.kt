@@ -306,7 +306,7 @@ class FamilySettingsRepository @Inject constructor(
     } catch (e: CancellationException) {
         throw e
     } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
-        Log.w(TAG, "Could not read the family settings for $documentId", e)
+        Log.w(TAG, "Could not read the family settings document", e)
         null
     }
 
@@ -316,7 +316,7 @@ class FamilySettingsRepository @Inject constructor(
     } catch (e: CancellationException) {
         throw e
     } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
-        Log.w(TAG, "The family settings write was refused for ${pair.documentId}", e)
+        Log.w(TAG, "The family settings write was refused", e)
         Result.failure(e)
     }
 

@@ -68,7 +68,7 @@ invocation is yours.
 | --- | --- | --- | --- |
 | **M-5** | Multi-family cleanup: delete `partnerId`, `User.role`, `Event.sharedWith`, `isPartnerOf` — **after** the ops steps in REL-3 | P2 | M |
 | **M-8** | M-4's last leftover: badges across families. Chat now follows the selected family (done, September 2026); an honest cross-family signal needs a conversation-document listener per non-selected family — a dot, not a count | P2 | M |
-| **CQ-17** | Six dependencies worth moving | P3 | S |
+| **CQ-17** | WorkManager is bumped; four dependencies left, each with the reason it could not be moved blind | P3 | S |
 | **MON-2** | Market facts checked (23 Sep 2026): **app2us has an Android build**; left: mediator count, ARPU, Facebook groups, app2us price on a phone | P0 | S |
 | **MON-3** | Export to PDF/CSV — the first paid feature (needs MON-4 first) | P1 | M |
 | **MON-4** | The paper is written; three answers are owed by the owner, and MON-3 waits on them | P1 | S |
@@ -79,7 +79,7 @@ invocation is yours.
 | **MON-12** | Intelligent suggestions (MVP 3) — behind SEC-1's proxy, never with a key in the client | P3 | M |
 | **MON-13** | The tables and Germany's Länder are done (five countries; Ukraine's holidays are suspended by martial law) — left: school vacations outside Czechia, and whether Austria's patron-saint days are drawn at all | P2 | M |
 | **FAM-4** | Custody per child | P2 | L |
-| **REL-4 (drafting)** | Fill the placeholders in the legal drafts, write the web account-deletion page | P0 | S |
+| **REL-4 (drafting)** | Done as far as the code can answer: every placeholder left is a fact only the owner has, listed at the top of each document. The deletion page and the privacy link in the app are written | P0 | S |
 
 ### ⚙️ Cloud, but a CI job has to be built first
 
@@ -107,7 +107,7 @@ invocation is yours.
 | **REL-3 storage** | `firebase deploy --only storage` | One command that fixes a live bug: every pet and medical photo upload is refused today because the bucket still runs the July rules. |
 | **REL-1** | Firebase console, Google Cloud console, a fresh `google-services.json`, the debug and release SHA-1 | A local build fails until this is done — deliberately, since `applicationId` changed to `app.coplanly`. |
 | **REL-2** | Generate the release keystore and back it up in two places | The single most irreversible item in this document. |
-| **REL-4 (legal)** | A lawyer reads the drafts; both documents get hosted at stable URLs | This app processes a child's health data. No template survives that unread. |
+| **REL-4 (legal)** | Fill the "Owner must fill" tables (identity, contact, Firestore region, dates, liability, law); a lawyer reads the drafts; the three pages get hosted; the URL goes into `publishedPrivacyPolicyUrl` | This app processes a child's health data. No template survives that unread. |
 | **REL-6** | Play Console: Data Safety, listing, screenshots, content rating, a closed track with **real co-parent pairs** | This product cannot be tested by one person. |
 | **REL-7** | Install a release build and confirm a child's medical profile reaches the co-parent non-empty | The one test CI cannot run: a green `assembleRelease` proves R8 ran, not that Gson still finds its field names. |
 | **CQ-16** | Digital Asset Links | Needs a domain you own — the same one REL-4 needs. |
@@ -304,8 +304,16 @@ Drafts are in `docs/legal/`. They are drafts. **Have a lawyer read them before p
 app processes a child's health data, which is special-category data under GDPR Art. 9, and no
 template survives that unread.
 
-- [ ] Fill every `{{PLACEHOLDER}}` in `PRIVACY-POLICY.md` and `TERMS-OF-SERVICE.md`: controller
-      identity, address, contact. *(cloud, once you supply the identity)*
+- [x] Fill every placeholder the code can answer (September 2026, release-tails pass). The
+      functions' region is stated (`us-central1`), retention says what the code does (90-day
+      tombstones, the daily guest sweep, no sweep for lapsed friend grants), the pricing section
+      and the invitation paragraph are written, and the terms no longer point at the EU ODR
+      platform, which closed in July 2025.
+- [ ] Fill what only you can: each of `PRIVACY-POLICY.md`, `TERMS-OF-SERVICE.md` and
+      `DATA-SAFETY.md` opens with an **"Owner must fill"** table — controller identity, address,
+      IČO, contact addresses, the Firestore/Storage location (`{{FIRESTORE_REGION}}`), the dates,
+      whether a DPO is appointed, the liability cap, governing law and courts, and the Families
+      answer. *(yours; then regenerate the pages)*
 - [ ] Legal review. *(yours)*
 - [x] Both are **pages already**: `web/privacy/index.html` and `web/terms/index.html`, generated
       from the markdown by `tools/wrap-legal-page.js` in the deletion page's self-contained style
@@ -323,8 +331,16 @@ template survives that unread.
       entered vanish from your co-parent's calendar too.
 - [ ] Host it, and put the URL in **two** places: the Play Console's data-deletion field and
       `{{WEB_DELETION_URL}}` in the privacy policy. *(yours)*
-- [ ] Link both from Settings once the URLs resolve. Deliberately not wired yet: a row pointing at
-      a dead URL is exactly the affordance-promising-nothing that design rule #8 forbids.
+- [x] The deletion page now matches the code again. It had listed the photographs as deleted
+      while `deleteAccountDataImpl` left every Storage object in the bucket — fixed in the function
+      (`deleteAuthoredFiles`, before the documents that name the files), not in the text — and it
+      implied the co-parent's phone forgets, which it does not: nothing reconciles by absence, so
+      a record already downloaded there stays. The page, the policy and the terms say so now.
+- [x] The privacy policy is linked from Settings → Account and from the consent screen, through
+      `BuildConfig.PRIVACY_POLICY_URL` and `PrivacyPolicyLink` — and **neither renders while the
+      value is blank**, which it is until the policy is hosted (design rule #8).
+- [ ] Set `publishedPrivacyPolicyUrl` in `app/build.gradle.kts` once the policy is hosted. That
+      single line is what makes both links appear. *(yours, or a session once you give the URL)*
 
 This unblocks **CQ-16** too — both want the same domain.
 
@@ -874,13 +890,18 @@ scheme rather than a verified App Link. Both need the domain **REL-4** needs for
 
 **Where:** ☁️ cloud for the bumps; 👁 the sign-in ones want a device.
 
-| Dependency | Now | Why |
+**September 2026 (release-tails pass): one moved, four stay, each for a stated reason.** The
+session had no Android SDK and could not reach Maven Central, so "safe to make blind" meant a
+version whose existence could be confirmed and whose API the code demonstrably does not depend on
+changing.
+
+| Dependency | Now | State |
 | --- | --- | --- |
-| `androidx.security:security-crypto` | 1.1.0-alpha06 | See **SEC-5**. |
-| `play-services-auth` | 21.2.0, deprecated | Both it and Credential Manager are in the graph — two sign-in paths, twice the size. |
-| `androidx.work` | 2.9.0 | 2.10.x fixes the Doze/foreground bugs that hit a 15-minute sync. |
-| `google-api-services-calendar` | `v3-rev20220715` | A 2022 revision. |
-| `firebase-functions` (Node) | ^4.5.0, gen-1 API | Two generations behind; ESLint 8 is EOL. |
+| `androidx.work` | **2.10.5** (was 2.9.0) | **Done.** 2.10.x fixes the Doze/foreground bugs that hit a 15-minute sync; same API, `hilt-work` 1.2.0 unchanged. 2.11 raises minSdk and changes more — a separate step. |
+| `androidx.security:security-crypto` | 1.1.0-alpha06 | **Left.** See **SEC-5** — whether stored OAuth tokens survive is a sign-in on a real device. |
+| `play-services-auth` | 21.2.0, deprecated | **Left.** Not a version bump: `CredentialManagerService` still calls `GoogleSignIn`/`GoogleSignInClient` for the Calendar scope, so dropping it means moving that flow to `AuthorizationClient` — a sign-in change only a device can judge. Both it and Credential Manager stay in the graph until then. |
+| `google-api-services-calendar` | `v3-rev20220715` | **Left.** The current revision (`v3-rev20260708-2.0.0` per the client-library repository) pulls a newer `google-api-client` than the pinned `google-api-client-android:2.2.0`, so the bump is really a pair, and Maven Central could not be reached to check what the two resolve to. The surface the app uses (`events().list/get/insert/update/delete`) is stable across revisions; what wants checking is resolution and R8, then one import and one export on a device. |
+| `firebase-functions` (Node) | ^4.5.0 (lockfile 4.9.0, the last 4.x), gen-1 API | **Left.** Already at the top of its major. 5.x/6.x move the gen-1 triggers behind `firebase-functions/v1` and v6 changes the default export; every function then needs a `firebase deploy` to prove it, which is yours. ESLint 8 → 9 needs a flat config and goes with it. |
 
 *(`retrofit` left the graph with the AI subsystem — MON-7.)*
 
