@@ -58,10 +58,11 @@ import java.time.format.DateTimeFormatter
  * @param parentNames Resolves a slot to that parent's name
  * @param members The family's children and pets, for naming who the event is about
  * @param onEdit Open the full editor for this event
- * @param onDelete Delete the event
+ * @param onDelete Delete the event, or null where the surface has no delete-with-undo of its
+ *   own (Home) — the button is then left out rather than shown doing something else
  * @param onDismiss Close the sheet without action
  */
-@Suppress("LongMethod") // linear declarative layout, no logic to extract
+@Suppress("LongMethod", "LongParameterList") // linear declarative layout, no logic to extract
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EventPreviewSheet(
@@ -69,7 +70,7 @@ fun EventPreviewSheet(
     parentNames: ParentNames,
     members: List<FamilyMember> = emptyList(),
     onEdit: () -> Unit,
-    onDelete: () -> Unit,
+    onDelete: (() -> Unit)?,
     onDismiss: () -> Unit
 ) {
     val parentColor = when (event.parentOwner) {
@@ -189,22 +190,24 @@ fun EventPreviewSheet(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                OutlinedButton(
-                    onClick = onDelete,
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error
-                    )
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Text(
-                        text = stringResource(R.string.event_preview_delete),
-                        modifier = Modifier.padding(start = 6.dp)
-                    )
+                if (onDelete != null) {
+                    OutlinedButton(
+                        onClick = onDelete,
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error
+                        )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Text(
+                            text = stringResource(R.string.event_preview_delete),
+                            modifier = Modifier.padding(start = 6.dp)
+                        )
+                    }
                 }
                 Button(
                     onClick = onEdit,

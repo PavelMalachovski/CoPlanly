@@ -207,6 +207,42 @@ class HomeViewModel @Inject constructor(
     homeIdentityDependencies: HomeIdentityDependencies
 ) : ViewModel() {
 
+    /** Kept for [openPreview]; the constructor parameter itself feeds the flows below. */
+    private val events: EventRepository = eventRepository
+
+    private val _previewEvent = MutableStateFlow<Event?>(null)
+
+    /**
+     * The event whose preview sheet is open, or null. Home opens an event the way the calendar
+     * does — a read-only preview first, the editor one tap further (UX item 5) — instead of
+     * dropping a parent straight into an edit form for the co-parent's event.
+     */
+    val previewEvent: StateFlow<Event?> = _previewEvent
+
+    /**
+     * Loads [eventId] into [previewEvent]. An event already on the dashboard is taken from there,
+     * because that copy is the expanded *occurrence* — a recurring event read back from Room is
+     * its master, dated to the first occurrence. The activity feed can name events outside the
+     * dashboard's window, and those are read from Room.
+     *
+     * @param onMissing Called when there is no such event on this device, so the caller can fall
+     *   back to the editor route, which reports that case itself.
+     */
+    fun openPreview(eventId: String, onMissing: () -> Unit) {
+        viewModelScope.launch {
+            val dashboard = uiState.value as? HomeUiState.Dashboard
+            val onScreen = dashboard?.today?.events?.firstOrNull { it.id == eventId }
+                ?: dashboard?.week?.firstOrNull { it.event.id == eventId }?.event
+            val event = onScreen ?: runCatching { events.getEventById(eventId) }.getOrNull()
+            if (event == null) onMissing() else _previewEvent.value = event
+        }
+    }
+
+    /** Closes the preview sheet. */
+    fun closePreview() {
+        _previewEvent.value = null
+    }
+
     /** App-wide default currency, used when the month has no expenses to take one from. */
     private val defaultCurrency: StateFlow<SupportedCurrency> =
         monthSpendDependencies.preferencesRepository.getDefaultCurrencyFlow()

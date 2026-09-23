@@ -59,6 +59,8 @@ class HomeViewModelTest {
         val eventRepository = mockk<EventRepository> {
             every { getAllEvents() } returns flowOf(emptyList())
             every { getEventsByDateRange(any(), any()) } returns flowOf(emptyList())
+            coEvery { getEventById("e1") } returns storedEvent
+            coEvery { getEventById("gone") } returns null
         }
         val changeRequestRepository = mockk<ChangeRequestRepository> {
             every { getAllChangeRequests() } returns flowOf(emptyList())
@@ -100,6 +102,18 @@ class HomeViewModelTest {
                 pairingRepository,
                 ParentsSource(userRepository, pairingRepository)
             )
+        )
+    }
+
+    private val storedEvent = java.time.LocalDateTime.of(2026, 9, 1, 9, 0).let { at ->
+        com.coparently.app.domain.model.Event(
+            id = "e1",
+            title = "Dentist",
+            startDateTime = at,
+            eventType = "medical",
+            parentOwner = "mom",
+            createdAt = at,
+            updatedAt = at
         )
     }
 
@@ -186,4 +200,25 @@ class HomeViewModelTest {
             cancelAndIgnoreRemainingEvents()
         }
     }
+
+    @Test
+    fun `a tapped event opens its preview, and a missing one falls back to the editor`() =
+        runTest(dispatcher) {
+            var missing: String? = null
+
+            viewModel.openPreview("e1", onMissing = { missing = "e1" })
+            dispatcher.scheduler.advanceUntilIdle()
+            assertEquals(storedEvent, viewModel.previewEvent.value)
+            assertEquals(null, missing)
+
+            viewModel.closePreview()
+            assertEquals(null, viewModel.previewEvent.value)
+
+            // No such event on this device: the sheet stays shut and the caller is told, so it
+            // can route to the editor as Home did before the preview existed.
+            viewModel.openPreview("gone", onMissing = { missing = "gone" })
+            dispatcher.scheduler.advanceUntilIdle()
+            assertEquals(null, viewModel.previewEvent.value)
+            assertEquals("gone", missing)
+        }
 }
