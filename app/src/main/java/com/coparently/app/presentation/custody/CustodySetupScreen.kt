@@ -34,8 +34,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -51,7 +49,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -73,6 +70,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.domain.model.CustodyModelType
+import com.coparently.app.presentation.common.LocalDatePickerDialog
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.animations.sectionEnter
 import com.coparently.app.presentation.common.animations.sectionExit
@@ -81,9 +79,7 @@ import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.dimensions
 import java.time.DayOfWeek
-import java.time.Instant
 import java.time.LocalDate
-import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.time.format.TextStyle
@@ -551,40 +547,13 @@ fun CustodySetupScreen(
 
     // Date picker dialog
     if (showDatePicker) {
-        // Material3's DatePickerState speaks UTC-midnight millis on both sides; converting
-        // through the system zone shifted the anchor a day early west of Greenwich.
-        val datePickerState = rememberDatePickerState(
-            initialSelectedDateMillis = uiState.startDate
-                .atStartOfDay(ZoneOffset.UTC)
-                .toInstant()
-                .toEpochMilli()
+        LocalDatePickerDialog(
+            initialDate = uiState.startDate,
+            confirmLabel = stringResource(R.string.custody_ok),
+            dismissLabel = stringResource(R.string.custody_cancel),
+            onConfirm = viewModel::setStartDate,
+            onDismiss = { showDatePicker = false }
         )
-
-        DatePickerDialog(
-            onDismissRequest = { showDatePicker = false },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        datePickerState.selectedDateMillis?.let { millis ->
-                            val date = Instant.ofEpochMilli(millis)
-                                .atZone(ZoneOffset.UTC)
-                                .toLocalDate()
-                            viewModel.setStartDate(date)
-                        }
-                        showDatePicker = false
-                    }
-                ) {
-                    Text(stringResource(R.string.custody_ok))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) {
-                    Text(stringResource(R.string.custody_cancel))
-                }
-            }
-        ) {
-            DatePicker(state = datePickerState)
-        }
     }
 }
 

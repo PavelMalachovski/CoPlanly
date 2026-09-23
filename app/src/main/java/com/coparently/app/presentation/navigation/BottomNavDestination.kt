@@ -18,6 +18,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -31,6 +32,12 @@ import com.coparently.app.R
  * it always speaks the real count via [pluralStringResource].
  */
 private const val MAX_BADGE_DISPLAY_COUNT = 99
+
+/**
+ * Test tag on the bottom bar, so an instrumented test can tell "the bar is showing" from "some
+ * text that reads like a tab label is showing" — the labels also appear as titles and on Home.
+ */
+const val BOTTOM_BAR_TEST_TAG = "bottom_nav_bar"
 
 /**
  * Top-level destinations reachable from the bottom navigation bar.
@@ -107,7 +114,7 @@ fun CoPlanlyBottomBar(
     onNavigate: (BottomNavDestination) -> Unit,
     chatUnreadCount: Int = 0
 ) {
-    NavigationBar {
+    NavigationBar(modifier = Modifier.testTag(BOTTOM_BAR_TEST_TAG)) {
         BottomNavDestination.entries.forEach { destination ->
             val selected = currentRoute == destination.route
             NavigationBarItem(

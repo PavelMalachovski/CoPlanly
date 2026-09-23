@@ -1,67 +1,39 @@
 package com.coparently.app.presentation.childinfo.components
 
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import com.coparently.app.R
-import java.time.Instant
+import com.coparently.app.presentation.common.LocalDatePickerDialog
 import java.time.LocalDate
 import java.time.LocalDateTime
-import java.time.ZoneOffset
+import java.time.LocalTime
 
 /**
- * Material3 Date Picker Dialog for selecting child's date of birth.
+ * Material3 date picker dialog shared by the child and pet forms, the profile and onboarding —
+ * dates of birth and vaccinations.
+ *
+ * The millis conversion lives in [LocalDatePickerDialog]: this picker used to convert through the
+ * system zone, which highlighted the previous day east of Greenwich (all of Central Europe) and
+ * saved the previous day west of it (`docs/AUDIT-2026-09.md` §1 item 3).
  *
  * @param onDateSelected Callback when date is selected
  * @param onDismiss Callback when dialog is dismissed
  * @param initialDate Initial date to show in picker
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DatePickerDialog(
     onDateSelected: (LocalDateTime) -> Unit,
     onDismiss: () -> Unit,
     initialDate: LocalDateTime? = null
 ) {
-    // Material3's DatePickerState speaks UTC-midnight millis on both sides. Converting through
-    // the system zone highlighted the previous day east of Greenwich (all of Central Europe) and
-    // saved the previous day west of it — the bug CustodySetupScreen had already fixed.
-    val datePickerState = rememberDatePickerState(
-        initialSelectedDateMillis = (initialDate?.toLocalDate() ?: LocalDate.now())
-            .atStartOfDay(ZoneOffset.UTC)
-            .toInstant()
-            .toEpochMilli()
-    )
-
-    DatePickerDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    datePickerState.selectedDateMillis?.let { millis ->
-                        val selectedDate = Instant.ofEpochMilli(millis)
-                            .atZone(ZoneOffset.UTC)
-                            .toLocalDate()
-                        // Keep the time of day the caller already had (usually midnight).
-                        val time = initialDate?.toLocalTime() ?: java.time.LocalTime.MIDNIGHT
-                        onDateSelected(LocalDateTime.of(selectedDate, time))
-                    }
-                    onDismiss()
-                }
-            ) {
-                Text(stringResource(R.string.childinfo_ok))
-            }
+    LocalDatePickerDialog(
+        initialDate = initialDate?.toLocalDate() ?: LocalDate.now(),
+        confirmLabel = stringResource(R.string.childinfo_ok),
+        dismissLabel = stringResource(R.string.childinfo_cancel),
+        onConfirm = { selectedDate ->
+            // Keep the time of day the caller already had (usually midnight).
+            onDateSelected(LocalDateTime.of(selectedDate, initialDate?.toLocalTime() ?: LocalTime.MIDNIGHT))
         },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.childinfo_cancel))
-            }
-        }
-    ) {
-        DatePicker(
-            state = datePickerState,
-            showModeToggle = true
-        )
-    }
+        onDismiss = onDismiss
+    )
 }
-

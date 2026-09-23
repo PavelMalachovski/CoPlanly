@@ -16,8 +16,6 @@ import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.TableChart
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -27,9 +25,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -49,13 +45,12 @@ import com.coparently.app.domain.export.RecordActions
 import com.coparently.app.domain.export.RecordColumns
 import com.coparently.app.domain.export.RecordLabels
 import com.coparently.app.presentation.common.GroupLabel
+import com.coparently.app.presentation.common.LocalDatePickerDialog
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.asString
-import java.time.Instant
 import java.time.LocalDate
-import java.time.ZoneOffset
 
 /**
  * Exporting the communication record (MON-3): a period, and a CSV or a PDF of it.
@@ -220,35 +215,16 @@ private fun ExportRow(format: ExportFormat, working: ExportFormat?, onClick: () 
     )
 }
 
-/** A date picker for one end of the range; the picker speaks UTC-midnight millis. */
-@OptIn(ExperimentalMaterial3Api::class)
+/** A date picker for one end of the range; see [LocalDatePickerDialog] for the millis it speaks. */
 @Composable
 private fun RangeDatePicker(initial: LocalDate, onPicked: (LocalDate) -> Unit, onDismiss: () -> Unit) {
-    val pickerState = rememberDatePickerState(
-        initialSelectedDateMillis = initial.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+    LocalDatePickerDialog(
+        initialDate = initial,
+        confirmLabel = stringResource(R.string.export_pick_ok),
+        dismissLabel = stringResource(R.string.export_pick_cancel),
+        onConfirm = onPicked,
+        onDismiss = onDismiss
     )
-    DatePickerDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    // `atZone`, not `LocalDate.ofInstant`, which is API 34 (minSdk is 26).
-                    pickerState.selectedDateMillis?.let { millis ->
-                        onPicked(Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate())
-                    } ?: onDismiss()
-                }
-            ) {
-                Text(stringResource(R.string.export_pick_ok))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.export_pick_cancel))
-            }
-        }
-    ) {
-        DatePicker(state = pickerState)
-    }
 }
 
 /** Every word the exported file prints, in the reader's language. */
@@ -301,18 +277,22 @@ private fun rememberRecordLabels(): RecordLabels = RecordLabels(
     page = stringResource(R.string.export_record_page)
 )
 
+/** Hands [file] to the share sheet, through [recordShareIntent]. */
+private fun share(context: Context, file: ExportedFile, title: String) {
+    context.startActivity(Intent.createChooser(recordShareIntent(file), title))
+}
+
 /**
- * Hands [file] to the share sheet with a one-off read grant, and to nothing else.
+ * The `ACTION_SEND` intent an exported record is shared with: the file's `FileProvider` URI and a
+ * one-off read grant, and nothing else.
  *
  * The grant is on the intent *and* its `ClipData`, because some targets read the URI from the clip
- * and the chooser only forwards the grant it can see there.
+ * and the chooser only forwards the grant it can see there. Public so the instrumented export test
+ * can check the intent the share sheet receives without driving the chooser.
  */
-private fun share(context: Context, file: ExportedFile, title: String) {
-    val send = Intent(Intent.ACTION_SEND).apply {
-        type = file.mimeType
-        putExtra(Intent.EXTRA_STREAM, file.uri)
-        clipData = ClipData.newRawUri(null, file.uri)
-        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-    }
-    context.startActivity(Intent.createChooser(send, title))
+fun recordShareIntent(file: ExportedFile): Intent = Intent(Intent.ACTION_SEND).apply {
+    type = file.mimeType
+    putExtra(Intent.EXTRA_STREAM, file.uri)
+    clipData = ClipData.newRawUri(null, file.uri)
+    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
 }
