@@ -239,8 +239,14 @@ cd firestore-tests && npm test              # firestore.rules + storage.rules on
   red build green; fix the finding, or regenerate the baseline through the Regenerate workflow so
   that accepting debt is a visible commit. The **`instrumented` job** closes **CQ-1** as far as it
   can be closed, and the shape of "as far as" matters. `reactivecircus/android-emulator-runner`
-  with the KVM udev rule boots API 30 and runs `connectedDebugAndroidTest`; the first attempt
-  failed for two unrelated reasons, both older than the job and neither previously observed.
+  with the KVM udev rule runs `connectedDebugAndroidTest` as a **matrix of three emulators**
+  (`fail-fast: false`, AVD cached per level): **API 26** (minSdk, 32-bit x86 — a newer-API call
+  only throws on an old device, and it is a second ABI for SQLCipher's native library), **API 30**
+  (where the job was first made green), and **API 35 on `google_apis_ps16k`** (16 KB memory pages,
+  which Play requires; a misaligned `.so` fails `System.loadLibrary` there). One caveat on 26:
+  mockk mocks *final* classes only on API 28+, so if a Firebase type `FakeFirebaseModule` mocks is
+  final, the Hilt UI tests fail on that leg alone — replace that mock with an open fake, do not
+  drop the leg. When the job ran at API 30 alone, its first attempt failed for two unrelated reasons, both older than the job and neither previously observed.
   **(1) Firebase.** `AuthScreenTest` and `SettingsScreenTest` start the real `MainActivity`,
   whose Hilt graph reaches `FirebaseModule.provideFirebaseMessaging` →
   `FirebaseMessaging.getInstance()`, and CI has no `google-services.json` (it is gitignored), so
@@ -252,7 +258,14 @@ cd firestore-tests && npm test              # firestore.rules + storage.rules on
   Google Services and Crashlytics plugins apply only when that file is present, so adding one
   changes what every Android job builds in order to fix something that belongs to the tests.
   Room is deliberately left real, which is what makes this the first thing anywhere to execute
-  the SEC-2 SQLCipher open path rather than merely compile it.
+  the SEC-2 SQLCipher open path rather than merely compile it. **`EncryptedDatabaseTest`** goes
+  further (September 2026): it builds every on-disk state `SqlCipherMigration` names — fresh
+  install, plaintext upgrade with and without a stored passphrase, a stale export beside the
+  original, an export whose rename never happened, a leftover beside an encrypted file, a lost
+  passphrase — and opens each through `buildCoPlanlyDatabase`, the builder `DatabaseModule`
+  itself calls, under a database name of its own. It snapshots and restores `DatabaseKey`'s
+  preferences around each case, because that store has one fixed name the UI tests' real
+  database also depends on; keep that if you add a case that forgets or mints a passphrase.
   **(2) Missing schemas.** `CoPlanlyDatabaseMigrationTest` held 14 test methods when the job
   was added, and only the six covering 11→12, 12→13 and 13→14 could run. The other eight name
   14→15 through 24→25 and need `15.json`–`24.json`, which do not exist and cannot be
@@ -656,8 +669,11 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     **field-level encryption is not the smaller version of this**: `child_info` syncs and the key is
     device-bound, so an encrypted field arrives at the co-parent's phone as ciphertext their
     Keystore cannot open — `SensitiveMedicalData` was deleted for saying otherwise. The SQLCipher
-    calls have **never run**: there is no instrumented job (CQ-1) and no Android SDK in the sessions
-    that wrote them, so the first launch on a device holding real data is an acceptance step.
+    calls **run in CI on emulators** (API 26, 30 and 35 with 16 KB pages): `EncryptedDatabaseTest`
+    drives every state `SqlCipherMigration` names through the production builder. What that cannot
+    prove is an upgrade over a database an *older build* wrote, under a phone's hardware-backed
+    Keystore, so the first launch on a device holding real data is still an acceptance step
+    (`docs/DEVICE-CHECKLIST.md` §2.1).
 21. **A parenting plan is two halves and a derived agreement, and neither half may write the
     other** (MON-5, Aug 2026, schema 34). `parenting_plans/{familyId}` holds `answers`,
     `agreedTo`, `catalogueVersions` and `updatedAt` as maps keyed by uid, and `firestore.rules`

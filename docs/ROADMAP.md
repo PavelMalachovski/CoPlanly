@@ -97,9 +97,9 @@ invocation is yours.
 
 ### ⚙️ Cloud, but a CI job has to be built first
 
-| Id | What | Why it needs a job |
-| --- | --- | --- |
-| **CQ-1** | An instrumented job for migration tests — the schema export and the guard against a new gap are done | Running a migration test needs an Android emulator that no workflow starts. Worth adding at v34, when there is a second schema to migrate between. |
+*Empty.* **CQ-1**, the only item that stood here, has its job (September 2026): the
+`instrumented` job runs every migration test that has schemas, plus SEC-2's
+`EncryptedDatabaseTest`, on API 26 (minSdk), 30 and 35 with 16 KB pages.
 
 ### 👁 Cloud writes it, only a device or a console can say whether it is right
 
@@ -525,12 +525,21 @@ invitation.
   launch — deliberately, because crashing makes the app unusable and wiping trades data the user
   has for a property they did not have a moment ago.
 
-**The caveat, restated (September 2026): the SQLCipher *open* path has now run** — the
-`instrumented` CI job keeps Room real and passed on `main` on 2026-09-01 — but the export, the
-verification and the swap of an existing plaintext file have not: the emulator starts from an
-empty database, so the conversion is still exercised nowhere. Nothing is published,
-so no install but the developer's own is at stake — but *the first launch on a device that already
-has data is an acceptance step somebody has to perform*, and it belongs in **REL-7**'s list. What to
+**The caveat, restated (September 2026): the conversion now runs in CI, and a phone is still the
+acceptance step.** The `instrumented` job keeps Room real and passed on `main` on 2026-09-01, and
+since then `EncryptedDatabaseTest` builds every on-disk state `SqlCipherMigration` names — fresh
+install, plaintext upgrade with and without a stored passphrase, a stale export beside the
+original, an export whose rename never happened, a leftover beside an encrypted file, a lost
+passphrase — and opens each through `buildCoPlanlyDatabase`, the builder `DatabaseModule` calls,
+on three emulators: API 26 (minSdk, 32-bit x86), 30, and 35 with 16 KB memory pages. Each case
+checks the rows, the schema version, that the file is ciphertext by its own header *and* by the
+platform's SQLite refusing it, and that no export or sidecar is left; a last case checks that the
+passphrase is stable across recoveries and on disk the moment `mint` returns. What the emulators
+cannot stand in for: a database written by an **older build** and taken through the migration
+chain in the same launch, a **hardware-backed** Keystore, and a reboot between launches. Nothing is
+published, so no install but the developer's own is at stake — but *the first launch on a device
+that already has data is an acceptance step somebody has to perform*: `docs/DEVICE-CHECKLIST.md`
+§2.1, and **REL-7**'s list. What to
 watch for: the app opens, the calendar and chat are still there, and
 `adb shell run-as app.coplanly` shows the database file no longer starting with `SQLite format 3`.
 
@@ -647,7 +656,8 @@ that looks complete. The consequence is stated rather than hidden: those ninetee
 **SEC-4**'s timestamp conversion and **FAM-2**'s dead `childId` columns, stay unprovable.
 
 **Left:** nothing on the CI side — the `instrumented` job exists (September 2026) and runs the
-six migration tests that have schemas plus 33→34; the eight tests for the missing schemas stay
+six migration tests that have schemas plus 33→34, 34→35 and 35→36, as a matrix over API 26
+(minSdk), 30 and 35 with 16 KB pages, beside SEC-2's `EncryptedDatabaseTest`; the eight tests for the missing schemas stay
 `@Ignore`d, as `CLAUDE.md` explains, until somebody restores a schema. The old **CQ-2** id, the
 untested migrations that shipped in `versionCode 2`, is folded in here and dies with the same
 reasoning.
