@@ -355,11 +355,10 @@ class SettingsViewModel @Inject constructor(
                 // Get current user
                 val currentUser = userRepository.getCurrentUser()
 
-                // Get FCM token status
-                val fcmToken = fcmService.getCurrentToken()
-
                 _settingsState.value = _settingsState.value.copy(
-                    notificationsEnabled = fcmToken != null,
+                    // The stored choice, not "a token exists": a token nearly always exists, so
+                    // the switch read on even for somebody who had turned it off.
+                    notificationsEnabled = fcmService.isPushEnabled(),
                     userEmail = currentUser?.email,
                     userName = currentUser?.name,
                     partnerId = currentUser?.partnerId,
@@ -385,16 +384,10 @@ class SettingsViewModel @Inject constructor(
             )
 
             try {
-                if (enabled) {
-                    // Get and register FCM token
-                    val token = fcmService.getCurrentToken()
-                        ?: throw IOException("Failed to get FCM token")
-
-                    fcmService.updateUserToken(token).getOrThrow()
-                } else {
-                    // Optionally clear token or unsubscribe from topics
-                    // For now, just update UI state
-                }
+                // Off used to change the switch and nothing else: the token stayed on the
+                // profile and every push kept arriving. `setPushEnabled` stores the choice and
+                // detaches or re-attaches this device's token.
+                fcmService.setPushEnabled(enabled).getOrElse { throw IOException(it) }
 
                 analyticsManager.logNotificationsToggled(enabled)
                 _settingsState.value = _settingsState.value.copy(
@@ -431,10 +424,7 @@ class SettingsViewModel @Inject constructor(
             _operationState.value = UiState.Loading("Requesting permission...")
 
             try {
-                val token = fcmService.getCurrentToken()
-                    ?: throw IOException("Failed to get notification token")
-
-                fcmService.updateUserToken(token).getOrThrow()
+                fcmService.setPushEnabled(true).getOrElse { throw IOException(it) }
 
                 _settingsState.value = _settingsState.value.copy(
                     notificationsEnabled = true,

@@ -102,6 +102,7 @@ import com.coparently.app.presentation.common.PillChip
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.SignedInAsRow
+import com.coparently.app.presentation.common.UiState
 import com.coparently.app.presentation.common.labelRes
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.consent.TelemetryConsentViewModel
@@ -281,6 +282,18 @@ fun SettingsScreen(
     LaunchedEffect(settingsUiState.errorMessage) {
         if (settingsUiState.errorMessage != null) {
             snackbarHostState.showSnackbar(deletionFailed)
+            settingsViewModel.clearMessages()
+        }
+    }
+
+    // Every other failure here — the push switch, loading the screen — lands in
+    // `operationState`, which nothing used to collect, so it failed without a word. It gets its
+    // own wording: the deletion snackbar above names an account that is still there.
+    val operationState by settingsViewModel.operationState.collectAsState()
+    val operationFailed = stringResource(R.string.settings_operation_failed)
+    LaunchedEffect(operationState) {
+        if (operationState is UiState.Error) {
+            snackbarHostState.showSnackbar(operationFailed)
             settingsViewModel.clearMessages()
         }
     }

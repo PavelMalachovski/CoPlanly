@@ -78,4 +78,5 @@
     <string name="settings_school_import_title">Import aus Bakaláři und EduPage</string>
     <string name="settings_school_import_description">Der Stundenplan Ihres Kindes direkt in den Kalender. Diese Funktion gibt es noch nicht.</string>
     <string name="settings_school_import_planned">Geplant</string>
+    <string name="settings_operation_failed">Das hat nicht geklappt. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.</string>
 </resources>

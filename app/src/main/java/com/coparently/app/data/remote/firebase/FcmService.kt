@@ -1,5 +1,7 @@
 package com.coparently.app.data.remote.firebase
 
+import com.coparently.app.data.local.preferences.EncryptedPreferences
+import com.coparently.app.data.local.preferences.PreferenceKeys
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.messaging.FirebaseMessaging
 import com.google.gson.Gson
@@ -15,9 +17,34 @@ import javax.inject.Singleton
 class FcmService @Inject constructor(
     private val firebaseMessaging: FirebaseMessaging,
     private val firestore: FirebaseFirestore,
-    private val firebaseAuthService: FirebaseAuthService
+    private val firebaseAuthService: FirebaseAuthService,
+    private val encryptedPreferences: EncryptedPreferences
 ) {
     private val gson = Gson()
+
+    /** Whether this person has left push notifications on. On unless they switched it off. */
+    fun isPushEnabled(): Boolean =
+        encryptedPreferences.getString(PreferenceKeys.PUSH_ENABLED, null) != false.toString()
+
+    /**
+     * Records the Settings switch and makes it true on the server: off detaches this device's
+     * token (see [unregisterToken]) so the co-parent's pushes stop arriving, on registers it
+     * again. [updateUserToken] refuses to register while it is off, which is what keeps app start
+     * and a token refresh from quietly undoing the choice.
+     *
+     * @return failure when turning it on could not register a token; turning it off is
+     *   best-effort, like sign-out, and always succeeds locally.
+     */
+    suspend fun setPushEnabled(enabled: Boolean): Result<Unit> {
+        encryptedPreferences.putString(PreferenceKeys.PUSH_ENABLED, enabled.toString())
+        if (!enabled) {
+            unregisterToken()
+            return Result.success(Unit)
+        }
+        val token = getCurrentToken()
+            ?: return Result.failure(IllegalStateException("No FCM token available"))
+        return updateUserToken(token)
+    }
 
     /**
      * Gets the current FCM token.
@@ -38,6 +65,8 @@ class FcmService @Inject constructor(
      * @param token The FCM token to save
      */
     suspend fun updateUserToken(token: String): Result<Unit> {
+        // Switched off in Settings: nothing re-attaches this device behind the person's back.
+        if (!isPushEnabled()) return Result.success(Unit)
         return try {
             val currentUser = firebaseAuthService.getCurrentUser() ?: return Result.failure(
                 IllegalStateException("User not authenticated")

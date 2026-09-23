@@ -78,4 +78,5 @@
     <string name="settings_school_import_title">Импорт из Bakaláři и EduPage</string>
     <string name="settings_school_import_description">Школьное расписание ребёнка прямо в календарь. Пока не сделано.</string>
     <string name="settings_school_import_planned">В планах</string>
+    <string name="settings_operation_failed">Не получилось. Проверьте подключение и попробуйте ещё раз.</string>
 </resources>
