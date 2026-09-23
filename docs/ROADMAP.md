@@ -70,8 +70,8 @@ invocation is yours.
 | **M-8** | M-4's last leftover: badges across families — and chat still follows the *first* co-parent, not the selected family (the chip and `familyId` on pushes are done) | P2 | M |
 | **CQ-17** | Six dependencies worth moving | P3 | S |
 | **MON-2** | Verify the market facts — most of them are public pages | P0 | S |
-| **MON-3** | Export to PDF/CSV — the first paid feature (needs MON-4 first) | P1 | M |
-| **MON-4** | The paper is written; three answers are owed by the owner, and MON-3 waits on them | P1 | S |
+| **MON-3** | The export ships, ungated; left: a PDF read on a device, and the paywall with MON-11 | P2 | S |
+| **MON-4** | Decided and built; left: `Event.updatedAt` to epoch millis (answer 3's last compared field) | P1 | M |
 | **MON-5** | The plan ships; swapping in the Ministry's own wording needs the form itself | P1 | S |
 | **MON-6b** | Contact windows ship (schema 36); left: Home's today card, and verifying the mixed-version path on two phones | P2 | S |
 | **MON-8** | Bakaláři / EduPage school import — the parsing, once you supply a real export | P2 | L |
@@ -96,6 +96,7 @@ invocation is yours.
 | **UX-8** | The second half: two surfaces colour a chip from two different sources | An owner's answer to "what does a chip's colour mean" — the event's owner, or whose day it falls on. |
 | **UX-13** | Light theme is unverifiable rather than incomplete — the cloud half is done (night window background, light+dark previews on the main screens' pieces) | Whether a dark cold start still flashes: only a device shows the window before Compose's first frame. |
 | **FAM-5** | The event chip does not say who it is about | Chips are single-line with ellipsis and every colour channel is spent. Worth an owner's eye on a real device rather than a treatment invented blind. |
+| **MON-3 (shipped, unseen)** | The PDF export and the share sheet | `PdfDocument` drawing, Cyrillic and Czech glyphs in the default typeface, page breaks, and whether the share sheet hands the file to a mail app — the layout is unit-tested, the drawing is not. |
 | **M-4 (shipped, unseen)** | The colour palette, the family switcher, the second-co-parent invite | Kotlin compiled in CI; nobody has looked at it. |
 
 ### 💻 Yours only — no session can do these
@@ -103,6 +104,7 @@ invocation is yours.
 | Id | What | Note |
 | --- | --- | --- |
 | **REL-3 ops** | `firebase deploy --only functions` → invoke `backfillFamilyDocuments` → invoke `backfillRecordFamilyIds` → `firebase deploy --only firestore:rules` | **The order matters.** PR #76's isolation is inert until this runs, and running the rules deploy before the record backfill leaves each co-parent's expenses looking empty on the other phone. `functions/README.md` has the runbook. |
+| **MON-4 deploy** | `firebase deploy --only firestore:rules` (the `event_versions` block) and `firebase deploy --only functions` (account deletion reaches revisions); trigger the Regenerate workflow for `37.json` | Until the rules are deployed every revision upload is refused and stays queued on the phone — nothing is lost, but nothing is recorded server-side either. The schema export is the one artefact only a machine with an Android SDK can produce; CI's schema guard fails until it is committed. Fold the rules deploy into REL-3's order: after the record backfill, like every rules deploy. |
 | **REL-3 storage** | `firebase deploy --only storage` | One command that fixes a live bug: every pet and medical photo upload is refused today because the bucket still runs the July rules. |
 | **REL-1** | Firebase console, Google Cloud console, a fresh `google-services.json`, the debug and release SHA-1 | A local build fails until this is done — deliberately, since `applicationId` changed to `app.coplanly`. |
 | **REL-2** | Generate the release keystore and back it up in two places | The single most irreversible item in this document. |
@@ -119,11 +121,12 @@ invocation is yours.
 
 In this order, and each is genuinely finishable in the cloud:
 
-1. **MON-3** — the export, and the first thing anybody would pay for. It is **blocked on three
-   lines of `docs/DESIGN-court-record.md` §9 that only the owner can write**: an export of a record
-   nobody can vouch for is worth nothing to a lawyer. Fill the form in and this is a cloud task.
-   The parenting plan is now one of the things worth exporting.
-*(Everything that headed this list — **M-6**, **CQ-19**, **CQ-12**, **CQ-1**'s bleeding half,
+1. **MON-4's last item** — `Event.updatedAt` to epoch millis, the one compared field answer 3
+   still reaches. Read `domain/custody/CustodyTimestamp.kt` first; the wire form keeps its name and
+   type.
+2. **MON-3's next slice** — the parenting plan is the other document worth exporting, and it is
+   not in the record yet.
+*(Everything that headed this list — **MON-4** and **MON-3**'s first version, **M-6**, **CQ-19**, **CQ-12**, **CQ-1**'s bleeding half,
 **CQ-5**, **CQ-6 + CQ-8**, **SEC-2**, the three honesty gaps **CQ-20**, **UX-17**, **UX-18**, and
 **UX-15**, which un-hid the colour picker, the **MON-13** holiday tables, and **CQ-13**'s ViewModel
 tests — is done. **SEC-2**
@@ -174,7 +177,7 @@ one of them should probably not be built at all.
 | --- | --- | --- | --- | --- |
 | Import (Bakaláři / EduPage) | From a PDF export, broken into events | XL | Low | **MON-8, P2 · L.** Mispriced at Low: every Czech parent's school schedule lives in one of those two systems, it solves cold-start, and no US competitor will build it. Document understanding makes XL smaller than when the line was written |
 | Payments | Clear | XL | Low | **MON-11, P2 · L.** Gated on MON-1's pricing decision — and **Onward closed on 8 October 2024** built entirely on expense splitting and payments. Expense reimbursement does not carry a product on its own |
-| Exports to PDF/CSV | Summary / punctuality. CSV preferred | M | Low | **MON-3, P1 · M.** Backwards at Low: this is the **first paid feature**. Willingness to pay concentrates on documentation you can hand to a lawyer. Blocked on **MON-4** |
+| Exports to PDF/CSV | Summary / punctuality. CSV preferred | M | Low | **MON-3, shipped (ungated).** Backwards at Low: this is the **first paid feature**. Willingness to pay concentrates on documentation you can hand to a lawyer. Built after **MON-4** was decided; the paywall waits on MON-1 and MON-11 |
 | Intelligent suggestions | Based on past schedules | M-L | Low | **MON-12, P3 · M.** Only behind SEC-1's proxy — the AI subsystem was deleted with its key (MON-7), and it comes back as *one* feature, never eight |
 | Time setting by dragging | Whole event by 15 min, corners by the minute | S | Low | **UX-16, done.** Move by 15 minutes and resize were already in `DayWeekView`; the corners now move by the minute. Needs a thumb to judge |
 
@@ -1219,18 +1222,39 @@ publish. In order of how much each answer moves the plan (audit §10.7):
 6. Current single-parent household numbers — the figure found (~175,700) is from 2015.
 7. Czech Facebook groups: closed groups are not indexed and need manual search. *(yours)*
 
-### MON-3 · P1 · M · Export to PDF/CSV — the first paid feature
+### MON-3 · **SHIPPED, UNGATED** · P1 · M · Export to PDF/CSV — the first paid feature
 
-**Where:** ☁️ cloud. Blocked on **MON-4**, and that order is not negotiable.
+**Where:** ☁️ built in the cloud after MON-4 was decided; 👁 the PDF has to be looked at on a device.
 
-Nothing in the app produces CSV or PDF. MVP 3 listed exports at **Low**; for a paid tier that is
-backwards. Willingness to pay concentrates on **documentation you can hand to a lawyer or a court**:
-an immutable log of who changed what and when, handover punctuality, an expense ledger with
-receipts.
+Willingness to pay concentrates on **documentation you can hand to a lawyer or a court**: an
+immutable log of who changed what and when, handover punctuality, an expense ledger with receipts.
+Audit §7.2.
 
-CoPlanly already *records* all three — the activity feed, `ChangeRequest`, `HandoverCalculator`,
-expenses with per-currency balances and receipt photos. The data exists. What is missing is the one
-step that turns a nice app into something a parent pays for in the month they need it. Audit §7.2.
+**What ships.** Settings → Family → *Export the record*: a period, then a CSV or an A4 PDF, made on
+the phone with no network (`android.graphics.pdf.PdfDocument`, no new dependency) and handed to the
+share sheet through the existing `FileProvider`. It holds every saved revision of every calendar
+entry that touches the period — its whole history, with the device time and the server's
+`recordedAt`, both labelled — the chat thread, and the expenses. It says on its face what the owner
+decided it is: *a record of what the parents recorded and wrote, not of what happened*. CLAUDE.md
+item 26 has the invariants; `domain/export` is pure Kotlin and unit-tested, down to RFC 4180 and the
+formula-injection guard.
+
+**Ungated, on purpose.** MON-1 has not set a price, so there is no entitlement to check, and a
+flag standing in for one would be the kind of gate this project has learned not to trust (REL-5).
+**The paywall arrives with MON-11's entitlement layer**, and the export is the first thing it gates.
+Until then the feature is free, which is also the honest way to learn whether anyone uses it.
+
+**Not in this version, and worth doing next:**
+
+- **The parenting plan (MON-5)** — the other document two parents hand to a court.
+- **Handover punctuality** — `HandoverCalculator` knows the schedule; nothing records whether a
+  handover happened, and inventing it would break the record's own claim. Needs a product decision
+  about what "on time" is recorded as, and by whom.
+- **Receipt photos** — the expense rows carry no image. Embedding them makes the PDF large and puts
+  a third party's document in a file meant for a court; a link that only the pair can open is the
+  likelier shape.
+- **Change requests** — their before-image is already stored (design §2) and would read well beside
+  the revision it led to.
 
 ### MON-4 · **DECIDED 2026-09-23** · P1 · M · Decide what a court-facing record guarantees — **prerequisite for MON-3**
 
@@ -1423,6 +1447,12 @@ Two different things travel under this word in the MVP plan, and they should not
 - **Parent-to-parent reimbursement** — actually moving money between two parents. **Onward closed on
   8 October 2024** built entirely on this. The balance is already computed per currency; the honest
   first version is an export and a payment link, not a payment rail.
+
+**The first thing the entitlement layer gates is MON-3's export**, which ships ungated until then
+(September 2026). Decide with MON-1 whether an export already made keeps working after a
+subscription lapses — it should: the file is the parent's, and a record that vanished on
+non-payment is the opposite of what it sells — and gate the *making* of a new one, in
+`ExportViewModel.export`, behind a server-checked entitlement rather than a client flag.
 
 ### MON-12 · P3 · M · Intelligent suggestions (MVP 3)
 
@@ -1691,7 +1721,9 @@ Not a wish-list ordering — a dependency ordering. Each block assumes the one a
 
 1. **REL-3's ops sequence** — deploy functions, run the two backfills, deploy the rules. Everything
    from both audits *and* all of PR #76 is inert until this runs, and one of the fixes closes a live
-   full-calendar disclosure.
+   full-calendar disclosure. The same rules deploy carries MON-4's `event_versions` block; until it
+   lands, every event revision waits on the phone that saved it. Trigger the Regenerate workflow
+   for `app/schemas/.../37.json` on the same day — CI's schema guard is red until it is committed.
 2. **REL-3's storage deploy** — one command; without it every pet and medical photo upload is
    refused on a live device today.
 3. **REL-1's console half** — a local build fails until it is done.
@@ -1716,12 +1748,14 @@ Not a wish-list ordering — a dependency ordering. Each block assumes the one a
 
 **Then the product bets, in descending confidence**
 
-10. **MON-4 then MON-3** — settle what the record guarantees, then sell the export. Not negotiable:
-    an export of a record nobody can vouch for is worth nothing to a lawyer.
+10. ~~**MON-4 then MON-3**~~ — **done in that order** (September 2026): the owner decided what the
+    record guarantees, events became versioned, and the export shipped ungated. Left: MON-4's
+    `Event.updatedAt` migration, and the deploy in §1 ("MON-4 deploy").
 11. **MON-5** — the Rodičovský plán. The cheapest local moat and the reason a mediator recommends
     you.
 12. **MON-1** then **MON-11** — decide the price before writing the entitlement layer, and decide
-    what a subscription means now that a person can have two families.
+    what a subscription means now that a person can have two families. MON-3's export is the first
+    thing it gates.
 13. **MON-8** — the school import.
 
 **Structural, whenever it fits**
