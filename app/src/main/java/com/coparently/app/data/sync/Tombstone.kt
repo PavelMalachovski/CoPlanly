@@ -23,9 +23,9 @@ package com.coparently.app.data.sync
  *
  * [DELETED_AT_MILLIS] is epoch millis, the same decision as `Message.sentAtMillis`: two parents
  * can be in different time zones, and this value crosses between their phones. The events
- * schema's own `updatedAt` is a naive `LocalDateTime` with the ordering defect SEC-4 describes,
- * so nothing here is decided by comparing it — see [com.coparently.app.data.sync.SyncService]
- * for the rule that replaces it.
+ * schema's own `updatedAt` expresses an instant since MON-4 (`EventTimestamp`), but an older
+ * build still writes its own wall clock there, so nothing here is decided by comparing it — see
+ * [com.coparently.app.data.sync.SyncService] for the rule that replaces it.
  *
  * The field name matches `expiresAtMillis` in the guest grants, which is the existing
  * convention in `firestore.rules` for a wire-format epoch.

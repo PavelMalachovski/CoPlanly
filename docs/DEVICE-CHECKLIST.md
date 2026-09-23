@@ -681,6 +681,13 @@ Preconditions: A is paired with **both** B and C (two families). Invite C from S
 - [ ] MON-6b with mixed versions (§3.5).
 - [ ] REL-7 on both phones (§4.1).
 - [ ] The push opt-out end to end (§3.7).
+- [ ] MON-4's event time (schema 39) with **one phone on the previous build**: events the
+      upgraded phone creates or edits still arrive on the older one, and the older phone's
+      still arrive on the upgraded one — `events.updatedAt` stays offset-free text both can
+      parse. A missing event here means the wire form broke; tags `SyncService`,
+      `EventRepository`. The conflict rule itself (`ConflictResolverTest`, two zones) is hard to
+      reach by hand: the sync uploads a phone's own edits before it downloads, so it only
+      decides when an upload failed and the download that follows succeeded.
 
 ### 5.4 Professional access (MON-18) · 3A, 2P or 1P fallback
 

@@ -6,6 +6,7 @@ import com.coparently.app.data.local.entity.EventEntity
 import com.coparently.app.data.remote.google.CredentialProvider
 import com.coparently.app.data.remote.google.CredentialProviderImpl
 import com.coparently.app.data.remote.google.GoogleCalendarApi
+import com.coparently.app.domain.events.EventTimestamp
 import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.repository.UserRepository
@@ -163,6 +164,7 @@ class CalendarSyncRepository @Inject constructor(
         val endDateTime = end?.dateTime?.value?.let { epochMillisToLocal(it) }
             ?: end?.date?.value?.let { utcMillisToLocalDate(it) }
 
+        val importedAtMillis = System.currentTimeMillis()
         return EventEntity(
             id = id ?: java.util.UUID.randomUUID().toString(),
             title = summary ?: "Untitled Event",
@@ -174,7 +176,8 @@ class CalendarSyncRepository @Inject constructor(
             isRecurring = recurrence != null,
             recurrencePattern = recurrence?.firstOrNull()?.toString(),
             createdAt = LocalDateTime.now(),
-            updatedAt = LocalDateTime.now(),
+            updatedAt = EventTimestamp.toWallClock(importedAtMillis),
+            updatedAtMillis = importedAtMillis,
             createdByFirebaseUid = ownerUid,
             familyId = ownerFamilyId,
             // An import is **private**: it stays on the device that pulled it and never

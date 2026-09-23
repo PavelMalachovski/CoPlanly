@@ -1,6 +1,7 @@
 package com.coparently.app.data.sync
 
 import com.coparently.app.data.local.entity.EventEntity
+import com.coparently.app.domain.events.EventTimestamp
 import com.coparently.app.domain.family.FamilyMemberRef
 import com.google.gson.Gson
 import java.time.LocalDate
@@ -30,8 +31,15 @@ internal object EventDocument {
      *
      * @param data The raw document.
      */
+    fun toEntity(data: Map<String, Any?>): EventEntity = toEntity(
+        data = data,
+        // Read as UTC — what an upgraded build writes — and a legacy naive value the same way,
+        // which is wrong by its writer's offset and cannot be otherwise (see `EventTimestamp`).
+        updatedAtMillis = EventTimestamp.fromWire(data["updatedAt"] as String)
+    )
+
     @Suppress("UNCHECKED_CAST")
-    fun toEntity(data: Map<String, Any?>): EventEntity = EventEntity(
+    private fun toEntity(data: Map<String, Any?>, updatedAtMillis: Long): EventEntity = EventEntity(
         id = data["id"] as String,
         title = data["title"] as String,
         description = data["description"] as? String,
@@ -51,7 +59,10 @@ internal object EventDocument {
         pickupConfirmedAt = (data["pickupConfirmedAt"] as? String)?.ifBlank { null }
             ?.let { LocalDateTime.parse(it, formatter) },
         createdAt = LocalDateTime.parse(data["createdAt"] as String, formatter),
-        updatedAt = LocalDateTime.parse(data["updatedAt"] as String, formatter),
+        // The wall clock shown on this phone is the instant in this phone's zone, not the
+        // writer's: the wire value no longer names the writer's wall clock at all.
+        updatedAt = EventTimestamp.toWallClock(updatedAtMillis),
+        updatedAtMillis = updatedAtMillis,
         syncedToFirestore = true,
         createdByFirebaseUid = data["createdByFirebaseUid"] as? String,
         sharedWithJson = gson.toJson(data["sharedWith"] ?: emptyList<String>()),

@@ -263,10 +263,9 @@ interface EventDao {
      * re-dating the first one. Two deletes of the same event are not hypothetical — a failed
      * upload leaves the row in place, visible to nothing, and the sync retries it.
      *
-     * `updatedAt` is deliberately **not** bumped. It is a naive `LocalDateTime` with the
-     * cross-time-zone ordering defect SEC-4 describes, and nothing about a deletion is decided
-     * by comparing it: see `SyncService.syncEvents`, where a tombstone wins outright rather
-     * than by timestamp.
+     * `updatedAt`/`updatedAtMillis` are deliberately **not** bumped. Nothing about a deletion is
+     * decided by comparing them — an older build still writes a wall clock into the field — see
+     * `SyncService.syncEvents`, where a tombstone wins outright rather than by timestamp.
      *
      * @return 1 if this call is what deleted the event, 0 if it was already deleted or absent.
      */

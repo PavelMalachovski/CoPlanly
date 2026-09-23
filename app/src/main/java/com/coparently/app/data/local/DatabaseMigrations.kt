@@ -836,6 +836,50 @@ object DatabaseMigrations {
     }
 
     /**
+     * v38 -> v39: an event is dated by an instant, not a wall clock (MON-4, the part left from
+     * the owner's answer 3).
+     *
+     * `events.updatedAt` is a naive `LocalDateTime`, and `ConflictResolver` compared it to decide
+     * which phone's copy of an event survives a sync conflict — so two parents in different zones
+     * did not order their edits by real time. SEC-4's defect in another table, and
+     * [MIGRATION_28_29]'s fix: an additive `updatedAtMillis` column, backfilled from the stored
+     * wall clock through [wallClockToEpochMillis].
+     *
+     * **Read in this device's zone**, as 28→29 did, and for a sharper reason here. The only rows
+     * `ConflictResolver` ever compares are rows this device has not uploaded yet, and those were
+     * written on this device by `LocalDateTime.now()` — so this device's zone is exactly right for
+     * every row the value will decide anything about. A row downloaded from the co-parent holds
+     * their wall clock and is read in the wrong zone, but it is marked synced, is never compared,
+     * and is replaced with an exactly dated copy the next time the sync reads its document. An
+     * unreadable value lands on the epoch and loses every comparison — the safe direction, as in
+     * 28→29.
+     *
+     * `updatedAt` stays: it is what the app displays. Needs `39.json` from the Regenerate workflow
+     * before `CoPlanlyDatabaseMigrationTest` can run it.
+     */
+    val MIGRATION_38_39 = object : Migration(38, 39) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL("ALTER TABLE events ADD COLUMN updatedAtMillis INTEGER NOT NULL DEFAULT 0")
+
+            // Read every wall clock out first, then write the instants back — the shape 12→13 and
+            // 28→29 use: nothing iterates a cursor while writing to the table it came from.
+            val instants = mutableListOf<Pair<String, Long>>()
+            database.query("SELECT id, updatedAt FROM events").use { cursor ->
+                while (cursor.moveToNext()) {
+                    val id = cursor.getString(0) ?: continue
+                    instants += id to wallClockToEpochMillis(cursor.getString(1))
+                }
+            }
+            instants.forEach { (id, millis) ->
+                database.execSQL(
+                    "UPDATE events SET updatedAtMillis = ? WHERE id = ?",
+                    arrayOf<Any>(millis, id)
+                )
+            }
+        }
+    }
+
+    /**
      * List of all migrations in order.
      */
     val ALL_MIGRATIONS = arrayOf(
@@ -871,6 +915,7 @@ object DatabaseMigrations {
         MIGRATION_34_35,
         MIGRATION_35_36,
         MIGRATION_36_37,
-        MIGRATION_37_38
+        MIGRATION_37_38,
+        MIGRATION_38_39
     )
 }

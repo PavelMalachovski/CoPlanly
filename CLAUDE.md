@@ -585,7 +585,7 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
 
 ```
 domain/    — models, repository interfaces, use cases, holidays, ReminderScheduler
-data/      — Room (v38 + migrations), Firestore/Google clients, repository impls, sync
+data/      — Room (v39 + migrations), Firestore/Google clients, repository impls, sync
 presentation/ — Compose screens per feature + ViewModels + theme
 di/        — Hilt modules (Database, Firebase, Google, UseCase, Notification, …)
 ```
@@ -695,7 +695,7 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     the conversation as `{uid: epochMillis}` maps — one write per event — and the ticks and
     unread badge are derived from them by `ChatReadState`, never stored per message.
     Message times are stored the same way: `Message.sentAtMillis`, epoch millis (Room
-    schema v13, since superseded — the database is at v38), not a naive `LocalDateTime`, so two
+    schema v13, since superseded — the database is at v39), not a naive `LocalDateTime`, so two
     parents in different time zones agree
     on what a mark means and on when a message was sent. The Firestore field keeps its name
     (`timestamp`) and the read path still accepts a legacy ISO string, so a co-parent on an
@@ -707,6 +707,11 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     decides which phone's schedule survives. Its wire form is the one to copy when the same
     question comes up again — see `domain/custody/CustodyTimestamp.kt`, which explains why the
     Firestore field kept both its name *and* its type and only changed the zone it expresses.
+    **`EventEntity.updatedAtMillis` copied it (MON-4, schema 39)**: `ConflictResolver` compares the
+    instant, `events.updatedAt` carries it as offset-free UTC text (`domain/events/EventTimestamp.kt`
+    — no `Z`, because an older build's `ISO_LOCAL_DATE_TIME` parse would throw and skip the event),
+    and `EventRepositoryImpl.toEntity` derives it from the `updatedAt` wall clock every save already
+    stamps, so no save path can forget it. `Event.updatedAt` stays a `LocalDateTime` for display.
 14. **A delete is a tombstone, never a document removal** (CQ-3). `data/sync/Tombstone.kt` is
     the one definition: the client writes `deletedAtMillis` (epoch millis) and `deletedBy` onto
     the document with `update()` — never `set()`, which would replace the `createdByFirebaseUid`
@@ -716,8 +721,9 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     remote write lands. Four things not to undo. **Do not reconcile by absence** — "delete what
     is not in the snapshot" takes the whole calendar the first time `sharedWith` narrows at
     unpair, a download window bounds the query (CQ-5), or a snapshot comes back partial.
-    **Do not decide a deletion by timestamp**: `updatedAt` is a naive `LocalDateTime` with
-    SEC-4's ordering defect, so a tombstone beats a concurrent edit by rule, deliberately —
+    **Do not decide a deletion by timestamp**: `updatedAt` names an instant since MON-4, but an
+    older build still writes its own wall clock there, so a tombstone beats a concurrent edit by
+    rule, deliberately —
     an event that should not exist is visible and can be deleted again, an edit that loses is
     gone. **Do not filter tombstones out of `getUnsyncedEvents`/`getUnsyncedExpenses`**, which
     are the outbox. And **do not shorten the 90-day sweep** (`sweepDeletedDocuments`): it is
@@ -981,9 +987,11 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     **there is no stored revision number**: two phones offline would mint the same one and the
     create-only rule would refuse the second for ever; order comes from the two clocks and the
     export numbers revisions when it renders. Calendar friends cannot read revisions — the
-    history is the parents' communication record, not the calendar. Not done, and recorded in
-    ROADMAP MON-4: `Event.updatedAt` is still a naive `LocalDateTime` although `ConflictResolver`
-    compares it, and the events rule does not *require* a revision beside each write, so an older
+    history is the parents' communication record, not the calendar. Done since (schema 39): the
+    compared timestamp is `EventEntity.updatedAtMillis` (item 13), so a revision's embedded
+    `updatedAt` is UTC text from an upgraded build and a wall clock from an older one — the export
+    keeps labelling `deviceTimeMillis` and `recordedAt` as the clocks. Not done, and recorded in
+    ROADMAP MON-4: the events rule does not *require* a revision beside each write, so an older
     build's edits go unrecorded.
 
 26. **The export is a communication record, says so on its face, and is made on the phone**

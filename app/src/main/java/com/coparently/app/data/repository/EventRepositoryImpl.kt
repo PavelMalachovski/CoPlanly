@@ -17,6 +17,7 @@ import com.coparently.app.domain.activity.ActivityKind
 import com.coparently.app.domain.events.CalendarVisibility
 import com.coparently.app.domain.events.EventAcceptance
 import com.coparently.app.domain.events.EventAcceptanceTransition
+import com.coparently.app.domain.events.EventTimestamp
 import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.model.Event
@@ -449,7 +450,9 @@ class EventRepositoryImpl @Inject constructor(
             "pickupConfirmedBy" to (pickupConfirmedBy ?: ""),
             "pickupConfirmedAt" to (pickupConfirmedAt?.format(dateFormatter) ?: ""),
             "createdAt" to createdAt.format(dateFormatter),
-            "updatedAt" to updatedAt.format(dateFormatter),
+            // UTC, offset-free: the field keeps its name and type so an older build still parses
+            // it, and only the zone it expresses changed (MON-4, see `EventTimestamp`).
+            "updatedAt" to EventTimestamp.toWire(EventTimestamp.ofWallClock(updatedAt)),
             "createdByFirebaseUid" to creatorUid,
             "sharedWith" to audience,
             "lastModifiedBy" to (lastModifiedBy ?: creatorUid),
@@ -539,6 +542,9 @@ class EventRepositoryImpl @Inject constructor(
             recurrencePattern = recurrencePattern,
             createdAt = createdAt,
             updatedAt = updatedAt,
+            // Derived here, at the one boundary every save crosses, from the wall clock each save
+            // path already stamps — so no path can forget it (see `EventTimestamp.ofWallClock`).
+            updatedAtMillis = EventTimestamp.ofWallClock(updatedAt),
             syncedToFirestore = syncedToFirestore,
             createdByFirebaseUid = createdByFirebaseUid,
             sharedWithJson = gson.toJson(sharedWith),
