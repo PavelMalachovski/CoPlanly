@@ -971,6 +971,28 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     with a flag — the gate is MON-11's. Times use `RecordFormat` (fixed `Locale.ROOT` patterns
     with the offset printed); event start/end are the naive wall-clock values the schema stores,
     and the statement says so.
+    **A registered export carries a record ID the server holds its SHA-256 under** (MON-16,
+    `docs/DESIGN-court-record.md` §10; `functions/export-receipts.js`, `web/verify/`). Six more
+    things not to undo. **The ID is reserved before the file is rendered, and the hash is of the
+    exact bytes saved** — `ExportViewModel` reserves, renders with the ID, hashes, registers, then
+    saves those same bytes; `ExportFileWriter.render`/`save` are split for that and nothing may
+    touch the bytes between. **No file names an ID the server holds no hash for**: a phone that
+    cannot reserve renders `export_verify_not_registered` on the face (and in every PDF footer),
+    and one whose registration fails after a reservation renders the file *again* without the ID —
+    never "registered" by default (`CommunicationRecord.verification` defaults to `Unregistered`),
+    and the screen says so before the share sheet opens. **`verifyExport` is unauthenticated and
+    answers with the receipt alone** — registered at, period, format, size and the fixed words "one
+    of the family's parents"; never a name, a uid, a `familyId` or whether the account still exists.
+    **`export_receipts` is closed to every client** (`allow read, write: if false`); only the
+    callables touch it, as admin. **`recordedAt` is the function's clock** and a receipt is
+    create-once: a second hash under a registered ID is refused, the same hash returns the original
+    time. And **account deletion scrubs a registered receipt, never deletes it** — `generatorUid`
+    and `familyId` blanked, the hash kept — because erasing one parent must not un-verify evidence
+    the other has filed; reservations that never received a hash are deleted. The verification
+    address is `BuildConfig.EXPORT_VERIFY_URL`, blank until `web/verify/` is hosted, and blank omits
+    the line rather than printing a dead link. The chat immutability pin §4 called missing lives in
+    `firestore-tests/rules/event-versions.test.js`'s last block: both parents, every field,
+    `set()`, delete and a stranger, with `isRead` as the control.
 
 27. **A calendar-feed token is the whole authorisation, so it is hashed, scoped and never served
     past what the app itself would show** (MON-17, September 2026). `functions/calendar-feed.js`

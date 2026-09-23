@@ -60,8 +60,19 @@ internal object RecordFixtures {
         notYetOnServer = "Not yet on server",
         noServerTime = "None kept",
         revision = "Revision",
-        page = "Page"
+        page = "Page",
+        verification = VerificationLabels(
+            recordId = "Record ID",
+            verifyAt = "Verify at",
+            instruction = "CHECK IT AT THE ADDRESS ABOVE",
+            instructionNoUrl = "REGISTERED UNDER THIS ID",
+            notRegistered = "NOT REGISTERED, CANNOT BE VERIFIED",
+            notRegisteredShort = "NOT REGISTERED"
+        )
     )
+
+    /** A record id as the server mints them. */
+    const val RECORD_ID = "7K3Q0ABCDEFGHJKM"
 
     fun scope(families: Set<String> = setOf(FAMILY)) = RecordScope(
         from = FROM,

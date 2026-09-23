@@ -103,7 +103,7 @@ more than "here are the messages"?**
 
 | Record | Decision | Why |
 | --- | --- | --- |
-| **Chat + announcements** | Already append-only. **Pinned in the rules tests** (`firestore-tests/rules/event-versions.test.js`, last block) and treated as a breaking change if it moves | The guarantee existed but nothing asserted it; a rule edit could have quietly widened `hasOnly(['isRead'])` and no test would have failed |
+| **Chat + announcements** | Already append-only. **Pinned in the rules tests** (`firestore-tests/rules/event-versions.test.js`, last block) and treated as a breaking change if it moves. MON-16 completed the pin: content, timestamp, sender id *and* name, type, reply target and attachments are refused to **both** parents, as are a rewrite smuggled in beside `isRead`, a whole-document `set()`, a delete by either side and any write by a stranger — with the one allowed write (`isRead`) as a control | The guarantee existed but nothing asserted it; a rule edit could have quietly widened `hasOnly(['isRead'])` and no test would have failed |
 | **Events** | **Full versioning — every saved revision kept whole** *(owner's choice; the recommendation was a trail)* | See below |
 | **Custody schedule** | Already announced through the activity feed; leave the document mutable | Two parents negotiating a schedule need to edit it. What matters is that each change was announced, and it is |
 | **Expenses** | Leave mutable; the split snapshot already covers the part that is money | A corrected amount is a correction, not a falsification. The export says expenses are shown as they stand |
@@ -260,7 +260,10 @@ content that made it private never leaves the phone. The export's header says so
 - **Not a legal opinion on admissibility.** That varies by court and is not the app's to give.
   Say what the record is; let a lawyer say what it proves.
 - **Not the child's medical data in an exportable document.** §4.
-- **Not a signed or notarised artefact** unless someone has actually built the signing. OFW posts a
+- **Not a signed or notarised artefact** unless someone has actually built the signing. MON-16
+  (§10) is not that either: a registered hash proves a file has not changed since a parent's
+  phone registered it, and when — not that the file is an honest rendering of the server's
+  record. OFW posts a
   physical court packet; that is a service, not a PDF button, and claiming its weight without its
   work is the single fastest way to lose the credibility this whole feature is for.
 - **Not that every edit carries a revision.** The rules do not *require* an event write to be
@@ -283,3 +286,116 @@ Answered by the owner on **2026-09-23**:
 3. **Clock:** ☑ epoch millis on every compared field, ☑ a server-stamped `recordedAt` beside the
    device time on each revision — the export shows both, labelled. *(`Event.updatedAt` is the one
    compared field still naive; see §5.)*
+
+---
+
+## 10. A verifiable export — MON-16
+
+**Built on 2026-09-23.** Every export can carry a **record ID**, and the server keeps the SHA-256
+of the file's exact bytes under it with the server's time. A lawyer, a mediator, a court or the
+other parent opens `web/verify/`, chooses the file, and learns whether it is byte for byte the file
+that was registered, and when. AppClose's "certified records" rest on the vendor's affidavit; this
+rests on arithmetic anybody can redo.
+
+### What a match proves, and what it does not
+
+A match proves that **these bytes were registered by one of the family's parents at the time
+shown, and have not changed since** — not by the other parent, not in an email, not by a
+well-meaning paralegal who re-saved the PDF. That is the adversary §3 cares about.
+
+It does **not** prove that the file is a faithful rendering of the server's record. The file is
+made on the exporting parent's phone, and a modified client could register bytes it made up; the
+receipt would then vouch, truthfully, that *those* bytes have not changed since. Nor does it prove
+completeness: the parent chose the period, and a record assembled without reaching the server says
+`export_record_incomplete` on its face. Everything §8 refuses to promise stays refused. The
+verification page says the narrower thing in its own words: "the fingerprint proves only that the
+file has not changed since it was registered".
+
+### The chicken and the egg: the ID must be inside the bytes it vouches for
+
+A record ID printed on the file has to be covered by the hash, or it could be printed on any file.
+So the ID exists **before** the file does, and the flow is fixed (`ExportViewModel`):
+
+1. `reserveExportRecordId({familyId, fromDate, toDate, format})` mints the ID — 80 random bits as
+   16 Crockford base-32 characters, printed `XXXX-XXXX-XXXX-XXXX`. No uid, family or date in it:
+   it travels on a document and must say nothing by itself. The reservation binds the ID to the
+   caller, the family, the range and the format, so a hash cannot later be re-labelled.
+2. The phone renders the file with the ID and the verification address on its face.
+3. It hashes exactly those bytes.
+4. `registerExportReceipt({recordId, sha256, byteLength})` records the hash **once**. Only the
+   reserving parent, only within an hour, never a second hash; a repeat of the *same* hash (a
+   retry after a lost acknowledgement) answers with the original time.
+5. The phone saves the same bytes it hashed.
+
+The alternative — a client-generated ID registered afterwards — was rejected because it cannot know
+*before rendering* whether the server is reachable, and the file has to say which it is. A
+reservation is also that test.
+
+**Offline, the file says so.** A phone that cannot reserve renders the file with
+`export_verify_not_registered` under the statement and "not registered" in every PDF footer, and
+the screen shows the same words in a dialog before the share sheet opens. A phone that reserved but
+failed to register **renders the file again without the ID**: no file ever names an ID the server
+holds no hash for. That is design item 8 at its sharpest — a verification promise that fails in
+front of a judge is worse than no promise.
+
+**The clock is the server's** (§5): `recordedAt` is the function's own `Timestamp.now()` at
+registration, never a client value. The phone's clock appears only as the "Generated" line inside
+the file, which the hash then freezes.
+
+### What `verifyExport` tells somebody with no account — and why not more
+
+`verifyExport` is callable **without signing in**: a lawyer has no account, and making them get one
+would put a CoPlanly login between a court and a document. So everything it returns is chosen for a
+stranger:
+
+| Returned | Why |
+| --- | --- |
+| `found` | The question |
+| `recordId` | So the verifier can see it is the ID printed on the file |
+| `recordedAt` | *When* — the point of the exercise, and the server's clock |
+| `fromDate`, `toDate`, `format`, `byteLength` | Describe the file registered, so a verifier can tell a near-miss (the right record, re-saved) from a stranger's file |
+| `generatedBy: "one of the family's parents"` | Fixed words, not data |
+
+| Never returned | Why not |
+| --- | --- |
+| The generator's **name** | Anybody holding only a record ID — a photo of one page — could learn who exported. The file already names both parents; the lookup must not add a name for someone who does not have the file. A name is also not stable: it can change after the export, and after erasure there is none |
+| `generatorUid`, `familyId` | Account identifiers of real people, useful only for correlating one family's exports; a verifier needs neither |
+| Whether the generator's account still exists | Would disclose an erasure to a stranger |
+| The hash, on a lookup by ID | Nothing to compare it with; returning it would only help someone forge a claim about a file they do not have |
+
+A reservation that never received a hash is "not found": it vouches for no file.
+
+**Rate limit.** Per address, in memory, per function instance (30 lookups per ten minutes), with the
+function deployed at `maxInstances: 10` — which is what turns a per-instance limit into a bound on
+the service. No address is written anywhere. Best-effort by construction, and deliberately so: the
+data behind it is designed to be harmless to a stranger, so the limit protects the bill, not a
+secret. `reserveExportRecordId` is limited per account the same way.
+
+**Rules.** `export_receipts` is closed to every client in both directions
+(`firestore-tests/rules/export-receipts.test.js`). A parent who could write one could vouch for a
+file the app never made; one who could read one would learn what `verifyExport` refuses to say.
+
+### Account deletion: scrub, never delete
+
+A receipt holds no content, but `generatorUid` is personal data, and so is a `familyId` that spells
+two uids. Deleting the receipt would un-verify a file the *other* parent may already have filed —
+erasing one parent would damage the other's evidence. So `deleteAccountDataImpl` blanks
+`generatorUid` and `familyId` on the departing parent's registered receipts, blanks `familyId` on
+the co-parent's receipts for every family it can still name (live partners, surviving threads, and
+the families on the departing parent's own receipts), and deletes reservations that never received
+a hash. What remains is a hash, a range, a format, a size and two times. Whether a hash of a document
+that names people is itself personal data is arguable — whoever holds the document can link them —
+and the retention then rests on Art. 17(3)(e) (the establishment, exercise or defence of legal
+claims). **That is for the lawyer to confirm** (REL-4); the privacy policy and the deletion page
+already say what is kept and why.
+
+### Not built
+
+- **A signature.** A receipt is a server-side registry, not a signed artefact; a verifier trusts
+  CoPlanly's database the way they would trust a notary's register. Signing the hash with a
+  published key would let a verifier check offline, and is the next step if a court ever asks.
+- **A sweep of stale reservations.** A reservation older than an hour can no longer be registered
+  and is never "found"; it is deleted with its account, and otherwise lingers harmlessly.
+- **Registering a file after the fact.** An export made offline stays unregistered; the parent
+  exports again online. Registering the earlier file later would print a server time that is not
+  when it was made.

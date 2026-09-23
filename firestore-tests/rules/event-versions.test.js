@@ -332,4 +332,58 @@ describe('messages — the half of the record that was already append-only', () 
   it('refuses the recipient deleting it', async () => {
     await assertFails(as(BOB).doc('messages/msg-1').delete());
   });
+
+  // MON-16 completed the pin: the export's statement says "cannot be edited or deleted by either
+  // parent once sent", so every field a reader relies on is refused to both parents, and the one
+  // write that is allowed is shown to succeed so the refusals cannot pass on a broken fixture.
+
+  it('still lets the recipient mark it read (the control for every refusal here)', async () => {
+    await assertSucceeds(as(BOB).doc('messages/msg-1').update({isRead: true}));
+  });
+
+  it('refuses the recipient rewriting what the sender said', async () => {
+    await assertFails(as(BOB).doc('messages/msg-1').update({content: 'Pickup at seven, you said'}));
+  });
+
+  it('refuses the recipient re-dating it', async () => {
+    await assertFails(as(BOB).doc('messages/msg-1').update({timestamp: 1790000000000}));
+  });
+
+  it('refuses re-attributing it to the other parent, by id or by name', async () => {
+    await assertFails(as(ALICE).doc('messages/msg-1').update({senderId: BOB}));
+    await assertFails(as(BOB).doc('messages/msg-1').update({senderId: BOB}));
+    await assertFails(as(ALICE).doc('messages/msg-1').update({senderName: 'Bob'}));
+  });
+
+  it('refuses changing its type or what it replies to', async () => {
+    await assertFails(as(ALICE).doc('messages/msg-1').update({messageType: 'SYSTEM'}));
+    await assertFails(as(ALICE).doc('messages/msg-1').update({replyToMessageId: 'msg-0'}));
+  });
+
+  it('refuses smuggling a rewrite in beside the one allowed field', async () => {
+    await assertFails(as(BOB).doc('messages/msg-1')
+        .update({isRead: true, content: 'Pickup at seven?'}));
+    await assertFails(as(BOB).doc('messages/msg-1')
+        .update({isRead: true, timestamp: 1790000000000}));
+  });
+
+  it('refuses replacing the whole message with set()', async () => {
+    await assertFails(as(ALICE).doc('messages/msg-1').set({
+      id: 'msg-1',
+      conversationId: 'conv-1',
+      senderId: ALICE,
+      senderName: 'Alice',
+      content: 'Something else entirely',
+      timestamp: 1787000000000,
+      messageType: 'TEXT',
+      attachments: [],
+      isRead: false,
+      replyToMessageId: '',
+    }));
+  });
+
+  it('refuses a stranger touching it at all', async () => {
+    await assertFails(as(CAROL).doc('messages/msg-1').update({isRead: true}));
+    await assertFails(as(CAROL).doc('messages/msg-1').delete());
+  });
 });

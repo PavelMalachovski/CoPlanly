@@ -176,6 +176,20 @@ vaccinations, doctors&#39; notes and photographs you attach to them.</li>
 with you (Art. 6(1)(b)). For the medical profile, which is health data under Art. 9, we rely
 on your <strong>explicit consent</strong> (Art. 9(2)(a)): the medical fields are optional, you choose
 whether to fill them, and you can delete them at any time. The app works without them.</p>
+<h3>Exports you make</h3>
+<p>You can export the record of what you and your co-parent wrote and recorded as a PDF or CSV
+file. <strong>The file is made on your phone and is not sent to us.</strong> When your phone can reach our
+server at that moment, we keep a <strong>receipt</strong> for it: a record ID printed on the file, a SHA-256
+fingerprint of the file (a one-way value from which the file cannot be reconstructed), its size
+and format, the period it covers, when it was registered, your account, and the family it was
+made for. Anyone who holds the file — or only its record ID — can ask our verification page
+whether it was registered and when. The answer gives the time, the period, the format and the
+size, and says the file was made by &quot;one of the family&#39;s parents&quot;; it never names you or
+identifies your account. The verification page fingerprints the file in the checker&#39;s own
+browser and sends us only the fingerprint.</p>
+<p><strong>Why:</strong> so that a lawyer, a mediator or a court can check that an export you handed over has not
+been altered. <strong>Legal basis:</strong> performance of our contract with you (Art. 6(1)(b)) — verification
+is part of the export you asked for.</p>
 <h3>Data about a child</h3>
 <p>A child does not hold an account and never signs in. What is recorded about them is entered by
 a parent, and only their parents — and anyone a parent explicitly grants access to — can read
@@ -209,6 +223,10 @@ release builds. These carry no message content, no event titles and no records a
 child. They record which screens are opened and which actions succeed or fail.
 Both are <strong>off until you agree</strong> on the screen shown before sign-in, and you can change your
 answer at any time in Settings → App.</li>
+<li><strong>The verification page&#39;s rate limit.</strong> When somebody checks an export on the verification
+page, our server uses their IP address to limit how many checks one connection can make. The
+address is held in the server&#39;s memory for at most ten minutes and is never written to our
+database or logs.</li>
 </ul>
 <h3>Google Calendar, if you connect it</h3>
 <p>If you connect a Google account, we request access to your calendars so events can be
@@ -252,6 +270,11 @@ not synced, and not visible to your co-parent.</li>
 <td>Because you created and shared it</td>
 </tr>
 <tr>
+<td><strong>Anyone holding an export you made, or its record ID</strong></td>
+<td>Whether it was registered, when, the period, the format and the size — never who made it</td>
+<td>So the export can be verified</td>
+</tr>
+<tr>
 <td>Google (Firebase)</td>
 <td>Account data, all synced content, files, push tokens, crash and usage data</td>
 <td>Our hosting, database, file storage and messaging provider</td>
@@ -278,6 +301,10 @@ it syncs. A daily job removes it for good <strong>90 days</strong> after you del
 removes lapsed grants. A calendar friend&#39;s access also ends on its expiry date; the lapsed grant
 stays on our servers, unusable, until a parent removes it or deletes their account. Queued
 notifications are deleted after <strong>30 days</strong>.</p>
+<p>An export&#39;s receipt is kept for as long as it can vouch for a file somebody may still rely on,
+which has no natural end: it is kept after your account is deleted too, but without your account
+or your family in it (see below). A record ID reserved for an export that was never registered —
+because the phone lost its connection half-way — is deleted with your account.</p>
 <h2>Deleting your account</h2>
 <p><strong>Settings → Account → Delete account.</strong> This is irreversible and, once confirmed, it:</p>
 <ul>
@@ -293,6 +320,10 @@ calendar-friend access you granted or held;</li>
 <li>unlinks the two of you, so their access ends immediately;</li>
 <li>deletes the fingerprint of your Google Calendar authorisation, if you connected one, and
 any notifications still queued for you;</li>
+<li>removes your account and your family from the receipts of exports you or your co-parent made.
+The fingerprint, period, format, size and registration time stay, so that an export already
+handed to a lawyer or a court can still be verified — but nothing left in a receipt identifies
+you. Record IDs reserved for exports that were never registered are deleted;</li>
 <li>deletes your authentication account;</li>
 <li>wipes the local copy on the device you did it from.</li>
 </ul>

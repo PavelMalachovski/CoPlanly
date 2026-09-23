@@ -62,4 +62,17 @@
     <string name="export_action_sent">Отправлено</string>
     <string name="export_action_not_sent">Не отправлено</string>
     <string name="export_action_recorded">Записано</string>
+
+    <!-- MON-16: the record id and whether the file can be verified. -->
+    <string name="export_verify_explainer">Если сервер доступен, файл регистрируется: сохраняются его идентификатор записи и отпечаток его точного содержимого, поэтому любой, у кого он есть, может проверить, что файл не изменён. С телефона уходит только отпечаток, никогда не сам файл.</string>
+    <string name="export_verify_record_id">Идентификатор записи</string>
+    <string name="export_verify_at">Проверить на</string>
+    <string name="export_verify_instruction">Чтобы проверить, что этот файл не изменён, откройте адрес выше и выберите файл. Даже один изменённый символ не пройдёт проверку.</string>
+    <string name="export_verify_instruction_no_url">Отпечаток этого файла был зарегистрирован в CoPlanly под этим идентификатором записи при его создании.</string>
+    <string name="export_verify_not_registered">Не зарегистрировано — проверка недоступна. При создании этого файла сервер был недоступен, поэтому его отпечаток не зарегистрирован и никто не сможет проверить его на изменения.</string>
+    <string name="export_verify_not_registered_short">Не зарегистрировано — проверка недоступна</string>
+    <string name="export_unregistered_title">Не зарегистрировано — проверка недоступна</string>
+    <string name="export_unregistered_body">Сервер был недоступен, поэтому этот файл не зарегистрирован и никто не сможет проверить его на изменения. Файл говорит об этом в начале. Можно всё равно поделиться им или экспортировать снова, когда появится сеть.</string>
+    <string name="export_unregistered_share">Всё равно поделиться</string>
+    <string name="export_unregistered_not_now">Не сейчас</string>
 </resources>
