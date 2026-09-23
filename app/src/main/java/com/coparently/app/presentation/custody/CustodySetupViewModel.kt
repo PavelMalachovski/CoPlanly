@@ -23,6 +23,9 @@ import javax.inject.Inject
 /** Keeps the parents flow warm across brief unsubscriptions (config changes). */
 private const val PARENTS_STOP_TIMEOUT_MS = 5_000L
 
+/** Days in one week of a custom custody pattern. */
+private const val DAYS_PER_WEEK = 7
+
 /**
  * ViewModel for custody setup screen.
  * Handles custody model selection and configuration.
@@ -190,12 +193,14 @@ class CustodySetupViewModel @Inject constructor(
     }
 
     /**
-     * Assigns every day in [days] to slot 1 ("mom"), leaving the rest of the pattern alone.
+     * Assigns every day of the zero-based [week] of the custom pattern to slot 1 ("mom"),
+     * leaving the rest of the pattern alone.
      *
      * The "Week N → name" shortcuts used to call [toggleCustomMomDay] per day, so on a partly
      * assigned week they flipped each day instead of assigning the week.
      */
-    fun assignCustomDaysToMom(days: IntRange) {
+    fun assignCustomWeekToMom(week: Int) {
+        val days = (week * DAYS_PER_WEEK) until ((week + 1) * DAYS_PER_WEEK)
         val inPattern = days.filter { it < _uiState.value.customPatternDays }
         _uiState.value = _uiState.value.copy(customMomDays = _uiState.value.customMomDays + inPattern)
     }

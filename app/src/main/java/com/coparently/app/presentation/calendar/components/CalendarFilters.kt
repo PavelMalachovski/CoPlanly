@@ -296,14 +296,16 @@ private fun ParentFilterSegments(
             Segment(ParentFilter.BOTH, stringResource(R.string.calendar_filter_both), primary, primary),
             Segment(ParentFilter.DAD, parentNames.labelFor("dad"), CoPlanlyColors.DadBlue, ParentColors.text("dad"))
         )
-        options.forEachIndexed { index, (filter, label, color, content) ->
+        options.forEachIndexed { index, segment ->
+            val filter = segment.filter
+            val color = segment.color
             SegmentedButton(
                 selected = selected == filter,
                 onClick = { onSelected(filter) },
                 shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size),
                 colors = SegmentedButtonDefaults.colors(
                     activeContainerColor = color.copy(alpha = 0.15f),
-                    activeContentColor = content,
+                    activeContentColor = segment.content,
                     activeBorderColor = color
                 ),
                 icon = {}
@@ -313,7 +315,7 @@ private fun ParentFilterSegments(
                 // arbitrary length, and the fallbacks are the worst case, not the best:
                 // "Второй родитель" is 15 characters, "Другий з батьків" 16.
                 Text(
-                    text = label,
+                    text = segment.label,
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = if (selected == filter) FontWeight.Bold else FontWeight.Medium,
                     maxLines = 1,

@@ -395,7 +395,7 @@ fun CustodySetupScreen(
                     ) {
                         TextButton(
                             onClick = {
-                                viewModel.assignCustomDaysToMom(0..6)
+                                viewModel.assignCustomWeekToMom(0)
                             },
                             modifier = Modifier.weight(1f)
                         ) {
@@ -409,7 +409,7 @@ fun CustodySetupScreen(
                         }
                         TextButton(
                             onClick = {
-                                viewModel.assignCustomDaysToMom(7..13)
+                                viewModel.assignCustomWeekToMom(1)
                             },
                             modifier = Modifier.weight(1f)
                         ) {
