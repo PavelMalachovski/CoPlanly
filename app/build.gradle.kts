@@ -75,6 +75,13 @@ val canSignRelease = run {
  */
 val publishedPrivacyPolicyUrl = ""
 
+/**
+ * The export verification page (MON-16), `web/verify/` once hosted — printed on every exported
+ * file beside its record id. Empty until `firebase deploy --only hosting` has run; while it is,
+ * a registered file prints its record id without an address rather than one that does not resolve.
+ */
+val publishedExportVerifyUrl = ""
+
 android {
     // The Kotlin package, and therefore where `R` and `BuildConfig` are generated. Deliberately
     // *not* the same as `applicationId` below: renaming the package would touch every file in
@@ -116,6 +123,12 @@ android {
             ?.trim()
             ?: publishedPrivacyPolicyUrl
         buildConfigField("String", "PRIVACY_POLICY_URL", "\"$privacyPolicyUrl\"")
+
+        // MON-16. Same rule as the policy: blank until hosted, and blank omits the line.
+        val exportVerifyUrl = (project.findProperty("COPLANLY_EXPORT_VERIFY_URL") as String?)
+            ?.trim()
+            ?: publishedExportVerifyUrl
+        buildConfigField("String", "EXPORT_VERIFY_URL", "\"$exportVerifyUrl\"")
 
         vectorDrawables {
             useSupportLibrary = true

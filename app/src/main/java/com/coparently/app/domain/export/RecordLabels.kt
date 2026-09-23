@@ -28,7 +28,29 @@ data class RecordLabels(
     val notYetOnServer: String,
     val noServerTime: String,
     val revision: String,
-    val page: String
+    val page: String,
+    val verification: VerificationLabels
+)
+
+/**
+ * What a file says about checking it (MON-16).
+ *
+ * @property recordId The label before the record id.
+ * @property verifyAt The label before the verification page's address.
+ * @property instruction One line telling a reader how to check the file, printed under the address.
+ * @property instructionNoUrl The same line while no verification page is hosted: it says the file was
+ *   registered, and does not point at an address that does not exist.
+ * @property notRegistered The file's own statement that it cannot be checked, on its first page and
+ *   in the CSV preamble.
+ * @property notRegisteredShort The same, short enough for every page's footer.
+ */
+data class VerificationLabels(
+    val recordId: String,
+    val verifyAt: String,
+    val instruction: String,
+    val instructionNoUrl: String,
+    val notRegistered: String,
+    val notRegisteredShort: String
 )
 
 /** The column headers, which the PDF reuses as field labels so the two formats read alike. */

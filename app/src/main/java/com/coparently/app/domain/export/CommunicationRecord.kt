@@ -27,6 +27,10 @@ import java.time.ZoneId
  * @property events Calendar entries whose dates touch the range, each with its whole history.
  * @property messages Messages sent in the range, oldest first.
  * @property expenses Expenses dated in the range, oldest first.
+ * @property verification Whether the file carries a registered record id (MON-16). The builder
+ *   never decides this — it is set by the export flow once the server has reserved an id, and a
+ *   record is [RecordVerification.Unregistered] until then, so nothing claims verifiability by
+ *   default.
  */
 data class CommunicationRecord(
     val from: LocalDate,
@@ -37,7 +41,8 @@ data class CommunicationRecord(
     val complete: Boolean,
     val events: List<RecordEvent>,
     val messages: List<RecordMessage>,
-    val expenses: List<RecordExpense>
+    val expenses: List<RecordExpense>,
+    val verification: RecordVerification = RecordVerification.Unregistered
 )
 
 /**

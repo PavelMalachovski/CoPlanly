@@ -5,10 +5,14 @@ import app.cash.turbine.test
 import com.coparently.app.R
 import com.coparently.app.data.export.CommunicationRecordSource
 import com.coparently.app.data.export.ExportFileWriter
+import com.coparently.app.data.export.ExportReceipts
 import com.coparently.app.data.export.ExportedFile
 import com.coparently.app.domain.export.CommunicationRecord
+import com.coparently.app.domain.export.ExportFingerprint
+import com.coparently.app.domain.export.ExportFormat
 import com.coparently.app.domain.export.RecordFixtures
 import com.coparently.app.domain.export.RecordSources
+import com.coparently.app.domain.export.RecordVerification
 import com.coparently.app.domain.model.PartnerSummary
 import com.coparently.app.domain.model.User
 import com.coparently.app.domain.repository.UserRepository
@@ -16,6 +20,7 @@ import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.testParentsSource
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
 import kotlinx.coroutines.Dispatchers
@@ -30,6 +35,7 @@ import org.junit.Before
 import org.junit.Test
 import java.time.LocalDate
 import java.time.ZoneId
+import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 
@@ -53,6 +59,7 @@ class ExportViewModelTest {
     )
     private val source = mockk<CommunicationRecordSource>()
     private val writer = mockk<ExportFileWriter>()
+    private val receipts = mockk<ExportReceipts>()
     private val userRepository = mockk<UserRepository>()
     private val fallbacks = NameFallbacks(you = "You", coParent = "Co-parent", unknown = "Parent")
 
@@ -67,6 +74,10 @@ class ExportViewModelTest {
             expenses = emptyList(),
             serverReached = true
         )
+        every { receipts.verifyUrl } returns VERIFY_URL
+        // Offline by default: the tests that are about something else must not depend on a server.
+        coEvery { receipts.reserve(any(), any(), any(), any()) } returns null
+        coEvery { writer.render(any(), any(), any()) } answers { bytesFor(firstArg()) }
     }
 
     @After
@@ -74,7 +85,13 @@ class ExportViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun viewModel() = ExportViewModel(source, writer, testParentsSource(me, partner), userRepository)
+    private fun viewModel() = ExportViewModel(source, writer, receipts, testParentsSource(me, partner), userRepository)
+
+    /** Distinct bytes per verification state, so a test can tell which rendering was saved. */
+    private fun bytesFor(record: CommunicationRecord): ByteArray = when (val v = record.verification) {
+        is RecordVerification.Registered -> "registered ${v.recordId} ${v.verifyUrl}".toByteArray()
+        RecordVerification.Unregistered -> "not registered".toByteArray()
+    }
 
     @Test
     fun `the range starts as the last three months, ending today`() {
@@ -101,12 +118,12 @@ class ExportViewModelTest {
     fun `a CSV is built for the pair on screen and handed to the share sheet`() = runTest {
         val record = slot<CommunicationRecord>()
         val file = ExportedFile(mockk<Uri>(), "text/csv")
-        coEvery { writer.writeCsv(capture(record), any()) } returns file
+        coEvery { writer.save(any(), capture(record), ExportFormat.CSV) } returns file
         val vm = viewModel()
 
         vm.files.test {
             vm.export(ExportFormat.CSV, RecordFixtures.labels(), fallbacks)
-            assertEquals(file, awaitItem())
+            assertEquals(file, awaitItem().file)
         }
 
         coVerify {
@@ -126,18 +143,19 @@ class ExportViewModelTest {
     @Test
     fun `a PDF goes through the PDF writer`() = runTest {
         val file = ExportedFile(mockk<Uri>(), "application/pdf")
-        coEvery { writer.writePdf(any(), any()) } returns file
+        coEvery { writer.save(any(), any(), ExportFormat.PDF) } returns file
         val vm = viewModel()
 
         vm.files.test {
             vm.export(ExportFormat.PDF, RecordFixtures.labels(), fallbacks)
-            assertEquals(file, awaitItem())
+            assertEquals(file, awaitItem().file)
         }
+        coVerify { writer.render(any(), any(), ExportFormat.PDF) }
     }
 
     @Test
     fun `a failure is a sentence, and the screen is usable again`() = runTest {
-        coEvery { writer.writeCsv(any(), any()) } throws IllegalStateException("disk full")
+        coEvery { writer.save(any(), any(), any()) } throws IllegalStateException("disk full")
         val vm = viewModel()
 
         vm.export(ExportFormat.CSV, RecordFixtures.labels(), fallbacks)
@@ -162,7 +180,7 @@ class ExportViewModelTest {
 
     @Test
     fun `a second tap while one export runs does not start another`() = runTest {
-        coEvery { writer.writeCsv(any(), any()) } coAnswers {
+        coEvery { writer.save(any(), any(), any()) } coAnswers {
             kotlinx.coroutines.awaitCancellation()
         }
         val vm = viewModel()
@@ -173,5 +191,78 @@ class ExportViewModelTest {
 
         assertEquals(ExportFormat.CSV, vm.state.value.working)
         assertFalse(vm.state.value.error != null)
+    }
+
+    // ---- MON-16: the record id is inside the bytes it vouches for -------------------------
+
+    @Test
+    fun `a registered export hashes exactly the bytes it saves, under the id it prints`() = runTest {
+        val file = ExportedFile(mockk<Uri>(), "application/pdf")
+        val saved = slot<ByteArray>()
+        coEvery { receipts.reserve("u1__u2", any(), any(), ExportFormat.PDF) } returns RECORD_ID
+        coEvery { receipts.register(any(), any(), any()) } returns true
+        coEvery { writer.save(capture(saved), any(), any()) } returns file
+        val vm = viewModel()
+
+        vm.files.test {
+            vm.export(ExportFormat.PDF, RecordFixtures.labels(), fallbacks)
+            assertEquals(FinishedExport(file, RECORD_ID), awaitItem())
+        }
+
+        val expected = "registered $RECORD_ID $VERIFY_URL".toByteArray()
+        assertContentEquals(expected, saved.captured)
+        coVerify { receipts.register(RECORD_ID, ExportFingerprint.sha256Hex(expected), expected.size) }
+    }
+
+    @Test
+    fun `offline, the file says it is not registered and nothing is registered`() = runTest {
+        val file = ExportedFile(mockk<Uri>(), "text/csv")
+        val saved = slot<ByteArray>()
+        coEvery { writer.save(capture(saved), any(), any()) } returns file
+        val vm = viewModel()
+
+        vm.files.test {
+            vm.export(ExportFormat.CSV, RecordFixtures.labels(), fallbacks)
+            assertEquals(FinishedExport(file, null), awaitItem())
+        }
+
+        assertContentEquals("not registered".toByteArray(), saved.captured)
+        coVerify(exactly = 0) { receipts.register(any(), any(), any()) }
+    }
+
+    @Test
+    fun `an id reserved but not registered is taken off the file before it is saved`() = runTest {
+        val file = ExportedFile(mockk<Uri>(), "application/pdf")
+        val saved = slot<ByteArray>()
+        coEvery { receipts.reserve(any(), any(), any(), any()) } returns RECORD_ID
+        coEvery { receipts.register(any(), any(), any()) } returns false
+        coEvery { writer.save(capture(saved), any(), any()) } returns file
+        val vm = viewModel()
+
+        vm.files.test {
+            vm.export(ExportFormat.PDF, RecordFixtures.labels(), fallbacks)
+            assertEquals(FinishedExport(file, null), awaitItem())
+        }
+
+        // Never a file naming an id the server holds no hash for.
+        assertContentEquals("not registered".toByteArray(), saved.captured)
+    }
+
+    @Test
+    fun `an account with no co-parent reserves under a blank family`() = runTest {
+        coEvery { writer.save(any(), any(), any()) } returns ExportedFile(mockk<Uri>(), "text/csv")
+        val vm = ExportViewModel(source, writer, receipts, testParentsSource(me, null), userRepository)
+
+        vm.files.test {
+            vm.export(ExportFormat.CSV, RecordFixtures.labels(), fallbacks)
+            awaitItem()
+        }
+
+        coVerify { receipts.reserve("", any(), any(), ExportFormat.CSV) }
+    }
+
+    private companion object {
+        const val RECORD_ID = "7K3Q0ABCDEFGHJKM"
+        const val VERIFY_URL = "https://coplanly.example/verify/"
     }
 }
