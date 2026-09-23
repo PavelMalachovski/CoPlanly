@@ -206,6 +206,9 @@ cd firestore-tests && npm test              # firestore.rules + storage.rules on
   prove the ruleset *in this repository*; only a deploy settles what the live bucket enforces,
   which is exactly the gap the `pet_photos` entry below describes.
 - Windows dev machine; Gradle wrapper works from Git Bash and PowerShell.
+- **What only a phone can prove** (SEC-2's conversion of real data, REL-7's Gson-after-R8, the
+  dark cold start, cross-time-zone chat, …) is one ordered script: `docs/DEVICE-CHECKLIST.md`.
+  Add a check there when you ship something CI cannot see.
 - `google-services.json` is required for the Google Services plugin, but the build
   degrades gracefully if it is missing (see the conditional apply in `app/build.gradle.kts`).
 - **GitHub CI runs on every pull request, and on every push to `main`** — a push to a
