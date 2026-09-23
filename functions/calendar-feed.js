@@ -9,7 +9,9 @@
  * **The custody port is deliberately small.** The Android app answers "whose day is this" in
  * `CustodyResolver.custodyFor` and `CustodyModel.getCustodyFor`, and "which afternoons does it
  * carry" in `CustodyResolver.contactWindowsResolver` and `ContactWindowCodec`. What is ported is
- * exactly that and nothing else: an accepted one-off swap first, then the whole-day pattern
+ * exactly that and nothing else: an accepted one-off swap first, then the highest-priority
+ * seasonal layer covering the date (MON-14, `SeasonalLayerCodec` strings, ordered by
+ * `SeasonalLayer.PRECEDENCE`), then the whole-day pattern
  * (`floorMod(days since startDate, patternDays)` in `momDayIndices` is slot 1), and contact
  * windows decoded from their wire strings, dropped when they name the parent who already has the
  * day. A pending or declined swap moves nothing, a pending proposal is not the schedule, and the
@@ -162,6 +164,73 @@ function decodeContactWindow(value) {
   return {dayIndex, start, end, parent};
 }
 
+/** Longest range, and longest cycle, a seasonal layer may have — `SeasonalLayer.MAX_LAYER_DAYS`. */
+const MAX_LAYER_DAYS = 366;
+
+/** How many layers are read before the rest count as unreadable — `SeasonalLayerCodec.MAX_LAYERS`. */
+const MAX_LAYERS = 32;
+
+/**
+ * One seasonal-layer wire string decoded, or null — the port of `SeasonalLayerCodec.decode`.
+ *
+ * `L1;<id>;<priority>;<from>;<to>;<anchor>;<patternDays>;<slot-1 days>;<windows>;<name>`. An
+ * entry this cannot read — another version, a field that does not validate — is ignored here,
+ * exactly as the app ignores it for resolving a date (it keeps it only to write it back, which
+ * the feed never does). The name is not needed and is not decoded.
+ *
+ * @param {*} value The stored string.
+ * @return {?{id: string, priority: number, from: number, to: number, start: number,
+ *   patternDays: number, momDays: !Set<number>, windows: !Array<!Object>}} The layer.
+ */
+function decodeSeasonalLayer(value) {
+  if (typeof value !== 'string') return null;
+  const parts = value.split(';');
+  if (parts.length !== 10 || parts[0] !== 'L1') return null;
+  const [, id, priorityText, fromIso, toIso, anchorIso, cycleText, daysText, windowsText, name] = parts;
+  if (!/^[A-Za-z0-9-]{1,64}$/.test(id)) return null;
+  // The name is not shown, but an entry the app cannot read must not be read here either.
+  if (!/^(?:[A-Za-z0-9\-_.~]|%[0-9A-Fa-f]{2})*$/.test(name)) return null;
+  let decodedName;
+  try {
+    decodedName = decodeURIComponent(name);
+  } catch (e) {
+    return null;
+  }
+  if (decodedName.length > 80) return null;
+  if (!/^-?\d+$/.test(priorityText) || !/^\d+$/.test(cycleText)) return null;
+  const priority = Number(priorityText);
+  const patternDays = Number(cycleText);
+  const [from, to, start] = [dayNumber(fromIso), dayNumber(toIso), dayNumber(anchorIso)];
+  if ([from, to, start].some(Number.isNaN) || to < from || to - from + 1 > MAX_LAYER_DAYS) return null;
+  if (patternDays < 1 || patternDays > MAX_LAYER_DAYS || priority < -1000 || priority > 1000) return null;
+  const dayTexts = daysText === '' ? [] : daysText.split(',');
+  if (dayTexts.some((d) => !/^\d+$/.test(d) || Number(d) >= patternDays)) return null;
+  const windows = (windowsText === '' ? [] : windowsText.split(',')).map(decodeContactWindow);
+  if (windows.some((w) => w === null || w.dayIndex >= patternDays)) return null;
+  return {id, priority, from, to, start, patternDays, momDays: new Set(dayTexts.map(Number)), windows};
+}
+
+/**
+ * The layer that decides [day], or null — the port of `CustodyModel.layerOn` and
+ * `SeasonalLayer.PRECEDENCE`: highest priority, then the later start, then the id.
+ *
+ * @param {!Object} model From [parseCustodyModel].
+ * @param {number} day Day number.
+ * @return {?Object} The layer.
+ */
+function layerOn(model, day) {
+  let best = null;
+  (model.layers || []).forEach((layer) => {
+    if (day < layer.from || day > layer.to) return;
+    if (best === null || layer.priority > best.priority ||
+        (layer.priority === best.priority && (layer.from > best.from ||
+          (layer.from === best.from && layer.id < best.id)))) {
+      best = layer;
+    }
+  });
+  return best;
+}
+
 /**
  * The parts of a `custody_models` document the feed needs, or null when it describes no pattern.
  *
@@ -171,7 +240,7 @@ function decodeContactWindow(value) {
  *
  * @param {?Object} doc The document's data.
  * @return {?{start: number, patternDays: number, momDays: !Set<number>,
- *   swaps: !Object<string, string>, windows: !Array<!Object>}} The model.
+ *   swaps: !Object<string, string>, windows: !Array<!Object>, layers: !Array<!Object>}} The model.
  */
 function parseCustodyModel(doc) {
   if (!doc) return null;
@@ -197,7 +266,12 @@ function parseCustodyModel(doc) {
       .map(decodeContactWindow)
       .filter((w) => w !== null);
 
-  return {start, patternDays, momDays, swaps, windows};
+  // `SeasonalLayerCodec.decodeAll`: distinct, sorted, readable ones up to MAX_LAYERS.
+  const layerStrings = [...new Set((Array.isArray(doc.seasonalLayers) ? doc.seasonalLayers : [])
+      .filter((v) => typeof v === 'string'))].sort();
+  const layers = layerStrings.map(decodeSeasonalLayer).filter((l) => l !== null).slice(0, MAX_LAYERS);
+
+  return {start, patternDays, momDays, swaps, windows, layers};
 }
 
 /**
@@ -210,6 +284,8 @@ function parseCustodyModel(doc) {
 function custodyOn(model, day) {
   const swap = model.swaps[isoOfDay(day)];
   if (swap) return swap;
+  const layer = layerOn(model, day);
+  if (layer) return layer.momDays.has(floorMod(day - layer.start, layer.patternDays)) ? SLOT_ONE : SLOT_TWO;
   return model.momDays.has(floorMod(day - model.start, model.patternDays)) ? SLOT_ONE : SLOT_TWO;
 }
 
@@ -223,10 +299,13 @@ function custodyOn(model, day) {
  * @return {!Array<!Object>} The windows.
  */
 function contactWindowsOn(model, day) {
-  if (model.windows.length === 0) return [];
-  const index = floorMod(day - model.start, model.patternDays);
+  // Inside a layer the layer's own windows answer, in its own cycle (`CustodyModel.contactWindowsOn`).
+  const layer = layerOn(model, day);
+  const source = layer ? layer : model;
+  if (source.windows.length === 0) return [];
+  const index = floorMod(day - source.start, source.patternDays);
   const owner = custodyOn(model, day);
-  return model.windows
+  return source.windows
       .filter((w) => w.dayIndex === index && w.parent !== owner)
       .sort((a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : 0));
 }
@@ -664,6 +743,8 @@ module.exports = {
   dayNumber,
   isoOfDay,
   decodeContactWindow,
+  decodeSeasonalLayer,
+  layerOn,
   parseCustodyModel,
   custodyOn,
   contactWindowsOn,

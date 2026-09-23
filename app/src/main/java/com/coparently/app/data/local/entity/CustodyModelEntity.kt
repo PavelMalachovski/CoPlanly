@@ -69,5 +69,12 @@ data class CustodyModelEntity(
      * with no windows must be byte-identical to one written before this column existed, or the
      * equality guard in `CustodyModelRepository.mirrorIntoRoom` would re-insert on every echo.
      */
-    val contactWindowsJson: String? = null
+    val contactWindowsJson: String? = null,
+    /**
+     * The seasonal layers (MON-14) as a JSON array of `SeasonalLayerCodec` strings — unreadable
+     * entries included, verbatim — or null for none. Null rather than `"[]"`, for the reason
+     * [contactWindowsJson] is: a row with no layers must be byte-identical to one written before
+     * this column existed.
+     */
+    val seasonalLayersJson: String? = null
 )

@@ -14,7 +14,8 @@ import java.time.LocalDate
  * The ordering is the whole correctness of the feature:
  *
  * 1. an **accepted** [DayOverride] for that date;
- * 2. otherwise the active [CustodyModel];
+ * 2. otherwise the active [CustodyModel] — which itself answers from the highest-priority
+ *    [SeasonalLayer] covering the date before its base pattern (MON-14);
  * 3. otherwise the legacy per-parent schedule;
  * 4. otherwise null — no arrangement is recorded, and a guess would be worse than a blank cell.
  *
@@ -80,7 +81,10 @@ object CustodyResolver {
         model: CustodyModel?,
         custodyFor: (LocalDate) -> String?
     ): (LocalDate) -> List<ContactWindow> {
-        if (model == null || model.contactWindows.isEmpty()) return { emptyList() }
+        // A seasonal layer may carry windows the base pattern does not (MON-14).
+        val anyWindows = model != null &&
+            (model.contactWindows.isNotEmpty() || model.seasonalLayers.any { it.contactWindows.isNotEmpty() })
+        if (model == null || !anyWindows) return { emptyList() }
         return { date -> model.contactWindowsOn(date).filter { it.parent != custodyFor(date) } }
     }
 

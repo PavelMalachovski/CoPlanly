@@ -9,6 +9,8 @@ import com.coparently.app.domain.custody.CustodyTimestamp
 import com.coparently.app.domain.custody.CustodyWriteKind
 import com.coparently.app.domain.custody.DayOverride
 import com.coparently.app.domain.custody.DayOverrideStatus
+import com.coparently.app.domain.custody.DecodedLayers
+import com.coparently.app.domain.custody.SeasonalLayerCodec
 import com.coparently.app.domain.custody.SharedCustody
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.CustodyModelType
@@ -149,6 +151,9 @@ class FirestoreCustodyDataSource @Inject constructor(
             // the document never had it — see `SharedCustody.contactWindowsWire`. A proposal or
             // swap write that changed this list would be refused by `firestore.rules`.
             contactWindowsWire?.let { put("contactWindows", it) }
+            // The seasonal layers (MON-14) follow the contact windows' rule exactly: verbatim,
+            // omitted when the document never had the key. See `SharedCustody.seasonalLayersWire`.
+            seasonalLayersWire?.let { put("seasonalLayers", it) }
         }
 
     /**
@@ -183,6 +188,7 @@ class FirestoreCustodyDataSource @Inject constructor(
         put("proposedBy", proposedBy)
         put("proposedAt", proposedAt)
         contactWindowsWire?.let { put("contactWindows", it) }
+        seasonalLayersWire?.let { put("seasonalLayers", it) }
     }
 
     /** The decision as a sub-map. `note` is omitted when absent rather than written as null. */
@@ -216,6 +222,8 @@ class FirestoreCustodyDataSource @Inject constructor(
         if (startDate == null || patternDays == null) return null
         val windowsWire = (this["contactWindows"] as? List<*>)?.mapNotNull { it as? String }
         val windows = ContactWindowCodec.decodeAll(windowsWire)
+        val layersWire = (this["seasonalLayers"] as? List<*>)?.mapNotNull { it as? String }
+        val layers = SeasonalLayerCodec.decodeAll(layersWire)
 
         return SharedCustody(
             model = CustodyModel(
@@ -228,13 +236,15 @@ class FirestoreCustodyDataSource @Inject constructor(
                     .toSet(),
                 startDate = startDate,
                 isActive = true,
-                contactWindows = windows
+                contactWindows = windows,
+                seasonalLayers = layers.layers,
+                unreadableLayers = layers.unreadable
             ),
             lastModifiedBy = (this["lastModifiedBy"] as? String).orEmpty(),
             lastModifiedAtMillis = CustodyTimestamp.fromWire(this["lastModifiedAt"] as? String),
             createdAt = (this["createdAt"] as? String).orEmpty(),
             repeatYearly = this["repeatYearly"] as? Boolean ?: true,
-            proposal = (this["proposal"] as? Map<*, *>)?.toProposal(documentId, windows),
+            proposal = (this["proposal"] as? Map<*, *>)?.toProposal(documentId, windows, layers),
             lastDecision = (this["lastDecision"] as? Map<*, *>)?.toDecision(),
             dayOverrides = (this["dayOverrides"] as? Map<*, *>).toDayOverrides(),
             lastSwapDate = (this["lastSwapDate"] as? String)?.takeIf { it.isNotBlank() },
@@ -245,7 +255,8 @@ class FirestoreCustodyDataSource @Inject constructor(
             lastModifiedKind = (this["lastModifiedKind"] as? String)
                 ?.let { name -> CustodyWriteKind.entries.firstOrNull { it.name == name } }
                 ?: CustodyWriteKind.PATTERN,
-            contactWindowsWire = windowsWire
+            contactWindowsWire = windowsWire,
+            seasonalLayersWire = layersWire
         )
     }
 
@@ -303,10 +314,13 @@ class FirestoreCustodyDataSource @Inject constructor(
      * @param agreedWindows The agreed pattern's contact windows, which a proposal with no
      *   `contactWindows` of its own keeps: it was written by a build that could not express
      *   windows, and that is not a proposal to remove them.
+     * @param agreedLayers The agreed pattern's seasonal layers, kept by a proposal with no
+     *   `seasonalLayers` of its own for the same reason (MON-14).
      */
     private fun Map<*, *>.toProposal(
         documentId: String,
-        agreedWindows: List<ContactWindow>
+        agreedWindows: List<ContactWindow>,
+        agreedLayers: DecodedLayers
     ): CustodyProposal? {
         val startDate = (this["startDate"] as? String)?.let { iso ->
             runCatching { LocalDate.parse(iso) }.getOrNull()
@@ -315,6 +329,8 @@ class FirestoreCustodyDataSource @Inject constructor(
         val proposedBy = (this["proposedBy"] as? String)?.takeIf { it.isNotBlank() }
         if (startDate == null || patternDays == null || proposedBy == null) return null
         val windowsWire = (this["contactWindows"] as? List<*>)?.mapNotNull { it as? String }
+        val layersWire = (this["seasonalLayers"] as? List<*>)?.mapNotNull { it as? String }
+        val layers = layersWire?.let { SeasonalLayerCodec.decodeAll(it) } ?: agreedLayers
 
         return CustodyProposal(
             model = CustodyModel(
@@ -329,12 +345,15 @@ class FirestoreCustodyDataSource @Inject constructor(
                 // Not the active pattern, and must never be mistaken for one by a caller that
                 // reads the field to decide what the calendar should colour.
                 isActive = false,
-                contactWindows = windowsWire?.let { ContactWindowCodec.decodeAll(it) } ?: agreedWindows
+                contactWindows = windowsWire?.let { ContactWindowCodec.decodeAll(it) } ?: agreedWindows,
+                seasonalLayers = layers.layers,
+                unreadableLayers = layers.unreadable
             ),
             repeatYearly = this["repeatYearly"] as? Boolean ?: true,
             proposedBy = proposedBy,
             proposedAt = (this["proposedAt"] as? String).orEmpty(),
-            contactWindowsWire = windowsWire
+            contactWindowsWire = windowsWire,
+            seasonalLayersWire = layersWire
         )
     }
 

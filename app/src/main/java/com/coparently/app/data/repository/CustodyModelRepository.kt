@@ -18,6 +18,7 @@ import com.coparently.app.domain.custody.CustodyTimestamp
 import com.coparently.app.domain.custody.CustodyWriteKind
 import com.coparently.app.domain.custody.DayOverride
 import com.coparently.app.domain.custody.DayOverrideStatus
+import com.coparently.app.domain.custody.SeasonalLayer
 import com.coparently.app.domain.custody.SharedCustody
 import com.coparently.app.domain.custody.SharedCustodyRead
 import com.coparently.app.domain.model.CustodyModel
@@ -479,7 +480,7 @@ class CustodyModelRepository(
             startDate = startDate,
             momFirst = momFirst
         )
-        return submitPattern(model.withWindows(contactWindows))
+        return submitPattern(withActiveLayers(model.withWindows(contactWindows)))
     }
 
     /**
@@ -502,7 +503,7 @@ class CustodyModelRepository(
             momIsResident = momIsResident,
             midweek = midweek
         )
-        return submitPattern(model.withWindows(contactWindows))
+        return submitPattern(withActiveLayers(model.withWindows(contactWindows)))
     }
 
     /**
@@ -518,7 +519,7 @@ class CustodyModelRepository(
             startDate = startDate,
             momStartsFirst = momStartsFirst
         )
-        return submitPattern(model.withWindows(contactWindows))
+        return submitPattern(withActiveLayers(model.withWindows(contactWindows)))
     }
 
     /**
@@ -534,7 +535,7 @@ class CustodyModelRepository(
             startDate = startDate,
             momStartsFirst = momStartsFirst
         )
-        return submitPattern(model.withWindows(contactWindows))
+        return submitPattern(withActiveLayers(model.withWindows(contactWindows)))
     }
 
     /**
@@ -552,7 +553,7 @@ class CustodyModelRepository(
             patternDays = patternDays,
             momDayIndices = momDayIndices
         )
-        return submitPattern(model.withWindows(contactWindows))
+        return submitPattern(withActiveLayers(model.withWindows(contactWindows)))
     }
 
     /**
@@ -562,6 +563,33 @@ class CustodyModelRepository(
      */
     private fun CustodyModel.withWindows(windows: List<ContactWindow>): CustodyModel =
         copy(contactWindows = ContactWindowCodec.canonical(windows.filter { it.dayIndex < patternDays }))
+
+    /**
+     * [model] carrying the active pattern's seasonal layers (MON-14).
+     *
+     * The pattern editor builds a fresh model from the base form, which knows nothing of layers;
+     * without this, saving the base pattern would propose deleting every layer the pair agreed —
+     * a change nobody asked for, riding on one somebody did. Unreadable entries travel too.
+     */
+    private suspend fun withActiveLayers(model: CustodyModel): CustodyModel {
+        val active = getActiveModelSync() ?: return model
+        return model.copy(seasonalLayers = active.seasonalLayers, unreadableLayers = active.unreadableLayers)
+    }
+
+    /**
+     * Submits a new set of seasonal layers over the active base pattern (MON-14).
+     *
+     * Through [submitPattern], so it takes the same road a base-pattern change does: applied
+     * directly on an unpaired account or before the pair has a shared schedule, and otherwise a
+     * **proposal** the co-parent accepts or declines — never written onto their calendar unasked.
+     * The base pattern and any layer entries this build cannot read are carried unchanged.
+     *
+     * @return How the change landed, or null when there is no base pattern to layer on.
+     */
+    suspend fun submitSeasonalLayers(layers: List<SeasonalLayer>): PatternSubmission? {
+        val active = getActiveModelSync() ?: return null
+        return submitPattern(active.copy(seasonalLayers = layers))
+    }
 
     /**
      * Deletes a custody model.
@@ -656,6 +684,13 @@ class CustodyModelRepository(
                 existing?.contactWindowsJson
             } else {
                 ContactWindowJson.encode(remote.model.contactWindows)
+            },
+            // The same rule for the seasonal layers (MON-14): a missing key is an older build's
+            // write, never "no layers".
+            seasonalLayersJson = if (remote.seasonalLayersWire == null) {
+                existing?.seasonalLayersJson
+            } else {
+                SeasonalLayerJson.encode(remote.model.seasonalLayers, remote.model.unreadableLayers)
             }
         )
         if (entity == existing) return
@@ -736,7 +771,9 @@ class CustodyModelRepository(
                     // Always the key, as `[]` for none: this is a pattern write, the one kind
                     // `firestore.rules` lets replace the list, and an explicit empty list is how
                     // a removal is told apart from an older build that never wrote the key.
-                    contactWindowsWire = ContactWindowCodec.encodeAll(model.contactWindows)
+                    contactWindowsWire = ContactWindowCodec.encodeAll(model.contactWindows),
+                    // The same for the seasonal layers (MON-14), unreadable entries included.
+                    seasonalLayersWire = model.seasonalLayersWire()
                 )
             )
         }
@@ -1069,6 +1106,7 @@ class CustodyModelRepository(
             .map { it.trim().toInt() }
             .toSet()
 
+        val layers = SeasonalLayerJson.decode(seasonalLayersJson)
         return CustodyModel(
             id = id,
             modelType = CustodyModelType.fromString(modelType),
@@ -1076,7 +1114,9 @@ class CustodyModelRepository(
             momDayIndices = momDays,
             startDate = LocalDate.parse(startDate),
             isActive = isActive,
-            contactWindows = ContactWindowJson.decode(contactWindowsJson)
+            contactWindows = ContactWindowJson.decode(contactWindowsJson),
+            seasonalLayers = layers.layers,
+            unreadableLayers = layers.unreadable
         )
     }
 
@@ -1111,7 +1151,8 @@ class CustodyModelRepository(
             // guard in `mirrorIntoRoom` depends on to stay quiet.
             dayOverridesJson = DayOverrideJson.encode(dayOverrides),
             // Null for none, for the same reason.
-            contactWindowsJson = ContactWindowJson.encode(contactWindows)
+            contactWindowsJson = ContactWindowJson.encode(contactWindows),
+            seasonalLayersJson = SeasonalLayerJson.encode(seasonalLayers, unreadableLayers)
         )
     }
 

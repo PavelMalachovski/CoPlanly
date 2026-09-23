@@ -5,6 +5,7 @@ import com.coparently.app.data.local.entity.CustodyModelEntity
 import com.coparently.app.data.remote.firebase.FirestoreCustodyDataSource
 import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.custody.CustodyTimestamp
+import com.coparently.app.domain.custody.SeasonalLayer
 import com.coparently.app.domain.custody.SharedCustody
 import com.coparently.app.domain.custody.SharedCustodyRead
 import com.coparently.app.domain.model.CustodyModel
@@ -522,6 +523,83 @@ class CustodyModelRepositoryTest {
         assertEquals(listOf(WEDNESDAY_WINDOW, WEDNESDAY_WINDOW.copy(dayIndex = 9)), model?.contactWindows)
     }
 
+    // ---- seasonal layers (MON-14) -------------------------------------------
+
+    @Test
+    fun `a pattern save writes its seasonal layers, and an empty list rather than no key`() =
+        runTest(dispatcher) {
+            val custody = slot<SharedCustody>()
+            coEvery {
+                firestoreCustodyDataSource.setCustody(any(), any(), capture(custody))
+            } returns Unit
+
+            repository.saveAndActivate(
+                localModel().copy(seasonalLayers = listOf(SUMMER), unreadableLayers = listOf(FUTURE))
+            )
+            assertEquals(listOf(SUMMER_WIRE, FUTURE).sorted(), custody.captured.seasonalLayersWire)
+
+            repository.saveAndActivate(localModel())
+            assertEquals(emptyList<String>(), custody.captured.seasonalLayersWire)
+        }
+
+    @Test
+    fun `a document an older build wrote without layers keeps this device's layers`() =
+        runTest(dispatcher) {
+            val stored = mirroredEntity().copy(seasonalLayersJson = """["$SUMMER_WIRE"]""")
+            coEvery { custodyModelDao.getModelById(REMOTE_MODEL_ID) } returns stored
+            every { firestoreCustodyDataSource.observeCustody(DOCUMENT_ID) } returns
+                flowOf(remoteCustody(lastModifiedAtMillis = RECENTLY))
+            val entity = slot<CustodyModelEntity>()
+            coEvery { custodyModelDao.insertModel(capture(entity)) } returns Unit
+
+            repository.observeShared().first()
+
+            assertEquals(stored.seasonalLayersJson, entity.captured.seasonalLayersJson)
+        }
+
+    @Test
+    fun `an explicit empty layer list on the document removes this device's layers`() =
+        runTest(dispatcher) {
+            val stored = mirroredEntity().copy(seasonalLayersJson = """["$SUMMER_WIRE"]""")
+            coEvery { custodyModelDao.getModelById(REMOTE_MODEL_ID) } returns stored
+            every { firestoreCustodyDataSource.observeCustody(DOCUMENT_ID) } returns
+                flowOf(remoteCustody().copy(seasonalLayersWire = emptyList()))
+            val entity = slot<CustodyModelEntity>()
+            coEvery { custodyModelDao.insertModel(capture(entity)) } returns Unit
+
+            repository.observeShared().first()
+
+            assertNull(entity.captured.seasonalLayersJson)
+        }
+
+    @Test
+    fun `saving the base pattern carries the agreed layers, unreadable ones included`() =
+        runTest(dispatcher) {
+            coEvery { custodyModelDao.getActiveModelSync() } returns
+                mirroredEntity().copy(seasonalLayersJson = """["$SUMMER_WIRE","$FUTURE"]""")
+            val entity = slot<CustodyModelEntity>()
+            coEvery { custodyModelDao.insertModel(capture(entity)) } returns Unit
+
+            repository.createWeekOnWeekOff(START_DATE)
+
+            assertEquals("""["$SUMMER_WIRE","$FUTURE"]""", entity.captured.seasonalLayersJson)
+        }
+
+    @Test
+    fun `submitting layers keeps the base pattern and refuses without one`() = runTest(dispatcher) {
+        coEvery { custodyModelDao.getActiveModelSync() } returns null
+        assertNull(repository.submitSeasonalLayers(listOf(SUMMER)))
+
+        coEvery { custodyModelDao.getActiveModelSync() } returns mirroredEntity()
+        val entity = slot<CustodyModelEntity>()
+        coEvery { custodyModelDao.insertModel(capture(entity)) } returns Unit
+
+        repository.submitSeasonalLayers(listOf(SUMMER))
+
+        assertEquals("[0,1,2,3,4,5,6]", entity.captured.momDaysPattern)
+        assertEquals("""["$SUMMER_WIRE"]""", entity.captured.seasonalLayersJson)
+    }
+
     // ---- fixtures ---------------------------------------------------------
 
     /** Points both the one-shot and the streaming uid lookups at [partnerUid]. */
@@ -579,6 +657,18 @@ class CustodyModelRepositoryTest {
     )
 
     private companion object {
+        /** July with slot 1 (MON-14). */
+        val SUMMER = SeasonalLayer.allWith(
+            "summer-26",
+            "Summer",
+            LocalDate.of(2026, 7, 1)..LocalDate.of(2026, 7, 31),
+            "mom"
+        )
+        const val SUMMER_WIRE = "L1;summer-26;0;2026-07-01;2026-07-31;2026-07-01;1;0;;Summer"
+
+        /** A layer from a newer build, which this one must carry without reading. */
+        const val FUTURE = "L2;written-by-a-newer-build"
+
         const val MY_UID = "uidA"
         const val PARTNER_UID = "uidB"
 

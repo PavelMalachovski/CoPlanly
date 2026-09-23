@@ -18,3 +18,4 @@ requested: 2026-09-23 — export schemas 35 (`users.regionCode`, MON-13) and 36
   check the baseline half of its commit before merging. If it grew entries under the files the
   same pull request added, that is a finding being absolved rather than fixed.
 requested: 2026-09-23 — export schema 37 (event_version_outbox, MON-4)
+requested: 2026-09-23 — export schema 38 (custody_models seasonal layers, MON-14)

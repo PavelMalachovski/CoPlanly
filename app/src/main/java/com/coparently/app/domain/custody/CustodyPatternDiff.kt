@@ -45,6 +45,10 @@ data class MovedDay(val date: LocalDate, val fromSlot: String, val toSlot: Strin
  *   than printing a confidently wrong "nothing changes".
  * @property contactWindowsChanged True when some day inside the window gains, loses or moves a
  *   contact window (MON-6b), whether or not any whole day moves.
+ * @property seasonalLayersChanged True when the proposal adds, removes or edits a seasonal layer
+ *   (MON-14). Compared on the whole list rather than over the window: a summer layer proposed in
+ *   March moves nothing in the next eight weeks, and "nothing on the calendar would change" over
+ *   it would be a false sentence.
  */
 data class CustodyPatternDiff(
     val movedDays: List<MovedDay>,
@@ -52,7 +56,8 @@ data class CustodyPatternDiff(
     val windowDays: Int,
     val identical: Boolean,
     val comparable: Boolean,
-    val contactWindowsChanged: Boolean = false
+    val contactWindowsChanged: Boolean = false,
+    val seasonalLayersChanged: Boolean = false
 ) {
     /** How many days move — the number the summary sentence leads with. */
     val movedDayCount: Int get() = movedDays.size
@@ -110,6 +115,8 @@ data class CustodyPatternDiff(
                 !CustodyModel.sameContactWindows(agreed.contactWindowsOn(date), proposed.contactWindowsOn(date))
             }
 
+            val layersChanged = agreed.seasonalLayersWire() != proposed.seasonalLayersWire()
+
             val net = mutableMapOf<String, Int>()
             moved.forEach { day ->
                 net[day.fromSlot] = (net[day.fromSlot] ?: 0) - 1
@@ -120,9 +127,10 @@ data class CustodyPatternDiff(
                 movedDays = moved,
                 netDaysBySlot = net.filterValues { it != 0 },
                 windowDays = window,
-                identical = moved.isEmpty() && !windowsChanged,
+                identical = moved.isEmpty() && !windowsChanged && !layersChanged,
                 comparable = true,
-                contactWindowsChanged = windowsChanged
+                contactWindowsChanged = windowsChanged,
+                seasonalLayersChanged = layersChanged
             )
         }
 

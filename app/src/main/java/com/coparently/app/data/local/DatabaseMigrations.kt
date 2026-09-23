@@ -823,6 +823,19 @@ object DatabaseMigrations {
     }
 
     /**
+     * v37 -> v38: seasonal layers on the custody pattern (MON-14).
+     *
+     * A layer replaces the base pattern for a range of dates — the summer, Christmas. Every
+     * existing pattern has none, which is what null says (see
+     * `CustodyModelEntity.seasonalLayersJson`), so nobody's calendar changes on upgrade.
+     */
+    val MIGRATION_37_38 = object : Migration(37, 38) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL("ALTER TABLE custody_models ADD COLUMN seasonalLayersJson TEXT")
+        }
+    }
+
+    /**
      * List of all migrations in order.
      */
     val ALL_MIGRATIONS = arrayOf(
@@ -857,6 +870,7 @@ object DatabaseMigrations {
         MIGRATION_33_34,
         MIGRATION_34_35,
         MIGRATION_35_36,
-        MIGRATION_36_37
+        MIGRATION_36_37,
+        MIGRATION_37_38
     )
 }

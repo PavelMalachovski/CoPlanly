@@ -215,6 +215,94 @@ describe('calendar feed: the custody port', () => {
     assert.deepStrictEqual(feed.contactWindowsOn(model, day('2026-09-23')), []);
   });
 
+  // The same fixtures as `SeasonalLayerTest` on the Kotlin side (MON-14): the two must agree.
+  const JULY_MUM_AUGUST_DAD = 'L1;summer-26;0;2026-07-01;2026-08-31;2026-07-01;62;' +
+      Array.from({length: 31}, (_, i) => i).join(',') + ';;Summer';
+  const WINTER_MUM = 'L1;winter-26;0;2026-12-20;2027-01-03;2026-12-20;1;0;;Winter';
+  const CHRISTMAS_DAD = 'L1;xmas-26;1;2026-12-24;2026-12-26;2026-12-24;1;;;Christmas';
+
+  it('decodes seasonal layers as SeasonalLayerCodec does, ignoring what it cannot read', () => {
+    const summer = feed.decodeSeasonalLayer(JULY_MUM_AUGUST_DAD);
+    assert.strictEqual(summer.patternDays, 62);
+    assert.strictEqual(summer.momDays.size, 31);
+    assert.strictEqual(feed.isoOfDay(summer.to), '2026-08-31');
+    [
+      'L2;summer-26;0;2026-07-01;2026-08-31;2026-07-01;62;0;;Summer',
+      'L1;summer 26;0;2026-07-01;2026-08-31;2026-07-01;62;0;;Summer',
+      'L1;s;0;2026-08-31;2026-07-01;2026-07-01;62;0;;Summer',
+      'L1;s;0;2026-01-01;2027-01-02;2026-01-01;1;0;;Too long',
+      'L1;s;0;2026-07-01;2026-08-31;2026-07-01;14;14;;Index past the cycle',
+      'L1;s;0;2026-07-01;2026-08-31;2026-07-01;14;0;14|15:00|19:00|dad;Window past the cycle',
+      'L1;s;5000;2026-07-01;2026-08-31;2026-07-01;14;0;;Priority',
+      'L1;s;0;2026-07-01;2026-08-31;2026-07-01;+14;0;;Signed',
+      7,
+    ]
+        .forEach((bad) => assert.strictEqual(feed.decodeSeasonalLayer(bad), null, String(bad)));
+    // An empty name is a name.
+    assert.notStrictEqual(feed.decodeSeasonalLayer('L1;s;0;2026-07-01;2026-08-31;2026-07-01;14;0;;'), null);
+  });
+
+  it('lets a layer replace the base pattern inside its dates, and only there', () => {
+    const model = feed.parseCustodyModel(Object.assign({}, WEEK_ON_WEEK_OFF, {
+      seasonalLayers: [JULY_MUM_AUGUST_DAD],
+    }));
+    // 2026-07-06 is a base slot-2 week (floorMod(-63, 14) = 7), but July is Mum's.
+    assert.strictEqual(feed.custodyOn(model, day('2026-07-06')), 'mom');
+    // 2026-08-10 is index 0 of the base pattern (Mum's), but the second half is Dad's.
+    assert.strictEqual(feed.custodyOn(model, day('2026-08-10')), 'dad');
+    assert.strictEqual(feed.custodyOn(model, day('2026-08-31')), 'dad');
+    // The day after the layer, the base pattern answers again: 2026-09-01 is index 8, Dad.
+    assert.strictEqual(feed.custodyOn(model, day('2026-09-01')), 'dad');
+    assert.strictEqual(feed.custodyOn(model, day('2026-09-07')), 'mom');
+    // Before it: 2026-06-24 is index 9, Dad's under the base pattern.
+    assert.strictEqual(feed.custodyOn(model, day('2026-06-24')), 'dad');
+  });
+
+  it('picks the higher priority where layers overlap, then the later start, then the id', () => {
+    const model = feed.parseCustodyModel(Object.assign({}, WEEK_ON_WEEK_OFF, {
+      seasonalLayers: [WINTER_MUM, CHRISTMAS_DAD],
+    }));
+    assert.strictEqual(feed.custodyOn(model, day('2026-12-23')), 'mom');
+    assert.strictEqual(feed.custodyOn(model, day('2026-12-24')), 'dad');
+    assert.strictEqual(feed.custodyOn(model, day('2026-12-26')), 'dad');
+    assert.strictEqual(feed.custodyOn(model, day('2026-12-27')), 'mom');
+
+    const tie = feed.parseCustodyModel(Object.assign({}, WEEK_ON_WEEK_OFF, {
+      seasonalLayers: [WINTER_MUM, CHRISTMAS_DAD.replace(';1;', ';0;')],
+    }));
+    // Same priority: the layer that starts later — the inner one — wins.
+    assert.strictEqual(feed.custodyOn(tie, day('2026-12-25')), 'dad');
+  });
+
+  it('keeps an accepted swap above every layer', () => {
+    const model = feed.parseCustodyModel(Object.assign({}, WEEK_ON_WEEK_OFF, {
+      seasonalLayers: [JULY_MUM_AUGUST_DAD],
+      dayOverrides: {'2026-07-02': {toParent: 'dad', requestedBy: BOB, status: 'ACCEPTED'}},
+    }));
+    assert.strictEqual(feed.custodyOn(model, day('2026-07-02')), 'dad');
+    assert.strictEqual(feed.custodyOn(model, day('2026-07-03')), 'mom');
+  });
+
+  it('takes a day\'s contact windows from the layer that decides it', () => {
+    const model = feed.parseCustodyModel(Object.assign({}, WEEK_ON_WEEK_OFF, {
+      contactWindows: ['0|10:00|12:00|dad', '1|10:00|12:00|dad', '2|10:00|12:00|dad',
+        '3|10:00|12:00|dad', '4|10:00|12:00|dad', '5|10:00|12:00|dad', '6|10:00|12:00|dad'],
+      seasonalLayers: ['L1;aug-26;0;2026-08-01;2026-08-31;2026-08-01;1;0;0|15:00|19:00|dad;August'],
+    }));
+    // Inside the layer: every day is Mum's and carries the layer's 15:00 window, not the base's.
+    assert.deepStrictEqual(feed.contactWindowsOn(model, day('2026-08-10')).map((w) => w.start), ['15:00']);
+    // Outside it: the base pattern's windows, on the base pattern's slot-1 week.
+    assert.deepStrictEqual(feed.contactWindowsOn(model, day('2026-09-07')).map((w) => w.start), ['10:00']);
+  });
+
+  it('ignores an unreadable layer rather than guessing it', () => {
+    const model = feed.parseCustodyModel(Object.assign({}, WEEK_ON_WEEK_OFF, {
+      seasonalLayers: ['L2;future;9;2026-07-01;2026-08-31;x', 'L1;broken', 42],
+    }));
+    assert.strictEqual(model.layers.length, 0);
+    assert.strictEqual(feed.custodyOn(model, day('2026-07-06')), 'dad');
+  });
+
   it('refuses a document without a pattern rather than guessing one', () => {
     assert.strictEqual(feed.parseCustodyModel({patternDays: 14}), null);
     assert.strictEqual(feed.parseCustodyModel({startDate: '2026-02-30', patternDays: 14}), null);
