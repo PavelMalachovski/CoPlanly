@@ -2,6 +2,9 @@ package com.coparently.app.presentation.home
 
 import app.cash.turbine.test
 import com.coparently.app.data.repository.CustodyModelRepository
+import com.coparently.app.domain.custody.ContactWindow
+import com.coparently.app.domain.model.CustodyModel
+import com.coparently.app.domain.model.CustodyModelType
 import com.coparently.app.domain.model.PairingState
 import com.coparently.app.domain.model.PartnerSummary
 import com.coparently.app.domain.money.SupportedCurrency
@@ -31,6 +34,8 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.time.LocalDate
+import java.time.LocalTime
 
 /**
  * [HomeViewModel.uiState] is fed by the one realtime repository in this class (the rest are
@@ -50,6 +55,7 @@ class HomeViewModelTest {
 
     private val dispatcher = StandardTestDispatcher()
     private lateinit var pairingState: MutableStateFlow<PairingState>
+    private val activeModel = MutableStateFlow<CustodyModel?>(null)
     private lateinit var viewModel: HomeViewModel
 
     @Before
@@ -66,7 +72,7 @@ class HomeViewModelTest {
             every { getAllChangeRequests() } returns flowOf(emptyList())
         }
         val custodyModelRepository = mockk<CustodyModelRepository> {
-            every { getActiveModel() } returns flowOf(null)
+            every { getActiveModel() } returns activeModel
             // The awaiting-swaps flow (items 4/13) subscribes at construction.
             every { observeDayOverrides() } returns flowOf(emptyMap())
         }
@@ -200,6 +206,54 @@ class HomeViewModelTest {
             cancelAndIgnoreRemainingEvents()
         }
     }
+
+    @Test
+    fun `today's card carries the afternoon with the other parent, and only that`() =
+        runTest(dispatcher) {
+            // MON-6b. Today is index 0 of a week-on/week-off cycle, so it is slot 1's day. The
+            // slot-2 afternoon is news; the slot-1 morning names the parent who already has the
+            // day, and the calendar grid does not draw it — so neither may the today card.
+            val today = LocalDate.now()
+            val afternoon = ContactWindow(
+                dayIndex = 0,
+                start = LocalTime.parse("15:00"),
+                end = LocalTime.parse("19:00"),
+                parent = ContactWindow.SLOT_TWO
+            )
+            val ownParent = ContactWindow(
+                dayIndex = 0,
+                start = LocalTime.parse("08:00"),
+                end = LocalTime.parse("09:00"),
+                parent = ContactWindow.SLOT_ONE
+            )
+            val tomorrow = afternoon.copy(dayIndex = 1)
+            activeModel.value = CustodyModel(
+                id = "m1",
+                modelType = CustodyModelType.WEEK_ON_WEEK_OFF,
+                patternDays = 14,
+                momDayIndices = (0..6).toSet(),
+                startDate = today,
+                contactWindows = listOf(tomorrow, ownParent, afternoon)
+            )
+
+            viewModel.uiState.test {
+                assertEquals(HomeUiState.Loading, awaitItem())
+                pairingState.value = PairingState.Paired(
+                    PartnerSummary(
+                        id = "partner-1",
+                        name = "Alex",
+                        email = "alex@example.com",
+                        pairedSinceMillis = null
+                    )
+                )
+                dispatcher.scheduler.advanceUntilIdle()
+
+                val dashboard = expectMostRecentItem() as HomeUiState.Dashboard
+                assertEquals(ContactWindow.SLOT_ONE, dashboard.today.dayParent)
+                assertEquals(listOf(afternoon), dashboard.today.contactWindows)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
 
     @Test
     fun `a tapped event opens its preview, and a missing one falls back to the editor`() =

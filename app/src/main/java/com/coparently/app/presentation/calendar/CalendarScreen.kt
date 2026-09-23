@@ -364,14 +364,10 @@ fun CalendarScreen(
     // does not change for an afternoon. Only a window that says something is drawn — one naming
     // the parent who already has the day (the pattern gives it to them, or an accepted swap does)
     // is not an afternoon with anybody new, so it is skipped rather than painted over its own
-    // parent's tint.
+    // parent's tint. The rule lives in `CustodyResolver.contactWindowsResolver`, which Home's
+    // today card reads too, so the two surfaces cannot disagree about the same afternoon.
     val getContactWindows: (LocalDate) -> List<ContactWindow> = remember(custodyModel, getCustody) {
-        val model = custodyModel
-        if (model == null || model.contactWindows.isEmpty()) {
-            { _ -> emptyList() }
-        } else {
-            { date -> model.contactWindowsOn(date).filter { it.parent != getCustody(date) } }
-        }
+        CustodyResolver.contactWindowsResolver(custodyModel, getCustody)
     }
 
     // The dates a swap is being negotiated on. A pending swap has changed nothing about whose

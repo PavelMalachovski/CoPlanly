@@ -736,7 +736,8 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     `momDayIndices`. **`getCustodyFor` stays whole-day** — do not teach it about windows: the
     grid's colour, the handover walk, swaps and every older build read it, and whose *day* it is
     does not move for an afternoon. `CustodyModel.contactWindowsOn(date)` is the separate question,
-    and `CalendarScreen.getContactWindows` drops a window naming the day's own parent. Four things
+    and `CustodyResolver.contactWindowsResolver` drops a window naming the day's own parent — the
+    one filter the grid and Home's today card both read, so don't re-inline it. Four things
     not to undo. **The wire form is `ContactWindowCodec` strings** (`"9|15:00|19:00|dad"`), never
     Gson over the data class, and `encodeAll` is canonical (sorted, de-duplicated). **A missing
     `contactWindows` key is not "none"**: an older build rewrites the whole document without it on

@@ -85,4 +85,5 @@
 
     <!-- MON-6b: a contact window on the grid. -->
     <string name="calendar_contact_window_desc">Спілкування: %1$s, %2$s–%3$s</string>
+    <string name="calendar_agenda_contact_window">%1$s–%2$s · спілкування: %3$s</string>
 </resources>

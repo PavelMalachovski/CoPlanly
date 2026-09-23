@@ -108,4 +108,7 @@
 
     <!-- MON-6b: a contact window on the grid. -->
     <string name="calendar_contact_window_desc">Contact with %1$s, %2$s–%3$s</string>
+    <!-- MON-6b: a contact window on Home's today card. %1$s/%2$s are the start and end
+         times, %3$s the parent's name from ParentLabels (never a role word). -->
+    <string name="calendar_agenda_contact_window">%1$s–%2$s · contact with %3$s</string>
 </resources>

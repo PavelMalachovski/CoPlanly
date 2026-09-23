@@ -73,7 +73,7 @@ invocation is yours.
 | **MON-3** | Export to PDF/CSV — the first paid feature (needs MON-4 first) | P1 | M |
 | **MON-4** | The paper is written; three answers are owed by the owner, and MON-3 waits on them | P1 | S |
 | **MON-5** | The plan ships; swapping in the Ministry's own wording needs the form itself | P1 | S |
-| **MON-6b** | Contact windows ship (schema 36); left: Home's today card, and verifying the mixed-version path on two phones | P2 | S |
+| **MON-6b** | Contact windows ship (schema 36), on the grid and on Home's today card; left: verifying the mixed-version path on two phones | P2 | S |
 | **MON-8** | Bakaláři / EduPage school import — the parsing, once you supply a real export | P2 | L |
 | **MON-11** | Payments (MVP 3) — the entitlement model, after MON-1 decides the price | P2 | L |
 | **MON-12** | Intelligent suggestions (MVP 3) — behind SEC-1's proxy, never with a key in the client | P3 | M |
@@ -1346,9 +1346,17 @@ What it took, and the choices worth knowing:
   read as before; the hours are in the cell's description and one tap away in Day view. A window
   naming the parent who already has the day (the pattern's, or an accepted swap's) is not drawn.
 
-**Left.** Home's handover/today card does not mention a window yet. And the mixed-version path —
-one phone on this build, one on an older one, a swap and a proposal each way — is covered by the
-rules suite and the unit tests but has not been run on two devices.
+- **Home's today card** (September 2026) lists the day's windows under the line that says whose
+  day it is — "15:00–19:00 · contact with Alex", marker in the window parent's hue, name through
+  `ParentNames`. The filter moved out of `CalendarScreen` into
+  `CustodyResolver.contactWindowsResolver`, which the grid and `HomeViewModel` both call with their
+  own custody lookup, so a window naming the day's own parent (or a parent an accepted swap gave the
+  day to) is dropped in both places by one rule. `TodayAgenda.contactWindows` carries it; tests in
+  `CustodyResolverTest`, `HomeWeekTest` and `HomeViewModelTest`.
+
+**Left.** The mixed-version path — one phone on this build, one on an older one, a swap and a
+proposal each way — is covered by the rules suite and the unit tests but has not been run on two
+devices.
 
 ### MON-8 · P2 · L · Bakaláři / EduPage school import
 
