@@ -15,7 +15,7 @@ import kotlin.test.assertTrue
  * makes a broken one a crash on launch for somebody with real data rather than a wipe.
  *
  * **What this test does and does not catch, corrected.** It reads `app/schemas/` off disk, and
- * kapt *writes* that directory during the build that precedes it — `room.schemaLocation` points
+ * KSP (Room) *writes* that directory during the build that precedes it — `room.schemaLocation` points
  * straight at the tracked path. So in CI the file it is looking for has just been created,
  * committed or not, and the assertion below passes on a repository missing the very export it
  * exists to demand. It was believed to be the gate for nineteen versions' worth of gap; it is
@@ -44,7 +44,7 @@ class DatabaseSchemaExportTest {
 
         assertTrue(
             exported.isNotEmpty(),
-            "No exported schemas at all under $SCHEMA_DIR. Room writes them during kapt from " +
+            "No exported schemas at all under $SCHEMA_DIR. Room writes them during KSP from " +
                 "the room.schemaLocation argument in app/build.gradle.kts."
         )
         assertEquals(

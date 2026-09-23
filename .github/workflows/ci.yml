@@ -144,7 +144,7 @@ jobs:
         run: ./gradlew assembleDebug testDebugUnitTest
 
       # `DatabaseSchemaExportTest` cannot catch what CQ-1 says it catches, and this is the
-      # step that can. kapt writes `app/schemas/<version>.json` during the build above, from
+      # step that can. KSP (Room) writes `app/schemas/<version>.json` during the build above, from
       # the `room.schemaLocation` argument — so by the time the unit test reads that directory
       # the file it is looking for has just been created, whether or not anybody committed it.
       # The test passes on a repository missing the very export it exists to demand.

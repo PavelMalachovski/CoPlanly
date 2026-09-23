@@ -160,8 +160,8 @@ When touching the UI, keep these invariants:
    a chip strip on the Expenses screen itself. Tab switches, including Home's stat-tile deep
    links, go through `NavHostController.navigateToTab` so they share one back-stack policy.)*
 2. **Toolchain**: compileSdk/targetSdk 36, Kotlin 2.1 (+ `kotlin.plugin.compose`),
-   Compose BOM 2025.10 (Material 3 1.4 / M3 Expressive), Room 2.7.2 (2.6.x kapt breaks on
-   Kotlin 2.x metadata), Navigation 2.9.3, Hilt 2.56.2, predictive back on.
+   Compose BOM 2025.10 (Material 3 1.4 / M3 Expressive), Room 2.7.2 (2.6.x breaks on
+   Kotlin 2.x metadata), Hilt and Room on **KSP** (`2.1.0-1.0.29`; kapt is gone — move KSP with Kotlin), Navigation 2.9.3, Hilt 2.56.2, predictive back on.
 3. **Calendar**: month view is a classic grid from the 1st with horizontal month paging
    (kizitonwose `HorizontalCalendar`); day/week use `HorizontalPager` with fling physics.
    Event chips are single-line (`softWrap = false` + ellipsis). School vacation is a thin
@@ -315,8 +315,8 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   artifact this build does not declare.
   What stops the gap growing is a **step in `ci.yml`**: `git status --porcelain -- app/schemas`
   after the build, failing when the build produced a schema nobody committed. It is deliberately
-  *not* `DatabaseSchemaExportTest`, which this line used to credit and which cannot do it — kapt
-  writes that directory during the build immediately before the test reads it, so the file it
+  *not* `DatabaseSchemaExportTest`, which this line used to credit and which cannot do it — KSP
+  (Room) writes that directory during the build immediately before the test reads it, so the file it
   looks for has just been created whether or not it is in the repository.
 
   The **`e2e` job** ("Android — two parents on the Firebase emulators", September 2026) is the
@@ -363,7 +363,7 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   merged, by touching `.github/regenerate-request`.
 
   Still run the build locally before pushing — CI is a backstop, not a substitute.
-  After switching branches, prefer `clean` — stale Hilt/kapt stubs from another branch cause
+  After switching branches, prefer `clean` — stale Hilt/KSP generated sources from another branch cause
   errors like "Could not find class file for '…Application'".
 - **The `screenshots` job is how UI is reviewed without a phone** (September 2026). Roborazzi on
   Robolectric's native graphics renders the tests in `app/src/test/java/com/coparently/app/
