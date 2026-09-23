@@ -51,7 +51,7 @@ import com.coparently.app.domain.chat.ChatScrollPolicy
 import com.coparently.app.domain.model.Message
 import com.coparently.app.domain.model.MessageSendStatus
 import com.coparently.app.domain.model.MessageType
-import com.coparently.app.presentation.common.animations.AnimatedEmptyState
+import com.coparently.app.presentation.common.EmptyState
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
@@ -215,12 +215,11 @@ fun MessagesList(
         modifier = modifier.fillMaxSize()
     ) {
         if (messages.isEmpty()) {
-            AnimatedEmptyState(
+            EmptyState(
                 icon = Icons.Default.Message,
                 title = stringResource(R.string.chat_messages_empty_title),
                 description = stringResource(R.string.chat_messages_empty_description),
-                actionText = null,
-                onActionClick = null
+                modifier = Modifier.fillMaxSize()
             )
         } else {
             LazyColumn(

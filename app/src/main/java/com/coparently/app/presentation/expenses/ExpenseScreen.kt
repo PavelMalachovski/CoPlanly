@@ -52,10 +52,10 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.domain.expenses.SplitRatioProposal
 import com.coparently.app.domain.model.Expense
+import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.FamilyMemberChips
 import com.coparently.app.presentation.common.ListSkeleton
 import com.coparently.app.presentation.common.Loadable
-import com.coparently.app.presentation.common.animations.AnimatedEmptyState
 import com.coparently.app.presentation.common.monthPagingTransition
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.common.valueOrNull
@@ -253,15 +253,16 @@ fun ExpenseScreen(
             if (expensesState is Loadable.Loading) {
                 ListSkeleton(modifier = Modifier.weight(1f))
             } else if (expenses.isEmpty()) {
-                Box(modifier = Modifier.weight(1f)) {
-                    AnimatedEmptyState(
-                        icon = Icons.Default.ReceiptLong,
-                        title = stringResource(R.string.expenses_empty_title),
-                        description = stringResource(R.string.expenses_empty_description),
-                        actionText = stringResource(R.string.expenses_add),
-                        onActionClick = onAddExpense
-                    )
-                }
+                EmptyState(
+                    icon = Icons.Default.ReceiptLong,
+                    title = stringResource(R.string.expenses_empty_title),
+                    description = stringResource(R.string.expenses_empty_description),
+                    actionLabel = stringResource(R.string.expenses_add),
+                    onAction = onAddExpense,
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                )
             } else {
                 // Months change with the calendar's animation, from the calendar's constants —
                 // see `MonthPaging`. Not a pager, and the comment on `monthSwipe` says why: the

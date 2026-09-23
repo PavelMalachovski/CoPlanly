@@ -56,6 +56,8 @@ import com.coparently.app.domain.model.Message
 import com.coparently.app.domain.model.MessageSendStatus
 import com.coparently.app.presentation.common.PillChip
 import com.coparently.app.presentation.common.valueOrNull
+import com.coparently.app.utils.LightDarkPreviews
+import com.coparently.app.utils.PreviewWrapper
 import java.time.format.DateTimeFormatter
 
 /**
@@ -378,5 +380,13 @@ private fun ChatThreadHeader(title: String, messages: List<Message>, currentUser
                 color = statusColor
             )
         }
+    }
+}
+
+@LightDarkPreviews
+@Composable
+private fun ChatThreadHeaderPreview() {
+    PreviewWrapper {
+        ChatThreadHeader(title = "Pavel", messages = emptyList(), currentUserId = "u1")
     }
 }

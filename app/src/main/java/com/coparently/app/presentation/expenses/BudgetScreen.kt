@@ -34,9 +34,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.domain.model.Budget
 import com.coparently.app.domain.model.BudgetAlert
+import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.ListSkeleton
 import com.coparently.app.presentation.common.Loadable
-import com.coparently.app.presentation.common.animations.AnimatedEmptyState
 import com.coparently.app.presentation.common.valueOrNull
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -85,12 +85,15 @@ fun BudgetScreen(
         if (budgetsState is Loadable.Loading) {
             ListSkeleton(modifier = Modifier.padding(padding), rows = 3)
         } else if (budgets.isEmpty()) {
-            AnimatedEmptyState(
+            EmptyState(
                 icon = Icons.Default.Savings,
                 title = stringResource(R.string.budgets_empty_title),
                 description = stringResource(R.string.budgets_empty_description),
-                actionText = stringResource(R.string.budget_add),
-                onActionClick = { showAddSheet = true }
+                actionLabel = stringResource(R.string.budget_add),
+                onAction = { showAddSheet = true },
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
             )
         } else {
             Column(

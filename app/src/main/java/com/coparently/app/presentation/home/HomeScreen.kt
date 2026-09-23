@@ -28,6 +28,8 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ChildCare
 import androidx.compose.material.icons.filled.Contacts
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.EventAvailable
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material.icons.filled.Pets
 import androidx.compose.material.icons.filled.PriorityHigh
@@ -81,6 +83,7 @@ import com.coparently.app.domain.home.WeekEntry
 import com.coparently.app.domain.model.FamilyKind
 import com.coparently.app.presentation.calendar.components.DayAgendaCard
 import com.coparently.app.presentation.changerequests.ChangeRequestViewModel
+import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.PillChip
 import com.coparently.app.presentation.common.SectionGroup
@@ -91,7 +94,11 @@ import com.coparently.app.presentation.common.rememberToday
 import com.coparently.app.presentation.components.SkeletonBox
 import com.coparently.app.presentation.custody.custodyDiffDescription
 import com.coparently.app.presentation.theme.ParentColors
+import com.coparently.app.utils.LightDarkPreviews
+import com.coparently.app.utils.PreviewWrapper
+import com.coparently.app.utils.previewParentNames
 import java.text.NumberFormat
+import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
@@ -148,6 +155,7 @@ private const val SETTLED_EPSILON = 0.01
  * @param onNavigateToPairing Opens the pairing screen
  * @param onOpenExpenses Switches to the Expenses tab — the spend tile's deep link
  * @param onOpenChat Switches to the Chat tab — the unread tile's deep link
+ * @param onAddEvent Opens the new-event form — the empty week's way forward
  * @param viewModel Screen state
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -165,6 +173,7 @@ fun HomeScreen(
     onNavigateToPairing: () -> Unit,
     onOpenExpenses: () -> Unit,
     onOpenChat: () -> Unit,
+    onAddEvent: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel(),
     changeRequestViewModel: ChangeRequestViewModel = hiltViewModel()
 ) {
@@ -260,7 +269,8 @@ fun HomeScreen(
                     onOpenPets = onOpenPets,
                     caresFor = caresFor,
                     onOpenExpenses = onOpenExpenses,
-                    onOpenChat = onOpenChat
+                    onOpenChat = onOpenChat,
+                    onAddEvent = onAddEvent
                 )
                 AwaitingDialogs(
                     state = state,
@@ -533,6 +543,7 @@ private fun PairingInvitation(
  * @param onOpenPets Opens the pet records
  * @param onOpenExpenses Switches to the Expenses tab
  * @param onOpenChat Switches to the Chat tab
+ * @param onAddEvent Opens the new-event form
  */
 @Composable
 // One callback per navigation target; the body is one linear column of sections, so splitting
@@ -550,7 +561,8 @@ private fun Dashboard(
     onOpenPets: () -> Unit,
     caresFor: Set<FamilyKind>,
     onOpenExpenses: () -> Unit,
-    onOpenChat: () -> Unit
+    onOpenChat: () -> Unit,
+    onAddEvent: () -> Unit
 ) {
     LazyColumn(
         modifier = Modifier
@@ -652,15 +664,16 @@ private fun Dashboard(
         // Aug 2026 walkthrough moved the emergency surface above it).
         item { SectionHeader(stringResource(R.string.home_section_this_week)) }
         if (state.week.isEmpty()) {
+            // The shared empty state (UX-9), not the `Card { Text }` the refresh outlawed — and
+            // with the one thing an empty week asks for.
             item {
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Text(
-                        text = stringResource(R.string.home_week_empty),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(16.dp)
-                    )
-                }
+                EmptyState(
+                    icon = Icons.Default.EventAvailable,
+                    title = stringResource(R.string.home_week_empty),
+                    actionLabel = stringResource(R.string.home_week_empty_action),
+                    onAction = onAddEvent,
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         } else {
             itemsIndexed(
@@ -700,14 +713,11 @@ private fun Dashboard(
 
         if (state.recentChanges.isEmpty()) {
             item {
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Text(
-                        text = stringResource(R.string.home_recent_empty_paired),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(16.dp)
-                    )
-                }
+                EmptyState(
+                    icon = Icons.Default.History,
+                    title = stringResource(R.string.home_recent_empty_paired),
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         } else {
             item {
@@ -1155,4 +1165,35 @@ private fun ActivityKind.labelRes(): Int = when (this) {
     ActivityKind.EVENT_UPDATED -> R.string.home_activity_event_updated
     ActivityKind.PICKUP_CONFIRMED -> R.string.home_activity_pickup_confirmed
     ActivityKind.CHANGE_REQUESTED -> R.string.home_activity_change_requested
+}
+
+@LightDarkPreviews
+@Composable
+private fun HandoverHeroPreview() {
+    PreviewWrapper {
+        HandoverHero(
+            info = HandoverInfo(
+                date = LocalDate.now().plusDays(1),
+                daysUntil = 1L,
+                fromParent = "mom",
+                toParent = "dad"
+            ),
+            parentNames = previewParentNames,
+            onConfirm = {}
+        )
+    }
+}
+
+@LightDarkPreviews
+@Composable
+private fun StatTilesPreview() {
+    PreviewWrapper {
+        StatTiles(
+            spend = MonthSpend(byCurrency = listOf(CurrencyAmount(currency = "CZK", amount = 4_250.0))),
+            balances = emptyList(),
+            unreadCount = 2,
+            onOpenExpenses = {},
+            onOpenChat = {}
+        )
+    }
 }
