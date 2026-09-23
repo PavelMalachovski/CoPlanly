@@ -6,7 +6,6 @@ import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.junit4.ComposeTestRule
-import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.unit.dp
 import org.junit.Assert.assertTrue
 
@@ -76,21 +75,23 @@ val iconOnlyControl: SemanticsMatcher = SemanticsMatcher("a clickable control wi
  * `size` flags every standard icon button (the first run did, on Home's gear).
  *
  * Those bounds are clipped to the window, so a control below the fold of a scrolling screen
- * measures 0x0 (Settings' sync button did). Such a node is scrolled into view and measured
- * again — skipping it instead would let the check pass on whatever is not on the first screen.
+ * measures 0x0 (Settings' sync button did). For such a node the check applies the rule Compose's
+ * own hit testing applies on screen — the node's layout size, widened to
+ * `viewConfiguration.minimumTouchTargetSize` — rather than skipping it, which would let the check
+ * pass on whatever is not on the first screen. Scrolling it into view was tried and does not work
+ * here: `performScrollTo` waits on an animation the paused clock never advances.
  */
 fun ComposeTestRule.assertIconOnlyControlsAreAccessible(screen: String) {
-    val ids = onAllNodes(iconOnlyControl).fetchSemanticsNodes().map { it.id }
-    val offenders = ids.mapNotNull { id -> measuredOnScreen(id) }.mapNotNull { node ->
+    val offenders = onAllNodes(iconOnlyControl).fetchSemanticsNodes().mapNotNull { node ->
         val minimum = with(node.layoutInfo.density) { MIN_TOUCH_TARGET_DP.dp.roundToPx() }
         val label = node.config.getOrElseNullable(SemanticsProperties.ContentDescription) { null }
             .orEmpty()
             .joinToString(" ")
         val problems = buildList {
             if (label.isBlank()) add("no contentDescription")
-            val touch = node.touchBoundsInRoot
-            if (touch.width < minimum || touch.height < minimum) {
-                add("${touch.width.toInt()}x${touch.height.toInt()}px, under ${MIN_TOUCH_TARGET_DP}dp ($minimum px)")
+            val (width, height) = touchTargetPx(node)
+            if (width < minimum || height < minimum) {
+                add("${width}x${height}px, under ${MIN_TOUCH_TARGET_DP}dp ($minimum px)")
             }
         }
         if (problems.isEmpty()) null else "node #${node.id} \"$label\": ${problems.joinToString("; ")}"
@@ -101,31 +102,14 @@ fun ComposeTestRule.assertIconOnlyControlsAreAccessible(screen: String) {
     )
 }
 
-/**
- * The node with [id], scrolled into view first when it is entirely outside the window.
- *
- * Not `performScrollTo`: it scrolls with an animation and then waits for the node to become
- * visible, and with the Compose clock paused that animation never advances — both API 26 and 30
- * hung to the job timeout on it. This issues one `ScrollBy` on the nearest scroll container and
- * moves the clock itself with [settle].
- */
-private fun ComposeTestRule.measuredOnScreen(id: Int): SemanticsNode? {
-    val node = nodeWithId(id) ?: return null
-    if (!node.touchBoundsInRoot.isEmpty) return node
-    var container = node.parent
-    while (container != null && !container.config.contains(SemanticsActions.ScrollBy)) {
-        container = container.parent
+/** The node's touch target in px: what the window shows, or — off screen — what Compose would give it. */
+private fun touchTargetPx(node: SemanticsNode): Pair<Int, Int> {
+    val touch = node.touchBoundsInRoot
+    if (!touch.isEmpty) return touch.width.toInt() to touch.height.toInt()
+    val floor = node.layoutInfo.viewConfiguration.minimumTouchTargetSize
+    return with(node.layoutInfo.density) {
+        maxOf(node.size.width, floor.width.roundToPx()) to maxOf(node.size.height, floor.height.roundToPx())
     }
-    if (container == null) return node
-    val delta = node.positionInRoot.y - container.boundsInRoot.center.y
-    val containerId = container.id
-    onNode(SemanticsMatcher("semantics id $containerId") { it.id == containerId })
-        .performSemanticsAction(SemanticsActions.ScrollBy) { scrollBy -> scrollBy(0f, delta) }
-    settle()
-    return nodeWithId(id)
 }
-
-private fun ComposeTestRule.nodeWithId(id: Int): SemanticsNode? =
-    onAllNodes(SemanticsMatcher("semantics id $id") { it.id == id }).fetchSemanticsNodes().singleOrNull()
 
 private const val MIN_TOUCH_TARGET_DP = 48
