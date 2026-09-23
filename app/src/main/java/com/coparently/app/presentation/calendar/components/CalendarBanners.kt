@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -27,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -34,6 +36,7 @@ import com.coparently.app.R
 import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.theme.CoPlanlyColors
+import com.coparently.app.presentation.theme.LayoutConstants
 import com.coparently.app.presentation.theme.ParentColors
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -67,7 +70,9 @@ fun ChangeRequestBanner(
             .fillMaxWidth()
             .clip(RoundedCornerShape(10.dp))
             .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f))
-            .clickable(onClick = onReview)
+            // A button to TalkBack, and a 48dp target: the padded row was about 36dp.
+            .clickable(role = Role.Button, onClick = onReview)
+            .heightIn(min = LayoutConstants.MIN_TOUCH_TARGET)
             .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(9.dp)
@@ -276,7 +281,8 @@ fun DayAgendaCard(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { onEventClick(event.id) },
+                        .clickable(role = Role.Button) { onEventClick(event.id) }
+                        .heightIn(min = LayoutConstants.MIN_TOUCH_TARGET),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {

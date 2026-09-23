@@ -2,7 +2,6 @@ package com.coparently.app.presentation.calendar.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -49,6 +48,10 @@ import com.coparently.app.presentation.theme.CoPlanlyColors
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.dimensions
 import androidx.compose.foundation.layout.ExperimentalLayoutApi as FoundationExperimentalLayoutApi
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.ui.semantics.Role
+import com.coparently.app.presentation.theme.LayoutConstants
 
 /**
  * Bottom sheet holding every calendar filter: whose events to show, event type visibility,
@@ -239,7 +242,9 @@ private fun FilterPill(
                 color = if (selected) color else MaterialTheme.colorScheme.outlineVariant,
                 shape = RoundedCornerShape(50)
             )
-            .clickable(onClick = onClick)
+            // A checkbox to TalkBack — on/off was said by colour and weight alone — and 48dp tall.
+            .toggleable(value = selected, role = Role.Checkbox, onValueChange = { onClick() })
+            .heightIn(min = LayoutConstants.MIN_TOUCH_TARGET)
             .padding(horizontal = 14.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
