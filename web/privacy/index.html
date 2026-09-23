@@ -188,6 +188,15 @@ record.</li>
 <li><strong>A calendar friend</strong> whom you grant time-limited read access to the family calendar.</li>
 </ul>
 <p>Every such grant carries an expiry, is visible to both parents, and can be revoked at any time.</p>
+<h3>Calendar links you create</h3>
+<p>You can create a <strong>read-only calendar link</strong> (Settings → Sync) so that a calendar app — for
+example Apple Calendar on an iPhone — can show your family&#39;s custody days and shared events.
+Anyone who has the link can read what it shows, so share it only with the person it is for. It
+never includes private events, deleted events, chat, expenses or children&#39;s records. We store a
+one-way fingerprint (a SHA-256 hash) of the link, never the link itself, together with the family
+it belongs to, who created it and when a calendar last fetched it. You can revoke a link at any
+time; a link no calendar has fetched for <strong>90 days</strong> is deleted automatically, and every link into
+a family ends when the co-parents unlink or either account is deleted.</p>
 <h3>Technical data</h3>
 <ul>
 <li><strong>A push notification token</strong>, so we can notify you about changes your co-parent makes.</li>
@@ -234,6 +243,11 @@ not synced, and not visible to your co-parent.</li>
 <td>Because you granted it</td>
 </tr>
 <tr>
+<td><strong>Whoever holds a calendar link you created</strong></td>
+<td>Custody days and shared events, read-only, until you revoke the link</td>
+<td>Because you created and shared it</td>
+</tr>
+<tr>
 <td>Google (Firebase)</td>
 <td>Account data, all synced content, files, push tokens, crash and usage data</td>
 <td>Our hosting, database, file storage and messaging provider</td>
@@ -270,6 +284,7 @@ your invitations, and the whole message thread with your co-parent;</li>
 pet photographs;</li>
 <li>removes you from the audience of anything your co-parent created, and ends any guest or
 calendar-friend access you granted or held;</li>
+<li>deletes every read-only calendar link into your families, whichever of you created it;</li>
 <li>unlinks the two of you, so their access ends immediately;</li>
 <li>deletes the fingerprint of your Google Calendar authorisation, if you connected one, and
 any notifications still queued for you;</li>

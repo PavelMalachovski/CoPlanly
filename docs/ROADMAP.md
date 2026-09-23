@@ -82,7 +82,7 @@ invocation is yours.
 | **MON-14** | Seasonal schedule layers (summer / school holidays override the base pattern), with "fill from school holidays" | P1 | M |
 | **MON-15** | Search in chat — local Room FTS, never a server index | P1 | S |
 | **MON-16** | Verifiable export: record ID + SHA-256 registered server-side, verified in the browser | P1 | S |
-| **MON-17** | ICS calendar feed for a co-parent on an iPhone (secret revocable token, no private events) | P1 | M |
+| **MON-17** | **Built** (functions, rules, Settings screen); left: the deploy and a subscription from a real iPhone — see the 👁 table | P1 | — |
 | **MON-18** | Free, expiring, two-consent access for a mediator or lawyer | P1 | M |
 | **MON-19** | A pause before sending (undo window + a lexical nudge, no AI) | P2 | S |
 | **MON-20** | Holiday fairness at a glance (who has which holidays, nights per parent) | P2 | S |
@@ -107,6 +107,7 @@ invocation is yours.
 | **FAM-5** | The event chip does not say who it is about | Chips are single-line with ellipsis and every colour channel is spent. Worth an owner's eye on a real device rather than a treatment invented blind. |
 | **M-4 (shipped, unseen)** | The colour palette, the family switcher, the second-co-parent invite | Kotlin compiled in CI; nobody has looked at it. |
 | **M-8 (chat, shipped, unseen)** | Chat, its badge and `ChatMirror` follow the selected family | Unit tests pin the re-key; only an account with two co-parents on real phones shows a switch landing the Chat tab on the other thread, the badge moving with it, and messages from the family *left* arriving again after switching back. |
+| **MON-17 (built, unseen)** | The iCalendar feed: `calendarFeed` + three callables, the Settings → Sync row | The RFC 5545 text and the custody port are pinned by `functions/test/calendar-feed.test.js`; only Apple Calendar shows whether it *subscribes* (`webcal://` from the share sheet), draws the all-day custody bars and the contact windows at the right local times, refreshes within the hour, and stops updating after a revoke. Checklist in MON-17. |
 
 ### 💻 Yours only — no session can do these
 
@@ -279,6 +280,11 @@ full-calendar disclosure (audit §2.1) and the whole of PR #76's family isolatio
 2. [ ] Invoke `backfillFamilyDocuments` — every live pair gets `members`, `slots`, `caresFor`
 3. [ ] Invoke `backfillRecordFamilyIds` — every record gets its `familyId`
 4. [ ] `firebase deploy --only firestore:rules,firestore:indexes`
+
+Step 1 also ships the MON-17 calendar feed (`calendarFeed`, `createCalendarFeed`,
+`listCalendarFeeds`, `revokeCalendarFeed`, `sweepIdleCalendarFeeds`); step 4 closes
+`calendar_feeds` to clients explicitly. Until step 1 the app's "Create a link" fails with the
+generic connection message.
 
 Both callables are idempotent and report per-reason counts. **Running 4 before 3** leaves each
 co-parent's expense and budget history looking empty on the other phone until 3 completes — nothing
@@ -1660,7 +1666,7 @@ when. The file itself never leaves the verifier's machine. A single altered byte
 with a test that pins message immutability in `firestore.rules` (called out as missing in
 `DESIGN-court-record.md`).
 
-### MON-17 · P1 · M · A calendar feed for a co-parent on an iPhone
+### MON-17 · **BUILT, UNSEEN ON AN IPHONE** · P1 · M · A calendar feed for a co-parent on an iPhone
 
 **Where:** ☁️ cloud (functions); 📱 subscribing from an iPhone.
 
@@ -1677,6 +1683,70 @@ changes), and the settings text must say exactly that (design item 8).
   (item 3), tombstoned events never.
 - Rate-limit it and cache per token. Calendar clients poll hourly, and the function must not fan
   out to Firestore per poll.
+
+**What shipped (September 2026).**
+
+- **Server** — `functions/index.js` (`createCalendarFeed`, `listCalendarFeeds`,
+  `revokeCalendarFeed`, the `calendarFeed` HTTPS function, the daily `sweepIdleCalendarFeeds`)
+  over `functions/calendar-feed.js`, which holds everything pure: the token, the RFC 5545 text
+  (CRLF, folding at 75 octets without splitting a UTF-8 character, TEXT escaping, floating local
+  times, all-day `VALUE=DATE` with an exclusive `DTEND`, stable UIDs) and the custody port.
+  `calendar_feeds/{sha256(token)}` holds `feedId`, `familyId`, `familyMembers`, `ownerUid`,
+  `locale`, `createdAtMillis`, `lastUsedAtMillis` — never the token. A separate random `feedId` is
+  what the app lists and revokes by. Up to 10 live links per parent.
+- **Serving** — `GET …/calendarFeed/<token>.ics`. A per-token rate limit (30 per 10 minutes, per
+  instance) runs before any read; the record is read on every request so a revoke is immediate;
+  the render (family, custody, events) is cached per token for 15 minutes per instance and sent
+  with `Cache-Control: private, max-age=900`. Unknown, revoked, idle for 90 days and
+  family-ended links all answer the same 404, and the last three are deleted. A family is live
+  only while both profiles exist and name each other, so an unpair or an account deletion ends
+  every link into it; `deleteAccountDataImpl` also deletes them outright.
+- **Content** — 30 days back, 365 ahead. Custody as one all-day event per *run* of days with one
+  parent (`TRANSP:TRANSPARENT`), titled with that parent's name from `users/{uid}.name` and the
+  slot from `families/{id}.slots` (falling back to the profile's `role`); a pair still sharing a
+  slot gets no custody layer and a calendar description saying why. Contact windows as timed
+  events, decoded from the `ContactWindowCodec` strings and dropped when they name the day's own
+  parent. Events: `familyId ==` the feed's family, created by one of its two parents, readable
+  by the owner (creator or in `sharedWith`), **never `isPrivate`, never tombstoned**. Recurrence
+  maps to `RRULE` (`daily`, `weekly`, `biweekly` → `INTERVAL=2`, `monthly`) with a floating
+  `UNTIL`; an unknown pattern is its first occurrence, which is what the app shows. The few words
+  the feed writes itself are in the creating parent's app language (five locales).
+- **Rules** — `calendar_feeds` is `allow read, write: if false`, proved by
+  `firestore-tests/rules/calendar-feeds.test.js` (owner, co-parent, stranger, list, update,
+  delete, unauthenticated).
+- **App** — Settings → Sync → "Calendar feed for iPhone and other calendars", shown only while the
+  account is in a family. `CalendarFeedScreen` says what is included and what never is, creates a
+  link and offers it **once** (share sheet with the `webcal://` form and the https one; copy puts
+  the https form on the clipboard marked sensitive), lists the family's links with when a
+  calendar last fetched them, and revokes with a confirmation. `CalendarFeedViewModelTest`.
+
+**Known limits, deliberately not papered over.**
+
+- Only events stamped with the family's `familyId` are served — the M-6 rule. An event uploaded
+  before pairing carries `familyId: ""` until `backfillRecordFamilyIds` has run (REL-3), and is
+  absent from the feed until then, exactly as it is from a calendar friend's view.
+- A monthly event on the 29th–31st: RFC 5545 skips a month without that day, the app clamps it to
+  the month's last day. Rare, and an iPhone reader sees one fewer occurrence rather than a wrong one.
+- The cache and the rate limit are per function instance, not global: a brake on a runaway client
+  and a saving on hourly polls, not a quota. After an unpair a warm instance can serve its cached
+  render for up to 15 minutes before the next miss deletes the link.
+- The default URL is `https://us-central1-<project>.cloudfunctions.net/calendarFeed/…`. Set
+  `CALENDAR_FEED_BASE_URL` in `functions/.env` if the functions move region or a Hosting rewrite
+  gives the feed a nicer address.
+
+**The iPhone acceptance run** (📱, nobody has done it):
+
+1. Deploy the functions and the rules (REL-3).
+2. On the Android phone: Settings → Sync → Calendar feed → Create a link → Share → send it to the
+   iPhone (Messages or Mail).
+3. On the iPhone: tap the `webcal://` link → Subscribe. The calendar is named CoPlanly.
+4. Check: custody bars span the right days and end on the day *before* the next handover; titles
+   use names, never Mom/Dad; a contact window sits at its local time; a private event and a
+   deleted event are absent; a weekly event with an end date stops on that date; Czech/German/
+   Russian/Ukrainian titles appear when the link was made in that language.
+5. Change an event on Android, wait for the iPhone to refresh (Settings → Calendar → Accounts →
+   Subscribed Calendars → Fetch, or up to an hour): the change arrives.
+6. Revoke the link on Android: the iPhone stops receiving updates (its next fetch gets a 404).
 
 ### MON-18 · P1 · M · Free, expiring access for a mediator or lawyer
 

@@ -69,7 +69,7 @@ Every factual claim on the page mirrors `deleteAccountDataImpl` in `functions/in
 all three do.** The one most likely to drift is the list of collections: the callable deletes
 `events`, `child_info`, `pets`, `expenses`, `budgets`, `change_requests`, `conversations`,
 `messages`, `custody_models`, `family_settings`, `parenting_plans`, `calendar_friends`,
-`friend_profiles`, `google_oauth`, `invitations`, `notification_queue` and `users`, plus the
+`calendar_feeds`, `friend_profiles`, `google_oauth`, `invitations`, `notification_queue` and `users`, plus the
 Storage files `AUTHORED_FILES` maps (`event_images/`, `receipts/`, `medical_photos/`,
 `pet_photos/`), and adding a collection or a file layout to the app without adding it there
 leaves data behind that the page promises is gone.
