@@ -50,6 +50,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.coparently.app.R
 import com.coparently.app.domain.activity.ActivityEntityType
+import com.coparently.app.domain.chat.ChatAttachmentCodec
 import com.coparently.app.domain.chat.ChatScrollPolicy
 import com.coparently.app.domain.model.Message
 import com.coparently.app.domain.model.MessageSendStatus
@@ -443,6 +444,11 @@ fun MessageItem(
             .padding(top = if (startsGroup) 8.dp else 0.dp),
         horizontalAlignment = if (isCurrentUser) Alignment.End else Alignment.Start
     ) {
+        // Files the message carries (MON-23), above its bubble. The bubble below still carries the
+        // text — the file's name for a file sent alone — with the time and the honest tick.
+        if (message.attachments.any { it.startsWith(ChatAttachmentCodec.PREFIX) }) {
+            LocalChatAttachments.current?.invoke(message, isCurrentUser)
+        }
         val openLabel = stringResource(R.string.chat_open_change_request)
         Row(
             modifier = Modifier

@@ -45,6 +45,7 @@ import com.coparently.app.presentation.childinfo.ChildInfoScreen
 import com.coparently.app.presentation.common.animations.*
 import com.coparently.app.presentation.consent.TelemetryConsentScreen
 import com.coparently.app.presentation.consent.TelemetryConsentViewModel
+import com.coparently.app.presentation.documents.FamilyDocumentsScreen
 import com.coparently.app.presentation.event.AddEditEventScreen
 import com.coparently.app.presentation.event.EventListScreen
 import com.coparently.app.presentation.export.ExportScreen
@@ -500,6 +501,9 @@ fun NavGraph(
                     onNavigateToExport = {
                         navController.navigate(Screen.Export.route)
                     },
+                    onNavigateToDocuments = {
+                        navController.navigate(Screen.Documents.route)
+                    },
                     onNavigateToMyProfile = {
                         navController.navigate(Screen.MyProfile.route)
                     },
@@ -538,6 +542,18 @@ fun NavGraph(
                 popExitTransition = { slideOutToRight() }
             ) {
                 ExportScreen(onNavigateBack = { navController.popBackStack() })
+            }
+
+            // The document vault (MON-23), beside the export: the family's papers, shared with both
+            // parents, opened from Settings → Family like the other family records.
+            composable(
+                route = Screen.Documents.route,
+                enterTransition = { slideInFromRight() },
+                exitTransition = { slideOutToLeft() },
+                popEnterTransition = { slideInFromLeft() },
+                popExitTransition = { slideOutToRight() }
+            ) {
+                FamilyDocumentsScreen(onNavigateUp = { navController.popBackStack() })
             }
 
             composable(
@@ -1284,6 +1300,7 @@ sealed class Screen(val route: String) {
     data object ChildInfo : Screen("child_info")
     data object ParentingPlan : Screen("parenting_plan")
     data object Export : Screen("export")
+    data object Documents : Screen("family_documents")
     data object Pets : Screen("pets")
     data object Pairing : Screen("pairing?code={code}&enter={enter}") {
         /** Optional invite code carried by a `coplanly://pair` deep link. */

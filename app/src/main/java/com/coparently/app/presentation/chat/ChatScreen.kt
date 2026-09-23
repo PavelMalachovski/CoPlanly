@@ -74,7 +74,8 @@ import java.time.format.DateTimeFormatter
  * Reworked by the August 2026 design review. The two unlabelled affordances it found — a
  * `swap_horiz` app-bar icon that meant "request change" here but something else on the
  * calendar, and a `+` in the composer that opened message *templates* rather than attachments —
- * are now labelled chips above the composer, so neither depends on the user guessing.
+ * are now labelled chips above the composer, so neither depends on the user guessing. The attach
+ * button beside the composer arrived with attachments themselves (MON-23), as design item 8 asked.
  *
  * @param conversationId Thread to show
  * @param onBack Up navigation, or null when the thread is the Chat tab itself and there is
@@ -212,21 +213,25 @@ fun ChatScreen(
                     modifier = Modifier.weight(1f)
                 )
             } else {
-                MessagesList(
-                    messages = messages,
-                    currentUserId = currentUserId,
-                    canLoadEarlier = canLoadEarlier,
-                    onLoadEarlier = viewModel::loadEarlier,
-                    onRefresh = {
-                        viewModel.refreshThread()
-                    },
-                    onEventLinkClick = onOpenChangeRequest,
-                    onOpenInbox = onOpenInbox,
-                    onRetryFailed = { viewModel.resendFailedMessages() },
-                    modifier = Modifier.weight(1f),
-                    revealMessageId = revealTarget,
-                    onRevealed = { revealTarget = null }
-                )
+                // The attachment renderer and the tap-to-open handling (MON-23), provided rather
+                // than passed so `MessageItem`'s baselined signature stays as it is.
+                ChatAttachmentsHost {
+                    MessagesList(
+                        messages = messages,
+                        currentUserId = currentUserId,
+                        canLoadEarlier = canLoadEarlier,
+                        onLoadEarlier = viewModel::loadEarlier,
+                        onRefresh = {
+                            viewModel.refreshThread()
+                        },
+                        onEventLinkClick = onOpenChangeRequest,
+                        onOpenInbox = onOpenInbox,
+                        onRetryFailed = { viewModel.resendFailedMessages() },
+                        modifier = Modifier.weight(1f),
+                        revealMessageId = revealTarget,
+                        onRevealed = { revealTarget = null }
+                    )
+                }
             }
 
             // Outside the search branch: a held message keeps counting down, and keeps its Undo,
@@ -268,19 +273,27 @@ fun ChatScreen(
 
                 if (!nudge.isEmpty) ToneNudgeHint(nudge)
 
-                MessageInput(
-                    value = composerText,
-                    onValueChange = {
-                        composerText = it
-                        viewModel.onDraftChanged(conversationId, it)
-                    },
-                    onSendMessage = { content ->
-                        viewModel.sendMessage(content)
-                        composerText = ""
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    focusRequester = composerFocus
-                )
+                // The attach button beside the field, not inside `MessageInput`: it is its own flow
+                // (picker, confirmation, outbox) and the composer stays a text field and a send.
+                Row(verticalAlignment = Alignment.Bottom) {
+                    ChatAttachButton(
+                        conversationId = conversationId,
+                        modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
+                    )
+                    MessageInput(
+                        value = composerText,
+                        onValueChange = {
+                            composerText = it
+                            viewModel.onDraftChanged(conversationId, it)
+                        },
+                        onSendMessage = { content ->
+                            viewModel.sendMessage(content)
+                            composerText = ""
+                        },
+                        modifier = Modifier.weight(1f),
+                        focusRequester = composerFocus
+                    )
+                }
             }
         }
     }

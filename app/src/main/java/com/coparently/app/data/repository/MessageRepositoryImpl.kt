@@ -4,6 +4,7 @@ import android.util.Log
 import com.coparently.app.data.local.dao.MessageDao
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestoreMessageDataSource
+import com.coparently.app.domain.chat.AttachmentUploadGate
 import com.coparently.app.domain.chat.ChatReadState
 import com.coparently.app.domain.chat.ConversationKey
 import com.coparently.app.domain.model.Conversation
@@ -52,7 +53,8 @@ import javax.inject.Singleton
 class MessageRepositoryImpl @Inject constructor(
     private val messageDao: MessageDao,
     private val firebaseAuthService: FirebaseAuthService,
-    private val firestoreMessageDataSource: FirestoreMessageDataSource
+    private val firestoreMessageDataSource: FirestoreMessageDataSource,
+    private val attachmentGate: AttachmentUploadGate = AttachmentUploadGate.None
 ) : MessageRepository {
 
     /**
@@ -223,6 +225,10 @@ class MessageRepositoryImpl @Inject constructor(
      * @param message The message to deliver, exactly as it is stored.
      */
     private suspend fun deliver(message: Message) {
+        // Files first (MON-23): a message is written only once every file it names is stored, so
+        // a failure here leaves it SENDING/ERROR in the outbox instead of delivering a reference
+        // the co-parent cannot open. See [AttachmentUploadGate].
+        attachmentGate.ensureUploaded(message)
         try {
             firestoreMessageDataSource.sendMessage(message.id, message.toFirestoreMap())
         } catch (e: CancellationException) {

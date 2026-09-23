@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Geteilte Dateien (MON-23): Dokumentenablage und Chat-Anhänge. -->
+<resources>
+    <string name="documents_settings_title">Dokumente</string>
+    <string name="documents_settings_description">Gerichtsbeschlüsse, Schulbriefe, Ausweiskopien — mit dem anderen Elternteil geteilt</string>
+    <string name="documents_title">Dokumente</string>
+    <string name="documents_shared_notice">Alles hier ist mit dem anderen Elternteil geteilt. Private Dokumente gibt es nicht: Was du hinzufügst, kann auch er oder sie öffnen.</string>
+    <string name="documents_add_file">Datei hinzufügen</string>
+    <string name="documents_take_photo">Foto aufnehmen</string>
+    <string name="documents_empty_title">Noch keine Dokumente</string>
+    <string name="documents_empty_description">Füge ein PDF oder ein Foto eines Gerichtsbeschlusses, eines Schulbriefs oder eines Ausweises hinzu. Der andere Elternteil sieht es ebenfalls.</string>
+    <string name="documents_no_family_title">Verbinde zuerst den anderen Elternteil</string>
+    <string name="documents_no_family_description">Dokumente gehören zu einer Familie: Ab dem Hinzufügen sind sie mit beiden Eltern geteilt.</string>
+    <string name="documents_unavailable">Dokumente können gerade nicht geladen werden. Prüfe deine Verbindung.</string>
+    <string name="documents_category_court_order">Gerichtsbeschlüsse</string>
+    <string name="documents_category_school">Schule</string>
+    <string name="documents_category_medical">Gesundheit</string>
+    <string name="documents_category_identity">Ausweisdokumente</string>
+    <string name="documents_category_other">Sonstiges</string>
+    <string name="documents_add_dialog_title">Zu den Dokumenten hinzufügen</string>
+    <string name="documents_add_dialog_name_label">Name</string>
+    <string name="documents_add_dialog_category_label">Kategorie</string>
+    <string name="documents_add_dialog_confirm">Hochladen und teilen</string>
+    <string name="documents_uploading">Wird hochgeladen…</string>
+    <string name="documents_row_meta">%1$s · hinzugefügt von %2$s · %3$s</string>
+    <string name="documents_delete">Dokument löschen</string>
+    <string name="documents_delete_confirm_title">Dieses Dokument löschen?</string>
+    <string name="documents_delete_confirm_body">Es verschwindet aus den Dokumenten beider Eltern. Die Datei selbst wird nach 90 Tagen vom Server entfernt.</string>
+    <string name="documents_delete_confirm">Löschen</string>
+    <string name="documents_error_upload">Das Dokument konnte nicht hochgeladen werden. Es wurde nichts geteilt.</string>
+    <string name="documents_error_delete">Das Dokument konnte nicht gelöscht werden.</string>
+    <string name="documents_camera_unavailable">Keine Kamera-App verfügbar.</string>
+
+    <string name="shared_file_cancel">Abbrechen</string>
+    <string name="shared_file_error_type">Es können nur PDF-, JPEG-, PNG-, HEIC- und WebP-Dateien geteilt werden.</string>
+    <string name="shared_file_error_size">Dateien müssen kleiner als 20 MB sein.</string>
+    <string name="shared_file_error_open">Die Datei konnte nicht geöffnet werden.</string>
+    <string name="shared_file_error_integrity">Diese Datei stimmt nicht mit der geteilten überein und wurde deshalb nicht geöffnet.</string>
+    <string name="shared_file_no_viewer">Keine App auf diesem Telefon kann diese Datei öffnen.</string>
+
+    <string name="chat_attach">Foto oder PDF anhängen</string>
+    <string name="chat_attach_confirm_title">Diese Datei senden?</string>
+    <string name="chat_attach_confirm_body">%1$s (%2$s) wird an den anderen Elternteil gesendet. Wie jede Nachricht bleibt sie im Chat und kann später nicht gelöscht werden.</string>
+    <string name="chat_attach_send">Senden</string>
+    <string name="chat_attach_uploading">Wird hochgeladen…</string>
+    <string name="chat_attach_waiting">Noch nicht hochgeladen</string>
+    <string name="chat_attach_open">%1$s öffnen</string>
+    <string name="chat_attach_stage_error">Die Datei konnte nicht zum Senden vorbereitet werden.</string>
+</resources>
