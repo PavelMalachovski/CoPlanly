@@ -139,7 +139,7 @@ class MainNavigationSmokeTest {
         composeTestRule.settle()
         composeTestRule.pumpUntil("the ${destination.name} tab to be selected") {
             onNode(hasAnyAncestor(bottomBar) and hasText(string(destination.labelRes)))
-                .fetchSemanticsNode().config.getOrNull(SemanticsProperties.Selected) == true
+                .fetchSemanticsNode().config.getOrElseNullable(SemanticsProperties.Selected) { null } == true
         }
     }
 

@@ -74,7 +74,9 @@ val iconOnlyControl: SemanticsMatcher = SemanticsMatcher("a clickable control wi
 fun ComposeTestRule.assertIconOnlyControlsAreAccessible(screen: String) {
     val offenders = onAllNodes(iconOnlyControl).fetchSemanticsNodes().mapNotNull { node ->
         val minimum = with(node.layoutInfo.density) { MIN_TOUCH_TARGET_DP.dp.roundToPx() }
-        val label = node.config.getOrNull(SemanticsProperties.ContentDescription).orEmpty().joinToString(" ")
+        val label = node.config.getOrElseNullable(SemanticsProperties.ContentDescription) { null }
+            .orEmpty()
+            .joinToString(" ")
         val problems = buildList {
             if (label.isBlank()) add("no contentDescription")
             if (node.size.width < minimum || node.size.height < minimum) {

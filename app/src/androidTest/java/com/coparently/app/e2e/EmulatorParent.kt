@@ -8,6 +8,7 @@ import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestoreEventDataSource
+import com.coparently.app.data.remote.firebase.FirestoreEventVersionDataSource
 import com.coparently.app.data.remote.firebase.FirestoreExpenseDataSource
 import com.coparently.app.data.remote.firebase.FirestoreFamilyDataSource
 import com.coparently.app.data.remote.firebase.FirestoreMessageDataSource
@@ -21,6 +22,7 @@ import com.coparently.app.data.repository.PairingRepositoryImpl
 import com.coparently.app.data.repository.PostPairingConversationSetup
 import com.coparently.app.data.repository.UserRepositoryImpl
 import com.coparently.app.data.sync.SyncRequester
+import com.coparently.app.data.versions.EventVersionRecorder
 import com.coparently.app.domain.activity.ActivityAnnouncer
 import com.coparently.app.domain.model.PairingState
 import com.coparently.app.presentation.common.ParentsSource
@@ -100,7 +102,12 @@ class EmulatorParent private constructor(
         userDao = database.userDao(),
         firebaseAuthService = authService,
         firestoreEventDataSource = eventDataSource,
-        activityAnnouncer = announcer
+        activityAnnouncer = announcer,
+        eventVersionRecorder = EventVersionRecorder(
+            outboxDao = database.eventVersionOutboxDao(),
+            userDao = database.userDao(),
+            remote = FirestoreEventVersionDataSource(firestore)
+        )
     )
 
     val expenseRepository = ExpenseRepositoryImpl(

@@ -152,8 +152,8 @@ class LocalDatePickerDialogTest(private val zone: String) {
     private fun dayCell(day: Int): SemanticsMatcher {
         val word = Regex("\\b$day\\b")
         return SemanticsMatcher("a day cell for $day") { node ->
-            val words = node.config.getOrNull(SemanticsProperties.Text).orEmpty().map { it.text } +
-                node.config.getOrNull(SemanticsProperties.ContentDescription).orEmpty()
+            val words = node.config.getOrElseNullable(SemanticsProperties.Text) { null }.orEmpty().map { it.text } +
+                node.config.getOrElseNullable(SemanticsProperties.ContentDescription) { null }.orEmpty()
             node.config.contains(SemanticsActions.OnClick) && words.any { word.containsMatchIn(it) }
         }
     }

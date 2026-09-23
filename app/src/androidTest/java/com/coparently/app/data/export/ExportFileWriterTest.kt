@@ -16,12 +16,14 @@ import com.coparently.app.domain.export.CommunicationRecordCsv
 import com.coparently.app.domain.export.CurrentEventInput
 import com.coparently.app.domain.export.EventFacts
 import com.coparently.app.domain.export.EventRevisionInput
+import com.coparently.app.domain.export.ExportFormat
 import com.coparently.app.domain.export.MessageInput
 import com.coparently.app.domain.export.RecordActions
 import com.coparently.app.domain.export.RecordColumns
 import com.coparently.app.domain.export.RecordLabels
 import com.coparently.app.domain.export.RecordScope
 import com.coparently.app.domain.export.RecordSources
+import com.coparently.app.domain.export.VerificationLabels
 import com.coparently.app.domain.model.Expense
 import com.coparently.app.domain.model.ExpenseCategory
 import com.coparently.app.presentation.export.recordShareIntent
@@ -65,7 +67,7 @@ class ExportFileWriterTest {
 
     @Test
     fun csv_isWrittenWhereTheProviderServesIt_andParsesAsRfc4180() {
-        val exported = runBlocking { writer.writeCsv(record, labels) }
+        val exported = runBlocking { writer.write(record, labels, ExportFormat.CSV) }
 
         val file = File(context.cacheDir, "exports/coplanly-record-$FROM-$TO.csv")
         assertTrue("CSV file exists", file.exists())
@@ -88,7 +90,7 @@ class ExportFileWriterTest {
 
     @Test
     fun csv_holdsBothRevisionsWithBothClocks_guardsFormulas_andLeavesOutThePrivateEvent() {
-        runBlocking { writer.writeCsv(record, labels) }
+        runBlocking { writer.write(record, labels, ExportFormat.CSV) }
         val text = File(context.cacheDir, "exports/coplanly-record-$FROM-$TO.csv").readText(Charsets.UTF_8)
         val rows = parseRfc4180(text.removePrefix(CommunicationRecordCsv.BOM))
 
@@ -114,7 +116,7 @@ class ExportFileWriterTest {
 
     @Test
     fun pdf_opensInPdfRenderer_withAtLeastOnePage() {
-        val exported = runBlocking { writer.writePdf(record, labels) }
+        val exported = runBlocking { writer.write(record, labels, ExportFormat.PDF) }
 
         assertTrue(File(context.cacheDir, "exports/coplanly-record-$FROM-$TO.pdf").exists())
         assertEquals("application/pdf", exported.mimeType)
@@ -131,7 +133,7 @@ class ExportFileWriterTest {
 
     @Test
     fun shareIntent_carriesTheProviderUri_withAOneOffReadGrant() {
-        val exported = runBlocking { writer.writeCsv(record, labels) }
+        val exported = runBlocking { writer.write(record, labels, ExportFormat.CSV) }
         val intent = recordShareIntent(exported)
 
         assertEquals(Intent.ACTION_SEND, intent.action)
@@ -339,7 +341,22 @@ class ExportFileWriterTest {
             notYetOnServer = context.getString(R.string.export_record_not_on_server),
             noServerTime = context.getString(R.string.export_record_no_server_time),
             revision = context.getString(R.string.export_record_revision),
-            page = context.getString(R.string.export_record_page)
+            page = context.getString(R.string.export_record_page),
+            verification = VerificationLabels(
+                recordId = context.getString(R.string.export_verify_record_id),
+                verifyAt = context.getString(R.string.export_verify_at),
+                instruction = context.getString(R.string.export_verify_instruction),
+                instructionNoUrl = context.getString(R.string.export_verify_instruction_no_url),
+                notRegistered = context.getString(R.string.export_verify_not_registered),
+                notRegisteredShort = context.getString(R.string.export_verify_not_registered_short)
+            )
         )
     }
 }
+
+/** Renders then saves: the two steps `ExportViewModel` runs with a hash and a registration between. */
+private suspend fun ExportFileWriter.write(
+    record: CommunicationRecord,
+    labels: RecordLabels,
+    format: ExportFormat
+): ExportedFile = save(render(record, labels, format), record, format)
