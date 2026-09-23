@@ -87,12 +87,12 @@ invocation is yours.
 | **MON-12** | Intelligent suggestions (MVP 3) — behind SEC-1's proxy, never with a key in the client | P3 | M |
 | **MON-13** | The tables, Germany's Länder and sourced school vacations (Slovakia and Austria nationwide, Germany per Land) are done — left: Austria's per-Land breaks, Slovakia's regional spring holidays, a grid marker for school vacations, whether Austria's patron-saint days are drawn at all, and ODbL attribution | P2 | M |
 | **FAM-4** | Custody per child | P2 | L |
-| **MON-14** | Seasonal schedule layers (summer / school holidays override the base pattern), with "fill from school holidays" | P1 | M |
+| **MON-14** | **Built** (schema 38, rules, feed port, custody screen); left: the Regenerate run for `38.json`, the rules deploy, and a look at the grid — see the 👁 table | P1 | — |
 | **MON-15 (FTS)** | Chat search ships on `LIKE` plus a Kotlin fold; the FTS4 table is the later schema change, once the schema is free | P3 | S |
 | **MON-16** | **Built** (callables, closed rules, record ID on every export, `web/verify/`); left: the functions, rules and hosting deploys, then `publishedExportVerifyUrl` | P1 | — |
 | **MON-17** | **Built** (functions, rules, Settings screen); left: the deploy and a subscription from a real iPhone — see the 👁 table | P1 | — |
 | **MON-18** | **Built** (fourth callable, two-consent rules, screens); left: the functions and rules deploys and a three-account run — see the 👁 table | P1 | — |
-| **MON-20** | Holiday fairness at a glance (who has which holidays, nights per parent) | P2 | S |
+| **MON-20** | **Built** (read-only card in custody settings, pure calculator); left: a look on a phone | P2 | — |
 | **MON-21** | From the agreed parenting plan to a proposed schedule | P2 | M |
 | **MON-22** | A private, local-only journal that can be attached to an export | P2 | M |
 | **REL-4 (drafting)** | Done as far as the code can answer: every placeholder left is a fact only the owner has, listed at the top of each document. The deletion page and the privacy link in the app are written | P0 | S |
@@ -120,6 +120,8 @@ invocation is yours.
 | **M-8 (chat, shipped, unseen)** | Chat, its badge and `ChatMirror` follow the selected family | Unit tests pin the re-key; only an account with two co-parents on real phones shows a switch landing the Chat tab on the other thread, the badge moving with it, and messages from the family *left* arriving again after switching back. |
 | **M-8 (dot, shipped, unseen)** | The switcher chip and dialog show a dot when a family not on screen has chat news, a change request or a schedule proposal / day swap waiting on this parent; the dialog row names which | Three accounts (a parent and two co-parents) on at least two phones: the co-parent of the family *not* on screen sends a message, then files a change request, then proposes a schedule — each raises the dot on the chip and on that row within seconds, the row's line names it, and TalkBack reads the kind; answering it (or opening the thread) clears that kind; news in the family on screen never raises it; a one-family account shows exactly what it did. Also: the first change-request dot must not fail with a missing-index error in logcat (`OtherFamiliesSignals`) — the query is equality-only and should need none. |
 | **MON-17 (built, unseen)** | The iCalendar feed: `calendarFeed` + three callables, the Settings → Sync row | The RFC 5545 text and the custody port are pinned by `functions/test/calendar-feed.test.js`; only Apple Calendar shows whether it *subscribes* (`webcal://` from the share sheet), draws the all-day custody bars and the contact windows at the right local times, refreshes within the hour, and stops updating after a revoke. Checklist in MON-17. |
+| **MON-14 (built, unseen)** | Seasonal layers over the base pattern, "Fill from school holidays", layer changes through the proposal flow | `DEVICE-CHECKLIST.md` §3.11: the grid on a layer's dates (no new colour), the proposal reaching the co-parent with "the seasonal schedules change too", and the mixed-version path. Needs `38.json` from the Regenerate workflow before CI's schema guard is green, and `firebase deploy --only firestore:rules` for the `seasonalLayersKeptOrDropped` guard (without it the live rules refuse every proposal and swap write that carries the new key). |
+| **MON-20 (built, unseen)** | The holiday-fairness card | §3.11: nights add up to the year, names and colours are the parents' own, the year switch. |
 | **MON-18 (shipped, unseen)** | Professional access: invite, the co-parent's consent, the professional's read-only calendar and plan, revoke | The rules and the callable are proved offline (emulator suite, mocha); the Kotlin is compiled by CI and seen by nobody. Three accounts (A, B, a professional P): A invites, P redeems, P sees "waiting"; B consents from Settings → Family → Professionals; P reads the calendar and plan and nothing else; either parent revokes and P's views empty at once. `docs/DEVICE-CHECKLIST.md` §5.4. Needs the functions **and** rules deploy first. |
 
 ### 💻 Yours only — no session can do these
@@ -1773,28 +1775,72 @@ MON-1 decides, messaging, the calendar and the custody schedule stay usable by b
 regardless of who pays. The paid tier is documentation (export, verification, versions),
 never the ability to talk.
 
-### MON-14 · P1 · M · Seasonal schedule layers (summer, school holidays)
+### MON-14 · **BUILT, UNSEEN** · P1 · M · Seasonal schedule layers (summer, school holidays)
 
-**Where:** ☁️ cloud; 📱 a look at the grid.
+**Where:** ☁️ cloud; 📱 a look at the grid (`DEVICE-CHECKLIST.md` §3.11).
 
 A base pattern plus **layers with a date range that override it**. AppClose's precedence is
 holiday > summer > regular. In CZ/DE, summer care is routinely split differently from term time
-(e.g. two blocks of two weeks each), and today the only way to enter that is day overrides, one
-day at a time.
+(e.g. two blocks of two weeks each), and until this shipped the only way to enter that was day
+overrides, one day at a time.
 
-- A layer is `{name, from, to, pattern (the same shape as the base: cycle length, day
-  indices, contact windows), priority}` stored **inside** the custody model document. It is not a
-  second model: `CustodyModel.getCustodyFor(date)` resolves the layers first, the base second.
-  `getCustodyFor` stays the one question (item 24's rule that a window never splits a day holds
-  within a layer too).
-- Wire form: a codec of plain strings, like `ContactWindowCodec`. **A missing key is not "no
-  layers"**, the same older-build rule as item 24: the mirror keeps its copy when the key is
-  absent. Proposal and swap writes carry the stored list verbatim, and the rule refuses a
-  proposal-only or swap write that changes it.
-- **The part AppClose does not have:** "Fill from school holidays". The Czech vacation table
-  (and the Slovak, Austrian and German-Land tables MON-13 now has) proposes the layer's dates; the
-  parents confirm. Never auto-applied — a proposal, like every other schedule change.
-- Holiday fairness (below, **MON-20**) reads these layers.
+**What shipped (September 2026, schema 38).**
+
+- **Domain** — `domain/custody/SeasonalLayer.kt`: `{id, name, fromDate, toDate (inclusive),
+  patternDays, momDayIndices, startDate (the layer's own cycle anchor), contactWindows, priority}`,
+  three presets (all with one parent, alternating weeks, split in half) and `SeasonalLayerCodec`.
+  A layer is **not a second model**: it lives on `CustodyModel.seasonalLayers`, and
+  `getCustodyFor(date)` answers from the highest-precedence layer covering the date, then the base
+  pattern (`baseCustodyFor`). Precedence is `SeasonalLayer.PRECEDENCE`: priority, then the later
+  start (the inner of two nested layers), then the id. Accepted swaps stay above everything —
+  `CustodyResolver` is unchanged and still the one lookup. `contactWindowsOn(date)` answers from
+  the deciding layer too (a layer replaces the whole pattern for its dates, afternoons included),
+  and item 24's rule holds inside it. `complemented()` flips layers with the slots;
+  `isEquivalentTo` compares them by outcome over their dates.
+- **Wire form** — one string per layer,
+  `L1;<id>;<priority>;<from>;<to>;<anchor>;<patternDays>;<slot-1 days>;<windows>;<name>`, the name
+  percent-encoded, windows as `ContactWindowCodec` strings; `encodeAll` is canonical (sorted,
+  de-duplicated). **An entry this build cannot read is kept verbatim** (`DecodedLayers.unreadable`,
+  `CustodyModel.unreadableLayers`), decides nothing, and is written back unchanged — the
+  `FamilyMemberRef.Unknown` rule, so an older build never erases a newer one's layer.
+- **Room** — `custody_models.seasonalLayersJson` (nullable, null = none), `MIGRATION_37_38`, and
+  `migration37To38_keepsThePatternAndAddsNoLayers`, which passes once the Regenerate workflow has
+  exported `38.json` (requested in `.github/regenerate-request`; **not** hand-written).
+- **Firestore** — `seasonalLayers` on the document and in the proposal sub-map, under item 24's
+  three rules exactly: a missing key is an older build's write (the mirror keeps its copy), a
+  pattern write always writes the key (`[]` for none), and proposal/swap writes carry the stored
+  list verbatim (`SharedCustody.seasonalLayersWire`, `CustodyProposal.seasonalLayersWire`).
+  `firestore.rules`' `seasonalLayersKeptOrDropped` refuses a proposal-only or swap write that
+  changes the list and allows one that drops it; pinned by `custody-models.test.js`
+  "seasonal layers (MON-14)". Saving the base pattern carries the agreed layers
+  (`withActiveLayers`), so editing the fortnight never proposes deleting the summer.
+- **Calendar feed** — `functions/calendar-feed.js` ports the codec and the precedence
+  (`decodeSeasonalLayer`, `layerOn`); `functions/test/calendar-feed.test.js` and
+  `SeasonalLayerTest` share the same fixture strings.
+- **UI** — Custody setup → **Seasonal schedules** (`SeasonalScheduleSection`, a `SectionGroup`):
+  each layer with its range and each parent's day count, an editor with name, range
+  (`LocalDatePickerDialog`), the three presets or "keep as it is", and **Fill from school
+  holidays** (`SchoolVacationSuggestions`: the parent's own calendar's upcoming breaks, widened
+  over adjacent weekends and public holidays, single school-free days left out). Every change goes
+  through `CustodyModelRepository.submitSeasonalLayers` → `submitPattern`: applied on an unpaired
+  account or before the pair shares a schedule, otherwise **a proposal** the co-parent accepts —
+  and refused while the co-parent's own proposal waits, rather than falling back to a local save.
+  The proposal's description says "the seasonal schedules change too"
+  (`CustodyPatternDiff.seasonalLayersChanged`), because a summer proposed in September moves no
+  day in the compared weeks.
+
+**Left, deliberately.**
+
+- **No banner over the grid.** A per-month "Summer schedule" banner is the variable-height strip
+  the calendar removed for school vacations (the note in `CalendarScreen` says why); the grid
+  shows the layer through the custody band it already draws, with no new colour channel.
+- The editor offers presets, not a second day grid; an unusual shape is several layers. A layer's
+  own contact windows exist in the model, codec, rules and feed, but the editor does not yet add
+  them.
+- `priority` is stored and honoured but not exposed: nested layers resolve by the later start.
+  MON-21 can set it when a plan proposes a holiday over a summer.
+- School vacations outside Czechia come from MON-13's tables as they are, so suggestions follow
+  what each country's table holds (Germany only with a Land).
 
 ### MON-15 · **SHIPPED ON `LIKE`; FTS IS THE LATER STEP** · P1 · S · Search in chat
 
@@ -2035,15 +2081,27 @@ What shipped:
 
 Left: a native speaker's read of each word list, and a look on a phone (§1).
 
-### MON-20 · P2 · S · Holiday fairness at a glance
+### MON-20 · **BUILT, UNSEEN** · P2 · S · Holiday fairness at a glance
 
-**Where:** ☁️ cloud.
+**Where:** ☁️ cloud; 📱 a look (`DEVICE-CHECKLIST.md` §3.11).
 
-**Answers:** nothing a competitor ships. The holiday tables (MON-13) and the schedule are both in
-the app, so it can answer: over this year and the next, who has Christmas Eve, Easter, the
-children's birthdays and each school break, and how many nights each parent has in total. Shown
-as a small read-only summary in the custody settings, with the proposal flow (never an automatic
-change) when a parent wants to rebalance. It uses **MON-14**'s layers.
+**Answers:** nothing a competitor ships. Over this year and the next: who has Christmas Eve,
+Christmas Day, New Year's Day, Easter, the children's birthdays, each school break and each other
+public holiday, and how many nights each parent has in total.
+
+**What shipped (September 2026).** `domain/custody/HolidayFairness.kt` — a pure calculator over
+`CustodyResolver.resolver`, so accepted swaps and MON-14 layers count exactly as the grid shows
+them, and **contact windows are not nights** (item 24). Public holidays and school vacations come
+from the parent's own `HolidayLocation`; birthdays from `child_info` dates of birth (29 February
+falls on the 28th in a common year). Custody setup → **Holiday fairness**
+(`HolidayFairnessCard`): a year switch, the nights line, one row per occasion naming the parent
+(or each parent's day count for a range) through `ParentNames` and `ParentColors`, other public
+holidays behind a toggle. **Read-only**: "Propose a change" opens the seasonal-schedule editor,
+whose result is an ordinary proposal. Tests: `HolidayFairnessTest`, `SeasonalScheduleViewModelTest`.
+
+Not done: Orthodox Christmas is not one of the fixed rows (Russia's table carries 7 January as a
+public holiday, which the card lists), and the card reads this viewer's country — the same
+per-viewer rule as the school-vacation strips (MON-13).
 
 ### MON-21 · P2 · M · From the parenting plan to the schedule
 

@@ -94,6 +94,13 @@ const RULES = [
     paths: ['K/domain/custody/**', 'K/presentation/custody/**', 'K/data/repository/Custody*'],
   },
   {
+    sections: ['3.11'],
+    why: 'seasonal custody layers or holiday fairness',
+    paths: ['K/domain/custody/SeasonalLayer.kt', 'K/domain/custody/HolidayFairness.kt',
+      'K/domain/holidays/SchoolVacationSuggestions.kt', 'K/presentation/custody/Seasonal*',
+      'K/presentation/custody/HolidayFairness*', 'K/data/repository/SeasonalLayerJson.kt'],
+  },
+  {
     sections: ['3.6', '4.2'],
     why: 'strings, locales or the language picker',
     paths: ['app/src/main/res/values*/**', 'app/src/main/res/xml/locales_config.xml',

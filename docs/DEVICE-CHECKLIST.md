@@ -508,6 +508,46 @@ the Settings row, and it cannot see Android 13's system setting or a Play instal
 - [ ] While here, attach a **receipt photo** to an expense and a **photo to an event** (tag
       `CoPlanlyUpload`). §7 needs the same four kinds of file on the throwaway account.
 
+### 3.11 Seasonal schedules and holiday fairness (MON-14, MON-20) · 1P, proposal check 2P
+
+Custody setup, below the preview: **Seasonal schedules**, then **Holiday fairness**. Needs a saved
+base pattern; schema 38 (the Regenerate workflow must have exported `38.json` for CI to be green).
+
+- [ ] With no base pattern saved, the section says to save one first and offers no editor.
+- [ ] **Add a seasonal schedule** → name "Summer" → **Fill from school holidays** (Czech account):
+      the chips list the next breaks, widened over weekends and public holidays — autumn
+      28 Oct–1 Nov 2026, Christmas 23 Dec–3 Jan, Easter 25–29 Mar 2027, summer 1 Jul–31 Aug
+      2027. No spring break (district-dependent, deliberately absent). Tap the summer chip: the
+      range fills; the name is kept if you typed one.
+- [ ] Shapes: **Split in half** with the other parent first → Save. On an **unpaired** account the
+      month grid for July/August now shows the first half in that parent's band and the second in
+      yours; June and September are the base pattern again. **No new colour** on the grid — the
+      band is the ordinary custody band, the weekend grey still underneath.
+- [ ] The row reads "1 Jul 2027 – 31 Aug 2027 · <name> 31 · <name> 31". Tap it → **Delete** →
+      the summer grid returns to the base pattern.
+- [ ] An overlapping "Christmas" (all with one parent) inside a longer "Winter" layer: Christmas
+      wins on its days, Winter on the rest.
+- [ ] A contact window on the base pattern does **not** appear inside a layer's dates.
+- [ ] **Holiday fairness:** the year chips switch between this year and the next; "Nights" adds
+      up to 365/366; Christmas Eve, Christmas Day, New Year's Day and Easter name a parent (or
+      show both counts when split); a child's birthday row appears when a date of birth is set;
+      school vacations show day counts per parent. "Show other public holidays" lists the rest.
+      Names only, never Mom/Dad; each parent's colour is their chosen one (§3.3).
+- [ ] **Propose a change** opens the seasonal editor; nothing changes until it is saved.
+- [ ] **2P, paired, schedule already shared:** A adds a layer → "Sent to your co-parent for
+      approval"; A's grid is unchanged; B gets the proposal (inbox banner), whose description
+      says "The seasonal schedules change too" even when no day in the next weeks moves. B
+      accepts → both grids change on the layer's dates. While B's own proposal is pending, A's
+      seasonal change is refused with "Answer it first".
+- [ ] **2P, mixed versions:** a swap or a proposal from a build without MON-14 keeps the layers on
+      the newer phone (the rules allow the older build to drop the key; the mirror keeps its
+      copy). No one-phone fallback: `custody-models.test.js` "seasonal layers" is the substitute.
+- [ ] **Calendar feed (MON-17), if deployed:** an iPhone subscribed to the feed shows the layer's
+      custody bars on its dates after the next refresh.
+- **If it fails:** tag `SeasonalScheduleVM` / `CustodyModelRepo`; `presentation/custody/Seasonal*`,
+  `HolidayFairnessCard.kt`, `domain/custody/SeasonalLayer.kt`, `HolidayFairness.kt`,
+  `firestore.rules` `seasonalLayersKeptOrDropped`.
+
 ---
 
 ## 4. Release-build checks

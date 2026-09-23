@@ -557,7 +557,7 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
 
 ```
 domain/    — models, repository interfaces, use cases, holidays, ReminderScheduler
-data/      — Room (v37 + migrations), Firestore/Google clients, repository impls, sync
+data/      — Room (v38 + migrations), Firestore/Google clients, repository impls, sync
 presentation/ — Compose screens per feature + ViewModels + theme
 di/        — Hilt modules (Database, Firebase, Google, UseCase, Notification, …)
 ```
@@ -667,7 +667,7 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     the conversation as `{uid: epochMillis}` maps — one write per event — and the ticks and
     unread badge are derived from them by `ChatReadState`, never stored per message.
     Message times are stored the same way: `Message.sentAtMillis`, epoch millis (Room
-    schema v13, since superseded — the database is at v37), not a naive `LocalDateTime`, so two
+    schema v13, since superseded — the database is at v38), not a naive `LocalDateTime`, so two
     parents in different time zones agree
     on what a mark means and on when a message was sent. The Firestore field keeps its name
     (`timestamp`) and the read path still accepts a legacy ISO string, so a co-parent on an
@@ -1023,8 +1023,9 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     a fallback for unstamped events. **Parents are named, never slotted**: titles come from
     `users/{uid}.name`, the slot from `families/{id}.slots`, and a pair still sharing one slot gets
     no custody layer rather than a guess. And **the custody port must agree with
-    `CustodyResolver`/`ContactWindowCodec`** — accepted swaps first, whole-day pattern, windows
-    dropped when they name the day's own parent; change the Kotlin, add a fixture to
+    `CustodyResolver`/`ContactWindowCodec`/`SeasonalLayerCodec`** — accepted swaps first, then the
+    deciding seasonal layer (item 30), then the whole-day pattern, windows dropped when they name
+    the day's own parent; change the Kotlin, add a fixture to
     `functions/test/calendar-feed.test.js`. A link is served only while its family is live (both
     profiles name each other); an unpair, an account deletion or 90 idle days end it with the same
     404 as an unknown token.
@@ -1073,6 +1074,36 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     this phone cannot know the palette each parent chose (design item 12). The push
     `professional_access_requested` is server-only, like `pairing_accepted`, and says consent is
     being asked for, never that access began.
+
+30. **A seasonal layer replaces the pattern for its dates, lives inside the one custody document,
+    and reaches the co-parent only as a proposal** (MON-14, September 2026; schema 38).
+    `domain/custody/SeasonalLayer.kt` is the one definition — `{id, name, from, to (inclusive),
+    patternDays, momDayIndices, startDate, contactWindows, priority}` — and
+    `CustodyModel.getCustodyFor` answers from the highest-precedence layer covering a date
+    (`SeasonalLayer.PRECEDENCE`: priority, then the later start, then the id) before the base
+    pattern; `CustodyResolver` still puts accepted swaps above both, and stays the one lookup.
+    `contactWindowsOn` answers from the deciding layer too — a layer replaces the whole pattern,
+    afternoons included — and item 24 holds inside it. Five things not to undo. **The wire form is
+    `SeasonalLayerCodec` strings** (`L1;id;priority;from;to;anchor;cycle;days;windows;name`, name
+    percent-encoded), never Gson over the data class, and `encodeAll` is canonical. **An entry this
+    build cannot read is kept verbatim** (`CustodyModel.unreadableLayers`), decides nothing and is
+    written back — dropping it would let an older build erase a newer one's summer. **Item 24's
+    three wire rules apply unchanged under the key `seasonalLayers`**: a missing key is an older
+    build's write and the mirror keeps its copy; a pattern write always writes the key (`[]` for
+    none); proposal and swap writes carry the stored list verbatim
+    (`SharedCustody.seasonalLayersWire`, `CustodyProposal.seasonalLayersWire`), and
+    `firestore.rules`' `seasonalLayersKeptOrDropped` refuses one that changes it. **Saving the base
+    pattern carries the agreed layers** (`CustodyModelRepository.withActiveLayers`) — the form
+    knows nothing of layers, and without that every fortnight edit would propose deleting the
+    summer. And **a layer change is a pattern change**: `submitSeasonalLayers` goes through
+    `submitPattern`, so a paired family gets a proposal, never an overwrite, and the section
+    refuses to send while the co-parent's own proposal waits (the repository's fallback there is
+    a local save). The grid shows a layer only through the custody band it already draws — **no
+    new colour, and no per-month banner** (the variable-height strip `CalendarScreen` removed for
+    school vacations). `functions/calendar-feed.js` ports the codec and the precedence; change the
+    Kotlin, change the fixture both suites share. **Holiday fairness (MON-20) only counts**:
+    `HolidayFairnessCalculator` reads the same resolver, so swaps and layers count as drawn and a
+    contact window is never a night; its "Propose a change" opens the layer editor.
 
 ## Known issues / do not "fix" silently
 
