@@ -288,6 +288,13 @@ what is happening in the family they are not looking at. Tapping one switches co
 Push gains `familyId` so a notification can deep-link into the right family: four places, per
 CLAUDE.md item 15.
 
+*As built (M-8, September 2026):* the chip is on Home and Expenses, not all four — the Calendar
+header's row is spoken for, and Chat turned out to follow the first co-parent rather than the
+selected family (ROADMAP M-8). `familyId` is a payload **field**, not a type, so item 15's four
+places did not apply: one stamp in `FcmService`, two in the functions, a bound in the rule, and a
+switch before the deep link on tap. The cross-family badges above were not built, for the reason
+M-8 records: nothing mirrors the second family's chat while it is closed, so a count would lie.
+
 #### Order of operations, and the ops steps it depends on
 
 `backfillRecordFamilyIds` stamps `familyId` on the documents of the six collections for every

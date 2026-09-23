@@ -67,14 +67,13 @@ invocation is yours.
 | Id | What | Pri | Size |
 | --- | --- | --- | --- |
 | **M-5** | Multi-family cleanup: delete `partnerId`, `User.role`, `Event.sharedWith`, `isPartnerOf` — **after** the ops steps in REL-3 | P2 | M |
-| **M-8** | M-4's leftovers: badges that count across families, `familyId` on pushes, a switcher chip in the top bar | P2 | M |
+| **M-8** | M-4's last leftover: badges across families — and chat still follows the *first* co-parent, not the selected family (the chip and `familyId` on pushes are done) | P2 | M |
 | **CQ-11** | The declared error model is not the one in use | P3 | S |
 | **CQ-13** | Fourteen of twenty-four ViewModels have no tests | P2 | M |
 | **CQ-15** | The last of the dead code, and one decision about it | P3 | S |
 | **CQ-17** | Six dependencies worth moving | P3 | S |
 | **UX-9** | Five different empty-state anatomies, one of which renders under the top bar | P2 | M |
 | **UX-14** | Four different brand purples | P3 | S |
-| **UX-16** | Drag an event to reschedule it (MVP 3) | P3 | S |
 | **MON-2** | Verify the market facts — most of them are public pages | P0 | S |
 | **MON-3** | Export to PDF/CSV — the first paid feature (needs MON-4 first) | P1 | M |
 | **MON-4** | The paper is written; three answers are owed by the owner, and MON-3 waits on them | P1 | S |
@@ -184,7 +183,7 @@ one of them should probably not be built at all.
 | Payments | Clear | XL | Low | **MON-11, P2 · L.** Gated on MON-1's pricing decision — and **Onward closed on 8 October 2024** built entirely on expense splitting and payments. Expense reimbursement does not carry a product on its own |
 | Exports to PDF/CSV | Summary / punctuality. CSV preferred | M | Low | **MON-3, P1 · M.** Backwards at Low: this is the **first paid feature**. Willingness to pay concentrates on documentation you can hand to a lawyer. Blocked on **MON-4** |
 | Intelligent suggestions | Based on past schedules | M-L | Low | **MON-12, P3 · M.** Only behind SEC-1's proxy — the AI subsystem was deleted with its key (MON-7), and it comes back as *one* feature, never eight |
-| Time setting by dragging | Whole event by 15 min, corners by the minute | S | Low | **UX-16, P3 · S.** The smallest item here and the one a user notices daily |
+| Time setting by dragging | Whole event by 15 min, corners by the minute | S | Low | **UX-16, done.** Move by 15 minutes and resize were already in `DayWeekView`; the corners now move by the minute. Needs a thumb to judge |
 
 ### What none of the three phases contains
 
@@ -1039,14 +1038,36 @@ broke (parent hues as 8sp text on Custody Setup) is exactly where it was bypasse
 one, so a direct `MomPink` reference is no longer merely a style violation — it draws the wrong
 person's colour for anyone who picked purple or orange.
 
-### UX-16 · P3 · S · Drag an event to reschedule it
+### UX-16 · **DONE** · Drag an event to reschedule it
 
-**Where:** ☁️ cloud writes it; 👁 nobody can tell whether a drag feels right without a thumb.
+**Where:** 👁 what is left is acceptance — nobody can tell whether a drag feels right without a thumb.
 
 MVP 3's "time setting by dragging corners": drag the whole event by 15-minute steps, drag a corner
-by single minutes. The smallest item in MVP 3 and the one a user touches daily. Day and week views
-are `HorizontalPager` with fling physics, so the gesture has to be nested inside a pager that
-already claims horizontal drags — which is the whole difficulty.
+by single minutes. This line said it was open long after most of it had shipped; checked against
+`presentation/calendar/DayWeekView.kt` (September 2026):
+
+- **Move — was already there.** `EventChip` runs `detectDragGesturesAfterLongPress`: a long press
+  lifts the block (haptic), the drag's vertical travel snaps to `MOVE_SNAP_MINUTES` (15) and its
+  horizontal travel to whole day columns in week view, and the drop calls
+  `EventViewModel.moveEvent` with a minute-of-day, which keeps the duration and offers Undo
+  (`EventOperation.RESCHEDULED`). Dropping on the delete target deletes instead.
+- **Nested in the pager — was already solved,** by the long press itself: until it fires, a
+  horizontal swipe belongs to the `HorizontalPager` and pages the day or week; after it, the chip's
+  handler consumes every change, so the pager never sees the drag. The resize handles consume from
+  the first touch, and they are small pills at the block's top and bottom edges, so a swipe that
+  starts anywhere else still pages.
+- **Resize by the minute — the gap, now closed.** Both handles existed, with a live `HH:mm – HH:mm`
+  badge over the block, but snapped to the same 15-minute grid as the move. They now step by
+  `RESIZE_STEP_MINUTES` (1) — the precise gesture is the one for "pickup is at 15:40" — and never
+  make an event shorter than `MIN_EVENT_MINUTES` (15): a corner dragged past the other one leaves a
+  quarter-hour block instead of refusing the drop, as it used to. The badge shows exactly what the
+  drop writes (`resizedStart`/`resizedEnd` serve both), and a drop that changes nothing writes
+  nothing.
+
+Left, deliberately: **Month view has no drag** — its cells carry dots, not blocks, and a dot has no
+duration to move. Continuation slices of a multi-day or overnight event stay fixed, since which end
+a drag on the middle day means is ambiguous. Acceptance on a device: whether one minute per dp (an hour
+row is about 60 dp) is controllable under a thumb, or wants a coarser step on compact screens.
 
 ### UX-17 · **DONE** · A proposed split ratio could not be withdrawn, and the proposer was told nothing
 
@@ -1472,19 +1493,57 @@ while looking at the wrong family. `CalendarSyncRepository` says so at the call 
 is where the answer goes. Related: **MON-8**, where a school import is the opposite case — it *is*
 about the child and must be shared.
 
-### M-8 · P2 · M · What M-4 deliberately left
+### M-8 · P2 · M · What M-4 deliberately left — two of three done, one documented
 
-**Where:** ☁️ cloud.
+**Where:** ☁️ cloud for what is left; a phone with two paired accounts for acceptance.
 
-- **Badges do not count across families.** Something happening in the family you are not looking at
-  is quiet until you switch. The counts are per-selected-family because every query resolves through
-  the projected `partnerId`; counting across families means querying across them.
-- **Pushes carry no `familyId`.** Adding the key alone would be a field nothing reads; the value is
-  deep-linking into the right family, which means the tap has to switch the selection first. The
-  `notification_queue` rule has no `hasOnly`, so a new key is accepted — but its own comment
-  requires a length bound, since "a field the rule does not know about is a field with no bound".
-- **A switcher chip in the top bar**, in addition to the Settings row. Two families is when the
-  Settings-only route starts costing three taps a day.
+- **Done — a switcher chip in the top bar** of Home and Expenses (`presentation/common/
+  FamilySwitcher.kt`, `FamilySwitcherChip`), beside the gear, naming the family on screen by its
+  co-parent. It **appears at two, not at one**: a parent with one co-parent sees the top bar they
+  always saw. It opens the dialog the Settings row opens — the dialog moved out of `SettingsScreen`
+  into the same file, and both entry points share `FamilySwitcherViewModel`, which replaced
+  `SettingsViewModel`'s own family state. The list is now *observed* off the signed-in Room row
+  (`SelectedFamilySource.observeFamilies`) rather than reloaded when Settings opens, because a chip
+  has no "opens" moment; the co-parents' names stay the one remote read, one per family, only at
+  two or more, cached per ViewModel. Not on the Calendar header, deliberately: design item 5 gave
+  that row a fixed four (title, Today, Filters, gear) and a person's name would squeeze the
+  Month/Week/Day title first. Not on Chat either, for the reason in the badges bullet below.
+- **Done — pushes carry `familyId`** (`PushPayload.FAMILY_ID`, a field, not a type, so item 15's
+  four-place rule does not apply). `FcmService.queueNotificationForUser` stamps every client push
+  with `FamilyKey.orNull(sender, addressee)` — one place, because a push goes to one co-parent and a
+  pair *is* a family — and the Cloud Functions stamp `chat_message` (its conversation id, which is
+  the family id) and `pairing_accepted` (the new family, so the inviter lands on it).
+  `pairing_removed` names none: that family is gone. The rule's new `isPushFamily` bounds the key
+  at 258 characters (two 128-character uids and the separator) **and** requires both the sender and
+  the addressee to be in it, read off the id itself with no document read; `firestore-tests`
+  `notification-payload.test.js` pins accept/foreign-to-sender/foreign-to-addressee/overlong/
+  non-string. On the phone, `CoPlanlyMessagingService` puts the id on the tap intent as an extra
+  *and* into the PendingIntent request code (extras are not part of a PendingIntent's identity, so
+  two same-typed pushes from two families would otherwise share one and the older notification
+  would switch to the newer one's family), and `MainActivity.readLaunchIntent` switches through
+  `SelectedFamilySource.select` **before** it arms any deep link, since `NavGraph` navigates the
+  moment one appears. `select` refuses a family the account is not in, so a stale notification
+  opens on whatever is showing.
+- **Not done — badges that count across families**, and the reason is a defect found on the way,
+  not cost alone. The chat badge is not even per *selected* family: `ChatViewModel.unreadCount`,
+  `coParentLink` and `ChatMirror` all key on `PairingRepository.observePairingState()`, which reads
+  the **server's** `users/{uid}.partnerId` — `partnersOf(...)[0]`, the *first* co-parent — not the
+  local projection `SelectedFamilySource` writes. So the Chat tab, its badge and the process-wide
+  mirror follow the first family whatever the switcher says; the second family's thread receives
+  messages into Room only while it is open (the thread's own `observeMessages` mirror), and is
+  reachable from the conversation list and, now, from its push. Two consequences for the badge
+  work. A Room `COUNT(*)` across every conversation — the cheap version — would **undercount the
+  second family silently**, because nothing mirrors its messages while it is closed; a badge that
+  says 0 when it is not is worse than none (design item 8). And the honest version needs, in order:
+  (1) `ChatMirror` and `ChatViewModel.coParentLink` moved from `observePairingState` to the
+  projection (`SelectedFamilySource.observe`) or to *every* family, which is CQ-8-sensitive code
+  and wants a phone; (2) one conversation-document listener per non-selected family, deriving
+  "has unread" from `lastMessageAt > lastReadAt[me]` — a dot on the switcher chip and its dialog
+  rows, not a count, since the messages themselves are not mirrored; (3) the same question asked
+  of change requests and custody proposals, whose queries resolve through the projected
+  `partnerId` and so see only the selected family by construction. Cost: N−1 extra snapshot
+  listeners for the process lifetime, zero for a one-family account. Until (1) lands, the chat
+  push is the cross-family signal, and it now switches the family on tap.
 
 ---
 
