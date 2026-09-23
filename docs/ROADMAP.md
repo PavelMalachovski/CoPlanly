@@ -149,8 +149,11 @@ invocation is yours.
 
 In this order, and each is genuinely finishable in the cloud:
 
-1. **MON-3's next slice** — the parenting plan is the other document worth exporting, and it is
-   not in the record yet.
+1. **MON-21** — from the agreed parenting plan to a proposed schedule, through the proposal flow
+   the custody screen already has.
+2. ~~**MON-4's last item**~~ — **done** (September 2026): event edits compare by instant (schema 39).
+3. ~~**MON-3's next slice**~~ — **done** (September 2026): the parenting plan is in the record, an
+   optional section on by default; see MON-3.
 *(Everything that headed this list — **MON-4** and **MON-3**'s first version, **M-6**, **CQ-19**, **CQ-12**, **CQ-1**'s bleeding half,
 **CQ-5**, **CQ-6 + CQ-8**, **SEC-2**, the three honesty gaps **CQ-20**, **UX-17**, **UX-18**, and
 **UX-15**, which un-hid the colour picker, the **MON-13** holiday tables, and **CQ-13**'s ViewModel
@@ -1368,9 +1371,22 @@ flag standing in for one would be the kind of gate this project has learned not 
 **The paywall arrives with MON-11's entitlement layer**, and the export is the first thing it gates.
 Until then the feature is free, which is also the honest way to learn whether anyone uses it.
 
+**The parenting plan (MON-5) is in it** (September 2026, the slice this entry used to list first).
+A checkbox on the export screen, on by default, adds a last section: every catalogue question in
+catalogue order, each parent's answer under their name, and whether the two agree — derived by
+`ParentingPlanComparison.statusOf`, the plan screen's own rule, so each parent must have ticked the
+other's answer *as it reads now*. It is read from `parenting_plans/{familyId}` with `Source.SERVER`;
+when that fails the section prints this phone's copy and says so, and the record's face carries the
+incomplete line. A family with no plan gets "no parenting plan recorded". The section prints
+`parenting_plan_disclaimer` (the wording is this project's, not the Ministry's form) and says it is
+the plan as it stood at export time, not for the period, with each parent's last change. **Answers
+under retired question ids are listed after the catalogue under a "no longer asked" heading**, by
+id — the app keeps them (CLAUDE.md item 21), so the record does not quietly drop them.
+`domain/export/RecordPlan.kt` builds it, `RecordPlanLayout` and `CommunicationRecordCsv` lay it out,
+`data/export/ParentingPlanRecordSource` reads it; `RecordPlanTest` pins all three.
+
 **Not in this version, and worth doing next:**
 
-- **The parenting plan (MON-5)** — the other document two parents hand to a court.
 - **Handover punctuality** — `HandoverCalculator` knows the schedule; nothing records whether a
   handover happened, and inventing it would break the record's own claim. Needs a product decision
   about what "on time" is recorded as, and by whom.

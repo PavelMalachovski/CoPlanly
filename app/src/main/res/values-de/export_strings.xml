@@ -75,4 +75,16 @@
     <string name="export_unregistered_body">Der Server war nicht erreichbar, daher wurde diese Datei nicht registriert und niemand wird sie auf Änderungen prüfen können. Die Datei sagt das am Anfang. Sie können sie trotzdem teilen oder erneut exportieren, wenn Sie online sind.</string>
     <string name="export_unregistered_share">Trotzdem teilen</string>
     <string name="export_unregistered_not_now">Nicht jetzt</string>
+
+    <!-- The parenting plan in the record (MON-5 in MON-3): printed as it stands, not for a period. -->
+    <string name="export_include_label">Außerdem enthalten</string>
+    <string name="export_include_plan">Der Elternplan</string>
+    <string name="export_include_plan_supporting">Die Antworten beider Eltern und wo Sie sich einig sind, wie der Plan heute steht — unabhängig vom Zeitraum</string>
+    <string name="export_plan_current_state">Nicht auf den obigen Zeitraum beschränkt: So stand der Plan, als dieses Protokoll erstellt wurde. Jeder Elternteil antwortet für sich; eine Frage gilt nur dann als geeinigt, wenn jeder die Antwort des anderen in ihrem jetzigen Wortlaut abgehakt hat.</string>
+    <string name="export_plan_not_from_server">Der Elternplan konnte nicht vom Server gelesen werden. Es folgt die Kopie dieses Telefons, die von dem abweichen kann, was der andere Elternteil sieht.</string>
+    <string name="export_plan_unsent_here">Änderungen auf diesem Telefon, die den Server noch nicht erreicht haben, sind nicht enthalten.</string>
+    <string name="export_plan_none">Kein Elternplan erfasst.</string>
+    <string name="export_plan_last_changed">Zuletzt geändert</string>
+    <string name="export_plan_not_agreed">Nicht geeinigt</string>
+    <string name="export_plan_retired">Antworten auf Fragen, die der Plan nicht mehr stellt (aufbewahrt, nicht gelöscht)</string>
 </resources>

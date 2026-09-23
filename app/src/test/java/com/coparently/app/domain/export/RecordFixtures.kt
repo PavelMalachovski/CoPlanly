@@ -3,6 +3,7 @@ package com.coparently.app.domain.export
 import com.coparently.app.data.versions.EventVersionKind
 import com.coparently.app.domain.model.Expense
 import com.coparently.app.domain.model.ExpenseCategory
+import com.coparently.app.domain.parentingplan.ParentingPlanEntry
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -68,6 +69,20 @@ internal object RecordFixtures {
             instructionNoUrl = "REGISTERED UNDER THIS ID",
             notRegistered = "NOT REGISTERED, CANNOT BE VERIFIED",
             notRegisteredShort = "NOT REGISTERED"
+        ),
+        plan = PlanLabels(
+            section = "Plan",
+            disclaimer = "NOT THE MINISTRY FORM",
+            currentState = "CURRENT STATE AT EXPORT",
+            notFromServer = "PLAN FROM THIS PHONE",
+            unsentHere = "UNSENT EDITS NOT SHOWN",
+            noPlan = "NO PLAN RECORDED",
+            lastChanged = "Last changed",
+            agreed = "Agreed",
+            notAgreed = "Not agreed",
+            notAnswered = "Not answered",
+            retired = "NO LONGER ASKED",
+            questions = mapOf("residence_home" to "Where will the child live?")
         )
     )
 
@@ -146,6 +161,17 @@ internal object RecordFixtures {
         currentEvents: List<CurrentEventInput> = emptyList(),
         messages: List<MessageInput> = emptyList(),
         expenses: List<Expense> = emptyList(),
-        serverReached: Boolean = true
-    ) = RecordSources(revisions, currentEvents, messages, expenses, serverReached)
+        serverReached: Boolean = true,
+        plan: PlanSource? = null
+    ) = RecordSources(revisions, currentEvents, messages, expenses, serverReached, plan)
+
+    /** 2026-03-09 18:00 in Prague — when Bob last changed his half of the plan. */
+    const val MARCH_9_1800 = 1_773_075_600_000L
+
+    /** A plan read from the server, Alice first; halves default to none (a family with no plan). */
+    fun planOf(
+        halves: Map<String, ParentingPlanEntry> = emptyMap(),
+        serverReached: Boolean = true,
+        unsentHere: Boolean = false
+    ) = PlanSource(listOf(ALICE, BOB), halves, serverReached, unsentHere)
 }

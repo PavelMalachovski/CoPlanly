@@ -75,4 +75,16 @@
     <string name="export_unregistered_body">Server nebyl dostupný, takže tento soubor nebyl zaregistrován a nikdo nebude moci ověřit, zda byl změněn. Soubor to uvádí na začátku. Můžete ho přesto sdílet, nebo ho exportovat znovu, až budete online.</string>
     <string name="export_unregistered_share">Přesto sdílet</string>
     <string name="export_unregistered_not_now">Teď ne</string>
+
+    <!-- The parenting plan in the record (MON-5 in MON-3): printed as it stands, not for a period. -->
+    <string name="export_include_label">Přiložit také</string>
+    <string name="export_include_plan">Rodičovský plán</string>
+    <string name="export_include_plan_supporting">Odpovědi obou rodičů a na čem se shodnete, jak plán vypadá dnes — bez ohledu na období</string>
+    <string name="export_plan_current_state">Neomezuje se na období výše: takto vypadal plán v okamžiku, kdy byl tento záznam vytvořen. Každý rodič odpovídá sám; otázka platí za dohodnutou, jen když každý z nich odškrtl odpověď toho druhého v jejím současném znění.</string>
+    <string name="export_plan_not_from_server">Rodičovský plán se nepodařilo načíst ze serveru. Následuje kopie z tohoto telefonu, která se nemusí shodovat s tím, co vidí druhý rodič.</string>
+    <string name="export_plan_unsent_here">Změny provedené na tomto telefonu, které ještě nedorazily na server, zde nejsou.</string>
+    <string name="export_plan_none">Žádný rodičovský plán nebyl zaznamenán.</string>
+    <string name="export_plan_last_changed">Naposledy změněno</string>
+    <string name="export_plan_not_agreed">Bez shody</string>
+    <string name="export_plan_retired">Odpovědi na otázky, které plán už neklade (uchované, nesmazané)</string>
 </resources>

@@ -75,4 +75,16 @@
     <string name="export_unregistered_body">Сервер был недоступен, поэтому этот файл не зарегистрирован и никто не сможет проверить его на изменения. Файл говорит об этом в начале. Можно всё равно поделиться им или экспортировать снова, когда появится сеть.</string>
     <string name="export_unregistered_share">Всё равно поделиться</string>
     <string name="export_unregistered_not_now">Не сейчас</string>
+
+    <!-- The parenting plan in the record (MON-5 in MON-3): printed as it stands, not for a period. -->
+    <string name="export_include_label">Также включить</string>
+    <string name="export_include_plan">Родительский план</string>
+    <string name="export_include_plan_supporting">Ответы обоих родителей и в чём вы согласны — в том виде, в каком план есть сегодня, независимо от периода</string>
+    <string name="export_plan_current_state">Не ограничено периодом выше: таким план был в момент создания этой записи. Каждый родитель отвечает отдельно; вопрос считается согласованным, только если каждый отметил ответ другого в его нынешней формулировке.</string>
+    <string name="export_plan_not_from_server">Родительский план не удалось прочитать с сервера. Ниже — копия с этого телефона, которая может не совпадать с тем, что видит другой родитель.</string>
+    <string name="export_plan_unsent_here">Изменения, сделанные на этом телефоне и ещё не дошедшие до сервера, здесь не показаны.</string>
+    <string name="export_plan_none">Родительский план не заполнен.</string>
+    <string name="export_plan_last_changed">Последнее изменение</string>
+    <string name="export_plan_not_agreed">Не согласовано</string>
+    <string name="export_plan_retired">Ответы на вопросы, которых в плане больше нет (сохранены, не удалены)</string>
 </resources>

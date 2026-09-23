@@ -10,6 +10,7 @@ package com.coparently.app.domain.export
  *
  * @property statement The paragraphs that say what the record is and is not — printed first, on
  *   the face of both formats, and never shortened (`docs/DESIGN-court-record.md` §3).
+ * @property plan The words of the parenting-plan section, printed only when the record carries one.
  */
 data class RecordLabels(
     val title: String,
@@ -29,8 +30,52 @@ data class RecordLabels(
     val noServerTime: String,
     val revision: String,
     val page: String,
-    val verification: VerificationLabels
+    val verification: VerificationLabels,
+    val plan: PlanLabels
 )
+
+/**
+ * What the parenting-plan section prints (MON-5 in the record).
+ *
+ * @property section The section's heading.
+ * @property disclaimer That the wording is this project's own, not the Ministry of Justice's form —
+ *   the same sentence the plan screen shows (`parenting_plan_disclaimer`, CLAUDE.md item 21).
+ * @property currentState That the plan is not bound to the record's period: it is printed as it
+ *   stood when the record was generated.
+ * @property notFromServer That the plan could not be read from the server and this is the phone's copy.
+ * @property unsentHere That edits made on this phone have not reached the server and are not printed.
+ * @property noPlan For a family with no plan: said, never invented.
+ * @property lastChanged The label before each parent's last change to their half.
+ * @property agreed A question both parents agreed on, as each other's answer reads now.
+ * @property notAgreed A question at least one parent answered without the two agreeing.
+ * @property notAnswered An answer, or a question, nobody has written.
+ * @property retired The heading over answers to questions the plan no longer asks.
+ * @property questions Each catalogue question's wording by id; an id missing here prints as its id.
+ */
+data class PlanLabels(
+    val section: String,
+    val disclaimer: String,
+    val currentState: String,
+    val notFromServer: String,
+    val unsentHere: String,
+    val noPlan: String,
+    val lastChanged: String,
+    val agreed: String,
+    val notAgreed: String,
+    val notAnswered: String,
+    val retired: String,
+    val questions: Map<String, String>
+) {
+    /** The status a question's agreement prints as. */
+    fun agreement(agreement: PlanAgreement): String = when (agreement) {
+        PlanAgreement.AGREED -> agreed
+        PlanAgreement.NOT_AGREED -> notAgreed
+        PlanAgreement.UNANSWERED -> notAnswered
+    }
+
+    /** The wording of [questionId], or the id itself when there is none — a retired question's case. */
+    fun question(questionId: String): String = questions[questionId] ?: questionId
+}
 
 /**
  * What a file says about checking it (MON-16).

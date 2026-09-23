@@ -1042,6 +1042,14 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     the line rather than printing a dead link. The chat immutability pin §4 called missing lives in
     `firestore-tests/rules/event-versions.test.js`'s last block: both parents, every field,
     `set()`, delete and a stranger, with `isRead` as the control.
+    **The parenting plan is an optional last section** (MON-5 in the record, September 2026; a
+    checkbox, on by default, `domain/export/RecordPlan.kt`). It prints `parenting_plan_disclaimer`
+    and says it is the plan as it stood at export time, not for the period; lists every catalogue
+    question, each parent's answer **by name**, and agreement exactly as
+    `ParentingPlanComparison.statusOf` derives it — never a stored flag; keeps answers under retired
+    ids under a "no longer asked" heading rather than dropping them (item 21); reads with
+    `Source.SERVER` and, when that fails, prints this phone's copy *labelled as such* and marks the
+    record incomplete; and says "no parenting plan recorded" rather than inventing one.
 
 27. **A calendar-feed token is the whole authorisation, so it is hashed, scoped and never served
     past what the app itself would show** (MON-17, September 2026). `functions/calendar-feed.js`

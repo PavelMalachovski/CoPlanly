@@ -776,6 +776,14 @@ Preconditions:
 - [ ] The event edited twice appears **as versions**: the original plus two edits, each with
       its own times.
 - [ ] The **private** event appears **nowhere**, in either file.
+- [ ] With **Also include → The parenting plan** ticked (the default) and a plan both parents
+      have answered, both files end with a **Parenting plan** section: the "not the Ministry of
+      Justice form" sentence, "as it stood when this record was generated", each question with
+      **both parents' answers under their names** (never "Mom"/"Dad") and **Agreed** only where
+      each ticked the other's current answer. Edit one answer on the other phone, export again:
+      that question now reads **Not agreed**. Untick the box: the section is gone.
+- [ ] In **airplane mode**, the plan section says it is **this phone's copy** and the record's face
+      carries the incomplete line.
 - [ ] The **share sheet** opens from both, and sending to e-mail or Drive delivers a file that
       opens.
 - **If it fails:** read the PR's own description for the file and tag names.

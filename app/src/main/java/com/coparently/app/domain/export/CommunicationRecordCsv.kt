@@ -19,6 +19,11 @@ import java.time.ZoneId
  * The record id and how to verify the file follow it (MON-16) — or, for a file that could not be
  * registered, the sentence saying it cannot be verified.
  *
+ * **The parenting plan, when the record carries one, comes last** — one row per parent per
+ * question, then the rows for answers under questions the plan no longer asks, preceded by the
+ * section's own notes (the disclaimer, "current state at export time", and whether the server was
+ * read). Every one of those rows is padded to the header's width like any other.
+ *
  * Starts with a UTF-8 byte-order mark. Outside RFC 4180, harmless to a parser that follows it,
  * and the difference between Excel showing "Čeština" and "ÄŒeÅ¡tina" to the lawyer who opens it.
  */
@@ -80,7 +85,8 @@ object CommunicationRecordCsv {
     private fun body(record: CommunicationRecord, labels: RecordLabels): List<List<String>> =
         record.events.flatMap { event -> event.revisions.map { eventRow(event, it, record.zone, labels) } } +
             record.messages.map { messageRow(it, record.zone, labels) } +
-            record.expenses.map { expenseRow(it, labels) }
+            record.expenses.map { expenseRow(it, labels) } +
+            record.plan?.let { planRows(it, record.zone, labels.plan) }.orEmpty()
 
     private fun eventRow(
         event: RecordEvent,
@@ -137,6 +143,47 @@ object CommunicationRecordCsv {
         RecordFormat.amount(expense.amount),
         expense.currency
     )
+
+    /**
+     * The parenting plan: its notes, when each parent last changed their half, then one row per
+     * parent per question — the answer in the text column, the question's wording in the notes, the
+     * agreement in the action column. A retired question has no wording left, so its notes say so.
+     */
+    private fun planRows(plan: RecordPlan, zone: ZoneId, words: PlanLabels): List<List<String>> {
+        val note = { text: String -> listOf(words.section, "", "", "", "", "", "", text) }
+        val notes = listOfNotNull(
+            words.disclaimer,
+            words.currentState,
+            words.notFromServer.takeUnless { plan.serverReached },
+            words.unsentHere.takeIf { plan.unsentHere }
+        ).map(note)
+        if (!plan.recorded) return notes + listOf(note(words.noPlan))
+        val changes = plan.changes.map {
+            val time = RecordFormat.instant(it.updatedAtMillis, zone)
+            listOf(words.section, "", "", words.lastChanged, it.parentName, time)
+        }
+        val answers = plan.questions.flatMap { planQuestionRows(it, words.question(it.questionId), words) } +
+            plan.retired.flatMap { planQuestionRows(it, words.retired, words) }
+        return notes + changes + answers
+    }
+
+    private fun planQuestionRows(question: RecordPlanQuestion, notes: String, words: PlanLabels): List<List<String>> =
+        question.answers.map { answer ->
+            listOf(
+                words.section,
+                question.questionId,
+                "",
+                words.agreement(question.agreement),
+                answer.parentName,
+                "",
+                "",
+                answer.text ?: words.notAnswered,
+                "",
+                "",
+                "",
+                notes
+            )
+        }
 
     private fun List<String>.padded(width: Int): List<String> =
         if (size >= width) this else this + List(width - size) { "" }

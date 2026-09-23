@@ -22,11 +22,14 @@ import java.time.ZoneId
  * @property zone The zone every instant is printed in — the reader's.
  * @property generatedAtMillis When the export was made.
  * @property parents The two parents' names, as the app shows them — never "Mom" or "Dad".
- * @property complete False when the server could not be reached and the record holds only what
- *   this phone had. Printed on the document's face, never hidden.
+ * @property complete False when the server could not be reached — for any part of the record, the
+ *   parenting plan included — and the record holds only what this phone had. Printed on the
+ *   document's face, never hidden.
  * @property events Calendar entries whose dates touch the range, each with its whole history.
  * @property messages Messages sent in the range, oldest first.
  * @property expenses Expenses dated in the range, oldest first.
+ * @property plan The family's parenting plan as it stands at export time, or null when the parent
+ *   chose to leave it out. Not bound to [from]…[to]: a plan has no period.
  * @property verification Whether the file carries a registered record id (MON-16). The builder
  *   never decides this — it is set by the export flow once the server has reserved an id, and a
  *   record is [RecordVerification.Unregistered] until then, so nothing claims verifiability by
@@ -42,6 +45,7 @@ data class CommunicationRecord(
     val events: List<RecordEvent>,
     val messages: List<RecordMessage>,
     val expenses: List<RecordExpense>,
+    val plan: RecordPlan? = null,
     val verification: RecordVerification = RecordVerification.Unregistered
 )
 

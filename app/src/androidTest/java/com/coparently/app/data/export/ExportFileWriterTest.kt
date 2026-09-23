@@ -18,6 +18,7 @@ import com.coparently.app.domain.export.EventFacts
 import com.coparently.app.domain.export.EventRevisionInput
 import com.coparently.app.domain.export.ExportFormat
 import com.coparently.app.domain.export.MessageInput
+import com.coparently.app.domain.export.PlanLabels
 import com.coparently.app.domain.export.RecordActions
 import com.coparently.app.domain.export.RecordColumns
 import com.coparently.app.domain.export.RecordLabels
@@ -349,6 +350,20 @@ class ExportFileWriterTest {
                 instructionNoUrl = context.getString(R.string.export_verify_instruction_no_url),
                 notRegistered = context.getString(R.string.export_verify_not_registered),
                 notRegisteredShort = context.getString(R.string.export_verify_not_registered_short)
+            ),
+            plan = PlanLabels(
+                section = context.getString(R.string.parenting_plan_title),
+                disclaimer = context.getString(R.string.parenting_plan_disclaimer),
+                currentState = context.getString(R.string.export_plan_current_state),
+                notFromServer = context.getString(R.string.export_plan_not_from_server),
+                unsentHere = context.getString(R.string.export_plan_unsent_here),
+                noPlan = context.getString(R.string.export_plan_none),
+                lastChanged = context.getString(R.string.export_plan_last_changed),
+                agreed = context.getString(R.string.parenting_plan_status_agreed),
+                notAgreed = context.getString(R.string.export_plan_not_agreed),
+                notAnswered = context.getString(R.string.parenting_plan_not_answered),
+                retired = context.getString(R.string.export_plan_retired),
+                questions = emptyMap()
             )
         )
     }

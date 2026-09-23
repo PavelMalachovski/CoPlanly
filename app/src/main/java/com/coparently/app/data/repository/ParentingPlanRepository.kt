@@ -11,6 +11,7 @@ import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onEach
@@ -22,6 +23,17 @@ import javax.inject.Singleton
 data class ParentingPlanPair(
     val yours: ParentingPlanEntry,
     val theirs: ParentingPlanEntry?
+)
+
+/**
+ * This phone's Room copy of one family's plan.
+ *
+ * @property halves Each stored half, by author uid.
+ * @property unsentAuthors The authors whose half is still in this phone's outbox.
+ */
+data class ParentingPlanLocalCopy(
+    val halves: Map<String, ParentingPlanEntry>,
+    val unsentAuthors: Set<String>
 )
 
 /**
@@ -66,6 +78,29 @@ class ParentingPlanRepository @Inject constructor(
         }
 
         return merge(mirror, local)
+    }
+
+    /**
+     * Both halves of [familyId]'s plan as the server holds them, by author uid (MON-3's export).
+     *
+     * Read once, from the server and never the cache, and not written into Room: the export
+     * prints what the server has, and a read made for a document is not a sync. Throws when the
+     * server cannot be reached.
+     */
+    suspend fun serverHalves(familyId: String): Map<String, ParentingPlanEntry> = remote.fetchFromServer(familyId)
+
+    /**
+     * This phone's copy of both halves of [familyId]'s plan, and which of them have not been sent.
+     *
+     * What the export prints when the server cannot be reached — labelled as this phone's copy —
+     * and how it knows the signed-in parent has edits the server's copy does not show yet.
+     */
+    suspend fun localCopy(familyId: String): ParentingPlanLocalCopy {
+        val rows = dao.observeEntries(familyId).first()
+        return ParentingPlanLocalCopy(
+            halves = rows.associate { it.authorUid to it.toDomain() },
+            unsentAuthors = rows.filterNot { it.syncedToFirestore }.map { it.authorUid }.toSet()
+        )
     }
 
     /**

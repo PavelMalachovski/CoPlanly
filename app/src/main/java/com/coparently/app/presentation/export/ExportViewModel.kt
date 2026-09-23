@@ -8,6 +8,7 @@ import com.coparently.app.data.export.CommunicationRecordSource
 import com.coparently.app.data.export.ExportFileWriter
 import com.coparently.app.data.export.ExportReceipts
 import com.coparently.app.data.export.ExportedFile
+import com.coparently.app.data.export.ParentingPlanRecordSource
 import com.coparently.app.domain.chat.ConversationKey
 import com.coparently.app.domain.export.CommunicationRecord
 import com.coparently.app.domain.export.CommunicationRecordBuilder
@@ -44,12 +45,15 @@ import javax.inject.Inject
  *
  * @property from First day of the range, inclusive.
  * @property to Last day of the range, inclusive.
+ * @property includePlan Whether the record carries the family's parenting plan. On by default: a
+ *   plan is the other document two parents hand to a mediator, and leaving it out is the choice.
  * @property working The format being produced, or null when idle.
  * @property error What went wrong with the last attempt, for a snackbar; cleared once shown.
  */
 data class ExportUiState(
     val from: LocalDate,
     val to: LocalDate,
+    val includePlan: Boolean = true,
     val working: ExportFormat? = null,
     val error: UiText? = null
 )
@@ -88,6 +92,7 @@ data class FinishedExport(val file: ExportedFile, val recordId: String?)
 @HiltViewModel
 class ExportViewModel @Inject constructor(
     private val source: CommunicationRecordSource,
+    private val planSource: ParentingPlanRecordSource,
     private val writer: ExportFileWriter,
     private val receipts: ExportReceipts,
     private val parentsSource: ParentsSource,
@@ -114,6 +119,9 @@ class ExportViewModel @Inject constructor(
     /** Moves the end of the range; a start after it moves with it. */
     fun setTo(date: LocalDate) = _state.update { it.copy(to = date, from = minOf(it.from, date)) }
 
+    /** Puts the parenting plan in the record, or leaves it out. */
+    fun setIncludePlan(include: Boolean) = _state.update { it.copy(includePlan = include) }
+
     /** Clears the error once the screen has shown it. */
     fun errorShown() = _state.update { it.copy(error = null) }
 
@@ -125,11 +133,11 @@ class ExportViewModel @Inject constructor(
      */
     fun export(format: ExportFormat, labels: RecordLabels, fallbacks: NameFallbacks) {
         if (_state.value.working != null) return
-        val range = _state.value
+        val request = _state.value
         _state.update { it.copy(working = format, error = null) }
         viewModelScope.launch {
             try {
-                val finished = produce(format, range.from, range.to, labels, fallbacks)
+                val finished = produce(format, request, labels, fallbacks)
                 if (finished == null) {
                     _state.update { it.copy(error = UiText.Res(R.string.export_error_signed_out)) }
                 } else {
@@ -146,19 +154,20 @@ class ExportViewModel @Inject constructor(
         }
     }
 
-    // Each argument is one input of the record; bundling them would only rename this list.
-    @Suppress("LongParameterList")
+    /** [request] is the screen's state when the parent tapped: the range and whether the plan goes in. */
     private suspend fun produce(
         format: ExportFormat,
-        from: LocalDate,
-        to: LocalDate,
+        request: ExportUiState,
         labels: RecordLabels,
         fallbacks: NameFallbacks
     ): FinishedExport? {
         val myUid = userRepository.getCurrentUserId() ?: return null
         val partnerUid = parentsSource.coParentUid()
-        val record = buildRecord(myUid, partnerUid, from, to, fallbacks)
-        val recordId = receipts.reserve(FamilyKey.orNull(myUid, partnerUid).orEmpty(), from, to, format)
+        // Everything that goes into the file is gathered here, before an id is reserved and the
+        // bytes are rendered: nothing may be added between the hash and the save (MON-16).
+        val record = buildRecord(myUid, partnerUid, request, fallbacks)
+        val family = FamilyKey.orNull(myUid, partnerUid).orEmpty()
+        val recordId = receipts.reserve(family, request.from, request.to, format)
         val registered = recordId?.let { registeredBytes(record, labels, format, it) }
         val bytes = registered
             ?: writer.render(record.copy(verification = RecordVerification.Unregistered), labels, format)
@@ -184,22 +193,24 @@ class ExportViewModel @Inject constructor(
     private suspend fun buildRecord(
         myUid: String,
         partnerUid: String?,
-        from: LocalDate,
-        to: LocalDate,
+        request: ExportUiState,
         fallbacks: NameFallbacks
     ): CommunicationRecord {
+        val from = request.from
+        val to = request.to
         // The pairing half can arrive a moment after the profile half; a record that named the
         // co-parent "Parent" because it was built in that moment would be a worse document.
         val parents = withTimeoutOrNull(NAMES_WAIT_MS) {
             parentsSource.observe().first { partnerUid == null || it.coParent != null }
         } ?: parentsSource.observe().first()
-        val sources = source.gather(
+        val gathered = source.gather(
             myUid = myUid,
             conversationId = partnerUid?.let { ConversationKey.of(myUid, it) },
             from = from,
             to = to,
             zone = zone
         )
+        val sources = if (request.includePlan) gathered.copy(plan = planSource.read(myUid, partnerUid)) else gathered
         return CommunicationRecordBuilder.build(
             sources,
             RecordScope(

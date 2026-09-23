@@ -81,4 +81,16 @@
     <string name="export_unregistered_body">The server could not be reached, so this file was not registered and nobody will be able to check it for changes. The file says so near the top. You can share it anyway, or export again when you are online.</string>
     <string name="export_unregistered_share">Share anyway</string>
     <string name="export_unregistered_not_now">Not now</string>
+
+    <!-- The parenting plan in the record (MON-5 in MON-3): printed as it stands, not for a period. -->
+    <string name="export_include_label">Also include</string>
+    <string name="export_include_plan">The parenting plan</string>
+    <string name="export_include_plan_supporting">Both parents\' answers and where you agree, as the plan stands today — whatever the period</string>
+    <string name="export_plan_current_state">Not limited to the period above: this is the plan as it stood when this record was generated. Each parent answers separately; a question counts as agreed only when each has ticked the other\'s answer as it reads now.</string>
+    <string name="export_plan_not_from_server">The parenting plan could not be read from the server. What follows is this phone\'s copy, which may not match what the other parent sees.</string>
+    <string name="export_plan_unsent_here">Changes made on this phone that have not reached the server yet are not shown.</string>
+    <string name="export_plan_none">No parenting plan recorded.</string>
+    <string name="export_plan_last_changed">Last changed</string>
+    <string name="export_plan_not_agreed">Not agreed</string>
+    <string name="export_plan_retired">Answers to questions the plan no longer asks (kept, not deleted)</string>
 </resources>
