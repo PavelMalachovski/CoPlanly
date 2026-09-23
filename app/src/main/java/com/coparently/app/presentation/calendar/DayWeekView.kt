@@ -80,6 +80,7 @@ import com.coparently.app.presentation.common.rememberToday
 import com.coparently.app.presentation.theme.CoPlanlyColors
 import com.coparently.app.presentation.theme.Dimensions
 import com.coparently.app.presentation.theme.Motion
+import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.dimensions
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -494,12 +495,8 @@ private fun DayWeekPage(
                                         DayCellBase.SURFACE -> MaterialTheme.colorScheme.surface
                                     }
                                     val overlayColor = when (fill.overlay) {
-                                        DayCellOverlay.CUSTODY_MOM ->
-                                            CoPlanlyColors.MomPink
-                                                .copy(alpha = CoPlanlyColors.CUSTODY_TINT_ALPHA)
-                                        DayCellOverlay.CUSTODY_DAD ->
-                                            CoPlanlyColors.DadBlue
-                                                .copy(alpha = CoPlanlyColors.CUSTODY_TINT_ALPHA)
+                                        DayCellOverlay.CUSTODY_MOM -> ParentColors.container("mom")
+                                        DayCellOverlay.CUSTODY_DAD -> ParentColors.container("dad")
                                         DayCellOverlay.TODAY ->
                                             MaterialTheme.colorScheme.primaryContainer
                                                 .copy(alpha = TODAY_TINT_ALPHA)
@@ -515,11 +512,15 @@ private fun DayWeekPage(
                                     // shows a schedule as settled while the month says it is not.
                                     val proposalColor = when (fill.pendingProposalFor) {
                                         DayCellOverlay.CUSTODY_MOM ->
-                                            CoPlanlyColors.MomPink
-                                                .copy(alpha = CoPlanlyColors.PROPOSAL_TINT_ALPHA)
+                                            ParentColors.container(
+                                                "mom",
+                                                alpha = CoPlanlyColors.PROPOSAL_TINT_ALPHA
+                                            )
                                         DayCellOverlay.CUSTODY_DAD ->
-                                            CoPlanlyColors.DadBlue
-                                                .copy(alpha = CoPlanlyColors.PROPOSAL_TINT_ALPHA)
+                                            ParentColors.container(
+                                                "dad",
+                                                alpha = CoPlanlyColors.PROPOSAL_TINT_ALPHA
+                                            )
                                         else -> Color.Transparent
                                     }
 
@@ -729,22 +730,19 @@ private fun EventChip(
 
     // Transparent background colors (more transparent)
     val backgroundColor = when (event.parentOwner) {
-        "mom" -> CoPlanlyColors.MomPink.copy(alpha = 0.3f)
-        "dad" -> CoPlanlyColors.DadBlue.copy(alpha = 0.3f)
+        "mom", "dad" -> ParentColors.container(event.parentOwner, alpha = 0.3f)
         else -> MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.3f)
     }
 
     val borderColor = when (event.parentOwner) {
-        "mom" -> CoPlanlyColors.MomPink.copy(alpha = 0.8f)
-        "dad" -> CoPlanlyColors.DadBlue.copy(alpha = 0.8f)
+        "mom", "dad" -> ParentColors.container(event.parentOwner, alpha = 0.8f)
         else -> MaterialTheme.colorScheme.tertiary.copy(alpha = 0.8f)
     }
 
     // Full-hue bar on the start edge. This is what carries parent identity in week view, where
     // the block has no room for a label at all.
     val accentColor = when (event.parentOwner) {
-        "mom" -> CoPlanlyColors.MomPink
-        "dad" -> CoPlanlyColors.DadBlue
+        "mom", "dad" -> ParentColors.fill(event.parentOwner)
         else -> MaterialTheme.colorScheme.tertiary
     }
 
@@ -1300,7 +1298,8 @@ private fun resizedTime(
 /**
  * Solid band above the week's day headers, split into runs of consecutive same-custody days.
  *
- * Each run is drawn at full hue and labelled when it is wide enough to hold a word; a one-day
+ * Each run is drawn in the parent's solid chip tone ([ParentColors.chipFill], so its label
+ * clears AA) and labelled when it is wide enough to hold a word; a one-day
  * run gets no label, because a clipped "M" is worse than a plain coloured block. Column geometry
  * (gutter width, weights, 4dp gaps) mirrors the header and content rows so the band lines up
  * with the days it describes.
@@ -1343,9 +1342,12 @@ private fun CustodyWeekBand(
         Box(modifier = Modifier.width(gutterWidth))
 
         runs.forEach { (custody, days) ->
+            // The solid chip-grade tone, not the full-strength fill: the band carries a name in
+            // white-or-black, and white on the full pink is 4.35:1, under AA. The label colour is
+            // then picked by contrast against whatever the family chose.
             val color = when (custody) {
-                "mom" -> CoPlanlyColors.MomPink
-                "dad" -> CoPlanlyColors.DadBlue
+                "mom" -> ParentColors.chipFill("mom")
+                "dad" -> ParentColors.chipFill("dad")
                 else -> Color.Transparent
             }
             Box(
@@ -1360,7 +1362,7 @@ private fun CustodyWeekBand(
                         text = parentNames.labelFor(custody),
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color.White,
+                        color = ParentColors.onFill(color),
                         maxLines = 1,
                         softWrap = false,
                         overflow = TextOverflow.Ellipsis

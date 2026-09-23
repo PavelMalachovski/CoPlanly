@@ -79,7 +79,6 @@ import com.coparently.app.R
 import com.coparently.app.domain.model.CustodyModelType
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.rememberParentNames
-import com.coparently.app.presentation.theme.CoPlanlyColors
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.dimensions
 import java.time.DayOfWeek
@@ -272,7 +271,7 @@ fun CustodySetupScreen(
                             modifier = Modifier
                                 .size(12.dp)
                                 .background(
-                                    if (uiState.momFirst) CoPlanlyColors.MomPink else CoPlanlyColors.DadBlue,
+                                    ParentColors.fill(if (uiState.momFirst) "mom" else "dad"),
                                     CircleShape
                                 )
                         )
@@ -349,12 +348,14 @@ fun CustodySetupScreen(
                                     .size(40.dp)
                                     .clip(RoundedCornerShape(8.dp))
                                     .background(
-                                        if (isMomDay) CoPlanlyColors.MomPink.copy(alpha = 0.3f)
-                                        else CoPlanlyColors.DadBlue.copy(alpha = 0.3f)
+                                        ParentColors.container(
+                                            if (isMomDay) "mom" else "dad",
+                                            alpha = 0.3f
+                                        )
                                     )
                                     .border(
                                         width = 2.dp,
-                                        color = if (isMomDay) CoPlanlyColors.MomPink else CoPlanlyColors.DadBlue,
+                                        color = ParentColors.fill(if (isMomDay) "mom" else "dad"),
                                         shape = RoundedCornerShape(8.dp)
                                     )
                                     .clickable { viewModel.toggleCustomMomDay(dayIndex) },
@@ -468,8 +469,8 @@ fun CustodySetupScreen(
                             val date = uiState.startDate.plusDays(dayOffset.toLong())
                             val custody = tempModel?.getCustodyFor(date)
                             val color = when (custody) {
-                                "mom" -> CoPlanlyColors.MomPink
-                                "dad" -> CoPlanlyColors.DadBlue
+                                "mom" -> ParentColors.fill("mom")
+                                "dad" -> ParentColors.fill("dad")
                                 else -> Color.Gray
                             }
                             Box(
@@ -505,7 +506,7 @@ fun CustodySetupScreen(
                         Box(
                             modifier = Modifier
                                 .size(10.dp)
-                                .background(CoPlanlyColors.MomPink, CircleShape)
+                                .background(ParentColors.fill("mom"), CircleShape)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
@@ -520,7 +521,7 @@ fun CustodySetupScreen(
                         Box(
                             modifier = Modifier
                                 .size(10.dp)
-                                .background(CoPlanlyColors.DadBlue, CircleShape)
+                                .background(ParentColors.fill("dad"), CircleShape)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(

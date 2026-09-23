@@ -47,7 +47,7 @@ import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.common.FamilyMember
 import com.coparently.app.presentation.common.FullScreenImageDialog
 import com.coparently.app.presentation.common.ParentNames
-import com.coparently.app.presentation.theme.CoPlanlyColors
+import com.coparently.app.presentation.theme.ParentColors
 import java.time.format.DateTimeFormatter
 
 /**
@@ -74,8 +74,8 @@ fun EventPreviewSheet(
     onDismiss: () -> Unit
 ) {
     val parentColor = when (event.parentOwner) {
-        "mom" -> CoPlanlyColors.MomPink
-        "dad" -> CoPlanlyColors.DadBlue
+        "mom" -> ParentColors.fill("mom")
+        "dad" -> ParentColors.fill("dad")
         else -> MaterialTheme.colorScheme.tertiary
     }
     val parentLabel = parentNames.labelFor(event.parentOwner)

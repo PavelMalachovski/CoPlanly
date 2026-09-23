@@ -272,8 +272,9 @@ private fun FilterPill(
  * a filter offering "Mom" and "Dad" told half the families using this app that one of them was
  * somebody they are not.
  *
- * Parent colours are applied directly from [CoPlanlyColors] rather than through the theme's
- * `secondary` slot: pink and blue mean parent identity in this product and nothing else.
+ * Parent colours come from [ParentColors] — the family's chosen palette — rather than through
+ * the theme's `secondary` slot: a parent colour means parent identity in this product and
+ * nothing else.
  *
  * @param selected Currently active filter
  * @param parentNames Resolves a slot to that parent's name
@@ -292,9 +293,9 @@ private fun ParentFilterSegments(
         data class Segment(val filter: ParentFilter, val label: String, val color: Color, val content: Color)
         val primary = MaterialTheme.colorScheme.primary
         val options = listOf(
-            Segment(ParentFilter.MOM, parentNames.labelFor("mom"), CoPlanlyColors.MomPink, ParentColors.text("mom")),
+            Segment(ParentFilter.MOM, parentNames.labelFor("mom"), ParentColors.fill("mom"), ParentColors.text("mom")),
             Segment(ParentFilter.BOTH, stringResource(R.string.calendar_filter_both), primary, primary),
-            Segment(ParentFilter.DAD, parentNames.labelFor("dad"), CoPlanlyColors.DadBlue, ParentColors.text("dad"))
+            Segment(ParentFilter.DAD, parentNames.labelFor("dad"), ParentColors.fill("dad"), ParentColors.text("dad"))
         )
         options.forEachIndexed { index, segment ->
             val filter = segment.filter
