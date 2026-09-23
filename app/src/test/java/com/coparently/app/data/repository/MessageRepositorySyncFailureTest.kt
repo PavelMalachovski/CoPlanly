@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -108,7 +109,7 @@ class MessageRepositorySyncFailureTest {
     }
 
     @Test
-    fun `a failed messages query is logged with the conversation and the query shape`() = runTest {
+    fun `a failed messages query is logged with the query shape but not the conversation id`() = runTest {
         every { firestoreMessageDataSource.getMessages(CONVERSATION_ID) } returns
             failing(missingIndex())
         // A list, not a `slot`: reconnection logs a line per attempt before giving up, and MockK
@@ -119,10 +120,12 @@ class MessageRepositorySyncFailureTest {
 
         verify { android.util.Log.w(any<String>(), capture(logged), any<Throwable>()) }
         // Swallowing silently is what makes an index outage invisible: the message that gives up
-        // has to name the conversation, the query and where the index is declared. Selected by
-        // content rather than by position, so the number of reconnect attempts is free to change.
+        // has to name the query and where the index is declared. Selected by content rather than
+        // by position, so the number of reconnect attempts is free to change. It must *not* name
+        // the conversation: that id is two Firebase uids joined, and a `Log.w` survives R8 into
+        // release builds (September 2026 audit).
         val gaveUp = logged.single { it.contains("firestore.indexes.json") }
-        assertTrue(gaveUp.contains(CONVERSATION_ID))
+        assertFalse(gaveUp.contains(CONVERSATION_ID))
         assertTrue(gaveUp.contains("timestamp"))
     }
 
