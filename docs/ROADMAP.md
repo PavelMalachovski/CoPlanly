@@ -1232,37 +1232,47 @@ CoPlanly already *records* all three — the activity feed, `ChangeRequest`, `Ha
 expenses with per-currency balances and receipt photos. The data exists. What is missing is the one
 step that turns a nice app into something a parent pays for in the month they need it. Audit §7.2.
 
-### MON-4 · **PAPER WRITTEN, THREE ANSWERS OWED** · P1 · M · Decide what a court-facing record guarantees — **prerequisite for MON-3**
+### MON-4 · **DECIDED 2026-09-23** · P1 · M · Decide what a court-facing record guarantees — **prerequisite for MON-3**
 
-**Where:** ☁️ cloud writes it; the guarantee itself is an owner's decision.
+**Where:** ☁️ cloud. The owner's three answers are in; what is left is one cloud item (below).
 
-**`docs/DESIGN-court-record.md` is that paper.** It audits what the code actually guarantees today,
-lays out three decisions with options and a recommendation each, and costs the recommended shape.
-§9 is a three-line form: fill it in and MON-3 is unblocked.
+**`docs/DESIGN-court-record.md` is the paper, and §9 now carries the owner's answers:**
 
-Two findings from writing it that change the item:
+1. **A communication record, not a truth record.** The export lists what the two parents recorded
+   and wrote in the app and when, and says on its face that it does not say whether any of it is
+   true.
+2. **Append-only: chat (already) and full event versioning.** The owner chose versions over the
+   recommended edit trail — every saved revision of an event is kept whole, in its own immutable
+   document. §4 records both shapes and why the trail lost.
+3. **Clock: epoch millis on every compared field, plus a server-stamped `recordedAt` beside the
+   device time on each revision.** The export prints both, labelled.
 
-**The chat is already an unalterable record, and nobody knew.** `firestore.rules` sets
-`allow delete: if false` on `messages`, and update is two disjoint `hasOnly` branches — `isRead`
-alone, or a constrained `conversationId` re-point. Content, sender, timestamp and attachments
-cannot be changed by either parent. The activity feed rides the same collection, so every announced
-change to the calendar, the schedule and the expenses is in it. TalkingParents charges $32/month
-for a tier headlined "Unalterable Records"; CoPlanly has had them since the August 2026 chat work
-and has never said so. Nothing asserts the guarantee, though — pinning it in `firestore-tests/` is
-the first task, because a future rule edit could widen that `hasOnly` and no test would fail.
+Two findings from writing the paper still stand and are worth keeping in view:
 
-**Events are the weak half, and the recommendation is a trail rather than versions.** One
-append-only `event_edits` row per edit carrying `{from, to}` per changed field, who, and when —
-not a copy of the old event. It answers what a court asks ("was this moved, by whom") without
-duplicating every event forever or making the 90-day tombstone sweep meaningless.
+**The chat is already an unalterable record.** `firestore.rules` sets `allow delete: if false` on
+`messages`, and update is two disjoint `hasOnly` branches — `isRead` alone, or a constrained
+`conversationId` re-point. Content, sender, timestamp and attachments cannot be changed by either
+parent. The activity feed rides the same collection. That guarantee is now **pinned** in
+`firestore-tests/rules/event-versions.test.js`, so a rule edit that widens the `hasOnly` fails a
+test instead of passing silently.
 
-An export that says "this is what happened" is only as good as the record behind it. Today `events`
-are freely editable by the creator with no history, conversations can be re-pointed, and — until
-SEC-4 — the custody schedule was ordered by a naive local date-time.
+**Events were the weak half, and are now versioned.** `event_versions/{versionId}` holds one
+document per create, update and delete of a non-private event — the event in its wire format,
+`editorUid`, `deviceTimeMillis` and a `recordedAt` the rule pins to `request.time` — and the rule
+allows `create` only. See CLAUDE.md item 25 for the invariants and the design doc §4 for why the
+collection is top-level, why there is no stored revision number, and why a missing event does not
+refuse a revision.
 
-Before selling documentation, decide: which records are append-only, what an edit does to history,
-and whose clock orders writes. This is not a nice-to-have once anything is exported for legal use —
-it is what makes the export worth paying for. Audit §7.5.
+**Left from answer 3 (☁️ cloud, M):** `Event.updatedAt` is still a naive `LocalDateTime`, and it is
+compared — `ConflictResolver` decides a sync conflict on it. Move it to epoch millis the way SEC-4
+moved custody, reading `domain/custody/CustodyTimestamp.kt` first: the Firestore field keeps its
+name and ISO-string type and only changes the zone it expresses, so a co-parent on an older build
+keeps reading it. The revisions do not depend on this, which is why it did not ship with them.
+
+**Left as a limit, not a task:** the events rule does not *require* a revision beside each write,
+so an older build or a modified client can still edit without recording one. Demanding it
+(`existsAfter`) would refuse every edit from a co-parent on an older build; it waits until the app
+can require an update (design §8).
 
 ### MON-5 · **BUILT; THE OFFICIAL WORDING IS STILL OWED** · P1 · M · Digitise the official Rodičovský plán
 
