@@ -88,7 +88,6 @@ invocation is yours.
 | **MON-15** | Search in chat — local Room FTS, never a server index | P1 | S |
 | **MON-16** | Verifiable export: record ID + SHA-256 registered server-side, verified in the browser | P1 | S |
 | **MON-17** | ICS calendar feed for a co-parent on an iPhone (secret revocable token, no private events) | P1 | M |
-| **MON-18** | Free, expiring, two-consent access for a mediator or lawyer | P1 | M |
 | **MON-19** | A pause before sending (undo window + a lexical nudge, no AI) | P2 | S |
 | **MON-20** | Holiday fairness at a glance (who has which holidays, nights per parent) | P2 | S |
 | **MON-21** | From the agreed parenting plan to a proposed schedule | P2 | M |
@@ -112,13 +111,14 @@ invocation is yours.
 | **FAM-5** | The event chip does not say who it is about | Chips are single-line with ellipsis and every colour channel is spent. Worth an owner's eye on a real device rather than a treatment invented blind. |
 | **M-4 (shipped, unseen)** | The colour palette, the family switcher, the second-co-parent invite | Kotlin compiled in CI; nobody has looked at it. |
 | **M-8 (chat, shipped, unseen)** | Chat, its badge and `ChatMirror` follow the selected family | Unit tests pin the re-key; only an account with two co-parents on real phones shows a switch landing the Chat tab on the other thread, the badge moving with it, and messages from the family *left* arriving again after switching back. |
+| **MON-18 (shipped, unseen)** | Professional access: invite, the co-parent's consent, the professional's read-only calendar and plan, revoke | The rules and the callable are proved offline (emulator suite, mocha); the Kotlin is compiled by CI and seen by nobody. Three accounts (A, B, a professional P): A invites, P redeems, P sees "waiting"; B consents from Settings → Family → Professionals; P reads the calendar and plan and nothing else; either parent revokes and P's views empty at once. `docs/DEVICE-CHECKLIST.md` §5.4. Needs the functions **and** rules deploy first. |
 | **M-8 (dot, shipped, unseen)** | The switcher chip and dialog show a dot when a family not on screen has chat news | Three accounts (a parent and two co-parents) on at least two phones: the co-parent of the family *not* on screen sends, the dot appears on the chip and on that row within seconds; opening that family's thread clears it; sending from the family on screen never raises it; a one-family account shows exactly what it did. |
 
 ### 💻 Yours only — no session can do these
 
 | Id | What | Note |
 | --- | --- | --- |
-| **REL-3 ops** | `firebase deploy --only functions` → invoke `backfillFamilyDocuments` → invoke `backfillRecordFamilyIds` → `firebase deploy --only firestore:rules` | **The order matters.** PR #76's isolation is inert until this runs, and running the rules deploy before the record backfill leaves each co-parent's expenses looking empty on the other phone. The functions deploy also ships the `onFamilyCreated` re-stamp trigger and the `sweepLapsedCalendarFriends` schedule. `functions/README.md` has the runbook. |
+| **REL-3 ops** | `firebase deploy --only functions` → invoke `backfillFamilyDocuments` → invoke `backfillRecordFamilyIds` → `firebase deploy --only firestore:rules` | **The order matters.** PR #76's isolation is inert until this runs, and running the rules deploy before the record backfill leaves each co-parent's expenses looking empty on the other phone. The functions deploy also ships the `onFamilyCreated` re-stamp trigger and the `sweepLapsedCalendarFriends` schedule, and MON-18's `acceptProfessionalInvitation` callable and `sweepLapsedProfessionalGrants` schedule — whose rules land with the same rules deploy. Until both deploys run, a professional code fails to redeem (no callable) or redeems into a grant nothing reads (old rules). `functions/README.md` has the runbook. |
 | **REL-3 storage** | `firebase deploy --only storage` | One command that fixes a live bug: every pet and medical photo upload is refused today because the bucket still runs the July rules. |
 | **REL-1** | Firebase console, Google Cloud console, a fresh `google-services.json`, the debug and release SHA-1 | A local build fails until this is done — deliberately, since `applicationId` changed to `app.coplanly`. |
 | **REL-2** | Generate the release keystore and back it up in two places | The single most irreversible item in this document. |
@@ -1702,9 +1702,43 @@ changes), and the settings text must say exactly that (design item 8).
 - Rate-limit it and cache per token. Calendar clients poll hourly, and the function must not fan
   out to Firestore per poll.
 
-### MON-18 · P1 · M · Free, expiring access for a mediator or lawyer
+### MON-18 · **DONE (unseen on a device)** · P1 · M · Free, expiring access for a mediator or lawyer
 
-**Where:** ☁️ cloud; 📱 the invite flow.
+**Where:** 👁 shipped; the device pass is `docs/DEVICE-CHECKLIST.md` §5.4, after the REL-3 deploys.
+
+**What shipped (September 2026).** `professional_grants/{familyId}__{proUid}`, written only by a
+fourth callable, `acceptProfessionalInvitation`; CLAUDE.md item 25 has the invariants.
+In short:
+- **Two consents to open, one to close.** The grant is born carrying the inviting parent's consent
+  (`consents: {uid: epochMillis}`); the co-parent adds their own key from Settings → Family →
+  Professionals, and `firestore.rules` lets each parent write **only their own key** (the nested
+  `hasOnly` shape of item 21). Nothing is readable until the map holds both parents. Either parent
+  deletes the grant alone.
+- **Always expiring.** The invitation names the end; the rules refuse one more than 180 days out
+  and the callable clamps to 180 days from redemption. The rule compares against `request.time`;
+  `sweepLapsedProfessionalGrants` (06:00 UTC) removes the row afterwards. Unpair deletes the
+  family's grants; account deletion deletes both directions.
+- **One family, read-only, never chat.** `isProfessionalOf(familyId)` opens `events` (last
+  disjunct, with the creator checked against `familyParents`, as for a friend),
+  `parenting_plans/{familyId}` and `custody_models/{familyId}` — `get` only for the last two.
+  Chat, messages, expenses, budgets, child and pet records, family settings, families and user
+  profiles admit no professional; `professional-access.test.js` pins each one.
+- **The professional's view is new, not the friend's.** The brief assumed a calendar friend
+  already had a read-only calendar to reuse. It does not — a friend's app shows their grant and
+  their profile, nothing else — so the professional gets a list-shaped agenda (four weeks at a
+  time, whose day it is **named** rather than coloured, the family's shared events) and a
+  read-only parenting plan with both halves side by side. Both read Firestore live and write
+  nothing to Room: a professional's phone holds no copy of the family. Building the friend's
+  view on the same pieces is now a small change.
+- **A push, server-only**: `professional_access_requested` to both parents when a code is
+  redeemed. It says consent is being asked for, never that access began.
+
+**Left, deliberately.** Exports "the parents choose to share" wait for MON-3/MON-16. A web
+read-only view is still a later step. There is no in-app notice to the professional when the
+second consent lands — their list updates live; a push would need a fifth server type. The grant's
+copy of the parents' names and slots is taken at redemption and not refreshed.
+
+The original brief:
 
 **Answers:** AppClose Pro. Mediators are this product's distribution channel (MON-9), and a free
 portal is how AppClose earns their recommendation.

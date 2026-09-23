@@ -781,6 +781,37 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     window parent's tint with a full-hue edge (Day/Week) and a full-hue corner triangle (Month),
     both over the `DayCellFills` layers rather than a new fill competing with them.
 
+25. **A professional reads one family, with both parents' consent, until a date, and never the
+    chat** (MON-18, September 2026). A mediator, lawyer, guardian ad litem or therapist holds
+    `professional_grants/{familyId}__{proUid}`, written only by `acceptProfessionalInvitation` —
+    a **fourth** callable beside pairing, guest and calendar friend. `acceptPairingInvitation`
+    refuses `kind: 'professional'` by name (redeeming it there would make a mediator a parent of
+    the family they observe), and the guest and friend callables refuse it as not theirs; test all
+    three whenever a kind is added. Five things not to invert. **Two consents to open, one to
+    close**: `consents` is a `{parentUid: epochMillis}` map, the callable writes only the inviting
+    parent's key, the rules let each parent add **only their own** (the nested `hasOnly` of item
+    21), and `isProfessionalOf` admits nothing until the map `hasAll(familyParents)`; either parent
+    **deletes** the grant alone, and there is deliberately no "withdraw my consent" edit — a parent
+    who no longer consents revokes. **Always expiring**: the invitation rule refuses an end more
+    than 180 days out, the callable clamps to 180 days from redemption and refuses a missing end,
+    the rule compares `expiresAtMillis` against `request.time`, and `sweepLapsedProfessionalGrants`
+    only tidies the row afterwards (it shares `sweepLapsedByExpiry` with the friend sweep, so a
+    grant with no numeric expiry is never matched). **One family**: the grant id is built from the
+    record's `familyId` and the caller's uid, the stored `familyId`/`proUid` must repeat it, and
+    an event additionally needs its creator in `familyParents` — the same two checks as
+    `isCalendarFriendOf`, for the same reason (M-6). Unpair deletes the family's grants; account
+    deletion deletes both directions. **Read-only, and three collections only**: `events` (last
+    disjunct), `parenting_plans/{familyId}` and `custody_models/{familyId}` (`get`, including a
+    document not yet written). Never `conversations`/`messages`, `expenses`, `budgets`,
+    `child_info`, `pets`, `family_settings`, `families` or `users` — `professional-access.test.js`
+    pins each; don't widen it for an export, attach the export instead (MON-3/MON-16). **No Room
+    table**: grants and the professional's reads are Firestore listeners (`ProfessionalRepository`),
+    so a professional's phone never stores somebody else's family and the schema did not move. The
+    professional's calendar is a list that **names** whose day it is rather than colouring it —
+    this phone cannot know the palette each parent chose (design item 12). The push
+    `professional_access_requested` is server-only, like `pairing_accepted`, and says consent is
+    being asked for, never that access began.
+
 ## Known issues / do not "fix" silently
 
 **Check an entry against the code before acting on it.** Two entries in this section, and one
