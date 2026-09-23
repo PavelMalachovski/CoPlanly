@@ -86,7 +86,7 @@ has" below means "in the code", not "proven with users".
 | Schedule changes | swap requests, pick-up/drop-off requests | change requests with honest status, swaps and overrides, a custody proposal with accept/decline, pickup confirmation | even |
 | Calendar breadth | parenting calendar and events calendar kept separate | month/week/day with drag to reschedule, recurrence, private events, filters by parent and by child/pet, holidays for 5 countries + German Länder, Czech school vacations | **CoPlanly** |
 | External calendar | phone-calendar sync | Google Calendar API (create, update, delete) | even |
-| Messaging | unalterable, read time, search, groups, documents | 1:1 only; unalterable by the rules (no test pins it); ticks; templates; no search, groups or attachments | **AppClose** |
+| Messaging | unalterable, read time, search, groups, documents | 1:1 only; unalterable by the rules (no test pins it); ticks; templates; local search of the thread (MON-15, since this comparison); no groups or attachments | **AppClose** |
 | Tone check / AI | Co-Parent Assist | none (MON-12, P3, only behind a proxy) | **AppClose** |
 | Calls | audio and video, recording with consent | none | **AppClose** |
 | Expenses | categories, documents, reimbursements | receipts with **on-device OCR**, budgets, per-child/pet tags, an **agreed split ratio frozen per expense**, balances per currency | **CoPlanly** on split logic |
@@ -113,8 +113,9 @@ has" below means "in the code", not "proven with users".
    - a test pinning message immutability;
    - coverage of calls, check-ins and a journal, which do not exist.
 3. **A tone check before sending.** Every paid competitor has one. It must never block and never be
-   stored, and it needs an EU AI Act review. (MON-12, behind SEC-1's proxy.)
-4. **Chat completeness:** search, attachments (the composer deliberately has none until they
+   stored, and it needs an EU AI Act review. (MON-12, behind SEC-1's proxy.) The model-free half —
+   an undo window and a lexical hint — has since shipped as MON-19.
+4. **Chat completeness:** search (local, shipped since as MON-15), attachments (the composer deliberately has none until they
    ship), a journal and notes, and third-party threads.
 5. **Seasonal schedule layers:** a summer or school-holiday schedule that overrides the base
    pattern. It matters in CZ/DE, where summer care is split differently from term time.

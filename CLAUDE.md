@@ -757,6 +757,20 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     window parent's tint with a full-hue edge (Day/Week) and a full-hue corner triangle (Month),
     both over the `DayCellFills` layers rather than a new fill competing with them.
 
+25. **Chat search reads this phone's Room copy of the open thread and nothing else; the pause
+    before sending never blocks and never keeps what it looked at** (MON-15, MON-19, September
+    2026). `ChatSearchRepository` has no Firestore branch on purpose — a server-side search would
+    need an index that shows message text to a service — and it is bounded by the conversation on
+    screen, which follows `ChatPartnerSource` (M-8). `MessageDao.searchCandidates` is only a
+    `LIKE … ESCAPE '\'` prefilter: SQLite folds ASCII case and nothing else, so the decision is
+    `domain/chat/ChatSearch` over `TextFold` (case and diacritics ignored, "cas" finds "čas"). Don't
+    "simplify" it into a bare `LIKE` — four of the five languages break — and don't add an FTS table
+    without the schema bump and Regenerate run that MON-15 describes. The hold (`SendHold`) keeps a
+    message out of Room and the outbox until the pause ends, which is what makes Undo real, and hands
+    a held message back to the draft store if the ViewModel is cleared rather than sending it. The
+    hint (`ToneCheck`) is three string tests computed while rendering: it never disables Send, is
+    never stored, logged or sent, and never calls itself "AI" — a tone model is MON-12.
+
 ## Known issues / do not "fix" silently
 
 **Check an entry against the code before acting on it.** Two entries in this section, and one

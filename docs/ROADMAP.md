@@ -80,11 +80,10 @@ invocation is yours.
 | **MON-13** | The tables and Germany's Länder are done (five countries; Ukraine's holidays are suspended by martial law) — left: school vacations outside Czechia, and whether Austria's patron-saint days are drawn at all | P2 | M |
 | **FAM-4** | Custody per child | P2 | L |
 | **MON-14** | Seasonal schedule layers (summer / school holidays override the base pattern), with "fill from school holidays" | P1 | M |
-| **MON-15** | Search in chat — local Room FTS, never a server index | P1 | S |
+| **MON-15 (FTS)** | Chat search ships on `LIKE` plus a Kotlin fold; the FTS4 table is the later schema change, once the schema is free | P3 | S |
 | **MON-16** | Verifiable export: record ID + SHA-256 registered server-side, verified in the browser | P1 | S |
 | **MON-17** | ICS calendar feed for a co-parent on an iPhone (secret revocable token, no private events) | P1 | M |
 | **MON-18** | Free, expiring, two-consent access for a mediator or lawyer | P1 | M |
-| **MON-19** | A pause before sending (undo window + a lexical nudge, no AI) | P2 | S |
 | **MON-20** | Holiday fairness at a glance (who has which holidays, nights per parent) | P2 | S |
 | **MON-21** | From the agreed parenting plan to a proposed schedule | P2 | M |
 | **MON-22** | A private, local-only journal that can be attached to an export | P2 | M |
@@ -106,6 +105,8 @@ invocation is yours.
 | **UX-13** | Light theme is unverifiable rather than incomplete — the cloud half is done (night window background, light+dark previews on the main screens' pieces) | Whether a dark cold start still flashes: only a device shows the window before Compose's first frame. |
 | **FAM-5** | The event chip does not say who it is about | Chips are single-line with ellipsis and every colour channel is spent. Worth an owner's eye on a real device rather than a treatment invented blind. |
 | **M-4 (shipped, unseen)** | The colour palette, the family switcher, the second-co-parent invite | Kotlin compiled in CI; nobody has looked at it. |
+| **MON-15 (shipped, unseen)** | Search in the chat thread: header action, results with the match marked, a tap scrolls to the message | Kotlin compiled in CI and the matching is unit-tested; nobody has typed "cas" on a phone holding "čas", tapped a result three hundred messages back and watched the thread land on it, or timed a search over a years-long thread. |
+| **MON-19 (shipped, unseen)** | Settings → App → "Pause before sending": a five-second hold with Undo, and the lexical hint over the composer | Unit tests pin the hold and the three rules; only a phone shows whether the countdown line and the hint sit well above the keyboard, and whether the word lists read as mild in each language to a native speaker. |
 | **M-8 (chat, shipped, unseen)** | Chat, its badge and `ChatMirror` follow the selected family | Unit tests pin the re-key; only an account with two co-parents on real phones shows a switch landing the Chat tab on the other thread, the badge moving with it, and messages from the family *left* arriving again after switching back. |
 
 ### 💻 Yours only — no session can do these
@@ -1629,17 +1630,44 @@ day at a time.
   parents confirm. Never auto-applied — a proposal, like every other schedule change.
 - Holiday fairness (below, **MON-20**) reads these layers.
 
-### MON-15 · P1 · S · Search in chat
+### MON-15 · **SHIPPED ON `LIKE`; FTS IS THE LATER STEP** · P1 · S · Search in chat
 
-**Where:** ☁️ cloud.
+**Where:** ☁️ cloud (done, September 2026); 📱 a look on a phone (§1).
 
-Search over this device's Room copy of the thread: SQLite FTS4 on `messages.text`, or a `LIKE`
-if FTS proves awkward under SQLCipher. Results jump to the message in context. It never queries
-Firestore: the mirror already holds the thread, and a server-side search would need an index
-that exposes message text to a service. Local-only is also the privacy answer. It needs a schema
-bump and a migration (run the Regenerate workflow after *this* bump, not after a batch — see
-CLAUDE.md on the missing `35.json`). Search in the export (MON-3) comes free with the same
-query.
+Search over this device's Room copy of the thread. Results jump to the message in context. It
+never queries Firestore: the mirror already holds the thread, and a server-side search would need
+an index that exposes message text to a service. Local-only is also the privacy answer.
+
+**What shipped, and why not FTS yet.** No schema change: another change held schema v37 at the
+time, and an FTS table is a schema bump and a migration. So:
+- `MessageDao.searchCandidates` is a `LIKE … ESCAPE '\'` over the existing `messages` table,
+  bounded by the one conversation and by `messageType = 'TEXT'`. `ChatSearch.candidatePattern`
+  escapes `%`, `_` and the escape character, and narrows the pattern only for a query of digits
+  and punctuation ("15:00", "50%"). For anything with a letter in it the pattern is `%`, because
+  SQLite's `LIKE` folds ASCII case and nothing else — it cannot find "čas" from "cas" or
+  "Привет" from "привет", which is four of the five languages the app ships in.
+- The decision is made in Kotlin (`domain/chat/ChatSearch`, over `TextFold`): lower-case with
+  `Locale.ROOT`, NFD, combining marks dropped, so case and diacritics do not matter; the match is
+  mapped back to the original text for the highlight. Pure, and pinned by `ChatSearchTest`.
+- UI: a search action in the thread header (`ChatTopBar`), results in place of the thread
+  (sender by name via `ParentNames`, time, a snippet with the match marked, at most 100 newest
+  with a line saying so), empty and no-result states through `EmptyState`, a 300 ms debounce
+  (`ChatSearchViewModel.SEARCH_DEBOUNCE_MS`). A tap widens the thread's window
+  (`ChatWindow.reaching`, from a `COUNT(*)`) until the message is loaded, scrolls to it and
+  highlights it for `Motion.HIGHLIGHT_HOLD_MS`.
+- It searches **the selected family's conversation only** — the thread on screen, which follows
+  `ChatPartnerSource` (M-8) — and closes itself if the thread changes under it.
+
+**Known limits.** It searches what this phone holds: messages older than anything the mirror
+ever brought down (a fresh install receives the newest 200) are not there to be found. Folding a
+very long thread is linear work per query, off the main thread; FTS is the answer if a device
+shows that to be slow.
+
+**The later step: FTS4.** A `messages_fts` table (external content on `messages.content`) with
+its triggers and a migration — run the Regenerate workflow after *that* bump, not after a batch
+(CLAUDE.md on the missing `35.json`). Even then the fold stays: FTS4's `unicode61` tokenizer
+removes diacritics but the snippet still has to be mapped back to the original text. Search in
+the export (MON-3) can use the same query.
 
 ### MON-16 · P1 · S · A verifiable export, without anybody's affidavit
 
@@ -1694,16 +1722,33 @@ A **professional grant** beside the calendar friend (item 16):
 No new portal app. The professional uses the same Android app, or the web export verification
 (MON-16). A web read-only view is a later step.
 
-### MON-19 · P2 · S · A pause before sending
+### MON-19 · **SHIPPED** · P2 · S · A pause before sending
 
-**Where:** ☁️ cloud.
+**Where:** ☁️ cloud (done, September 2026); 📱 a look on a phone (§1).
 
 **Answers:** tone checks (Co-Parent Assist, ToneMeter) **without** a model, a key or a data
-flow. An opt-in setting ("Give me a moment before sending") holds an outgoing message for a
-short, cancellable interval with an Undo, like Gmail's undo send. There is also a gentle,
-purely lexical nudge (all-caps, several exclamation marks, words from a short per-locale list)
-that **never blocks and never stores anything**. It is honest about what it is: no "AI". A real
-tone model remains MON-12, behind SEC-1's proxy and an EU AI Act review.
+flow. A tone model remains MON-12, behind SEC-1's proxy and an EU AI Act review.
+
+What shipped:
+- **Settings → App → "Pause before sending"**, off by default, stored through
+  `PreferencesRepository` (`PreferenceKeys.CHAT_PAUSE_BEFORE_SENDING`).
+- **The hold** (`presentation/chat/SendHold`): a text message is held for
+  `SendHold.PAUSE_SECONDS` (5) with a "Sending in N s…" line and Undo above the composer. The
+  message exists nowhere else meanwhile — not in Room, not in the outbox — so Undo is real and
+  returns the text to the composer (followed by anything typed since). A second send releases the
+  first at once, keeping the order. `sendMessage` reads the setting afresh on each send (CLAUDE.md
+  item 17). If the ViewModel is cleared mid-pause (a tab switch), the held text goes back to the
+  draft store: it is found unsent in the composer rather than sent after it could no longer be
+  undone.
+- **The lexical hint** (`domain/chat/ToneCheck`): two or more all-caps words of four letters or
+  more (one is as often an acronym — OSPOD), three or more `!`/`?` in a row, and words from a short,
+  mild per-locale `chat_nudge_words` string array (an entry ending in `*` matches every ending,
+  for the inflected languages). It is part of the same opt-in, shown as a quiet line over the
+  composer while typing, computed during composition and dropped with the frame: **it never
+  blocks the send button and nothing is stored, logged or sent.** The wording says what it
+  counted, never a verdict, and nowhere calls itself "AI".
+
+Left: a native speaker's read of each word list, and a look on a phone (§1).
 
 ### MON-20 · P2 · S · Holiday fairness at a glance
 
