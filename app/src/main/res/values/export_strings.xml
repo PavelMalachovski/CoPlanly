@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Exporting the communication record (MON-3).
+
+  The export_statement_* paragraphs are printed on the face of every exported file. They are the
+  owner's answer to MON-4 (docs/DESIGN-court-record.md §3 and §9): the file is a record of what
+  the parents recorded and wrote, not of what happened. Do not shorten them into marketing.
+-->
+<resources>
+    <string name="export_settings_title">Export the record</string>
+    <string name="export_settings_description">Messages, calendar history and expenses, as PDF or CSV</string>
+    <string name="export_title">Export the record</string>
+    <string name="export_back">Back</string>
+    <string name="export_intro">Make a file of what you and your co-parent recorded and wrote to each other in CoPlanly — for a lawyer, a mediator or a court. It is made on this phone and goes only where you share it.</string>
+    <string name="export_range_label">Period</string>
+    <string name="export_from">From</string>
+    <string name="export_to">To</string>
+    <string name="export_pick_ok">OK</string>
+    <string name="export_pick_cancel">Cancel</string>
+    <string name="export_what_it_says">What the file says about itself</string>
+    <string name="export_csv">Export as CSV</string>
+    <string name="export_csv_supporting">A spreadsheet: one row per revision, message and expense</string>
+    <string name="export_pdf">Export as PDF</string>
+    <string name="export_pdf_supporting">A printable A4 document</string>
+    <string name="export_working">Preparing…</string>
+    <string name="export_share_title">Share the record</string>
+    <string name="export_error_failed">The record could not be exported. Try again.</string>
+    <string name="export_error_signed_out">Sign in to export the record.</string>
+
+    <string name="export_record_title">CoPlanly communication record</string>
+    <string name="export_statement_what">This is a record of what the parents recorded and wrote to each other in CoPlanly, and when. It is not a record of what happened, and it does not say whether anything written here is true.</string>
+    <string name="export_statement_messages">Messages cannot be edited or deleted by either parent once sent. A message\'s time is the sender\'s device clock.</string>
+    <string name="export_statement_revisions">Every saved revision of a calendar entry is kept whole and cannot be changed afterwards. Each shows two times: when the editing parent\'s device recorded it, and when the server received it.</string>
+    <string name="export_statement_limits">Entry times are the wall-clock times the parents entered, without a time zone. Expenses are shown as they stand today. Entries saved before revision history began show only their current state. Private entries and children\'s medical records are never included.</string>
+    <string name="export_record_period">Period</string>
+    <string name="export_record_generated">Generated</string>
+    <string name="export_record_time_zone">Times shown in</string>
+    <string name="export_record_parents">Parents</string>
+    <string name="export_record_incomplete">The server could not be reached. This record holds only what this phone had, and may be missing entries.</string>
+    <string name="export_record_section_events">Calendar entries</string>
+    <string name="export_record_section_messages">Messages</string>
+    <string name="export_record_section_expenses">Expenses</string>
+    <string name="export_record_nothing">Nothing recorded in this period.</string>
+    <string name="export_record_not_on_server">Not yet received by the server</string>
+    <string name="export_record_no_server_time">None kept</string>
+    <string name="export_record_revision">Revision</string>
+    <string name="export_record_page">Page</string>
+
+    <string name="export_col_section">Section</string>
+    <string name="export_col_item">Item ID</string>
+    <string name="export_col_revision">Revision</string>
+    <string name="export_col_action">Action</string>
+    <string name="export_col_by">Recorded by</string>
+    <string name="export_col_device_time">Device time (when the parent saved it)</string>
+    <string name="export_col_server_time">Server time (when the server received it)</string>
+    <string name="export_col_text">Title or message</string>
+    <string name="export_col_starts">Starts</string>
+    <string name="export_col_ends">Ends</string>
+    <string name="export_col_parent">Parent (whose day, or who paid)</string>
+    <string name="export_col_notes">Notes</string>
+    <string name="export_col_amount">Amount</string>
+    <string name="export_col_currency">Currency</string>
+
+    <string name="export_action_created">Created</string>
+    <string name="export_action_updated">Changed</string>
+    <string name="export_action_deleted">Deleted</string>
+    <string name="export_action_current">Current state (no saved history)</string>
+    <string name="export_action_sent">Sent</string>
+    <string name="export_action_not_sent">Not sent</string>
+    <string name="export_action_recorded">Recorded</string>
+</resources>

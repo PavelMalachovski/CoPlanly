@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Export des Kommunikationsprotokolls (MON-3). Die Absätze export_statement_* stehen auf jeder Datei. -->
+<resources>
+    <string name="export_settings_title">Protokoll exportieren</string>
+    <string name="export_settings_description">Nachrichten, Kalenderverlauf und Ausgaben als PDF oder CSV</string>
+    <string name="export_title">Protokoll exportieren</string>
+    <string name="export_back">Zurück</string>
+    <string name="export_intro">Erstellen Sie eine Datei mit dem, was Sie und der andere Elternteil in CoPlanly festgehalten und einander geschrieben haben — für eine Anwältin, einen Mediator oder ein Gericht. Sie entsteht auf diesem Telefon und geht nur dorthin, wohin Sie sie teilen.</string>
+    <string name="export_range_label">Zeitraum</string>
+    <string name="export_from">Von</string>
+    <string name="export_to">Bis</string>
+    <string name="export_pick_ok">OK</string>
+    <string name="export_pick_cancel">Abbrechen</string>
+    <string name="export_what_it_says">Was die Datei über sich selbst sagt</string>
+    <string name="export_csv">Als CSV exportieren</string>
+    <string name="export_csv_supporting">Eine Tabelle: eine Zeile pro Version, Nachricht und Ausgabe</string>
+    <string name="export_pdf">Als PDF exportieren</string>
+    <string name="export_pdf_supporting">Ein druckbares A4-Dokument</string>
+    <string name="export_working">Wird vorbereitet…</string>
+    <string name="export_share_title">Protokoll teilen</string>
+    <string name="export_error_failed">Das Protokoll konnte nicht exportiert werden. Bitte erneut versuchen.</string>
+    <string name="export_error_signed_out">Melden Sie sich an, um das Protokoll zu exportieren.</string>
+
+    <string name="export_record_title">CoPlanly-Kommunikationsprotokoll</string>
+    <string name="export_statement_what">Dies ist ein Protokoll dessen, was die Eltern in CoPlanly festgehalten und einander geschrieben haben, und wann. Es ist kein Protokoll dessen, was geschehen ist, und es sagt nicht, ob etwas hier Geschriebenes wahr ist.</string>
+    <string name="export_statement_messages">Gesendete Nachrichten kann kein Elternteil bearbeiten oder löschen. Die Zeit einer Nachricht stammt von der Uhr des Geräts des Absenders.</string>
+    <string name="export_statement_revisions">Jede gespeicherte Version eines Kalendereintrags wird vollständig aufbewahrt und kann nachträglich nicht geändert werden. Jede zeigt zwei Zeiten: wann das Gerät des bearbeitenden Elternteils sie festhielt und wann der Server sie empfing.</string>
+    <string name="export_statement_limits">Die Zeiten der Einträge sind die Uhrzeiten, die die Eltern eingegeben haben, ohne Zeitzone. Ausgaben werden so gezeigt, wie sie heute sind. Einträge, die vor Beginn des Versionsverlaufs gespeichert wurden, zeigen nur ihren aktuellen Stand. Private Einträge und medizinische Angaben zu Kindern sind nie enthalten.</string>
+    <string name="export_record_period">Zeitraum</string>
+    <string name="export_record_generated">Erstellt</string>
+    <string name="export_record_time_zone">Zeiten angegeben in</string>
+    <string name="export_record_parents">Eltern</string>
+    <string name="export_record_incomplete">Der Server war nicht erreichbar. Dieses Protokoll enthält nur, was dieses Telefon hatte, und es können Einträge fehlen.</string>
+    <string name="export_record_section_events">Kalendereinträge</string>
+    <string name="export_record_section_messages">Nachrichten</string>
+    <string name="export_record_section_expenses">Ausgaben</string>
+    <string name="export_record_nothing">In diesem Zeitraum wurde nichts festgehalten.</string>
+    <string name="export_record_not_on_server">Vom Server noch nicht empfangen</string>
+    <string name="export_record_no_server_time">Nicht aufbewahrt</string>
+    <string name="export_record_revision">Version</string>
+    <string name="export_record_page">Seite</string>
+
+    <string name="export_col_section">Bereich</string>
+    <string name="export_col_item">Eintrags-ID</string>
+    <string name="export_col_revision">Version</string>
+    <string name="export_col_action">Aktion</string>
+    <string name="export_col_by">Festgehalten von</string>
+    <string name="export_col_device_time">Gerätezeit (wann der Elternteil gespeichert hat)</string>
+    <string name="export_col_server_time">Serverzeit (wann der Server empfangen hat)</string>
+    <string name="export_col_text">Titel oder Nachricht</string>
+    <string name="export_col_starts">Beginn</string>
+    <string name="export_col_ends">Ende</string>
+    <string name="export_col_parent">Elternteil (wessen Tag oder wer bezahlt hat)</string>
+    <string name="export_col_notes">Notizen</string>
+    <string name="export_col_amount">Betrag</string>
+    <string name="export_col_currency">Währung</string>
+
+    <string name="export_action_created">Erstellt</string>
+    <string name="export_action_updated">Geändert</string>
+    <string name="export_action_deleted">Gelöscht</string>
+    <string name="export_action_current">Aktueller Stand (kein gespeicherter Verlauf)</string>
+    <string name="export_action_sent">Gesendet</string>
+    <string name="export_action_not_sent">Nicht gesendet</string>
+    <string name="export_action_recorded">Festgehalten</string>
+</resources>

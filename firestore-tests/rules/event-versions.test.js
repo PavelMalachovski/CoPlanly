@@ -312,6 +312,23 @@ describe('messages — the half of the record that was already append-only', () 
     await assertFails(as(ALICE).doc('messages/msg-1').delete());
   });
 
+  it('serves the export\'s ranged thread query to a participant (MON-3)', async () => {
+    await assertSucceeds(as(BOB).collection('messages')
+        .where('conversationId', '==', 'conv-1')
+        .where('timestamp', '>=', 1780000000000)
+        .where('timestamp', '<', 1790000000000)
+        .orderBy('timestamp')
+        .get());
+  });
+
+  it('refuses the same ranged query to an outsider', async () => {
+    await assertFails(as(CAROL).collection('messages')
+        .where('conversationId', '==', 'conv-1')
+        .where('timestamp', '>=', 1780000000000)
+        .orderBy('timestamp')
+        .get());
+  });
+
   it('refuses the recipient deleting it', async () => {
     await assertFails(as(BOB).doc('messages/msg-1').delete());
   });

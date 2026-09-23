@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.Balance
 import androidx.compose.material.icons.filled.ChildCare
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.DeleteForever
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Diversity3
 import androidx.compose.material.icons.filled.EventAvailable
 import androidx.compose.material.icons.filled.ExpandMore
@@ -148,6 +149,7 @@ private val syncTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
  * @param onNavigateToChildInfo Opens child information
  * @param onNavigateToParentingPlan Opens the parenting plan (MON-5)
  * @param onNavigateToPets Opens the pets list
+ * @param onNavigateToExport Opens the communication-record export (MON-3)
  * @param onNavigateToPairing Opens co-parent pairing
  * @param onNavigateToFriends Opens the calendar-friend list (item 16)
  * @param onNavigateToCustodySetup Opens custody schedule setup
@@ -168,6 +170,7 @@ fun SettingsScreen(
     onNavigateUp: (() -> Unit)? = null,
     onNavigateToChildInfo: (() -> Unit)? = null,
     onNavigateToParentingPlan: (() -> Unit)? = null,
+    onNavigateToExport: (() -> Unit)? = null,
     onNavigateToPets: (() -> Unit)? = null,
     onNavigateToPairing: (() -> Unit)? = null,
     onNavigateToFriends: (() -> Unit)? = null,
@@ -581,6 +584,22 @@ fun SettingsScreen(
                             supporting = stringResource(
                                 R.string.parenting_plan_settings_description
                             ),
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                navigate()
+                            },
+                            trailing = { Chevron() }
+                        )
+                        Divider()
+                    }
+                    // Beside the plan: the other document two parents may hand to a court. In
+                    // Family rather than Account because it is the family's record, not a
+                    // setting of this login — and it is where a parent who needs it will look.
+                    onNavigateToExport?.let { navigate ->
+                        SectionRow(
+                            icon = Icons.Default.Description,
+                            title = stringResource(R.string.export_settings_title),
+                            supporting = stringResource(R.string.export_settings_description),
                             onClick = {
                                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 navigate()

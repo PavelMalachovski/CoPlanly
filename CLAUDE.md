@@ -782,6 +782,33 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     compares it, and the events rule does not *require* a revision beside each write, so an older
     build's edits go unrecorded.
 
+26. **The export is a communication record, says so on its face, and is made on the phone**
+    (MON-3, September 2026; the owner's MON-4 answer). Settings → Family → *Export the record*
+    (`presentation/export`) picks a period and writes a CSV or an A4 PDF to `cache/exports/`,
+    shared through the existing `FileProvider` (`file_paths.xml` → `exports/`). What goes in is
+    decided in pure Kotlin — `domain/export/CommunicationRecordBuilder` builds the model,
+    `CommunicationRecordCsv` and `RecordLayout` lay it out, `data/export/ExportFileWriter` only
+    draws with `android.graphics.pdf.PdfDocument` — so the JVM tests reach every rule. Seven things
+    not to undo. **The `export_statement_*` paragraphs are printed first in both formats** —
+    "a record of what the parents recorded and wrote … not of what happened" is the owner's
+    answer, not copy; don't shorten it, and a new format prints it too. **Revisions show both
+    clocks under their own labels**, a revision still in the outbox says "not yet received by the
+    server" rather than borrowing its device time, and an event saved before revisions existed is
+    printed as its *current state*, never dressed up as a "created" revision dated today. **Read
+    from the server with `Source.SERVER`, and say so when it failed** — `RecordSources.serverReached`
+    false prints `export_record_incomplete` on the face; a record assembled silently from the cache
+    is a record of one phone. **Never a private event, never a child's or pet's record** — the
+    source reads events, messages and expenses only, and the builder drops `isPrivate` again
+    whatever it is handed (item 3; design §4 on the medical profile). **Names, never roles** —
+    every uid and slot goes through `parentLabelByUid`/`parentLabel` (the hard rule above).
+    **CSV is RFC 4180 plus a formula guard** — CRLF, quoted fields with doubled quotes, one width
+    for every record (the preamble is padded), and a cell starting `= + - @ \t \r` gets a leading
+    apostrophe *inside* the quotes: half the file is the other parent's words. And **it is
+    ungated**: MON-1 has not set a price, so there is no entitlement check and none is to be faked
+    with a flag — the gate is MON-11's. Times use `RecordFormat` (fixed `Locale.ROOT` patterns
+    with the offset printed); event start/end are the naive wall-clock values the schema stores,
+    and the statement says so.
+
 ## Known issues / do not "fix" silently
 
 **Check an entry against the code before acting on it.** Two entries in this section, and one

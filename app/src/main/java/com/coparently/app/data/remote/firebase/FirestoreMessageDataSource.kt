@@ -233,6 +233,35 @@ class FirestoreMessageDataSource @Inject constructor(
             .map { it.id }
             .toSet()
 
+    /**
+     * A thread's messages sent in [fromMillis, untilMillis), as the server holds them (MON-3).
+     *
+     * The export's read, and deliberately not the live listener's: that one keeps a window of
+     * the newest messages, and a record of March cannot depend on March still being recent. Read
+     * from the server, never the cache — a message this phone deleted from Room is still in the
+     * record (`messages` cannot be deleted server-side), and the cache would not have it.
+     *
+     * A message written by a build old enough to store an ISO-string `timestamp` is not matched
+     * by a numeric range; the caller adds this phone's own copy of the thread for that reason.
+     *
+     * @throws com.google.firebase.firestore.FirebaseFirestoreException when the server cannot be
+     *   reached; the caller marks the record incomplete rather than presenting the cache as whole.
+     */
+    suspend fun fetchBetween(
+        conversationId: String,
+        fromMillis: Long,
+        untilMillis: Long
+    ): List<Map<String, Any>> =
+        messagesCollection
+            .whereEqualTo("conversationId", conversationId)
+            .whereGreaterThanOrEqualTo("timestamp", fromMillis)
+            .whereLessThan("timestamp", untilMillis)
+            .orderBy("timestamp", Query.Direction.ASCENDING)
+            .get(Source.SERVER)
+            .await()
+            .documents
+            .map { doc -> doc.data?.plus("id" to doc.id) ?: emptyMap() }
+
     private companion object {
         /**
          * How many of a thread's newest messages the live listener carries.
