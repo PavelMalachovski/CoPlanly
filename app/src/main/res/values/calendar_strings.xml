@@ -105,4 +105,7 @@
     <!-- UX-8: whose day it is is its own line now, not a suffix on the date. -->
     <string name="calendar_agenda_custody_day">%1$s\'s day</string>
     <string name="calendar_filter_members">Show for</string>
+
+    <!-- MON-6b: a contact window on the grid. -->
+    <string name="calendar_contact_window_desc">Contact with %1$s, %2$s–%3$s</string>
 </resources>

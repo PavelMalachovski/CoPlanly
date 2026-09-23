@@ -324,7 +324,28 @@ service cloud.firestore {
     // to decide which phone's document survives, and the winner is re-pushed over the loser.
     function swapWriteTouchesOnlyTheSwap(before, after) {
       return after.diff(before).affectedKeys()
-                  .hasOnly(['dayOverrides', 'lastSwapDate', 'lastModifiedBy', 'lastModifiedKind']);
+                  .hasOnly(['dayOverrides', 'lastSwapDate', 'lastModifiedBy', 'lastModifiedKind',
+                            'contactWindows']) &&
+             contactWindowsKeptOrDropped(before, after);
+    }
+
+    // True when a write leaves `contactWindows` (MON-6b) exactly as it was, or drops the key.
+    //
+    // The contact windows are part of the agreed pattern, so a swap or proposal write may not
+    // change them — that would be a pattern change riding on a write whose banner is suppressed,
+    // the same silencing `swapWriteTouchesOnlyTheSwap` exists to refuse. Only a pattern write
+    // (which stamps `lastModifiedBy` and is announced) may set them.
+    //
+    // **Dropping** the key is allowed, and that is not a loophole but backward compatibility: a
+    // build that predates the field rewrites the whole document with `set()` and cannot carry a
+    // key it has never heard of, so without this clause every swap and every proposal from a
+    // co-parent on an older build would be denied the moment the pair had any window at all. It
+    // costs nothing on the calendar: a current build reads a missing key as "written by an older
+    // build" and keeps its own copy (`CustodyModelRepository.mirrorIntoRoom`), and a removal it
+    // makes itself is an explicit empty list written by a pattern write.
+    function contactWindowsKeptOrDropped(before, after) {
+      return !('contactWindows' in after) ||
+             !after.diff(before).affectedKeys().hasAny(['contactWindows']);
     }
 
     // True when a write only puts, clears, or records the outcome of a custody *proposal* (item
@@ -335,7 +356,8 @@ service cloud.firestore {
     // echo and swallow its banner). Accepting a proposal is a different write — it changes the
     // model and stamps the accepter — and passes the normal pattern branch below, not this one.
     function proposalWriteTouchesOnlyProposal(before, after) {
-      return after.diff(before).affectedKeys().hasOnly(['proposal', 'lastDecision']);
+      return after.diff(before).affectedKeys().hasOnly(['proposal', 'lastDecision', 'contactWindows']) &&
+             contactWindowsKeptOrDropped(before, after);
     }
 
     // The canonical pair id for a 2-element participants list — the same sorted-join formula

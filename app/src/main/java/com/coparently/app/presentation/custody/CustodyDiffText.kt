@@ -24,6 +24,13 @@ import com.coparently.app.presentation.common.ParentNames
 fun custodyDiffDescription(diff: CustodyPatternDiff?, parentNames: ParentNames): String? {
     if (diff == null || !diff.comparable) return null
     if (diff.identical) return stringResource(R.string.custody_diff_none)
+    // Only the contact afternoons move (MON-6b): "0 days move" would read as "nothing changes".
+    if (diff.movedDays.isEmpty()) return stringResource(R.string.custody_diff_windows_only)
+    val windowsLine = if (diff.contactWindowsChanged) {
+        "\n" + stringResource(R.string.custody_diff_windows_too)
+    } else {
+        ""
+    }
 
     val context = LocalContext.current
     val summary = context.resources.getQuantityString(
@@ -36,7 +43,7 @@ fun custodyDiffDescription(diff: CustodyPatternDiff?, parentNames: ParentNames):
     val net = listOf("mom", "dad").mapNotNull { slot ->
         diff.netDaysBySlot[slot]?.let { slot to it }
     }
-    if (net.isEmpty()) return summary
+    if (net.isEmpty()) return summary + windowsLine
 
     val netLine = net.joinToString(" · ") { (slot, days) ->
         // A signed integer with no unit word, deliberately: the plural above already said
@@ -44,5 +51,5 @@ fun custodyDiffDescription(diff: CustodyPatternDiff?, parentNames: ParentNames):
         val signed = if (days > 0) "+$days" else days.toString()
         "${parentNames.labelFor(slot)} $signed"
     }
-    return "$summary\n$netLine"
+    return "$summary\n$netLine$windowsLine"
 }

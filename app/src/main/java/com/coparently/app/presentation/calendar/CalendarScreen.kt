@@ -59,6 +59,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.data.sync.SyncWorker
+import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.custody.CustodyResolver
 import com.coparently.app.domain.custody.DaySwapInbox
 import com.coparently.app.domain.family.FamilyMemberRef
@@ -355,6 +356,21 @@ fun CalendarScreen(
             { _ -> null }
         } else {
             { date -> proposed.getCustodyFor(date) }
+        }
+    }
+
+    // Contact windows (MON-6b): part of a day with the parent who does not have it — "every
+    // Wednesday 15:00–19:00". Separate from `getCustody`, which stays whole-day: whose *day* it is
+    // does not change for an afternoon. Only a window that says something is drawn — one naming
+    // the parent who already has the day (the pattern gives it to them, or an accepted swap does)
+    // is not an afternoon with anybody new, so it is skipped rather than painted over its own
+    // parent's tint.
+    val getContactWindows: (LocalDate) -> List<ContactWindow> = remember(custodyModel, getCustody) {
+        val model = custodyModel
+        if (model == null || model.contactWindows.isEmpty()) {
+            { _ -> emptyList() }
+        } else {
+            { date -> model.contactWindowsOn(date).filter { it.parent != getCustody(date) } }
         }
     }
 
@@ -786,6 +802,7 @@ fun CalendarScreen(
                                     events = filteredEvents,
                                     getCustody = getCustody,
                                     getProposedCustody = getProposedCustody,
+                                    getContactWindows = getContactWindows,
                                     parentNames = parentNames,
                                     onDateChange = { calendarViewModel.setSelectedDate(it) },
                                     onEventClick = { eventId -> previewEventId = eventId },
@@ -822,6 +839,7 @@ fun CalendarScreen(
                                     eventsByDay = eventsByDay,
                                     getCustody = getCustody,
                                     getProposedCustody = getProposedCustody,
+                                    getContactWindows = getContactWindows,
                                     parentNames = parentNames,
                                     pendingSwapDates = pendingSwapDates,
                                     swappedDates = swappedDates,

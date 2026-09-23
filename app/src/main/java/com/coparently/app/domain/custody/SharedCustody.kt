@@ -40,6 +40,19 @@ import com.coparently.app.domain.model.CustodyModel
  *   so a swap write cannot leave the field alone — and without this marker the co-parent's
  *   device would read that stamp as a pattern change and raise the "the schedule changed under
  *   you" banner for a day nobody has agreed to yet. See [CustodyWriteKind].
+ * @property contactWindowsWire The document's `contactWindows` list **exactly as stored**, or null
+ *   when the document has no such key (MON-6b). [model]'s `contactWindows` are its decoded form;
+ *   this is kept beside them for two reasons, both about builds that disagree:
+ *   - **A proposal or swap write must send the list back byte for byte.** `firestore.rules`
+ *     refuses such a write if it changes `contactWindows`, and those writes re-send the whole
+ *     document, so a list re-encoded from the model would be refused the day a newer build wrote
+ *     an entry this one cannot decode. Only a pattern write (`CustodyModelRepository.
+ *     pushToFirestore`, or accepting a proposal) replaces it, from the model.
+ *   - **Null is not "no windows".** A build that predates the field rewrites the whole document
+ *     without the key on every save. Reading that as "the windows were removed" would let an
+ *     older co-parent's ordinary swap erase the contact afternoons from this device's calendar,
+ *     so the mirror keeps its own copy when the key is absent — and this build always writes the
+ *     key, as `[]` when there are none, so a removal it makes is a real, explicit empty list.
  */
 data class SharedCustody(
     val model: CustodyModel,
@@ -51,7 +64,8 @@ data class SharedCustody(
     val lastDecision: CustodyDecision? = null,
     val dayOverrides: Map<String, DayOverride> = emptyMap(),
     val lastSwapDate: String? = null,
-    val lastModifiedKind: CustodyWriteKind = CustodyWriteKind.PATTERN
+    val lastModifiedKind: CustodyWriteKind = CustodyWriteKind.PATTERN,
+    val contactWindowsWire: List<String>? = null
 )
 
 /**

@@ -237,9 +237,10 @@ cd firestore-tests && npm test              # firestore.rules + storage.rules on
   job is green on what can run and the intent survives for whoever restores a schema. Do not
   read that as ordinary quarantine: an `@Ignore` normally hides a defect, and this one records
   missing data that no fix to the code can supply. The migrations a test can prove are those
-  six plus 34→35 (MON-13's region) — this line used to credit a 33→34 test to MON-5, and none
-  exists (it could be written: `33.json` and `34.json` are both there). 34→35 needs the Regenerate
-  workflow to have exported `35.json` first.
+  six plus 34→35 (MON-13's region) and 35→36 (MON-6b's contact windows) — this line used to
+  credit a 33→34 test to MON-5, and none exists (it could be written: `33.json` and `34.json` are
+  both there). The two new ones need the Regenerate workflow to have exported `35.json` and
+  `36.json` first.
   What stops the gap growing is a **step in `ci.yml`**: `git status --porcelain -- app/schemas`
   after the build, failing when the build produced a schema nobody committed. It is deliberately
   *not* `DatabaseSchemaExportTest`, which this line used to credit and which cannot do it — kapt
@@ -395,7 +396,7 @@ cd firestore-tests && npm test              # firestore.rules + storage.rules on
 
 ```
 domain/    — models, repository interfaces, use cases, holidays, ReminderScheduler
-data/      — Room (v35 + migrations), Firestore/Google clients, repository impls, sync
+data/      — Room (v36 + migrations), Firestore/Google clients, repository impls, sync
 presentation/ — Compose screens per feature + ViewModels + theme
 di/        — Hilt modules (Database, Firebase, Google, UseCase, Notification, …)
 ```
@@ -492,7 +493,7 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     the conversation as `{uid: epochMillis}` maps — one write per event — and the ticks and
     unread badge are derived from them by `ChatReadState`, never stored per message.
     Message times are stored the same way: `Message.sentAtMillis`, epoch millis (Room
-    schema v13, since superseded — the database is at v35), not a naive `LocalDateTime`, so two
+    schema v13, since superseded — the database is at v36), not a naive `LocalDateTime`, so two
     parents in different time zones agree
     on what a mark means and on when a message was sent. The Firestore field keeps its name
     (`timestamp`) and the read path still accepts a legacy ISO string, so a co-parent on an
@@ -705,6 +706,28 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     `CredentialManagerService.signOut` clears the Google credential *before* the network revoke,
     because an offline sign-out used to leave the previous account's calendar token for the next
     one.
+
+24. **A contact window sits on top of the whole-day pattern and never splits it** (MON-6b,
+    September 2026, owner decision; schema 36). `domain/custody/ContactWindow.kt` is the one
+    definition: `{cycle day, from, to, parent slot}`, repeating with the cycle like
+    `momDayIndices`. **`getCustodyFor` stays whole-day** — do not teach it about windows: the
+    grid's colour, the handover walk, swaps and every older build read it, and whose *day* it is
+    does not move for an afternoon. `CustodyModel.contactWindowsOn(date)` is the separate question,
+    and `CalendarScreen.getContactWindows` drops a window naming the day's own parent. Four things
+    not to undo. **The wire form is `ContactWindowCodec` strings** (`"9|15:00|19:00|dad"`), never
+    Gson over the data class, and `encodeAll` is canonical (sorted, de-duplicated). **A missing
+    `contactWindows` key is not "none"**: an older build rewrites the whole document without it on
+    every save, so the mirror keeps its own copy when the key is absent, and this build always
+    writes the key on a pattern write (`[]` for none). **Proposal and swap writes carry the stored
+    list verbatim** (`SharedCustody.contactWindowsWire`, `CustodyProposal.contactWindowsWire`):
+    `firestore.rules`' `contactWindowsKeptOrDropped` refuses a proposal-only or swap write that
+    *changes* the list — a pattern change riding on a write whose banner is suppressed — and allows
+    one that *drops* it, which is what an older co-parent's write does. Re-encoding from the model
+    there would be refused the day a newer build wrote an entry this one cannot decode. And **the
+    MON-6 midweek toggle is not a window**: it is the whole day with the overnight, stays as it
+    was, and no saved schedule is converted between the two. On the grid a window is a band in the
+    window parent's tint with a full-hue edge (Day/Week) and a full-hue corner triangle (Month),
+    both over the `DayCellFills` layers rather than a new fill competing with them.
 
 ## Known issues / do not "fix" silently
 

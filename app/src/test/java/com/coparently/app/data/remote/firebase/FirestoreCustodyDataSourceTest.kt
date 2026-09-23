@@ -277,6 +277,85 @@ class FirestoreCustodyDataSourceTest {
         assertEquals(CustodyTimestamp.UNDATED, read!!.lastModifiedAtMillis)
     }
 
+    // ---- contact windows (MON-6b) -------------------------------------------
+
+    @Test
+    fun `contact windows cross the wire as a list of strings and read back as windows`() = runTest {
+        val wire = listOf("2|15:00|19:00|dad", "9|15:00|19:00|dad")
+        val written = writeAndCapture(custody().copy(contactWindowsWire = wire))
+
+        assertEquals(wire, written["contactWindows"])
+
+        every { documentRef.get() } returns Tasks.forResult(snapshotOf(written))
+        val parsed = dataSource.getCustody(DOCUMENT_ID)
+        assertEquals(wire, parsed?.contactWindowsWire)
+        assertEquals(listOf(2, 9), parsed?.model?.contactWindows?.map { it.dayIndex })
+    }
+
+    @Test
+    fun `a document an older build wrote has no windows key, and none is invented`() = runTest {
+        // Null, not an empty list: absent means "written by a build that predates the field",
+        // which the repository must not read as a removal.
+        every { documentRef.get() } returns Tasks.forResult(snapshotOf(document()))
+
+        val parsed = dataSource.getCustody(DOCUMENT_ID)
+
+        assertNull(parsed?.contactWindowsWire)
+        assertTrue(parsed?.model?.contactWindows.orEmpty().isEmpty())
+        assertFalse(writeAndCapture(custody()).containsKey("contactWindows"))
+    }
+
+    @Test
+    fun `an unreadable entry is kept on the wire but not drawn`() = runTest {
+        // Carried back verbatim so a proposal or swap write does not change the stored list,
+        // which `firestore.rules` would refuse; left out of the model so no guess reaches the grid.
+        val wire = listOf("2|15:00|19:00|dad", "2|15:00|19:00|dad|v2")
+        every { documentRef.get() } returns Tasks.forResult(
+            snapshotOf(document("contactWindows" to wire))
+        )
+
+        val parsed = requireNotNull(dataSource.getCustody(DOCUMENT_ID))
+
+        assertEquals(wire, parsed.contactWindowsWire)
+        assertEquals(1, parsed.model.contactWindows.size)
+        assertEquals(wire, writeAndCapture(parsed)["contactWindows"])
+    }
+
+    @Test
+    fun `a proposal with no windows of its own keeps the agreed ones`() = runTest {
+        // Written by a build that could not express windows: not a proposal to remove them.
+        every { documentRef.get() } returns Tasks.forResult(
+            snapshotOf(
+                document(
+                    "contactWindows" to listOf("2|15:00|19:00|dad"),
+                    "proposal" to proposalMap()
+                )
+            )
+        )
+
+        val proposal = dataSource.getCustody(DOCUMENT_ID)?.proposal
+
+        assertNull(proposal?.contactWindowsWire)
+        assertEquals(listOf(2), proposal?.model?.contactWindows?.map { it.dayIndex })
+    }
+
+    @Test
+    fun `a proposal's own windows win, an empty list included`() = runTest {
+        every { documentRef.get() } returns Tasks.forResult(
+            snapshotOf(
+                document(
+                    "contactWindows" to listOf("2|15:00|19:00|dad"),
+                    "proposal" to proposalMap() + ("contactWindows" to emptyList<String>())
+                )
+            )
+        )
+
+        val proposal = dataSource.getCustody(DOCUMENT_ID)?.proposal
+
+        assertEquals(emptyList<String>(), proposal?.contactWindowsWire)
+        assertTrue(proposal?.model?.contactWindows.orEmpty().isEmpty())
+    }
+
     // ---- fixtures -----------------------------------------------------------
 
     /** Runs [FirestoreCustodyDataSource.setCustody] and returns the document it wrote. */

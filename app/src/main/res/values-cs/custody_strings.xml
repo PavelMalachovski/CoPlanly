@@ -66,7 +66,7 @@
     <string name="custody_is_resident">Žije u: %1$s</string>
     <string name="custody_midweek_title">Kontakt uprostřed týdne</string>
     <string name="custody_midweek_enable">Přidat den uprostřed týdne</string>
-    <string name="custody_midweek_overnight_warning">Tento rozvrh přiděluje celé dny, takže den uprostřed týdne zahrnuje i noc. Pokud vaše rozhodnutí mluví jen o odpoledni, sestavte čtrnáctidenní cyklus ve Vlastním rozvrhu.</string>
+    <string name="custody_midweek_overnight_warning">Tento rozvrh přiděluje celé dny, takže den uprostřed týdne zahrnuje i noc. Pokud vaše rozhodnutí mluví jen o odpoledni, nechte tuto volbu vypnutou a níže místo toho přidejte čas styku.</string>
     <string name="custody_midweek_every_week">Každý týden</string>
     <string name="custody_midweek_off_week_only">Jen v týdnu bez víkendu</string>
     <string name="custody_preview_every_other_weekend_midweek">Každý den: %1$s. Každou druhou so–ne a každou %3$s: %2$s.</string>
@@ -81,4 +81,25 @@
 
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
     <string name="custody_setup_save_failed">Rozvrh se nepodařilo uložit. Zkuste to znovu.</string>
+
+    <!-- MON-6b: contact windows over the whole-day pattern. -->
+    <string name="custody_windows_title">Časy styku</string>
+    <string name="custody_windows_hint">Část dne s rodičem, který ten den nemá, například každou středu 15:00–19:00. Den sám zůstává tomu, kdo ho má; čas styku se zobrazí navíc.</string>
+    <string name="custody_windows_empty">Žádné časy styku.</string>
+    <string name="custody_windows_add">Přidat čas styku</string>
+    <string name="custody_window_remove">Odebrat čas styku</string>
+    <string name="custody_window_summary">%1$s · %2$s–%3$s · %4$s</string>
+    <string name="custody_window_day_label">%1$d. týden, %2$s</string>
+    <string name="custody_window_dialog_title">Nový čas styku</string>
+    <string name="custody_window_weekday">Den</string>
+    <string name="custody_window_week">Týden</string>
+    <string name="custody_window_every_week">Každý týden</string>
+    <string name="custody_window_week_n">%1$d. týden</string>
+    <string name="custody_window_from">Od %1$s</string>
+    <string name="custody_window_to">Do %1$s</string>
+    <string name="custody_window_with">S kým</string>
+    <string name="custody_window_invalid">Čas styku musí skončit až po svém začátku, a to týž den.</string>
+    <string name="custody_window_add_confirm">Přidat</string>
+    <string name="custody_diff_windows_only">Změnily by se jen časy styku.</string>
+    <string name="custody_diff_windows_too">Mění se i časy styku.</string>
 </resources>

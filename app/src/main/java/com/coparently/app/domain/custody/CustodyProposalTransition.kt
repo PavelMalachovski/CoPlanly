@@ -53,7 +53,10 @@ object CustodyProposalTransition {
                     model = model,
                     repeatYearly = repeatYearly,
                     proposedBy = byUid,
-                    proposedAt = atIso
+                    proposedAt = atIso,
+                    // Always written, even empty: this build's proposal says what the windows
+                    // become, and "none" is an answer (see CustodyProposal.contactWindowsWire).
+                    contactWindowsWire = ContactWindowCodec.encodeAll(model.contactWindows)
                 )
             )
         )
@@ -92,6 +95,9 @@ object CustodyProposalTransition {
                 repeatYearly = pending.repeatYearly,
                 lastModifiedBy = byUid,
                 lastModifiedAtMillis = atMillis,
+                // The accepted pattern's windows become the agreed ones, written explicitly —
+                // this is a pattern write, the one kind that may replace the stored list.
+                contactWindowsWire = ContactWindowCodec.encodeAll(pending.model.contactWindows),
                 proposal = null,
                 lastDecision = CustodyDecision(
                     outcome = CustodyDecisionOutcome.ACCEPTED,

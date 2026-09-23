@@ -778,6 +778,20 @@ object DatabaseMigrations {
     }
 
     /**
+     * v35 -> v36: contact windows on the custody pattern (MON-6b).
+     *
+     * A window is part of one cycle day spent with the parent who does not have that day —
+     * "every Wednesday 15:00–19:00". The pattern itself still gives each day to one parent, so
+     * nothing about existing rows changes: every existing pattern has no windows, which is what
+     * null says (see `CustodyModelEntity.contactWindowsJson`).
+     */
+    val MIGRATION_35_36 = object : Migration(35, 36) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL("ALTER TABLE custody_models ADD COLUMN contactWindowsJson TEXT")
+        }
+    }
+
+    /**
      * List of all migrations in order.
      */
     val ALL_MIGRATIONS = arrayOf(
@@ -810,6 +824,7 @@ object DatabaseMigrations {
         MIGRATION_31_32,
         MIGRATION_32_33,
         MIGRATION_33_34,
-        MIGRATION_34_35
+        MIGRATION_34_35,
+        MIGRATION_35_36
     )
 }

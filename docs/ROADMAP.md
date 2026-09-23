@@ -79,7 +79,7 @@ invocation is yours.
 | **MON-3** | Export to PDF/CSV — the first paid feature (needs MON-4 first) | P1 | M |
 | **MON-4** | The paper is written; three answers are owed by the owner, and MON-3 waits on them | P1 | S |
 | **MON-5** | The plan ships; swapping in the Ministry's own wording needs the form itself | P1 | S |
-| **MON-6b** | Half-day custody, so contact afternoons can be described | P2 | L |
+| **MON-6b** | Contact windows ship (schema 36); left: Home's today card, and verifying the mixed-version path on two phones | P2 | S |
 | **MON-8** | Bakaláři / EduPage school import — the parsing, once you supply a real export | P2 | L |
 | **MON-11** | Payments (MVP 3) — the entitlement model, after MON-1 decides the price | P2 | L |
 | **MON-12** | Intelligent suggestions (MVP 3) — behind SEC-1's proxy, never with a key in the client | P3 | M |
@@ -1215,19 +1215,54 @@ Replacing the catalogue is a data edit: `ParentingPlanCatalogue` holds ids, the 
 stored answers keyed by an id that survives are untouched. Then, and only then, the disclaimer
 comes out. Audit §10.6.
 
-### MON-6b · P2 · L · Half-day custody, so contact afternoons can be described
+### MON-6b · **CONTACT WINDOWS DONE** · P2 · S · Contact afternoons on top of the whole days
 
-**Where:** ☁️ cloud.
+**Where:** ☁️ done in a cloud session; 📱 the mixed-version check below needs two phones.
 
 `CustodyModel` assigns each day of the cycle to exactly one parent (`momDayIndices`), so an
 arrangement of the form "every second weekend **plus Wednesday afternoon**" — which is most Czech
-contact orders, not an edge case — can only be entered by rounding the afternoon up to a whole day
-or dropping it. MON-6's preset drops it and says so; `CUSTOM` cannot express it either.
+contact orders, not an edge case — could only be entered by rounding the afternoon up to a whole
+day or dropping it.
 
-Not a small change: it touches the pattern representation, the Room entity, the Firestore document,
-`getCustodyFor`, `complemented`, `isEquivalentTo`, the custom-pattern editor and the day-cell fills.
-Worth doing before claiming the app describes a Czech family's real schedule; worth costing properly
-first.
+**Owner decision (September 2026): keep one parent per day, and overlay "contact windows".** A
+window is `{cycle day, from, to, parent slot}` (`domain/custody/ContactWindow.kt`), repeating
+with the cycle exactly like `momDayIndices`. `getCustodyFor` is **unchanged** — whose *day* it is
+does not move for an afternoon, so the grid's colour, the handover walk, swaps and every build
+already shipped keep their answer — and `CustodyModel.contactWindowsOn(date)` is the new question.
+What it took, and the choices worth knowing:
+
+- **Storage.** Room `custody_models.contactWindowsJson` (schema 36, `MIGRATION_35_36`, null =
+  none) and the document's `contactWindows`, both as lists of `ContactWindowCodec` strings
+  (`"9|15:00|19:00|dad"`) — never a Gson serialisation of the data class. The proposal sub-map
+  carries its own list.
+- **Older builds, and why a missing key is not "none".** An older build rewrites the whole
+  document with `set()` and cannot carry a key it has never heard of. So: this build always writes
+  the key on a pattern write (`[]` for none); a document *without* it is read as "written by an
+  older build" and the mirror keeps this device's copy; and proposal/swap writes send the stored
+  list back **verbatim** (`SharedCustody.contactWindowsWire`), because `firestore.rules` now
+  refuses a proposal-only or swap write that *changes* `contactWindows` — a pattern change riding
+  on a write whose banner is suppressed — while allowing one that **drops** it, which is exactly
+  what an older co-parent's swap or proposal does. Cases in `custody-models.test.js`. A proposal
+  sub-map with no list (an older proposer) keeps the agreed windows rather than removing them.
+- **Equivalence and the diff see windows.** `isEquivalentTo` compares each date's windows by
+  content, so a pairing conflict that differs only in the afternoons is shown, not silently
+  settled; `CustodyPatternDiff.contactWindowsChanged` stops a windows-only proposal being described
+  as "nothing on the calendar would change". `complemented` flips each window's slot with the days.
+- **Setup.** A "Contact windows" section under every pattern type (weekday, every week or one
+  week of the cycle, from/to via the existing `TimePickerDialog`, which parent). **The MON-6
+  midweek toggle is left exactly as it was** — it is the whole-day-with-overnight shape, and no
+  saved schedule is converted — and its warning now points to a contact window for the
+  afternoon-only case instead of to `CUSTOM`, which could never express one.
+- **Calendar.** Day and Week draw an hour band in the window parent's custody tint over the cell's
+  own base (weekend grey survives inside it), with a full-hue edge — the saturation rule's two
+  strengths of one hue. Month marks the day with a small corner triangle in the window parent's
+  full hue, laid over everything else, so the weekend base, the band and the handover diagonal
+  read as before; the hours are in the cell's description and one tap away in Day view. A window
+  naming the parent who already has the day (the pattern's, or an accepted swap's) is not drawn.
+
+**Left.** Home's handover/today card does not mention a window yet. And the mixed-version path —
+one phone on this build, one on an older one, a swap and a proposal each way — is covered by the
+rules suite and the unit tests but has not been run on two devices.
 
 ### MON-8 · P2 · L · Bakaláři / EduPage school import
 
@@ -1683,7 +1718,7 @@ in `docs/AUDIT-2026-08.md` under the § numbers cited.
   second because the enum's order is the picker's order. Its switch asks "who does the child live
   with" rather than "who starts first" — this pattern does not alternate blocks, so a parent asked
   who starts would answer about the first weekend and set it inverted. What it exposed is
-  **MON-6b**.
+  **MON-6b**, since done as contact windows.
 - **MON-7 · The AI subsystem is deleted.** 23 files, ~3,200 lines, reachable from no navigation
   graph, while the Gemini key shipped in every APK. `generativeai`, `retrofit`, `converter-gson`,
   `okhttp` and `logging-interceptor` went with it. It is in git history. See **MON-12** for the
