@@ -46,8 +46,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FilterChip
@@ -67,7 +65,6 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -104,6 +101,7 @@ import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.common.FamilyMemberChips
 import com.coparently.app.presentation.common.FullScreenImageDialog
+import com.coparently.app.presentation.common.LocalDatePickerDialog
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.common.toggling
 import com.coparently.app.presentation.components.TimePickerDialog
@@ -114,11 +112,9 @@ import com.coparently.app.utils.ValidationUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
-import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.util.UUID
 
@@ -1528,75 +1524,24 @@ fun AddEditEventScreen(
 
     // Recurrence end date picker
     if (showRecurrenceEndPicker) {
-        val recurrenceEndPickerState = rememberDatePickerState(
-            initialSelectedDateMillis = (recurrenceEndDate ?: startDate.plusMonths(3))
-                .atStartOfDay(ZoneOffset.UTC)
-                .toInstant()
-                .toEpochMilli()
+        LocalDatePickerDialog(
+            initialDate = recurrenceEndDate ?: startDate.plusMonths(3),
+            confirmLabel = stringResource(R.string.event_form_ok),
+            dismissLabel = stringResource(R.string.event_form_cancel),
+            onConfirm = { recurrenceEndDate = it },
+            onDismiss = { showRecurrenceEndPicker = false }
         )
-
-        DatePickerDialog(
-            onDismissRequest = { showRecurrenceEndPicker = false },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        recurrenceEndPickerState.selectedDateMillis?.let { millis ->
-                            // LocalDate.ofInstant requires API 34; atZone works from minSdk 26.
-                            // UTC, not the system zone: DatePickerState speaks UTC-midnight millis.
-                            recurrenceEndDate = Instant.ofEpochMilli(millis)
-                                .atZone(ZoneOffset.UTC)
-                                .toLocalDate()
-                        }
-                        showRecurrenceEndPicker = false
-                    }
-                ) {
-                    Text(stringResource(R.string.event_form_ok))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showRecurrenceEndPicker = false }) {
-                    Text(stringResource(R.string.event_form_cancel))
-                }
-            }
-        ) {
-            DatePicker(state = recurrenceEndPickerState)
-        }
     }
 
     // Date Picker Dialog
     if (showDatePicker) {
-        val datePickerState = rememberDatePickerState(
-            initialSelectedDateMillis = startDate.atStartOfDay(ZoneOffset.UTC)
-                .toInstant()
-                .toEpochMilli()
+        LocalDatePickerDialog(
+            initialDate = startDate,
+            confirmLabel = stringResource(R.string.event_form_ok),
+            dismissLabel = stringResource(R.string.event_form_cancel),
+            onConfirm = { startDate = it },
+            onDismiss = { showDatePicker = false }
         )
-
-        DatePickerDialog(
-            onDismissRequest = { showDatePicker = false },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        datePickerState.selectedDateMillis?.let { millis ->
-                            // LocalDate.ofInstant requires API 34; atZone works from minSdk 26.
-                            // UTC, not the system zone: DatePickerState speaks UTC-midnight millis.
-                            startDate = Instant.ofEpochMilli(millis)
-                                .atZone(ZoneOffset.UTC)
-                                .toLocalDate()
-                        }
-                        showDatePicker = false
-                    }
-                ) {
-                    Text(stringResource(R.string.event_form_ok))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) {
-                    Text(stringResource(R.string.event_form_cancel))
-                }
-            }
-        ) {
-            DatePicker(state = datePickerState)
-        }
     }
 
     // Start Time Picker

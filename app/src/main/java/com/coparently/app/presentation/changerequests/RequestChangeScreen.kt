@@ -17,8 +17,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -27,9 +25,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -44,11 +40,10 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.domain.model.Event
+import com.coparently.app.presentation.common.LocalDatePickerDialog
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.components.TimePickerDialog
-import java.time.Instant
 import java.time.LocalDateTime
-import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
 /**
@@ -270,35 +265,13 @@ private fun RequestChangeForm(
     }
 
     if (showDatePicker) {
-        val datePickerState = rememberDatePickerState(
-            initialSelectedDateMillis = proposedDate
-                // UTC on both sides: DatePickerState speaks UTC-midnight millis.
-                .atStartOfDay(ZoneOffset.UTC)
-                .toInstant()
-                .toEpochMilli()
+        LocalDatePickerDialog(
+            initialDate = proposedDate,
+            confirmLabel = stringResource(R.string.change_request_ok),
+            dismissLabel = stringResource(R.string.change_request_cancel),
+            onConfirm = { proposedDate = it },
+            onDismiss = { showDatePicker = false }
         )
-        DatePickerDialog(
-            onDismissRequest = { showDatePicker = false },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        datePickerState.selectedDateMillis?.let { millis ->
-                            proposedDate = Instant.ofEpochMilli(millis)
-                                .atZone(ZoneOffset.UTC)
-                                .toLocalDate()
-                        }
-                        showDatePicker = false
-                    }
-                ) { Text(stringResource(R.string.change_request_ok)) }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) {
-                    Text(stringResource(R.string.change_request_cancel))
-                }
-            }
-        ) {
-            DatePicker(state = datePickerState)
-        }
     }
 
     if (showStartTimePicker) {

@@ -71,6 +71,7 @@ import com.coparently.app.presentation.calendar.components.CustodyChangedBanner
 import com.coparently.app.presentation.calendar.components.DaySwapSheet
 import com.coparently.app.presentation.calendar.components.EventTypeFilterSheet
 import com.coparently.app.presentation.common.FamilyMemberChips
+import com.coparently.app.presentation.common.PickerDates
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.common.rememberToday
 import com.coparently.app.presentation.common.toggling
@@ -259,12 +260,10 @@ fun CalendarScreen(
 
     var showDatePicker by remember { mutableStateOf(false) }
     val datePickerState = rememberDatePickerState(
-        // Material3's DatePickerState speaks UTC-midnight millis, so the conversion must go
-        // through UTC — a system-zone start-of-day lands one day off west of Greenwich. Opens
+        // DatePickerState speaks UTC-midnight millis; PickerDates is the one conversion. Opens
         // on the selected day (or today), never on the 1st: "jump to a date" should start from
         // where the user is, and proposing the 1st is what read as "schedule from the 1st".
-        initialSelectedDateMillis = (selectedDate ?: today)
-            .atStartOfDay(java.time.ZoneOffset.UTC).toInstant().toEpochMilli(),
+        initialSelectedDateMillis = PickerDates.toPickerMillis(selectedDate ?: today),
         yearRange = IntRange(now.year - 5, now.year + 5)
     )
     val scope = rememberCoroutineScope()
@@ -882,12 +881,7 @@ fun CalendarScreen(
                 Button(
                     onClick = {
                         datePickerState.selectedDateMillis?.let { millis ->
-                            // LocalDate.ofInstant requires API 34; atZone works from minSdk 26.
-                            // The millis are UTC midnight (DatePickerState's contract), so read
-                            // them back in UTC — a system-zone read is a day early west of it.
-                            val pickedDate = java.time.Instant.ofEpochMilli(millis)
-                                .atZone(java.time.ZoneOffset.UTC)
-                                .toLocalDate()
+                            val pickedDate = PickerDates.fromPickerMillis(millis)
 
                             calendarViewModel.setSelectedDate(pickedDate)
                             if (viewMode != CalendarViewMode.MONTH) {

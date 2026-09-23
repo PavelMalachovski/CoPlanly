@@ -54,7 +54,11 @@ locally. What *is* verifiable in the session is the Firestore rules suite agains
 Everything Kotlin is proved by **CI** — `assembleDebug`, `testDebugUnitTest`, `lint`, `detekt`
 (a gate again since **CQ-12**), `assembleRelease` so R8 runs, and — since September 2026 — the
 `instrumented` job, an API 30 emulator running `connectedDebugAndroidTest` with Firebase replaced
-in the graph and Room left real (this sentence used to say no emulator job existed). And no session holds
+in the graph and Room left real (this sentence used to say no emulator job existed). Besides the
+migration tests it now runs a first set of device checks (September 2026): the date pickers in four
+time zones, the per-app language switch, the export's files and share intent, a signed-in walk of
+the main screens with a basic accessibility sweep — `docs/DEVICE-CHECKLIST.md` marks what they cover
+**[CI]**. And no session holds
 Firebase or Play credentials: every `firebase deploy`, every console change and every callable
 invocation is yours.
 
@@ -870,7 +874,9 @@ coverage.
 
 **Still thin, and worth a line when touching them:** the rest of `SettingsViewModel` (account
 deletion, the family dialogs), `SyncViewModel.handleSignInResult` (it takes a Play-services `Task`),
-and the Compose screens themselves, which only the instrumented job reaches.
+and the Compose screens themselves, which only the instrumented job reaches. It reaches the main
+screens now, as a signed-in smoke walk (`MainNavigationSmokeTest`) — a crash check with Firebase
+mocked, not a behavioural test of any one screen.
 
 ### CQ-14 · **DONE** · P2 · M · User-facing strings produced inside ViewModels and services
 

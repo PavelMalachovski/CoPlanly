@@ -281,6 +281,20 @@ cd firestore-tests && npm test              # firestore.rules + storage.rules on
   same branch before the Regenerate workflow ran, so 35 was never current there. A schema
   version that is skipped this way is a new gap of the CQ-1 kind; run Regenerate after each
   version bump, not after a batch of them.
+  **(3) Device checks** (September 2026) run in the same job: every date picker in two UTC+ and
+  two UTC− zones (`PickerDatesTest`, `LocalDatePickerDialogTest` — which is why every `LocalDate`
+  picker opens `presentation/common/PickerDates.kt`'s `LocalDatePickerDialog`; don't give a screen
+  its own copy of the millis conversion again), the per-app locale switch, the export's files and
+  share intent, and a signed-in walk of the main screens with a basic accessibility sweep;
+  `docs/DEVICE-CHECKLIST.md` marks what they cover **[CI]**. Two things to know before adding one.
+  A test that launches `MainActivity` signs in through `androidTest`'s `testing/SignedInSession` —
+  a stubbed `currentUser` on the mocked `FirebaseAuth`, a real Room row with onboarding done, the
+  telemetry question answered "no", all undone in `@After` because the emulator's files outlive the
+  test — and **pauses the Compose clock** (`testing/PausedClock.kt`): the splash and the list
+  skeletons animate for as long as a screen waits on a Firestore that never answers, so with the
+  clock running every `waitForIdle` times out. And the accessibility sweep is a semantics check
+  (unnamed or sub-48 dp icon-only controls), not ATF: `enableAccessibilityChecks()` needs an
+  artifact this build does not declare.
   What stops the gap growing is a **step in `ci.yml`**: `git status --porcelain -- app/schemas`
   after the build, failing when the build produced a schema nobody committed. It is deliberately
   *not* `DatabaseSchemaExportTest`, which this line used to credit and which cannot do it — kapt
