@@ -70,7 +70,6 @@ invocation is yours.
 | **M-8** | M-4's leftovers: badges that count across families, `familyId` on pushes, a switcher chip in the top bar | P2 | M |
 | **CQ-11** | The declared error model is not the one in use | P3 | S |
 | **CQ-13** | Fourteen of twenty-four ViewModels have no tests | P2 | M |
-| **CQ-15** | The last of the dead code, and one decision about it | P3 | S |
 | **CQ-17** | Six dependencies worth moving | P3 | S |
 | **UX-9** | Five different empty-state anatomies, one of which renders under the top bar | P2 | M |
 | **UX-14** | Four different brand purples | P3 | S |
@@ -86,7 +85,6 @@ invocation is yours.
 | **MON-13** | The tables are done (five countries; Ukraine's holidays are suspended by martial law) — left: a state/region setting for Germany's and Austria's regional holidays and school vacations | P2 | M |
 | **FAM-4** | Custody per child | P2 | L |
 | **REL-4 (drafting)** | Fill the placeholders in the legal drafts, write the web account-deletion page | P0 | S |
-| **REL-5** | An analytics consent gate for the EU | P0 | M |
 
 ### ⚙️ Cloud, but a CI job has to be built first
 
