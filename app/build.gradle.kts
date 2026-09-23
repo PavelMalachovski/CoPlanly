@@ -4,6 +4,7 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.dagger.hilt.android")
     id("io.gitlab.arturbosch.detekt")
+    id("io.github.takahirom.roborazzi")
     kotlin("kapt")
 }
 
@@ -391,6 +392,16 @@ dependencies {
 
     // Navigation Testing
     androidTestImplementation("androidx.navigation:navigation-testing:2.9.3")
+
+    // JVM screenshot tests — Roborazzi on Robolectric's native graphics, no emulator
+    // (`app/src/test/java/com/coparently/app/screenshots`, recorded by `recordRoborazziDebug`).
+    // Robolectric 4.16.1 knows SDK 36, but runs SDK 36 only on JDK 21 and CI builds on 17, so
+    // the tests pin `@Config(sdk = [34])` — see `ScreenshotMatrix`. `ui-test-junit4` provides
+    // `createComposeRule`; its activity comes from the `ui-test-manifest` debug dependency above.
+    testImplementation("org.robolectric:robolectric:4.16.1")
+    testImplementation("io.github.takahirom.roborazzi:roborazzi:1.60.0")
+    testImplementation(composeBom)
+    testImplementation("androidx.compose.ui:ui-test-junit4")
 }
 
 // androidx.room:room-testing-android pulls in JUnit 5 (junit-jupiter/junit-platform)
@@ -426,6 +437,30 @@ dependencies {
     detektPlugins("io.gitlab.arturbosch.detekt:detekt-formatting:1.23.7")
 }
 
+// Screenshots are recorded into the plugin's default `build/outputs/roborazzi`, which is what CI
+// uploads. Test code names each file relative to this directory (see
+// `roborazzi.record.filePathStrategy` in gradle.properties), so switching to committed baselines
+// later is this one line — `outputDir.set(file("src/test/screenshots"))` — and no test changes.
+roborazzi {
+    outputDir.set(layout.buildDirectory.dir("outputs/roborazzi"))
+}
+
+/**
+ * Whether this build was asked for a Roborazzi task (`recordRoborazziDebug`, `verify…`,
+ * `compare…`). Screenshot tests run only then: they are slow (each one boots a Robolectric
+ * sandbox and renders natively), their first run downloads an SDK jar, and a rendering problem in
+ * one of them must not turn the ordinary unit-test job red. Conversely a Roborazzi run runs only
+ * them, so the `screenshots` CI job does not repeat the unit tests `build-test` already ran.
+ */
+val roborazziRequested = gradle.startParameter.taskNames.any { it.contains("Roborazzi") }
+
+tasks.withType<Test>().configureEach {
+    if (roborazziRequested) {
+        filter.includeTestsMatching("com.coparently.app.screenshots.*")
+    } else {
+        exclude("com/coparently/app/screenshots/**")
+    }
+}
 
 // A failing unit test on CI printed only its exception class and a line number — enough to
 // know something broke, not enough to know what. `FULL` prints the assertion message and the
