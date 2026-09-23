@@ -1,9 +1,7 @@
 package com.coparently.app.data.chat
 
 import android.util.Log
-import com.coparently.app.domain.model.PairingState
 import com.coparently.app.domain.repository.MessageRepository
-import com.coparently.app.domain.repository.PairingRepository
 import com.coparently.app.domain.repository.UserRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -51,13 +49,22 @@ import javax.inject.Singleton
  * **It awaits `ensureConversation` before subscribing**, which is the other structural fix the
  * roadmap named and the direct answer to what was observed.
  *
+ * **It mirrors the family the device is showing** (M-8), through [ChatPartnerSource] — not the
+ * server's first co-parent, which is what `PairingRepository.observePairingState` names and what
+ * this class followed until then. A switch re-points the Room projection, the partner changes,
+ * and `collectLatest` cancels the old thread's two listeners before the new thread's
+ * `ensureConversation` runs: exactly one thread is mirrored at a time, never an accumulating set.
+ * The families that are *not* on screen are therefore not mirrored at all, and their messages
+ * reach Room only when their thread is selected again or opened — which is why no badge counts
+ * across families (docs/ROADMAP.md M-8).
+ *
  * The listener cost is not new. The Activity-scoped collector already held both listeners for the
  * whole process; this moves them somewhere that says so and can restart them.
  */
 @Singleton
 class ChatMirror @Inject constructor(
     private val userRepository: UserRepository,
-    private val pairingRepository: PairingRepository,
+    private val chatPartnerSource: ChatPartnerSource,
     private val messageRepository: MessageRepository
 ) {
 
@@ -84,14 +91,14 @@ class ChatMirror @Inject constructor(
     internal suspend fun mirror(sleep: suspend (Long) -> Unit = { delay(it) }) {
         combine(
             userRepository.observeCurrentUserId(),
-            pairingRepository.observePairingState()
-        ) { uid, pairing -> threadFor(uid, pairing) }
-            // Restart only when the *pair* changes. `observePairingState` re-emits on every
-            // invite and profile write, and rebuilding two Firestore listeners for those would
-            // be churn that looks exactly like the outage this class exists to end.
+            chatPartnerSource.observe()
+        ) { uid, partner -> threadFor(uid, partner) }
+            // Restart only when the *pair* changes. The pairing state re-emits on every invite
+            // and profile write, and rebuilding two Firestore listeners for those would be churn
+            // that looks exactly like the outage this class exists to end.
             .distinctUntilChanged()
-            // `collectLatest`: signing out or unpairing cancels the mirror below rather than
-            // leaving it attached to a thread this account no longer has.
+            // `collectLatest`: signing out, unpairing or switching family cancels the mirror
+            // below rather than leaving it attached to a thread this device is no longer showing.
             .collectLatest { thread ->
                 if (thread == null) return@collectLatest
                 mirrorThread(thread, sleep)
@@ -99,9 +106,9 @@ class ChatMirror @Inject constructor(
     }
 
     /** The conversation to mirror, or null when there is nobody to chat with yet. */
-    private fun threadFor(uid: String?, pairing: PairingState): ChatThread? {
+    private fun threadFor(uid: String?, partner: ChatPartner): ChatThread? {
         val myUid = uid?.takeIf { it.isNotBlank() } ?: return null
-        val partnerUid = (pairing as? PairingState.Paired)?.partner?.id?.takeIf { it.isNotBlank() }
+        val partnerUid = (partner as? ChatPartner.Linked)?.partnerUid?.takeIf { it.isNotBlank() }
             ?: return null
         return ChatThread(myUid = myUid, partnerUid = partnerUid)
     }

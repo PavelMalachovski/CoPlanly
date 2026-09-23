@@ -3,6 +3,8 @@ package com.coparently.app.presentation.chat
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.coparently.app.data.chat.ChatPartner
+import com.coparently.app.data.chat.ChatPartnerSource
 import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.domain.chat.ChatReadState
 import com.coparently.app.domain.chat.ChatWindow
@@ -12,10 +14,8 @@ import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.model.Message
 import com.coparently.app.domain.model.MessageSendStatus
 import com.coparently.app.domain.model.MessageType
-import com.coparently.app.domain.model.PairingState
 import com.coparently.app.domain.repository.EventRepository
 import com.coparently.app.domain.repository.MessageRepository
-import com.coparently.app.domain.repository.PairingRepository
 import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.presentation.common.Loadable
 import com.coparently.app.presentation.common.valueOrNull
@@ -90,18 +90,19 @@ sealed interface ChatEvent {
  *
  * Everything session-dependent here is a *stream*, never a value captured in `init`.
  * The identity ([currentUserId]) follows Firebase Auth and the co-parent link
- * ([coParentLink]) follows [PairingRepository.observePairingState], so a pairing that is
- * established — or ended — while this screen is open is reflected without recreating the
- * ViewModel. The previous version read both once from a Room row that a freshly paired
- * device does not have yet, which left the "chat with my co-parent" action permanently
- * dead for that ViewModel instance.
+ * ([coParentLink]) follows [ChatPartnerSource.observe], so a pairing that is established — or
+ * ended — while this screen is open is reflected without recreating the ViewModel, and so is a
+ * switch of family (M-8): the link names the co-parent of the family the device is *showing*,
+ * not the server's first one. The previous version read both once from a Room row that a
+ * freshly paired device does not have yet, which left the "chat with my co-parent" action
+ * permanently dead for that ViewModel instance.
  */
 @HiltViewModel
 class ChatViewModel @Inject constructor(
     private val messageRepository: MessageRepository,
     private val userRepository: UserRepository,
     private val eventRepository: EventRepository,
-    private val pairingRepository: PairingRepository,
+    private val chatPartnerSource: ChatPartnerSource,
     private val preferences: EncryptedPreferences
 ) : ViewModel() {
 
@@ -162,7 +163,7 @@ class ChatViewModel @Inject constructor(
         )
 
     /** Whether there is a co-parent to chat with. See [CoParentLink]. */
-    val coParentLink: StateFlow<CoParentLink> = pairingRepository.observePairingState()
+    val coParentLink: StateFlow<CoParentLink> = chatPartnerSource.observe()
         .map { it.toCoParentLink() }
         .stateIn(
             scope = viewModelScope,
@@ -396,6 +397,11 @@ class ChatViewModel @Inject constructor(
      *
      * Kept as an independent subscription from [messages] — mirroring `HomeViewModel.unreadCount`'s
      * Home-tile figure — so a failure in one cannot blank the other.
+     *
+     * **The selected family's count, and only that one** (M-8). It follows [coParentLink], so a
+     * family switch re-keys it; and it deliberately does not sum the other families'
+     * conversations, because `ChatMirror` mirrors only the family on screen — a `COUNT(*)` over a
+     * thread nothing is filling would say 0 when it is not (docs/ROADMAP.md M-8).
      */
     @OptIn(ExperimentalCoroutinesApi::class)
     val unreadCount: StateFlow<Int> = combine(currentUserId, coParentLink) { uid, link -> uid to link }
@@ -720,18 +726,13 @@ class ChatViewModel @Inject constructor(
         }
 
     /**
-     * The pairing state as the chat entry point needs to see it.
-     *
-     * A [PairingState.Paired] carrying a blank partner id is what the pairing repository
-     * falls back to when the partner's profile document cannot be read. There is nothing
-     * to start a conversation with in that case, so it reads as [CoParentLink.NotPaired].
+     * The chat partner as the chat entry point needs to see it. [ChatPartnerSource.resolve] has
+     * already turned a paired state with no usable partner id into [ChatPartner.None].
      */
-    private fun PairingState.toCoParentLink(): CoParentLink = when (this) {
-        PairingState.Loading -> CoParentLink.Resolving
-        is PairingState.NotPaired -> CoParentLink.NotPaired
-        is PairingState.Paired ->
-            partner.id.takeIf { it.isNotBlank() }?.let { CoParentLink.Linked(it) }
-                ?: CoParentLink.NotPaired
+    private fun ChatPartner.toCoParentLink(): CoParentLink = when (this) {
+        ChatPartner.Resolving -> CoParentLink.Resolving
+        ChatPartner.None -> CoParentLink.NotPaired
+        is ChatPartner.Linked -> CoParentLink.Linked(partnerUid)
     }
 
     private companion object {

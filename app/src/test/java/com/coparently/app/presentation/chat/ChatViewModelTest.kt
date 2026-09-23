@@ -1,6 +1,9 @@
 package com.coparently.app.presentation.chat
 
 import app.cash.turbine.test
+import com.coparently.app.data.chat.ChatPartnerSource
+import com.coparently.app.data.family.FamilyOption
+import com.coparently.app.data.family.SelectedFamilySource
 import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.domain.chat.ConversationKey
 import com.coparently.app.domain.model.Conversation
@@ -54,6 +57,7 @@ class ChatViewModelTest {
 
     private lateinit var pairingState: MutableStateFlow<PairingState>
     private lateinit var signedInUid: MutableStateFlow<String?>
+    private lateinit var projectedFamily: MutableStateFlow<FamilyOption?>
     private lateinit var conversationInRoom: MutableStateFlow<Conversation?>
     private lateinit var messageRepository: MessageRepository
     private lateinit var userRepository: UserRepository
@@ -64,6 +68,7 @@ class ChatViewModelTest {
 
         pairingState = MutableStateFlow(PairingState.Loading)
         signedInUid = MutableStateFlow<String?>(UID)
+        projectedFamily = MutableStateFlow(null)
         conversationInRoom = MutableStateFlow(null)
 
         messageRepository = mockk(relaxed = true) {
@@ -399,6 +404,98 @@ class ChatViewModelTest {
         verify(exactly = 0) { messageRepository.observeUnreadCount(any(), any()) }
     }
 
+    // ---- M-8: chat follows the family on screen, not the server's first co-parent ----------
+    //
+    // The server's `partnerId` is `partnersOf(...)[0]`, and with two families it keeps naming the
+    // first one whatever the switcher says. `pairingState` below stays on PARTNER throughout; only
+    // the projection the switcher writes onto the Room row moves.
+
+    @Test
+    fun `switching family re-keys the co-parent link`() = runTest {
+        pairingState.value = PairingState.Paired(partner())
+        projectedFamily.value = family(PARTNER)
+        val viewModel = createViewModel()
+
+        viewModel.coParentLink.test {
+            assertEquals(CoParentLink.Resolving, awaitItem())
+            assertEquals(CoParentLink.Linked(PARTNER), awaitItem())
+
+            projectedFamily.value = family(SECOND_PARTNER)
+
+            assertEquals(CoParentLink.Linked(SECOND_PARTNER), awaitItem())
+        }
+    }
+
+    @Test
+    fun `switching family re-keys the thread and the unread badge`() = runTest {
+        pairingState.value = PairingState.Paired(partner())
+        projectedFamily.value = family(PARTNER)
+        every { messageRepository.observeUnreadCount(CONVERSATION, UID) } returns flowOf(3)
+        every { messageRepository.observeUnreadCount(SECOND_CONVERSATION, UID) } returns flowOf(5)
+        val viewModel = createViewModel()
+
+        viewModel.unreadCount.test {
+            advanceUntilIdle()
+            assertEquals(3, expectMostRecentItem())
+
+            projectedFamily.value = family(SECOND_PARTNER)
+            advanceUntilIdle()
+
+            // The badge is the selected family's, and only that family's — the other one is not
+            // mirrored while it is not on screen, so its count would be a guess.
+            assertEquals(5, expectMostRecentItem())
+        }
+        viewModel.conversations.test {
+            awaitItem()
+            advanceUntilIdle()
+            cancelAndIgnoreRemainingEvents()
+        }
+        verify { messageRepository.observeConversation(SECOND_CONVERSATION) }
+    }
+
+    @Test
+    fun `the co-parent action opens the selected family's thread`() = runTest {
+        pairingState.value = PairingState.Paired(partner())
+        projectedFamily.value = family(SECOND_PARTNER)
+        val viewModel = createViewModel()
+        var opened: String? = null
+
+        viewModel.startConversationWithPartner { opened = it }
+        runCurrent()
+
+        assertEquals(SECOND_CONVERSATION, opened)
+        coVerify(exactly = 0) { messageRepository.ensureConversation(UID, PARTNER, any()) }
+    }
+
+    @Test
+    fun `a one-family account reads the same thread before and after the projection lands`() = runTest {
+        pairingState.value = PairingState.Paired(partner())
+        val viewModel = createViewModel()
+
+        viewModel.coParentLink.test {
+            assertEquals(CoParentLink.Resolving, awaitItem())
+            assertEquals(CoParentLink.Linked(PARTNER), awaitItem())
+
+            projectedFamily.value = family(PARTNER)
+            advanceUntilIdle()
+
+            // Not even a re-emission: nothing on a one-family account may flicker.
+            expectNoEvents()
+        }
+    }
+
+    @Test
+    fun `a stale projection does not invent a co-parent for an unpaired account`() = runTest {
+        pairingState.value = PairingState.NotPaired()
+        projectedFamily.value = family(SECOND_PARTNER)
+        val viewModel = createViewModel()
+
+        viewModel.coParentLink.test {
+            assertEquals(CoParentLink.Resolving, awaitItem())
+            assertEquals(CoParentLink.NotPaired, awaitItem())
+        }
+    }
+
     // ---- the draft belongs to the composer, not to the send's outcome ----
 
     @Test
@@ -448,12 +545,15 @@ class ChatViewModelTest {
         val pairingRepository = mockk<PairingRepository> {
             every { observePairingState() } returns pairingState
         }
-        coEvery { userRepository.getUserById(PARTNER) } returns null
+        val selectedFamilySource = mockk<SelectedFamilySource> {
+            every { observe(any()) } returns projectedFamily
+        }
+        coEvery { userRepository.getUserById(any()) } returns null
         return ChatViewModel(
             messageRepository,
             userRepository,
             eventRepository,
-            pairingRepository,
+            ChatPartnerSource(userRepository, pairingRepository, selectedFamilySource),
             preferences
         )
     }
@@ -462,6 +562,8 @@ class ChatViewModelTest {
     private fun draftStore() = mockk<EncryptedPreferences>(relaxed = true) {
         every { getChatDraft(any()) } returns ""
     }
+
+    private fun family(partnerUid: String) = FamilyOption(ConversationKey.of(UID, partnerUid), partnerUid)
 
     private fun partner() = PartnerSummary(
         id = PARTNER,
@@ -494,6 +596,12 @@ class ChatViewModelTest {
         /** What `ConversationKey.of(UID, PARTNER)` derives; kept literal so the test pins it. */
         const val CONVERSATION = "user-a__user-b"
         const val OTHER_CONVERSATION = "conversation-2"
+
+        /** A second co-parent, in a second family. */
+        const val SECOND_PARTNER = "user-c"
+
+        /** What `ConversationKey.of(UID, SECOND_PARTNER)` derives. */
+        const val SECOND_CONVERSATION = "user-a__user-c"
 
         /** Unsent text in the composer. */
         const val DRAFT = "are you free on Friday?"
