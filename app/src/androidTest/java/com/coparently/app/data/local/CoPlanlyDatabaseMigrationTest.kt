@@ -706,6 +706,57 @@ class CoPlanlyDatabaseMigrationTest {
         }
     }
 
+    /**
+     * 36-to-37 adds the outbox for event revisions (MON-4) and leaves every event alone.
+     *
+     * The history starts on the day this ships: nothing is backfilled, because a "created"
+     * revision minted from today's state would be a record of the upgrade dated as the parent's.
+     * So an existing event must come through untouched and the new table must be empty — and
+     * usable, which is what the insert at the end proves.
+     */
+    @Test
+    fun migration36To37_addsAnEmptyRevisionOutbox() {
+        val db = helper.createDatabase(TEST_DB, VERSION_36)
+        db.execSQL(
+            """
+            INSERT INTO custody_models (id, modelType, patternDays, momDaysPattern, startDate,
+                                        isActive, repeatYearly, createdAt, lastModifiedAt,
+                                        lastModifiedAtMillis, dayOverridesJson, contactWindowsJson)
+            VALUES ('m1', 'week_on_week_off', 14, '[0,1,2,3,4,5,6]',
+                    '2026-08-03', 1, 1, '2026-08-01T09:00:00', '', 1785578400000, NULL, NULL)
+            """.trimIndent()
+        )
+        db.close()
+
+        val migrated = helper.runMigrationsAndValidate(
+            TEST_DB,
+            VERSION_37,
+            true,
+            DatabaseMigrations.MIGRATION_36_37
+        )
+
+        migrated.query("SELECT momDaysPattern FROM custody_models").use {
+            assertTrue(it.moveToFirst())
+            assertEquals("[0,1,2,3,4,5,6]", it.getString(0))
+        }
+        migrated.query("SELECT COUNT(*) FROM event_version_outbox").use {
+            assertTrue(it.moveToFirst())
+            assertEquals("nothing is backfilled", 0, it.getInt(0))
+        }
+        migrated.execSQL(
+            """
+            INSERT INTO event_version_outbox (id, eventId, kind, editorUid, deviceTimeMillis,
+                                              snapshotJson, audienceJson, familyId, attempts)
+            VALUES ('v1', 'e1', 'created', 'alice', 1787000000000, '{}', '[]', NULL, 0)
+            """.trimIndent()
+        )
+        migrated.query("SELECT kind, familyId FROM event_version_outbox").use {
+            assertTrue(it.moveToFirst())
+            assertEquals("created", it.getString(0))
+            assertTrue("an unshared event's revision has no family", it.isNull(1))
+        }
+    }
+
     private companion object {
         const val TEST_DB = "coplanly-migration-test.db"
         const val VERSION_11 = 11
@@ -723,6 +774,7 @@ class CoPlanlyDatabaseMigrationTest {
         const val VERSION_25 = 25
         const val VERSION_34 = 34
         const val VERSION_36 = 36
+        const val VERSION_37 = 37
 
         /** 2026-08-01T12:00:00 at UTC+05:30, i.e. 06:30:00Z. */
         const val NOON_AT_PLUS_FIVE_THIRTY_MILLIS = 1_785_565_800_000L

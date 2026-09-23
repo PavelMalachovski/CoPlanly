@@ -602,6 +602,71 @@ service cloud.firestore {
                       resource.data.createdByFirebaseUid == request.auth.uid;
     }
 
+    // ---- Event revisions (MON-4) ----------------------------------------
+    // One immutable document per saved revision of a non-private event: the whole event as the
+    // editing device saved it, who saved it, when their device says they did, and when the server
+    // received it. docs/DESIGN-court-record.md §4 is the design; CLAUDE.md item 25 the invariants.
+    //
+    // **Create only, for everybody, for ever.** That is the whole guarantee the export sells: a
+    // revision, once written, can be changed or removed by neither parent. `update` and `delete`
+    // are false with no exception — an account deletion runs as admin and bypasses this, which
+    // is the one path meant to remove them.
+
+    // True when the caller may edit the event document [ev] — its creator, or a co-parent the
+    // event is shared with under `read_write`. The same two branches as the events update rule.
+    function mayEditEvent(ev) {
+      return ev.get('createdByFirebaseUid', '') == request.auth.uid ||
+             (request.auth.uid in ev.get('sharedWith', []) &&
+              ev.get('permissions', '') == 'read_write');
+    }
+
+    // True when the caller may record a revision of [eventId].
+    //
+    // A missing event does not refuse it, deliberately. The revision comes from a device outbox,
+    // and the event may not have landed yet (created offline) or may already be gone (created and
+    // deleted offline, or swept 90 days after its tombstone); refusing either would strand the
+    // outbox for ever. It grants nothing: the author is the caller and the audience is bound to
+    // the caller's own family below, so a revision of a missing event is the caller's own words
+    // under their own name — which is what creating an event already is.
+    function mayRecordRevisionOf(eventId) {
+      return !exists(/databases/$(database)/documents/events/$(eventId)) ||
+             mayEditEvent(get(/databases/$(database)/documents/events/$(eventId)).data);
+    }
+
+    match /event_versions/{versionId} {
+      // The revision's own audience, frozen when it was saved. Not the event's current one and
+      // not `calendar_friends`: a friend sees the calendar as it stands, and the history of how
+      // the two parents edited it is theirs. Unpair does not narrow it either — the ex-partner
+      // keeps the revisions they could see, as they keep the chat thread.
+      allow read: if isAuthenticated() &&
+                    request.auth.uid in resource.data.get('sharedWith', []);
+
+      allow create: if isAuthenticated() &&
+                      request.resource.data.keys().hasOnly(
+                        ['eventId', 'kind', 'editorUid', 'deviceTimeMillis', 'recordedAt',
+                         'sharedWith', 'familyId', 'event', 'formatVersion']) &&
+                      request.resource.data.keys().hasAll(
+                        ['eventId', 'kind', 'editorUid', 'deviceTimeMillis', 'recordedAt',
+                         'sharedWith', 'familyId', 'event', 'formatVersion']) &&
+                      request.resource.data.editorUid == request.auth.uid &&
+                      // The server's clock, and only the server's: the client writes
+                      // `FieldValue.serverTimestamp()`, which is exactly `request.time`.
+                      request.resource.data.recordedAt == request.time &&
+                      request.resource.data.deviceTimeMillis is int &&
+                      request.resource.data.kind in ['created', 'updated', 'deleted'] &&
+                      request.resource.data.formatVersion is int &&
+                      request.resource.data.eventId is string &&
+                      request.resource.data.event is map &&
+                      request.resource.data.event.get('id', '') == request.resource.data.eventId &&
+                      request.resource.data.sharedWith is list &&
+                      request.auth.uid in request.resource.data.sharedWith &&
+                      isMyAudience(request.resource.data.sharedWith) &&
+                      familyIsMineOrBlank(request.resource.data.familyId) &&
+                      mayRecordRevisionOf(request.resource.data.eventId);
+
+      allow update, delete: if false;
+    }
+
     // ---- Child info ----------------------------------------------------
     // Shared between a parent pair via the sharedWith list.
     // True when `guests` names the caller and their grant has run out — or carries no usable

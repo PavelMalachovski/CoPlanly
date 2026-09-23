@@ -221,6 +221,25 @@ describe('deleteAccountDataImpl', () => {
     assert.ok(survivor.sharedWith.includes(BOB), 'the author lost their own audience');
   });
 
+  // MON-4. A revision is the one document no client may ever delete, so this is the only path
+  // that removes one — and it must remove exactly the departing parent's, not the co-parent's
+  // record of what *they* changed on the departing parent's event.
+  it('deletes the revisions the user saved and narrows the co-parent\'s', async () => {
+    const db = fakeDb(Object.assign(family(), {
+      event_versions: [
+        {id: 'v-alice', eventId: 'ev-alice', editorUid: ALICE, sharedWith: [ALICE, BOB]},
+        {id: 'v-bob', eventId: 'ev-alice', editorUid: BOB, sharedWith: [ALICE, BOB]},
+      ],
+    }));
+
+    const removed = await myFunctions.deleteAccountDataImpl(db, ALICE);
+
+    assert.deepStrictEqual(db._store.event_versions.map((v) => v.id), ['v-bob']);
+    assert.deepStrictEqual(db._store.event_versions[0].sharedWith, [BOB]);
+    assert.strictEqual(removed.event_versions, 1);
+    assert.strictEqual(removed.event_versions_scrubbed, 1);
+  });
+
   it('deletes the conversation and every message in it', async () => {
     const db = fakeDb(family());
     await myFunctions.deleteAccountDataImpl(db, ALICE);

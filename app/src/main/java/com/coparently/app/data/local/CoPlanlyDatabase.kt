@@ -9,6 +9,7 @@ import com.coparently.app.data.local.dao.ChildInfoDao
 import com.coparently.app.data.local.dao.CustodyModelDao
 import com.coparently.app.data.local.dao.CustodyScheduleDao
 import com.coparently.app.data.local.dao.EventDao
+import com.coparently.app.data.local.dao.EventVersionOutboxDao
 import com.coparently.app.data.local.dao.ExpenseDao
 import com.coparently.app.data.local.dao.MessageDao
 import com.coparently.app.data.local.dao.ParentingPlanDao
@@ -21,6 +22,7 @@ import com.coparently.app.data.local.entity.ConversationEntity
 import com.coparently.app.data.local.entity.CustodyModelEntity
 import com.coparently.app.data.local.entity.CustodyScheduleEntity
 import com.coparently.app.data.local.entity.EventEntity
+import com.coparently.app.data.local.entity.EventVersionOutboxEntity
 import com.coparently.app.data.local.entity.ExpenseEntity
 import com.coparently.app.data.local.entity.MessageEntity
 import com.coparently.app.data.local.entity.ParentingPlanEntryEntity
@@ -46,9 +48,10 @@ import com.coparently.app.data.local.entity.UserEntity
         ExpenseEntity::class,
         BudgetEntity::class,
         ChangeRequestEntity::class,
-        ParentingPlanEntryEntity::class
+        ParentingPlanEntryEntity::class,
+        EventVersionOutboxEntity::class
     ],
-    version = 36,
+    version = 37,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -107,5 +110,10 @@ abstract class CoPlanlyDatabase : RoomDatabase() {
      * Provides access to ParentingPlanDao.
      */
     abstract fun parentingPlanDao(): ParentingPlanDao
+
+    /**
+     * Provides access to EventVersionOutboxDao — event revisions waiting for the server (MON-4).
+     */
+    abstract fun eventVersionOutboxDao(): EventVersionOutboxDao
 }
 

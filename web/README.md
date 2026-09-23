@@ -62,7 +62,8 @@ grep -o '{{[A-Z_]*}}' web/delete-account/index.html | sort -u   # nothing left b
 Every factual claim on the page mirrors `deleteAccountDataImpl` in `functions/index.js` and the
 "Deleting your account" section of `docs/legal/PRIVACY-POLICY.md`. **If any of the three changes,
 all three do.** The one most likely to drift is the list of collections: the callable deletes
-`events`, `child_info`, `pets`, `expenses`, `budgets`, `change_requests`, `conversations`,
+`events`, `event_versions` (the revisions the user saved — MON-4), `child_info`, `pets`,
+`expenses`, `budgets`, `change_requests`, `conversations`,
 `messages`, `custody_models`, `family_settings`, `calendar_friends`, `friend_profiles`,
 `invitations`, `notification_queue` and `users`, and adding a collection to the app without adding
 it there leaves data behind that the page promises is gone.

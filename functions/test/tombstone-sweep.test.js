@@ -149,6 +149,25 @@ describe('sweepDeletedDocuments', () => {
     ]);
   });
 
+  it('never sweeps an event revision, not even one of a swept event (MON-4)', async () => {
+    // A revision outlives its event on purpose: a deletion is the edit a dispute is most likely
+    // to be about, and a history that vanished with the thing it describes would be missing it.
+    // The revision below even carries a top-level `deletedAtMillis`, which no real one does, to
+    // show that it is the collection list — not the field — that keeps the sweep away.
+    assert.ok(!index.TOMBSTONED_COLLECTIONS.includes('event_versions'));
+    const db = fakeDb({
+      events: [tombstonedDaysAgo('e-old', 200)],
+      event_versions: [
+        Object.assign(tombstonedDaysAgo('v-1', 200), {eventId: 'e-old', kind: 'deleted'}),
+      ],
+    });
+
+    const removed = await index.sweepDeletedDocumentsImpl(db, NOW);
+
+    assert.strictEqual(removed, 1);
+    assert.deepStrictEqual(db._deleted, [{id: 'e-old', collection: 'events'}]);
+  });
+
   it('leaves collections that are not tombstoned alone', async () => {
     // `budgets` and `change_requests` delete by other means or not at all. A sweep that widened
     // to every collection would be a scheduled job that removes documents no client ever marked.

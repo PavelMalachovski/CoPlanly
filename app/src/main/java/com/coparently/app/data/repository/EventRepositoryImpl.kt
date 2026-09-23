@@ -8,6 +8,8 @@ import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestoreEventDataSource
 import com.coparently.app.data.sync.EventDocument
 import com.coparently.app.data.sync.Tombstone
+import com.coparently.app.data.versions.EventVersionKind
+import com.coparently.app.data.versions.EventVersionRecorder
 import com.coparently.app.domain.activity.ActivityAnnouncement
 import com.coparently.app.domain.activity.ActivityAnnouncer
 import com.coparently.app.domain.activity.ActivityEntityType
@@ -43,7 +45,8 @@ class EventRepositoryImpl @Inject constructor(
     private val userDao: UserDao,
     private val firebaseAuthService: FirebaseAuthService,
     private val firestoreEventDataSource: FirestoreEventDataSource,
-    private val activityAnnouncer: ActivityAnnouncer
+    private val activityAnnouncer: ActivityAnnouncer,
+    private val eventVersionRecorder: EventVersionRecorder
 ) : EventRepository {
 
     private val dateFormatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
@@ -163,16 +166,22 @@ class EventRepositoryImpl @Inject constructor(
         }.let { withAcceptance(it, firebaseUser?.uid) }
         eventDao.insertEvent(stamped.toEntity())
 
-        if (firebaseUser != null && !stamped.syncedToFirestore && !stamped.isPrivate) {
+        if (firebaseUser != null && !stamped.isPrivate) {
             val audience = shareTargets(stamped, firebaseUser.uid, firebaseUser.uid)
-            firestoreEventDataSource.insertEvent(stamped.id, stamped.toFirestoreMap(firebaseUser.uid, audience))
+            val document = stamped.toFirestoreMap(firebaseUser.uid, audience)
+            // Queued before the upload, so the revision survives an upload that never lands.
+            recordVersion(stamped, EventVersionKind.CREATED, firebaseUser.uid, audience, document)
 
-            val syncedEvent = stamped.copy(
-                syncedToFirestore = true,
-                createdByFirebaseUid = firebaseUser.uid,
-                sharedWith = audience
-            )
-            eventDao.updateEvent(syncedEvent.toEntity())
+            if (!stamped.syncedToFirestore) {
+                firestoreEventDataSource.insertEvent(stamped.id, document)
+
+                val syncedEvent = stamped.copy(
+                    syncedToFirestore = true,
+                    createdByFirebaseUid = firebaseUser.uid,
+                    sharedWith = audience
+                )
+                eventDao.updateEvent(syncedEvent.toEntity())
+            }
         }
 
         announce(stamped, ActivityKind.EVENT_CREATED)
@@ -191,7 +200,9 @@ class EventRepositoryImpl @Inject constructor(
         } else {
             val uid = event.createdByFirebaseUid ?: firebaseUser.uid
             val audience = shareTargets(event, uid, firebaseUser.uid)
-            firestoreEventDataSource.updateEvent(event.id, event.toFirestoreMap(uid, audience))
+            val document = event.toFirestoreMap(uid, audience)
+            recordVersion(event, EventVersionKind.UPDATED, firebaseUser.uid, audience, document)
+            firestoreEventDataSource.updateEvent(event.id, document)
             // Converge the Room copy on what was uploaded. Without this the stale audience
             // survives locally until the next down-sync, which is exactly the window the
             // unpair sweep cannot reach.
@@ -232,6 +243,19 @@ class EventRepositoryImpl @Inject constructor(
         }
 
         val firebaseUser = firebaseAuthService.getCurrentUser() ?: return
+        // The deletion is a revision too — the one a dispute is most likely to be about. It
+        // carries the event as it stood plus the tombstone fields, so the history shows what was
+        // deleted and not merely that something was.
+        val creatorUid = event.createdByFirebaseUid ?: firebaseUser.uid
+        val audience = shareTargets(event, creatorUid, firebaseUser.uid)
+        recordVersion(
+            event = event,
+            kind = EventVersionKind.DELETED,
+            editorUid = firebaseUser.uid,
+            audience = audience,
+            document = event.toFirestoreMap(creatorUid, audience) +
+                Tombstone.fields(deletedAtMillis, firebaseUser.uid)
+        )
         val tombstoned = firestoreEventDataSource.tombstoneEvent(
             id = event.id,
             deletedAtMillis = deletedAtMillis,
@@ -351,6 +375,32 @@ class EventRepositoryImpl @Inject constructor(
             senderName = userDao.getUserById(myUid)?.name.orEmpty(),
             suppress = event.isPrivate || (mine != null && mine != myUid)
         )
+    }
+
+    /**
+     * Queues a revision of [event] for `event_versions` and starts its upload (MON-4).
+     *
+     * Called with the very map this save uploads, so a revision is the event document as it was
+     * written and never a second mapping of it. Private events are refused inside the recorder
+     * as well as by every caller (CLAUDE.md item 3).
+     */
+    private suspend fun recordVersion(
+        event: Event,
+        kind: EventVersionKind,
+        editorUid: String,
+        audience: List<String>,
+        document: Map<String, Any?>
+    ) {
+        eventVersionRecorder.record(
+            eventId = event.id,
+            kind = kind,
+            editorUid = editorUid,
+            isPrivate = event.isPrivate,
+            audience = audience,
+            familyId = event.familyId,
+            snapshot = document
+        )
+        eventVersionRecorder.flushInBackground(editorUid)
     }
 
     /** The announcement an acceptance decision deserves, or null when this was an ordinary edit. */
