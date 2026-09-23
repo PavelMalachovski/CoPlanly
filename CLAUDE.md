@@ -33,7 +33,8 @@ Second pass over the six main screens, from a Claude Design audit. It builds on 
 replace) the July 2026 overhaul below — those invariants still hold except where noted here.
 
 1. **Shared UI primitives** live in `presentation/common/DesignSystem.kt`: `SectionGroup`
-   (one tonal container per run of rows, dividers inserted for you), `SectionRow` (icon,
+   (one tonal container per run of rows; call its scope's `Divider()` between rows — this line
+   used to say they were inserted for you, and they are not), `SectionRow` (icon,
    title, status/value, **at most one** trailing control), `GroupLabel`, `PillChip`. Home,
    Settings, Expenses and Chat all render through these — do not reintroduce
    `Card { ListItem { … } }` per row, which is what the audit called "double surfaces".
@@ -98,6 +99,19 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     holiday tint, the proposal preview, the swap arrows, the long press. That is the line — a
     pattern crosses the month boundary, a thing you would answer does not.
 
+11. **Motion has one vocabulary** (September 2026 audit, `docs/AUDIT-2026-09.md` §4).
+    `presentation/theme/Motion.kt` holds the only durations — `SHORT_MS` 150 (fades, crossfades),
+    `MEDIUM_MS` 300 (navigation, forms), `LONG_MS` 500 (a month changing, the splash exit) — and
+    `MONTH_PAGING_MS` is an alias of `LONG_MS`. Detail screens push (`slideInFromRight` …, also
+    the `NavHost` default so a route that names nothing does not get Navigation's own 700 ms
+    fade); **the four tabs fade-through between each other** (`tabEnter`/`tabExit` in
+    `NavGraph.kt`), because peers have no direction. Don't add a literal duration — pick a
+    token, or add one here with its reason.
+12. **The parent-colour picker is hidden** behind `PARENT_COLOUR_PICKER_ENABLED`
+    (`theme/ParentColors.kt`), in Settings and in onboarding. No screen reads the chosen
+    palette yet (UX-15), so the picker changed nothing — design item 8. Turn the flag on in the
+    same change that threads `ParentsSource.palette` into `ParentColors`.
+
 ## UX/UI overhaul (July 2026 design review) — implemented, keep consistent
 
 Direction agreed after a live walkthrough and shipped on `feature/ux-overhaul`.
@@ -124,7 +138,8 @@ When touching the UI, keep these invariants:
    (`getCustody`): active `CustodyModel` first, legacy `CustodyScheduleEntity` as fallback.
    Don't read the legacy schedules directly in a view — model-based custody would vanish.
 5. **Event tap opens a preview bottom sheet** (`EventPreviewSheet`, details + Edit/Delete);
-   the editor is the second step. The event form has a sticky bottom Save button.
+   the editor is the second step — on Home too since September 2026 (`HomeViewModel.
+   openPreview`; Home passes `onDelete = null` because it has no delete-with-undo). The event form has a sticky bottom Save button.
 6. **Color semantics**: Mom-pink/Dad-blue are parent identity ONLY, applied via
    `CoPlanlyColors.MomPink/DadBlue` directly. The theme's `secondary` slot is a neutral
    indigo (`CoPlanlyColors.Neutral*`), so generic Material selected states (FilterChips)

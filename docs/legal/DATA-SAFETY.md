@@ -18,7 +18,7 @@
 | Is data encrypted at rest on the device? | **Yes, for the app's database** | Room opens through SQLCipher; the passphrase is wrapped by an Android Keystore key (SEC-2). The Firebase SDK's offline cache and Coil's image cache are plaintext files under Android's file-based encryption only — the privacy policy says so (September 2026). Play does not ask this question — the row is here because the privacy policy makes the claim and something has to say what backs it |
 | Do you provide a way for users to request that their data is deleted? | **Yes** | Settings → Account → Delete account, backed by the `deleteAccount` callable |
 | Is data collection required, or can users choose? | **Required** for the account and shared content; **optional** for the medical profile, photos, Google Calendar, and — since REL-5 — analytics and crash reporting |
-| Have you committed to Play's Families policy? | {{DECIDE}} — the app is for parents, not children, and offers no child accounts |
+| Have you committed to Play's Families policy? | {{DECIDE}} — the app is for parents, not children, and offers no child accounts. Audit 2026-09 recommends: target audience **18+ only**, **not** in the Families programme, no child imagery or "kids" wording in the listing |
 
 ## Data types
 
@@ -29,7 +29,11 @@ our processor are declared.
 | Data type | Collected | Shared | Optional | Purpose |
 | --- | --- | --- | --- | --- |
 | Name | Yes | No | No | Account management, app functionality |
-| Email address | Yes | No | No | Account management, invitations |
+| Email address | Yes | No | No | Account management (email invitations were removed in August 2026) |
+| Phone number | Yes | No | **Yes** | App functionality — `User.phone` on the profile and onboarding, and the phone numbers of emergency, school, activity and vet contacts (third parties' numbers, entered by a parent) |
+| Address | Yes | No | **Yes** | App functionality — addresses on emergency and school contacts in the child's record |
+| Other info | Yes | No | **Yes** | App functionality — a child's date of birth, school and activity details |
+| Device or other IDs | Yes | No | No | App functionality (the FCM push token stored on `users/{uid}`) and, with consent, analytics/crash reporting (Firebase installation ID) |
 | User IDs | Yes | No | No | Account management |
 | Photos | Yes | No | Yes | App functionality — receipts, event images, medical and pet photos |
 | Calendar events | Yes | No | No | App functionality |
@@ -83,6 +87,6 @@ Play data types are *Crash logs* and *Diagnostics* / *App interactions* under Ap
 **No advertising, no ad IDs, no tracking.** The app declares no advertising SDK and does not
 link data to third-party identifiers.
 
-**AI.** No user data reaches a generative model today: the AI screens are not reachable from
-navigation. **If any AI feature ships, this declaration must be revisited**, because the
+**AI.** No user data reaches a generative model: the AI subsystem was deleted in August 2026
+(MON-7). **If any AI feature ships, this declaration must be revisited**, because the
 prompts would carry calendar contents and message text to a third party.

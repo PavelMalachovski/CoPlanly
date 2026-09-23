@@ -82,7 +82,7 @@
 
 <div class="draft" role="note">
   <p><strong>Draft.</strong> This page has not been reviewed by a lawyer and is not in force.
-    Placeholders still to be filled in: <code>{{COMPANY_ID}}</code>, <code>{{CONSENT_SENTENCE_ONCE_CONSENT_SCREEN_SHIPS}}</code>, <code>{{DATE}}</code>, <code>{{DPO_PARAGRAPH_IF_APPOINTED}}</code>, <code>{{FIRESTORE_REGION_SENTENCE}}</code>, <code>{{LEGAL_ENTITY_NAME}}</code>, <code>{{MAIL_PROVIDER}}</code>, <code>{{PLACEHOLDER}}</code>, <code>{{PRIVACY_CONTACT_EMAIL}}</code>, <code>{{REGISTERED_ADDRESS}}</code>, <code>{{WEB_DELETION_URL}}</code>.</p>
+    Placeholders still to be filled in: <code>{{COMPANY_ID}}</code>, <code>{{DATE}}</code>, <code>{{DPO_PARAGRAPH_IF_APPOINTED}}</code>, <code>{{FIRESTORE_REGION_SENTENCE}}</code>, <code>{{LEGAL_ENTITY_NAME}}</code>, <code>{{PLACEHOLDER}}</code>, <code>{{PRIVACY_CONTACT_EMAIL}}</code>, <code>{{REGISTERED_ADDRESS}}</code>, <code>{{WEB_DELETION_URL}}</code>.</p>
 </div>
 
 <h1>CoPlanly — Privacy Policy</h1>
@@ -155,12 +155,17 @@ record.</li>
 <li><strong>Crash reports</strong> (Firebase Crashlytics) and <strong>usage analytics</strong> (Firebase Analytics) in
 release builds. These carry no message content, no event titles and no records about your
 child. They record which screens are opened and which actions succeed or fail.
-{{CONSENT_SENTENCE_ONCE_CONSENT_SCREEN_SHIPS}}</li>
+Both are <strong>off until you agree</strong> on the screen shown before sign-in, and you can change your
+answer at any time in Settings → App.</li>
 </ul>
 <h3>Google Calendar, if you connect it</h3>
 <p>If you connect a Google account, we request access to your calendars so events can be
-imported and exported. We store the resulting access and refresh tokens <strong>encrypted on your
-device only</strong> — they are never sent to our servers. Disconnecting in Settings deletes them.</p>
+imported and exported. The resulting access and refresh tokens are <strong>stored encrypted on your
+device only</strong>. To obtain and renew them, the one-time authorisation code and, on each renewal,
+the refresh token pass through our server (a Google Cloud Function), which forwards them to
+Google and does not keep them. The server keeps only a one-way fingerprint (a SHA-256 hash) of
+your refresh token, linked to your account, so that a token stolen from somebody else cannot be
+renewed through our service. Disconnecting in Settings deletes the tokens from your device.</p>
 <h2>What happens on your device and goes nowhere</h2>
 <ul>
 <li><strong>Receipt scanning.</strong> When you photograph a receipt, the text is recognised <strong>entirely on
@@ -198,11 +203,6 @@ not synced, and not visible to your co-parent.</li>
 <td>Google (Calendar API)</td>
 <td>Only your calendar, only if you connect it</td>
 <td>The integration you enabled</td>
-</tr>
-<tr>
-<td>{{MAIL_PROVIDER}}</td>
-<td>The recipient&#39;s email address and the invitation text</td>
-<td>To deliver invitation emails</td>
 </tr>
 </tbody></table></div>
 <p>Google processes data both inside and outside the EU. Transfers outside the EEA rely on the
