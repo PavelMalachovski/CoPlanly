@@ -18,6 +18,7 @@ lines, and go on to the next one. Do not fix things during the session.
 | **3A** | Needs three accounts: you plus two co-parents. |
 | **[branch]** | Only in a build that includes `claude/charming-ritchie-d6uqz8` (merged to `main`, or built from that branch). On `main` @ `44f9d66` the check does not apply yet. |
 | **[#99]** | Lands with PR #99. Check it against the merged PR, because the details may differ. |
+| **[CI]** | The `instrumented` CI job already exercises the mechanism on an emulator (table below). The phone still confirms it against real data and real services. |
 
 **Warning: switching accounts wipes the phone's local data.** `AccountSwitchGuard` clears Room
 when a *different* uid signs in. Records that already synced come back from the cloud. Records
@@ -36,6 +37,19 @@ adb logcat -v time EncryptedDatabase:V DatabaseKey:V SyncService:V SyncWorker:V 
 `AndroidRuntime:E` is where a crash shows up, including a failed Room migration
 (`IllegalStateException: A migration from N to M was required but not found` or
 `Migration didn't properly handle`). A release build strips `Log.d/v/i` but keeps `Log.w/e`.
+
+**What CI now covers.** The `instrumented` job (API 30 emulator, debug build, Firebase mocked by
+`FakeFirebaseModule`, Room real) runs these on every Android pull request. A check they cover is
+marked **[CI]** below: CI saw the mechanism work, so on the phone it is a quick confirmation, and
+a failure there points at something the emulator does not have — real Firebase, real data, a
+Play install, a vendor skin.
+
+| Test (`app/src/androidTest/...`) | Covers | What only the phone still adds |
+| --- | --- | --- |
+| `presentation/common/PickerDatesTest`, `LocalDatePickerDialogTest` | §3.1: every picker's conversion and both picker composables, tapped, in Prague, Kiritimati (+14), Los Angeles and Pago Pago (−11) | Each *screen* saving what its picker returned, and a stored date staying put across a zone change |
+| `presentation/settings/PerAppLocaleTest` | §3.6: `setApplicationLocales` to cs/de/ru/uk renders Settings in that language | The Settings row itself, Android 13's system setting, and §4.2 (a Play install) — never CI |
+| `data/export/ExportFileWriterTest` | §6: a CSV (RFC 4180, statement first, formula guard, both clocks, no private event) and a PDF that `PdfRenderer` opens, written through the real writer; the share intent's `FileProvider` URI and read-only grant | Real revisions from the server, the share sheet, and a spreadsheet or PDF app opening the file |
+| `presentation/navigation/MainNavigationSmokeTest` | A signed-in launch visiting Home, Calendar (month/week/day), Chat, Expenses and Settings without a crash; bottom bar on the tabs only; icon-only controls named and ≥ 48 dp | Everything that needs data, a co-parent or a server; TalkBack itself (§3.9) |
 
 ---
 
@@ -221,7 +235,13 @@ Preconditions: `adb uninstall app.coplanly`, set the system to **dark** theme
 Signed in as A, with some data (the §2.2 install). Unless a check says otherwise, keep the system
 language as it is.
 
-### 3.1 Date pickers: the off-by-one fix · 1P
+### 3.1 Date pickers: the off-by-one fix · 1P [CI]
+
+**[CI]** Every picker below now opens one of two composables (`LocalDatePickerDialog`, or the
+child/pet `DatePickerDialog` that wraps it) and converts through `PickerDates`; CI taps both in a
+UTC+1, +14, −8 and −11 zone and checks the highlighted and the returned day. What is left here is
+each screen's own save and the stored date surviving a zone change, so one UTC+ and one UTC−
+pass over the list is enough.
 
 Material3 date pickers work in UTC-midnight millis. Before the fix, east of Greenwich the picker
 highlighted the previous day, and west of it the app saved the previous day. Test in **one UTC+
@@ -349,7 +369,12 @@ who does **not** have today.
 - **If it fails:** `presentation/custody/ContactWindowsSection.kt`, `MonthView.kt`,
   `DayWeekView.kt`, `CustodyResolver.contactWindowsResolver` [branch]; tag `CustodyModelRepo`.
 
-### 3.6 Per-app language picker, debug APK part · 1P
+### 3.6 Per-app language picker, debug APK part · 1P [CI]
+
+**[CI]** `PerAppLocaleTest` sets each of cs, de, ru and uk through
+`AppCompatDelegate.setApplicationLocales` and sees Settings render in it on API 30 — so
+`MainActivity` is still an `AppCompatActivity` and composition follows the choice. It does not tap
+the Settings row, and it cannot see Android 13's system setting or a Play install.
 
 - [ ] Settings → App → **Language** → **Deutsch**, while the phone is in another language. The
       UI switches at once.
@@ -394,7 +419,9 @@ who does **not** have today.
 - [ ] **Home → tap an event.** The preview sheet opens, Edit works from it, and there is no
       Delete (Home passes `onDelete = null`).
 - [ ] **TalkBack:** delete an expense through the actions menu, and toggle "Private" on an event.
-      Each switch announces its name.
+      Each switch announces its name. (**[CI]** checks only that icon-only controls on Home,
+      Calendar, Chat, Expenses and Settings carry a label and are at least 48 dp — on empty
+      screens. TalkBack's reading order and the controls that appear with data are still yours.)
 - [ ] **Google Calendar** connect and import. This needs REL-3's OAuth env and a functions
       deploy. It also covers SEC-5 (tokens in `EncryptedPreferences`): relaunch the app and the
       account stays connected.
@@ -530,6 +557,13 @@ Preconditions: A is paired with **both** B and C (two families). Invite C from S
 
 **Verify against the merged PR; the details may differ.** Expected: event versions, plus a PDF
 and CSV export started from Settings.
+
+**[CI]** `ExportFileWriterTest` writes both files on the emulator from a fixture (two revisions
+with both clocks, a private event, a formula-looking message, an expense) and checks the CSV
+parses as RFC 4180 with the statement first, the formula guard and no private event, that the
+PDF opens in `PdfRenderer`, and that the share intent carries the `FileProvider` URI with a
+read-only grant. Still yours: revisions that came from the server, the share sheet, and a real
+spreadsheet and PDF app.
 
 Preconditions:
 - a build with PR #99 merged;
