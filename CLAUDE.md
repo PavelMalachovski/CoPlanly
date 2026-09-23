@@ -215,6 +215,9 @@ cd firestore-tests && npm test              # firestore.rules + storage.rules on
   prove the ruleset *in this repository*; only a deploy settles what the live bucket enforces,
   which is exactly the gap the `pet_photos` entry below describes.
 - Windows dev machine; Gradle wrapper works from Git Bash and PowerShell.
+- **What only a phone can prove** (SEC-2's conversion of real data, REL-7's Gson-after-R8, the
+  dark cold start, cross-time-zone chat, …) is one ordered script: `docs/DEVICE-CHECKLIST.md`.
+  Add a check there when you ship something CI cannot see.
 - `google-services.json` is required for the Google Services plugin, but the build
   degrades gracefully if it is missing (see the conditional apply in `app/build.gradle.kts`).
 - **GitHub CI runs on every pull request, and on every push to `main`** — a push to a
@@ -250,18 +253,18 @@ cd firestore-tests && npm test              # firestore.rules + storage.rules on
   changes what every Android job builds in order to fix something that belongs to the tests.
   Room is deliberately left real, which is what makes this the first thing anywhere to execute
   the SEC-2 SQLCipher open path rather than merely compile it.
-  **(2) Missing schemas.** `CoPlanlyDatabaseMigrationTest` holds 14 test methods and only the
-  six covering 11→12, 12→13 and 13→14 can run. The other eight name 14→15 through 24→25 and
-  need `15.json`–`24.json`, which do not exist and cannot be regenerated — `app/schemas/` holds
-  2–14, then 33 and 34. Those eight have **never passed anywhere**; they were written against
+  **(2) Missing schemas.** `CoPlanlyDatabaseMigrationTest` held 14 test methods when the job
+  was added, and only the six covering 11→12, 12→13 and 13→14 could run. The other eight name
+  14→15 through 24→25 and need `15.json`–`24.json`, which do not exist and cannot be
+  regenerated — `app/schemas/` holds 2–14, then 33, 34 and 36. Those eight have **never passed anywhere**; they were written against
   schemas that were already gone. They carry `@Ignore` naming the versions they want, so the
   job is green on what can run and the intent survives for whoever restores a schema. Do not
   read that as ordinary quarantine: an `@Ignore` normally hides a defect, and this one records
   missing data that no fix to the code can supply. The migrations a test can prove are those
-  six plus 34→35 (MON-13's region) and 35→36 (MON-6b's contact windows) — this line used to
-  credit a 33→34 test to MON-5, and none exists (it could be written: `33.json` and `34.json` are
-  both there). Those two new tests each run 34→36 through both migrations, because **`35.json`
-  does not exist**: the build exports only the current version, and v35 and v36 landed on the
+  six plus 33→34 (MON-5's parenting plan), 34→35 (MON-13's region) and 35→36 (MON-6b's contact
+  windows) — this line once credited a 33→34 test to MON-5 before one existed; it was written in
+  September 2026 from `33.json` and `34.json`. The last two each run 34→36 through both
+  migrations, because **`35.json` does not exist**: the build exports only the current version, and v35 and v36 landed on the
   same branch before the Regenerate workflow ran, so 35 was never current there. A schema
   version that is skipped this way is a new gap of the CQ-1 kind; run Regenerate after each
   version bump, not after a batch of them.

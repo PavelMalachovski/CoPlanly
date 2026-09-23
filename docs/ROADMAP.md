@@ -62,6 +62,11 @@ invocation is yours.
 
 ## 1. Where the remaining work can be done
 
+> **Device session:** every 👁 and 💻 item below that a phone can answer — SEC-2's conversion of an
+> existing database, UX-13, REL-7, CQ-18, M-8, MON-6b, UX-15, the date-picker fix, the language
+> split — is scripted as one ordered pass in `docs/DEVICE-CHECKLIST.md`, with the ops that must run
+> first (REL-1, REL-3) and a one-phone fallback where one exists.
+
 ### ☁️ Cloud — a session can take these now
 
 | Id | What | Pri | Size |
