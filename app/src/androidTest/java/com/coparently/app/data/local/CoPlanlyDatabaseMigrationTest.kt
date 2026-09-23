@@ -630,6 +630,76 @@ class CoPlanlyDatabaseMigrationTest {
     }
 
     /**
+     * 33-to-34 adds `parenting_plan_entries` (MON-5) and touches nothing that already exists.
+     *
+     * The migration only creates a table, so the row worth carrying across is one it must *not*
+     * disturb: the parent's own `users` row, country included. Past that, three things are
+     * asserted rather than assumed. The new table starts empty — a pair with no plan has no row,
+     * and a seeded one would read as an answer nobody gave. It takes both halves of one family,
+     * one per author. And the composite key `(familyId, authorUid)` really is the key: a second
+     * row for the same author in the same family is refused, which is what keeps the signed-in
+     * parent's half from ever being confused with the co-parent's mirrored one.
+     * `runMigrationsAndValidate` checks the table's shape against `34.json` on top of this.
+     */
+    @Test
+    fun migration33To34_addsAnEmptyPlanTableAndKeepsTheParent() {
+        val db = helper.createDatabase(TEST_DB, VERSION_33)
+        db.execSQL(
+            """
+            INSERT INTO users (id, email, name, role, colorCode, googleCalendarSyncEnabled,
+                               partnerIdsJson, allergiesJson, medicalProfileJson, countryCode)
+            VALUES ('u1', 'a@example.com', 'Anna', 'mom', '#FF4081', 0, '["u2"]', '[]', '{}', 'SK')
+            """.trimIndent()
+        )
+        db.close()
+
+        val migrated = helper.runMigrationsAndValidate(
+            TEST_DB, VERSION_34, true, DatabaseMigrations.MIGRATION_33_34
+        )
+
+        migrated.query("SELECT name, partnerIdsJson, countryCode FROM users").use {
+            assertTrue(it.moveToFirst())
+            assertEquals("Anna", it.getString(0))
+            assertEquals("[\"u2\"]", it.getString(1))
+            assertEquals("SK", it.getString(2))
+        }
+        migrated.query("SELECT COUNT(*) FROM parenting_plan_entries").use {
+            assertTrue(it.moveToFirst())
+            assertEquals("a pair with no plan has no row", 0, it.getInt(0))
+        }
+
+        migrated.execSQL(
+            """
+            INSERT INTO parenting_plan_entries (familyId, authorUid, catalogueVersion, answersJson,
+                                                agreedToJson, updatedAtMillis, syncedToFirestore)
+            VALUES ('u1_u2', 'u1', 1, '{"q1":"Alternate weeks"}', '{}', 1785578400000, 0),
+                   ('u1_u2', 'u2', 1, '{"q1":"Alternate weeks"}', '{"q1":"Alternate weeks"}',
+                    1785578400000, 1)
+            """.trimIndent()
+        )
+        migrated.execSQL(
+            """
+            INSERT OR IGNORE INTO parenting_plan_entries (familyId, authorUid, catalogueVersion,
+                                                          answersJson, agreedToJson,
+                                                          updatedAtMillis, syncedToFirestore)
+            VALUES ('u1_u2', 'u1', 1, '{"q1":"Every weekend"}', '{}', 1785578500000, 0)
+            """.trimIndent()
+        )
+        migrated.query(
+            "SELECT authorUid, answersJson FROM parenting_plan_entries ORDER BY authorUid"
+        ).use {
+            assertEquals("one row per parent per family", 2, it.count)
+            assertTrue(it.moveToFirst())
+            assertEquals("u1", it.getString(0))
+            assertEquals(
+                "a second row for the same author is refused by the composite key",
+                "{\"q1\":\"Alternate weeks\"}",
+                it.getString(1)
+            )
+        }
+    }
+
+    /**
      * 34-to-35 adds a parent's holiday region (MON-13, regional half) and gives every existing
      * row none.
      *
@@ -721,6 +791,7 @@ class CoPlanlyDatabaseMigrationTest {
         const val VERSION_21 = 21
         const val VERSION_24 = 24
         const val VERSION_25 = 25
+        const val VERSION_33 = 33
         const val VERSION_34 = 34
         const val VERSION_36 = 36
 
