@@ -13,6 +13,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeoutOrNull
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -156,9 +157,13 @@ class EventVersionRecorder @Inject constructor(
             snapshot = EventVersionDocument.decodeSnapshot(row.snapshotJson)
         )
         return try {
-            remote.create(row.id, document)
-            outboxDao.delete(row.id)
-            true
+            // Bounded: a Firestore write does not complete until the server acknowledges it, so
+            // offline this would hold the flush — and the sync waiting behind it — indefinitely.
+            // A write that times out is still queued in Firestore's own cache; the next pass finds
+            // it landed through `exists()` below.
+            val landed = withTimeoutOrNull(UPLOAD_TIMEOUT_MS) { remote.create(row.id, document) } != null
+            if (landed) outboxDao.delete(row.id) else Log.w(TAG, "Revision ${row.id} not acknowledged yet")
+            landed
         } catch (e: CancellationException) {
             throw e
         } catch (e: FirebaseFirestoreException) {
@@ -215,5 +220,8 @@ class EventVersionRecorder @Inject constructor(
          * syncs' worth, and past that the rule is saying no for a reason a retry will not change.
          */
         const val MAX_REFUSALS = 10
+
+        /** How long one upload may wait for the server before the pass gives up until next time. */
+        private const val UPLOAD_TIMEOUT_MS = 15_000L
     }
 }
