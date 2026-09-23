@@ -68,8 +68,6 @@ invocation is yours.
 | --- | --- | --- | --- |
 | **M-5** | Multi-family cleanup: delete `partnerId`, `User.role`, `Event.sharedWith`, `isPartnerOf` — **after** the ops steps in REL-3 | P2 | M |
 | **M-8** | M-4's leftovers: badges that count across families, `familyId` on pushes, a switcher chip in the top bar | P2 | M |
-| **CQ-11** | The declared error model is not the one in use | P3 | S |
-| **CQ-13** | Fourteen of twenty-four ViewModels have no tests | P2 | M |
 | **CQ-17** | Six dependencies worth moving | P3 | S |
 | **UX-9** | Five different empty-state anatomies, one of which renders under the top bar | P2 | M |
 | **UX-14** | Four different brand purples | P3 | S |
@@ -128,11 +126,10 @@ In this order, and each is genuinely finishable in the cloud:
    lines of `docs/DESIGN-court-record.md` §9 that only the owner can write**: an export of a record
    nobody can vouch for is worth nothing to a lawyer. Fill the form in and this is a cloud task.
    The parenting plan is now one of the things worth exporting.
-2. **CQ-13** — sixteen of twenty-five ViewModels have no tests. `SettingsViewModel` now has its
-   first (the push switch, September 2026); the rest of its surface is still uncovered.
 *(Everything that headed this list — **M-6**, **CQ-19**, **CQ-12**, **CQ-1**'s bleeding half,
 **CQ-5**, **CQ-6 + CQ-8**, **SEC-2**, the three honesty gaps **CQ-20**, **UX-17**, **UX-18**, and
-**UX-15**, which un-hid the colour picker, and the **MON-13** holiday tables — is done. **SEC-2**
+**UX-15**, which un-hid the colour picker, the **MON-13** holiday tables, and **CQ-13**'s ViewModel
+tests — is done. **SEC-2**
 carries one caveat that is not a cloud task: see its entry.)*
 
 ---
@@ -724,17 +721,39 @@ collector. **Do not** "fix" it by removing the `.catch` — an uncaught failure 
 broken rule would then reconnect for the life of the process, and any test of the give-up path
 spins on the virtual clock instead of finishing.
 
-### CQ-11 · **PARTLY DONE** · P3 · S · Error handling is declared but not wired
+### CQ-11 · **DONE** · P3 · S · Error handling is declared but not wired
 
 **Where:** ☁️ cloud.
 
 **Done:** all ten `printStackTrace()` calls now record to Crashlytics; `SyncWorker` logs and reports
 both its failure paths and gained the `NetworkType.CONNECTED` constraint it was missing.
 
-**Still open:** `domain/error/AppError.kt` and `ErrorHandler.kt` have three references outside their
-own package, and 228 `catch` blocks — 116 of them `catch (e: Exception)` — are the error model in
-use. Audit §8.12. Decide whether `AppError` becomes real or goes; a declared model nobody uses is
-worse than none, because it reads as coverage.
+**Decided (September 2026): the error model is two shapes, and `AppError` is the smaller one.**
+Measured against the code rather than the audit, `ErrorHandler` was not unwired — `EventViewModel`
+routes all twelve of its failure paths through it, and since CQ-14 `AppError.toUiText()` words the
+result. What was dead was the part that read as coverage: `getRetryAction` (it returned `null` on
+every branch and had no caller), `shouldRetry` and `userMessage` (read by nothing — the latter was
+"logs-only" with no log reading it), and the `SyncError` variant (never constructed) with its
+string. All of it is deleted, and `ErrorHandlerTest` pins what is left: each failure is recorded
+and classified, an I/O failure says whether the device was offline, a classified error passes
+through.
+
+The model in use, which is the rule for new code:
+
+- **A ViewModel that knows which operation failed says so with its own resource** —
+  `UiText.Res(R.string.change_request_error_apply_failed)`, `custody_setup_save_failed`,
+  `pets_delete_failed` — and logs the exception. This is most of the app, and it is more useful to a
+  parent than a sentence chosen by exception type, so it is **not** to be routed through
+  `ErrorHandler`.
+- **A ViewModel whose failures arrive as an arbitrary `Throwable` from a use case** — today only
+  `EventViewModel` — classifies them with `ErrorHandler.handleError` and words the `AppError` with
+  `toUiText()`, mapping a `ValidationError.field` to something more specific where it can.
+- **A screen that branches on an outcome gets a typed code** (`EventOperation`, `SyncFailure`,
+  `SwapError`, `PetSaveOutcome`), never text (CQ-14).
+
+The 228 `catch` blocks are not a defect of this model; each is a local decision about what a failure
+means at that call site. The ones that matter to a user are the ones whose outcome reaches a screen,
+and those are the ViewModel tests CQ-13 added.
 
 ### CQ-12 · **DONE** · detekt gates again
 
@@ -759,20 +778,32 @@ Do not put `continue-on-error` back to turn a red build green. Fix the finding, 
 baseline through the workflow so the acceptance is somebody's decision rather than a side effect.
 The debt the baseline records is still there to work down; the baseline is what stops it growing.
 
-### CQ-13 · P2 · M · Test coverage is concentrated in pure domain logic
+### CQ-13 · **DONE** · P2 · M · Test coverage is concentrated in pure domain logic
 
 **Where:** ☁️ cloud — JVM unit tests are exactly what CI runs.
 
-**Fourteen of twenty-four ViewModels have no tests** (counted September 2026; this used to say
-seventeen of twenty-five): ChangeRequest, RequestChange, TelemetryConsent, Contacts, CustodySetup,
-Budget, Friend, GuestAccept, CustodyConflict, ParentingPlan, Pets, Settings, AuthState and Sync.
-`SettingsViewModel` and `SyncViewModel` were removed as stale and never rewritten;
-`ChildInfoViewModelTest`, `PairingViewModelTest`, `OnboardingViewModelTest` and `SyncServiceTest`
-exist.
+**Every one of the twenty-five ViewModels now has a test file** (September 2026). The thirteen that
+had none — ChangeRequest, RequestChange, TelemetryConsent, Contacts, CustodySetup, Budget, Friend,
+GuestAccept, CustodyConflict, ParentingPlan, Pets, AuthState and Sync — got two to six tests each,
+aimed at behaviour a regression would hurt rather than at construction: the custom-pattern week
+shortcut and the every-other-weekend form reopening on a Monday midweek (`CustodySetupViewModelTest`),
+a friend profile saved from a route that never collected the grant (item 17,
+`FriendViewModelTest`) and a revoke's result reaching the screen, telemetry's `DENIED` stored as an
+answer rather than left unanswered, accepting a change request whose event has not synced, the
+onboarding decision counting only this account's own records (`AuthStateViewModelTest`), a pet
+photo whose delete failed staying on the record, a conflict choice that archives a same-id rejected
+pattern and can be retried after a failure, and each save path's localised error. `SettingsViewModel`
+has its push-switch tests from earlier in the month.
+
+They were written in a session with no Android SDK, so CI's `build-test` job is their first run.
 
 The first four CI runs are the argument: 30 unit tests were failing because their mocks had gone
 stale against collaborators added months earlier, and nobody knew. Tests that do not run are not
 coverage.
+
+**Still thin, and worth a line when touching them:** the rest of `SettingsViewModel` (account
+deletion, the family dialogs), `SyncViewModel.handleSignInResult` (it takes a Play-services `Task`),
+and the Compose screens themselves, which only the instrumented job reaches.
 
 ### CQ-14 · **DONE** · P2 · M · User-facing strings produced inside ViewModels and services
 
@@ -794,8 +825,9 @@ follows the Activity. Where a screen *branches* on an outcome, the answer is sti
 What moved, every one of them checked against a composable that actually renders it:
 `GoogleCalendarSyncState` (and `CalendarSyncRepository`'s `SyncResult`, which now reports facts —
 counts, the window as dates, a `SyncFailure` — instead of sentences), `EventUiState.Error`
-(`AppError` is mapped by type in `presentation/common/ErrorText.kt`; `userMessage` is logs-only now),
-`ChangeRequestViewModel.errorMessage` (inbox Toast and Home snackbar), `RequestChangeUiState.Error`,
+(`AppError` is mapped by type in `presentation/common/ErrorText.kt`; its `userMessage` has since
+been deleted — CQ-11), `ChangeRequestViewModel.errorMessage` (inbox Toast and Home snackbar),
+`RequestChangeUiState.Error`,
 the child and pet list errors, the expense save error and receipt warnings, the custody-setup save
 error, the Co-parent sync row's error line, the event form's title/description validation, and the
 FCM notification channel's name and description (system Settings shows them). Every place on that
@@ -805,8 +837,8 @@ prints a localised sentence and logs the exception instead.
 Deliberately left, each for a stated reason: `UiError.message` and the `UiState.Loading/Success`
 messages (no screen renders them; Settings, the only collector, reads the state's type — the
 literals it passed were dropped), `SettingsUiState.successMessage` (never rendered; removed),
-`AppError.userMessage` (logs), `CredentialManagerService`'s error strings (logged, no longer shown),
-the unused validators in `utils/ValidationUtils.kt` (no caller), and three **stored** fallbacks —
+`AppError.userMessage` (logs; since deleted by CQ-11, when nothing turned out to log it),
+`CredentialManagerService`'s error strings (logged, no longer shown), the unused validators in `utils/ValidationUtils.kt` (no caller), and three **stored** fallbacks —
 `"Untitled Event"` on a Google import, `"Unknown"` as a chat `senderName`, `"Co-parent"` as a
 conversation's partner name. Those are data written to Room and Firestore, not text drawn from a
 ViewModel; localising them would bake the writer's language into a record the other parent reads.
@@ -1531,7 +1563,7 @@ Not a wish-list ordering — a dependency ordering. Each block assumes the one a
 
 14. **CQ-5**, and **CQ-6 + CQ-8** together. All three grow worse with tenure, so they land on your
     longest-standing users first.
-15. **CQ-13** → **UX-9**, **M-5**. (**CQ-14** and **UX-12**, which used to open this line, are done.)
+15. **UX-9**, **M-5**. (**CQ-14**, **UX-12** and **CQ-13**, which used to open this line, are done.)
 
 **One thread runs through this document.** The security holes, the release-only Gson corruption, the
 plaintext refresh token, the two-year recurrence bug, thirty unit tests failing against a

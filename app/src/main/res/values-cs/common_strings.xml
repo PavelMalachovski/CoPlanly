@@ -49,5 +49,4 @@
     <string name="common_error_server">Server není dostupný. Zkuste to prosím později.</string>
     <string name="common_error_permission">K této akci nemáte oprávnění.</string>
     <string name="common_error_invalid_input">Některé údaje chybí nebo nejsou platné. Zkontrolujte je a zkuste to znovu.</string>
-    <string name="common_error_sync">Synchronizace se nezdařila. Zkuste to prosím znovu.</string>
 </resources>

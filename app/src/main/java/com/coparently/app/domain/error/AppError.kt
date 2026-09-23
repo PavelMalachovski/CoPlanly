@@ -1,61 +1,46 @@
 package com.coparently.app.domain.error
 
 /**
- * Sealed class hierarchy for application errors.
+ * What kind of failure an event operation hit, as [ErrorHandler] classifies it (CQ-11).
  *
- * [userMessage] is English and is for logs only: the domain layer has no `Context`, so the text
- * a user reads is chosen by the presentation layer from the error's *type*
- * (`presentation/common/ErrorText.kt`, CQ-14). Do not render it.
+ * A classification, not a message: the domain layer has no `Context`, so the sentence a user
+ * reads is chosen by the presentation layer from the variant (`presentation/common/ErrorText.kt`,
+ * CQ-14). The original exception goes to Crashlytics in [ErrorHandler.handleError] and to the log
+ * at the call site. Only variants something produces live here — a `SyncError`, a `userMessage`
+ * and a `shouldRetry` flag were declared for years and read by nothing, which read as coverage.
  */
 sealed class AppError : Exception() {
-    abstract val userMessage: String
-    abstract val shouldRetry: Boolean
 
     /**
-     * Network connectivity error.
+     * An I/O failure.
+     *
+     * @property offline True when the device had no connection; false when it did and the server
+     *   failed. The two need different advice.
      */
     data class NetworkError(
-        override val userMessage: String = "Check your internet connection",
-        override val shouldRetry: Boolean = true,
         val originalException: Throwable? = null,
-        /** True when the device had no connection; false when it did and the server failed. */
         val offline: Boolean = true
     ) : AppError()
 
     /**
-     * Validation error for user input.
+     * Input a use case refused.
+     *
+     * @property field The field the validator named, so a form can say which one; null when the
+     *   refusal is not about one field.
+     * @property validationMessage The validator's own English text, for the log.
      */
     data class ValidationError(
         val field: String?,
-        val validationMessage: String,
-        override val userMessage: String = validationMessage,
-        override val shouldRetry: Boolean = false
+        val validationMessage: String
     ) : AppError()
 
-    /**
-     * Permission denied error.
-     */
+    /** The platform refused the operation (a [SecurityException]). */
     data class PermissionError(
-        val permission: String,
-        override val userMessage: String = "Permission required: $permission",
-        override val shouldRetry: Boolean = false
-    ) : AppError()
-
-    /**
-     * Data synchronization error.
-     */
-    data class SyncError(
-        override val userMessage: String = "Failed to sync data. Please try again.",
-        override val shouldRetry: Boolean = true,
         val originalException: Throwable? = null
     ) : AppError()
 
-    /**
-     * Unknown or unexpected error.
-     */
+    /** Anything else. */
     data class UnknownError(
-        override val userMessage: String = "Something went wrong. Please try again.",
-        override val shouldRetry: Boolean = true,
         val originalException: Throwable
     ) : AppError()
 }

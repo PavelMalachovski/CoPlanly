@@ -896,8 +896,13 @@ whatever you were doing; a stale "known issue" costs more than a missing one.
   gets a typed code, not text** — `CalendarScreen` used to compare the literal
   `"Event rescheduled"` to decide whether to offer Undo (UX-12); it now reads
   `EventOperation.RESCHEDULED`. **Never render `e.message`**: it is English and sometimes a class
-  name — log it, and show a localised sentence (`AppError` maps by type in
-  `presentation/common/ErrorText.kt`; `AppError.userMessage` and `UiError.message` are logs-only).
+  name — log it, and show a localised sentence (`UiError.message` is logs-only). **Which sentence
+  is decided by what the ViewModel knows** (CQ-11): one that knows which operation failed uses its
+  own resource (`change_request_error_apply_failed`, `pets_delete_failed`, …); only one whose
+  failures arrive as an arbitrary `Throwable` from a use case — today `EventViewModel` alone —
+  classifies them with `ErrorHandler.handleError` into an `AppError` and words that by type
+  (`presentation/common/ErrorText.kt`). Don't route the first kind through `ErrorHandler`: a
+  sentence chosen by exception type is vaguer than the one the call site already has.
   **The data layer reports facts, not sentences** — `CalendarSyncRepository`'s `SyncResult`
   carries counts, dates and a `SyncFailure`, and `SyncViewModel` words them. Stored fallbacks
   (`"Untitled Event"` on an import, a chat `senderName` of `"Unknown"`) are data, not UI text,
@@ -908,7 +913,8 @@ whatever you were doing; a stale "known issue" costs more than a missing one.
 - Unit tests for ChildInfo/Pairing/Settings/Sync ViewModels were once removed as stale (they
   targeted long-gone APIs). **All four are back**: `ChildInfoViewModelTest`,
   `PairingViewModelTest`, `SyncServiceTest` and — since September 2026, starting with the push
-  switch — `SettingsViewModelTest`.
+  switch — `SettingsViewModelTest`. As of CQ-13 **every ViewModel has a test file**; a new
+  ViewModel arrives with one.
 
 - **`ChildInfoViewModel`'s editor state is loaded by id, never from the head of a list.**
   `loadChildInfo()` serves the list screen and touches nothing else; `loadChildInfoById()` is the

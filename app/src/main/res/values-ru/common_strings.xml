@@ -49,5 +49,4 @@
     <string name="common_error_server">Сервер недоступен. Попробуйте позже.</string>
     <string name="common_error_permission">У вас нет прав на это действие.</string>
     <string name="common_error_invalid_input">Некоторые данные не заполнены или неверны. Проверьте их и попробуйте ещё раз.</string>
-    <string name="common_error_sync">Не удалось синхронизировать. Попробуйте ещё раз.</string>
 </resources>

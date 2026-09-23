@@ -8,7 +8,14 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Service for converting exceptions to user-friendly AppError instances.
+ * Classifies a failure that reaches a ViewModel as an arbitrary [Throwable] (CQ-11).
+ *
+ * Its caller is `EventViewModel`, whose use cases return `Result` failures of every shape — a
+ * validator's refusal, an I/O error, a rules denial — and whose screen shows one sentence per
+ * *kind*. That is the only place in the app where the kind is all a ViewModel knows; everywhere
+ * else the ViewModel knows which operation failed and says so with its own resource
+ * (`UiText.Res(R.string.change_request_error_apply_failed)` and the like), which is more useful to
+ * a parent than a sentence chosen by exception type. Do not route those through here.
  */
 @Singleton
 class ErrorHandler @Inject constructor(
@@ -16,10 +23,11 @@ class ErrorHandler @Inject constructor(
     private val networkMonitor: NetworkMonitor
 ) {
     /**
-     * Converts an exception to an AppError.
+     * Records [error] to Crashlytics and classifies it.
+     *
+     * @return The [AppError] the presentation layer words by type.
      */
     fun handleError(error: Throwable): AppError {
-        // Log to crashlytics
         crashlyticsManager.recordException(error)
 
         return when (error) {
@@ -28,42 +36,16 @@ class ErrorHandler @Inject constructor(
                 validationMessage = error.message ?: "Validation failed"
             )
 
-            is SecurityException -> AppError.PermissionError(
-                permission = "Unknown permission"
-            )
+            is SecurityException -> AppError.PermissionError(originalException = error)
 
-            is IOException -> {
-                if (networkMonitor.isOnline()) {
-                    AppError.NetworkError(
-                        userMessage = "Server error occurred",
-                        originalException = error,
-                        offline = false
-                    )
-                } else {
-                    AppError.NetworkError(
-                        userMessage = "No internet connection",
-                        originalException = error
-                    )
-                }
-            }
+            is IOException -> AppError.NetworkError(
+                originalException = error,
+                offline = !networkMonitor.isOnline()
+            )
 
             is AppError -> error
 
             else -> AppError.UnknownError(originalException = error)
         }
-    }
-
-    /**
-     * Gets a retry action for an error if applicable.
-     */
-    fun getRetryAction(error: AppError): (() -> Unit)? {
-        return if (error.shouldRetry) {
-            // Return appropriate retry action based on error type
-            when (error) {
-                is AppError.NetworkError -> { /* retry network call */ null }
-                is AppError.SyncError -> { /* retry sync */ null }
-                else -> null
-            }
-        } else null
     }
 }

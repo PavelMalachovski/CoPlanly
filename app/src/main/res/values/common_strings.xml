@@ -52,5 +52,4 @@
     <string name="common_error_server">The server could not be reached. Please try again later.</string>
     <string name="common_error_permission">You don\'t have permission to do that.</string>
     <string name="common_error_invalid_input">Some details are missing or invalid. Check them and try again.</string>
-    <string name="common_error_sync">Couldn\'t sync. Please try again.</string>
 </resources>
