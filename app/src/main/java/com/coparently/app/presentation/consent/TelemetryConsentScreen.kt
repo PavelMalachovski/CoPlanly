@@ -91,14 +91,7 @@ fun TelemetryConsentScreen(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        // The full account of what is processed, for whoever wants more than three sentences
-        // before answering (REL-4). Absent until the policy is hosted — see PrivacyPolicyLink.
-        if (PrivacyPolicyLink.url != null) {
-            val uriHandler = LocalUriHandler.current
-            TextButton(onClick = { PrivacyPolicyLink.open(uriHandler) }) {
-                Text(stringResource(R.string.consent_privacy_policy_link))
-            }
-        }
+        ConsentPrivacyPolicyLink()
 
         Spacer(modifier = Modifier.size(8.dp))
 
@@ -123,5 +116,18 @@ fun TelemetryConsentScreen(
         ) {
             Text(stringResource(R.string.consent_accept))
         }
+    }
+}
+
+/**
+ * The full account of what is processed, for whoever wants more than three sentences before
+ * answering (REL-4). Renders nothing until the policy is hosted — see [PrivacyPolicyLink].
+ */
+@Composable
+private fun ConsentPrivacyPolicyLink() {
+    if (PrivacyPolicyLink.url == null) return
+    val uriHandler = LocalUriHandler.current
+    TextButton(onClick = { PrivacyPolicyLink.open(uriHandler) }) {
+        Text(stringResource(R.string.consent_privacy_policy_link))
     }
 }
