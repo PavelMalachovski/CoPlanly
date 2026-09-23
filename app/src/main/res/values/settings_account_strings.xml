@@ -92,4 +92,8 @@
 
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
     <string name="settings_sync_failed">Last sync failed</string>
+
+    <!-- MON-19: Settings → App. The argument is the pause, in seconds. -->
+    <string name="settings_pause_before_sending_title">Pause before sending</string>
+    <string name="settings_pause_before_sending_description">Hold each chat message for %1$d seconds with an Undo, and point out capitals, !!! and sharp words while you type. Checked on this phone only.</string>
 </resources>

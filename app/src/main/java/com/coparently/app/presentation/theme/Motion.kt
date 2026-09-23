@@ -22,6 +22,14 @@ object Motion {
 
     /** A month or page changing, and the splash exit. */
     const val LONG_MS = 500
+
+    /**
+     * How long something the app pointed the reader at stays marked before the mark fades — a
+     * chat message a search result jumped to (MON-15). Not a movement, a hold: long enough to find
+     * the bubble after the list lands, short enough that it is gone by the time they read on. The
+     * fade itself is [MEDIUM_MS].
+     */
+    const val HIGHLIGHT_HOLD_MS = 1500
 }
 
 /**

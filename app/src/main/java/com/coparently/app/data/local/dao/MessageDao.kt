@@ -115,6 +115,38 @@ interface MessageDao {
     )
     fun observeUnreadCount(conversationId: String, myUid: String, afterMillis: Long): Flow<Int>
 
+    /**
+     * The text messages of one conversation whose content is `LIKE` [pattern], newest first —
+     * the candidates chat search (MON-15) decides over.
+     *
+     * **Candidates, not answers.** `LIKE` folds ASCII case and nothing else, so it cannot find
+     * "čas" from "cas"; `ChatSearch.candidatePattern` therefore passes `%` (the whole
+     * conversation) for any query with a letter in it, and `ChatSearch.search` makes the real
+     * decision in Kotlin. The bound is the conversation: nothing here reads another thread, and
+     * nothing in chat search reads Firestore. A full-text index (FTS4) would answer in SQL; it is
+     * a schema change, recorded as the later step in docs/ROADMAP.md MON-15.
+     *
+     * `ESCAPE '\'` is what lets a literal "%" or "_" in a query mean itself —
+     * `ChatSearch.escapeLike` escapes them with that character.
+     */
+    @Query(
+        "SELECT * FROM messages WHERE conversationId = :conversationId " +
+            "AND messageType = 'TEXT' " +
+            "AND content LIKE :pattern ESCAPE '\\' " +
+            "ORDER BY sentAtMillis DESC"
+    )
+    suspend fun searchCandidates(conversationId: String, pattern: String): List<MessageEntity>
+
+    /**
+     * How many messages of [conversationId] were sent at or after [sentAtMillis] — the window a
+     * thread needs to hold for that message to be on screen (see `ChatWindow`).
+     */
+    @Query(
+        "SELECT COUNT(*) FROM messages " +
+            "WHERE conversationId = :conversationId AND sentAtMillis >= :sentAtMillis"
+    )
+    suspend fun countMessagesSince(conversationId: String, sentAtMillis: Long): Int
+
     /** One-shot read of a conversation's messages, oldest first — used by the legacy-conversation merge. */
     @Query("SELECT * FROM messages WHERE conversationId = :conversationId ORDER BY sentAtMillis ASC")
     suspend fun getMessagesOnce(conversationId: String): List<MessageEntity>

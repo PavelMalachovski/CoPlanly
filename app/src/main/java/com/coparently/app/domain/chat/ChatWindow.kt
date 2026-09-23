@@ -39,6 +39,16 @@ object ChatWindow {
     fun grow(current: Int): Int = current + STEP
 
     /**
+     * The window after a jump to a search result that sits [needed] messages from the newest
+     * (MON-15): large enough to hold it, and never smaller than [current] — the same "it grows"
+     * rule [grow] follows, for the same reason.
+     *
+     * @param current The window in force now.
+     * @param needed How many of the newest messages the window must hold.
+     */
+    fun reaching(current: Int, needed: Int): Int = maxOf(current, needed)
+
+    /**
      * Whether there may be older messages than the ones loaded.
      *
      * `loaded >= limit` rather than `>`: a full window is the only evidence available without a

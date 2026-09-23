@@ -52,6 +52,13 @@ object PreferenceKeys {
     const val PUSH_ENABLED = "push_enabled"
 
     /**
+     * Whether this person turned on "Pause before sending" for chat (MON-19): `true` when they
+     * did, absent otherwise. One person's choice, like [PUSH_ENABLED], so it is not exempt from
+     * `EncryptedPreferences.clear()` — the next account on this device starts with it off.
+     */
+    const val CHAT_PAUSE_BEFORE_SENDING = "chat_pause_before_sending"
+
+    /**
      * Prefix for the per-user events change cursor — the actual key is this prefix plus the
      * Firebase UID, and the value is the highest `serverUpdatedAt` this device has taken in,
      * as decimal epoch millis (CQ-5).

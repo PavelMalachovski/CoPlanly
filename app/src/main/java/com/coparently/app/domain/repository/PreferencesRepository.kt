@@ -72,5 +72,19 @@ interface PreferencesRepository {
      * @param consent What the user chose
      */
     suspend fun setTelemetryConsent(consent: TelemetryConsent)
-}
 
+    /**
+     * Whether this person asked for a pause before each chat message is sent (MON-19). Off
+     * unless they turned it on; never emits null.
+     *
+     * @return Flow emitting the current choice
+     */
+    fun getPauseBeforeSendingFlow(): Flow<Boolean>
+
+    /**
+     * Records the pause-before-sending choice.
+     *
+     * @param enabled True to hold each message briefly with an Undo before it is sent
+     */
+    suspend fun setPauseBeforeSending(enabled: Boolean)
+}

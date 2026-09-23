@@ -1,5 +1,7 @@
 package com.coparently.app.presentation.chat
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -13,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -52,6 +55,8 @@ import com.coparently.app.domain.model.Message
 import com.coparently.app.domain.model.MessageSendStatus
 import com.coparently.app.domain.model.MessageType
 import com.coparently.app.presentation.common.EmptyState
+import com.coparently.app.presentation.theme.Motion
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
@@ -148,6 +153,11 @@ private fun buildThread(messages: List<Message>): List<ThreadEntry> {
  * @param onEventLinkClick Handler for tapping a change-request card, given the linked event id,
  *   or null to render such cards inert (e.g. while the destination is not wired up yet)
  * @param modifier Modifier for the list
+ * @param revealMessageId A message to scroll to and briefly highlight — a chat search result
+ *   (MON-15) — or null. It may not be loaded yet: the caller widens the window, and the scroll
+ *   happens once the message arrives.
+ * @param onRevealed Called once the list has scrolled to [revealMessageId], so the caller can
+ *   drop the request
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -166,25 +176,37 @@ fun MessagesList(
     onEventLinkClick: ((String) -> Unit)? = null,
     onOpenInbox: (() -> Unit)? = null,
     onRetryFailed: (() -> Unit)? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    revealMessageId: String? = null,
+    onRevealed: () -> Unit = {}
 ) {
     val listState = rememberLazyListState()
     val pullToRefreshState = rememberPullToRefreshState()
     val scope = rememberCoroutineScope()
     var isRefreshing by remember { mutableStateOf(false) }
     val entries = remember(messages) { buildThread(messages) }
+    val loadEarlier = onLoadEarlier.takeIf { canLoadEarlier }
+    val highlightedId = rememberRevealedMessage(
+        listState = listState,
+        entries = entries,
+        revealMessageId = revealMessageId,
+        leadingItems = if (loadEarlier != null) 1 else 0,
+        onRevealed = onRevealed
+    )
 
     // Survives a configuration change: the jump is about *opening* the thread, and a rotation
     // is not a re-open. The scroll position itself is restored by rememberLazyListState.
     var initialJumpDone by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(entries.size) {
+        // Not while a search result is being revealed: following the newest message would undo the
+        // jump, and the window growing to reach that result is exactly the change this reacts to.
         val target = ChatScrollPolicy.targetIndex(
             entryCount = entries.size,
             firstVisibleIndex = listState.firstVisibleItemIndex,
             lastVisibleIndex = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0,
             initialJumpDone = initialJumpDone
-        )
+        ).takeIf { revealMessageId == null }
         if (target != null) {
             // Instant on open — animating a flight past forty bubbles is its own defect —
             // and animated afterwards, when it is one new message sliding into view.
@@ -232,10 +254,10 @@ fun MessagesList(
                 // rather than pinned above it (CQ-6). The reader has to be at the top to see it,
                 // so after it grows the window they are still at the top and the newly loaded
                 // messages appear directly below — no scroll anchor to restore.
-                if (canLoadEarlier && onLoadEarlier != null) {
+                if (loadEarlier != null) {
                     item(key = "load_earlier") {
                         TextButton(
-                            onClick = onLoadEarlier,
+                            onClick = loadEarlier,
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Text(stringResource(R.string.chat_load_earlier))
@@ -253,19 +275,79 @@ fun MessagesList(
                 ) { index ->
                     when (val entry = entries[index]) {
                         is ThreadEntry.DayHeader -> DaySeparator(entry.date)
-                        is ThreadEntry.Bubble -> MessageItem(
-                            message = entry.message,
-                            isCurrentUser = entry.message.senderId == currentUserId,
-                            startsGroup = entry.startsGroup,
-                            endsGroup = entry.endsGroup,
-                            onEventLinkClick = onEventLinkClick,
-                            onOpenInbox = onOpenInbox,
-                            onRetryFailed = onRetryFailed
-                        )
+                        is ThreadEntry.Bubble -> RevealHighlight(entry.message.id == highlightedId) {
+                            MessageItem(
+                                message = entry.message,
+                                isCurrentUser = entry.message.senderId == currentUserId,
+                                startsGroup = entry.startsGroup,
+                                endsGroup = entry.endsGroup,
+                                onEventLinkClick = onEventLinkClick,
+                                onOpenInbox = onOpenInbox,
+                                onRetryFailed = onRetryFailed
+                            )
+                        }
                     }
                 }
             }
         }
+    }
+}
+
+/**
+ * Scrolls to [revealMessageId] once it is among [entries], and returns the id to highlight —
+ * cleared again after [Motion.HIGHLIGHT_HOLD_MS].
+ *
+ * Two effects, not one: [onRevealed] clears the request, which would cancel an effect keyed on it
+ * halfway through the hold and leave the highlight on for good.
+ *
+ * @param leadingItems Rows the list draws above the first entry (the "load earlier" button).
+ */
+@Composable
+private fun rememberRevealedMessage(
+    listState: LazyListState,
+    entries: List<ThreadEntry>,
+    revealMessageId: String?,
+    leadingItems: Int,
+    onRevealed: () -> Unit
+): String? {
+    var highlighted by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(revealMessageId, entries) {
+        val target = revealMessageId ?: return@LaunchedEffect
+        val index = entries.indexOfFirst { it is ThreadEntry.Bubble && it.message.id == target }
+        // Not loaded yet: the window is still growing towards it, and this runs again when it has.
+        if (index < 0) return@LaunchedEffect
+        listState.scrollToItem(index + leadingItems)
+        highlighted = target
+        onRevealed()
+    }
+    LaunchedEffect(highlighted) {
+        if (highlighted != null) {
+            delay(Motion.HIGHLIGHT_HOLD_MS.toLong())
+            highlighted = null
+        }
+    }
+    return highlighted
+}
+
+/** A bubble's row, tinted while it is the message a search result pointed at. */
+@Composable
+private fun RevealHighlight(highlighted: Boolean, content: @Composable () -> Unit) {
+    val tint by animateColorAsState(
+        targetValue = if (highlighted) {
+            MaterialTheme.colorScheme.primaryContainer.copy(alpha = REVEAL_TINT_ALPHA)
+        } else {
+            Color.Transparent
+        },
+        animationSpec = tween(Motion.MEDIUM_MS),
+        label = "revealHighlight"
+    )
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(REVEAL_CORNER))
+            .background(tint)
+    ) {
+        content()
     }
 }
 
@@ -629,6 +711,12 @@ private val RECEIPT_ICON_SIZE = 13.dp
 
 /** How much larger the change-request card's chevron is than the delivery-receipt glyph. */
 private const val CHEVRON_SCALE = 1.4f
+
+/** Opacity of the wash behind a message a search result jumped to. */
+private const val REVEAL_TINT_ALPHA = 0.6f
+
+/** Corner of that wash — a step rounder than the day pill, so it frames the bubble. */
+private val REVEAL_CORNER = 12.dp
 
 /** Brief pause after a manual refresh so the spinner does not flash out instantly. */
 private const val REFRESH_SETTLE_MS = 500L

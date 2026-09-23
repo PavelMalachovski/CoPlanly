@@ -36,6 +36,7 @@ import androidx.compose.material.icons.filled.EventAvailable
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.FamilyRestroom
 import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.HourglassTop
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Link
@@ -103,6 +104,7 @@ import com.coparently.app.domain.holidays.HolidayCountry
 import com.coparently.app.domain.model.FamilyKind
 import com.coparently.app.domain.money.SupportedCurrency
 import com.coparently.app.domain.telemetry.TelemetryConsent
+import com.coparently.app.presentation.chat.SendHold
 import com.coparently.app.presentation.common.ConfirmationDialog
 import com.coparently.app.presentation.common.FamilySwitcherDialog
 import com.coparently.app.presentation.common.FamilySwitcherViewModel
@@ -298,6 +300,7 @@ fun SettingsScreen(
     val darkTheme by settingsViewModel.darkThemeFlow.collectAsState()
     val account by settingsViewModel.account.collectAsState()
     val defaultCurrency by settingsViewModel.defaultCurrency.collectAsState()
+    val pauseBeforeSending by settingsViewModel.pauseBeforeSending.collectAsState()
 
     var showCurrencyPicker by remember { mutableStateOf(false) }
     var showLanguagePicker by remember { mutableStateOf(false) }
@@ -801,6 +804,28 @@ fun SettingsScreen(
                         onClick = { showCurrencyPicker = true },
                         trailing = {
                             ValueLabel("${defaultCurrency.code} ${defaultCurrency.symbol}")
+                        }
+                    )
+                    Divider()
+                    // MON-19. Off by default: a pause and a hint are help a parent asks for, not
+                    // one the app imposes on every message.
+                    SectionRow(
+                        icon = Icons.Default.HourglassTop,
+                        title = stringResource(R.string.settings_pause_before_sending_title),
+                        supporting = stringResource(
+                            R.string.settings_pause_before_sending_description,
+                            SendHold.PAUSE_SECONDS
+                        ),
+                        trailing = {
+                            val pauseLabel = stringResource(R.string.settings_pause_before_sending_title)
+                            Switch(
+                                checked = pauseBeforeSending,
+                                modifier = Modifier.semantics { contentDescription = pauseLabel },
+                                onCheckedChange = { enabled ->
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    settingsViewModel.setPauseBeforeSending(enabled)
+                                }
+                            )
                         }
                     )
                     Divider()

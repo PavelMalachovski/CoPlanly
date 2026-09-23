@@ -84,4 +84,8 @@
 
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
     <string name="settings_sync_failed">Остання синхронізація не вдалася</string>
+
+    <!-- MON-19: Settings → App. The argument is the pause, in seconds. -->
+    <string name="settings_pause_before_sending_title">Пауза перед надсиланням</string>
+    <string name="settings_pause_before_sending_description">Затримує кожне повідомлення в чаті на %1$d секунд із можливістю скасування й під час набору підказує про великі літери, !!! та різкі слова. Перевірка — лише на цьому телефоні.</string>
 </resources>

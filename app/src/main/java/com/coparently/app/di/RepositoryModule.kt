@@ -4,6 +4,7 @@ import com.coparently.app.data.remote.firebase.FirebaseImageStorage
 import com.coparently.app.data.repository.BudgetRepositoryImpl
 import com.coparently.app.data.repository.CalendarFeedRepositoryImpl
 import com.coparently.app.data.repository.ChangeRequestRepositoryImpl
+import com.coparently.app.data.repository.ChatSearchRepositoryImpl
 import com.coparently.app.data.repository.ChildInfoRepositoryImpl
 import com.coparently.app.data.repository.EventRepositoryImpl
 import com.coparently.app.data.repository.ExpenseRepositoryImpl
@@ -16,6 +17,7 @@ import com.coparently.app.data.repository.PreferencesRepositoryImpl
 import com.coparently.app.domain.repository.BudgetRepository
 import com.coparently.app.domain.repository.CalendarFeedRepository
 import com.coparently.app.domain.repository.ChangeRequestRepository
+import com.coparently.app.domain.repository.ChatSearchRepository
 import com.coparently.app.domain.repository.ChildInfoRepository
 import com.coparently.app.domain.repository.EventImageStorage
 import com.coparently.app.domain.repository.EventRepository
@@ -77,6 +79,15 @@ abstract class RepositoryModule {
     abstract fun bindMessageRepository(
         messageRepositoryImpl: MessageRepositoryImpl
     ): MessageRepository
+
+    /**
+     * Provides the Room-only chat search (MON-15).
+     */
+    @Binds
+    @Singleton
+    abstract fun bindChatSearchRepository(
+        chatSearchRepositoryImpl: ChatSearchRepositoryImpl
+    ): ChatSearchRepository
 
     /**
      * Provides ExpenseRepository implementation.

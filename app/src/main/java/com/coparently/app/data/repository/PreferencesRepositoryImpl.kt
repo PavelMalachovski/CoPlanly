@@ -34,6 +34,12 @@ class PreferencesRepositoryImpl @Inject constructor(
         )
     )
 
+    // Read once, here, for the reason the consent above is: a message sent in the first frame
+    // after launch must already see the choice.
+    private val _pauseBeforeSendingFlow = MutableStateFlow(
+        encryptedPreferences.getBoolean(PreferenceKeys.CHAT_PAUSE_BEFORE_SENDING, false)
+    )
+
     init {
         // Initialize with current value
         _darkThemeFlow.value = encryptedPreferences.getDarkTheme()
@@ -83,5 +89,11 @@ class PreferencesRepositoryImpl @Inject constructor(
         encryptedPreferences.putString(PreferenceKeys.TELEMETRY_CONSENT, consent.stored)
         _telemetryConsentFlow.value = consent
     }
-}
 
+    override fun getPauseBeforeSendingFlow(): Flow<Boolean> = _pauseBeforeSendingFlow.asStateFlow()
+
+    override suspend fun setPauseBeforeSending(enabled: Boolean) {
+        encryptedPreferences.putBoolean(PreferenceKeys.CHAT_PAUSE_BEFORE_SENDING, enabled)
+        _pauseBeforeSendingFlow.value = enabled
+    }
+}

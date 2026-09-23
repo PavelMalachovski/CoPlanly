@@ -84,4 +84,8 @@
 
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
     <string name="settings_sync_failed">Letzte Synchronisierung fehlgeschlagen</string>
+
+    <!-- MON-19: Settings → App. The argument is the pause, in seconds. -->
+    <string name="settings_pause_before_sending_title">Pause vor dem Senden</string>
+    <string name="settings_pause_before_sending_description">Hält jede Chatnachricht %1$d Sekunden mit „Rückgängig“ zurück und weist beim Tippen auf Großbuchstaben, !!! und scharfe Wörter hin. Geprüft wird nur auf diesem Telefon.</string>
 </resources>
