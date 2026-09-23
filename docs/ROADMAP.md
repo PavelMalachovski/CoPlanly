@@ -67,7 +67,7 @@ invocation is yours.
 | Id | What | Pri | Size |
 | --- | --- | --- | --- |
 | **M-5** | Multi-family cleanup: delete `partnerId`, `User.role`, `Event.sharedWith`, `isPartnerOf` — **after** the ops steps in REL-3 | P2 | M |
-| **M-8** | M-4's last leftover: badges across families. Chat now follows the selected family (done, September 2026); an honest cross-family signal needs a conversation-document listener per non-selected family — a dot, not a count | P2 | M |
+| **M-8** | M-4's last leftover, and now a small one: chat follows the selected family and the switcher carries a cross-family chat dot (both done, September 2026); left is the same signal for change requests and custody proposals | P2 | S |
 | **CQ-17** | WorkManager is bumped; four dependencies left, each with the reason it could not be moved blind | P3 | S |
 | **MON-2** | Market facts checked (23 Sep 2026): **app2us has an Android build**; left: mediator count, ARPU, Facebook groups, app2us price on a phone | P0 | S |
 | **MON-3** | Export to PDF/CSV — the first paid feature (needs MON-4 first) | P1 | M |
@@ -98,6 +98,7 @@ invocation is yours.
 | **FAM-5** | The event chip does not say who it is about | Chips are single-line with ellipsis and every colour channel is spent. Worth an owner's eye on a real device rather than a treatment invented blind. |
 | **M-4 (shipped, unseen)** | The colour palette, the family switcher, the second-co-parent invite | Kotlin compiled in CI; nobody has looked at it. |
 | **M-8 (chat, shipped, unseen)** | Chat, its badge and `ChatMirror` follow the selected family | Unit tests pin the re-key; only an account with two co-parents on real phones shows a switch landing the Chat tab on the other thread, the badge moving with it, and messages from the family *left* arriving again after switching back. |
+| **M-8 (dot, shipped, unseen)** | The switcher chip and dialog show a dot when a family not on screen has chat news | Three accounts (a parent and two co-parents) on at least two phones: the co-parent of the family *not* on screen sends, the dot appears on the chip and on that row within seconds; opening that family's thread clears it; sending from the family on screen never raises it; a one-family account shows exactly what it did. |
 
 ### 💻 Yours only — no session can do these
 
@@ -1669,7 +1670,7 @@ while looking at the wrong family. `CalendarSyncRepository` says so at the call 
 is where the answer goes. Related: **MON-8**, where a school import is the opposite case — it *is*
 about the child and must be shared.
 
-### M-8 · P2 · M · What M-4 deliberately left — chip, pushes and chat done; cross-family badges open
+### M-8 · P2 · S · What M-4 deliberately left — chip, pushes, chat and the chat dot done
 
 **Where:** ☁️ cloud for what is left; a phone with two paired accounts for acceptance.
 
@@ -1721,25 +1722,43 @@ about the child and must be shared.
   "👁" table. The Chat tab still carries no switcher chip — the original reason is gone, but the
   tab renders the thread in place (design item 7) and `ChatThreadHeader` already names the
   co-parent, so adding one is a layout decision rather than a fix.
-- **Not done — badges that count across families, and after the chat fix the answer is still
-  no.** The open question was whether step (1) makes a cross-family count sound. It does not,
-  and the code says why: `ChatMirror` now mirrors **only** the selected family (a switch
-  cancels the previous one's listeners by design — the alternative is N listener pairs for the
-  process lifetime), and a thread's own `observeMessages` mirror runs only while that thread is
-  open, which a push tap now does *after* switching the family. So a non-selected family's
-  messages reach Room only when that family is selected again. A Room `COUNT(*)` across every
-  conversation — the cheap version — would therefore **undercount every family not on screen**,
-  silently; a badge that says 0 when it is not is worse than none (design item 8). What ships:
-  the bottom-bar and Home badges count the **selected** family only (both already key on the
-  projection — Home through the Room `partnerId`, Chat through `ChatPartnerSource`), and the
-  switcher chip and its dialog show **no** count or dot. The honest cross-family version still
-  needs, in order: (2) one conversation-document listener per non-selected family, deriving "has
-  unread" from `lastMessageAt > lastReadAt[me]` — a dot on the switcher chip and its dialog rows,
-  not a count, since the messages themselves are not mirrored; (3) the same question asked of
-  change requests and custody proposals, whose queries resolve through the projected `partnerId`
-  and so see only the selected family by construction. Cost: N−1 extra snapshot listeners for the
-  process lifetime, zero for a one-family account. Until (2) lands, the chat push is the
-  cross-family signal, and it switches the family on tap.
+- **Not done, by design — badges that *count* across families.** `ChatMirror` mirrors **only**
+  the selected family (a switch cancels the previous one's listeners — the alternative is N
+  listener pairs for the process lifetime), and a thread's own `observeMessages` runs only while
+  it is open. So a non-selected family's messages reach Room only when that family is selected
+  again, and a Room `COUNT(*)` across conversations would **undercount every family not on
+  screen**, silently; a badge that says 0 when it is not is worse than none (design item 8). The
+  bottom-bar and Home badges count the **selected** family only (Home through the Room
+  `partnerId`, Chat through `ChatPartnerSource`).
+- **Done (September 2026) — a dot for the other families' chat.** Step (2) of the order this
+  bullet used to give. `data/chat/OtherFamiliesUnreadSource` holds one **conversation-document**
+  listener per family *not* on screen — the messages collection is never read — and derives "has
+  unread" from `lastMessageAt > lastReadAt[me]` (`ChatReadState.hasUnread`, strictly newer, so a
+  mark written at the newest message covers it). It is a yes/no, so the switcher chip carries a
+  Material `Badge` dot and each dialog row its own, **never a number**, each with a content
+  description (`family_switcher_unread_other`, `family_switcher_unread_row`). Properties the code
+  holds and the tests pin (`OtherFamiliesUnreadSourceTest`, `FamilySwitcherViewModelTest`,
+  `ChatReadStateTest`): **no listener at all at one family**, and the state refuses a dot at one
+  family or for the family on screen even if the source says otherwise; the listeners are one
+  `shareIn(WhileSubscribed)` for the process, so Home's chip, Expenses' chip and the Settings
+  dialog share them and nothing listens while no switcher is on screen; `flatMapLatest`
+  re-derives and **cancels** them on a switch, an unpair, a new pairing or a sign-out; and a
+  failing listener retries with `reconnecting()`'s bound (eight attempts, exponential, capped at a
+  minute) and then gives up to "no dot" rather than retrying for the process's life — the next
+  subscription starts it again. **No rule change**: `conversations` already allows a participant
+  to read (`get`/listen to) their own document. A conversation that does not exist yet reads as
+  *denied* (the rule keys on `resource.data.participants`), which is why the give-up path matters:
+  the source never creates a conversation, it only reads one. Two known limits, both small:
+  `lastMessageAt` does not name its sender, so a message **I** sent could raise my own dot if my
+  read mark never reached the server (sent offline, then switched away) — the open thread
+  re-asserts the mark on every change to its messages, own sends included, so the normal path is
+  covered; and the dot says *chat* only. Cost: N−1 single-document listeners while a switcher is
+  on screen, zero for a one-family account. **Not seen on a device** — see §1's "👁" table.
+- **Not done — the same question for change requests and custody proposals**, whose queries
+  resolve through the projected `partnerId` and so see only the selected family by construction.
+  Each would need its own per-family document read or listener, and neither has a single
+  document per family the way a conversation does; until then the push (which switches the family
+  on tap) is the cross-family signal for those.
 
 ---
 

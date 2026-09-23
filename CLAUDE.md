@@ -130,9 +130,14 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     Calendar header (item 5's fixed four). It is not on Chat either — the original reason (chat
     followed the first co-parent, whatever the switcher said) is fixed, and what remains is a
     layout call: the tab renders the thread in place (item 7) and its header already names the
-    co-parent. **Neither the chip nor its dialog shows an unread count or dot**: only the selected
-    family's chat is mirrored, so a figure for any other family could not be backed (see the
-    fixed known issue on chat and the first co-parent, and ROADMAP M-8).
+    co-parent. **The chip and each dialog row carry a dot — never a count — when a family *not* on
+    screen has chat news**: only the selected family's messages are mirrored, so no figure for
+    another family could be backed, but its conversation *document* can say "newer than my read
+    mark". `data/chat/OtherFamiliesUnreadSource` holds one such listener per other family, shared
+    process-wide (`shareIn`, `WhileSubscribed`), **none at one family**, re-derived and cancelled
+    on a switch, pairing change or sign-out, and bounded like `reconnecting()`. Don't turn the dot
+    into a number, don't attach the listener per composable, and don't let it create a
+    conversation — it only reads (ROADMAP M-8).
 
 ## UX/UI overhaul (July 2026 design review) — implemented, keep consistent
 
@@ -870,10 +875,10 @@ whatever you were doing; a stale "known issue" costs more than a missing one.
   guarantee — `ensureConversation` awaited before either listener attaches, the outer restart
   loop, the bounded inner retry, the `.catch` — and its `collectLatest` now also cancels the old
   thread's listeners on a switch: **the process-wide mirror follows exactly one family.** That is
-  why cross-family badges are still **not** built, and why the switcher chip shows no count: a
-  Room `COUNT(*)` over a family nothing is mirroring would say 0 when it is not. The honest
-  version (a conversation-document listener per non-selected family, a dot rather than a count)
-  is recorded in `docs/ROADMAP.md` M-8 — don't paper over it with a count. Unverified on two
+  why cross-family badges *count* nothing: a Room `COUNT(*)` over a family nothing is mirroring
+  would say 0 when it is not. The honest version shipped instead — a conversation-document
+  listener per non-selected family and a **dot** on the switcher (design item 13) — so don't
+  paper over it with a count. Unverified on two
   phones: see M-8's acceptance note.
 
 - **Cross-time-zone chat is implemented but never verified on two devices.** The August 2026

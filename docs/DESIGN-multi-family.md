@@ -295,7 +295,9 @@ chip stays off the Chat tab as a layout call). `familyId` is a payload **field**
 places did not apply: one stamp in `FcmService`, two in the functions, a bound in the rule, and a
 switch before the deep link on tap. The cross-family badges above were not built, for the reason
 M-8 records: only the selected family's chat is mirrored, so a count for any other family would
-lie. The badge counts the selected family, and the switcher shows no count.
+lie. The badge counts the selected family; the switcher shows no count, but a **dot** on the chip
+and on each dialog row when another family's conversation document says it moved after this
+parent's read mark (`OtherFamiliesUnreadSource`, one listener per other family, none at one).
 
 #### Order of operations, and the ops steps it depends on
 
