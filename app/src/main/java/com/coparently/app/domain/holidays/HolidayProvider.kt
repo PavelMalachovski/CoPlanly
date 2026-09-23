@@ -37,9 +37,12 @@ data class Holiday(
  *
  * **Public holidays and school vacations are separate questions, and a country may answer only
  * the first.** A public holiday is national and computable; a school calendar often is not —
- * Germany's and Austria's are set per state, and Czechia's own district-dependent spring break
- * is left out for exactly that reason. Returning an empty list from [schoolVacations] is a
- * legitimate answer and must not be read as "this country has no school holidays".
+ * Germany's is set per Land (so only a Land's calendar has one), Austria's semester and summer
+ * breaks and Slovakia's spring holidays are set per region, and Czechia's own district-dependent
+ * spring break is left out for exactly that reason. Outside Czechia the vacations are published
+ * per school year rather than computed, so they are dated tables ([SchoolVacation]) that end
+ * where the published data ends. Returning an empty list from [schoolVacations] is a legitimate
+ * answer and must not be read as "this country has no school holidays".
  */
 interface HolidayProvider {
 
@@ -47,9 +50,11 @@ interface HolidayProvider {
     fun publicHolidays(year: Int): List<Holiday>
 
     /**
-     * Nationwide school vacation periods overlapping [year], as (range, (English, local) names).
+     * School vacation periods overlapping [year], as (range, (English, local) names) — the
+     * nationwide ones, or a region's when this is a region's calendar ([forRegion]).
      *
-     * Empty when the country's school calendar is regional or not known to the app.
+     * Empty when the calendar's school vacations are regional or not known to the app, and for a
+     * year past the end of a published table.
      */
     fun schoolVacations(year: Int): List<Pair<ClosedRange<LocalDate>, Pair<String, String>>>
 
@@ -57,27 +62,30 @@ interface HolidayProvider {
     val localLanguage: String
 
     /**
-     * Whether [schoolVacations] ever returns anything for this country.
+     * Whether [schoolVacations] ever returns anything for this calendar.
      *
      * Stated per provider rather than probed from the list, because it is what the country picker
-     * tells the user: "public holidays and school vacations" is a promise only Czechia keeps, and
-     * saying it for Germany would be design rule 8's affordance that does not exist.
+     * tells the user: saying "school vacations" for Germany without a Land, which has none, would
+     * be design rule 8's affordance that does not exist.
      */
     val hasSchoolVacations: Boolean
 
     /**
-     * The subdivisions whose own public holidays this calendar can add, as ISO 3166-2 suffixes
+     * The subdivisions whose own public holidays or school vacations this calendar can add, as
+     * ISO 3166-2 suffixes
      * (`"BY"` for `DE-BY`), or empty for a calendar that is the same everywhere in the country.
      *
      * Empty is the honest answer for every country but Germany today, **Austria included**: its
-     * thirteen public holidays are nationwide, and the per-Land patron-saint days the reference
-     * library carries are bank holidays, not days off. A region picker that changed nothing on
-     * the grid would be design rule 8's affordance that promises a feature (MON-13).
+     * thirteen public holidays are nationwide, the per-Land patron-saint days the reference
+     * library carries are bank holidays, not days off, and its per-Land school breaks have no
+     * final dates past 2025/26 in the source (see `AustrianHolidays`). A region picker that
+     * changed nothing on the grid would be design rule 8's affordance that promises a feature
+     * (MON-13).
      */
     val regions: List<String> get() = emptyList()
 
     /**
-     * This calendar with [regionCode]'s own public holidays added, or this provider itself for
+     * This calendar with [regionCode]'s own public holidays and school vacations, or this provider itself for
      * null, for a country with no [regions], or for a code this build does not know — a newer
      * build's region read by an older one draws the nationwide days rather than nothing.
      */

@@ -2,7 +2,7 @@
 <resources>
     <!-- MON-13: the country whose public holidays the calendar draws. -->
     <string name="country_label">Země</string>
-    <string name="country_settings_summary">Určuje, které státní svátky kalendář zobrazuje</string>
+    <string name="country_settings_summary">Určuje, které státní svátky a školní prázdniny kalendář zobrazuje</string>
 
     <string name="country_cz">Česko</string>
     <string name="country_sk">Slovensko</string>
@@ -12,17 +12,19 @@
     <string name="country_ru">Rusko</string>
     <string name="country_other">Jiná</string>
 
-    <string name="country_holidays_supported">V kalendáři se zobrazují státní svátky a školní prázdniny.</string>
+    <string name="country_holidays_supported">V kalendáři se zobrazují státní svátky a školní prázdniny. Jarní prázdniny se liší podle okresu a nezobrazují se.</string>
+    <string name="country_holidays_school_sk">V kalendáři se zobrazují státní svátky a školní prázdniny tak, jak je zveřejňuje ministerstvo. Jarní prázdniny se liší podle kraje a nezobrazují se.</string>
+    <string name="country_holidays_school_at">V kalendáři se zobrazují státní svátky a školní prázdniny společné pro celé Rakousko. Pololetní a letní prázdniny se liší podle spolkové země a nezobrazují se.</string>
     <string name="country_holidays_unavailable">Svátky pro zemi %1$s zatím v aplikaci nejsou, proto se nezobrazují.</string>
     <string name="country_holidays_public_only">V kalendáři se zobrazují celostátní svátky. Školní prázdniny pro zemi %1$s v aplikaci nejsou.</string>
     <string name="country_holidays_suspended">Státní svátky v zemi %1$s nejsou během válečného stavu dny pracovního volna, proto se nezobrazují.</string>
 
     <!-- MON-13, regional half: the Land whose own public holidays are added. -->
     <string name="holiday_region_label_de">Spolková země</string>
-    <string name="holiday_region_settings_summary">Přidá svátky dané spolkové země</string>
+    <string name="holiday_region_settings_summary">Přidá svátky a školní prázdniny dané spolkové země</string>
     <string name="holiday_region_none">Jen celostátní</string>
-    <string name="country_holidays_pick_region">V kalendáři se zobrazují celostátní svátky; vyberte spolkovou zemi a přidají se i její vlastní. Školní prázdniny pro zemi %1$s v aplikaci nejsou.</string>
-    <string name="country_holidays_with_region">V kalendáři se zobrazují celostátní svátky i svátky spolkové země %1$s. Školní prázdniny v aplikaci nejsou.</string>
+    <string name="country_holidays_pick_region">V kalendáři se zobrazují celostátní svátky. Školní prázdniny určuje každá spolková země: vyberte ji a přidají se její prázdniny i vlastní svátky.</string>
+    <string name="country_holidays_with_region">V kalendáři se zobrazují celostátní svátky a také svátky a školní prázdniny spolkové země %1$s.</string>
 
     <string name="region_de_bb">Braniborsko</string>
     <string name="region_de_be">Berlín</string>

@@ -15,9 +15,10 @@ import java.time.LocalDate
  * half): [forRegion] returns this table plus that state's rules from [GermanState], which says
  * what each state adds and which library entries are deliberately not drawn.
  *
- * **No school vacations**, with or without a state. German school holidays are set per state and
- * shift every year; the reference library carries them, but school calendars stay Czech-only
- * until there is a per-family school calendar to hang them on (ROADMAP MON-13).
+ * **School vacations come with the Land, and only with it.** German school holidays are Land law
+ * and there is no nationwide period, so this object draws none and [hasSchoolVacations] is false;
+ * a state's calendar draws that Land's published list from [GERMAN_SCHOOL_VACATIONS], which says
+ * where the dates come from and what is left out.
  *
  * Names and dates are the Python `holidays` library's (v0.105) for Germany without a subdivision,
  * and `HolidayReferenceTest` holds this table to it for every year of its fixture (2020–2035).
@@ -45,7 +46,9 @@ object GermanHolidays : HolidayProvider {
 
     /** One provider per state, built once: the grid asks on every range change. */
     private val byState: Map<GermanState, HolidayProvider> by lazy {
-        GermanState.entries.associateWith { StateHolidays(table + it.rules) }
+        GermanState.entries.associateWith {
+            StateHolidays(table + it.rules, GERMAN_SCHOOL_VACATIONS[it].orEmpty())
+        }
     }
 
     override fun forRegion(regionCode: String?): HolidayProvider =
@@ -58,17 +61,20 @@ object GermanHolidays : HolidayProvider {
 
     /**
      * One Land's calendar: the nationwide table and the state's own rules, as one list so the
-     * shared [holidaysIn] sorts them together. Has no regions of its own — a state is already the
-     * finest division the app knows.
+     * shared [holidaysIn] sorts them together, and the Land's school vacations. Has no regions of
+     * its own — a state is already the finest division the app knows.
      */
-    private class StateHolidays(private val rules: List<HolidayRule>) : HolidayProvider {
+    private class StateHolidays(
+        private val rules: List<HolidayRule>,
+        private val vacations: List<SchoolVacation>
+    ) : HolidayProvider {
         override val localLanguage: String = "de"
 
-        override val hasSchoolVacations: Boolean = false
+        override val hasSchoolVacations: Boolean = vacations.isNotEmpty()
 
         override fun publicHolidays(year: Int): List<Holiday> = rules.holidaysIn(year, localLanguage)
 
         override fun schoolVacations(year: Int): List<Pair<ClosedRange<LocalDate>, Pair<String, String>>> =
-            emptyList()
+            vacations.overlapping(year)
     }
 }

@@ -381,20 +381,35 @@ October–November 2026 and check the dates below.
       Record whether any school vacation actually appears: AUDIT §4.2 says `VacationBanner` has
       no caller.
 - [ ] **Slovakia:** 1 Nov drawn. **15 Sep 2026 and 17 Nov 2026 not drawn** (both are working
-      days by law in 2026).
-- [ ] **Germany**, no state: 3 Oct drawn, and the note asks you to pick a state.
-  - **Bavaria** adds 1 Nov and 6 Jan 2027.
-  - **Saxony** adds 31 Oct and **18 Nov 2026** (Buß- und Bettag).
-  - **Berlin** adds 8 Mar 2027.
+      days by law in 2026). The note says school vacations are shown and spring holidays are not.
+      **Day view on 29 Oct 2026** is labelled "Jesenné prázdniny" (app in Slovak or matching
+      language) or "Autumn vacation"; **Day view on 17 Feb 2027** has no label (spring holidays
+      are regional and not drawn).
+- [ ] **Germany**, no state: 3 Oct drawn, and the note asks you to pick a state to add its
+      school vacations and public holidays. **Day view on 2 Nov 2026 has no label.**
+  - **Bavaria** adds 1 Nov and 6 Jan 2027, and the note now mentions school vacations.
+    **Day view on 2–6 Nov 2026** is labelled "Herbstferien"/"Autumn vacation", and on
+    **18 Nov 2026** "Buß- und Bettag" as a school-free day.
+  - **Saxony** adds 31 Oct and **18 Nov 2026** (Buß- und Bettag, a public holiday there — the
+    day's cell is tinted as a holiday, unlike Bavaria's).
+  - **Berlin** adds 8 Mar 2027; **Day view on 19 Oct 2026** is labelled "Herbstferien".
   - Change the country to Austria: the state row disappears and Bavaria's days go.
-- [ ] **Austria:** 26 Oct, 1 Nov, 8 Dec drawn. There is no state picker.
+- [ ] **Austria:** 26 Oct, 1 Nov, 8 Dec drawn. There is no state picker. The note says the
+      nationwide school vacations are shown and the semester and summer breaks are not. **Day view
+      on 28 Oct 2026** is labelled "Herbstferien"; **2 Nov 2026** "Allerseelen".
+- [ ] **School vacations are not marked on the month grid** for any country, Czechia included —
+      record it, do not fail it: the month banner was removed on purpose (ROADMAP MON-13, "Where
+      they show").
 - [ ] **Russia:** 4 Nov drawn.
 - [ ] **Ukraine:** nothing drawn, and the note says holidays are suspended under martial law.
 - [ ] **Other:** nothing drawn, and the note says so.
 - [ ] Holiday names: with the app language matching the country (e.g. Deutsch with Germany),
       the local name shows; otherwise the English name.
-- **If it fails:** the data is pinned by `HolidayReferenceTest`, so suspect the rendering or
-  the setting (`domain/holidays/HolidayCountry.kt`, `HolidayLocation`) rather than the tables.
+- **If it fails:** the data is pinned by `HolidayReferenceTest` (public holidays) and
+  `SchoolVacationReferenceTest` (school vacations), so suspect the rendering or the setting
+  (`domain/holidays/HolidayCountry.kt`, `HolidayLocation`) rather than the tables — unless a
+  ministry has changed a published date since the pinned dataset commit, in which case regenerate
+  with `tools/generate-school-vacation-fixture.py`.
 
 ### 3.5 Contact windows (MON-6b) · 1P
 

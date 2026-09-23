@@ -13,12 +13,19 @@ package com.coparently.app.domain.holidays
  *
  * [coverage] is what the picker states on the row, and it is derived, not declared, so the row
  * cannot claim more than the provider draws:
- * - **Czechia** — public holidays and the nationwide MŠMT school vacations.
- * - **Slovakia, Germany, Austria, Russia** — public holidays only. Their school calendars are set
- *   per region, and inventing a nationwide one would be exactly the wrong date this item is about.
- *   Germany's table is the nine nationwide days, plus the chosen Land's own when the parent has
- *   named one (see [regions] and [HolidayLocation]); Russia's is the statutory list without the
- *   annual transfer decree. Each provider's KDoc says what it leaves out.
+ * - **Czechia** — public holidays and the nationwide MŠMT school vacations (computed).
+ * - **Slovakia and Austria** — public holidays and the *nationwide* school vacations, as published
+ *   per school year (a dated table, from 2025/26 to the last published year). What is set per
+ *   region is left out: Slovakia's spring holidays, Austria's semester and summer breaks.
+ * - **Germany** — the nine nationwide public holidays, and no school vacations, until the parent
+ *   names a Land; then the Land's own public holidays *and* its school vacations (see [regions],
+ *   [HolidayLocation] and [coverageIn]). There is no nationwide German school period to draw.
+ * - **Russia** — public holidays only: the statutory list without the annual transfer decree.
+ *   Its school vacations are set per school, not by the state.
+ *
+ * Inventing a nationwide school calendar where the real one is regional would be exactly the wrong
+ * date this item is about. Each provider's KDoc says what it leaves out, and where the vacation
+ * dates come from.
  * - **Ukraine** — none, and not because the table is missing. Under martial law (in force since
  *   24 February 2022) Ukraine's public holidays are not days off, and the reference data returns
  *   none from 2023 on. A provider that computed the pre-war list would put days off on the grid
@@ -63,13 +70,13 @@ enum class HolidayCountry(
     /** Public holidays and school vacations, and the default. */
     CZECHIA("CZ", CzechHolidays),
 
-    /** Public holidays only; the list changes by year (Acts 530/2023 and 261/2025). */
+    /** Public holidays (the list changes by year: Acts 530/2023, 261/2025) and nationwide school vacations. */
     SLOVAKIA("SK", SlovakHolidays),
 
-    /** The nine nationwide public holidays, plus the chosen Land's own. */
+    /** The nine nationwide public holidays, plus the chosen Land's own and its school vacations. */
     GERMANY("DE", GermanHolidays),
 
-    /** The thirteen public holidays, which are nationwide — so no region to choose. */
+    /** The thirteen public holidays and the nationwide school vacations — so no region to choose. */
     AUSTRIA("AT", AustrianHolidays),
 
     /** No days off under martial law — see the class KDoc. */
@@ -85,9 +92,10 @@ enum class HolidayCountry(
     val hasHolidays: Boolean get() = provider != null
 
     /**
-     * The regions whose own public holidays this country's calendar can add, as ISO 3166-2
-     * suffixes — the sixteen Länder for Germany, and empty everywhere else. The region picker
-     * appears only when this is non-empty, so it can never be offered where it changes nothing.
+     * The regions whose own public holidays and school vacations this country's calendar can add,
+     * as ISO 3166-2 suffixes — the sixteen Länder for Germany, and empty everywhere else. The
+     * region picker appears only when this is non-empty, so it can never be offered where it
+     * changes nothing.
      */
     val regions: List<String> get() = provider?.regions.orEmpty()
 
@@ -103,14 +111,24 @@ enum class HolidayCountry(
         return normalized.takeIf { it in regions }
     }
 
-    /** What picking this country puts on the grid — the sentence the picker shows under it. */
-    val coverage: HolidayCoverage
-        get() = when {
-            provider?.hasSchoolVacations == true -> HolidayCoverage.PUBLIC_AND_SCHOOL
-            provider != null -> HolidayCoverage.PUBLIC_ONLY
+    /** What picking this country, with no region, puts on the grid. */
+    val coverage: HolidayCoverage get() = coverageIn(null)
+
+    /**
+     * What picking this country and [regionCode] puts on the grid — the sentence the picker shows
+     * under it. Read from the calendar [HolidayLocation] would draw, so Germany with a Land says
+     * "school vacations" and Germany without one does not; a code that is not one of [regions] is
+     * read as no region, as everywhere else.
+     */
+    fun coverageIn(regionCode: String?): HolidayCoverage {
+        val calendar = HolidayLocation(this, regionOrNull(regionCode)).provider
+        return when {
+            calendar?.hasSchoolVacations == true -> HolidayCoverage.PUBLIC_AND_SCHOOL
+            calendar != null -> HolidayCoverage.PUBLIC_ONLY
             holidaysSuspended -> HolidayCoverage.SUSPENDED
             else -> HolidayCoverage.NONE
         }
+    }
 
     companion object {
 
@@ -176,14 +194,14 @@ data class HolidayLocation(
  *
  * Four answers rather than a boolean because each is a different sentence to the user, and
  * collapsing any two would make one of them false: "holidays and school vacations" said for
- * Germany promises strips that never appear, and "not in the app yet" said for Ukraine implies
+ * Germany without a Land promises strips that never appear, and "not in the app yet" said for Ukraine implies
  * days off that do not exist.
  */
 enum class HolidayCoverage {
-    /** Public holidays and nationwide school vacations. */
+    /** Public holidays and school vacations (the nationwide ones, or a chosen region's). */
     PUBLIC_AND_SCHOOL,
 
-    /** Public holidays; the country's school calendar is regional or unknown to the app. */
+    /** Public holidays; the school calendar is regional (and no region is chosen) or unknown. */
     PUBLIC_ONLY,
 
     /** The country's public holidays are not days off at present, so none are drawn. */

@@ -6,6 +6,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 /**
  * The country a parent lives in, and the holiday calendar that follows (MON-13).
@@ -52,13 +53,14 @@ class HolidayCountryTest {
     @Test
     fun `each country states exactly what it draws`() {
         // Not an aspiration: `coverage` is what the picker renders its note from, so a change here
-        // is a change in what the app tells the user. Only Czechia has school vacations; Ukraine
-        // has no provider *because* its holidays are suspended, not because one is missing.
+        // is a change in what the app tells the user. Germany has school vacations only per Land
+        // (see the next test); Ukraine has no provider *because* its holidays are suspended, not
+        // because one is missing.
         val expected = mapOf(
             HolidayCountry.CZECHIA to HolidayCoverage.PUBLIC_AND_SCHOOL,
-            HolidayCountry.SLOVAKIA to HolidayCoverage.PUBLIC_ONLY,
+            HolidayCountry.SLOVAKIA to HolidayCoverage.PUBLIC_AND_SCHOOL,
             HolidayCountry.GERMANY to HolidayCoverage.PUBLIC_ONLY,
-            HolidayCountry.AUSTRIA to HolidayCoverage.PUBLIC_ONLY,
+            HolidayCountry.AUSTRIA to HolidayCoverage.PUBLIC_AND_SCHOOL,
             HolidayCountry.UKRAINE to HolidayCoverage.SUSPENDED,
             HolidayCountry.RUSSIA to HolidayCoverage.PUBLIC_ONLY,
             HolidayCountry.OTHER to HolidayCoverage.NONE
@@ -71,16 +73,34 @@ class HolidayCountryTest {
     }
 
     @Test
-    fun `a provider that says it has no school vacations returns none`() {
-        // The picker's "public holidays only" sentence is derived from the flag, so the flag must
-        // not disagree with the list it describes.
-        HolidayCountry.entries.mapNotNull { it.provider }.forEach { provider ->
+    fun `a German Land's calendar has school vacations and Germany without one has none`() {
+        // The note under the picker reads `coverageIn`, so "school vacations" appears for a
+        // German parent exactly when a Land is chosen - and a stale code reads as no Land.
+        assertEquals(HolidayCoverage.PUBLIC_ONLY, HolidayCountry.GERMANY.coverageIn(null))
+        HolidayCountry.GERMANY.regions.forEach { region ->
+            assertEquals(HolidayCoverage.PUBLIC_AND_SCHOOL, HolidayCountry.GERMANY.coverageIn(region), region)
+        }
+        assertEquals(HolidayCoverage.PUBLIC_ONLY, HolidayCountry.GERMANY.coverageIn("XX"))
+        assertEquals(HolidayCoverage.PUBLIC_AND_SCHOOL, HolidayCountry.AUSTRIA.coverageIn("BY"))
+    }
+
+    @Test
+    fun `a calendar's school-vacation flag agrees with its list`() {
+        // The picker's sentence is derived from the flag, so the flag must not disagree with the
+        // list it describes: a calendar that says "none" returns none in any year, and one that
+        // says "some" returns some in the school year the published tables start with. (A dated
+        // table ends where its source ends, so a later year may legitimately be empty.)
+        val calendars = HolidayCountry.entries.flatMap { country ->
+            (listOf<String?>(null) + country.regions).mapNotNull { HolidayLocation(country, it).provider }
+        }
+        calendars.forEach { provider ->
             (2024..2030).forEach { year ->
-                assertEquals(
-                    provider.hasSchoolVacations,
-                    provider.schoolVacations(year).isNotEmpty(),
-                    "${provider.localLanguage} $year"
-                )
+                if (!provider.hasSchoolVacations) {
+                    assertTrue(provider.schoolVacations(year).isEmpty(), "${provider.localLanguage} $year")
+                }
+            }
+            if (provider.hasSchoolVacations) {
+                assertTrue(provider.schoolVacations(2026).isNotEmpty(), provider.localLanguage)
             }
         }
     }

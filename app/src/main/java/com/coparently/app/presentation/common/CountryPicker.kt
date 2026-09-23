@@ -90,13 +90,16 @@ fun HolidayCountry.regionName(regionCode: String?): String {
  * The sentence under a country picker saying what choosing [this] actually draws (MON-13).
  *
  * One function for the wizard's chips and the Settings dialog, so the two cannot drift on **what
- * is admitted**. It reads [HolidayCountry.coverage], which is derived from the provider, so the
- * note cannot promise school vacations a provider does not return — only Czechia has them — or
- * call Ukraine's holidays "not in the app yet" when the truth is that martial law suspended them.
+ * is admitted**. It reads [HolidayCountry.coverageIn], which is derived from the calendar the
+ * grid would draw, so the note cannot promise school vacations a provider does not return —
+ * Germany has them only with a Land — or call Ukraine's holidays "not in the app yet" when the
+ * truth is that martial law suspended them.
  *
- * For a country with regions it also says whether the region's own days are in: "nationwide
- * only" would under-state a Bavarian calendar that has Epiphany on it, and the old sentence
- * would never tell a parent that choosing a state adds anything.
+ * Where a country's school vacations are drawn but part of them is not — Czechia's and Slovakia's
+ * spring breaks, Austria's semester and summer breaks, all set per region — the sentence says
+ * which part, per country ([schoolNoteRes]). For a country with regions it also says whether the
+ * region's own days are in: "nationwide only" would under-state a Bavarian calendar that has
+ * Epiphany and the Bavarian school holidays on it.
  *
  * @param regionCode The region stored for this country, if any; ignored when it is not one of
  *   the country's regions.
@@ -105,16 +108,30 @@ fun HolidayCountry.regionName(regionCode: String?): String {
 fun HolidayCountry.coverageNote(regionCode: String? = null): String {
     val name = stringResource(labelRes())
     val region = regionOrNull(regionCode)
-    return when (coverage) {
-        HolidayCoverage.PUBLIC_AND_SCHOOL -> stringResource(R.string.country_holidays_supported)
+    return when (coverageIn(region)) {
+        HolidayCoverage.PUBLIC_AND_SCHOOL -> when (region) {
+            null -> stringResource(schoolNoteRes())
+            else -> stringResource(R.string.country_holidays_with_region, regionName(region))
+        }
         HolidayCoverage.PUBLIC_ONLY -> when {
             regions.isEmpty() -> stringResource(R.string.country_holidays_public_only, name)
-            region == null -> stringResource(R.string.country_holidays_pick_region, name)
-            else -> stringResource(R.string.country_holidays_with_region, regionName(region))
+            else -> stringResource(R.string.country_holidays_pick_region)
         }
         HolidayCoverage.SUSPENDED -> stringResource(R.string.country_holidays_suspended, name)
         HolidayCoverage.NONE -> stringResource(R.string.country_holidays_unavailable, name)
     }
+}
+
+/**
+ * The note for a country whose nationwide calendar has school vacations, naming what part of the
+ * school calendar is left out because it is set per region. Only the countries whose providers
+ * return vacations without a region reach this; anything else gets the plain sentence.
+ */
+@StringRes
+private fun HolidayCountry.schoolNoteRes(): Int = when (this) {
+    HolidayCountry.SLOVAKIA -> R.string.country_holidays_school_sk
+    HolidayCountry.AUSTRIA -> R.string.country_holidays_school_at
+    else -> R.string.country_holidays_supported
 }
 
 /**
@@ -123,14 +140,17 @@ fun HolidayCountry.coverageNote(regionCode: String? = null): String {
  * Shared by the onboarding wizard's profile step and the Settings row so the two cannot drift on
  * what is offered — and, more importantly, on **what is admitted**. The supporting line under
  * the chips ([coverageNote]) states outright what the chosen country's calendar contains: public
- * holidays and school vacations for Czechia, public holidays alone for four others, and nothing
- * — with the reason — for Ukraine and "Other". A picker that offered a country and then quietly
- * drew less than it implied would be the affordance design rule 8 forbids, and one that drew
- * *Czech* holidays for a German family is the bug this whole item exists to fix.
+ * holidays and school vacations for Czechia, Slovakia and Austria (each saying which regional
+ * part is left out), public holidays for Germany with its Land's school vacations once a Land is
+ * chosen, public holidays alone for Russia, and nothing — with the reason — for Ukraine and
+ * "Other". A picker that offered a country and then quietly drew less than it implied would be
+ * the affordance design rule 8 forbids, and one that drew *Czech* holidays for a German family is
+ * the bug this whole item exists to fix.
  *
  * The region chips (MON-13, regional half) appear only when the chosen country has regions —
- * Germany's sixteen Länder — and only when the caller takes a region at all, so a picker that
- * has no region to store never offers one.
+ * Germany's sixteen Länder, which add their own public holidays and school vacations — and only
+ * when the caller takes a region at all, so a picker that has no region to store never offers
+ * one.
  *
  * @param selected The country currently stored on the profile.
  * @param onSelect Called with the new country; the caller persists it.
