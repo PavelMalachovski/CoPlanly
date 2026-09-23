@@ -74,8 +74,9 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
    navigating instead: that drops the tab route, hides the bottom bar, and makes Back bounce
    off a list that immediately forwards again.
 8. **No affordance may promise a feature that doesn't exist.** The composer's `+` was
-   captioned "attach" and opened message templates; templates are now a labelled chip and
-   there is no attach button until attachments actually ship. Same rule shaped the thread
+   captioned "attach" and opened message templates; templates are now a labelled chip, and the
+   attach button came back only when attachments shipped (MON-23, item 31) — a paperclip
+   *beside* `MessageInput`, which opens a real picker and a real upload. Same rule shaped the thread
    header (`ChatThreadHeader`): it shows the co-parent's initial, their name and whether
    **your own** messages left the device (derived from `Message.status`), not the mock's
    "Synced just now" — the app tracks no chat sync timestamp, so printing one would be the
@@ -1105,6 +1106,52 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     `HolidayFairnessCalculator` reads the same resolver, so swaps and layers count as drawn and a
     contact window is never a night; its "Propose a change" opens the layer editor.
 
+31. **A shared file is indexed in Firestore, stored in Storage under its family's path, and never
+    reached by a download URL** (MON-23, September 2026). Two surfaces: the **vault**,
+    `family_documents/{docId}` (Settings → Family → Documents, `presentation/documents`), with the
+    bytes at `family_documents/{familyId}/{docId}/{fileName}`; and **chat attachments**, bytes at
+    `chat_attachments/{conversationId}/{messageId}/{fileName}`, referenced from the message.
+    `domain/files/SharedFilePolicy` holds the cap (under 20 MB) and the types (PDF, JPEG, PNG,
+    HEIC/HEIF, WebP) that both rule files repeat — change all three together. Eight things not to
+    undo.
+    **No Room table, and none added quietly.** The vault is a Firestore listener
+    (`FamilyDocumentRepositoryImpl`, like the calendar-friend list), and a chat reference rides the
+    `attachments` list `Message` already had, as a `ChatAttachmentCodec` string
+    (`att1|path|type|size|sha256|name`) — never Gson over the data class, and never a new column.
+    A vault cache is a schema version (ROADMAP MON-23).
+    **The Storage gate is the path.** `storage.rules`' `isOneOfPair` splits the first segment —
+    `FamilyKey.of`, the two uids — so the emulator runs every case
+    (`firestore-tests/rules/storage-shared-files.test.js`); the cross-service `firestore.get()`
+    it cannot run is not used. The cost is written in the rule: a path names its pair for ever,
+    so an ex-partner who kept one can still fetch that file after an unpair, although the
+    vault's index narrows (`family_documents` is in `SHARED_AUDIENCE_COLLECTIONS`). Don't widen
+    a block to "signed in"; don't add `list`.
+    **No download URL, ever.** A token URL bypasses Storage rules for whoever holds it.
+    `SharedFileStorage` has no `downloadUrl` call; a reader downloads as themselves, and
+    `vaultKeysOnly` refuses a `downloadUrl` field.
+    **The digest is checked, not decorative.** Every upload stamps `uploader` and `sha256` in custom
+    metadata (the rule requires both), `SharedFileCache` renames a download into place only when
+    its SHA-256 matches, and the export lists attachments by name and SHA-256
+    (`RecordFormat.messageText`), never by their bytes. Nothing may overwrite a stored object
+    (`resource == null` in the rule — the emulator treated an overwrite as a create).
+    **A chat message is written only after its file is stored.** `MessageRepositoryImpl.deliver`
+    calls `AttachmentUploadGate.ensureUploaded` (`ChatAttachmentOutbox`) before the Firestore write,
+    so a message whose upload failed stays SENDING/ERROR, shows "Not uploaded yet" and no tick, and
+    the ordinary outbox retries it with its staged file in `files/chat_outbox/{messageId}/`. Don't
+    move the gate after the write. A bubble only opens a reference stored under its own message
+    (`ChatAttachmentCodec.belongsTo`).
+    **Shared by definition.** A vault document has no private form (item 3 does not apply), needs
+    a family (`isFamilyMember`, not `familyIsMineOrBlank`), and its audience is bounded by
+    `isMyAudience` *and* by the family id, so a parent with two families cannot file one family's
+    court order into the other's. The screen says so before anything is added.
+    **Only the uploader renames, re-files or deletes, and a delete is a tombstone** (item 14).
+    `sweepDeletedDocuments` removes a vault tombstone **and its file** after 90 days
+    (`FILES_SWEPT_WITH_TOMBSTONE`); no client can delete a chat file at all.
+    **Account deletion reaches both**: the departing parent's vault documents and their folders
+    (`AUTHORED_FILES.family_documents`, keyed on the stored `familyId`, never a blank prefix), and
+    every conversation's `chat_attachments/{id}/` with the thread.
+    None of it works live until `firebase deploy --only storage` — the known issue below.
+
 ## Known issues / do not "fix" silently
 
 **Check an entry against the code before acting on it.** Two entries in this section, and one
@@ -1145,8 +1192,9 @@ whatever you were doing; a stale "known issue" costs more than a missing one.
   the entry gave still holds: never route the first agreement through `propose`.
 
 - **`storage.rules` has never been deployed past its July 2026 state, and that is why attaching a
-  photo to a pet fails.** The file in this repo covers `receipts/`, `event_images/`,
-  `medical_photos/` and `pet_photos/`; the live bucket, on the evidence, still covers only the
+  photo to a pet fails** — and why the MON-23 vault and chat attachments (item 31) cannot upload
+  anything live yet. The file in this repo covers `receipts/`, `event_images/`,
+  `medical_photos/`, `pet_photos/`, `family_documents/` and `chat_attachments/`; the live bucket, on the evidence, still covers only the
   first two, so `pet_photos/**` falls through to `match /{allPaths=**} { allow read, write: if
   false; }` and every pet — and, silently, every medical — photo upload is refused. The client
   path is sound and was ruled out end to end. **The fix is an ops action nobody has taken:

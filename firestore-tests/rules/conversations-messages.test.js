@@ -197,6 +197,27 @@ describe('Part 1d: messages', () => {
     })));
   });
 
+  // MON-23. A chat attachment travels as a reference string in the `attachments` list the
+  // message already had (`ChatAttachmentCodec`), so no field is added and an older build sees
+  // the content fallback. The bytes are Storage's business; this pins that the reference is
+  // accepted as written and that the list stays bounded.
+  it('lets a participant send a message carrying an attachment reference', async () => {
+    const db = env.authenticatedContext(ALICE).firestore();
+    const ref = 'att1|chat_attachments/conv-1/msg-1/report.pdf|application/pdf|2048|' +
+      'a'.repeat(64) + '|report.pdf';
+    await assertSucceeds(db.doc('messages/msg-1').set(messageDoc({
+      content: 'report.pdf',
+      attachments: [ref],
+    })));
+  });
+
+  it('refuses a message carrying more than ten attachment entries', async () => {
+    const db = env.authenticatedContext(ALICE).firestore();
+    await assertFails(db.doc('messages/msg-1').set(messageDoc({
+      attachments: Array.from({length: 11}, (_, i) => `att1|x/${i}`),
+    })));
+  });
+
   it('refuses an announcement forged as coming from the co-parent', async () => {
     // `senderId == request.auth.uid` already covers this, and it matters more now: a card the
     // reader renders themselves looks exactly as trustworthy as one the app wrote, so a forged
@@ -279,6 +300,11 @@ describe('Part 1d: messages', () => {
       const db = env.authenticatedContext(BOB).firestore();
       await assertFails(
           db.doc('messages/msg-1').update({isRead: true, content: 'rewritten'}));
+    });
+
+    it('denies swapping the attachments after sending', async () => {
+      const db = env.authenticatedContext(ALICE).firestore();
+      await assertFails(db.doc('messages/msg-1').update({attachments: ['att1|elsewhere']}));
     });
 
     it('denies reassigning the sender', async () => {

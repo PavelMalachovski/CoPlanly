@@ -40,8 +40,9 @@ import com.coparently.app.R
  *
  * The leading `+` this used to carry is gone. It was captioned "attach" but opened message
  * templates — the August 2026 audit's clearest "icon promises one thing, does another". The
- * templates now live in a labelled chip above this row (see `ChatScreen`), and a real attach
- * button will land with attachments themselves rather than ahead of them.
+ * templates now live in a labelled chip above this row (see `ChatScreen`), and the real attach
+ * button landed with attachments themselves (MON-23): `ChatAttachButton`, beside this row in
+ * `ChatScreen`, not inside it.
  *
  * @param value Current composer text
  * @param onValueChange Called on every edit

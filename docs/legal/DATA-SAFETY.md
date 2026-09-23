@@ -43,7 +43,8 @@ our processor are declared.
 | Other info | Yes | No | **Yes** | App functionality — a child's date of birth, school and activity details |
 | Device or other IDs | Yes | No | No | App functionality (the FCM push token stored on `users/{uid}`) and, with consent, analytics/crash reporting (Firebase installation ID) |
 | User IDs | Yes | No | No | Account management |
-| Photos | Yes | No | Yes | App functionality — receipts, event images, medical and pet photos |
+| Photos | Yes | No | Yes | App functionality — receipts, event images, medical and pet photos, photos in the document vault and sent in chat |
+| Files and docs | Yes | No | Yes | App functionality — the family document vault and PDFs sent in chat (MON-23). Always shared with the co-parent by design; optional to use |
 | Calendar events | Yes | No | No | App functionality |
 | Messages (in-app) | Yes | No | No | App functionality |
 | Health info | Yes | No | Yes | App functionality — the child's medical profile |
@@ -67,7 +68,10 @@ optional**.
 cannot read Firestore, so a photograph's URL is protected by being unguessable rather than by
 a rule that knows who a parent is. This is documented at length in `storage.rules`. It does
 not change the declaration, but it is the honest state of the control and should be fixed
-before this ships (see `docs/ROADMAP.md`, **SEC-1**).
+before this ships (see `docs/ROADMAP.md`, **SEC-1**). **The vault and chat attachments
+(MON-23) are the exception**: their rules gate on the family id in the path, which names the
+family's two parents, so only those two can download them — with the one caveat `storage.rules`
+states, that the path still names an ex-partner after an unpair.
 
 **Receipt OCR is on-device.** ML Kit's bundled model recognises receipt text without the
 photograph or the text leaving the device. Nothing about it is collected or shared, and it is

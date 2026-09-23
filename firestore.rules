@@ -960,6 +960,92 @@ service cloud.firestore {
                       resource.data.createdByFirebaseUid == request.auth.uid;
     }
 
+    // ---- Family documents (the vault, MON-23) ---------------------------
+    // One document per file a parent filed for the family: a court order, a school letter, a
+    // passport scan. The document is the *index* of a file in Cloud Storage; the bytes live at
+    // `storagePath`, gated by `storage.rules`' `family_documents` block, and this document never
+    // carries a download URL — a token URL bypasses Storage rules entirely, so the field is
+    // refused by `vaultKeysOnly`.
+    //
+    // **Shared by definition.** There is no private vault document (item 3 has no counterpart
+    // here), so the family is required, not `familyIsMineOrBlank`, and the audience is bounded
+    // twice: by `isMyAudience` like every per-document audience since item 23, and by the family
+    // id itself, so a parent with two co-parents cannot show one family's court order to the
+    // other family's parent.
+    //
+    // After creation only the title, the category and the tombstone move, and only the uploader
+    // moves them. The co-parent reads and can open the file but cannot rename, re-file or delete
+    // what the other parent filed: in a product whose records settle disagreements, "who filed
+    // this, and is it still what they filed" has to stay answerable. A delete is a tombstone
+    // (item 14); `sweepDeletedDocuments` removes the document and its file after 90 days.
+    function vaultContentTypes() {
+      return ['application/pdf', 'image/jpeg', 'image/png', 'image/heic', 'image/heif',
+              'image/webp'];
+    }
+
+    function vaultKeysOnly(data) {
+      return data.keys().hasOnly(['id', 'familyId', 'createdByFirebaseUid', 'sharedWith',
+                                  'title', 'category', 'fileName', 'storagePath',
+                                  'contentType', 'sizeBytes', 'sha256', 'createdAtMillis',
+                                  'deletedAtMillis', 'deletedBy']);
+    }
+
+    function validVaultCategory(category) {
+      return category in ['court_order', 'school', 'medical', 'identity', 'other'];
+    }
+
+    function validVaultFile(data, docId) {
+      return isValidLength(data.fileName, 1, 120) &&
+             !data.fileName.matches('.*[/|].*') &&
+             data.storagePath ==
+               'family_documents/' + data.familyId + '/' + docId + '/' + data.fileName &&
+             data.contentType in vaultContentTypes() &&
+             data.sizeBytes is int &&
+             data.sizeBytes > 0 &&
+             data.sizeBytes < 20 * 1024 * 1024 &&
+             data.sha256 is string &&
+             data.sha256.matches('^[0-9a-f]{64}$') &&
+             data.createdAtMillis is int;
+    }
+
+    match /family_documents/{docId} {
+      allow read: if isAuthenticated() &&
+                    request.auth.uid in resource.data.get('sharedWith', []);
+
+      allow create: if isAuthenticated() &&
+                      vaultKeysOnly(request.resource.data) &&
+                      !('deletedAtMillis' in request.resource.data) &&
+                      !('deletedBy' in request.resource.data) &&
+                      request.resource.data.id == docId &&
+                      request.resource.data.createdByFirebaseUid == request.auth.uid &&
+                      isFamilyMember(request.resource.data.familyId) &&
+                      request.auth.uid in request.resource.data.sharedWith &&
+                      isMyAudience(request.resource.data.sharedWith) &&
+                      request.resource.data.sharedWith.toSet()
+                        .difference(request.resource.data.familyId.split('__').toSet())
+                        .size() == 0 &&
+                      isValidLength(request.resource.data.title, 1, 200) &&
+                      validVaultCategory(request.resource.data.category) &&
+                      validVaultFile(request.resource.data, docId);
+
+      allow update: if isAuthenticated() &&
+                      resource.data.createdByFirebaseUid == request.auth.uid &&
+                      vaultKeysOnly(request.resource.data) &&
+                      (
+                        (request.resource.data.diff(resource.data).affectedKeys()
+                           .hasOnly(['title', 'category']) &&
+                         isValidLength(request.resource.data.title, 1, 200) &&
+                         validVaultCategory(request.resource.data.category)) ||
+                        (request.resource.data.diff(resource.data).affectedKeys()
+                           .hasOnly(['deletedAtMillis', 'deletedBy']) &&
+                         request.resource.data.deletedBy == request.auth.uid &&
+                         request.resource.data.deletedAtMillis is int)
+                      );
+
+      // Tombstones only (item 14). The sweep and account deletion run as admin.
+      allow delete: if false;
+    }
+
     // ---- Expenses (receipt sync) --------------------------------------
     // The one collection where "a co-parent of the author" was standing in for "in the same
     // family", and the only real leak a second co-parent opens (docs/DESIGN-multi-family.md,
@@ -1704,8 +1790,12 @@ service cloud.firestore {
       // `conversations` create and `custody_models` get already apply. Unpair keeps the thread
       // for its history but must end the writing: without this an ex-partner kept posting, and
       // `onChatMessageCreated` kept pushing it to the other parent's lock screen.
+      // `attachments` is bounded because since MON-23 it carries file references
+      // (`ChatAttachmentCodec`) as well as the one event id a change-request card names; ten is
+      // far above what any client writes and keeps a message document a message.
       allow create: if isAuthenticated() &&
                       request.resource.data.senderId == request.auth.uid &&
+                      request.resource.data.get('attachments', []).size() <= 10 &&
                       request.auth.uid in
                         get(/databases/$(database)/documents/conversations/$(request.resource.data.conversationId))
                           .data.participants &&

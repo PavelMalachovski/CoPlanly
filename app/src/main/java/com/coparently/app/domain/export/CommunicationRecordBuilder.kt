@@ -1,6 +1,7 @@
 package com.coparently.app.domain.export
 
 import com.coparently.app.data.versions.EventVersionKind
+import com.coparently.app.domain.chat.ChatAttachment
 import com.coparently.app.domain.model.Expense
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -39,13 +40,19 @@ data class CurrentEventInput(
     val facts: EventFacts
 )
 
-/** One chat message as the export reads it. */
+/**
+ * One chat message as the export reads it.
+ *
+ * @property attachments The files it carried (MON-23) — listed in the record by name and SHA-256,
+ *   never by their bytes.
+ */
 data class MessageInput(
     val messageId: String,
     val senderUid: String,
     val sentAtMillis: Long,
     val text: String,
-    val delivered: Boolean
+    val delivered: Boolean,
+    val attachments: List<ChatAttachment> = emptyList()
 )
 
 /**
@@ -185,7 +192,7 @@ object CommunicationRecordBuilder {
                     messageId = it.messageId,
                     senderName = scope.nameForUid(it.senderUid),
                     sentAtMillis = it.sentAtMillis,
-                    text = it.text,
+                    text = RecordFormat.messageText(it.text, it.attachments),
                     delivered = it.delivered
                 )
             }

@@ -35,6 +35,7 @@ import androidx.compose.material.icons.filled.Diversity3
 import androidx.compose.material.icons.filled.EventAvailable
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.FamilyRestroom
+import androidx.compose.material.icons.filled.FolderShared
 import androidx.compose.material.icons.filled.Gavel
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.HourglassTop
@@ -158,6 +159,7 @@ private val syncTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
  * @param onNavigateToParentingPlan Opens the parenting plan (MON-5)
  * @param onNavigateToPets Opens the pets list
  * @param onNavigateToExport Opens the communication-record export (MON-3)
+ * @param onNavigateToDocuments Opens the family document vault (MON-23)
  * @param onNavigateToPairing Opens co-parent pairing
  * @param onNavigateToFriends Opens the calendar-friend list (item 16)
  * @param onNavigateToCalendarFeed Opens the read-only calendar links (MON-17); the row shows
@@ -182,6 +184,7 @@ fun SettingsScreen(
     onNavigateToChildInfo: (() -> Unit)? = null,
     onNavigateToParentingPlan: (() -> Unit)? = null,
     onNavigateToExport: (() -> Unit)? = null,
+    onNavigateToDocuments: (() -> Unit)? = null,
     onNavigateToPets: (() -> Unit)? = null,
     onNavigateToPairing: (() -> Unit)? = null,
     onNavigateToFriends: (() -> Unit)? = null,
@@ -631,6 +634,20 @@ fun SettingsScreen(
                             icon = Icons.Default.Description,
                             title = stringResource(R.string.export_settings_title),
                             supporting = stringResource(R.string.export_settings_description),
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                navigate()
+                            },
+                            trailing = { Chevron() }
+                        )
+                        Divider()
+                    }
+                    // The vault (MON-23) sits with the record: both are the family's papers.
+                    onNavigateToDocuments?.let { navigate ->
+                        SectionRow(
+                            icon = Icons.Default.FolderShared,
+                            title = stringResource(R.string.documents_settings_title),
+                            supporting = stringResource(R.string.documents_settings_description),
                             onClick = {
                                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 navigate()

@@ -9,6 +9,7 @@ import com.coparently.app.data.repository.toMessageOrNull
 import com.coparently.app.data.versions.EventVersionDocument
 import com.coparently.app.data.versions.EventVersionKind
 import com.coparently.app.data.versions.EventVersionRecorder
+import com.coparently.app.domain.chat.ChatAttachmentCodec
 import com.coparently.app.domain.export.CommunicationRecordBuilder
 import com.coparently.app.domain.export.CurrentEventInput
 import com.coparently.app.domain.export.EventFacts
@@ -104,7 +105,16 @@ class CommunicationRecordSource @Inject constructor(
         val end = to.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
         val remote = fromServer("messages") { messages.fetchBetween(conversationId, start, end) }
             ?.mapNotNull { it.toMessageOrNull() }
-            ?.map { MessageInput(it.id, it.senderId, it.sentAtMillis, it.content, delivered = true) }
+            ?.map {
+                MessageInput(
+                    it.id,
+                    it.senderId,
+                    it.sentAtMillis,
+                    it.content,
+                    delivered = true,
+                    attachments = ChatAttachmentCodec.attachmentsOf(it.attachments)
+                )
+            }
         val remoteIds = remote.orEmpty().map { it.messageId }.toSet()
         val local = messageDao.getMessagesOnce(conversationId)
             .map { it.toDomain() }
@@ -115,7 +125,8 @@ class CommunicationRecordSource @Inject constructor(
                     senderUid = it.senderId,
                     sentAtMillis = it.sentAtMillis,
                     text = it.content,
-                    delivered = it.syncedToFirestore && it.status != MessageSendStatus.ERROR
+                    delivered = it.syncedToFirestore && it.status != MessageSendStatus.ERROR,
+                    attachments = ChatAttachmentCodec.attachmentsOf(it.attachments)
                 )
             }
         return (remote.orEmpty() + local) to (remote != null)

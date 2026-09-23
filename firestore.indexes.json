@@ -1,6 +1,20 @@
 {
   "indexes": [
     {
+      "collectionGroup": "family_documents",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "sharedWith",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "familyId",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "notification_queue",
       "queryScope": "COLLECTION",
       "fields": [
