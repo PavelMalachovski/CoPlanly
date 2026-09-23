@@ -107,7 +107,7 @@ invocation is yours.
 | **SEC-1 §1** | Storage rules keyed on Firestore state (cross-service rules — the "this needs the proxy" claim was a factual error) | The **Storage emulator does not resolve cross-service calls**, so `firestore-tests/` cannot cover it. Settle the verification story — a staging bucket against a real project — before writing the rule. |
 | **SEC-5** | `androidx.security:security-crypto` is on an alpha holding OAuth tokens | A dependency bump compiles in CI; whether tokens survive it is a sign-in on a real device. |
 | **UX-8** | The second half: two surfaces colour a chip from two different sources | An owner's answer to "what does a chip's colour mean" — the event's owner, or whose day it falls on. |
-| **UX-13** | Light theme is unverifiable rather than incomplete — the cloud half is done (night window background, light+dark previews on the main screens' pieces) | Whether a dark cold start still flashes: only a device shows the window before Compose's first frame. |
+| **UX-13** | Light theme is no longer unverifiable: CI's `screenshots` job renders the main screens' pieces in light and dark on every Android PR (night window background and previews done before it) | Whether a dark cold start still flashes: only a device shows the window before Compose's first frame. |
 | **FAM-5** | The event chip does not say who it is about | Chips are single-line with ellipsis and every colour channel is spent. Worth an owner's eye on a real device rather than a treatment invented blind. |
 | **MON-3 (shipped, unseen)** | The PDF export and the share sheet | `PdfDocument` drawing, Cyrillic and Czech glyphs in the default typeface, page breaks, and whether the share sheet hands the file to a mail app — the layout is unit-tested, the drawing is not. |
 | **M-4 (shipped, unseen)** | The colour palette, the family switcher, the second-co-parent invite | Kotlin compiled in CI; nobody has looked at it. |
@@ -1085,6 +1085,19 @@ silently removes the undo snackbar. Fix the branch first, then the strings.
 ### UX-13 · P3 · M · Light theme is unverifiable rather than incomplete
 
 **Where:** 👁 cloud writes the previews and the theme fix; only a device shows the flash.
+
+**Reviewable from CI (September 2026).** The `screenshots` job (Roborazzi on Robolectric's native
+graphics, `app/src/test/java/com/coparently/app/screenshots`) records Home's four cards, the month
+grid with every `DayCellFills` layer, the calendar banners, a Settings group, `EmptyState`, the
+Expenses summary header, a chat thread, the event preview, the consent screen and the family
+switcher chip — each in light **and** dark, across the five languages, at 1.0× and 1.5× text, and
+in the default and a purple/orange palette (112 images; `ScreenshotVariants` documents which
+combinations). The artefact carries an `index.html` gallery. So "does the light theme render
+right" is answered on every Android pull request without a phone, and so are two neighbours:
+translations that clip at large text, and a surface the chosen palette does not reach (UX-15).
+The job records only; it does not compare yet, because baselines have to be recorded on the CI
+runner itself to be stable — the `TODO(screenshots)` in `ci.yml` has the three steps. What stays
+on the device is the window before Compose's first frame.
 
 **Cloud half done (September 2026).** `Theme.CoPlanly` is now `Theme.AppCompat.DayNight.NoActionBar`
 (still AppCompat, as per-app locales require) with `android:windowBackground` =

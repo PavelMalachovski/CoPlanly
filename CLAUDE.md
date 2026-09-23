@@ -222,8 +222,8 @@ cd firestore-tests && npm test              # firestore.rules + storage.rules on
   degrades gracefully if it is missing (see the conditional apply in `app/build.gradle.kts`).
 - **GitHub CI runs on every pull request, and on every push to `main`** — a push to a
   feature branch with no PR open is not built (`.github/workflows/ci.yml`, added
-  August 2026 — this line used to say there was none). Eight jobs (this line used to say
-  seven, before `instrumented` was added): `changes` (a cheap gate,
+  August 2026 — this line used to say there was none). Nine jobs (this line used to say
+  eight, before `screenshots` was added, and seven before `instrumented`): `changes` (a cheap gate,
   below), three Android ones — `build-test` (`assembleDebug` + `testDebugUnitTest` in a
   single invocation), `static` (`lint`, then `detekt`), `release` (`assembleRelease`, where
   R8 runs, and where `node tools/check-r8-mapping.js` then reads R8's own `mapping.txt` and
@@ -297,8 +297,32 @@ cd firestore-tests && npm test              # firestore.rules + storage.rules on
   Still run the build locally before pushing — CI is a backstop, not a substitute.
   After switching branches, prefer `clean` — stale Hilt/kapt stubs from another branch cause
   errors like "Could not find class file for '…Application'".
+- **The `screenshots` job is how UI is reviewed without a phone** (September 2026). Roborazzi on
+  Robolectric's native graphics renders the tests in `app/src/test/java/com/coparently/app/
+  screenshots/` — Home's cards, the month grid with every `DayCellFills` layer, the calendar
+  banners, a Settings group, `EmptyState`, the Expenses summary header, a chat thread, the event
+  preview body, the consent screen and the family switcher chip — over a variant matrix of theme,
+  the five languages, 1.0×/1.5× font scale and the default vs a purple/orange parent palette
+  (`ScreenshotVariants`: nine variants for text-heavy components, four for the rest, 112 images).
+  **To view:** open the run's `screenshots` artefact, unzip, open `index.html`
+  (`tools/screenshot-gallery.js`, no dependencies, filters by component/language/theme/scale/
+  palette). Locally: `./gradlew recordRoborazziDebug`, images in `app/build/outputs/roborazzi/`.
+  Five things to know. **It records and does not compare** — no baselines are committed, because
+  they must be recorded on the CI runner to be pixel-stable; `ci.yml`'s `TODO(screenshots)` lists
+  the three steps to switch to `verifyRoborazziDebug` through the Regenerate workflow. **A
+  Roborazzi task runs only the screenshot package and `testDebugUnitTest` excludes it**
+  (`roborazziRequested` in `app/build.gradle.kts`), so `build-test` stays fast and a rendering
+  failure cannot redden it. **Robolectric runs SDK 34, not 36** (`SCREENSHOT_SDK`): 4.16.1
+  supports 36 but only on JDK 21, and every job builds on 17. **Roborazzi stays at 1.60.0**, the
+  last release built with Kotlin 2.0; later ones are built with Kotlin 2.3, whose metadata this Kotlin 2.1 compiler is
+  not guaranteed to read — upgrade the two together. And **a private composable a test needs becomes
+  `internal`**, never public (`HandoverHero`, `StatTiles`, `TimelineRow`, `ChatThreadHeader`), and
+  a sheet's body is split out of the sheet (`EventPreviewContent`), because a `ModalBottomSheet`
+  opens its own window that a node capture does not see. Every fixture date is pinned (May 2026,
+  `ScreenshotFixtures`) so an image does not change with the calendar — keep it that way, or the
+  suite can never move to verify.
 - **A docs/functions/rules-only pull request skips the Android jobs.** The `changes` job
-  diffs against the base and sets one output; the three Android jobs are `if:`-gated on it.
+  diffs against the base and sets one output; the Android jobs are `if:`-gated on it.
   Two things not to get wrong. The ignore list is deliberately conservative — a path wrongly
   *on* it silently stops building real changes, which is far worse than a path wrongly off it
   costing a few free runner minutes — and `.github/workflows/**` is deliberately **not** on

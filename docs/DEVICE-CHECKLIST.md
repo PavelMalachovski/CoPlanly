@@ -37,6 +37,19 @@ adb logcat -v time EncryptedDatabase:V DatabaseKey:V SyncService:V SyncWorker:V 
 (`IllegalStateException: A migration from N to M was required but not found` or
 `Migration didn't properly handle`). A release build strips `Log.d/v/i` but keeps `Log.w/e`.
 
+**Look at the screenshots before the phone.** Every pull request that touches Android uploads a
+`screenshots` artefact from CI (the `screenshots` job: Roborazzi on Robolectric, no emulator).
+Unzip it and open `index.html`; it filters by component, language, theme, font scale and palette.
+It renders Home's cards (handover hero, today card with a contact window, week timeline, stat
+tiles), the month grid with every layer, the calendar banners, a Settings group, an empty state,
+the Expenses summary header, a chat thread, the event preview, the consent screen and the family
+switcher chip — in light and dark, in all five languages, at 1.0× and 1.5× text, and in the
+default and a purple/orange palette (`ScreenshotVariants` says which combinations). What those
+images settle is marked **(screenshots)** below: the static look of a component. They cannot show
+anything a device adds — the window before Compose's first frame, insets, the keyboard, motion,
+TalkBack, AppCompat's per-app locale switching, or a screen assembled from real data — so those
+checks stay. A check marked **(screenshots)** only needs a glance on the phone, or none.
+
 ---
 
 ## 0. Before the session: owner ops
@@ -208,7 +221,12 @@ Preconditions: `adb uninstall app.coplanly`, set the system to **dark** theme
     in-app choice is not known before Compose draws. Note it, but it is not a failure.
   - **If it fails:** look at `res/values/themes.xml` and `res/values-night/colors.xml`
     (`window_background`).
-- [ ] **REL-5, telemetry consent screen**, shown before sign-in on a fresh install.
+  - **(screenshots)** The *rest* of UX-13 — whether the light theme renders correctly once
+    Compose draws — is in the artefact's `light` images; this device check is only about the
+    window before the first frame.
+- [ ] **REL-5, telemetry consent screen**, shown before sign-in on a fresh install. Its layout,
+      in every language and at 1.5× text, is in the screenshots (`consent_screen`); on the phone
+      check that it appears, and when.
   - **Expected:** the decline button comes first. It is outlined, **enabled**, and reads as a
     real choice rather than a disabled control. The default is off.
   - Decline. Later, Settings → App → **Usage statistics** shows the switch off.
@@ -298,6 +316,12 @@ zone back to automatic afterwards.
 
 Settings → Family → **My colour** → choose a **non-default** colour (purple or orange).
 
+**(screenshots)** The `purpleorange` images already show the month grid (wash, dots, handover
+triangle, contact-window corner), Home's today card, week timeline and handover hero, the event
+preview, the Expenses split bar and the family switcher. A pink or blue in any of them is the
+bug, found without a phone. Spend the device time on the surfaces the screenshots do not render:
+Day/Week, the event form, Filters, Custody setup and the onboarding picker.
+
 - [ ] Every surface below shows the new colour, not pink or blue:
   - [ ] Month grid: the custody wash (about 14% alpha), event dots, handover triangle.
   - [ ] Day/Week: hour-cell wash, event blocks (fill, border, accent), and the **custody band**,
@@ -355,7 +379,9 @@ who does **not** have today.
 - [ ] Add a window naming the parent who **already has** that day. It is **not drawn**.
 - [ ] **Home today card** [branch]: under "whose day it is", a line reads
       "15:00–19:00 · contact with <name>" in the window parent's colour. Without the branch,
-      Home does not mention windows.
+      Home does not mention windows. **(screenshots)** `home_today_card` and
+      `calendar_month_grid` show the line and the Month corner from fixed data; on the phone,
+      check that a window you *saved* reaches them.
 - [ ] The existing MON-6 midweek toggle still behaves as before (a whole day with overnight).
       Its warning now points to contact windows.
 - [ ] **2P, mixed versions:** one phone on build A (`f6bab3e`, which has no windows) and one on
@@ -376,6 +402,9 @@ who does **not** have today.
 - [ ] Go through Čeština, Русский, Українська and English, then back to **System default**.
 - [ ] Known and not a failure (AUDIT §4.2): Home's dates may keep the old language until the
       process restarts.
+- **(screenshots)** Whether each translation *fits* — clipping, ellipsis, wrapping at 1.5× text
+  in German and Ukrainian — is in the artefact for the components it renders. This section is
+  about the picker switching the language, which only a device shows.
 - The install that matters is the Play-like one in §4.2. A sideloaded APK always contains every
   language, so this part cannot catch the split bug.
 
