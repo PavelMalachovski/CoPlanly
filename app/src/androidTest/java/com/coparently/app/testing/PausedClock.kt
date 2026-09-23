@@ -6,7 +6,7 @@ import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.junit4.ComposeTestRule
-import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.unit.dp
 import org.junit.Assert.assertTrue
 
@@ -101,14 +101,31 @@ fun ComposeTestRule.assertIconOnlyControlsAreAccessible(screen: String) {
     )
 }
 
-/** The node with [id], scrolled into view first when it is entirely outside the window. */
+/**
+ * The node with [id], scrolled into view first when it is entirely outside the window.
+ *
+ * Not `performScrollTo`: it scrolls with an animation and then waits for the node to become
+ * visible, and with the Compose clock paused that animation never advances — both API 26 and 30
+ * hung to the job timeout on it. This issues one `ScrollBy` on the nearest scroll container and
+ * moves the clock itself with [settle].
+ */
 private fun ComposeTestRule.measuredOnScreen(id: Int): SemanticsNode? {
-    val matcher = SemanticsMatcher("semantics id $id") { it.id == id }
-    val node = onAllNodes(matcher).fetchSemanticsNodes().singleOrNull() ?: return null
+    val node = nodeWithId(id) ?: return null
     if (!node.touchBoundsInRoot.isEmpty) return node
-    onNode(matcher).performScrollTo()
+    var container = node.parent
+    while (container != null && !container.config.contains(SemanticsActions.ScrollBy)) {
+        container = container.parent
+    }
+    if (container == null) return node
+    val delta = node.positionInRoot.y - container.boundsInRoot.center.y
+    val containerId = container.id
+    onNode(SemanticsMatcher("semantics id $containerId") { it.id == containerId })
+        .performSemanticsAction(SemanticsActions.ScrollBy) { scrollBy -> scrollBy(0f, delta) }
     settle()
-    return onAllNodes(matcher).fetchSemanticsNodes().singleOrNull()
+    return nodeWithId(id)
 }
+
+private fun ComposeTestRule.nodeWithId(id: Int): SemanticsNode? =
+    onAllNodes(SemanticsMatcher("semantics id $id") { it.id == id }).fetchSemanticsNodes().singleOrNull()
 
 private const val MIN_TOUCH_TARGET_DP = 48
