@@ -251,8 +251,11 @@ cd firestore-tests && npm test              # firestore.rules + storage.rules on
   missing data that no fix to the code can supply. The migrations a test can prove are those
   six plus 34→35 (MON-13's region) and 35→36 (MON-6b's contact windows) — this line used to
   credit a 33→34 test to MON-5, and none exists (it could be written: `33.json` and `34.json` are
-  both there). The two new ones need the Regenerate workflow to have exported `35.json` and
-  `36.json` first.
+  both there). Those two new tests each run 34→36 through both migrations, because **`35.json`
+  does not exist**: the build exports only the current version, and v35 and v36 landed on the
+  same branch before the Regenerate workflow ran, so 35 was never current there. A schema
+  version that is skipped this way is a new gap of the CQ-1 kind; run Regenerate after each
+  version bump, not after a batch of them.
   What stops the gap growing is a **step in `ci.yml`**: `git status --porcelain -- app/schemas`
   after the build, failing when the build produced a schema nobody committed. It is deliberately
   *not* `DatabaseSchemaExportTest`, which this line used to credit and which cannot do it — kapt
@@ -464,7 +467,7 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
    holidays), so it gets no picker — a row that changed nothing is item 8 again. The German
    states are pinned by a second fixture (`--regions`, only what each state *adds*), and the
    library's `catholic` category and the Augsburg pseudo-state are excluded on purpose —
-   `GermanState`'s KDoc says why. The Room schema JSON for v35 is exported by the Regenerate
+   `GermanState`'s KDoc says why. The Room schema JSON for v36 (which carries this column) is exported by the Regenerate
    workflow, not by hand.
 9. **Reminders** are scheduled through the `ReminderScheduler` domain interface
    (WorkManager impl `EventReminderScheduler`), hooked into the event use cases —

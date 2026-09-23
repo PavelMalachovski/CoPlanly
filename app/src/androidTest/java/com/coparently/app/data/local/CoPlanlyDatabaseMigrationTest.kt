@@ -636,6 +636,11 @@ class CoPlanlyDatabaseMigrationTest {
      * Null is the whole point: it is "nationwide", which is what every account was drawing
      * before the column existed, so a German parent's calendar is unchanged until they name a
      * Land. The country beside it must survive untouched.
+     *
+     * Both this test and the next start from 34 and validate at 36: the build exports only the
+     * current version's schema, and 35 was never current on a commit the Regenerate workflow ran
+     * on, so there is no `35.json` to validate against or create from. Chaining through 35 still
+     * runs both migrations; what it cannot do is check 35's shape on its own.
      */
     @Test
     fun migration34To35_givesEveryExistingParentNoRegion() {
@@ -650,7 +655,11 @@ class CoPlanlyDatabaseMigrationTest {
         db.close()
 
         val migrated = helper.runMigrationsAndValidate(
-            TEST_DB, VERSION_35, true, DatabaseMigrations.MIGRATION_34_35
+            TEST_DB,
+            VERSION_36,
+            true,
+            DatabaseMigrations.MIGRATION_34_35,
+            DatabaseMigrations.MIGRATION_35_36
         )
 
         migrated.query("SELECT countryCode, regionCode FROM users").use {
@@ -670,7 +679,7 @@ class CoPlanlyDatabaseMigrationTest {
      */
     @Test
     fun migration35To36_keepsThePatternAndAddsNoWindows() {
-        val db = helper.createDatabase(TEST_DB, VERSION_35)
+        val db = helper.createDatabase(TEST_DB, VERSION_34)
         db.execSQL(
             """
             INSERT INTO custody_models (id, modelType, patternDays, momDaysPattern, startDate,
@@ -683,7 +692,11 @@ class CoPlanlyDatabaseMigrationTest {
         db.close()
 
         val migrated = helper.runMigrationsAndValidate(
-            TEST_DB, VERSION_36, true, DatabaseMigrations.MIGRATION_35_36
+            TEST_DB,
+            VERSION_36,
+            true,
+            DatabaseMigrations.MIGRATION_34_35,
+            DatabaseMigrations.MIGRATION_35_36
         )
 
         migrated.query("SELECT momDaysPattern, contactWindowsJson FROM custody_models").use {
@@ -709,7 +722,6 @@ class CoPlanlyDatabaseMigrationTest {
         const val VERSION_24 = 24
         const val VERSION_25 = 25
         const val VERSION_34 = 34
-        const val VERSION_35 = 35
         const val VERSION_36 = 36
 
         /** 2026-08-01T12:00:00 at UTC+05:30, i.e. 06:30:00Z. */
