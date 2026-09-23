@@ -49,5 +49,4 @@
     <string name="common_error_server">Der Server ist nicht erreichbar. Bitte versuche es später erneut.</string>
     <string name="common_error_permission">Dafür fehlt dir die Berechtigung.</string>
     <string name="common_error_invalid_input">Einige Angaben fehlen oder sind ungültig. Prüfe sie und versuche es erneut.</string>
-    <string name="common_error_sync">Synchronisierung fehlgeschlagen. Bitte versuche es erneut.</string>
 </resources>
