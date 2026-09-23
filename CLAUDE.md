@@ -877,10 +877,23 @@ whatever you were doing; a stale "known issue" costs more than a missing one.
   BuildConfig (`GOOGLE_CLIENT_SECRET` gradle property / env var). `GEMINI_API_KEY` is gone
   with the AI subsystem — don't reintroduce a model key in the client. Real secrets belong in
   `gradle.properties`/env vars only.
-- User-facing strings produced **inside ViewModels/services** (e.g.
-  `GoogleCalendarSyncState.message`, sync/status errors) are still hardcoded English —
-  extracting them needs a resource-provider abstraction and is a tracked follow-up of the
-  July 2026 localization pass. Don't inject `Context` into ViewModels ad hoc to "fix" one.
+- **Text a ViewModel or a service produces is a `UiText`, resolved in composition** (CQ-14,
+  September 2026). `presentation/common/UiText.kt` holds *which* string — `Res` with arguments,
+  `Plural`, `Date` (formatted in the reader's locale at resolution), or `Raw` for what is already
+  the user's own words — and the screen calls `asString()`, or `asString(context)` with the
+  **Activity's** `Context` inside a snackbar/Toast lambda. Still don't inject `Context` into a
+  ViewModel: the application's configuration can lag AppCompat's per-app locale on older APIs,
+  while composition follows the Activity. Three rules. **A screen that branches on an outcome
+  gets a typed code, not text** — `CalendarScreen` used to compare the literal
+  `"Event rescheduled"` to decide whether to offer Undo (UX-12); it now reads
+  `EventOperation.RESCHEDULED`. **Never render `e.message`**: it is English and sometimes a class
+  name — log it, and show a localised sentence (`AppError` maps by type in
+  `presentation/common/ErrorText.kt`; `AppError.userMessage` and `UiError.message` are logs-only).
+  **The data layer reports facts, not sentences** — `CalendarSyncRepository`'s `SyncResult`
+  carries counts, dates and a `SyncFailure`, and `SyncViewModel` words them. Stored fallbacks
+  (`"Untitled Event"` on an import, a chat `senderName` of `"Unknown"`) are data, not UI text,
+  and stay as they are: localising them would write one parent's language into a record the
+  other reads.
 - Calendar range/day queries now match multi-day & overnight events by overlap
   (`getSingleEventsByDateRange` / `getEventsByDate`), not start date only.
 - Unit tests for ChildInfo/Pairing/Settings/Sync ViewModels were once removed as stale (they
@@ -926,7 +939,9 @@ Ukrainian** (`values-cs/`, `values-de/`, `values-ru/`, `values-uk/`). Rules:
   translation's format arguments, since a dropped `%1$s` throws `IllegalFormatException` only on
   the device of whoever reads that language. CI runs it as the `invariants` job.
 - In composables use `stringResource(...)`; for text consumed inside non-composable
-  lambdas (snackbars, coroutines) capture the string in composable scope first. Language
+  lambdas (snackbars, coroutines) capture the string in composable scope first. Text that comes
+  from a ViewModel or a service is a `UiText` (`presentation/common/UiText.kt`, CQ-14) — never a
+  `String` built there. Language
   endonyms in the picker ("Čeština", "Русский", …) are `translatable="false"`.
 - Dates/day/month names come from `java.time` formatters with the default locale —
   never from string arrays.
