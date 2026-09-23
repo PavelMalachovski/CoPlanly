@@ -28,9 +28,6 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
 
-    /** Schema versions older than the start of the migration chain (5->6). */
-    private val PRE_MIGRATION_CHAIN_SCHEMAS = intArrayOf(1, 2, 3, 4)
-
     /** The database file name. Fixed forever: it names a file that exists on real devices. */
     private const val DATABASE_NAME = "coparently_database"
 
@@ -53,31 +50,7 @@ object DatabaseModule {
     fun provideDatabase(
         @ApplicationContext context: Context,
         encryptedDatabase: EncryptedDatabase
-    ): CoPlanlyDatabase {
-        return Room.databaseBuilder(
-            context,
-            CoPlanlyDatabase::class.java,
-            DATABASE_NAME
-        )
-            .apply {
-                encryptedDatabase.openHelperFactory(DATABASE_NAME)?.let { openHelperFactory(it) }
-            }
-            .addMigrations(*com.coparently.app.data.local.DatabaseMigrations.ALL_MIGRATIONS)
-            // The migration chain starts at 5->6 and is complete up to the current version;
-            // installs older than schema v5 have no upgrade path (a v3 install crashed with
-            // "migration from 3 to 9 required but not found" during the 2026-07 review), so
-            // wipe ONLY those pre-chain schemas explicitly.
-            //
-            // Deliberately NOT using the blanket fallbackToDestructiveMigration()/
-            // ...OnDowngrade(): with real family data on the device, a missing migration or a
-            // downgrade must fail loudly (and be fixed with a proper migration) rather than
-            // silently wiping the user's calendar, expenses and messages.
-            .fallbackToDestructiveMigrationFrom(
-                dropAllTables = true,
-                *PRE_MIGRATION_CHAIN_SCHEMAS
-            )
-            .build()
-    }
+    ): CoPlanlyDatabase = buildCoPlanlyDatabase(context, encryptedDatabase, DATABASE_NAME)
 
     /**
      * Provides EventDao.
@@ -174,4 +147,44 @@ object DatabaseModule {
     fun provideEventVersionOutboxDao(database: CoPlanlyDatabase): EventVersionOutboxDao {
         return database.eventVersionOutboxDao()
     }
+}
+
+/** Schema versions older than the start of the migration chain (5->6). */
+private val PRE_MIGRATION_CHAIN_SCHEMAS = intArrayOf(1, 2, 3, 4)
+
+/**
+ * Builds the Room database the way the app opens it: through [EncryptedDatabase], with the whole
+ * migration chain and the pre-chain wipe.
+ *
+ * A function of its own, outside the Hilt module, so that `EncryptedDatabaseTest` can open a
+ * database under a name of its own through *this* path rather than through a copy of it — a copy
+ * would prove the copy. Production has exactly one caller, [DatabaseModule.provideDatabase], and
+ * one name.
+ *
+ * @param name The database file name, resolved under the app's database directory.
+ */
+fun buildCoPlanlyDatabase(
+    context: Context,
+    encryptedDatabase: EncryptedDatabase,
+    name: String
+): CoPlanlyDatabase {
+    return Room.databaseBuilder(context, CoPlanlyDatabase::class.java, name)
+        .apply {
+            encryptedDatabase.openHelperFactory(name)?.let { openHelperFactory(it) }
+        }
+        .addMigrations(*com.coparently.app.data.local.DatabaseMigrations.ALL_MIGRATIONS)
+        // The migration chain starts at 5->6 and is complete up to the current version;
+        // installs older than schema v5 have no upgrade path (a v3 install crashed with
+        // "migration from 3 to 9 required but not found" during the 2026-07 review), so
+        // wipe ONLY those pre-chain schemas explicitly.
+        //
+        // Deliberately NOT using the blanket fallbackToDestructiveMigration()/
+        // ...OnDowngrade(): with real family data on the device, a missing migration or a
+        // downgrade must fail loudly (and be fixed with a proper migration) rather than
+        // silently wiping the user's calendar, expenses and messages.
+        .fallbackToDestructiveMigrationFrom(
+            dropAllTables = true,
+            *PRE_MIGRATION_CHAIN_SCHEMAS
+        )
+        .build()
 }

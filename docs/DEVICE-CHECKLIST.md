@@ -128,9 +128,20 @@ If the upload keystore from REL-2 already exists, use it instead, and register i
 
 ### 2.1 SEC-2 + Room migrations: upgrade over real plaintext data · 1P · **do this first**
 
-These checks can be run only once per install. SQLCipher has never converted an existing
-plaintext database anywhere: the CI emulator always starts empty. Room migrations 24→33 have
-never run on a device either, and 33→36 have run only in CI.
+These checks can be run only once per install. Room migrations 24→33 have never run on a device
+either, and 33→36 have run only in CI.
+
+**What CI now covers, and what it does not** (September 2026). `EncryptedDatabaseTest` runs in
+the `instrumented` job on API 26, 30 and 35 with 16 KB pages, and converts a plaintext database
+on every run. The boxes below are marked **[CI]** where an emulator already proves the same thing,
+so a failure there on a phone points at something the emulator does not have. What CI does not
+cover is the reason this section still comes first:
+
+- the plaintext file there was written by the **current** Room schema, not by an older build and
+  then taken through the migration chain in the same launch as the conversion;
+- the emulator's Keystore is **software-backed**, not a phone's hardware (TEE/StrongBox) one;
+- nothing reboots between two launches;
+- the data is three rows in one table, not a family's real calendar, chat and medical profile.
 
 Preconditions: a factory-fresh phone, or `adb uninstall app.coplanly`. Build A (or A′).
 
@@ -159,12 +170,18 @@ Preconditions: a factory-fresh phone, or `adb uninstall app.coplanly`. Build A (
     `DatabaseKey: ... could not be unwrapped` is serious. The code is in
     `data/local/security/EncryptedDatabase.kt`, `SqlCipherMigration.kt` and `DatabaseKey.kt`.
 - [ ] The file is now **ciphertext**: the same `head -c 16 | od -c` command prints random
-      bytes, not `SQLite format 3`.
+      bytes, not `SQLite format 3`. **[CI]** for a current-schema file: the header check, plus
+      the platform's SQLite refusing to read it.
 - [ ] No leftover files: `adb shell run-as app.coplanly ls -la databases/` shows no
       `coparently_database.migrating*`, and `shared_prefs/` contains the `database_key` store.
+      **[CI]**, including a killed conversion's leftovers (a stale export beside the original,
+      an export whose rename never happened, a leftover beside an encrypted file).
 - [ ] Run `adb shell am force-stop app.coplanly`, then relaunch twice. Everything still opens:
-      the passphrase is **recovered** each time, never re-minted.
+      the passphrase is **recovered** each time, never re-minted. **[CI]** within one process
+      (recovered twice, by a second `DatabaseKey`, and on disk as soon as `mint` returns); the
+      process death between launches is the part left to the phone.
 - [ ] **Reboot the phone**, then relaunch. It still opens: the Keystore key survives a reboot.
+      *Not in CI* — phone only.
 - [ ] Migrated rows get the new defaults:
   - [ ] Settings → Country shows **Czechia** (schema 33 default) and no state;
   - [ ] the custody pattern has **no** contact windows;

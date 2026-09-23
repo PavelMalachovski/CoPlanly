@@ -7,9 +7,8 @@
 #
 # Jobs run on every pull request, and on every push to `main`. A push to a feature branch
 # with no pull request open is therefore **not** built — open the pull request to get it
-# checked. The instrumented migration job is deliberately absent: `app/schemas/` stops at
-# v14 while the database is at v25, so it would be red from its first run for a reason
-# unrelated to any change. Add it once the schemas are restored (see docs/ROADMAP.md, CQ-1).
+# checked. The instrumented job runs on three emulators (API 26, 30 and 35 with 16 KB pages);
+# see its comment for what each level is there to catch.
 #
 # ## Why the Android work is three jobs and not one
 #
@@ -276,12 +275,50 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
+  # One emulator per API level, in parallel. Three levels because each catches something the
+  # others cannot:
+  #
+  #  * **26 — minSdk.** A call to an API newer than the device (`LocalDate.ofInstant` is 34+; the
+  #    CLAUDE.md hard rules name it) compiles against compileSdk 36 and only throws
+  #    `NoSuchMethodError` on an old device. Lint's NewApi catches most of it, not all — not a
+  #    library that does it for you. 32-bit x86 on purpose: it is a second ABI for SQLCipher's
+  #    native library, whose absence is exactly the failure `EncryptedDatabase.fallBackTo` handles.
+  #    **Caveat:** mockk only mocks *final* classes on API 28+, and `FakeFirebaseModule` mocks
+  #    Firebase types. If one of them is final, the Hilt UI tests fail on this leg and only here —
+  #    that is a finding about the test module (swap the mock for an open fake), not a reason to
+  #    drop the leg.
+  #  * **30 — the level this job was built and first made green on.**
+  #  * **35 with 16 KB memory pages** (`google_apis_ps16k`). Google Play requires 16 KB page
+  #    support for apps targeting Android 15+, and the one native library that decides whether
+  #    the app can open its own database is SQLCipher's. A `.so` not aligned for 16 KB pages fails
+  #    `System.loadLibrary` on such a device, and `EncryptedDatabaseTest` would say so here rather
+  #    than a Play pre-launch report later.
+  #
+  # `fail-fast: false` so one level's failure does not cancel the others' answers. The AVD is
+  # cached per level and arch, following the action's README: on a cache miss one boot creates
+  # the AVD and saves a snapshot, and every run after boots from it with `-no-snapshot-save`.
   instrumented:
-    name: Android — instrumented tests (emulator)
+    name: Android — instrumented tests (API ${{ matrix.api-level }}${{ matrix.label }})
     needs: changes
     if: needs.changes.outputs.android == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - api-level: 26
+            target: default
+            arch: x86
+            label: ''
+          - api-level: 30
+            target: default
+            arch: x86_64
+            label: ''
+          - api-level: 35
+            target: google_apis_ps16k
+            arch: x86_64
+            label: ', 16 KB pages'
     steps:
       - uses: actions/checkout@v4
 
@@ -303,29 +340,54 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
-      # CQ-1. Two things have never run anywhere until this job: the migration test against a
-      # real SQLite file, and — through `createAndroidComposeRule<MainActivity>()`, which builds
-      # the whole Hilt graph — the SQLCipher open path of SEC-2, whose calls had until now only
-      # ever been compiled. `app/schemas/` holds 11 to 14, which is what the migration test
-      # builds from; the versions between 14 and 33 are irrecoverable, so no test can reach
-      # them and this job does not pretend to.
+      - name: Cache the AVD
+        uses: actions/cache@v4
+        id: avd-cache
+        with:
+          path: |
+            ~/.android/avd/*
+            ~/.android/adb*
+          key: avd-${{ matrix.api-level }}-${{ matrix.target }}-${{ matrix.arch }}-pixel_2
+
+      - name: Create the AVD and its snapshot
+        if: steps.avd-cache.outputs.cache-hit != 'true'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api-level }}
+          target: ${{ matrix.target }}
+          arch: ${{ matrix.arch }}
+          profile: pixel_2
+          ram-size: 4096M
+          force-avd-creation: false
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: false
+          script: echo "Generated the AVD snapshot for caching."
+
+      # CQ-1 and SEC-2. What runs here: the migration tests against real SQLite files (only the
+      # versions whose schemas exist — see CLAUDE.md for why eight of them are @Ignore'd), the
+      # Hilt UI tests, which build the whole graph with Room real, and `EncryptedDatabaseTest`,
+      # which builds every on-disk state `SqlCipherMigration` names — fresh install, plaintext
+      # upgrade, an interrupted export, a lost passphrase — and opens each through the production
+      # path. What it cannot prove is an upgrade over data an *older build* wrote, on a phone's
+      # hardware-backed Keystore: that stays docs/DEVICE-CHECKLIST.md §2.1.
       - name: Run instrumented tests
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 30
-          arch: x86_64
-          target: default
+          api-level: ${{ matrix.api-level }}
+          target: ${{ matrix.target }}
+          arch: ${{ matrix.arch }}
           profile: pixel_2
           ram-size: 4096M
+          force-avd-creation: false
           disable-animations: true
-          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: ./gradlew connectedDebugAndroidTest
 
       - name: Upload reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: android-reports-instrumented
+          name: android-reports-instrumented-api${{ matrix.api-level }}-${{ matrix.target }}
           path: |
             app/build/reports/androidTests/
             app/build/outputs/androidTest-results/
