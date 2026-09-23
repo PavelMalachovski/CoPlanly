@@ -67,9 +67,11 @@ val iconOnlyControl: SemanticsMatcher = SemanticsMatcher("a clickable control wi
  * This stands in for the Accessibility Test Framework checks (`enableAccessibilityChecks()`),
  * which need an extra artifact this build does not declare. It covers the two findings that
  * matter most for a control a screen reader user has to find and a finger has to hit: an unnamed
- * button, and one too small to tap. The size is the node's own, unclipped layout size — Material
- * widgets reach 48 dp by growing their layout (`minimumInteractiveComponentSize`), so a control
- * that only *looks* 48 dp does not pass.
+ * button, and one too small to tap. The size is the node's **touch bounds**
+ * (`touchBoundsInRoot`), which is what a finger hits and what ATF measures: a Material 3
+ * `IconButton` draws 40 dp and reaches 48 dp through `minimumInteractiveComponentSize`, which
+ * widens the touch target around the node rather than the node's own layout — so measuring
+ * `size` flags every standard icon button (the first run did, on Home's gear).
  */
 fun ComposeTestRule.assertIconOnlyControlsAreAccessible(screen: String) {
     val offenders = onAllNodes(iconOnlyControl).fetchSemanticsNodes().mapNotNull { node ->
@@ -79,8 +81,9 @@ fun ComposeTestRule.assertIconOnlyControlsAreAccessible(screen: String) {
             .joinToString(" ")
         val problems = buildList {
             if (label.isBlank()) add("no contentDescription")
-            if (node.size.width < minimum || node.size.height < minimum) {
-                add("${node.size.width}x${node.size.height}px, under ${MIN_TOUCH_TARGET_DP}dp ($minimum px)")
+            val touch = node.touchBoundsInRoot
+            if (touch.width < minimum || touch.height < minimum) {
+                add("${touch.width.toInt()}x${touch.height.toInt()}px, under ${MIN_TOUCH_TARGET_DP}dp ($minimum px)")
             }
         }
         if (problems.isEmpty()) null else "node #${node.id} \"$label\": ${problems.joinToString("; ")}"
