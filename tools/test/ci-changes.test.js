@@ -92,3 +92,9 @@ test('format writes one GITHUB_OUTPUT line per key, the matrix as one-line JSON'
   const matrix = JSON.parse(lines[3].slice('matrix='.length));
   assert.equal(matrix[0]['api-level'], 30);
 });
+
+test('only API 26 records the screen: screenrecord crashed the API 30 and 16 KB images', () => {
+  const recording = everything().matrix.filter((leg) => leg.record).map((leg) => leg['api-level']);
+  assert.deepEqual(recording, [26]);
+  for (const leg of everything().matrix) assert.equal(typeof leg.record, 'boolean');
+});

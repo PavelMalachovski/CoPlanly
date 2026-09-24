@@ -450,9 +450,12 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   **What testers download** (each linked from the comment, 14-day retention, GitHub login
   needed): `coplanly-debug-apk` from `build-test` — **a UI-only build**: CI has no
   `google-services.json` (and must not get one, see above), so sign-in and sync do not work in
-  it; for full testing build locally with the file. `emulator-video-api<n>-<target>` from each
-  `instrumented` leg — `tools/with-screen-recording.sh` records in 170 s segments around
-  `connectedDebugAndroidTest`, keeps the tests' exit status, and cannot fail the job.
+  it; for full testing build locally with the file. `emulator-video-api<n>-<target>` from the
+  `instrumented` legs that record — `tools/with-screen-recording.sh` records in 170 s segments around
+  `connectedDebugAndroidTest`, keeps the tests' exit status, and cannot fail the job. **Only API 26
+  records** (`record` in `tools/ci-changes.js`): on the API 30 image screenrecord's software
+  encoder aborted `media.codec` and surfaceflinger followed, which Gradle reports as "System has
+  crashed" mid-suite — the recorder had become the failure it was meant to explain.
   `coverage-report` — Kover (`org.jetbrains.kotlinx.kover` 0.9.9, `app/build.gradle.kts`, Hilt/Room/
   Compose-generated classes filtered out). Coverage is **visibility, not a gate**: there is no
   verification rule, and its step is the one place in `ci.yml` where `continue-on-error` is

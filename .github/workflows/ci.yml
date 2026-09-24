@@ -545,6 +545,8 @@ jobs:
         continue-on-error: true
         env:
           STATUS_FILE: ${{ runner.temp }}/instrumented-status
+          # Only the legs whose emulator survives screenrecord record (tools/ci-changes.js).
+          RECORD_SCREEN: ${{ matrix.record }}
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: ${{ matrix.api-level }}
@@ -555,8 +557,9 @@ jobs:
           force-avd-creation: false
           disable-animations: true
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          # Records the screen in 170 s segments while the tests run and pulls the MP4s after;
-          # the exit status is the tests', and a recorder that fails never fails the job.
+          # Records the screen in 170 s segments while the tests run (on legs with `record`) and
+          # pulls the MP4s after; the exit status is the tests', and a recorder that fails never
+          # fails the job.
           script: bash tools/with-screen-recording.sh ./gradlew connectedDebugAndroidTest ${{ matrix.test-args }}
 
       - name: The instrumented tests finished and passed

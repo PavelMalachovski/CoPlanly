@@ -45,9 +45,18 @@ const SCREENSHOT_INPUTS = /^(app\/src\/main\/java\/com\/coparently\/app\/(presen
  */
 const EMULATOR_SENSITIVE = /^(app\/src\/main\/AndroidManifest\.xml$|app\/src\/main\/jniLibs\/|app\/src\/main\/java\/com\/coparently\/app\/data\/local\/|app\/src\/androidTest\/|app\/src\/debug\/|tools\/with-screen-recording\.sh$)/;
 
-/** The emulator legs. API 30 always runs when Android does; the other two by the rule above. */
-const LEG_30 = { 'api-level': 30, target: 'default', arch: 'x86_64', label: '', 'test-args': '' };
-const LEG_26 = { 'api-level': 26, target: 'default', arch: 'x86', label: '', 'test-args': '' };
+/**
+ * The emulator legs. API 30 always runs when Android does; the other two by the rule above.
+ *
+ * `record` turns on tools/with-screen-recording.sh's video, and only API 26 has it. On the API 30
+ * image, screenrecord's software H.264 encoder aborted `media.codec` and surfaceflinger then
+ * crashed in `eglCreateImageKHR` on the virtual display's buffers — "System has crashed" in the
+ * middle of the suite, on a run whose tests were otherwise passing — and the 16 KB image died the
+ * same way ("Process/System crashed"). A video is a convenience for reading a failure; it must
+ * never be the failure. Turn it back on for a leg only with a green run to show for it.
+ */
+const LEG_30 = { 'api-level': 30, target: 'default', arch: 'x86_64', label: '', 'test-args': '', record: false };
+const LEG_26 = { 'api-level': 26, target: 'default', arch: 'x86', label: '', 'test-args': '', record: true };
 // MockK's inline-mocking agent does not dlopen on 16 KB pages, and every Hilt test mocks through
 // it, so this leg runs the non-Hilt tests only (NativeLibrariesTest is what it exists for).
 const LEG_16KB = {
@@ -56,6 +65,7 @@ const LEG_16KB = {
   arch: 'x86_64',
   label: ', 16 KB pages',
   'test-args': '-Pandroid.testInstrumentationRunnerArguments.notAnnotation=dagger.hilt.android.testing.HiltAndroidTest',
+  record: false,
 };
 const FULL_MATRIX = [LEG_26, LEG_30, LEG_16KB];
 

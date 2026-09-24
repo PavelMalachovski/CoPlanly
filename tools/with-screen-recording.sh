@@ -45,25 +45,33 @@ record_loop() {
   done
 }
 
-record_loop &
-recorder=$!
+# RECORD_SCREEN=false runs the command with no recorder at all: on some emulator images
+# screenrecord's encoder takes the system down with it (see `record` in tools/ci-changes.js).
+if [ "${RECORD_SCREEN:-true}" = "false" ]; then
+  echo "Screen recording is off for this leg."
+  "$@"
+  status=$?
+else
+  record_loop &
+  recorder=$!
 
-"$@"
-status=$?
+  "$@"
+  status=$?
 
-touch "$STOP_FLAG"
-adb shell "pkill -INT screenrecord || killall -INT screenrecord" >/dev/null 2>&1 || true
-for _ in $(seq 1 20); do
-  kill -0 "$recorder" 2>/dev/null || break
-  sleep 1
-done
-kill "$recorder" 2>/dev/null || true
-wait "$recorder" 2>/dev/null || true
-sleep 2 # let the device flush the last segment's moov atom
+  touch "$STOP_FLAG"
+  adb shell "pkill -INT screenrecord || killall -INT screenrecord" >/dev/null 2>&1 || true
+  for _ in $(seq 1 20); do
+    kill -0 "$recorder" 2>/dev/null || break
+    sleep 1
+  done
+  kill "$recorder" 2>/dev/null || true
+  wait "$recorder" 2>/dev/null || true
+  sleep 2 # let the device flush the last segment's moov atom
 
-adb pull "$REMOTE/." "$VIDEO_DIR/" >/dev/null 2>&1 || true
+  adb pull "$REMOTE/." "$VIDEO_DIR/" >/dev/null 2>&1 || true
+  echo "Screen recording: $(find "$VIDEO_DIR" -name '*.mp4' 2>/dev/null | wc -l) segment(s) in $VIDEO_DIR"
+fi
 rm -f "$STOP_FLAG"
-echo "Screen recording: $(find "$VIDEO_DIR" -name '*.mp4' 2>/dev/null | wc -l) segment(s) in $VIDEO_DIR"
 
 # A crashed process ("Process crashed", "System has crashed") leaves no stack trace in Gradle's
 # output, and the log is often the only thing a reader can reach. Print the crash buffer — the
