@@ -11,7 +11,7 @@ import com.coparently.app.domain.repository.PetPhotoStorage
 import com.coparently.app.domain.repository.ReceiptStorage
 import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.StorageException
-import com.google.firebase.storage.ktx.storageMetadata
+import com.google.firebase.storage.storageMetadata
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.tasks.await

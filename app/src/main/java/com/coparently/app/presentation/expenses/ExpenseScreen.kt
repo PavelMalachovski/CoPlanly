@@ -12,8 +12,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -258,7 +258,7 @@ fun ExpenseScreen(
                 ListSkeleton(modifier = Modifier.weight(1f))
             } else if (expenses.isEmpty()) {
                 EmptyState(
-                    icon = Icons.Default.ReceiptLong,
+                    icon = Icons.AutoMirrored.Filled.ReceiptLong,
                     title = stringResource(R.string.expenses_empty_title),
                     description = stringResource(R.string.expenses_empty_description),
                     actionLabel = stringResource(R.string.expenses_add),

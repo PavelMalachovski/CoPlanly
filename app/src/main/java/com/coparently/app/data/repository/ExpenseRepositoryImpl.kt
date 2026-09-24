@@ -272,7 +272,7 @@ class ExpenseRepositoryImpl @Inject constructor(
                         currency = data["currency"] as String,
                         category = ExpenseCategory.valueOf(data["category"] as String),
                         paidBy = data["paidBy"] as String,
-                        splitBetween = (data["splitBetween"] as? List<String>) ?: emptyList(),
+                        splitBetween = (data["splitBetween"] as? List<*>)?.filterIsInstance<String>() ?: emptyList(),
                         date = LocalDate.parse(data["date"] as String, dateFormatter),
                         receiptUrl = (data["receiptUrl"] as? String)?.takeIf { it.isNotEmpty() },
                         notes = (data["notes"] as? String)?.takeIf { it.isNotEmpty() },

@@ -4,7 +4,7 @@ import android.net.Uri
 import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.StorageException
 import com.google.firebase.storage.StorageReference
-import com.google.firebase.storage.ktx.storageMetadata
+import com.google.firebase.storage.storageMetadata
 import kotlinx.coroutines.tasks.await
 import java.io.File
 import java.io.IOException

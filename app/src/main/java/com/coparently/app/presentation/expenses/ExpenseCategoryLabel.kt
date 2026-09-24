@@ -2,11 +2,11 @@ package com.coparently.app.presentation.expenses
 
 import androidx.annotation.StringRes
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Checkroom
 import androidx.compose.material.icons.filled.DirectionsBus
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.MedicalServices
-import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.SportsSoccer
@@ -61,7 +61,7 @@ internal val ExpenseCategory.iconVector: ImageVector
         ExpenseCategory.TRANSPORTATION -> Icons.Default.DirectionsBus
         ExpenseCategory.TOYS -> Icons.Default.Toys
         ExpenseCategory.HOUSEHOLD -> Icons.Default.Home
-        ExpenseCategory.OTHER -> Icons.Default.ReceiptLong
+        ExpenseCategory.OTHER -> Icons.AutoMirrored.Filled.ReceiptLong
     }
 
 /**

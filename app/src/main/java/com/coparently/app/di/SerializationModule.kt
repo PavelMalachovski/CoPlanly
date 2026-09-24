@@ -2,6 +2,7 @@ package com.coparently.app.di
 
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
+import com.google.gson.Strictness
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -16,8 +17,9 @@ import javax.inject.Singleton
  * referenced from outside them, but the module in that package was providing something that was.
  * A module named after a feature should only provide that feature's bindings.
  *
- * `setLenient()` is preserved from that provider rather than reconsidered. It changes how
- * malformed JSON is read, and the only consumer —
+ * Lenient parsing (`setLenient()`, now spelled `setStrictness(Strictness.LENIENT)` — Gson 2.11
+ * deprecated the old name, the behaviour is identical) is preserved from that provider rather
+ * than reconsidered. It changes how malformed JSON is read, and the only consumer —
  * [com.coparently.app.presentation.event.EventViewModel] — parses values that have been through
  * Room and Firestore; tightening it is a behaviour change that belongs in its own commit, with
  * whatever it breaks in front of the person making it.
@@ -34,6 +36,6 @@ object SerializationModule {
     @Provides
     @Singleton
     fun provideGson(): Gson = GsonBuilder()
-        .setLenient()
+        .setStrictness(Strictness.LENIENT)
         .create()
 }

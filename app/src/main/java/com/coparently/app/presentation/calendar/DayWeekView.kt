@@ -1253,7 +1253,7 @@ private fun EventChip(
                                 hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
                             },
                             onDragEnd = {
-                                if (isResizingStart && onResize != null) {
+                                if (isResizingStart) {
                                     val newStartTime =
                                         resizedStart(eventStart, eventEnd, resizeDragAmountStart, hourHeightPx)
                                     if (newStartTime != eventStart) {
@@ -1294,7 +1294,7 @@ private fun EventChip(
                                 hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
                             },
                             onDragEnd = {
-                                if (isResizingEnd && onResize != null) {
+                                if (isResizingEnd) {
                                     val newEndTime =
                                         resizedEnd(eventStart, eventEnd, resizeDragAmountEnd, hourHeightPx)
                                     if (newEndTime != eventEnd) {

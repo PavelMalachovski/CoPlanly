@@ -2,12 +2,12 @@ package com.coparently.app.di
 
 import com.coparently.app.data.repository.UserRepositoryImpl
 import com.coparently.app.domain.repository.UserRepository
+import com.google.firebase.Firebase
 import com.google.firebase.analytics.FirebaseAnalytics
-import com.google.firebase.analytics.ktx.analytics
+import com.google.firebase.analytics.analytics
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.ktx.Firebase
 import com.google.firebase.messaging.FirebaseMessaging
 import dagger.Binds
 import dagger.Module

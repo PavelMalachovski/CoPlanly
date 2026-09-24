@@ -30,6 +30,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -349,16 +350,15 @@ private fun SwipeToDeleteRow(
     onDelete: () -> Unit,
     content: @Composable () -> Unit
 ) {
-    val dismissState = rememberSwipeToDismissBoxState(
-        confirmValueChange = { value ->
-            if (value == SwipeToDismissBoxValue.EndToStart) {
-                onDelete()
-                true
-            } else {
-                false
-            }
+    val dismissState = rememberSwipeToDismissBoxState()
+    // The delete runs once the row has settled off-screen. The callback is remembered so a
+    // recomposition cannot hand SwipeToDismissBox a new lambda and re-run it on a settled row.
+    val currentOnDelete by rememberUpdatedState(onDelete)
+    val onDismiss: (SwipeToDismissBoxValue) -> Unit = remember {
+        { value ->
+            if (value == SwipeToDismissBoxValue.EndToStart) currentOnDelete()
         }
-    )
+    }
 
     // A swipe is invisible to TalkBack and Switch Access, so the same delete is offered as a
     // custom accessibility action — otherwise those users could not remove an expense at all.
@@ -374,6 +374,7 @@ private fun SwipeToDeleteRow(
             )
         },
         enableDismissFromStartToEnd = false,
+        onDismiss = onDismiss,
         backgroundContent = {
             Box(
                 modifier = Modifier

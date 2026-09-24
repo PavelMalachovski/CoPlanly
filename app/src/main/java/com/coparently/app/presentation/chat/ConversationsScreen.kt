@@ -10,8 +10,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
@@ -182,7 +182,7 @@ fun ConversationsScreen(
         } else if (conversations.isEmpty()) {
             // Issue 8.2: Empty state for conversations
             EmptyState(
-                icon = Icons.Default.Chat,
+                icon = Icons.AutoMirrored.Filled.Chat,
                 title = stringResource(R.string.chat_empty_title),
                 description = stringResource(R.string.chat_empty_description),
                 actionLabel = stringResource(R.string.chat_new_conversation),

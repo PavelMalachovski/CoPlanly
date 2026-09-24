@@ -37,6 +37,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -179,19 +180,19 @@ private fun PrivacyNotice() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SwipeableJournalRow(entry: JournalEntry, onOpen: () -> Unit, onDelete: () -> Unit) {
-    val dismissState = rememberSwipeToDismissBoxState(
-        confirmValueChange = { value ->
-            if (value == SwipeToDismissBoxValue.EndToStart) {
-                onDelete()
-                true
-            } else {
-                false
-            }
+    val dismissState = rememberSwipeToDismissBoxState()
+    // The delete runs once the row has settled off-screen. The callback is remembered so a
+    // recomposition cannot hand SwipeToDismissBox a new lambda and re-run it on a settled row.
+    val currentOnDelete by rememberUpdatedState(onDelete)
+    val onDismiss: (SwipeToDismissBoxValue) -> Unit = remember {
+        { value ->
+            if (value == SwipeToDismissBoxValue.EndToStart) currentOnDelete()
         }
-    )
+    }
     SwipeToDismissBox(
         state = dismissState,
         enableDismissFromStartToEnd = false,
+        onDismiss = onDismiss,
         backgroundContent = {
             Box(
                 modifier = Modifier
