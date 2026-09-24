@@ -2316,7 +2316,9 @@ about" reference, and events knowing who they are about. Two remain.
 
 ### FAM-4 · P2 · L · Custody per child
 
-**Where:** ☁️ cloud. **SEC-4** was its prerequisite and is done.
+**Where:** ☁️ cloud. **SEC-4** was its prerequisite and is done. **Status (September 2026): the
+wire half is built; the app half waits for one Room column.** `docs/DESIGN-custody-per-child.md`
+is the design.
 
 One schedule per pair stays the default; a per-child schedule is an override. It drags Home's
 handover hero (singular today), the calendar banners and `getCustody` with it. The reason it waited
@@ -2326,6 +2328,32 @@ now fixed, so the blocker is gone.
 
 Genuinely rarer than FAM-2 and FAM-3 — a teenager who negotiated their own arrangement, an infant
 who stays with one parent — which is why it is last rather than never.
+
+**Built.** An override lives inside the one custody document under `childOverrides`, as
+`ChildOverrideCodec` strings (`C1;child:<id>;<anchor>;<cycle>;<slot-1 days>;<windows>`,
+`domain/custody/ChildScheduleOverride.kt`): pattern, anchor and contact windows, nothing else —
+**the family's seasonal layers and accepted swaps do not move an overridden child** (design §3).
+Unreadable entries are kept verbatim. `domain/custody/ChildCustody.kt` answers the three questions
+the UI will ask — the grid follows an override only when FAM-3's filter is exactly one child who has
+one; Home's hero names each child with their parent only when the children disagree; nothing
+appears below two children and one override — and `ChildScheduleOverrideTest` pins all of it.
+`firestore.rules` gained `childOverridesKeptOrDropped` in both `hasOnly` lists (item 24's rules,
+tested in `custody-models.test.js`, "per-child overrides (FAM-4)"). The calendar feed deliberately
+stays the family schedule and ignores the key (a test pins that).
+
+**Left.**
+1. **A Room column**, `custody_models.childOverridesJson TEXT` (nullable, null = none, like
+   `seasonalLayersJson`), in the next free schema version, plus its Regenerate run.
+   `CustodyModelEntity` has no column that round-trips unknown document keys, and without one this
+   build cannot keep a mirror copy or write `[]` safely — so until then the data layer neither
+   reads nor writes the key, exactly as an older build, which the rules allow.
+2. With it: `CustodyModel`/`SharedCustody`/`CustodyProposal` carry the list the way they carry
+   `seasonalLayers` (design §6), saving the base pattern carries the agreed overrides, and a change
+   goes through `submitPattern` (a proposal for a paired family, never an overwrite).
+3. The UI: the grid's `getCustody` through `ChildCustody.overrideForFilter`, Home's hero through
+   `whereaboutsOn` (names, never colours), and a "Different schedule for a child" section in
+   custody setup, at two or more children, opening the same pattern editor scoped to the child.
+4. The rules deploy.
 
 ### FAM-5 · P2 · S · The event chip does not say who it is about
 
