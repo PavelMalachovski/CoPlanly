@@ -10,6 +10,7 @@ import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.domain.model.Pet
 import com.coparently.app.domain.repository.PetPhotoStorage
 import com.coparently.app.domain.repository.PetRepository
+import com.coparently.app.presentation.common.FormDraft
 import com.coparently.app.presentation.common.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
@@ -79,6 +80,12 @@ class PetsViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow<PetsUiState>(PetsUiState.Loading)
     val uiState: StateFlow<PetsUiState> = _uiState.asStateFlow()
+
+    /**
+     * The editor's fields, here rather than in the screen so a rotation keeps what was typed
+     * (docs/AUDIT-2026-10-design.md D-11). Seeded once per record by the editor.
+     */
+    internal val petForm = FormDraft(PetFields.EMPTY)
 
     /** The one pet the editor is open on, or null while nothing has loaded. */
     private val _currentPet = MutableStateFlow<Pet?>(null)

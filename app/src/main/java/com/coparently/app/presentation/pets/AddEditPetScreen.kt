@@ -51,16 +51,15 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
-import com.coparently.app.domain.model.Medication
 import com.coparently.app.domain.model.Pet
 import com.coparently.app.domain.model.PetSpecies
-import com.coparently.app.domain.model.Vaccination
 import com.coparently.app.presentation.childinfo.components.DatePickerDialog
 import com.coparently.app.presentation.childinfo.components.MedicationEditor
 import com.coparently.app.presentation.common.ConfirmationDialog
 import com.coparently.app.presentation.common.PhotoStrip
 import com.coparently.app.presentation.common.PhotoStripStrings
 import com.coparently.app.presentation.common.VaccinationListEditor
+import com.coparently.app.presentation.common.field
 import com.coparently.app.presentation.common.labelRes
 import com.coparently.app.presentation.common.rememberDiscardGuard
 import com.coparently.app.presentation.theme.Spacing
@@ -89,19 +88,22 @@ fun AddEditPetScreen(
     val haptic = LocalHapticFeedback.current
     val isNewPet = petId == null || petId == "new"
 
-    var name by remember { mutableStateOf("") }
-    var species by remember { mutableStateOf(PetSpecies.OTHER) }
-    var breed by remember { mutableStateOf("") }
-    var dateOfBirth by remember { mutableStateOf<LocalDateTime?>(null) }
-    var medications by remember { mutableStateOf<List<Medication>>(emptyList()) }
-    var vaccinations by remember { mutableStateOf<List<Vaccination>>(emptyList()) }
-    var specialNeeds by remember { mutableStateOf("") }
-    var feedingNotes by remember { mutableStateOf("") }
-    var vetName by remember { mutableStateOf("") }
-    var vetPhone by remember { mutableStateOf("") }
-    var storedPhotos by remember { mutableStateOf<List<String>>(emptyList()) }
-    var pickedPhotos by remember { mutableStateOf<List<String>>(emptyList()) }
-    var removedPhotos by remember { mutableStateOf<List<String>>(emptyList()) }
+    // The fields live in the ViewModel (FormDraft), so a rotation keeps what was typed (D-11);
+    // each `var` below reads the draft and assigns into it.
+    val form = viewModel.petForm
+    val draft = form.state.collectAsState()
+    var name by draft.field(form, { it.name }) { f, v -> f.copy(name = v) }
+    var species by draft.field(form, { it.species }) { f, v -> f.copy(species = v) }
+    var breed by draft.field(form, { it.breed }) { f, v -> f.copy(breed = v) }
+    var dateOfBirth by draft.field(form, { it.dateOfBirth }) { f, v -> f.copy(dateOfBirth = v) }
+    var medications by draft.field(form, { it.medications }) { f, v -> f.copy(medications = v) }
+    var vaccinations by draft.field(form, { it.vaccinations }) { f, v -> f.copy(vaccinations = v) }
+    var specialNeeds by draft.field(form, { it.specialNeeds }) { f, v -> f.copy(specialNeeds = v) }
+    var feedingNotes by draft.field(form, { it.feedingNotes }) { f, v -> f.copy(feedingNotes = v) }
+    var vetName by draft.field(form, { it.vetName }) { f, v -> f.copy(vetName = v) }
+    var vetPhone by draft.field(form, { it.vetPhone }) { f, v -> f.copy(vetPhone = v) }
+    var pickedPhotos by draft.field(form, { it.pickedPhotos }) { f, v -> f.copy(pickedPhotos = v) }
+    var removedPhotos by draft.field(form, { it.removedPhotos }) { f, v -> f.copy(removedPhotos = v) }
     var showDatePicker by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var isSaving by remember { mutableStateOf(false) }
@@ -115,29 +117,13 @@ fun AddEditPetScreen(
 
     val currentPet by viewModel.currentPet.collectAsState()
 
-    // Seeded once per record, as the child form is: `currentPet` is an observation and emits again
-    // on every write to the row, and copying each emission into the fields overwrote whatever
-    // the parent was typing whenever a sync tick landed.
-    var seededForId by remember { mutableStateOf<String?>(null) }
-    // What the form was seeded with, so Back can tell an edit from an untouched form (D-11).
-    var seededFields by remember { mutableStateOf(PetFields.EMPTY) }
+    // Seeded once per record (FormDraft.seed), as the child form is: `currentPet` is an
+    // observation and emits again on every write to the row, and copying each emission into the
+    // fields overwrote whatever the parent was typing whenever a sync tick landed.
     LaunchedEffect(currentPet) {
-        currentPet?.takeIf { it.id != seededForId }?.let { pet ->
-            seededForId = pet.id
-            seededFields = PetFields.of(pet)
-            name = pet.name
-            species = pet.species
-            breed = pet.breed ?: ""
-            dateOfBirth = pet.dateOfBirth
-            medications = pet.medications
-            vaccinations = pet.vaccinations
-            specialNeeds = pet.specialNeeds ?: ""
-            feedingNotes = pet.feedingNotes ?: ""
-            vetName = pet.vetName ?: ""
-            vetPhone = pet.vetPhone ?: ""
-            storedPhotos = pet.photos
-        }
+        currentPet?.let { pet -> form.seed(pet.id, PetFields.of(pet)) }
     }
+    val storedPhotos = currentPet?.photos.orEmpty()
 
     val photoPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.PickVisualMedia()
@@ -196,21 +182,7 @@ fun AddEditPetScreen(
 
     // Asked before an edit is dropped (docs/AUDIT-2026-10-design.md D-11): Back used to leave
     // with whatever was typed, without a word.
-    val formFields = PetFields(
-        name = name,
-        species = species,
-        breed = breed,
-        dateOfBirth = dateOfBirth,
-        medications = medications,
-        vaccinations = vaccinations,
-        specialNeeds = specialNeeds,
-        feedingNotes = feedingNotes,
-        vetName = vetName,
-        vetPhone = vetPhone,
-        pickedPhotos = pickedPhotos,
-        removedPhotos = removedPhotos
-    )
-    val leave = rememberDiscardGuard(dirty = formFields != seededFields && !isSaving, onLeave = onNavigateBack)
+    val leave = rememberDiscardGuard(dirty = draft.value.dirty && !isSaving, onLeave = onNavigateBack)
 
     if (showDeleteConfirm) {
         val pet = currentPet
@@ -554,53 +526,3 @@ private fun petPhotoStripStrings() = PhotoStripStrings(
     remove = R.string.pet_photos_remove,
     close = R.string.pet_photos_close
 )
-
-/**
- * The values the pet form edits, compared with what it was seeded with to tell whether Back
- * would drop an edit (D-11). A photo picked or marked for removal counts as an edit.
- */
-private data class PetFields(
-    val name: String,
-    val species: PetSpecies,
-    val breed: String,
-    val dateOfBirth: LocalDateTime?,
-    val medications: List<Medication>,
-    val vaccinations: List<Vaccination>,
-    val specialNeeds: String,
-    val feedingNotes: String,
-    val vetName: String,
-    val vetPhone: String,
-    val pickedPhotos: List<String>,
-    val removedPhotos: List<String>
-) {
-    /** A blank form, and the form seeded from a stored record. */
-    companion object {
-        val EMPTY = PetFields(
-            name = "",
-            species = PetSpecies.OTHER,
-            breed = "",
-            dateOfBirth = null,
-            medications = emptyList(),
-            vaccinations = emptyList(),
-            specialNeeds = "",
-            feedingNotes = "",
-            vetName = "",
-            vetPhone = "",
-            pickedPhotos = emptyList(),
-            removedPhotos = emptyList()
-        )
-
-        fun of(pet: Pet) = EMPTY.copy(
-            name = pet.name,
-            species = pet.species,
-            breed = pet.breed ?: "",
-            dateOfBirth = pet.dateOfBirth,
-            medications = pet.medications,
-            vaccinations = pet.vaccinations,
-            specialNeeds = pet.specialNeeds ?: "",
-            feedingNotes = pet.feedingNotes ?: "",
-            vetName = pet.vetName ?: "",
-            vetPhone = pet.vetPhone ?: ""
-        )
-    }
-}
