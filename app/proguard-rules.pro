@@ -101,3 +101,22 @@
     long mNativeHandle;
 }
 -dontwarn net.zetetic.database.**
+
+# ---- Google Calendar API models (REL-7) ------------------------------------
+# `GoogleCalendarApi` parses a page of events with `GsonFactory` into
+# `com.google.api.services.calendar.model.*`. google-http-client builds those models by
+# reflection: it instantiates each class through its no-argument constructor and fills the
+# fields annotated `@Key`, reading the fields' generic types for lists and nested models.
+# Nothing in the app calls those constructors, so R8 made the classes abstract and dropped
+# the constructors, and the release build failed the first page with "unable to create new
+# instance of class … because it is abstract". The `r8-runtime` CI job found it; its probe
+# case for `Events` is the regression test.
+-keepattributes Signature,RuntimeVisibleAnnotations,AnnotationDefault
+-keepclassmembers class * {
+    @com.google.api.client.util.Key <fields>;
+}
+-keep class * extends com.google.api.client.json.GenericJson {
+    <init>();
+    <fields>;
+}
+-keep class com.google.api.services.calendar.model.** { *; }
