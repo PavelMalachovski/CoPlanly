@@ -1,5 +1,7 @@
 package com.coparently.app.e2e
 
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasClickAction
@@ -16,6 +18,7 @@ import com.coparently.app.domain.custody.DayOverrideStatus
 import com.coparently.app.domain.custody.DayOverrideTransition
 import com.coparently.app.domain.custody.SeasonalLayer
 import com.coparently.app.domain.custody.SharedCustody
+import com.coparently.app.domain.custody.SharedCustodyRead
 import com.coparently.app.domain.model.ChangeRequest
 import com.coparently.app.domain.model.ChangeRequestStatus
 import com.coparently.app.domain.model.CustodyModel
@@ -147,7 +150,7 @@ class OnScreenAgreementsTest : AliceOnScreenTest() {
 
         step("swap: Bob offers a day, Alice accepts on Home")
         runBlocking { bobOffers(agreed, firstDay) }
-        waitFor("Bob's swap on Alice's Home", swapDialogFor(firstDay))
+        waitForSwap("Bob's swap on Alice's Home", firstDay)
         tap(dialogButton(R.string.day_swap_accept))
         runBlocking {
             awaitOverride(firstDay) { it.isAccepted && it.decidedBy == aliceUid }
@@ -155,7 +158,7 @@ class OnScreenAgreementsTest : AliceOnScreenTest() {
 
         step("swap: Bob offers another, Alice declines on Home")
         runBlocking { bobOffers(agreed, secondDay) }
-        waitFor("Bob's second swap on Alice's Home", swapDialogFor(secondDay))
+        waitForSwap("Bob's second swap on Alice's Home", secondDay)
         tap(dialogButton(R.string.day_swap_decline))
         runBlocking {
             awaitOverride(secondDay) { it.status == DayOverrideStatus.DECLINED && it.decidedBy == aliceUid }
@@ -304,6 +307,33 @@ class OnScreenAgreementsTest : AliceOnScreenTest() {
                 .first { overrides -> overrides[date.toString()]?.let(condition) == true }
                 .getValue(date.toString())
         }
+
+    /**
+     * [waitFor] for Home's swap dialog, which on a timeout says where the offer got to: the pair's
+     * document on the server, each phone's Room, and the text of whatever dialog Home does show.
+     */
+    private fun waitForSwap(description: String, date: LocalDate) {
+        try {
+            waitFor(description, swapDialogFor(date))
+        } catch (e: AssertionError) {
+            throw AssertionError("$description — ${swapState(date)}", e)
+        }
+    }
+
+    /** Where the swap on [date] stands on the server and on each phone, for a failure message. */
+    private fun swapState(date: LocalDate): String = runBlocking {
+        val iso = date.toString()
+        val server = when (val read = bob.custodyRepository.readShared()) {
+            is SharedCustodyRead.Found -> read.custody.dayOverrides.toString()
+            else -> read.toString()
+        }
+        val alices = custodyRepository.observeDayOverrides().first()
+        val bobs = bob.custodyRepository.observeDayOverrides().first()
+        val dialogs = composeTestRule.onAllNodes(hasAnyAncestor(isDialog()))
+            .fetchSemanticsNodes(atLeastOneRootRequired = false)
+            .mapNotNull { node -> node.config.getOrNull(SemanticsProperties.Text)?.joinToString() }
+        "server=$server; Alice's Room[$iso]=${alices[iso]}; Bob's Room[$iso]=${bobs[iso]}; dialogs=$dialogs"
+    }
 
     // ---- what Home draws ------------------------------------------------------------------------
 
