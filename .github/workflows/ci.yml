@@ -71,8 +71,13 @@ jobs:
       # requests that can break it without touching a line of Kotlin.
       e2e: ${{ steps.filter.outputs.e2e }}
       screenshots: ${{ steps.filter.outputs.screenshots }}
+      # The upgrade job: the database, the preference store, the schemas, the manifest, the build,
+      # its own tests and scripts — or any path tools/ci-changes.js does not know.
+      upgrade: ${{ steps.filter.outputs.upgrade }}
       # The `instrumented` job's matrix, as a JSON array of legs.
       matrix: ${{ steps.filter.outputs.matrix }}
+      # The `r8-runtime` job: Android changes that can reach Gson, R8's rules or the probe.
+      r8runtime: ${{ steps.filter.outputs.r8runtime }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -378,6 +383,143 @@ jobs:
           path: app/build/outputs/mapping/release/
           if-no-files-found: ignore
           retention-days: 14
+
+  # REL-7 at runtime. The job above proves R8 ran and that the keep rules held for field *names*;
+  # it cannot see the minified app *run*. R8 full mode also strips generic signatures (Gson's
+  # TypeToken then throws), drops constructors, merges and inlines classes — failures that raise
+  # nothing at build time and only show when the code executes, which until now meant a person, a
+  # phone and docs/DEVICE-CHECKLIST.md §4.1.
+  #
+  # `assembleR8Test` builds the `r8Test` build type: `release` exactly as R8 shrinks it, plus one
+  # kept entry point, a self-targeting instrumentation (app/src/r8Test/), signed with the debug key.
+  # tools/run-r8-probe.sh installs it on an API 30 emulator and runs `am instrument`, and the probe
+  # — inside the minified process — writes every model Gson reflects over through the app's own
+  # code (the repositories into Room, DayOverrideJson, the draft Gson, the chat and revision
+  # mappers, the calendar's @Key models) and reads it back. tools/check-r8-probe.js fails on any
+  # key that is not the source field name, any value that does not read back equal, a probe that
+  # did not finish, and a model check-invariants.js finds with no case — each as an ::error::.
+  #
+  # What it cannot see: Firestore. The probe never signs in, so the documents themselves are the
+  # phone's (§4.1), as is a real Google Calendar import. The emulator step follows the other
+  # emulator jobs: decided by the status file, the emulator stopped by the script
+  # (tools/stop-emulator.sh), `continue-on-error` and a timeout as the backstop, the APK built
+  # while the AVD restores (tools/ci-background-build.sh), and the API 30 AVD restored only.
+  r8-runtime:
+    name: Android — minified build at runtime (R8)
+    needs: changes
+    if: needs.changes.outputs.r8runtime == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions:
+      contents: read
+      checks: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: temurin
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          # Lets setup-gradle save and restore Gradle's configuration cache between runs (it holds
+          # secrets, so it is only stored encrypted). Optional: with the repository secret unset
+          # the cache still works within one job, just not across runs.
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+
+      # R8 is the long part (~7 minutes in `release`); it runs while the AVD restores and boots.
+      - name: Start building the minified APK in the background
+        env:
+          BACKGROUND_BUILD_TASKS: assembleR8Test
+        run: bash tools/ci-background-build.sh start
+
+      # The API 30 AVD the `instrumented` job caches — restored only, so no two jobs race to save it.
+      - name: Restore the API 30 AVD
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.android/avd/*
+            ~/.android/adb*
+          key: avd-30-default-x86_64-pixel_2
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      # 15 minutes: most of it is waiting for R8; the probe itself takes seconds.
+      - name: Run the R8 probe in the minified app
+        id: probe
+        timeout-minutes: 15
+        continue-on-error: true
+        env:
+          STATUS_FILE: ${{ runner.temp }}/r8-probe-status
+          STOP_EMULATOR: 'true'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 30
+          arch: x86_64
+          target: default
+          profile: pixel_2
+          ram-size: 4096M
+          force-avd-creation: false
+          disable-animations: true
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: bash tools/ci-background-build.sh wait && bash tools/run-r8-probe.sh
+
+      - name: The probe finished and passed
+        if: always()
+        env:
+          STATUS_FILE: ${{ runner.temp }}/r8-probe-status
+          STEP_OUTCOME: ${{ steps.probe.outcome }}
+        run: |
+          if [ ! -f "$STATUS_FILE" ]; then
+            echo "::error::The R8 probe did not finish: the emulator step died or timed out before it wrote an exit status."
+            exit 1
+          fi
+          status=$(cat "$STATUS_FILE")
+          if [ "$status" != "0" ]; then
+            echo "::error::The R8 probe exited with status $status — see the annotations above, and the r8-probe artefact."
+            exit 1
+          fi
+          if [ "$STEP_OUTCOME" != "success" ]; then
+            echo "::warning::The probe passed; the emulator step then failed while shutting the emulator down. That is not a result."
+          fi
+
+      - name: Upload the probe's output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r8-probe
+          path: |
+            app/build/outputs/r8-probe/
+            app/build/outputs/mapping/r8Test/
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Upload the probe's results (JUnit XML)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-r8-probe
+          path: app/build/outputs/r8-probe/junit/*.xml
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Publish the R8 probe check run
+        if: always()
+        uses: mikepenz/action-junit-report@v6
+        with:
+          check_name: R8 runtime probe
+          report_paths: app/build/outputs/r8-probe/junit/*.xml
+          detailed_summary: true
+          # A job that died before writing results must not publish a green check.
+          require_tests: true
 
   # JVM screenshot tests: Roborazzi on Robolectric's native graphics, no emulator. The images are
   # the way to review light theme, the four translations at 1.5x text and the chosen parent
@@ -923,6 +1065,200 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
+  # "Install the new build over the previous one" (docs/DEVICE-CHECKLIST.md §2.1), on an emulator.
+  # `EncryptedDatabaseTest` builds every on-disk state the *current* code names; nothing else opens
+  # data an *older build* wrote. This job does: it builds the base build — the pull request's base
+  # commit, or on `main` the commit before the push — installs it, lets it write a family's state
+  # through its own code (`UpgradeSeedTest`: rows in eight tables through the production SQLCipher
+  # open path, the sealed SEC-5 preference store with a refresh token and the telemetry answer),
+  # installs this build over it with `adb install -r`, and checks from inside this build
+  # (`UpgradeVerifyTest`) that the database opens with the *recovered* passphrase, every Room
+  # migration ran to the newest exported schema, nothing was lost, the file is still ciphertext and
+  # the consent question stays answered. `tools/upgrade/run-upgrade-test.sh` is the orchestration.
+  #
+  # Things that must stay true:
+  #  * **Both builds in this one job**, under one HOME, so AGP signs both with the same
+  #    ~/.android/debug.keystore — `adb install -r` refuses an update signed by another key, and
+  #    an instrumentation must share its target's certificate. The script compares the three APKs'
+  #    certificates with apksigner before installing anything, rather than assuming it.
+  #  * **The seed runs on the base build's classes** (the test APK is this branch's, the app
+  #    process is the base's), so it touches only the handful of signatures `UpgradeFixture`
+  #    lists and writes rows by SQL. A pull request that changes one of those fails the seed with
+  #    `NoSuchMethodError`; the fix is in the fixture, as its KDoc says.
+  #  * **A skip is a failure.** Both classes skip themselves without `-e coplanlyUpgradePhase`,
+  #    which is what keeps them out of the `instrumented` job, and `am instrument` prints
+  #    "OK (1 test)" for a skip — so `tools/upgrade/instrument-results.js` decides from the
+  #    per-test status codes, and a skip, a crash or no test at all is red.
+  #  * **Decided by the status file**, like the other emulator jobs: the script stops the emulator
+  #    itself (tools/stop-emulator.sh), and the step's timeout and `continue-on-error` are only the
+  #    backstop for the action's shutdown hang.
+  #
+  # What it cannot prove: an upgrade from a build older than the base (a phone that skipped
+  # releases runs a longer migration chain than this one — `CoPlanlyDatabaseMigrationTest` is the
+  # place for that), the plaintext → encrypted conversion of SEC-2 (the base already ships
+  # SQLCipher, so this is encrypted → encrypted; the verify still passes, and says so, if a base
+  # ever wrote plaintext), and a real phone's hardware-backed Keystore.
+  upgrade:
+    name: Android — upgrade over main
+    needs: changes
+    if: needs.changes.outputs.upgrade == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      checks: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # HEAD~1 is the fallback base when the event names none (a manual run, a first push).
+          fetch-depth: 2
+
+      - name: Choose the base build
+        id: base
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          case "$EVENT_NAME" in
+            pull_request) sha="$PR_BASE_SHA" ;;
+            push) sha="$PUSH_BEFORE" ;;
+            *) sha="" ;;
+          esac
+          # A new branch's first push reports forty zeros as `before`.
+          if [ -z "$sha" ] || [ -z "${sha//0/}" ]; then
+            sha=$(git rev-parse HEAD~1)
+            echo "::notice::No base commit in the event; upgrading over the parent commit $sha."
+          fi
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "Base build: $sha ($EVENT_NAME)" | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Check out the base build
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.base.outputs.sha }}
+          path: upgrade-base
+          persist-credentials: false
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: temurin
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          # Lets setup-gradle save and restore Gradle's configuration cache between runs (it holds
+          # secrets, so it is only stored encrypted). Optional: with the repository secret unset
+          # the cache still works within one job, just not across runs.
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+
+      # In the foreground and first: it is the build that creates ~/.android/debug.keystore if the
+      # runner has none, and the branch's build below must find that same file, not race to make
+      # its own. Its own wrapper and Gradle version — it is the base commit's build, exactly.
+      - name: Build the base build (app APK)
+        working-directory: upgrade-base
+        # The base build's daemon would otherwise keep its 4 GB heap beside this branch's
+        # daemon and the emulator on a 16 GB runner.
+        run: ./gradlew assembleDebug && ./gradlew --stop
+
+      # This branch's app and test APKs, while the AVD restores and the emulator boots; the
+      # emulator script's first line waits for it (tools/ci-background-build.sh).
+      - name: Start building this branch's APKs in the background
+        run: bash tools/ci-background-build.sh start
+
+      # The API 30 AVD the `instrumented` job caches, snapshot included — restored only, so the
+      # jobs never race to save it. On a miss the action creates the AVD as it always did.
+      - name: Restore the API 30 AVD
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.android/avd/*
+            ~/.android/adb*
+          key: avd-30-default-x86_64-pixel_2
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      # 15 minutes: the wait for this branch's build (~3–5), the boot, two installs, two short
+      # instrumentation runs. Decided by the status file, not by this step (see above).
+      - name: Install the base build, seed it, upgrade, verify
+        id: upgrade-run
+        timeout-minutes: 15
+        continue-on-error: true
+        uses: reactivecircus/android-emulator-runner@v2
+        env:
+          STATUS_FILE: ${{ runner.temp }}/upgrade-status
+          BASE_APK: upgrade-base/app/build/outputs/apk/debug/app-debug.apk
+          RESULTS_DIR: app/build/outputs/upgrade-results
+        with:
+          api-level: 30
+          arch: x86_64
+          target: default
+          profile: pixel_2
+          ram-size: 4096M
+          force-avd-creation: false
+          disable-animations: true
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: adb logcat -G 16M || true; bash tools/ci-background-build.sh wait && bash tools/upgrade/run-upgrade-test.sh; status=$?; echo "$status" > "$STATUS_FILE"; bash tools/stop-emulator.sh; exit $status
+
+      - name: The upgrade finished and passed
+        if: always()
+        env:
+          STATUS_FILE: ${{ runner.temp }}/upgrade-status
+          STEP_OUTCOME: ${{ steps.upgrade-run.outcome }}
+        run: |
+          if [ ! -f "$STATUS_FILE" ]; then
+            echo "::error::The upgrade check did not finish: the emulator step died or timed out before it wrote an exit status."
+            exit 1
+          fi
+          status=$(cat "$STATUS_FILE")
+          if [ "$status" != "0" ]; then
+            echo "::error::The upgrade check exited with status $status."
+            exit 1
+          fi
+          if [ "$STEP_OUTCOME" != "success" ]; then
+            echo "::warning::The upgrade check passed; the emulator step then failed while shutting the emulator down. That is not a test result."
+          fi
+
+      - name: Upload upgrade results (JUnit XML)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-upgrade
+          path: app/build/outputs/upgrade-results/TEST-*.xml
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Publish upgrade check run
+        if: always()
+        uses: mikepenz/action-junit-report@v6
+        with:
+          check_name: Upgrade over the base build
+          report_paths: app/build/outputs/upgrade-results/TEST-*.xml
+          detailed_summary: true
+          require_tests: true
+
+      # The raw `am instrument` output and the logcat of each phase.
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-reports-upgrade
+          path: app/build/outputs/upgrade-results/
+          if-no-files-found: ignore
+          retention-days: 14
+
   invariants:
     name: Resource and payload invariants
     runs-on: ubuntu-latest
@@ -1084,7 +1420,7 @@ jobs:
   # `main` there is no pull request: the summary goes to the run's job summary only.
   report:
     name: CI report
-    needs: [changes, build-test, static, detekt, release, screenshots, instrumented, e2e, invariants, functions, rules]
+    needs: [changes, build-test, static, detekt, release, r8-runtime, screenshots, instrumented, e2e, upgrade, invariants, functions, rules]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 10

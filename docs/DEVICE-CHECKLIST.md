@@ -27,7 +27,7 @@ in the same commit; its test in the CI `invariants` job fails otherwise.
 | **3A** | Needs three accounts: you plus two co-parents. |
 | **[branch]** | Only in a build that includes `claude/charming-ritchie-d6uqz8` (merged to `main`, or built from that branch). On `main` @ `44f9d66` the check does not apply yet. |
 | **[#99]** | Lands with PR #99. Check it against the merged PR, because the details may differ. |
-| **[CI]** | The `instrumented` or `e2e` CI job already exercises the mechanism on an emulator (table below). The phone still confirms it against real data and real services. |
+| **[CI]** | The `instrumented`, `e2e` or `upgrade` CI job already exercises the mechanism on an emulator (tables below). The phone still confirms it against real data and real services. |
 
 **Warning: switching accounts wipes the phone's local data.** `AccountSwitchGuard` clears Room
 when a *different* uid signs in. Records that already synced come back from the cloud. Records
@@ -61,7 +61,8 @@ TalkBack, AppCompat's per-app locale switching, or a screen assembled from real 
 checks stay. A check marked **(screenshots)** only needs a glance on the phone, or none.
 
 **What CI now covers.** The `instrumented` job (API 26/30/35 emulators, debug build, Firebase mocked by
-`FakeFirebaseModule`, Room real) runs these on every Android pull request. A check they cover is
+`FakeFirebaseModule`, Room real) runs these on every Android pull request, and the `r8-runtime` job
+(the minified `r8Test` build, API 30) runs the last row. A check they cover is
 marked **[CI]** below: CI saw the mechanism work, so on the phone it is a quick confirmation, and
 a failure there points at something the emulator does not have — real Firebase, real data, a
 Play install, a vendor skin.
@@ -71,7 +72,10 @@ Play install, a vendor skin.
 | `presentation/common/PickerDatesTest`, `LocalDatePickerDialogTest` | §3.1: every picker's conversion and both picker composables, tapped, in Prague, Kiritimati (+14), Los Angeles and Pago Pago (−11) | Each *screen* saving what its picker returned, and a stored date staying put across a zone change |
 | `presentation/settings/PerAppLocaleTest` | §3.6: `setApplicationLocales` to cs/de/ru/uk renders Settings in that language | The Settings row itself, Android 13's system setting, and §4.2 (a Play install) — never CI |
 | `data/export/ExportFileWriterTest` | §6: a CSV (RFC 4180, statement first, formula guard, both clocks, no private event) and a PDF that `PdfRenderer` opens, written through the real writer; the share intent's `FileProvider` URI and read-only grant | Real revisions from the server, the share sheet, and a spreadsheet or PDF app opening the file |
+| `data/remote/firebase/PushNotificationTest` | §3.7 and every push's wording: real data payloads through `PushNotifier` (what `CoPlanlyMessagingService` hands each message to), read back from `NotificationManager.activeNotifications` — every worded type in English and German, composed in all five languages with its names shown; an unknown type (even with a `title`/`body`) and a push for another account post nothing; each tap's PendingIntent matched to its deep link, `familyId` extra and request code, two families kept apart. Runs on all three legs, 16 KB included (not a Hilt test) | FCM delivering it, the shade as the phone's skin draws it, a tap actually switching family (§5.2), and the language on Android 12 or older when the app language differs from the phone's (a push follows the phone's there) |
 | `presentation/navigation/MainNavigationSmokeTest` | A signed-in launch visiting Home, Calendar (month/week/day), Chat, Expenses and Settings without a crash; bottom bar on the tabs only; icon-only controls named and ≥ 48 dp | Everything that needs data, a co-parent or a server; TalkBack itself (§3.9) |
+| `upgrade/UpgradeSeedTest` → `adb install -r` → `upgrade/UpgradeVerifyTest` (the **`upgrade` job**, API 30, not `instrumented`) | §2.1 and §3.9's SEC-5 box for **one release step**: the base build (the PR's base commit, or the previous `main`) writes a family's rows into eight tables through its own SQLCipher open path, plus a refresh token, settings and the telemetry answer into the sealed store; this build is installed over it keeping the data, and must open the database with the **recovered** passphrase (the wrapped value unchanged), run every migration to the newest exported schema, read every row back (six tables also through its own DAOs), leave the file ciphertext, and keep the preferences and the consent answer | An upgrade from a build older than the base (a longer migration chain), the plaintext → encrypted conversion of an install that predates SEC-2, a hardware-backed Keystore, a reboot between launches, and a real family's volume of data |
+| `app/src/r8Test/.../R8GsonProbe` — not an `androidTest`: the **`r8-runtime`** job runs it inside the *minified* `r8Test` build (`release` plus the probe) on API 30 | §4.1's Gson half: a child's medical profile (blood type, intolerances, hereditary conditions, a dated vaccination), medications, activities, emergency contacts and school, and a pet, written through the real repositories into Room with the source key names and read back equal; custody swaps, the event draft, the chat and revision `TypeToken`s, and the Google Calendar `@Key` models parsed | The Firestore document itself (the probe never signs in), the co-parent's phone reading it, a real Google Calendar import, and the telemetry check — a signed release build with a real `google-services.json` |
 
 **What the `e2e` job covers between two parents.** Two accounts in one emulator, each with the
 production data layer, against the Auth, Firestore, Functions and Storage emulators and the real
@@ -193,12 +197,22 @@ either, and 33→36 have run only in CI.
 
 **What CI now covers, and what it does not** (September 2026). `EncryptedDatabaseTest` runs in
 the `instrumented` job on API 26, 30 and 35 with 16 KB pages, and converts a plaintext database
-on every run. The boxes below are marked **[CI]** where an emulator already proves the same thing,
-so a failure there on a phone points at something the emulator does not have. What CI does not
-cover is the reason this section still comes first:
+on every run. And the **`upgrade` job** ("Android — upgrade over main") does this section's
+install-over for one release step on every pull request that reaches the database or the
+preference store: it installs the **base build** (the PR's base commit, or the previous `main`),
+has it write rows into events, a private event, expenses, a child, a pet, a message, a custody
+model, the journal and the user through its own code — plus a Google refresh token, settings and
+the telemetry answer into the sealed store — then `adb install -r`s this build over it and checks
+from inside it that everything opens and is still there. Since `main` already ships SQLCipher,
+what that job exercises is **encrypted → encrypted with the migrations between the two schema
+versions**, not this section's plaintext conversion. The boxes below are marked **[CI]** where an
+emulator already proves the same thing, so a failure there on a phone points at something the
+emulator does not have. What CI does not cover is the reason this section still comes first:
 
-- the plaintext file there was written by the **current** Room schema, not by an older build and
-  then taken through the migration chain in the same launch as the conversion;
+- the plaintext file `EncryptedDatabaseTest` converts was written by the **current** Room schema,
+  and the `upgrade` job's base build already encrypts — nothing in CI takes a file an older,
+  pre-SEC-2 build wrote through the migration chain in the same launch as the conversion, and
+  nothing upgrades across more than one release step;
 - the emulator's Keystore is **software-backed**, not a phone's hardware (TEE/StrongBox) one;
 - nothing reboots between two launches;
 - the data is three rows in one table, not a family's real calendar, chat and medical profile.
@@ -223,7 +237,9 @@ Preconditions: a factory-fresh phone, or `adb uninstall app.coplanly`. Build A (
 - [ ] Install over it **without uninstalling**: `adb install -r app/build/outputs/apk/debug/app-debug.apk`.
 - [ ] Launch.
   - **Expected:** no crash. Every record from the old build is still there: the same counts,
-    the private event, the medical profile, and the chat history.
+    the private event, the medical profile, and the chat history. **[CI]** for one release step
+    (the `upgrade` job: the base build's rows in eight tables, read back by SQL and through the
+    new build's DAOs after its migrations); the older build and the real data are the phone's.
   - **If it fails:** a crash in `AndroidRuntime` naming a migration points to
     `DatabaseMigrations.kt`. `EncryptedDatabase: Could not open the database encrypted` means
     it fell back to plaintext and will retry next launch. That is safe, but it is a finding.
@@ -238,8 +254,10 @@ Preconditions: a factory-fresh phone, or `adb uninstall app.coplanly`. Build A (
       an export whose rename never happened, a leftover beside an encrypted file).
 - [ ] Run `adb shell am force-stop app.coplanly`, then relaunch twice. Everything still opens:
       the passphrase is **recovered** each time, never re-minted. **[CI]** within one process
-      (recovered twice, by a second `DatabaseKey`, and on disk as soon as `mint` returns); the
-      process death between launches is the part left to the phone.
+      (recovered twice, by a second `DatabaseKey`, and on disk as soon as `mint` returns), and
+      across a process death *and* an app replacement in the `upgrade` job (the wrapped value the
+      base build stored is unchanged after the new build opened the database twice); the reboot
+      below is the part left to the phone.
 - [ ] **Reboot the phone**, then relaunch. It still opens: the Keystore key survives a reboot.
       *Not in CI* — phone only.
 - [ ] Migrated rows get the new defaults:
@@ -500,7 +518,14 @@ the Settings row, and it cannot see Android 13's system setting or a Play instal
 - The install that matters is the Play-like one in §4.2. A sideloaded APK always contains every
   language, so this part cannot catch the split bug.
 
-### 3.7 Push opt-out switch · 1P, full check 2P
+### 3.7 Push opt-out switch · 1P, full check 2P [CI]
+
+**[CI]** The JVM test `FcmServicePushSwitchTest` pins this device's side of the first two boxes:
+off deletes `fcmToken` from `users/{uid}` and the token itself, on writes a fresh token back,
+and while off nothing re-registers one. `PushNotificationTest` (instrumented) pins what arrives:
+a push for another account posts nothing and triggers no sync, every type is worded in the
+reader's language, and the tap carries the family. What only the phones add: the console showing
+the field gone, the OS permission turning the switch off, and a real push arriving or not.
 
 - [ ] Settings → App → **Push notifications** off. In the Firebase console → Firestore →
       `users/{A's uid}`, `fcmToken` is removed or empty.
@@ -542,8 +567,9 @@ the Settings row, and it cannot see Android 13's system setting or a Play instal
       this one over it (no uninstall). Calendar is still connected, Settings keep their values,
       and the app does not ask the telemetry question again — the old store was copied into
       `no_backup/secure_prefs.bin` on the first launch. **[CI]** runs that copy on the emulators
-      (`EncryptedPreferencesMigrationTest`); only a phone has a store an older build wrote under
-      a hardware-backed Keystore.
+      (`EncryptedPreferencesMigrationTest`), and the `upgrade` job carries a sealed store the base
+      build wrote — refresh token, settings, telemetry answer — across `adb install -r`; only a
+      phone has a store an older, pre-SEC-5 build wrote under a hardware-backed Keystore.
 
 ### 3.10 Pet and medical photo upload · 1P
 
@@ -704,21 +730,33 @@ family's proposal can carry an override.
 A green `assembleRelease` proves R8 ran. It does not prove that Gson still finds its field names.
 That defect has shipped once before.
 
+**[CI] since September 2026, as far as one process can go.** The `r8-runtime` job runs the
+minified `r8Test` build (`release` plus the probe in `app/src/r8Test/`) on an emulator and writes
+this section's child — the same medical profile, activity and emergency contact — through
+`ChildInfoRepositoryImpl` into Room, then checks the stored JSON carries `bloodType`,
+`intolerances`, `hereditaryConditions` and `vaccinations` and reads back complete; a pet, custody
+swaps, the event draft and the chat mappers the same way (CLAUDE.md, the `r8-runtime` job). The
+Firestore map is built from the same Gson call on the same instance, so a green job makes the
+console check below a confirmation. What the job cannot do is below: it never signs in, so the
+document itself, the co-parent's phone and the telemetry check are still the phone's.
+
 Preconditions: install build C: `adb uninstall app.coplanly && adb install app-release.apk`. Do
 the same on B's phone if you have one.
 
 - [ ] Sign in as A. Save a child's **medical profile**: blood type, two allergies, an
       intolerance, a hereditary condition, a vaccination with a date. Also add an activity and an
-      emergency contact.
+      emergency contact. **[CI]** for the Room half (`r8-runtime`).
 - [ ] Firebase console → `child_info/{id}`: `medicalProfile` has **readable keys**
       (`bloodType`, `intolerances`, `hereditaryConditions`, `vaccinations`), not `a`, `b`, `c`.
-      Each list is non-empty.
+      Each list is non-empty. **[CI]** for the keys Gson writes; the document itself is the
+      phone's.
 - [ ] **2P:** on B's phone (also on build C), the same child's medical profile is **complete and
       non-empty**.
 - [ ] **Fallback (1P):** run `adb shell pm clear app.coplanly`, sign in as A again, and let it
       sync. The medical profile comes back from Firestore complete. That covers both directions
       of the Gson mapping on a release build.
-- [ ] A Google Calendar import on the release build works. It uses the `@Key` models.
+- [ ] A Google Calendar import on the release build works. It uses the `@Key` models. **[CI]** for
+      parsing a page into them (`r8-runtime`); the OAuth sign-in and the network are the phone's.
 - [ ] **Telemetry end to end** (a release build has `ENABLE_ANALYTICS=true`):
   - Run `adb shell setprop debug.firebase.analytics.app app.coplanly` and open Firebase
     console → Analytics → DebugView.
@@ -728,7 +766,9 @@ the same on B's phone if you have one.
 - [ ] While on the release build, glance at the palette, the switcher and the second-co-parent
       invite (M-4, shipped but never seen).
 - **If it fails:** `app/proguard-rules.pro` (the `-keepclassmembers ... { <fields>; }` rules) and
-  `tools/check-r8-mapping.js`. A new Gson type without a rule is the likely cause.
+  `tools/check-r8-mapping.js`. A new Gson type without a rule is the likely cause. If the
+  `r8-runtime` job was green on the same commit, the fault is past Gson — the Firestore mapping
+  or the sync — and its `r8-probe` artefact holds the JSON the minified build wrote.
 
 ### 4.2 Language picker after a Play-like install · 1P
 

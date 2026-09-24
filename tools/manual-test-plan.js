@@ -123,7 +123,7 @@ const RULES = [
     sections: ['3.7'],
     why: 'push notifications',
     paths: ['K/data/remote/firebase/FcmService.kt', 'K/data/remote/firebase/PushPayload.kt',
-      'K/data/notification/**', 'K/domain/notification/**', '**/*MessagingService*',
+      'K/data/remote/firebase/PushNotifier.kt', 'K/data/notification/**', 'K/domain/notification/**', '**/*MessagingService*',
       'app/src/main/res/values*/push_strings.xml'],
   },
   {
@@ -148,7 +148,8 @@ const RULES = [
     why: 'R8, Gson models or the build itself',
     paths: ['app/proguard-rules.pro', 'app/build.gradle.kts', 'build.gradle.kts',
       'gradle.properties', 'gradle/**', 'settings.gradle.kts', 'K/data/sync/**',
-      'tools/check-r8-mapping.js'],
+      'tools/check-r8-mapping.js', 'app/proguard-r8test.pro', 'app/src/r8Test/**', 'tools/check-r8-probe.js',
+      'tools/run-r8-probe.sh'],
   },
   {
     sections: ['5.1'],

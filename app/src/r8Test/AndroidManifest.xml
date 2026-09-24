@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Merged into the `r8Test` build type only: a minified, release-shaped APK with one extra entry
+  point, the R8 runtime probe. Neither `debug` nor `release` ever sees this file.
+
+  A self-targeting <instrumentation> rather than an exported activity, receiver or provider: it
+  exposes nothing to other apps (only the shell can start one), it runs before
+  Application.onCreate, so the probe can skip the Hilt graph and its Firebase singletons, and
+  `am instrument -w -r` prints what it reports without a file, a poll or `run-as`. Start it with
+  `bash tools/run-r8-probe.sh` (CLAUDE.md, the `r8-runtime` CI job).
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <instrumentation
+        android:name="com.coparently.app.r8probe.R8ProbeInstrumentation"
+        android:label="R8 Gson probe"
+        android:targetPackage="${applicationId}" />
+
+</manifest>

@@ -170,6 +170,28 @@ android {
             buildConfigField("Boolean", "ENABLE_CRASHLYTICS", "true")
             buildConfigField("Boolean", "ENABLE_ANALYTICS", "true")
         }
+
+        // REL-7's runtime proof: `release` as R8 builds it, plus the probe in `src/r8Test/`, run on
+        // an emulator by the `r8-runtime` CI job (`tools/run-r8-probe.sh`). `check-r8-mapping.js`
+        // shows R8 kept the Gson field names; this shows the minified app still *writes and reads*
+        // them — generic signatures, constructors and all. Nothing here changes `debug` or `release`.
+        create("r8Test") {
+            initWith(getByName("release"))
+            // Installable without the release key, which CI must never hold. Signing is applied
+            // after R8 and does not change what it produces.
+            signingConfig = signingConfigs.getByName("debug")
+            // Stays non-debuggable, as `release` is: for a debuggable build AGP runs R8 in its debug
+            // mode, which skips optimisations the shipped build gets — the probe would pass on code
+            // that never ships.
+            isDebuggable = false
+            // Keeps the probe's entry point, and nothing of the app (see the file).
+            proguardFile("proguard-r8test.pro")
+            matchingFallbacks += listOf("release")
+            // Nothing reports anywhere from a test build. The probe never starts the telemetry
+            // applier anyway (it skips Application.onCreate); these only close the build-flag half.
+            buildConfigField("Boolean", "ENABLE_CRASHLYTICS", "false")
+            buildConfigField("Boolean", "ENABLE_ANALYTICS", "false")
+        }
     }
 
     compileOptions {
@@ -461,6 +483,9 @@ detekt {
     allRules = false
     config.setFrom("$projectDir/config/detekt/detekt.yml")
     baseline = file("$projectDir/config/detekt/baseline.xml")
+    // The plugin's defaults are src/{main,test}/{java,kotlin}; the R8 probe (the `r8Test` build
+    // type's own source set) is held to the same rules.
+    source.from("src/r8Test/java")
 }
 
 dependencies {

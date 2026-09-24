@@ -236,9 +236,9 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   degrades gracefully if it is missing (see the conditional apply in `app/build.gradle.kts`).
 - **GitHub CI runs on every pull request, and on every push to `main`** — a push to a
   feature branch with no PR open is not built (`.github/workflows/ci.yml`, added
-  August 2026 — this line used to say there was none). Eleven jobs that test (this line used to
-  say ten, before detekt left the lint job; eight before `screenshots` and `e2e`; seven before
-  `instrumented`), plus `report`, which only reads them (below): `changes` (a cheap gate,
+  August 2026 — this line used to say there was none). Thirteen jobs that test (this line used to
+  say eleven, before `upgrade` and `r8-runtime`; ten before detekt left the lint job; eight before `screenshots`
+  and `e2e`; seven before `instrumented`), plus `report`, which only reads them (below): `changes` (a cheap gate,
   below), four Android ones — `build-test` (`assembleDebug` + `testDebugUnitTest` in a
   single invocation), `static` (`lint` alone — the id is kept), `detekt` (its own job since
   September 2026: the two ran in sequence, lint 5:15 then detekt 0:52), `release` (`assembleRelease`, where
@@ -247,9 +247,11 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   rules suite against the emulator, and `invariants` (`node tools/check-invariants.js`, no
   dependencies and no Android SDK: locale completeness, format-argument agreement across the
   five locales, the four-way push-type agreement item 15 states, and the rule that every type
-  Gson reflects over is covered by a `-keepclassmembers ... { <fields>; }` rule). The last two
+  Gson reflects over is covered by a `-keepclassmembers ... { <fields>; }` rule *and* has a case
+  in the R8 runtime probe). The last two
   are one defect from two sides — the source says a rule exists, the mapping says it worked, and
-  a typo in a package name passes the first and fails the second. They run **in parallel**; the Android three were one sequential job until the August 2026 CI
+  a typo in a package name passes the first and fails the second. A third side, the minified app
+  actually *running*, is `r8-runtime` (below). They run **in parallel**; the Android three were one sequential job until the August 2026 CI
   pass, which is why a run took 13:22 for about 7 minutes of critical path. Two caveats, both
   deliberate. **detekt gates again** as of CQ-12 — do not add `continue-on-error` back to turn a
   red build green; fix the finding, or regenerate the baseline through the Regenerate workflow so
@@ -395,6 +397,38 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   manual plan then tells the tester the mechanism already ran and only what is drawn, the push
   and the real network are left — which is the point of the whole map.
 
+  The **`upgrade` job** ("Android — upgrade over main", September 2026) is `docs/DEVICE-CHECKLIST.md`
+  §2.1's install-over, for one release step, on the API 30 AVD. It builds the **base build** —
+  the PR's base commit, or on `main` the commit before the push (`github.event.before`) — in a
+  second checkout (`upgrade-base/`) and this branch's app and test APKs in the same job, so both
+  are signed by the one `~/.android/debug.keystore` (`tools/upgrade/run-upgrade-test.sh` compares
+  the three certificates with `apksigner` before installing anything). Then: install the base
+  app and the test APK fresh; `am instrument` `upgrade/UpgradeSeedTest`, which runs **in the base
+  build's process** and writes the real `coparently_database` through `buildCoPlanlyDatabase`
+  (rows in eight tables, by SQL) and the real sealed preference store (a refresh token, settings,
+  the telemetry answer), and leaves a marker; `adb install -r` this branch's app, keeping the
+  data; `am instrument` `upgrade/UpgradeVerifyTest`, which opens the database through this build
+  and asserts the passphrase was **recovered, not re-minted** (the wrapped value unchanged), the
+  schema is the newest exported one with Room's identity hash, every row reads back (by SQL and
+  through the DAOs), the file is still ciphertext, `lastUpdateTime` moved while
+  `firstInstallTime` did not, and the preferences and consent answer survived. Four things not to
+  undo. **The seed runs against the base build's classes**, so it calls only the signatures
+  `UpgradeFixture`'s KDoc lists and writes rows by SQL adapted to `PRAGMA table_info`, never
+  through a DAO: an entity's constructor changes with every added column, which is exactly the
+  pull request this job is for. A PR that changes a listed signature fails the seed with
+  `NoSuchMethodError` — adapt the fixture (reflection, or SQL) until the change is on the base.
+  **Both classes skip themselves without `-e coplanlyUpgradePhase seed|verify`**, which is what
+  keeps them — they write the real database and preference store — out of the `instrumented`
+  job; the seed also refuses to run over an existing database. **A skip is a failure here**:
+  `am instrument` prints "OK (1 test)" for one, so `tools/upgrade/instrument-results.js` (tested
+  in `invariants`) judges each phase from the raw per-test status codes and writes the JUnit XML
+  the check run and the PR comment read, with a skip as a failure. And **the status file decides
+  the job**, as in the other emulator jobs. **What it cannot prove**: an upgrade from a build older
+  than the base (a longer migration chain — `CoPlanlyDatabaseMigrationTest`'s job, as far as
+  schemas exist), SEC-2's plaintext → encrypted conversion of an install older than SQLCipher (the
+  base already encrypts, so this is encrypted → encrypted), a reboot, and a real phone's
+  hardware-backed Keystore — those stay on the device checklist.
+
   **A second workflow file exists and is not part of CI**: `.github/workflows/regenerate.yml` runs
   `detektBaseline` and exports the Room schema, then commits both back to the branch it ran on.
   It exists because those are the two artefacts only a machine with an Android SDK can produce,
@@ -405,6 +439,36 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   Still run the build locally before pushing — CI is a backstop, not a substitute.
   After switching branches, prefer `clean` — stale Hilt/KSP generated sources from another branch cause
   errors like "Could not find class file for '…Application'".
+- **The `r8-runtime` job runs the minified app** ("Android — minified build at runtime (R8)",
+  REL-7, September 2026). `release` and the mapping check prove R8 ran and kept the field names;
+  neither sees R8 full mode's runtime failures — a `TypeToken` whose generic signature was stripped
+  (Gson throws), a constructor or member removed, a class merged — nor that the JSON the app writes
+  reads back. The `r8Test` build type (`app/build.gradle.kts`) is `initWith(release)`: the same
+  proguard files plus `app/proguard-r8test.pro`, which keeps **only** the probe's entry point;
+  non-debuggable (AGP runs R8 in a weaker debug mode for a debuggable build), signed with the debug
+  key, telemetry flags off, no `applicationIdSuffix` (so a local `google-services.json` still
+  matches). Its own source set, `app/src/r8Test/`, adds `R8ProbeInstrumentation`, a
+  **self-targeting `<instrumentation>`**: `am instrument` starts it inside the minified process, it
+  skips `Application.onCreate` (whose Hilt graph needs a default FirebaseApp, which CI has no
+  `google-services.json` for — and must not get one), and `R8GsonProbe` builds the production
+  classes by hand the way the e2e parents do: a child and a pet through `ChildInfoRepositoryImpl`/
+  `PetRepositoryImpl` into an in-memory Room, signed out on a named `demo-coplanly` FirebaseApp, then
+  the stored JSON columns and the repositories' own read-back; `DayOverrideJson`; the draft Gson from
+  `SerializationModule`; the chat and revision mappers' `TypeToken`s; `Converters`; the calendar's
+  `@Key` models. `tools/run-r8-probe.sh` installs and runs it on API 30; `tools/check-r8-probe.js`
+  fails, one `::error::` each, on a key that is not the source field name (`bloodType`, never `a`),
+  a value that does not read back equal, a probe that did not finish, and a Gson model
+  `check-invariants.js` discovers with no case — and `invariants` already refuses that last one
+  (check 5), so **a new Gson model arrives with a probe case**: name its fully-qualified type as a
+  string literal in `R8GsonProbe` (a literal, because R8 renames the classes the report is about).
+  Four things to know. **Never add an app keep rule to `proguard-r8test.pro`** — the probe would
+  pass on a class the shipped build still breaks. **It is not byte-identical to `release`**: the
+  probe adds callers, so R8 may inline differently; what it decides by rule (names, signatures) is
+  the same, and that is what is checked. **It never reaches Firestore** — the documents' keys and a
+  second phone reading them stay `docs/DEVICE-CHECKLIST.md` §4.1, argued for by the probe only as
+  far as `toFirestoreMap()`'s medical profile is the same Gson call as the Room column it checks.
+  And it is gated on `changes`' `r8runtime` (Android changes outside screens, resources and tests,
+  plus the build, rules, workflow and the probe); `main` always runs it.
 - **The `screenshots` job is how UI is reviewed without a phone** (September 2026). Roborazzi on
   Robolectric's native graphics renders the tests in `app/src/test/java/com/coparently/app/
   screenshots/` — Home's cards, the month grid with every `DayCellFills` layer, the calendar
@@ -441,13 +505,16 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   `ScreenshotFixtures`) so an image does not change with the calendar — keep it that way, or the
   suite can never move to verify.
 - **A pull request runs only the jobs its diff can affect** (September 2026). The `changes` job
-  pipes `git diff --name-only` into `tools/ci-changes.js`, which decides four outputs and is tested
+  pipes `git diff --name-only` into `tools/ci-changes.js`, which decides five outputs and is tested
   by `tools/test/ci-changes.test.js` in `invariants`: docs/functions/rules only → no Android job;
   a screen-only change (`presentation/` outside `common/`, `res/`, `app/src/test/`) → no e2e
   (`common/` stays in because the e2e parents construct `ParentsSource`); nothing the screenshots
   render → no screenshots; and the **emulator matrix is API 30 alone** unless the diff reaches
   what API 26 and 16 KB exist for — `data/local/` (SQLCipher, Room), the manifest, `androidTest/`,
-  `src/debug/`, the emulator script — or the build. A push to `main` always runs everything, which
+  `src/debug/`, the emulator script — or the build; and the `upgrade` job runs when the diff reaches
+  what stored data depends on (`data/local/`, `data/security/`, `di/DatabaseModule.kt`, the
+  telemetry answer's form, `app/schemas/`, the manifest, its own tests and scripts), the build, or
+  any path the script does not know. A push to `main` always runs everything, which
   is the backstop for the legs a PR skipped; lint's NewApi check is the per-PR guard for a
   newer-API call. Three things not to get wrong. Every skip list is deliberately narrow — a path
   wrongly *on* one silently stops testing real changes, which is far worse than a path wrongly off
@@ -817,15 +884,15 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     document outright and has exactly one legitimate caller — an event turned private has to
     leave Firestore with no trace.
 15. **A push carries a type, never a sentence** (SEC-3). `data/remote/firebase/PushPayload.kt`
-    is the vocabulary; `CoPlanlyMessagingService` writes the text from *its own* string
-    resources and **drops a type it has no wording for**. Never reintroduce a `title`/`body`
+    is the vocabulary; `PushNotifier`, which `CoPlanlyMessagingService` hands every message to,
+    writes the text from *its own* string resources and **drops a type it has no wording for**. Never reintroduce a `title`/`body`
     fallback for an unrecognised type — that fallback is the forgery, not a nicety, and
     `firestore.rules` refuses both keys from a client precisely so nothing legitimate needs
     one. Two halves, and both are load-bearing: the rule's **allow-list** of client types keeps
     `pairing_accepted`, `pairing_removed` and `chat_message` producible only by Cloud Functions
     (which write as admin and bypass rules), so a co-parent cannot announce a pairing that did
     not happen. Adding a type means four places agreeing — `PushPayload`, the rule's allow-list,
-    `CoPlanlyMessagingService.PUSH_TEXT`, and the five `push_strings.xml` — and a type missing
+    `PushNotifier.PUSH_TEXT`, and the five `push_strings.xml` — and a type missing
     from any of them is a push that silently never appears. This is also why service-layer
     string extraction (**CQ-14**) was *not* a prerequisite: the string is read on the receiving
     device, which has a `Context` and all five translations.
@@ -837,6 +904,12 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     and the addressee both to be in it. The tap carries it as an intent extra **and** in the
     PendingIntent request code, and `MainActivity.readLaunchIntent` switches the family **before**
     arming any deep link — arming first would let `NavGraph` open the target on the wrong family.
+    **What the phone then shows is tested** (`androidTest/.../PushNotificationTest`, every leg
+    including 16 KB): every worded type posted and read back from `activeNotifications` in English
+    and German, composed in all five, an unknown type and another account's push posting nothing,
+    and each tap's PendingIntent matched to its deep link, family extra and request code. It words
+    through a configuration context because the service does: on API 32 and below AppCompat's
+    per-app language reaches activities only, so a push follows the *device* language there.
 16. **`sharedWith` is computed at upload time and never recomputed for a row already marked
     synced.** An event created while the account was unpaired is uploaded with an audience of
     one uid, and nothing revisits it — so it stays unreadable by a co-parent who arrives later.
@@ -920,10 +993,11 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     device-bound, so an encrypted field arrives at the co-parent's phone as ciphertext their
     Keystore cannot open — `SensitiveMedicalData` was deleted for saying otherwise. The SQLCipher
     calls **run in CI on emulators** (API 26, 30 and 35 with 16 KB pages): `EncryptedDatabaseTest`
-    drives every state `SqlCipherMigration` names through the production builder. What that cannot
-    prove is an upgrade over a database an *older build* wrote, under a phone's hardware-backed
-    Keystore, so the first launch on a device holding real data is still an acceptance step
-    (`docs/DEVICE-CHECKLIST.md` §2.1).
+    drives every state `SqlCipherMigration` names through the production builder, and the `upgrade`
+    job opens a database the *previous build* wrote (encrypted → encrypted, one release step; see
+    the CI section). What neither can prove is an upgrade from an older build, or under a phone's
+    hardware-backed Keystore, so the first launch on a device holding real data is still an
+    acceptance step (`docs/DEVICE-CHECKLIST.md` §2.1).
     **The preference store follows the same idea since SEC-5** (September 2026):
     `EncryptedPreferences` is no longer `security-crypto`'s alpha `EncryptedSharedPreferences` but
     one file, `no_backup/secure_prefs.bin` — the whole map (`PreferenceBlobCodec`, never Gson)
