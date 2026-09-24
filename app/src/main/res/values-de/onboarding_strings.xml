@@ -47,6 +47,7 @@
     <string name="onboarding_coparent_linked_title">Verknüpft mit %1$s</string>
     <string name="onboarding_coparent_linked_body">Alles, was %1$s schon eingetragen hat, wird für dich übernommen. Prüfe es in den nächsten Schritten und ergänze, was fehlt.</string>
     <string name="onboarding_coparent_fetching">Lade, was %1$s eingetragen hat…</string>
+    <string name="onboarding_coparent_fetching_hint">Du kannst weitermachen. Was noch unterwegs ist, kommt im Hintergrund an.</string>
     <string name="onboarding_coparent_found_title">Bereits eingetragen von %1$s</string>
     <string name="onboarding_coparent_found_children">Kinder</string>
     <string name="onboarding_coparent_found_pets">Haustiere</string>

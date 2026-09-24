@@ -278,10 +278,18 @@ private fun LinkedCoParent(name: String, fetch: CoParentFetch) {
     )
 
     when (fetch) {
-        CoParentFetch.Idle, CoParentFetch.Running -> StatusRow(
-            text = stringResource(R.string.onboarding_coparent_fetching, name)
-        ) {
-            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+        CoParentFetch.Idle, CoParentFetch.Running -> {
+            StatusRow(text = stringResource(R.string.onboarding_coparent_fetching, name)) {
+                CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+            }
+            // A spinner alone reads as "wait here", and on a slow network it can spin for a
+            // while (D-24). Nothing on this step needs the fetch to finish: the later steps keep
+            // listening and fill in what arrives.
+            Text(
+                text = stringResource(R.string.onboarding_coparent_fetching_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
         is CoParentFetch.Done -> if (fetch.found.isEmpty) {
             StatusRow(text = stringResource(R.string.onboarding_coparent_nothing_yet, name)) {

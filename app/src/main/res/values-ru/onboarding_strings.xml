@@ -47,6 +47,7 @@
     <string name="onboarding_coparent_linked_title">Связь с %1$s установлена</string>
     <string name="onboarding_coparent_linked_body">Всё, что уже есть у %1$s, подтянется к вам. Проверьте это на следующих шагах и дополните, чего не хватает.</string>
     <string name="onboarding_coparent_fetching">Получаем данные от %1$s…</string>
+    <string name="onboarding_coparent_fetching_hint">Можно продолжать: всё, что ещё не пришло, загрузится в фоне.</string>
     <string name="onboarding_coparent_found_title">Уже внесено — %1$s</string>
     <string name="onboarding_coparent_found_children">Дети</string>
     <string name="onboarding_coparent_found_pets">Питомцы</string>
