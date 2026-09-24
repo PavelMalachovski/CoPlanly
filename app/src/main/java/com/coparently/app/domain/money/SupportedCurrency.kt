@@ -67,3 +67,25 @@ fun currencyOfRegion(countryCode: String): SupportedCurrency? =
         "NO" -> SupportedCurrency.NOK
         else -> null
     }
+
+/**
+ * The default currency for a new expense when the parent has not chosen one (release audit R-5):
+ * the country's currency, else the currency of the family's last expense, else [deviceGuess] —
+ * the device region's, resolved once and stored.
+ *
+ * A country whose currency the app does not offer (Russia, Ukraine) falls through to the last
+ * expense rather than to the device, because what the family has actually been paying in is the
+ * better evidence of the two.
+ *
+ * @param countryCode The parent's country, ISO 3166-1 alpha-2, or null when unknown
+ * @param lastExpenseCurrency The code of the family's most recent expense, or null
+ * @param deviceGuess The device region's currency
+ */
+fun resolveDefaultCurrency(
+    countryCode: String?,
+    lastExpenseCurrency: String?,
+    deviceGuess: SupportedCurrency
+): SupportedCurrency =
+    countryCode?.let(::currencyOfRegion)
+        ?: SupportedCurrency.fromCode(lastExpenseCurrency)
+        ?: deviceGuess

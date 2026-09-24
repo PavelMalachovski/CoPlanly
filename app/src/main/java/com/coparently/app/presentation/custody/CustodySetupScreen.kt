@@ -59,7 +59,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -78,6 +77,7 @@ import com.coparently.app.presentation.parentingplan.coParentLabel
 import com.coparently.app.presentation.theme.CoPlanlyCorners
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.presentation.theme.bodyLargeEmphasized
 import com.coparently.app.presentation.theme.dimensions
 import com.coparently.app.presentation.theme.labelMediumEmphasized
 import com.coparently.app.presentation.theme.titleMediumEmphasized
@@ -332,8 +332,8 @@ fun CustodySetupScreen(
                     // Pattern days grid
                     FlowRow(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.S),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.S)
                     ) {
                         repeat(uiState.customPatternDays) { dayIndex ->
                             val isMomDay = uiState.customMomDays.contains(dayIndex)
@@ -618,8 +618,11 @@ private fun ModelTypeCard(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = modelTypeLabel(modelType),
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                    style = if (isSelected) {
+                        MaterialTheme.typography.bodyLargeEmphasized
+                    } else {
+                        MaterialTheme.typography.bodyLarge
+                    }
                 )
                 Text(
                     text = getModelTypeDescription(modelType),

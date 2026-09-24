@@ -146,7 +146,7 @@ private fun SlotCounts(counts: Map<String, Int>, parentNames: ParentNames, singl
                     text = if (singleDay) label else "$label ${counts[slot]}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = ParentColors.text(slot),
-                    modifier = Modifier.padding(start = 6.dp)
+                    modifier = Modifier.padding(start = Spacing.S)
                 )
             }
         }

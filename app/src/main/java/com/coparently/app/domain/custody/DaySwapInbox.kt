@@ -102,6 +102,16 @@ data class DaySwapGroup(val swaps: List<DaySwap>) {
      */
     val key: String get() = swaps.first().override.groupId ?: "single:$firstDate"
 
+    /**
+     * [key] plus what the offer says — each day, who it moves to, and when it was asked — so a
+     * parent who put the offer off ("Later") is asked again once it changes, and not before
+     * (release audit R-2).
+     */
+    val revision: String
+        get() = key + "@" + swaps.joinToString(",") {
+            "${it.date}:${it.override.toParent}:${it.override.requestedAt}"
+        }
+
     /** The ISO dates the offer covers, which is what a group answer is applied to. */
     val dates: List<String> get() = swaps.map { it.date.toString() }
 

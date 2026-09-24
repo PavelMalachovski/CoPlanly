@@ -40,7 +40,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.coparently.app.R
@@ -53,6 +52,7 @@ import com.coparently.app.presentation.theme.LayoutConstants
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.dimensions
+import com.coparently.app.presentation.theme.labelMediumEmphasized
 import androidx.compose.foundation.layout.ExperimentalLayoutApi as FoundationExperimentalLayoutApi
 
 /**
@@ -247,7 +247,7 @@ private fun FilterPill(
             // A checkbox to TalkBack — on/off was said by colour and weight alone — and 48dp tall.
             .toggleable(value = selected, role = Role.Checkbox, onValueChange = { onClick() })
             .heightIn(min = LayoutConstants.MIN_TOUCH_TARGET)
-            .padding(horizontal = 14.dp, vertical = Spacing.S),
+            .padding(horizontal = Spacing.L, vertical = Spacing.S),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.S)
     ) {
@@ -259,8 +259,11 @@ private fun FilterPill(
         )
         Text(
             text = label,
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+            style = if (selected) {
+                MaterialTheme.typography.labelMediumEmphasized
+            } else {
+                MaterialTheme.typography.labelMedium
+            },
             color = if (selected) {
                 MaterialTheme.colorScheme.onSurface
             } else {
@@ -324,8 +327,11 @@ private fun ParentFilterSegments(
                 // "Второй родитель" is 15 characters, "Другий з батьків" 16.
                 Text(
                     text = segment.label,
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = if (selected == filter) FontWeight.Bold else FontWeight.Medium,
+                    style = if (selected == filter) {
+                        MaterialTheme.typography.labelMediumEmphasized
+                    } else {
+                        MaterialTheme.typography.labelMedium
+                    },
                     maxLines = 1,
                     softWrap = false,
                     overflow = TextOverflow.Ellipsis

@@ -64,9 +64,9 @@ fun ProfessionalInviteSheet(
                 .fillMaxWidth()
                 .navigationBarsPadding()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp)
+                .padding(horizontal = Spacing.XL)
                 .padding(bottom = Spacing.XL),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+            verticalArrangement = Arrangement.spacedBy(Spacing.M)
         ) {
             Text(
                 text = stringResource(R.string.professional_invite_action),

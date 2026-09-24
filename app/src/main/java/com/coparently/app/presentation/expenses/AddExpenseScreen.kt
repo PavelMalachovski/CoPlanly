@@ -27,7 +27,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AddAPhoto
-import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material3.AlertDialog
@@ -43,7 +42,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SnackbarDuration
@@ -82,6 +80,7 @@ import com.coparently.app.domain.model.Expense
 import com.coparently.app.domain.model.ExpenseCategory
 import com.coparently.app.domain.money.SupportedCurrency
 import com.coparently.app.domain.receipts.ReceiptScan
+import com.coparently.app.presentation.common.DatePickerField
 import com.coparently.app.presentation.common.FamilyMemberChips
 import com.coparently.app.presentation.common.FamilyMemberRefListSaver
 import com.coparently.app.presentation.common.FullScreenImageDialog
@@ -364,26 +363,12 @@ fun AddExpenseScreen(
                 }
             )
 
-            // A picker, not a text field: disabled so it takes neither focus nor the keyboard, and
-            // drawn in the enabled colours with the event form's calendar glyph, because the
-            // disabled grey made the form's one date control look switched off
-            // (docs/AUDIT-2026-10-design.md D-7).
-            OutlinedTextField(
+            // A picker, not a text field (docs/AUDIT-2026-10-design.md D-7): the one date anatomy.
+            DatePickerField(
+                label = stringResource(R.string.expense_field_date),
                 value = date.format(dateFormatter),
-                onValueChange = {},
-                readOnly = true,
-                enabled = false,
-                label = { Text(stringResource(R.string.expense_field_date)) },
-                trailingIcon = { Icon(imageVector = Icons.Default.CalendarMonth, contentDescription = null) },
-                colors = OutlinedTextFieldDefaults.colors(
-                    disabledTextColor = MaterialTheme.colorScheme.onSurface,
-                    disabledBorderColor = MaterialTheme.colorScheme.outline,
-                    disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable(enabled = !isSaving) { showDatePicker = true }
+                onClick = { showDatePicker = true },
+                enabled = !isSaving
             )
 
             FamilyMemberChips(

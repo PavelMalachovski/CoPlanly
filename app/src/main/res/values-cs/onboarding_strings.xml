@@ -65,4 +65,5 @@
     <!-- Asked when Skip would leave something typed on this step unsaved. -->
     <string name="onboarding_skip_unsaved_title">Přeskočit bez uložení?</string>
     <string name="onboarding_skip_unsaved_message">To, co jste v tomto kroku zadali, zatím není uložené. Přeskočit pokračuje bez toho, Další to uloží.</string>
+    <string name="onboarding_split_footnote">Platí pro vás oba a pro každý výdaj, který od teď zapíšete.</string>
 </resources>

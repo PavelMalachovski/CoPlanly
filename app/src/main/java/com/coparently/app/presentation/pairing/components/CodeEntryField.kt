@@ -12,14 +12,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.sp
 import com.coparently.app.R
 import com.coparently.app.domain.pairing.InviteCodeGenerator
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.presentation.theme.headlineSmallEmphasized
 
 /**
  * Input for a code the user was given. Accepts a pasted pairing link or share
@@ -57,11 +56,7 @@ fun CodeEntryField(
             enabled = enabled,
             isError = errorText != null,
             supportingText = errorText?.let { { Text(it) } },
-            textStyle = TextStyle(
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 6.sp
-            ),
+            textStyle = MaterialTheme.typography.headlineSmallEmphasized.copy(letterSpacing = 6.sp),
             keyboardOptions = KeyboardOptions(
                 capitalization = KeyboardCapitalization.Characters,
                 autoCorrectEnabled = false,

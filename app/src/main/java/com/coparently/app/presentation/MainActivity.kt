@@ -50,6 +50,7 @@ import com.coparently.app.presentation.sync.SyncViewModel
 import com.coparently.app.presentation.theme.CoPlanlyTheme
 import com.coparently.app.presentation.theme.LocalParentPalette
 import com.coparently.app.presentation.widget.TodayWidgetRefresher
+import com.coparently.app.utils.ClockFormat
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -186,6 +187,16 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
+     * Reads the device's 12/24-hour setting each time the app comes forward, so every time it
+     * prints follows the reader's clock ([ClockFormat], release audit R-9) — including a change
+     * made in system settings while the app was in the background.
+     */
+    override fun onResume() {
+        super.onResume()
+        ClockFormat.follow(this)
+    }
+
+    /**
      * Handles a `coplanly://pair` link (or any other) arriving while the app is
      * already running. `MainActivity` is `singleTask`, so a warm launch is
      * routed here instead of creating a new instance.
@@ -206,6 +217,8 @@ class MainActivity : AppCompatActivity() {
         val splashScreen = installSplashScreen()
 
         super.onCreate(savedInstanceState)
+        // Before the first frame, so no time is ever drawn in the language's format first.
+        ClockFormat.follow(this)
 
         val splashDeadline = SystemClock.uptimeMillis() + SPLASH_HOLD_MAX_MS
         splashScreen.setKeepOnScreenCondition {

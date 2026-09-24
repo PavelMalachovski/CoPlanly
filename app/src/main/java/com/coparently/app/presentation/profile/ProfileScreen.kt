@@ -19,7 +19,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -50,6 +49,7 @@ import com.coparently.app.domain.model.MedicalProfile
 import com.coparently.app.domain.model.User
 import com.coparently.app.presentation.childinfo.components.AllergyEditor
 import com.coparently.app.presentation.childinfo.components.DatePickerDialog
+import com.coparently.app.presentation.common.DatePickerField
 import com.coparently.app.presentation.common.ErrorState
 import com.coparently.app.presentation.common.MedicalProfileEditor
 import com.coparently.app.presentation.common.PillChip
@@ -161,7 +161,7 @@ private fun ProfileContent(
             .padding(paddingValues)
             .verticalScroll(rememberScrollState())
             .padding(Spacing.L),
-        verticalArrangement = Arrangement.spacedBy(20.dp)
+        verticalArrangement = Arrangement.spacedBy(Spacing.XL)
     ) {
         if (editable) {
             when {
@@ -250,9 +250,11 @@ private fun MyProfileContent(
         modifier = Modifier.fillMaxWidth()
     )
 
-    OutlinedButton(onClick = { showDatePicker = true }, modifier = Modifier.fillMaxWidth()) {
-        Text(person.dateOfBirth?.format(dateFormatter) ?: stringResource(R.string.profile_dob_label))
-    }
+    DatePickerField(
+        label = stringResource(R.string.profile_dob_label),
+        value = person.dateOfBirth?.format(dateFormatter),
+        onClick = { showDatePicker = true }
+    )
     if (showDatePicker) {
         DatePickerDialog(
             onDateSelected = { dateTime ->

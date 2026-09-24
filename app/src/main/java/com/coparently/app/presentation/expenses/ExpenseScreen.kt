@@ -46,6 +46,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -61,7 +62,9 @@ import com.coparently.app.presentation.common.FamilySwitcherChip
 import com.coparently.app.presentation.common.InlineBanner
 import com.coparently.app.presentation.common.ListSkeleton
 import com.coparently.app.presentation.common.Loadable
+import com.coparently.app.presentation.common.ScrollAwareFab
 import com.coparently.app.presentation.common.monthPagingTransition
+import com.coparently.app.presentation.common.rememberFabScrollVisibility
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.common.valueOrNull
 import com.coparently.app.presentation.theme.Motion
@@ -204,6 +207,10 @@ fun ExpenseScreen(
         }
     }
 
+    val fabVisibility = rememberFabScrollVisibility()
+    // A month or a view that replaces the content starts at its top, so the button comes back.
+    LaunchedEffect(monthOfExpenses.month, showAnalytics) { fabVisibility.show() }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -228,8 +235,12 @@ fun ExpenseScreen(
         },
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         floatingActionButton = {
-            FloatingActionButton(onClick = onAddExpense) {
-                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.expenses_add))
+            // Leaves while the list moves forward (R-1): the amounts are the rows' trailing
+            // column, exactly where the button floats, so something was always under it.
+            ScrollAwareFab(fabVisibility) {
+                FloatingActionButton(onClick = onAddExpense) {
+                    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.expenses_add))
+                }
             }
         }
     ) { padding ->
@@ -237,6 +248,7 @@ fun ExpenseScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .nestedScroll(fabVisibility.connection)
         ) {
             // The money screen is where a change to how money divides belongs. A banner, not a
             // modal: every other agreement in this app is an inline banner plus an inbox card,
@@ -316,7 +328,7 @@ fun ExpenseScreen(
                                 navigation = monthNavigation,
                                 modifier = Modifier
                                     .monthSwipe(monthNavigation)
-                                    .padding(horizontal = 14.dp, vertical = Spacing.S)
+                                    .padding(horizontal = Spacing.L, vertical = Spacing.S)
                             )
                             Box(
                                 modifier = Modifier
@@ -361,7 +373,7 @@ fun ExpenseScreen(
                                                     Modifier
                                                 }
                                             )
-                                            .padding(horizontal = 14.dp, vertical = Spacing.XS),
+                                            .padding(horizontal = Spacing.L, vertical = Spacing.XS),
                                         monthNavigation = monthNavigation.takeIf { index == 0 }
                                     )
                                 }
@@ -373,7 +385,7 @@ fun ExpenseScreen(
                                 ViewSwitcher(
                                     showAnalytics = showAnalytics,
                                     onSelect = { showAnalytics = it },
-                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = Spacing.XS)
+                                    modifier = Modifier.padding(horizontal = Spacing.L, vertical = Spacing.XS)
                                 )
                             }
 
@@ -388,7 +400,7 @@ fun ExpenseScreen(
                                     navigation = monthNavigation,
                                     modifier = Modifier
                                         .monthSwipe(monthNavigation)
-                                        .padding(horizontal = 14.dp, vertical = Spacing.S)
+                                        .padding(horizontal = Spacing.L, vertical = Spacing.S)
                                 )
                                 viewSwitcher()
                                 ExpenseAnalytics(
@@ -450,7 +462,7 @@ fun ExpenseScreen(
                                                     onToggle = viewModel::toggleMemberFilter,
                                                     label = R.string.expenses_filter_members,
                                                     modifier = Modifier.padding(
-                                                        horizontal = 14.dp,
+                                                        horizontal = Spacing.L,
                                                         vertical = Spacing.XS
                                                     )
                                                 )
@@ -467,7 +479,7 @@ fun ExpenseScreen(
                                         exit = fadeOut(tween(Motion.SHORT_MS)),
                                         modifier = Modifier
                                             .align(Alignment.TopCenter)
-                                            .padding(horizontal = 14.dp)
+                                            .padding(horizontal = Spacing.L)
                                     ) {
                                         CollapsedMonthSummary(
                                             navigation = monthNavigation,
@@ -561,7 +573,7 @@ private fun SplitRatioWaitingBanner(
             proposal.ratio.momPercent,
             proposal.ratio.dadPercent
         ),
-        modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+        modifier = Modifier.padding(horizontal = Spacing.L, vertical = Spacing.S),
         actions = {
             TextButton(onClick = onWithdraw) {
                 Text(stringResource(R.string.expenses_split_proposal_withdraw))
@@ -599,7 +611,7 @@ private fun SplitRatioProposalBanner(
             proposal.ratio.momPercent,
             proposal.ratio.dadPercent
         ),
-        modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+        modifier = Modifier.padding(horizontal = Spacing.L, vertical = Spacing.S),
         tone = BannerTone.ATTENTION,
         actions = {
             Button(onClick = onAccept) {

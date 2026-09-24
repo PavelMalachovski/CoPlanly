@@ -60,10 +60,9 @@ import com.coparently.app.presentation.parentingplan.planCitationLine
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.bodyMediumEmphasized
 import com.coparently.app.presentation.theme.titleSmallEmphasized
+import com.coparently.app.utils.dateWithTime
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
-
-private val requestDateFormatter = DateTimeFormatter.ofPattern("EEE, MMM d · HH:mm")
 
 /**
  * Inbox of event change requests: incoming ones the user must respond to,
@@ -305,7 +304,7 @@ private fun AwaitingEventCard(
         ) {
             Text(text = event.title, style = MaterialTheme.typography.titleMedium)
             Text(
-                text = event.startDateTime.format(requestDateFormatter),
+                text = event.startDateTime.format(dateWithTime("MMMEd")),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -590,7 +589,7 @@ fun ChangeRequestCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = request.currentStartDateTime.format(requestDateFormatter),
+                        text = request.currentStartDateTime.format(dateWithTime("MMMEd")),
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }
@@ -609,7 +608,7 @@ fun ChangeRequestCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = request.proposedStartDateTime.format(requestDateFormatter),
+                        text = request.proposedStartDateTime.format(dateWithTime("MMMEd")),
                         style = MaterialTheme.typography.bodyMediumEmphasized
                     )
                 }

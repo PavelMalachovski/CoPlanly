@@ -2,13 +2,19 @@ package com.coparently.app.data.repository
 
 import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.local.preferences.PreferenceKeys
+import com.coparently.app.data.money.CurrencyHints
 import com.coparently.app.domain.money.SupportedCurrency
 import com.coparently.app.domain.money.defaultCurrencyForRegion
+import com.coparently.app.domain.money.resolveDefaultCurrency
 import com.coparently.app.domain.repository.PreferencesRepository
 import com.coparently.app.domain.telemetry.TelemetryConsent
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
 import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -19,11 +25,17 @@ import javax.inject.Singleton
  */
 @Singleton
 class PreferencesRepositoryImpl @Inject constructor(
-    private val encryptedPreferences: EncryptedPreferences
+    private val encryptedPreferences: EncryptedPreferences,
+    private val currencyHints: CurrencyHints
 ) : PreferencesRepository {
 
     private val _darkThemeFlow = MutableStateFlow<Boolean?>(null)
     private val _defaultCurrencyFlow = MutableStateFlow(resolveInitialCurrency())
+
+    // Whether the stored currency is the parent's own choice, which nothing may replace.
+    private val _currencyChosenFlow = MutableStateFlow(
+        encryptedPreferences.getBoolean(PreferenceKeys.DEFAULT_CURRENCY_CHOSEN, false)
+    )
 
     // Read once, here, rather than on first collection: the navigation graph decides its start
     // destination from this, and a flow that emitted a placeholder first would flash the consent
@@ -74,13 +86,33 @@ class PreferencesRepositoryImpl @Inject constructor(
         _darkThemeFlow.value = null
     }
 
+    /**
+     * The parent's own choice when they made one; otherwise the country, the last expense and the
+     * stored device guess, in that order ([resolveDefaultCurrency], release audit R-5).
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
     override fun getDefaultCurrencyFlow(): Flow<SupportedCurrency> =
-        _defaultCurrencyFlow.asStateFlow()
+        _currencyChosenFlow
+            .flatMapLatest { chosen ->
+                if (chosen) {
+                    _defaultCurrencyFlow
+                } else {
+                    combine(
+                        currencyHints.countryCode(),
+                        currencyHints.lastExpenseCurrency(),
+                        _defaultCurrencyFlow
+                    ) { country, lastExpense, deviceGuess ->
+                        resolveDefaultCurrency(country, lastExpense, deviceGuess)
+                    }
+                }
+            }
+            .distinctUntilChanged()
 
     override suspend fun setDefaultCurrency(currency: SupportedCurrency) {
         encryptedPreferences.putDefaultCurrency(currency.code)
         encryptedPreferences.putBoolean(PreferenceKeys.DEFAULT_CURRENCY_CHOSEN, true)
         _defaultCurrencyFlow.value = currency
+        _currencyChosenFlow.value = true
     }
 
     override suspend fun suggestDefaultCurrency(currency: SupportedCurrency) {

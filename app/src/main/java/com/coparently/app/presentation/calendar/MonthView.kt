@@ -73,9 +73,11 @@ import com.coparently.app.presentation.common.rememberToday
 import com.coparently.app.presentation.theme.CoPlanlyColors
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.presentation.theme.bodyMediumEmphasized
 import com.coparently.app.presentation.theme.dimensions
 import com.coparently.app.presentation.theme.labelSmallEmphasized
 import com.coparently.app.utils.localizedDate
+import com.coparently.app.utils.shortTime
 import com.kizitonwose.calendar.compose.CalendarState
 import com.kizitonwose.calendar.compose.HorizontalCalendar
 import com.kizitonwose.calendar.compose.rememberCalendarState
@@ -88,7 +90,6 @@ import kotlinx.coroutines.launch
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
-import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.time.temporal.ChronoUnit
 import java.util.Locale
@@ -312,7 +313,6 @@ private val VACATION_LINE_HEIGHT = 2.dp
 private val CONTACT_WINDOW_MARKER_SIZE = 10.dp
 
 /** A contact window's times in a day cell's description. */
-private val WINDOW_MARKER_TIME: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
 /**
  * Weekday header row (Mon, Tue, Wed, etc.)
@@ -496,8 +496,8 @@ private fun DayCell(
         stringResource(
             R.string.calendar_contact_window_desc,
             parentNames.labelFor(window.parent),
-            window.start.format(WINDOW_MARKER_TIME),
-            window.end.format(WINDOW_MARKER_TIME)
+            window.start.format(shortTime()),
+            window.end.format(shortTime())
         )
     }
 
@@ -799,8 +799,11 @@ private fun DayCell(
             ) {
                 Text(
                     text = date.dayOfMonth.toString(),
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = if (isToday || isPublicHoliday) FontWeight.Bold else FontWeight.Normal,
+                    style = if (isToday || isPublicHoliday) {
+                        MaterialTheme.typography.bodyMediumEmphasized
+                    } else {
+                        MaterialTheme.typography.bodyMedium
+                    },
                     color = when {
                         isToday -> MaterialTheme.colorScheme.onPrimary
                         isSelected -> MaterialTheme.colorScheme.onPrimaryContainer

@@ -29,6 +29,17 @@ object PreferenceKeys {
     const val DISMISSED_CUSTODY_CHANGE_AT = "calendar_dismissed_custody_change_at"
 
     /**
+     * The asks on Home this person put off with "Later", as a [LIST_SEPARATOR]-joined list of
+     * revisions (`AwaitingDialogs`, release audit R-2). Each names what it put off — a swap's
+     * days, parent and request time, a proposal's time, the number of change requests — so an
+     * ask that changes is asked again, and one that does not stays put off across launches. Only
+     * asks still waiting are kept on each write, so the list never outgrows the inbox.
+     *
+     * Not exempt from `EncryptedPreferences.clear()`: the next account on this device is asked.
+     */
+    const val PUT_OFF_ASKS = "home_put_off_asks"
+
+    /**
      * The user's answer to the analytics and crash-reporting question, as a
      * [com.coparently.app.domain.telemetry.TelemetryConsent] name.
      *

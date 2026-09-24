@@ -833,6 +833,32 @@ widget's own `RemoteViews` in each variant. What only a phone shows:
   `TodayWidgetRefresher.kt` (Room observer, names, midnight), `TodayWidgetLines.kt` (`TodayWidgetText`, the wording);
   `res/xml/today_widget_info.xml`.
 
+### 3.16 The tour's defects, fixed in week 7 · 1P, "Later" check 2P [branch]
+
+Release audit R-1, R-2, R-5 and R-9 (`docs/AUDIT-2026-10-release.md`). Unit tests hold the logic:
+`PutOffAsksViewModelTest`, `PreferencesRepositoryCurrencyTest` and `TodayWidgetTextTest`'s
+12-hour case. What only a phone shows is the gesture, the device setting and a relaunch.
+
+- [ ] **The Add button (R-1).** Open Expenses on a month with more expenses than fit on screen.
+      Scroll down: the "+" leaves, and no amount sits under it. Scroll up a little, and it
+      returns. Scroll to the very end: it returns, and the last row's amount is clear of it.
+      With TalkBack on, the button stays where it is.
+- [ ] **"Later" holds (R-2), 2P.** Have the co-parent offer a day swap. On Home, press **Later**.
+      Go to Calendar and back to Home, then close the app from Recents and reopen it: the dialog
+      does not return, and the calendar's banner still offers the swap. Have the co-parent change
+      the offer (withdraw and offer another day): the dialog asks again.
+- [ ] **Currency (R-5).** On a phone whose language and region are English (United States), with
+      the account's country Czechia and no currency ever picked in Settings: Add expense opens
+      on CZK, and Settings shows CZK. Pick EUR in Settings: new expenses open on EUR, and a later
+      country change does not move it.
+- [ ] **The reader's clock (R-9).** Turn *Use 24-hour format* off in the system settings, and
+      reopen the app. Every time is 12-hour: Home's week and today card, the event preview, Day
+      view's contact windows, the chat bubbles, the widget, a reminder. Turn it on again: every
+      time is 24-hour, with no screen still saying "PM".
+- **If it fails:** `presentation/common/FabScrollVisibility.kt`, `presentation/home/PutOffAsksViewModel.kt`,
+  `data/money/CurrencyHints.kt` with `PreferencesRepositoryImpl`, and `utils/LocalizedDates.kt`
+  (`shortTime`, `ClockFormat`).
+
 ---
 
 ## 4. Release-build checks

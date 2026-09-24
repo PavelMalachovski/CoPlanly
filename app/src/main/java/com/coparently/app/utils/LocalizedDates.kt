@@ -1,8 +1,12 @@
 package com.coparently.app.utils
 
+import android.content.Context
 import android.text.format.DateFormat
+import androidx.compose.runtime.mutableStateOf
 import java.time.LocalDate
+import java.time.chrono.IsoChronology
 import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeFormatterBuilder
 import java.time.format.DateTimeParseException
 import java.time.format.FormatStyle
 import java.util.Locale
@@ -25,9 +29,78 @@ fun localizedDate(skeleton: String, locale: Locale = Locale.getDefault()): DateT
     runCatching { DateTimeFormatter.ofPattern(DateFormat.getBestDateTimePattern(locale, skeleton), locale) }
         .getOrElse { DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale) }
 
-/** The locale's short time style: 24-hour or 12-hour as the language expects. */
-fun shortTime(locale: Locale = Locale.getDefault()): DateTimeFormatter =
-    DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withLocale(locale)
+/**
+ * The time of day as the reader's clock shows it: "15:30" or "3:30 PM" (release audit R-9, owner
+ * decision — the reader's setting, not one format for everybody).
+ *
+ * The app used to print both on one screen: fixed "HH:mm" in twenty places and the locale's
+ * short style in the rest, so Home's week said "10:00 AM" over a today card saying "15:30". Every
+ * time the app shows goes through here now. Two fixed patterns rather than the platform's
+ * preferred-hour skeleton, whose letters `java.time` on older Android cannot always parse.
+ *
+ * @param locale The language, for the day-period marker of a 12-hour clock
+ * @param is24Hour Whether the reader's clock is 24-hour; [ClockFormat] by default
+ */
+fun shortTime(
+    locale: Locale = Locale.getDefault(),
+    is24Hour: Boolean = ClockFormat.is24Hour
+): DateTimeFormatter =
+    if (is24Hour) {
+        DateTimeFormatter.ofPattern(PATTERN_24_HOUR, locale)
+    } else {
+        DateTimeFormatter.ofPattern(PATTERN_12_HOUR, locale)
+    }
+
+/**
+ * A date in [locale]'s own order for [skeleton], then [separator], then the time on the reader's
+ * clock ([shortTime]) — "Wed, Sep 2 · 3:30 PM", "st 2. 9. · 15:30".
+ */
+fun dateWithTime(
+    skeleton: String,
+    separator: String = " · ",
+    locale: Locale = Locale.getDefault()
+): DateTimeFormatter =
+    DateTimeFormatterBuilder()
+        .append(localizedDate(skeleton, locale))
+        .appendLiteral(separator)
+        .append(shortTime(locale))
+        .toFormatter(locale)
+
+private const val PATTERN_24_HOUR = "HH:mm"
+private const val PATTERN_12_HOUR = "h:mm a"
+
+/**
+ * Whether the reader's clock is 24-hour: the device's "Use 24-hour format" setting, which
+ * `MainActivity` and the widget read through [follow] — or, until one of them has, whatever the
+ * language expects, which is also what a JVM test and a screenshot see.
+ *
+ * Held in Compose state, so a screen that formatted a time recomposes when the setting changes
+ * while the app was in the background.
+ */
+object ClockFormat {
+
+    private val followed = mutableStateOf<Boolean?>(null)
+
+    /** Whether times are written on a 24-hour clock. */
+    val is24Hour: Boolean
+        get() = followed.value ?: localeUses24Hour(Locale.getDefault())
+
+    /** Reads the device setting; called whenever the app comes to the foreground. */
+    fun follow(context: Context) {
+        followed.value = DateFormat.is24HourFormat(context)
+    }
+
+    /** Whether [locale]'s own short time style is 24-hour. */
+    fun localeUses24Hour(locale: Locale): Boolean =
+        runCatching {
+            DateTimeFormatterBuilder.getLocalizedDateTimePattern(
+                null,
+                FormatStyle.SHORT,
+                IsoChronology.INSTANCE,
+                locale
+            ).contains('H')
+        }.getOrDefault(true)
+}
 
 /**
  * An ISO date (`2026-10-03`, the form dates travel in) written the way [locale] writes

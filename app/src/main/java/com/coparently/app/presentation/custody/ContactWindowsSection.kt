@@ -44,10 +44,10 @@ import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.dimensions
 import com.coparently.app.presentation.theme.titleMediumEmphasized
+import com.coparently.app.utils.shortTime
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalTime
-import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
 
@@ -58,7 +58,6 @@ private val DEFAULT_WINDOW_START: LocalTime = LocalTime.of(15, 0)
 private val DEFAULT_WINDOW_END: LocalTime = LocalTime.of(19, 0)
 
 /** How a window's times are written on screen: 24-hour, as the time picker uses. */
-private val WINDOW_TIME: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
 /**
  * The contact windows of the pattern being set up (MON-6b), under every pattern type.
@@ -163,8 +162,8 @@ private fun ContactWindowRow(
             text = stringResource(
                 R.string.custody_window_summary,
                 dayLabel,
-                window.start.format(WINDOW_TIME),
-                window.end.format(WINDOW_TIME),
+                window.start.format(shortTime()),
+                window.end.format(shortTime()),
                 parentName
             ),
             style = MaterialTheme.typography.bodyLarge,
@@ -296,10 +295,10 @@ private fun TimeButtons(draft: ContactWindowDraft, onPick: (TimeField) -> Unit) 
         modifier = Modifier.padding(top = Spacing.M)
     ) {
         OutlinedButton(onClick = { onPick(TimeField.START) }) {
-            Text(stringResource(R.string.custody_window_from, draft.start.format(WINDOW_TIME)))
+            Text(stringResource(R.string.custody_window_from, draft.start.format(shortTime())))
         }
         OutlinedButton(onClick = { onPick(TimeField.END) }) {
-            Text(stringResource(R.string.custody_window_to, draft.end.format(WINDOW_TIME)))
+            Text(stringResource(R.string.custody_window_to, draft.end.format(shortTime())))
         }
     }
     if (!draft.isValid) {

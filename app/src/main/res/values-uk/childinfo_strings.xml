@@ -29,7 +29,6 @@
     <!-- Child info: basic form -->
     <string name="childinfo_child_name_label">Ім\'я дитини *</string>
     <string name="childinfo_dob_value">Дата народження: %1$s</string>
-    <string name="childinfo_select_dob">Вибрати дату народження</string>
     <string name="childinfo_add_child_button">Додати дитину</string>
     <string name="childinfo_save_changes">Зберегти зміни</string>
     <string name="childinfo_medical_notes_label">Додаткова медична інформація</string>

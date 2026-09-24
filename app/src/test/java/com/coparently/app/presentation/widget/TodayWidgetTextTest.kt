@@ -2,6 +2,7 @@ package com.coparently.app.presentation.widget
 
 import android.app.Application
 import android.content.Context
+import android.provider.Settings
 import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.custody.HandoverInfo
 import com.coparently.app.domain.model.Event
@@ -11,6 +12,7 @@ import com.coparently.app.presentation.theme.ParentColorChoice
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -32,6 +34,16 @@ import java.time.LocalTime
 class TodayWidgetTextTest {
 
     private val context: Context get() = RuntimeEnvironment.getApplication()
+
+    /** The reader's clock is the device setting (release audit R-9); 24-hour unless a test says. */
+    @Before
+    fun twentyFourHourClock() {
+        clock("24")
+    }
+
+    private fun clock(hours: String) {
+        Settings.System.putString(context.contentResolver, Settings.System.TIME_12_24, hours)
+    }
 
     private val today: LocalDate = LocalDate.of(2026, 9, 2)
     private val alex = NamedParent("uid-alex", "mom", "Alex", colorCode = ParentColorChoice.PURPLE.storedCode)
@@ -66,6 +78,16 @@ class TodayWidgetTextTest {
             lines.events
         )
         assertNull(lines.footer)
+    }
+
+    @Test
+    fun `a twelve-hour clock writes the times as the reader reads them`() {
+        clock("12")
+
+        val lines = TodayWidgetText.lines(context, day, parents, maxEvents = 4)
+
+        assertEquals("3:00 PM–7:00 PM · contact with Sam", lines.windows.single().text)
+        assertEquals("9:00 AM–10:00 AM", lines.events.first().time)
     }
 
     @Test

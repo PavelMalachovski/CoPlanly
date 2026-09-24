@@ -21,6 +21,7 @@ import com.coparently.app.R
 import com.coparently.app.domain.model.*
 import com.coparently.app.presentation.childinfo.components.*
 import com.coparently.app.presentation.common.ConfirmationDialog
+import com.coparently.app.presentation.common.DatePickerField
 import com.coparently.app.presentation.common.MedicalProfileEditor
 import com.coparently.app.presentation.common.field
 import com.coparently.app.presentation.common.rememberDiscardGuard
@@ -244,23 +245,12 @@ fun AddEditChildInfoScreen(
                         singleLine = true
                     )
 
-                    // Date of Birth Picker
-                    OutlinedButton(
+                    DatePickerField(
+                        label = stringResource(R.string.profile_dob_label),
+                        value = dateOfBirth?.format(localizedDate("yMMMd")),
                         onClick = { showDatePicker = true },
-                        modifier = Modifier.fillMaxWidth(),
                         enabled = !isSaving
-                    ) {
-                        Text(
-                            text = if (dateOfBirth != null) {
-                                stringResource(
-                                    R.string.childinfo_dob_value,
-                                    dateOfBirth!!.format(localizedDate("yMMMd"))
-                                )
-                            } else {
-                                stringResource(R.string.childinfo_select_dob)
-                            }
-                        )
-                    }
+                    )
                 }
             }
 

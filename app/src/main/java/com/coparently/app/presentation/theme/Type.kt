@@ -186,6 +186,9 @@ val Typography.titleMediumEmphasized: TextStyle get() = titleMedium.emphasized()
 /** [Typography.titleSmall], one weight step heavier. */
 val Typography.titleSmallEmphasized: TextStyle get() = titleSmall.emphasized()
 
+/** [Typography.bodyLarge], one weight step heavier. */
+val Typography.bodyLargeEmphasized: TextStyle get() = bodyLarge.emphasized()
+
 /** [Typography.bodyMedium], one weight step heavier. */
 val Typography.bodyMediumEmphasized: TextStyle get() = bodyMedium.emphasized()
 

@@ -41,7 +41,6 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.domain.events.CalendarVisibility
@@ -228,7 +227,7 @@ private fun SwipeableEventCard(
                         color = MaterialTheme.colorScheme.error,
                         shape = MaterialTheme.shapes.small
                     )
-                    .padding(horizontal = 20.dp),
+                    .padding(horizontal = Spacing.XL),
                 contentAlignment = Alignment.CenterEnd
             ) {
                 Icon(

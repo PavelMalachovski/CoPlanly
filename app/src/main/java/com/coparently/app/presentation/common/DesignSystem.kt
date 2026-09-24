@@ -86,7 +86,7 @@ fun GroupLabel(
         style = MaterialTheme.typography.labelMediumEmphasized,
         color = MaterialTheme.colorScheme.primary,
         modifier = modifier
-            .padding(start = Spacing.XS, end = Spacing.XS, bottom = 6.dp)
+            .padding(start = Spacing.XS, end = Spacing.XS, bottom = Spacing.S)
             // A heading, so TalkBack can move from group to group instead of row by row, read in
             // the case it was written: a screen reader may spell an all-caps word out letter by
             // letter (docs/AUDIT-2026-10-design.md D-17).
@@ -189,8 +189,8 @@ fun SectionRow(
             .fillMaxWidth()
             .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier)
             .defaultMinSize(minHeight = 56.dp)
-            .padding(horizontal = Spacing.L, vertical = 14.dp),
-        horizontalArrangement = Arrangement.spacedBy(14.dp),
+            .padding(horizontal = Spacing.L, vertical = Spacing.L),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.M),
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (leading != null) {
@@ -304,8 +304,8 @@ fun PillChip(
                     Modifier
                 }
             )
-            .padding(PaddingValues(horizontal = Spacing.M, vertical = 6.dp)),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
+            .padding(PaddingValues(horizontal = Spacing.M, vertical = Spacing.S)),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.S),
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (leadingDot != null) {

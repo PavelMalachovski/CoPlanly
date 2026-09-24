@@ -21,4 +21,5 @@
     <string name="friend_event_none">Никто</string>
     <string name="friend_empty">Ни у кого вне семьи нет доступа к календарю.</string>
     <string name="friend_revoke_failed">Не удалось закрыть доступ. Проверьте подключение и попробуйте ещё раз.</string>
+    <string name="friend_redeem_code_label">Введите полученный код</string>
 </resources>

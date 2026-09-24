@@ -48,6 +48,7 @@ import com.coparently.app.utils.PreviewWrapper
 import com.coparently.app.utils.createSampleEvent
 import com.coparently.app.utils.localizedDate
 import com.coparently.app.utils.previewParentNames
+import com.coparently.app.utils.shortTime
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -103,6 +104,9 @@ fun ChangeRequestBanner(
             .heightIn(min = LayoutConstants.MIN_TOUCH_TARGET)
             .padding(horizontal = Spacing.M, vertical = Spacing.S),
         verticalAlignment = Alignment.CenterVertically,
+        // Off the grid on purpose, and the only such gap left (theme/Spacing.kt): these compact
+        // banners are a deliberate exception to the InlineBanner anatomy (design item 1), with a
+        // rhythm of their own that the release audit reviewed on device and kept.
         horizontalArrangement = Arrangement.spacedBy(9.dp)
     ) {
         Icon(
@@ -274,14 +278,14 @@ fun DayAgendaCard(
     contactWindows: List<ContactWindow> = emptyList()
 ) {
     val dateFormatter = remember(Locale.getDefault()) { localizedDate("MMMEEEd") }
-    val timeFormatter = remember { DateTimeFormatter.ofPattern("HH:mm") }
+    val timeFormatter = shortTime()
 
     Column(
         modifier = modifier
             .fillMaxWidth()
             .clip(MaterialTheme.shapes.medium)
             .background(MaterialTheme.colorScheme.surfaceContainer)
-            .padding(horizontal = 14.dp, vertical = Spacing.M),
+            .padding(horizontal = Spacing.L, vertical = Spacing.M),
         verticalArrangement = Arrangement.spacedBy(Spacing.S)
     ) {
         // Two lines, not one (UX-8). Whose day it is used to be a suffix on the date, at
@@ -330,7 +334,7 @@ fun DayAgendaCard(
                         .clickable(role = Role.Button) { onEventClick(event.id) }
                         .heightIn(min = LayoutConstants.MIN_TOUCH_TARGET),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.S)
                 ) {
                     Box(
                         modifier = Modifier
@@ -341,7 +345,7 @@ fun DayAgendaCard(
                     )
                     Column(modifier = Modifier.weight(1f)) {
                         Row(
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.S),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             // Same mark as the home timeline, same description. An exclamation

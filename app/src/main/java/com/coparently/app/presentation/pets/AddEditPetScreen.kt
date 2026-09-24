@@ -29,7 +29,6 @@ import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -56,6 +55,7 @@ import com.coparently.app.domain.model.PetSpecies
 import com.coparently.app.presentation.childinfo.components.DatePickerDialog
 import com.coparently.app.presentation.childinfo.components.MedicationEditor
 import com.coparently.app.presentation.common.ConfirmationDialog
+import com.coparently.app.presentation.common.DatePickerField
 import com.coparently.app.presentation.common.PhotoStrip
 import com.coparently.app.presentation.common.PhotoStripStrings
 import com.coparently.app.presentation.common.VaccinationListEditor
@@ -443,20 +443,12 @@ private fun BasicSection(
             singleLine = true
         )
 
-        OutlinedButton(
+        DatePickerField(
+            label = stringResource(R.string.profile_dob_label),
+            value = dateOfBirth?.format(localizedDate("yMMMd")),
             onClick = onPickDate,
-            modifier = Modifier.fillMaxWidth(),
             enabled = enabled
-        ) {
-            Text(
-                text = dateOfBirth?.let {
-                    stringResource(
-                        R.string.pet_dob_value,
-                        it.format(localizedDate("yMMMd"))
-                    )
-                } ?: stringResource(R.string.pet_select_dob)
-            )
-        }
+        )
     }
 }
 

@@ -129,7 +129,7 @@ fun ExpenseSummaryHeader(
             if (monthNavigation != null) {
                 MonthSwitcherBar(
                     navigation = monthNavigation,
-                    modifier = Modifier.padding(bottom = 10.dp)
+                    modifier = Modifier.padding(bottom = Spacing.M)
                 )
             }
 
@@ -138,7 +138,7 @@ fun ExpenseSummaryHeader(
             if (balance.splitKnown) {
                 SplitBar(
                     momShare = balance.momShareOfPaid,
-                    modifier = Modifier.padding(top = 10.dp)
+                    modifier = Modifier.padding(top = Spacing.M)
                 )
                 PaidByRow(
                     momLine = stringResource(
@@ -203,7 +203,7 @@ private fun PaidByRow(momLine: String, dadLine: String) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 6.dp)
+                .padding(top = Spacing.S)
         ) {
             Text(text = momLine, style = style, color = momColor)
             Text(text = dadLine, style = style, color = dadColor)
@@ -212,7 +212,7 @@ private fun PaidByRow(momLine: String, dadLine: String) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 6.dp),
+                .padding(top = Spacing.S),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(text = momLine, style = style, color = momColor, modifier = Modifier.weight(1f))
@@ -382,7 +382,7 @@ private fun TotalWithLabel(total: String) {
                 text = label,
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(start = 10.dp, bottom = Spacing.XS)
+                modifier = Modifier.padding(start = Spacing.M, bottom = Spacing.XS)
             )
         }
     }
@@ -487,7 +487,7 @@ private fun BalanceStrip(
         .fillMaxWidth()
         .clip(MaterialTheme.shapes.small)
         .background(accent.copy(alpha = BALANCE_STRIP_ALPHA))
-        .padding(horizontal = Spacing.M, vertical = 10.dp)
+        .padding(horizontal = Spacing.M, vertical = Spacing.M)
     val sentence: @Composable RowScope.() -> Unit = {
         Icon(
             imageVector = Icons.Default.AccountBalanceWallet,
@@ -517,7 +517,7 @@ private fun BalanceStrip(
         Column(modifier = strip, verticalArrangement = Arrangement.spacedBy(Spacing.S)) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(9.dp),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.S),
                 content = sentence
             )
             if (onSettleUp != null) settleUp(Modifier.align(Alignment.End), onSettleUp)
@@ -526,7 +526,7 @@ private fun BalanceStrip(
         Row(
             modifier = strip,
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(9.dp)
+            horizontalArrangement = Arrangement.spacedBy(Spacing.S)
         ) {
             sentence()
             if (onSettleUp != null) settleUp(Modifier, onSettleUp)

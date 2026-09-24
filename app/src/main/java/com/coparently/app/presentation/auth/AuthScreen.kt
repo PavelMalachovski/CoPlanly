@@ -29,7 +29,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -45,6 +44,7 @@ import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.dimensions
 import com.coparently.app.presentation.theme.headlineSmallEmphasized
+import com.coparently.app.presentation.theme.labelLargeEmphasized
 import com.coparently.app.presentation.theme.rememberReducedMotion
 import com.coparently.app.presentation.theme.titleMediumEmphasized
 import com.coparently.app.utils.findActivity
@@ -353,8 +353,8 @@ fun AuthScreen(
                     ) {
                         Text(
                             text = stringResource(R.string.auth_google_sign_in),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Medium
+                            // A button's own role, not a lightened title.
+                            style = MaterialTheme.typography.labelLarge
                         )
                     }
 
@@ -461,7 +461,7 @@ fun AuthScreen(
                         } else {
                             stringResource(R.string.auth_action_sign_in)
                         },
-                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.labelLargeEmphasized,
                         color = MaterialTheme.colorScheme.primary
                     )
                 }

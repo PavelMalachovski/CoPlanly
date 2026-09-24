@@ -2,11 +2,13 @@ package com.coparently.app.data.repository
 
 import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.local.preferences.PreferenceKeys
+import com.coparently.app.data.money.CurrencyHints
 import com.coparently.app.domain.money.SupportedCurrency
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
 import java.util.Locale
@@ -19,6 +21,13 @@ class PreferencesRepositoryCurrencyTest {
         every { getDarkTheme() } returns null
         every { getDefaultCurrency() } returns storedCurrency
     }
+
+    private fun hints(country: String?, lastExpense: String?): CurrencyHints = mockk {
+        every { countryCode() } returns flowOf(country)
+        every { lastExpenseCurrency() } returns flowOf(lastExpense)
+    }
+
+    private val noHints = hints(country = null, lastExpense = null)
 
     private fun withLocale(language: String, country: String, block: () -> Unit) {
         val original = Locale.getDefault()
@@ -34,7 +43,7 @@ class PreferencesRepositoryCurrencyTest {
     fun `seeds the currency from the device region when nothing is stored`() {
         withLocale("cs", "CZ") {
             val preferences = prefs(storedCurrency = null)
-            val repository = PreferencesRepositoryImpl(preferences)
+            val repository = PreferencesRepositoryImpl(preferences, noHints)
 
             runBlocking {
                 assertEquals(SupportedCurrency.CZK, repository.getDefaultCurrencyFlow().first())
@@ -46,7 +55,7 @@ class PreferencesRepositoryCurrencyTest {
     @Test
     fun `prefers the stored currency over the device region`() {
         withLocale("cs", "CZ") {
-            val repository = PreferencesRepositoryImpl(prefs(storedCurrency = "EUR"))
+            val repository = PreferencesRepositoryImpl(prefs(storedCurrency = "EUR"), noHints)
 
             runBlocking {
                 assertEquals(SupportedCurrency.EUR, repository.getDefaultCurrencyFlow().first())
@@ -57,7 +66,7 @@ class PreferencesRepositoryCurrencyTest {
     @Test
     fun `ignores an unrecognised stored code and reseeds from the region`() {
         withLocale("pl", "PL") {
-            val repository = PreferencesRepositoryImpl(prefs(storedCurrency = "XYZ"))
+            val repository = PreferencesRepositoryImpl(prefs(storedCurrency = "XYZ"), noHints)
 
             runBlocking {
                 assertEquals(SupportedCurrency.PLN, repository.getDefaultCurrencyFlow().first())
@@ -69,7 +78,7 @@ class PreferencesRepositoryCurrencyTest {
     fun `setting the currency persists it and updates the flow`() {
         withLocale("cs", "CZ") {
             val preferences = prefs(storedCurrency = null)
-            val repository = PreferencesRepositoryImpl(preferences)
+            val repository = PreferencesRepositoryImpl(preferences, noHints)
 
             runBlocking {
                 repository.setDefaultCurrency(SupportedCurrency.EUR)
@@ -85,7 +94,7 @@ class PreferencesRepositoryCurrencyTest {
         // A Czech parent whose phone runs in English (United States): the first default is dollars.
         withLocale("en", "US") {
             val preferences = prefs(storedCurrency = null)
-            val repository = PreferencesRepositoryImpl(preferences)
+            val repository = PreferencesRepositoryImpl(preferences, noHints)
 
             runBlocking {
                 repository.suggestDefaultCurrency(SupportedCurrency.CZK)
@@ -101,13 +110,62 @@ class PreferencesRepositoryCurrencyTest {
             val preferences = prefs(storedCurrency = "EUR").also {
                 every { it.getBoolean(PreferenceKeys.DEFAULT_CURRENCY_CHOSEN, false) } returns true
             }
-            val repository = PreferencesRepositoryImpl(preferences)
+            val repository = PreferencesRepositoryImpl(preferences, noHints)
 
             runBlocking {
                 repository.suggestDefaultCurrency(SupportedCurrency.CZK)
                 assertEquals(SupportedCurrency.EUR, repository.getDefaultCurrencyFlow().first())
             }
             verify(exactly = 0) { preferences.putDefaultCurrency("CZK") }
+        }
+    }
+
+    @Test
+    fun `the parent's country comes before the device region`() {
+        // R-5: a Czech account on an English (United States) phone, never asked to confirm.
+        withLocale("en", "US") {
+            val repository = PreferencesRepositoryImpl(prefs(storedCurrency = null), hints("CZ", "EUR"))
+
+            runBlocking {
+                assertEquals(SupportedCurrency.CZK, repository.getDefaultCurrencyFlow().first())
+            }
+        }
+    }
+
+    @Test
+    fun `a country without an offered currency falls to the last expense`() {
+        withLocale("en", "US") {
+            val repository = PreferencesRepositoryImpl(prefs(storedCurrency = null), hints("UA", "EUR"))
+
+            runBlocking {
+                assertEquals(SupportedCurrency.EUR, repository.getDefaultCurrencyFlow().first())
+            }
+        }
+    }
+
+    @Test
+    fun `a chosen currency outranks the country`() {
+        withLocale("en", "US") {
+            val preferences = prefs(storedCurrency = "GBP").also {
+                every { it.getBoolean(PreferenceKeys.DEFAULT_CURRENCY_CHOSEN, false) } returns true
+            }
+            val repository = PreferencesRepositoryImpl(preferences, hints("CZ", "EUR"))
+
+            runBlocking {
+                assertEquals(SupportedCurrency.GBP, repository.getDefaultCurrencyFlow().first())
+            }
+        }
+    }
+
+    @Test
+    fun `choosing a currency takes over from the country at once`() {
+        withLocale("en", "US") {
+            val repository = PreferencesRepositoryImpl(prefs(storedCurrency = null), hints("CZ", null))
+
+            runBlocking {
+                repository.setDefaultCurrency(SupportedCurrency.CHF)
+                assertEquals(SupportedCurrency.CHF, repository.getDefaultCurrencyFlow().first())
+            }
         }
     }
 }

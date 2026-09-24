@@ -206,7 +206,9 @@ private fun FriendRedeemRow(
         OutlinedTextField(
             value = state.code,
             onValueChange = onCodeChange,
-            label = { Text(stringResource(R.string.friend_invite_code_label)) },
+            // Asks for a code; the invite sheet's "Give them this code" is the other direction
+            // and read here as an instruction to share (release audit R-10).
+            label = { Text(stringResource(R.string.friend_redeem_code_label)) },
             singleLine = true,
             enabled = !state.isBusy,
             modifier = Modifier.fillMaxWidth()

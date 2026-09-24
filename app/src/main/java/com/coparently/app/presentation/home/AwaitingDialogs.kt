@@ -8,12 +8,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.domain.custody.CustodyPatternDiff
 import com.coparently.app.domain.custody.CustodyProposal
@@ -67,43 +66,52 @@ class AwaitingActions(
  * One dialog at a time — a custody proposal first, then day swaps. A swap carries enough context
  * to answer right here (who, which day), so it gets real Accept/Decline buttons; event change
  * requests carry times and notes, so their dialog routes to the inbox that can show them. "Later"
- * (or tapping outside) puts the ask away for this screen instance only — it returns on the next
- * visit, which is the level of insistence a request that blocks the other parent deserves.
+ * (or tapping outside) puts the ask off until it changes ([PutOffAsksViewModel]): it stays in the
+ * calendar's banner and the inbox, but Home stops interrupting with it. It used to return on
+ * every visit, which the UI tour showed as the same dialog five screens running (R-2).
  *
  * @param state The dashboard, for the swaps and requests awaiting this parent.
  * @param parentNames Resolves a uid to that parent's name.
  * @param proposal The co-parent's pending custody proposal, or null.
  * @param actions What each answer does.
+ * @param putOffAsks Which asks this person put off, and until when.
  */
 @Composable
 internal fun AwaitingDialogs(
     state: HomeUiState.Dashboard,
     parentNames: ParentNames,
     proposal: ProposalAsk?,
-    actions: AwaitingActions
+    actions: AwaitingActions,
+    putOffAsks: PutOffAsksViewModel = hiltViewModel()
 ) {
-    // rememberSaveable so a rotation mid-"Later" does not resurrect the dialog; a List because
-    // a Set has no built-in saver.
-    var dismissed by rememberSaveable { mutableStateOf(listOf<String>()) }
-    val dismiss: (String) -> Unit = { key -> dismissed = dismissed + key }
+    // Stored, not remembered: "Later" puts an ask off until it changes (release audit R-2), and
+    // an ask that followed the screen came back on every visit to Home.
+    val putOff by putOffAsks.putOff.collectAsState()
 
-    // Keyed on proposedAt so a fresh proposal (or a re-proposal) re-opens the dialog even after
-    // the last was put off.
+    // Each ask under its revision, so a fresh proposal, an amended offer or a new request opens
+    // again even after the last was put off.
     val proposalKey = proposal?.let { "proposal_${it.proposal.proposedAt}" }
+    val requestsKey = "requests_${state.awaitingRequestCount}"
+    val waiting = buildSet {
+        proposalKey?.let(::add)
+        state.awaitingSwaps.forEach { add("swap_${it.revision}") }
+        if (state.awaitingRequestCount > 0) add(requestsKey)
+    }
+    val dismiss: (String) -> Unit = { key -> putOffAsks.putOff(key, waiting) }
     // One dialog per *offer*, not per day. A week offered as one agreement used to raise seven
     // dialogs in a row, each dismissal revealing the next and every one asking the same question.
-    val swapGroup = state.awaitingSwaps.firstOrNull { "swap_${it.key}" !in dismissed }
+    val swapGroup = state.awaitingSwaps.firstOrNull { "swap_${it.revision}" !in putOff }
 
     when {
-        proposal != null && proposalKey != null && proposalKey !in dismissed ->
+        proposal != null && proposalKey != null && proposalKey !in putOff ->
             ProposalDialog(proposal, parentNames, onDismiss = { dismiss(proposalKey) }, actions = actions)
 
         swapGroup != null ->
-            SwapDialog(swapGroup, parentNames, onDismiss = { dismiss("swap_${swapGroup.key}") }, actions = actions)
+            SwapDialog(swapGroup, parentNames, onDismiss = { dismiss("swap_${swapGroup.revision}") }, actions = actions)
 
-        state.awaitingRequestCount > 0 && REQUESTS_DIALOG_KEY !in dismissed ->
+        state.awaitingRequestCount > 0 && requestsKey !in putOff ->
             RequestsDialog(
-                onDismiss = { dismiss(REQUESTS_DIALOG_KEY) },
+                onDismiss = { dismiss(requestsKey) },
                 onReview = actions.onOpenChangeRequests
             )
     }
@@ -240,6 +248,3 @@ private fun RequestsDialog(onDismiss: () -> Unit, onReview: () -> Unit) {
         }
     )
 }
-
-/** The one requests-summary dialog's dismissal key — swaps key on their date instead. */
-private const val REQUESTS_DIALOG_KEY = "requests"

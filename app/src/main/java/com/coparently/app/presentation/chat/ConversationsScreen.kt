@@ -47,7 +47,7 @@ import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.ListSkeleton
 import com.coparently.app.presentation.common.Loadable
 import com.coparently.app.presentation.common.valueOrNull
-import java.time.format.DateTimeFormatter
+import com.coparently.app.utils.dateWithTime
 
 /**
  * The Chat tab: the conversation list, and the single entry point into a chat with the co-parent.
@@ -233,7 +233,7 @@ fun ConversationItem(
     currentUserId: String,
     onClick: () -> Unit
 ) {
-    val timeFormatter = DateTimeFormatter.ofPattern("MMM d, HH:mm")
+    val timeFormatter = dateWithTime("MMMd", separator = ", ")
     val hasUnread = currentUserId.isNotEmpty() &&
         (conversation.lastMessageAtMillis ?: 0L) > (conversation.lastReadAt[currentUserId] ?: 0L)
 

@@ -68,4 +68,5 @@
     <!-- Asked when Skip would leave something typed on this step unsaved. -->
     <string name="onboarding_skip_unsaved_title">Skip without saving?</string>
     <string name="onboarding_skip_unsaved_message">What you entered on this step has not been saved. Skip moves on without it; Next saves it.</string>
+    <string name="onboarding_split_footnote">Shared with your co-parent, and used for every expense you record from now on.</string>
 </resources>

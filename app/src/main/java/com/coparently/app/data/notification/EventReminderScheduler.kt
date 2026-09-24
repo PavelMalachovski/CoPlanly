@@ -1,16 +1,17 @@
 package com.coparently.app.data.notification
 
 import android.content.Context
+import android.text.format.DateFormat
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.notification.ReminderScheduler
+import com.coparently.app.utils.shortTime
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.time.Duration
 import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -45,7 +46,9 @@ class EventReminderScheduler @Inject constructor(
                     ReminderWorker.KEY_EVENT_ID to event.id,
                     ReminderWorker.KEY_TITLE to event.title,
                     ReminderWorker.KEY_START_TIME to
-                        event.startDateTime.format(DateTimeFormatter.ofPattern("HH:mm"))
+                        // The reader's clock (release audit R-9), read here: no activity need
+                        // have run in the process that schedules a reminder.
+                        event.startDateTime.format(shortTime(is24Hour = DateFormat.is24HourFormat(context)))
                 )
             )
             .build()
