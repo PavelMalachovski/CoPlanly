@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -27,6 +28,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.pluralStringResource
@@ -60,8 +62,12 @@ private const val SETTLED_EPSILON = 0.01
 /** Tint strength of the strip behind the settle-up row. */
 private const val BALANCE_STRIP_ALPHA = 0.12f
 
-/** From this font scale the month's total and its label stack instead of sharing a line. */
-private const val STACK_TOTAL_FONT_SCALE = 1.3f
+/**
+ * From this font scale the card's side-by-side pairs stack: the month's total over its label, and
+ * the settle-up sentence over its Settle up chip. Side by side at 150 % German broke both
+ * ("gemeinsam|e", "820,0|0 CZK").
+ */
+private const val STACK_FONT_SCALE = 1.3f
 
 /**
  * Month header for the Expenses screen: which month, total spend, who paid what, and who owes
@@ -275,7 +281,7 @@ internal fun Modifier.monthSwipe(navigation: MonthNavigation): Modifier {
 
 /**
  * The month's total with its "shared spend" label: beside it, or under it from
- * [STACK_TOTAL_FONT_SCALE]. At 150 % the label beside a German total was squeezed into a sliver
+ * [STACK_FONT_SCALE]. At 150 % the label beside a German total was squeezed into a sliver
  * that broke "gemeinsame" in the middle of the word.
  */
 @Composable
@@ -288,7 +294,7 @@ private fun TotalWithLabel(total: String) {
         )
     }
     val label = stringResource(R.string.expenses_shared_spend)
-    if (LocalDensity.current.fontScale >= STACK_TOTAL_FONT_SCALE) {
+    if (LocalDensity.current.fontScale >= STACK_FONT_SCALE) {
         Column {
             totalText()
             Text(
@@ -384,15 +390,33 @@ private fun BalanceRow(
         stringResource(R.string.expenses_settle_up_message_owing, amount, monthLabel)
     }
 
-    Row(
+    BalanceStrip(
+        label = label,
+        accent = accent,
+        onSettleUp = if (settled) null else { { onSettleUp(draft) } },
         modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(accent.copy(alpha = BALANCE_STRIP_ALPHA))
-            .padding(horizontal = 12.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(9.dp)
-    ) {
+    )
+}
+
+/**
+ * The tinted strip [BalanceRow] draws: the sentence with its icon, and the Settle up chip beside
+ * it — or under it from [STACK_FONT_SCALE], where beside it left the sentence a word per line.
+ *
+ * @param onSettleUp What Settle up does, or null for a settled month, which offers none.
+ */
+@Composable
+private fun BalanceStrip(
+    label: String,
+    accent: Color,
+    onSettleUp: (() -> Unit)?,
+    modifier: Modifier = Modifier
+) {
+    val strip = modifier
+        .fillMaxWidth()
+        .clip(RoundedCornerShape(12.dp))
+        .background(accent.copy(alpha = BALANCE_STRIP_ALPHA))
+        .padding(horizontal = 12.dp, vertical = 10.dp)
+    val sentence: @Composable RowScope.() -> Unit = {
         Icon(
             imageVector = Icons.Default.AccountBalanceWallet,
             contentDescription = null,
@@ -408,13 +432,33 @@ private fun BalanceRow(
             fontWeight = FontWeight.SemiBold,
             modifier = Modifier.weight(1f)
         )
-        if (!settled) {
-            PillChip(
-                label = stringResource(R.string.expenses_settle_up),
-                container = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-                onClick = { onSettleUp(draft) }
+    }
+    val settleUp: @Composable (Modifier, () -> Unit) -> Unit = { chipModifier, onClick ->
+        PillChip(
+            label = stringResource(R.string.expenses_settle_up),
+            modifier = chipModifier,
+            container = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary,
+            onClick = onClick
+        )
+    }
+    if (LocalDensity.current.fontScale >= STACK_FONT_SCALE) {
+        Column(modifier = strip, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(9.dp),
+                content = sentence
             )
+            if (onSettleUp != null) settleUp(Modifier.align(Alignment.End), onSettleUp)
+        }
+    } else {
+        Row(
+            modifier = strip,
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(9.dp)
+        ) {
+            sentence()
+            if (onSettleUp != null) settleUp(Modifier, onSettleUp)
         }
     }
 }
