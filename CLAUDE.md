@@ -377,7 +377,7 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   banners, a Settings group, `EmptyState`, the Expenses summary header, a chat thread, the event
   preview body, the consent screen and the family switcher chip — over a variant matrix of theme,
   the five languages, 1.0×/1.5× font scale and the default vs a purple/orange parent palette
-  (`ScreenshotVariants`: nine variants for text-heavy components, four for the rest, 112 images).
+  (`ScreenshotVariants`: nine variants for text-heavy components, four for the rest, 113 images).
   **To view:** open the run's `screenshots` artefact, unzip, open `index.html`
   (`tools/screenshot-gallery.js`, no dependencies, filters by component/language/theme/scale/
   palette). Locally: `./gradlew recordRoborazziDebug`, images in `app/build/outputs/roborazzi/`.
@@ -594,7 +594,7 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
 
 ```
 domain/    — models, repository interfaces, use cases, holidays, ReminderScheduler
-data/      — Room (v41 + migrations), Firestore/Google clients, repository impls, sync
+data/      — Room (v42 + migrations), Firestore/Google clients, repository impls, sync
 presentation/ — Compose screens per feature + ViewModels + theme
 di/        — Hilt modules (Database, Firebase, Google, UseCase, Notification, …)
 ```
@@ -708,7 +708,7 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     the conversation as `{uid: epochMillis}` maps — one write per event — and the ticks and
     unread badge are derived from them by `ChatReadState`, never stored per message.
     Message times are stored the same way: `Message.sentAtMillis`, epoch millis (Room
-    schema v13, since superseded — the database is at v41), not a naive `LocalDateTime`, so two
+    schema v13, since superseded — the database is at v42), not a naive `LocalDateTime`, so two
     parents in different time zones agree
     on what a mark means and on when a message was sent. The Firestore field keeps its name
     (`timestamp`) and the read path still accepts a legacy ISO string, so a co-parent on an
@@ -1248,21 +1248,30 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     never re-hashed against today's plan.
 
 33. **A child's own schedule overrides the family's inside the one custody document, and is the
-    family schedule everywhere it is not asked for** (FAM-4, September 2026).
+    family schedule everywhere it is not asked for** (FAM-4, September 2026; schema 42).
     `domain/custody/ChildScheduleOverride.kt` is the one definition — `{childId, patternDays,
     momDayIndices, startDate, contactWindows}` — stored under `childOverrides` as
     `ChildOverrideCodec` strings (`C1;child:<id>;<anchor>;<cycle>;<slot-1 days>;<windows>`, the
     child in its `FamilyMemberRef` form), never Gson, never a second document per child (SEC-4's
-    comparison would multiply). Four things not to undo. **An override is self-contained**: the
-    family's seasonal layers and accepted swaps do not move an overridden child. **Item 24's three
-    wire rules apply under `childOverrides`** — `childOverridesKeptOrDropped` in `firestore.rules`
-    — and unreadable entries (another version, a second entry for one child, past 16) are kept
-    verbatim. **It appears at two, never at one**: `domain/custody/ChildCustody.kt` changes
-    nothing unless there are two children and an override; the grid's band follows an override
-    only when the member filter is exactly one child who has one, and Home's hero names each child
-    with their parent (names, never colours) only on a day they disagree. **The calendar feed
-    stays the family schedule** and ignores the key. See ROADMAP FAM-4 and
-    `docs/DESIGN-custody-per-child.md` for what is wired so far.
+    comparison would multiply). Room keeps it in `custody_models.childOverridesJson` (null = none,
+    `ChildOverrideJson`). Five things not to undo. **An override is self-contained**: the family's
+    seasonal layers and accepted swaps do not move an overridden child, and `getCustodyFor` never
+    reads overrides — `ChildCustody` is the separate question. **Item 24's three wire rules apply
+    under `childOverrides`**: a missing key keeps the mirror's copy (`ChildOverrideJson.mirrored`),
+    a pattern write always writes the key, proposal and swap writes carry
+    `SharedCustody`/`CustodyProposal.childOverridesWire` verbatim, and `firestore.rules`'
+    `childOverridesKeptOrDropped` refuses one that changes it; unreadable entries (another version,
+    a second entry for one child, past 16) are kept verbatim. **Saving the base pattern carries the
+    agreed overrides** (`CustodyModelRepository.withActiveLayers`), and **a change is a pattern
+    change** — `submitChildOverride` goes through `submitPattern`, so a paired family gets a
+    proposal. **It appears at two, never at one**: the calendar band follows a child only when the
+    member filter is exactly that child (`presentation/calendar/ChildCustodyBand.kt`, which also
+    switches the swap markers and long-press off — a swap is about the family schedule), Home's
+    hero adds "<child> is with <parent> today" per child only on a day they are apart
+    (`ChildrenToday`, names, never colours), and custody setup's "Different schedule for a child"
+    scopes the same editor to one child (`CustodySetupViewModel.editSchedule`) and is hidden below
+    two children. **The calendar feed stays the family schedule** and ignores the key. See
+    `docs/DESIGN-custody-per-child.md`.
 
 34. **The private journal never leaves the phone** (MON-22, schema 41). `journal_entries` has no
     `syncedToFirestore` column, no Firestore data source, no rule and no push;
