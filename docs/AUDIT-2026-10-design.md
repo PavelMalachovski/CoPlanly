@@ -149,19 +149,31 @@ Effort: XS < 1 h, S ≤ ½ day, M ≤ 2 days, L > 2 days.
 
 **D-5. The pending swap is a modal dialog on launch.** Effort: S.
 
+- **The dialog is an owner decision, not an accident.** This entry first read as a defect, and it
+  is not one. `presentation/home/AwaitingDialogs.kt` records that the owner walkthrough (items
+  4/13) called for the pop-up: what waits on this parent's answer should confront them on open,
+  instead of hiding behind a row they may never tap. *Later* puts it away for that screen instance
+  only, and it returns on the next visit, which the KDoc calls "the level of insistence a request
+  that blocks the other parent deserves". What follows is therefore a proposal for the owner to
+  weigh. It is not a fix to apply.
 - **Evidence:** [shots 01, 05, 06, 07] The *Day swap* dialog is still over Home after scrolling,
   and it appears behind the event sheet. A parent who opens the app to check tonight's pickup has
-  to decide on a swap first, or tap *Later* every time.
+  to decide on a swap first, or tap *Later* on every visit.
 - **Also seen:**
   - In RU the three buttons wrap: *Принять* alone on one line, *Позже · Отклонить* below it.
-  - The message ends in a double period, "3 октября 2026 г..". The date pattern supplies "г." and
-    the sentence adds another period.
-- **Fix:**
-  - Render awaiting decisions as an inline attention card at the top of Home. The "Bob changed"
-    section already has the anatomy. Keep the dialog only for a deep link from the push.
-  - Stack the dialog buttons vertically when they don't fit (M3 guidance).
-  - End `home_dialog_swap_message` without a period after the date argument in the ru/uk/cs/de
-    strings, or format the date without the abbreviation.
+    M3's dialog stacks its button slots when they overflow, and the dismiss slot holds two
+    buttons in one row.
+  - The message ended in a double period, "3 октября 2026 г..". The FULL date pattern ends with
+    "г." in ru and "р." in uk, and the sentence added another period. **Fixed:** ru and uk now end
+    on the date. ru, uk and cs also put the date after a colon, because the formatter's
+    nominative weekday read as a grammatical error mid-sentence ("у кого будет ребёнок суббота").
+- **Proposal (owner's call):**
+  - Keep the pop-up for a *new* ask, once. After *Later*, show the ask as an inline attention card
+    at the top of Home until it is answered. The "Bob changed" section already has the anatomy.
+    The ask still confronts the parent on open, still cannot hide behind a row, and stops
+    re-opening over the day's plan on every visit.
+  - With that change, drop *Later* from the dialog. Tapping outside already means later, and two
+    buttons fit on one row in every language.
 
 **D-6. The expense summary takes 60% of the Expenses screen.** Effort: S.
 
@@ -354,7 +366,7 @@ This is ordered for the closed test first. Each step leaves the app shippable.
 
 1. **Week 1, the P0s and cheap P1s** (≈2 days):
    - D-2 `consumeWindowInsets`, D-9 keyboard, D-1 money wrap.
-   - D-5 dialog → inline card, plus the double period.
+   - D-5: the double period (done). The inline card waits for the owner's decision.
    - D-7 currency default and Date field style.
    - A 2.0× variant in `ScreenshotVariants`.
    - Re-run the UI tour.
