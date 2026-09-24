@@ -127,7 +127,11 @@ object CoPlanlyColors {
     val BrandPrimaryContainer = Color(0xFFE2E0FF) // Soft indigo container - fill-only
     val BrandOnPrimaryContainer = Color(0xFF1A1650) // Deep indigo for container text
     val BrandSecondary = Color(0xFF7C3AED) // Purple 600 - 5.70:1 on white / 3.01:1 on DarkSurface (light theme only)
-    val BrandAccent = Color(0xFF059669) // Green 600 - 3.77:1 on white / 4.55:1 on DarkSurface (dark theme only)
+
+    // The light theme's `tertiary`, which screens use as text ("Synced at 15:05", "Up to date").
+    // It was Green 600 (#059669, 3.77:1 on white and 3.28:1 on surfaceContainer), under AA as a
+    // foreground; Emerald 700 clears it on every light surface (docs/AUDIT-2026-10-design.md D-14).
+    val BrandAccent = Color(0xFF047857) // Emerald 700 - 5.48:1 on white / 4.77:1 on surfaceContainer (light theme only)
 
     // Light theme colors - subtle indigo-tinted neutrals for a modern tonal look.
     // LightBackground and DarkBackground are mirrored by hand as `@color/window_background` in
@@ -160,8 +164,12 @@ object CoPlanlyColors {
     // Holiday colors - public holidays and school vacations (Czech calendar).
     // Both are used as day-number TEXT, so each needs a theme-aware partner: no single red
     // or teal clears 4.5:1 against both white and DarkSurface.
-    val HolidayRed = Color(0xFFD32F2F) // Red 700 - 4.98:1 on white / 3.44:1 on DarkSurface (light theme)
-    val HolidayRedDark = Color(0xFFEF5350) // Red 400 - 3.49:1 on white / 4.92:1 on DarkSurface (dark theme)
+    // A holiday's day number sits on the weekend grey and on the custody and holiday tints, not
+    // only on the plain surface; Red 700/400 fell to 3.35:1/3.58:1 there. Red 900 in the light
+    // theme and Red A100 in the dark keep it at or near AA on every one of them
+    // (docs/AUDIT-2026-10-design.md D-14).
+    val HolidayRed = Color(0xFFB71C1C) // Red 900 - 6.57:1 on white / 5.57:1 on the weekend grey (light theme)
+    val HolidayRedDark = Color(0xFFFF8A80) // Red A100 - 7.51:1 on DarkSurface / 6.24:1 on the weekend grey (dark theme)
     val VacationTint = Color(0xFF26A69A) // Teal 400 - 3.00:1 on white / 5.72:1 on DarkSurface (dark theme)
     val VacationTintLight = Color(0xFF00796B) // Teal 700 - 5.32:1 on white / 3.22:1 on DarkSurface (light theme)
 }
