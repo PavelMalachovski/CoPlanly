@@ -984,7 +984,8 @@ fun NavGraph(
                     popEnterTransition = { slideInFromLeft() },
                     popExitTransition = { slideOutToRight() }
                 ) { backStackEntry ->
-                    val conversationId = backStackEntry.arguments?.getString(Screen.Chat.ARG_CONVERSATION_ID) ?: return@pane
+                    val conversationId = backStackEntry.arguments?.getString(Screen.Chat.ARG_CONVERSATION_ID)
+                        ?: return@pane
                     com.coparently.app.presentation.chat.ChatScreen(
                         conversationId = conversationId,
                         draft = backStackEntry.arguments?.getString(Screen.Chat.ARG_DRAFT).orEmpty(),
