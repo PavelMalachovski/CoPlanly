@@ -40,12 +40,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -53,17 +56,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
@@ -78,6 +82,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import com.coparently.app.R
 import com.coparently.app.domain.custody.ContactWindow
@@ -161,6 +166,7 @@ fun DayWeekView(
     onEventLongPressStart: ((String) -> Unit)? = null,
     onEventLongPressEnd: (() -> Unit)? = null,
     onDragOverDeleteButton: ((Boolean) -> Unit)? = null,
+    deleteTargetBounds: () -> Rect? = { null },
     holidays: Map<LocalDate, com.coparently.app.domain.holidays.Holiday> = emptyMap()
 ) {
     // The pager is anchored at a fixed date; each page offsets it by daysCount.
@@ -212,25 +218,27 @@ fun DayWeekView(
                 }
             }
         }
-        DayWeekPage(
-            selectedDate = pageDate,
-            daysCount = daysCount,
-            events = events,
-            getCustody = getCustody,
-            getProposedCustody = getProposedCustody,
-            getContactWindows = getContactWindows,
-            parentNames = parentNames,
-            scrollState = scrollState,
-            onEventClick = onEventClick,
-            onAddEventClick = onAddEventClick,
-            onEventDragDrop = onEventDragDrop,
-            onEventResize = onEventResize,
-            onEventDelete = onEventDelete,
-            onEventLongPressStart = onEventLongPressStart,
-            onEventLongPressEnd = onEventLongPressEnd,
-            onDragOverDeleteButton = onDragOverDeleteButton,
-            holidays = holidays
-        )
+        CompositionLocalProvider(LocalDeleteTargetBounds provides deleteTargetBounds) {
+            DayWeekPage(
+                selectedDate = pageDate,
+                daysCount = daysCount,
+                events = events,
+                getCustody = getCustody,
+                getProposedCustody = getProposedCustody,
+                getContactWindows = getContactWindows,
+                parentNames = parentNames,
+                scrollState = scrollState,
+                onEventClick = onEventClick,
+                onAddEventClick = onAddEventClick,
+                onEventDragDrop = onEventDragDrop,
+                onEventResize = onEventResize,
+                onEventDelete = onEventDelete,
+                onEventLongPressStart = onEventLongPressStart,
+                onEventLongPressEnd = onEventLongPressEnd,
+                onDragOverDeleteButton = onDragOverDeleteButton,
+                holidays = holidays
+            )
+        }
     }
 }
 
@@ -825,7 +833,9 @@ private fun EventChip(
 ) {
     val density = LocalDensity.current
     val hapticFeedback = LocalHapticFeedback.current
-    val configuration = LocalConfiguration.current
+    // Read through the latest value rather than keyed: the lambda must not restart the drag
+    // gesture, which a new key would do mid-drag.
+    val currentDeleteTarget by rememberUpdatedState(LocalDeleteTargetBounds.current)
 
     // Sizing/temp times follow the visible segment; edits still act on the real event.
     val eventStart = displayStart
@@ -941,6 +951,12 @@ private fun EventChip(
     )
     val resizeStartDescription = stringResource(R.string.calendar_resize_start_handle)
     val resizeEndDescription = stringResource(R.string.calendar_resize_end_handle)
+    val endLaterLabel = stringResource(R.string.calendar_action_end_later)
+    val endEarlierLabel = stringResource(R.string.calendar_action_end_earlier)
+    // As tall as fits: 48 dp at each edge would leave a one-hour block (about 51 dp) no middle to
+    // tap or move it by, so a handle takes up to a third of the block. The actions below are the
+    // route that does not depend on hitting it (docs/AUDIT-2026-10-design.md D-10).
+    val handleTouchHeight = minOf(RESIZE_HANDLE_TOUCH_HEIGHT, eventHeightDp / 3)
 
     Box(
         modifier = Modifier
@@ -1033,14 +1049,40 @@ private fun EventChip(
                     openChip()
                     true
                 }
-                if (onDelete != null) {
-                    customActions = listOf(
-                        CustomAccessibilityAction(deleteActionLabel) {
-                            onDelete(event.id)
-                            true
+                val actions = buildList {
+                    if (onDelete != null) {
+                        add(
+                            CustomAccessibilityAction(deleteActionLabel) {
+                                onDelete(event.id)
+                                true
+                            }
+                        )
+                    }
+                    // The resize handle as actions, a quarter hour at a time. Without them,
+                    // changing a duration needed a drag on a small target. Like the drag, they
+                    // keep the end on its day and the event at least MIN_EVENT_MINUTES long.
+                    if (onResize != null && resizable) {
+                        val laterEnd = eventEnd.plusMinutes(RESIZE_ACTION_MINUTES)
+                        if (laterEnd.toLocalDate() == eventEnd.toLocalDate()) {
+                            add(
+                                CustomAccessibilityAction(endLaterLabel) {
+                                    onResize(event.id, null, laterEnd)
+                                    true
+                                }
+                            )
                         }
-                    )
+                        val earlierEnd = eventEnd.minusMinutes(RESIZE_ACTION_MINUTES)
+                        if (!earlierEnd.isBefore(eventStart.plusMinutes(MIN_EVENT_MINUTES))) {
+                            add(
+                                CustomAccessibilityAction(endEarlierLabel) {
+                                    onResize(event.id, null, earlierEnd)
+                                    true
+                                }
+                            )
+                        }
+                    }
                 }
+                if (actions.isNotEmpty()) customActions = actions
             }
     ) {
         // Event content - center area for drag & drop
@@ -1062,14 +1104,12 @@ private fun EventChip(
                     onDragDrop,
                     onDelete,
                     onDragOverDeleteButton,
-                    configuration,
                     eventGlobalPosition,
                     draggable
                 ) {
                     // Center drag for moving event
                     if (onDragDrop != null && draggable && columnWidthPx > 0f && hourHeightPx > 0f) {
-                        val screenWidth = with(density) { configuration.screenWidthDp.dp.toPx() }
-                        val screenHeight = with(density) { configuration.screenHeightDp.dp.toPx() }
+                        val deleteSlopPx = with(density) { DELETE_TARGET_SLOP.toPx() }
 
                         // Store initial touch position in window coordinates
                         var startPositionInWindow = Offset.Zero
@@ -1132,12 +1172,14 @@ private fun EventChip(
                             // So current position = startPositionInWindow + totalDrag
                             val currentPositionInWindow = startPositionInWindow + totalDrag
 
-                            // Delete button is in the right-bottom corner (FloatingActionButton)
-                            // Check if pointer is in the right-bottom area (last 25% width, last 25% height)
-                            val deleteAreaWidth = screenWidth * 0.25f
-                            val deleteAreaHeight = screenHeight * 0.25f
-                            val isInDeleteArea = currentPositionInWindow.x >= (screenWidth - deleteAreaWidth) &&
-                                currentPositionInWindow.y >= (screenHeight - deleteAreaHeight)
+                            // Over the red delete button itself, where it is drawn, with a little
+                            // slop. This used to be the screen's bottom-right quadrant, which is
+                            // not where the button sits (it floats 64 dp above the "+" button), so
+                            // a move that ended low on the right deleted the event
+                            // (docs/AUDIT-2026-10-design.md D-10).
+                            val target = currentDeleteTarget()
+                            val isInDeleteArea = target != null &&
+                                target.inflate(deleteSlopPx).contains(currentPositionInWindow)
 
                             if (isInDeleteArea != isOverDeleteButton) {
                                 isOverDeleteButton = isInDeleteArea
@@ -1239,9 +1281,9 @@ private fun EventChip(
             Box(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
-                    .width(40.dp)
-                    .height(14.dp)
-                    .background(color = borderColor, shape = RoundedCornerShape(7.dp))
+                    .width(RESIZE_HANDLE_TOUCH_WIDTH)
+                    .height(handleTouchHeight)
+                    .drawBehind { drawResizePill(borderColor, atTop = true) }
                     .semantics { contentDescription = resizeStartDescription }
                     .pointerInput(hourHeightPx, onResize) {
                         detectDragGestures(
@@ -1280,9 +1322,9 @@ private fun EventChip(
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
-                    .width(40.dp)
-                    .height(14.dp)
-                    .background(color = borderColor, shape = RoundedCornerShape(7.dp))
+                    .width(RESIZE_HANDLE_TOUCH_WIDTH)
+                    .height(handleTouchHeight)
+                    .drawBehind { drawResizePill(borderColor, atTop = false) }
                     .semantics { contentDescription = resizeEndDescription }
                     .pointerInput(hourHeightPx, onResize) {
                         detectDragGestures(
@@ -1317,6 +1359,47 @@ private fun EventChip(
         }
     }
 }
+
+/** Width of a resize handle's touch strip; the pill drawn in it is [RESIZE_PILL_SIZE] wide. */
+private val RESIZE_HANDLE_TOUCH_WIDTH = 48.dp
+
+/** Tallest a resize handle's touch strip gets, on a block tall enough to spare it. */
+private val RESIZE_HANDLE_TOUCH_HEIGHT = 24.dp
+
+/** The visible pill of a resize handle, unchanged from before its touch strip grew. */
+private val RESIZE_PILL_SIZE = DpSize(40.dp, 14.dp)
+
+/** Minutes the accessibility actions move an event's end by, the same step as a move. */
+private const val RESIZE_ACTION_MINUTES = 15L
+
+/**
+ * Draws a resize handle's pill against the strip's outer edge: the top of the strip for the
+ * start handle, the bottom for the end handle, centred across it, where it always sat.
+ */
+private fun DrawScope.drawResizePill(color: Color, atTop: Boolean) {
+    val pill = RESIZE_PILL_SIZE.toSize()
+    val left = (size.width - pill.width) / 2f
+    val top = if (atTop) 0f else size.height - pill.height
+    drawRoundRect(
+        color = color,
+        topLeft = Offset(left, top),
+        size = pill,
+        cornerRadius = CornerRadius(pill.height / 2f)
+    )
+}
+
+/**
+ * Where the red delete button is, in window coordinates, while it is on screen, or null.
+ * [DayWeekView] provides it and each event's drag reads it (docs/AUDIT-2026-10-design.md D-10).
+ * A local rather than a parameter, so it is not threaded through [DayWeekPage] into every chip.
+ */
+private val LocalDeleteTargetBounds = compositionLocalOf<() -> Rect?> { { null } }
+
+/**
+ * How far outside the red delete button a dragged event still counts as over it. The button is
+ * 56 dp; a finger carrying an event covers part of it, so an exact hit test would feel stingy.
+ */
+private val DELETE_TARGET_SLOP = 16.dp
 
 /**
  * Minutes a whole event moves by when it is dragged (UX-16): a quarter hour, because a move is a

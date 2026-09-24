@@ -39,6 +39,7 @@ import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -50,8 +51,11 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
@@ -301,6 +305,10 @@ fun CalendarScreen(
     var showDeleteButton by remember { mutableStateOf(false) }
     var eventToDelete by remember { mutableStateOf<String?>(null) }
     var isDragOverDeleteButton by remember { mutableStateOf(false) }
+    // Where the red delete button is drawn, in window coordinates, while it is on screen. A drag
+    // in Day or Week view deletes only when it ends over this (D-10), not over a screen quadrant.
+    var deleteButtonBounds by remember { mutableStateOf<Rect?>(null) }
+    val deleteTarget: () -> Rect? = remember { { deleteButtonBounds } }
 
     // Event preview sheet: a tap opens the read-only preview, Edit goes to the editor
     var previewEventId by remember { mutableStateOf<String?>(null) }
@@ -640,7 +648,11 @@ fun CalendarScreen(
                                 scaleX = if (isDragOverDeleteButton) 1.2f else 1f
                                 scaleY = if (isDragOverDeleteButton) 1.2f else 1f
                             }
+                            // After the scale, so a drag that reached the button keeps it while
+                            // the button grows under the finger.
+                            .onGloballyPositioned { deleteButtonBounds = it.boundsInWindow() }
                     ) {
+                        DisposableEffect(Unit) { onDispose { deleteButtonBounds = null } }
                         Icon(
                             imageVector = Icons.Default.Close,
                             contentDescription = stringResource(R.string.calendar_delete_event),
@@ -883,6 +895,7 @@ fun CalendarScreen(
                                     onDragOverDeleteButton = { isOver ->
                                         isDragOverDeleteButton = isOver
                                     },
+                                    deleteTargetBounds = deleteTarget,
                                     holidays = holidays
                                 )
                             }
