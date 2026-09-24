@@ -266,11 +266,12 @@ content that made it private never leaves the phone. The export's header says so
   record. OFW posts a
   physical court packet; that is a service, not a PDF button, and claiming its weight without its
   work is the single fastest way to lose the credibility this whole feature is for.
-- **Not that every edit carries a revision.** The rules do not *require* an event write to be
-  accompanied by one — an older build, or a modified client, can still edit an event without
+- **Not that every edit carries a phone's revision.** The rules do not *require* an event write to
+  be accompanied by one — an older build, or a modified client, can still edit an event without
   recording it. Making the events rule demand a matching revision is possible (`existsAfter`), but
-  it would refuse every edit from a co-parent on an older build, so it waits until the app can
-  require an update. Until then the export says what it holds, not what it caught.
+  it would refuse every edit from a co-parent on an older build. Since September 2026 the server
+  records such a write itself (§11), so the gap is a *labelled* revision rather than a missing
+  one; what the export cannot promise for those is who made the edit and when their phone did.
 
 ---
 
@@ -399,3 +400,75 @@ already say what is kept and why.
 - **Registering a file after the fact.** An export made offline stays unregistered; the parent
   exports again online. Registering the earlier file later would print a server time that is not
   when it was made.
+
+---
+
+## 11. The revisions a phone did not record — recorded by the server
+
+**Built on 2026-09-24** (the MON-4 remainder). An older build saves events without writing
+`event_versions`, and requiring a revision in the events rule would refuse every one of its edits.
+So the gap is closed from the other side: `recordServerEventRevision`
+(`functions/event-revisions.js`, wired in `functions/index.js`) runs on every write to
+`events/{eventId}` and records a revision **only when no phone recorded that write**.
+
+### Recognising "that write"
+
+A phone's revision embeds the event document its save uploaded, so the two sides are matched by
+content, with no new field on the client. The **write key** is `deleted|<deletedAtMillis>` for a
+tombstone and `saved|<updatedAt>` otherwise — the delete revision carries the same
+`Tombstone.fields` as the tombstone write, and every other revision is the very map its save
+uploaded. It is defined twice, in `EventVersionDocument.writeKey` and in `event-revisions.js`, and
+the two test suites pin the same cases.
+
+A write whose key did not change is **not** recorded: the unpair sweep narrowing `sharedWith`, the
+family backfill stamping `familyId`, account deletion scrubbing an audience and a sync re-uploading
+an unchanged document are writes nobody saved. A document removed outright (an event turned
+private, the 90-day sweep, account deletion) is not recorded either, and a document carrying
+`isPrivate: true` — which never reaches Firestore (CLAUDE.md item 3) — is refused by an explicit
+check anyway.
+
+### The race, settled by the reader
+
+A phone uploads its revision from an outbox, independently of the event write and possibly days
+later. A trigger cannot wait for that. So it looks for a phone's revision of the write once, again
+after a five-second grace, and then writes its own. When the phone's turns up afterwards, both
+exist, and **the export prints the phone's** (`CommunicationRecordBuilder`, keyed on the event and
+the write key): it is the one that knows the device time and the editor. The cost of that choice is
+a duplicate document in the rare late case, which nobody reads except through the export.
+
+### What a server revision says, and does not
+
+```
+event_versions/srv_<eventId>_<commit time of the write>
+  recordedBy       'server' — no client may write the key (it is outside the rule's hasOnly),
+                   and no client may create an id starting srv_, so none can squat on the id
+                   and keep the server's revision out
+  editorUid        whom the saved document names: deletedBy on a tombstone, else lastModifiedBy,
+                   else createdByFirebaseUid
+  editorField      which of those it came from
+  deviceTimeMillis null — no phone reported one
+  recordedAt       the server's time
+  event            the saved document as the trigger read it
+```
+
+The id is fixed by the write's commit time, so a retried trigger lands on the same document
+(`create()`, and an existing one is accepted as done). `sharedWith` and `familyId` are the event's
+own at that write; a write with an empty audience is not recorded, since nobody could read it.
+
+The export prints it with no device time, the server time, and beside the action the words
+`export_action_server_recorded`: *recorded by the server from the saved entry; the editing phone
+did not record this change, so no device time is known and the person named is the one the entry
+names.* That last clause is load-bearing. The events rule does not pin `lastModifiedBy`, and the
+app does not reliably set it on an edit, so a co-parent's edit from an older build can be
+attributed to the event's creator. The server revision proves **that** the document changed, to
+what, and when the server saw it — not who changed it.
+
+An **older export build** skips a server revision rather than mislabelling it: its parser requires a
+numeric `deviceTimeMillis`, and the server writes `null`.
+
+### Erasure
+
+Account deletion's existing `where('editorUid', '==', uid)` removes server revisions naming the
+departing parent together with their phone's, and the audience scrub narrows the rest. The same
+attribution caveat applies: a server revision is erased with the parent the document named.
+

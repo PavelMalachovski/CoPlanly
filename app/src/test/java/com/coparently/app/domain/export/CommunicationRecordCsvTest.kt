@@ -121,6 +121,21 @@ class CommunicationRecordCsvTest {
     }
 
     @Test
+    fun `a revision the server recorded says so, and has no device time`() {
+        val server = revision("srv_e1_1", deviceTime = null, byServer = true, writeKey = "saved|2026-03-10T08:00:00")
+        val csv = CommunicationRecordCsv.render(
+            CommunicationRecordBuilder.build(sources(revisions = listOf(server)), scope()),
+            labels()
+        )
+
+        val row = fields(records(csv).first { it.startsWith("Event,") })
+        val columns = labels().columns.all()
+        assertEquals("Changed — RECORDED BY THE SERVER", row[columns.indexOf("Action")])
+        assertEquals("", row[columns.indexOf("Device time")])
+        assertEquals("2026-03-10 09:00:02 +01:00", row[columns.indexOf("Server time")])
+    }
+
+    @Test
     fun `a message the other parent wrote as a formula arrives as text`() {
         val csv = CommunicationRecordCsv.render(
             CommunicationRecordBuilder.build(

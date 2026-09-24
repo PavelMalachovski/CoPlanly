@@ -289,6 +289,40 @@ exports.onEventCreated = functions.firestore
       return null;
     });
 
+const eventRevisions = require('./event-revisions');
+
+exports.recordServerRevisionImpl = eventRevisions.recordServerRevisionImpl;
+
+/**
+ * Records a revision of an event write that no phone recorded (MON-4, docs/DESIGN-court-record.md
+ * §11). An older build saves events without writing `event_versions`, and the events rule cannot
+ * demand a revision without refusing that build's every edit; this closes the gap from the
+ * server's side. What is recorded, when a write is skipped, and how the export avoids printing a
+ * write twice is `event-revisions.js`'s file comment.
+ *
+ * Never throws: a revision that could not be written is logged, and the event write it describes
+ * has already landed — failing here would only make Functions retry into the same error.
+ */
+exports.recordServerEventRevision = functions.firestore
+    .document('events/{eventId}')
+    .onWrite(async (change, context) => {
+      const eventId = context.params.eventId;
+      try {
+        const outcome = await eventRevisions.recordServerRevisionImpl(admin.firestore(), {
+          eventId,
+          before: change.before.exists ? change.before.data() : null,
+          after: change.after.exists ? change.after.data() : null,
+          updateTime: change.after.exists ? change.after.updateTime : null,
+        }, {serverTimestamp: () => FieldValue.serverTimestamp()});
+        if (outcome.recorded) {
+          console.log(`Server revision ${outcome.id} recorded (${outcome.reason})`);
+        }
+      } catch (err) {
+        console.error(`recordServerEventRevision failed for ${eventId}`, err);
+      }
+      return null;
+    });
+
 /**
  * Cloud Function для отправки уведомления об обновлении информации о ребенке.
  * Триггерится при обновлении документа в коллекции child_info.

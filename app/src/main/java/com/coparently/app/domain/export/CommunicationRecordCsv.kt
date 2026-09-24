@@ -100,7 +100,7 @@ object CommunicationRecordCsv {
         labels.sectionEvents,
         event.eventId,
         revision.number.toString(),
-        RecordFormat.action(revision.kind, labels.actions),
+        RecordFormat.revisionAction(revision, labels.actions),
         revision.byName,
         revision.deviceTimeMillis?.let { RecordFormat.instant(it, zone) }.orEmpty(),
         RecordFormat.serverTime(revision, zone, labels),

@@ -1512,10 +1512,23 @@ did. Pets have no conflict comparison at all today (the pull overwrites after th
 column exists so the two collections keep one wire form and any future comparison starts from the
 instant. Needs `40.json` from the Regenerate workflow before its migration test can run.
 
-**Left as a limit, not a task:** the events rule does not *require* a revision beside each write,
-so an older build or a modified client can still edit without recording one. Demanding it
-(`existsAfter`) would refuse every edit from a co-parent on an older build; it waits until the app
-can require an update (design §8).
+**Older builds' edits — recorded by the server (September 2026).** The events rule still does not
+*require* a revision beside each write — demanding it (`existsAfter`) would refuse every edit from a
+co-parent on an older build. Instead `recordServerEventRevision` (`functions/event-revisions.js`)
+runs on every `events/{eventId}` write and, when no phone recorded that write, records one from the
+saved document: `srv_<eventId>_<commit time>`, `recordedBy: 'server'`, no device time, the editor
+the document names. Writes are matched on a **write key** (`saved|<updatedAt>`,
+`deleted|<deletedAtMillis>`) defined in `EventVersionDocument.writeKey` and the function alike; a
+write that leaves the key unchanged (sweeps, backfills, re-uploads) is not recorded, nor is a
+removed or private document. A phone's revision that lands after the server's wins in the export,
+which prints a server revision labelled as the server's (`export_action_server_recorded`, five
+locales). Clients may neither write `recordedBy` nor create a `srv_` id (rules tests). Design §11.
+
+**What stays a limit:** a server revision proves that the document changed, to what, and when the
+server saw it — not who changed it: `lastModifiedBy` is not pinned by the rule and not reliably set
+on an edit, so an older build's edit can be attributed to the event's creator, and account deletion
+erases it with whoever the document named. Closing that needs the app to be able to require an
+update (design §8).
 
 ### MON-5 · **BUILT; THE OFFICIAL WORDING IS STILL OWED** · P1 · M · Digitise the official Rodičovský plán
 

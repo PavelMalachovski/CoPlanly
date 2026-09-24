@@ -252,6 +252,25 @@ describe('deleteAccountDataImpl', () => {
     assert.strictEqual(removed.event_versions_scrubbed, 1);
   });
 
+  // The server records a revision for an older build's save (`event-revisions.js`) under the
+  // editor the saved document names, so the same `editorUid` query erases it with the phone's own.
+  it('deletes the server-recorded revisions that name the user, and narrows the rest', async () => {
+    const db = fakeDb(Object.assign(family(), {
+      event_versions: [
+        {id: 'srv_ev-alice_1', eventId: 'ev-alice', editorUid: ALICE, recordedBy: 'server',
+          sharedWith: [ALICE, BOB]},
+        {id: 'srv_ev-alice_2', eventId: 'ev-alice', editorUid: BOB, recordedBy: 'server',
+          sharedWith: [ALICE, BOB]},
+      ],
+    }));
+
+    const removed = await myFunctions.deleteAccountDataImpl(db, ALICE);
+
+    assert.deepStrictEqual(db._store.event_versions.map((v) => v.id), ['srv_ev-alice_2']);
+    assert.deepStrictEqual(db._store.event_versions[0].sharedWith, [BOB]);
+    assert.strictEqual(removed.event_versions, 1);
+  });
+
   it('deletes the conversation and every message in it', async () => {
     const db = fakeDb(family());
     await myFunctions.deleteAccountDataImpl(db, ALICE);

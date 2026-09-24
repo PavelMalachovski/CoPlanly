@@ -15,18 +15,26 @@ import java.time.format.DateTimeFormatter
  *
  * @property versionId The revision's document id; the same revision seen from both places is
  *   printed once.
+ * @property deviceTimeMillis When the editing phone says it saved; null for a revision the server
+ *   recorded, which no phone reported a time for.
  * @property recordedAtMillis When the server received it, or null for one still in the outbox.
  * @property familyId The family the event belonged to, `""` for none.
+ * @property recordedByServer True for a revision the server recorded from the saved document
+ *   because the editing phone did not (`docs/DESIGN-court-record.md` §11).
+ * @property writeKey Which save of the event this is (`EventVersionDocument.writeKey`), so a server
+ *   revision of a save a phone also recorded is printed once; null when the snapshot has no key.
  */
 data class EventRevisionInput(
     val versionId: String,
     val eventId: String,
     val kind: EventVersionKind,
     val editorUid: String,
-    val deviceTimeMillis: Long,
+    val deviceTimeMillis: Long?,
     val recordedAtMillis: Long?,
     val familyId: String,
-    val facts: EventFacts
+    val facts: EventFacts,
+    val recordedByServer: Boolean = false,
+    val writeKey: String? = null
 )
 
 /**
@@ -108,6 +116,9 @@ data class RecordScope(
  * - **An event is in the record when any of its revisions touches the range**, and then its whole
  *   history comes with it. A parent who moved an appointment out of March changed March; showing
  *   March without that move would hide the one edit the reader is looking for.
+ * - **A save is printed once.** A revision the server recorded because it found no phone's
+ *   revision of that save (`docs/DESIGN-court-record.md` §11) is dropped when a phone's revision of
+ *   the same save turns up after all — the phone's carries the device time and the editor it knows.
  * - **Revisions are ordered by the server's clock**, the device's where the server has not seen
  *   one yet, and numbered 1…n when they are printed — see `docs/DESIGN-court-record.md` §4.
  * - **An event saved before revisions were kept is printed as its current state**, labelled as
@@ -145,6 +156,7 @@ object CommunicationRecordBuilder {
             // because it carries the time the server received it.
             .groupBy { it.versionId }
             .map { (_, copies) -> copies.firstOrNull { it.recordedAtMillis != null } ?: copies.first() }
+            .let { withoutDuplicatedServerRevisions(it) }
             .groupBy { it.eventId }
         val withHistory = byEvent.values
             .filter { revisions -> revisions.any { it.facts.touches(scope.from, scope.to) } }
@@ -175,6 +187,21 @@ object CommunicationRecordBuilder {
         )
     }
 
+    /**
+     * Drops each server-recorded revision whose save a phone also recorded. The server writes one
+     * only when it found no phone's revision, but a phone's outbox can upload much later (offline),
+     * so both can exist; the phone's is the one that knows when and by whom.
+     */
+    private fun withoutDuplicatedServerRevisions(revisions: List<EventRevisionInput>): List<EventRevisionInput> {
+        val recordedByPhones = revisions
+            .filter { !it.recordedByServer && it.writeKey != null }
+            .map { it.eventId to it.writeKey }
+            .toSet()
+        return revisions.filterNot {
+            it.recordedByServer && it.writeKey != null && (it.eventId to it.writeKey) in recordedByPhones
+        }
+    }
+
     private fun historyOf(revisions: List<EventRevisionInput>, scope: RecordScope): RecordEvent {
         val ordered = revisions.sortedWith(
             compareBy<EventRevisionInput> { it.recordedAtMillis ?: Long.MAX_VALUE }
@@ -192,7 +219,8 @@ object CommunicationRecordBuilder {
                     recordedAtMillis = revision.recordedAtMillis,
                     delivered = revision.recordedAtMillis != null,
                     facts = revision.facts,
-                    parentName = scope.nameForSlot(revision.facts.parentSlot)
+                    parentName = scope.nameForSlot(revision.facts.parentSlot),
+                    recordedByServer = revision.recordedByServer
                 )
             }
         )

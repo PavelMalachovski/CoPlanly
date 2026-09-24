@@ -2,7 +2,9 @@ package com.coparently.app.data.versions
 
 import org.junit.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 /**
  * [EventVersionDocument] — the one definition of a revision's wire form (MON-4).
@@ -92,6 +94,64 @@ class EventVersionDocumentTest {
         )
 
         assertNull(parsed)
+    }
+
+    @Test
+    fun `a server-recorded revision reads back with no device time and says so`() {
+        val parsed = EventVersionDocument.Parsed.from(
+            versionId = "srv_e1_1787000000000000000",
+            data = mapOf(
+                "eventId" to "e1",
+                "kind" to "updated",
+                "editorUid" to "bob",
+                "deviceTimeMillis" to null,
+                "recordedBy" to "server",
+                "event" to mapOf("id" to "e1", "updatedAt" to "2026-08-01T10:00:00")
+            ),
+            recordedAtMillis = 1_787_000_004_000L
+        )
+
+        requireNotNull(parsed)
+        assertTrue(parsed.recordedByServer)
+        assertNull(parsed.deviceTimeMillis)
+    }
+
+    @Test
+    fun `a phone's revision is not read as the server's`() {
+        val parsed = EventVersionDocument.Parsed.from(
+            versionId = "v1",
+            data = mapOf(
+                "eventId" to "e1",
+                "kind" to "updated",
+                "editorUid" to "bob",
+                "deviceTimeMillis" to 1L,
+                "event" to mapOf("id" to "e1")
+            ),
+            recordedAtMillis = null
+        )
+
+        requireNotNull(parsed)
+        assertFalse(parsed.recordedByServer)
+    }
+
+    /** The same cases as `writeKey` in `functions/test/event-revisions.test.js`. */
+    @Test
+    fun `the write key matches the server's definition`() {
+        assertEquals(
+            "saved|2026-08-01T10:00:00",
+            EventVersionDocument.writeKey(mapOf("updatedAt" to "2026-08-01T10:00:00"))
+        )
+        assertEquals(
+            "deleted|1787000000000",
+            EventVersionDocument.writeKey(
+                mapOf("updatedAt" to "2026-08-01T10:00:00", "deletedAtMillis" to 1_787_000_000_000L)
+            )
+        )
+        assertEquals(
+            "saved|2026-08-01T10:00:00",
+            EventVersionDocument.writeKey(mapOf("updatedAt" to "2026-08-01T10:00:00", "deletedAtMillis" to 0L))
+        )
+        assertNull(EventVersionDocument.writeKey(mapOf("updatedAt" to "")))
     }
 
     @Test

@@ -56,7 +56,8 @@ internal object RecordFixtures {
             currentState = "Current state",
             sent = "Sent",
             notSent = "Not sent",
-            recorded = "Recorded"
+            recorded = "Recorded",
+            serverRecorded = "RECORDED BY THE SERVER"
         ),
         notYetOnServer = "Not yet on server",
         noServerTime = "None kept",
@@ -144,10 +145,12 @@ internal object RecordFixtures {
         eventId: String = "e1",
         kind: EventVersionKind = EventVersionKind.UPDATED,
         editor: String = ALICE,
-        deviceTime: Long = MARCH_10_0900,
+        deviceTime: Long? = MARCH_10_0900,
         recordedAt: Long? = MARCH_10_0900 + 2_000,
         familyId: String = FAMILY,
-        facts: EventFacts = facts()
+        facts: EventFacts = facts(),
+        byServer: Boolean = false,
+        writeKey: String? = null
     ) = EventRevisionInput(
         versionId = versionId,
         eventId = eventId,
@@ -156,7 +159,9 @@ internal object RecordFixtures {
         deviceTimeMillis = deviceTime,
         recordedAtMillis = recordedAt,
         familyId = familyId,
-        facts = facts
+        facts = facts,
+        recordedByServer = byServer,
+        writeKey = writeKey
     )
 
     fun expense(id: String, date: LocalDate, familyId: String? = FAMILY, title: String = "School trip") = Expense(

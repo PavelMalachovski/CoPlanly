@@ -156,6 +156,9 @@ data class RecordColumns(
  *   revision — worded so nobody reads it as the moment the entry was made.
  * @property notSent A message this phone never managed to send; it is in the record because the
  *   parent wrote it, and marked because the other parent never received it.
+ * @property serverRecorded Beside the action of a revision the server recorded from the saved
+ *   document because the editing phone did not (an older build): says so, and that the editor
+ *   shown is the one the document names (`docs/DESIGN-court-record.md` §11).
  */
 data class RecordActions(
     val created: String,
@@ -164,5 +167,6 @@ data class RecordActions(
     val currentState: String,
     val sent: String,
     val notSent: String,
-    val recorded: String
+    val recorded: String,
+    val serverRecorded: String
 )

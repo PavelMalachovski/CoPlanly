@@ -62,6 +62,7 @@
     <string name="export_action_sent">Gesendet</string>
     <string name="export_action_not_sent">Nicht gesendet</string>
     <string name="export_action_recorded">Festgehalten</string>
+    <string name="export_action_server_recorded">vom Server aus dem gespeicherten Eintrag festgehalten; das bearbeitende Telefon hat diese Änderung nicht festgehalten, daher ist keine Gerätezeit bekannt, und genannt ist die Person, die der Eintrag nennt</string>
 
     <!-- MON-16: the record id and whether the file can be verified. -->
     <string name="export_verify_explainer">Wenn der Server erreichbar ist, wird die Datei registriert: Ihre Protokoll-ID und ein Fingerabdruck ihres genauen Inhalts werden gespeichert, sodass jeder, der sie hat, prüfen kann, dass sie nicht verändert wurde. Nur der Fingerabdruck verlässt dieses Telefon, nie die Datei.</string>

@@ -83,6 +83,59 @@ class CommunicationRecordBuilderTest {
     }
 
     @Test
+    fun `a server revision of a save a phone also recorded is dropped, the phone's kept`() {
+        val record = CommunicationRecordBuilder.build(
+            sources(
+                revisions = listOf(
+                    revision("client", recordedAt = 9_000L, writeKey = "saved|2026-03-10T08:00:00"),
+                    revision(
+                        "srv_e1_1",
+                        editor = BOB,
+                        deviceTime = null,
+                        recordedAt = 8_000L,
+                        byServer = true,
+                        writeKey = "saved|2026-03-10T08:00:00"
+                    )
+                )
+            ),
+            scope()
+        )
+
+        val only = record.events.single().revisions.single()
+        assertFalse(only.recordedByServer)
+        assertEquals("Alice", only.byName)
+    }
+
+    @Test
+    fun `a server revision of a save no phone recorded is printed as the server's, with no device time`() {
+        val record = CommunicationRecordBuilder.build(
+            sources(
+                revisions = listOf(
+                    revision("client", recordedAt = 1_000L, writeKey = "saved|2026-03-01T08:00:00"),
+                    revision(
+                        "srv_e1_2",
+                        editor = BOB,
+                        deviceTime = null,
+                        recordedAt = 2_000L,
+                        byServer = true,
+                        writeKey = "saved|2026-03-10T08:00:00"
+                    ),
+                    // The same key on another event is a different save.
+                    revision("other", eventId = "e2", recordedAt = 3_000L, writeKey = "saved|2026-03-10T08:00:00")
+                )
+            ),
+            scope()
+        )
+
+        val server = record.events.single { it.eventId == "e1" }.revisions.last()
+        assertTrue(server.recordedByServer)
+        assertNull(server.deviceTimeMillis)
+        assertEquals(2_000L, server.recordedAtMillis)
+        assertEquals("Bob", server.byName)
+        assertEquals(2, server.number)
+    }
+
+    @Test
     fun `an edit that moved an entry out of the period keeps the whole history in the record`() {
         val record = CommunicationRecordBuilder.build(
             sources(

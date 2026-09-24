@@ -338,7 +338,8 @@ class ExportFileWriterTest {
                 currentState = context.getString(R.string.export_action_current),
                 sent = context.getString(R.string.export_action_sent),
                 notSent = context.getString(R.string.export_action_not_sent),
-                recorded = context.getString(R.string.export_action_recorded)
+                recorded = context.getString(R.string.export_action_recorded),
+                serverRecorded = context.getString(R.string.export_action_server_recorded)
             ),
             notYetOnServer = context.getString(R.string.export_record_not_on_server),
             noServerTime = context.getString(R.string.export_record_no_server_time),
