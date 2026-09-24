@@ -22,6 +22,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -227,7 +228,8 @@ private fun PaidByRow(momLine: String, dadLine: String) {
  * The month switcher: back/forward around "August 2026 · 5 expenses".
  *
  * Normally rendered inside the summary card. `ExpenseScreen` also uses it standalone for a
- * month with no expenses, which has no summary card to sit in but still has to be pageable.
+ * month with no expenses, which has no summary card to sit in but still has to be pageable, above
+ * the analytics, which leave the cards to the list, and inside [CollapsedMonthSummary].
  *
  * @param navigation Month being shown and how to page it
  * @param modifier Modifier for the row
@@ -267,6 +269,47 @@ internal fun MonthSwitcherBar(navigation: MonthNavigation, modifier: Modifier = 
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = stringResource(R.string.expenses_next_month),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+/**
+ * The month's summary folded to one line: which month, the pager, and what was spent in each
+ * currency (docs/AUDIT-2026-10-design.md D-6). `ExpenseScreen` pins it over the list once the
+ * full cards have scrolled away, in the cards' own colour and hanging from the top edge, so it
+ * reads as the same card folded up rather than as a new bar.
+ *
+ * The totals wrap rather than end in an ellipsis (design refresh item 15): two currencies at a
+ * large font size take a second line, never half an amount.
+ *
+ * @param navigation The month being shown and how to page it, the same one the cards use
+ * @param totals This month's total in each currency, already formatted
+ * @param modifier Modifier for the bar
+ */
+@Composable
+internal fun CollapsedMonthSummary(
+    navigation: MonthNavigation,
+    totals: List<String>,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shadowElevation = 2.dp
+    ) {
+        Column(modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 8.dp)) {
+            MonthSwitcherBar(navigation = navigation)
+            Text(
+                text = stringResource(
+                    R.string.expenses_collapsed_totals,
+                    totals.joinToString(separator = " · ")
+                ),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
             )
         }
     }

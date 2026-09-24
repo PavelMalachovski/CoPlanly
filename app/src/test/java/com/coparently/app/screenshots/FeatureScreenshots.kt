@@ -15,7 +15,10 @@ import com.coparently.app.presentation.chat.MessageItem
 import com.coparently.app.presentation.consent.TelemetryConsentScreen
 import com.coparently.app.presentation.consent.TelemetryConsentViewModel
 import com.coparently.app.presentation.event.EventPreviewContent
+import com.coparently.app.presentation.expenses.CollapsedMonthSummary
 import com.coparently.app.presentation.expenses.ExpenseSummaryHeader
+import com.coparently.app.presentation.expenses.MonthNavigation
+import com.coparently.app.presentation.expenses.currencyFormat
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.flowOf
@@ -29,9 +32,9 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 /**
- * One text-heavy surface from each remaining main area: the Expenses summary header, a chat
- * thread (header plus an incoming, a read and a failed bubble), the event preview sheet's body,
- * and the telemetry consent screen — the first screen a fresh install shows.
+ * One text-heavy surface from each remaining main area: the Expenses summary header and its
+ * collapsed line, a chat thread (header plus an incoming, a read and a failed bubble), the event
+ * preview sheet's body, and the telemetry consent screen — the first screen a fresh install shows.
  *
  * @param variant Language, theme, font scale and palette for this run
  */
@@ -55,6 +58,25 @@ class FeatureScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant)
             onSettleUp = {},
             monthLabel = ScreenshotFixtures.MONTH.format(
                 DateTimeFormatter.ofPattern("LLLL yyyy", Locale.getDefault())
+            )
+        )
+    }
+
+    /** The summary folded to its pinned line, with two currencies so the totals are joined. */
+    @Test
+    fun expenseCollapsedSummary() = snap("expenses_collapsed_summary") {
+        CollapsedMonthSummary(
+            navigation = MonthNavigation(
+                label = ScreenshotFixtures.MONTH
+                    .format(DateTimeFormatter.ofPattern("LLLL yyyy", Locale.getDefault()))
+                    .replaceFirstChar { it.uppercase() },
+                expenseCount = EXPENSE_COUNT,
+                onPrevious = {},
+                onNext = {}
+            ),
+            totals = listOf(
+                currencyFormat("CZK").format(MOM_PAID + DAD_PAID),
+                currencyFormat("EUR").format(EUR_TOTAL)
             )
         )
     }
@@ -143,6 +165,8 @@ class FeatureScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant)
         private const val MOM_PAID = 3_120.0
         private const val DAD_PAID = 1_480.0
         private const val OWED_TO_ME = 820.0
+        private const val EUR_TOTAL = 145.0
+        private const val EXPENSE_COUNT = 5
         private const val PREVIEW_HOUR = 15
         private const val MESSAGE_HOUR = 9
         private const val MINUTE_MS = 60_000L

@@ -13,7 +13,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
@@ -94,6 +96,8 @@ private const val MOM_SLOT = "mom"
  *   decision, Aug 2026 walkthrough), and `firestore.rules` enforces the same server-side, so an
  *   affordance here would only promise a write the server rejects. The receipt viewer stays: it
  *   is a read.
+ * @param state Scroll state of the list, hoisted so the screen can tell when the month's summary
+ *   has scrolled away and pin its collapsed form
  * @param modifier Modifier for the list
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -108,6 +112,7 @@ fun ExpenseList(
     canModify: (Expense) -> Boolean = { true },
     bottomClearance: Dp = 0.dp,
     header: (LazyListScope.() -> Unit)? = null,
+    state: LazyListState = rememberLazyListState(),
     modifier: Modifier = Modifier
 ) {
     // Receipt being viewed full-screen; transient UI state, deliberately local.
@@ -125,6 +130,7 @@ fun ExpenseList(
     // analytics branch has carried this clearance since it was written, and the list never did.
     LazyColumn(
         modifier = modifier.fillMaxSize(),
+        state = state,
         contentPadding = PaddingValues(
             start = 14.dp,
             end = 14.dp,

@@ -1,12 +1,17 @@
 package com.coparently.app.presentation.expenses
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -33,6 +38,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -59,6 +65,7 @@ import com.coparently.app.presentation.common.Loadable
 import com.coparently.app.presentation.common.monthPagingTransition
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.common.valueOrNull
+import com.coparently.app.presentation.theme.Motion
 import kotlinx.coroutines.launch
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
@@ -107,7 +114,10 @@ private fun Modifier.scrollsAsPage(
  * then a segmented control choosing between two views of that month: the **list** (budget chips
  * and this month's expenses) or the **analytics** (a pie by category and a sorted table).
  *
- * Both views share the one month control in the summary card. Analytics is deliberately not a
+ * Both views share one month control: in the summary card on the list, and as the same line on
+ * its own above the analytics, which leave the balance cards to the list so that the chart is on
+ * the first screen (docs/AUDIT-2026-10-design.md D-6). Once the list scrolls past the cards, the
+ * month folds into [CollapsedMonthSummary], pinned over the list. Analytics is deliberately not a
  * route of its own: it would need a second month control, and the two could drift — a parent
  * looking at August's chart and September's list, with nothing on screen saying so.
  *
@@ -283,6 +293,7 @@ fun ExpenseScreen(
                     // month opens at the top rather than at this one's offset, while
                     // switching List/Analytics within a month comes back where it was.
                     val pageScroll = rememberScrollState()
+                    val listState = rememberLazyListState()
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
@@ -329,54 +340,57 @@ fun ExpenseScreen(
                                     .getDisplayName(java.time.format.TextStyle.FULL_STANDALONE, Locale.getDefault())
                                     .replaceFirstChar { it.uppercase() }
                             }
-                            // The month's summary and the view switcher, as one piece. The two
-                            // branches place it differently and that is the whole point: the
-                            // analytics page scrolls, so it renders this inline, while the list
-                            // hands it to `ExpenseList` as the first items of the list itself.
-                            // Rendered above both, it was pinned, and the list got `weight(1f)` of
-                            // whatever was left — a few rows on a phone, which read as "the list
-                            // will not scroll".
-                            //
-                            // One summary card per currency present this month — the app does no FX
-                            // conversion, so a mixed-currency month is shown as separate honest totals
-                            // rather than one wrong sum. Only the first card carries the month
-                            // switcher; repeating it per currency would switch the same month N times.
-                            val monthHeader: @Composable () -> Unit = {
-                                Column {
-                                    balancesByCurrency.forEachIndexed { index, currencyBalance ->
-                                        ExpenseSummaryHeader(
-                                            balance = currencyBalance.balance,
-                                            currency = currencyBalance.currency,
-                                            parentNames = parentNames,
-                                            onSettleUp = onSettleUp,
-                                            monthLabel = monthLabel,
-                                            modifier = Modifier
-                                                .then(
-                                                    if (index == 0) {
-                                                        Modifier.monthSwipe(monthNavigation)
-                                                    } else {
-                                                        Modifier
-                                                    }
-                                                )
-                                                .padding(horizontal = 14.dp, vertical = 4.dp),
-                                            monthNavigation = monthNavigation.takeIf { index == 0 }
-                                        )
-                                    }
-
-                                    // One month control, two views of it. A separate analytics route
-                                    // would need its own month control, and the two could drift — a
-                                    // parent looking at August's chart and September's list with
-                                    // nothing on screen saying so.
-                                    ViewSwitcher(
-                                        showAnalytics = showAnalytics,
-                                        onSelect = { showAnalytics = it },
-                                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 4.dp)
+                            // The month's summary cards. One card per currency present this month — the
+                            // app does no FX conversion, so a mixed-currency month is shown as separate
+                            // honest totals rather than one wrong sum. Only the first card carries the
+                            // month switcher; repeating it per currency would switch the same month N
+                            // times.
+                            val summaryCards: @Composable () -> Unit = {
+                                balancesByCurrency.forEachIndexed { index, currencyBalance ->
+                                    ExpenseSummaryHeader(
+                                        balance = currencyBalance.balance,
+                                        currency = currencyBalance.currency,
+                                        parentNames = parentNames,
+                                        onSettleUp = onSettleUp,
+                                        monthLabel = monthLabel,
+                                        modifier = Modifier
+                                            .then(
+                                                if (index == 0) {
+                                                    Modifier.monthSwipe(monthNavigation)
+                                                } else {
+                                                    Modifier
+                                                }
+                                            )
+                                            .padding(horizontal = 14.dp, vertical = 4.dp),
+                                        monthNavigation = monthNavigation.takeIf { index == 0 }
                                     )
                                 }
                             }
+                            // One month control, two views of it. A separate analytics route would
+                            // need its own month control, and the two could drift — a parent looking
+                            // at August's chart and September's list with nothing on screen saying so.
+                            val viewSwitcher: @Composable () -> Unit = {
+                                ViewSwitcher(
+                                    showAnalytics = showAnalytics,
+                                    onSelect = { showAnalytics = it },
+                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 4.dp)
+                                )
+                            }
 
                             if (showAnalytics) {
-                                monthHeader()
+                                // The month line, not the summary cards (docs/AUDIT-2026-10-design.md
+                                // D-6). With two currencies the cards reached 60% of the screen and
+                                // the chart started below the fold, so the tab looked empty. Who owes
+                                // whom is the list's question; this view answers where the money went,
+                                // and its table carries the totals. The line is the one the empty
+                                // month shows, in the same place.
+                                MonthSwitcherBar(
+                                    navigation = monthNavigation,
+                                    modifier = Modifier
+                                        .monthSwipe(monthNavigation)
+                                        .padding(horizontal = 14.dp, vertical = 8.dp)
+                                )
+                                viewSwitcher()
                                 ExpenseAnalytics(
                                     breakdown = selectedBreakdown,
                                     currencies = breakdowns.map { it.currency },
@@ -393,43 +407,76 @@ fun ExpenseScreen(
                                     modifier = Modifier.padding(bottom = FAB_CLEARANCE)
                                 )
                             } else {
-                                ExpenseList(
-                                    expenses = monthExpenses,
-                                    roleByUid = roleByUid,
-                                    parentNames = parentNames,
-                                    onDelete = deleteWithUndo,
-                                    onExpenseClick = { onEditExpense(it.id) },
-                                    // Only the creator edits or deletes an expense. A row whose creator
-                                    // was never recorded (pre-schema-23, or written signed-out) stays
-                                    // editable by both — all this device can honestly say about it.
-                                    canModify = { expense ->
-                                        expense.createdByFirebaseUid == null ||
-                                            expense.createdByFirebaseUid == currentUserId
-                                    },
-                                    // The same clearance the analytics branch takes, for the same
-                                    // reason: without it the last expense comes to rest under the
-                                    // Add button and the list will not scroll any further.
-                                    bottomClearance = FAB_CLEARANCE,
-                                    header = {
-                                        item { monthHeader() }
-                                        // Renders nothing below two members, so a family with one
-                                        // child sees the screen they always saw. Nothing selected is
-                                        // the whole month, which is how a parent gets back out.
-                                        item {
-                                            FamilyMemberFilterStrip(
-                                                members = familyMembers,
-                                                selected = memberFilter,
-                                                onToggle = viewModel::toggleMemberFilter,
-                                                label = R.string.expenses_filter_members,
-                                                modifier = Modifier.padding(
-                                                    horizontal = 14.dp,
-                                                    vertical = 4.dp
+                                // The summary cards and the switcher are the list's first item, so
+                                // they scroll away with it (see `ExpenseList`'s header). Once they
+                                // have, the month folds into one pinned line — month, pager and the
+                                // totals — so a parent deep in the list still sees which month it is
+                                // and can page it without scrolling back (D-6).
+                                val summaryScrolledAway by remember(listState) {
+                                    derivedStateOf { listState.firstVisibleItemIndex > 0 }
+                                }
+                                Box(modifier = Modifier.weight(1f)) {
+                                    ExpenseList(
+                                        expenses = monthExpenses,
+                                        roleByUid = roleByUid,
+                                        parentNames = parentNames,
+                                        onDelete = deleteWithUndo,
+                                        onExpenseClick = { onEditExpense(it.id) },
+                                        // Only the creator edits or deletes an expense. A row whose creator
+                                        // was never recorded (pre-schema-23, or written signed-out) stays
+                                        // editable by both — all this device can honestly say about it.
+                                        canModify = { expense ->
+                                            expense.createdByFirebaseUid == null ||
+                                                expense.createdByFirebaseUid == currentUserId
+                                        },
+                                        // The same clearance the analytics branch takes, for the same
+                                        // reason: without it the last expense comes to rest under the
+                                        // Add button and the list will not scroll any further.
+                                        bottomClearance = FAB_CLEARANCE,
+                                        header = {
+                                            item {
+                                                Column {
+                                                    summaryCards()
+                                                    viewSwitcher()
+                                                }
+                                            }
+                                            // Renders nothing below two members, so a family with one
+                                            // child sees the screen they always saw. Nothing selected is
+                                            // the whole month, which is how a parent gets back out.
+                                            item {
+                                                FamilyMemberFilterStrip(
+                                                    members = familyMembers,
+                                                    selected = memberFilter,
+                                                    onToggle = viewModel::toggleMemberFilter,
+                                                    label = R.string.expenses_filter_members,
+                                                    modifier = Modifier.padding(
+                                                        horizontal = 14.dp,
+                                                        vertical = 4.dp
+                                                    )
                                                 )
-                                            )
-                                        }
-                                    },
-                                    modifier = Modifier.weight(1f)
-                                )
+                                            }
+                                        },
+                                        state = listState,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                    AnimatedVisibility(
+                                        visible = summaryScrolledAway,
+                                        enter = fadeIn(tween(Motion.SHORT_MS)),
+                                        exit = fadeOut(tween(Motion.SHORT_MS)),
+                                        modifier = Modifier
+                                            .align(Alignment.TopCenter)
+                                            .padding(horizontal = 14.dp)
+                                    ) {
+                                        CollapsedMonthSummary(
+                                            navigation = monthNavigation,
+                                            totals = balancesByCurrency.map { currencyBalance ->
+                                                currencyFormat(currencyBalance.currency)
+                                                    .format(currencyBalance.balance.total)
+                                            },
+                                            modifier = Modifier.monthSwipe(monthNavigation)
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
