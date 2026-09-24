@@ -45,13 +45,18 @@ import com.coparently.app.data.repository.FriendRepositoryImpl
 import com.coparently.app.data.repository.GuestRepositoryImpl
 import com.coparently.app.data.repository.MessageRepositoryImpl
 import com.coparently.app.data.repository.PairingRepositoryImpl
+import com.coparently.app.data.repository.ParentSlotMigrator
 import com.coparently.app.data.repository.ParentingPlanRepository
 import com.coparently.app.data.repository.PetRepositoryImpl
 import com.coparently.app.data.repository.PostPairingConversationSetup
 import com.coparently.app.data.repository.ProfessionalRepositoryImpl
 import com.coparently.app.data.repository.UserRepositoryImpl
 import com.coparently.app.data.security.EncryptionManager
+import com.coparently.app.data.session.AccountSwitchGuard
+import com.coparently.app.data.sync.ConflictResolver
+import com.coparently.app.data.sync.FamilyIdBackfill
 import com.coparently.app.data.sync.SyncRequester
+import com.coparently.app.data.sync.SyncService
 import com.coparently.app.data.versions.EventVersionRecorder
 import com.coparently.app.domain.activity.ActivityAnnouncer
 import com.coparently.app.domain.chat.AttachmentUploadGate
@@ -190,17 +195,19 @@ class EmulatorParent private constructor(
 
     private val announcer = ActivityAnnouncer(messageRepository, userRepository)
 
+    val eventVersionRecorder = EventVersionRecorder(
+        outboxDao = database.eventVersionOutboxDao(),
+        userDao = database.userDao(),
+        remote = FirestoreEventVersionDataSource(firestore)
+    )
+
     val eventRepository = EventRepositoryImpl(
         eventDao = database.eventDao(),
         userDao = database.userDao(),
         firebaseAuthService = authService,
         firestoreEventDataSource = eventDataSource,
         activityAnnouncer = announcer,
-        eventVersionRecorder = EventVersionRecorder(
-            outboxDao = database.eventVersionOutboxDao(),
-            userDao = database.userDao(),
-            remote = FirestoreEventVersionDataSource(firestore)
-        )
+        eventVersionRecorder = eventVersionRecorder
     )
 
     val expenseRepository = ExpenseRepositoryImpl(
@@ -310,6 +317,49 @@ class EmulatorParent private constructor(
     )
 
     val guestRepository = GuestRepositoryImpl(firestore, authService, pairingFunctions)
+
+    /**
+     * The sync `SyncWorker` runs, over this phone's repositories — `performFullSync()` is the one
+     * call a test makes where the app would wait for the fifteen-minute tick or a push. It is
+     * also the client half of several pushes (`event_updated`, `event_deleted`,
+     * `child_info_updated`, `records_shared`), so a test of those runs it rather than faking them.
+     */
+    val syncService = SyncService(
+        eventDao = database.eventDao(),
+        childInfoDao = database.childInfoDao(),
+        userDao = database.userDao(),
+        firestoreEventDataSource = eventDataSource,
+        firestoreChildInfoDataSource = FirestoreChildInfoDataSource(firestore),
+        firestoreUserDataSource = userDataSource,
+        firebaseAuthService = authService,
+        fcmService = fcmService,
+        conflictResolver = ConflictResolver(),
+        parentSlotMigrator = ParentSlotMigrator(
+            database = database,
+            eventDao = database.eventDao(),
+            custodyModelRepository = custodyRepository,
+            encryptedPreferences = encryptedPreferences
+        ),
+        encryptedPreferences = encryptedPreferences,
+        petRepository = petRepository,
+        messageRepository = messageRepository,
+        changeRequestRepository = changeRequestRepository,
+        parentingPlanRepository = parentingPlanRepository,
+        familySettingsRepository = familySettingsRepository,
+        familyIdBackfill = FamilyIdBackfill(
+            eventDao = database.eventDao(),
+            expenseDao = database.expenseDao(),
+            budgetDao = database.budgetDao(),
+            childInfoDao = database.childInfoDao(),
+            petDao = database.petDao(),
+            changeRequestDao = database.changeRequestDao(),
+            encryptedPreferences = encryptedPreferences
+        ),
+        selectedFamilySource = selectedFamilySource,
+        accountSwitchGuard = AccountSwitchGuard(fileContext, database, authService, encryptedPreferences),
+        custodyModelRepository = custodyRepository,
+        eventVersionRecorder = eventVersionRecorder
+    )
 
     val calendarFeedRepository = CalendarFeedRepositoryImpl(functions)
 
