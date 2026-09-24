@@ -87,4 +87,5 @@
     <string name="export_plan_last_changed">Zuletzt geändert</string>
     <string name="export_plan_not_agreed">Nicht geeinigt</string>
     <string name="export_plan_retired">Antworten auf Fragen, die der Plan nicht mehr stellt (aufbewahrt, nicht gelöscht)</string>
+    <string name="export_plan_cited">Vorgeschlagen nach der Antwort im Elternplan auf die Frage</string>
 </resources>

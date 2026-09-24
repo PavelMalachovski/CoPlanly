@@ -87,4 +87,5 @@
     <string name="export_plan_last_changed">Последнее изменение</string>
     <string name="export_plan_not_agreed">Не согласовано</string>
     <string name="export_plan_retired">Ответы на вопросы, которых в плане больше нет (сохранены, не удалены)</string>
+    <string name="export_plan_cited">Предложено по ответу в родительском плане на вопрос</string>
 </resources>

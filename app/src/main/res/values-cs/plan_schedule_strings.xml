@@ -14,4 +14,5 @@
     <string name="plan_reference_note">Aplikace text za vás nečte: rozvrh, který popisuje, nastavte níže. Po uložení ho obdrží %1$s jako návrh s odkazem na tuto odpověď.</string>
     <string name="plan_citation_current">Z rodičovského plánu: %1$s</string>
     <string name="plan_citation_changed">Vychází z odpovědi v rodičovském plánu na otázku „%1$s“, která se od podání návrhu změnila.</string>
+    <string name="plan_citation_changed_short">Odpověď v plánu se od návrhu změnila: %1$s</string>
 </resources>

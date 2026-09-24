@@ -2185,15 +2185,42 @@ CZ, and a reason for a mediator to recommend the app.
 - **Not affected:** the calendar feed (MON-17). `functions/calendar-feed.js` ports only the agreed
   pattern, layers and swaps — it never reads `proposal`, so it never reads the citation either.
 
+- **Every surface that asks about the proposal names its source** (the second pass). Home's
+  pop-up and the calendar's "review" banner show the line the inbox card shows, from the same
+  `ChangeRequestViewModel.pendingProposalCitation` — nothing re-derives the hash. Home's dialogs
+  moved to `presentation/home/AwaitingDialogs.kt` and take the proposal as one `ProposalAsk`
+  (proposal, diff, citation) and their answers as one `AwaitingActions`, so the signature the
+  detekt baseline pinned is gone rather than widened: four parameters, no finding, and the two
+  old baseline entries simply match nothing. The banner takes one optional `detail` line
+  (`ChangeRequestBanner`, still one banner, a line taller) worded by `planCitationShortLine`,
+  whose "changed" form leads with the change (`plan_citation_changed_short`) so an ellipsis on a
+  narrow screen cuts the question, not the fact.
+- **The export names the question a proposal cited** (MON-3). The record has no custody-schedule
+  rows — the schedule is one mutable document (`docs/DESIGN-court-record.md` §4 leaves it so), and
+  the custody document forgets `proposalPlanCitation` the moment the proposal is answered. What the
+  record *does* print is the chat's `CUSTODY_PROPOSED` card, which nobody can edit; so that card
+  now carries the same codec string as an optional `planCitation` key in its `activity` sub-map
+  (`ActivityAnnouncement`; an older build ignores it, the Room copy is the existing
+  `activityJson`, no schema change, no rules change — `messages` create does not constrain the
+  sub-map). The record prints it beside that message — the CSV's *Notes* column, a small line
+  under the text in the PDF — as **"Proposed from the parenting plan answer to: <question>"**
+  (`RecordFormat.planCitation`, `export_plan_cited`). It records what was cited **when the
+  proposal was made**; it does not re-hash against today's plan, because the record is of what the
+  parents wrote, and a later edit to the answer must not rewrite what a past proposal said. A
+  question the plan no longer asks prints by its id; an unreadable citation prints nothing.
+  Tests: `RecordPlanCitationTest` (builder, CSV, PDF), `ChatMappersWireFormatTest` (both round
+  trips), `ActivityAnnouncementTest`, `CustodyModelRepositoryTest` (the card carries it).
+
 **Not done, recorded rather than hidden:**
 
-- **Only the inbox card shows the citation.** Home's proposal dialog and the calendar's banner
-  do not (the dialog's signature is pinned by the detekt baseline; widen it with the next
-  Regenerate run).
-- **The citation is not in the export (MON-3).** The record prints the plan and the schedule
-  changes separately; tying a revision of the schedule to the plan answer it cited is a later
-  export slice.
-- **Not on a device yet** — `docs/DEVICE-CHECKLIST.md` §3.12, and the rules deploy in §1's 💻 table.
+- **Proposals made before this build have no citation in the record.** Their cards were written
+  without the key and messages are immutable, so nothing can add it; the record prints them as it
+  always did.
+- **The chat bubble itself does not show the citation.** The card's sentence is rendered from its
+  kind alone (`ActivityFallbackText` / the chat's string mapping); the co-parent sees the source on
+  the inbox card, Home's pop-up and the banner, which are where the proposal is answered.
+- **Not on a device yet** — `docs/DEVICE-CHECKLIST.md` §3.12 (now also Home, the banner and the
+  export), and the rules deploy in §1's 💻 table.
 
 ### MON-23 · **SHIPPED, UNSEEN; LIVE ONLY AFTER `firebase deploy --only storage`** · P1 · M · A document vault and files in chat
 

@@ -78,6 +78,7 @@ import com.coparently.app.presentation.common.toggling
 import com.coparently.app.presentation.event.EventOperation
 import com.coparently.app.presentation.event.EventUiState
 import com.coparently.app.presentation.event.EventViewModel
+import com.coparently.app.presentation.parentingplan.planCitationShortLine
 import com.coparently.app.presentation.theme.dimensions
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -537,6 +538,8 @@ fun CalendarScreen(
     // `pendingProposal` (CalendarViewModel) is either party's; `proposalAwaitingMe`
     // (ChangeRequestViewModel) is only the co-parent's, so the difference tells them apart.
     val proposalAwaitingMe by changeRequestViewModel.pendingProposal.collectAsState()
+    // Where that proposal came from (MON-21) — the inbox card's own live derivation, re-used.
+    val proposalCitation by changeRequestViewModel.pendingProposalCitation.collectAsState()
     val proposerWaiting = pendingProposal != null && proposalAwaitingMe == null
 
     Scaffold(
@@ -686,6 +689,7 @@ fun CalendarScreen(
                                     R.string.custody_proposal_review,
                                     parentNames.labelForUid(proposal.proposedBy)
                                 ),
+                                detail = planCitationShortLine(proposalCitation),
                                 onReview = onChangeRequestsClick,
                                 modifier = Modifier.padding(
                                     horizontal = dims.paddingMedium,

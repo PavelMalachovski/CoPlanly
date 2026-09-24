@@ -1,5 +1,6 @@
 package com.coparently.app.presentation.parentingplan
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
@@ -77,20 +78,32 @@ private fun Quote(label: String, text: String) {
  * The line a proposal card shows about where the proposal came from (MON-21), or null when there
  * is nothing to say — no citation, one this build cannot read, or a question it has no wording
  * for. Never an error: a missing citation is simply an older build's proposal.
+ *
+ * The one wording of a [CitationStatus]: the inbox card and Home's proposal dialog both print this,
+ * from the same `ChangeRequestViewModel.pendingProposalCitation`, so they cannot disagree.
  */
 @Composable
-fun planCitationLine(citation: CitationStatus): String? {
+fun planCitationLine(citation: CitationStatus): String? =
+    citationLine(citation, changed = R.string.plan_citation_changed)
+
+/**
+ * [planCitationLine] for a one-line surface — the calendar's proposal banner. The same status and
+ * the same "current" wording; "changed since" leads with the change, so an ellipsis on a narrow
+ * screen cuts the question, never the fact that the answer moved.
+ */
+@Composable
+fun planCitationShortLine(citation: CitationStatus): String? =
+    citationLine(citation, changed = R.string.plan_citation_changed_short)
+
+@Composable
+private fun citationLine(citation: CitationStatus, @StringRes changed: Int): String? {
     val (questionId, current) = when (citation) {
         is CitationStatus.Current -> citation.questionId to true
         is CitationStatus.Changed -> citation.questionId to false
         CitationStatus.None -> return null
     }
     val prompt = PlanStrings.questionPrompt(questionId)?.let { stringResource(it) } ?: return null
-    return if (current) {
-        stringResource(R.string.plan_citation_current, prompt)
-    } else {
-        stringResource(R.string.plan_citation_changed, prompt)
-    }
+    return stringResource(if (current) R.string.plan_citation_current else changed, prompt)
 }
 
 /**

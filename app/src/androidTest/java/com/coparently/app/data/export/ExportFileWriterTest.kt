@@ -363,7 +363,8 @@ class ExportFileWriterTest {
                 notAgreed = context.getString(R.string.export_plan_not_agreed),
                 notAnswered = context.getString(R.string.parenting_plan_not_answered),
                 retired = context.getString(R.string.export_plan_retired),
-                questions = emptyMap()
+                questions = emptyMap(),
+                cited = context.getString(R.string.export_plan_cited)
             )
         )
     }

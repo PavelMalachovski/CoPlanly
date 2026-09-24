@@ -124,13 +124,18 @@ data class EventFacts(
  * @property sentAtMillis The sender's device time — messages carry no server stamp, and the
  *   record's statement says so.
  * @property delivered False for a message this phone never managed to send.
+ * @property citedPlanQuestionId For a schedule-proposal card built from the parenting plan
+ *   (MON-21), the id of the plan question whose agreed answer the proposal cited **when it was
+ *   made**; null otherwise. A fact about the proposal, not about the plan today: the record does
+ *   not claim the answer still reads the same.
  */
 data class RecordMessage(
     val messageId: String,
     val senderName: String,
     val sentAtMillis: Long,
     val text: String,
-    val delivered: Boolean
+    val delivered: Boolean,
+    val citedPlanQuestionId: String? = null
 )
 
 /**

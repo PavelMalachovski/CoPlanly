@@ -333,7 +333,7 @@ class CustodyModelRepository(
             saveAndActivate(model)
             return PatternSubmission.ACTIVATED
         }
-        announceProposal(pair, ActivityKind.CUSTODY_PROPOSED)
+        announceProposal(pair, ActivityKind.CUSTODY_PROPOSED, planCitation)
         notifyPartnerOfProposal(pair, "proposed")
         return PatternSubmission.PROPOSED
     }
@@ -384,14 +384,20 @@ class CustodyModelRepository(
         return Result.success(Unit)
     }
 
-    private suspend fun announceProposal(pair: CustodyPair, kind: ActivityKind) {
+    /**
+     * The chat card for a proposal or a decision. [planCitation] rides only on the proposal's own
+     * card (MON-21): the custody document drops it once the proposal is answered, and the chat is
+     * the immutable place the export can still read it from.
+     */
+    private suspend fun announceProposal(pair: CustodyPair, kind: ActivityKind, planCitation: String? = null) {
         activityAnnouncer.announce(
             announcement = ActivityAnnouncement(
                 kind = kind,
                 entityType = ActivityEntityType.CUSTODY_PROPOSAL,
                 entityId = pair.documentId,
                 title = pair.documentId,
-                whenIso = nowIso()
+                whenIso = nowIso(),
+                planCitation = planCitation
             )
         )
     }

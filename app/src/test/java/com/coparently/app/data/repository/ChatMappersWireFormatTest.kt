@@ -220,4 +220,32 @@ class ChatMappersWireFormatTest {
         assertEquals(MessageType.TEXT, row.toDomain().messageType)
     }
 
+    @Test
+    fun `a proposal card's plan citation survives both round trips, verbatim`() {
+        // MON-21: the custody document forgets the citation once the proposal is answered; the
+        // chat card is where the export reads it later, so both stores must keep it as written.
+        val announcement = ActivityAnnouncement(
+            kind = ActivityKind.CUSTODY_PROPOSED,
+            entityType = ActivityEntityType.CUSTODY_PROPOSAL,
+            entityId = "uidA__uidB",
+            title = "uidA__uidB",
+            planCitation = "p1|care_weekday|0123456789abcdef"
+        )
+        val message = Message(
+            id = "m2",
+            conversationId = "c1",
+            senderId = "uid-mom",
+            senderName = "Olya",
+            content = "New schedule proposed",
+            sentAtMillis = 1_785_565_800_000L,
+            messageType = MessageType.ACTIVITY,
+            activity = announcement
+        )
+
+        @Suppress("UNCHECKED_CAST")
+        val fromFirestore = (message.toFirestoreMap() as Map<String, Any>).toMessageOrNull()
+
+        assertEquals(announcement, fromFirestore?.activity)
+        assertEquals(announcement, message.toEntity().toDomain().activity)
+    }
 }

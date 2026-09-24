@@ -3,6 +3,7 @@ package com.coparently.app.domain.export
 import com.coparently.app.data.versions.EventVersionKind
 import com.coparently.app.domain.chat.ChatAttachment
 import com.coparently.app.domain.model.Expense
+import com.coparently.app.domain.parentingplan.PlanCitationCodec
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -45,6 +46,8 @@ data class CurrentEventInput(
  *
  * @property attachments The files it carried (MON-23) — listed in the record by name and SHA-256,
  *   never by their bytes.
+ * @property planCitation The `PlanCitationCodec` string a schedule-proposal card carried (MON-21),
+ *   or null — every other message, and every proposal from an older build or not built from the plan.
  */
 data class MessageInput(
     val messageId: String,
@@ -52,7 +55,8 @@ data class MessageInput(
     val sentAtMillis: Long,
     val text: String,
     val delivered: Boolean,
-    val attachments: List<ChatAttachment> = emptyList()
+    val attachments: List<ChatAttachment> = emptyList(),
+    val planCitation: String? = null
 )
 
 /**
@@ -199,7 +203,8 @@ object CommunicationRecordBuilder {
                     senderName = scope.nameForUid(it.senderUid),
                     sentAtMillis = it.sentAtMillis,
                     text = RecordFormat.messageText(it.text, it.attachments),
-                    delivered = it.delivered
+                    delivered = it.delivered,
+                    citedPlanQuestionId = PlanCitationCodec.questionIdOf(it.planCitation)
                 )
             }
     }

@@ -218,7 +218,9 @@ object RecordLayout {
                     spaceBefore = ITEM_GAP
                 ),
                 RecordBlock(message.text, LineStyle.BODY, indent = 1)
-            )
+            ) + RecordFormat.planCitation(message, labels.plan).takeIf { it.isNotEmpty() }?.let {
+                listOf(RecordBlock(it, LineStyle.SMALL, indent = 1))
+            }.orEmpty()
         }
     }
 

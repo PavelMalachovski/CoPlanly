@@ -87,4 +87,5 @@
     <string name="export_plan_last_changed">Naposledy změněno</string>
     <string name="export_plan_not_agreed">Bez shody</string>
     <string name="export_plan_retired">Odpovědi na otázky, které plán už neklade (uchované, nesmazané)</string>
+    <string name="export_plan_cited">Navrženo podle odpovědi v rodičovském plánu na otázku</string>
 </resources>

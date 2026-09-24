@@ -122,7 +122,7 @@ object CommunicationRecordCsv {
         "",
         "",
         "",
-        "",
+        RecordFormat.planCitation(message, labels.plan),
         "",
         ""
     )

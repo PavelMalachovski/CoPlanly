@@ -14,4 +14,5 @@
     <string name="plan_reference_note">Die App liest diesen Text nicht für Sie: Stellen Sie den beschriebenen Plan unten ein. Beim Speichern erhält %1$s ihn als Vorschlag, der diese Antwort nennt.</string>
     <string name="plan_citation_current">Aus dem Elternplan: %1$s</string>
     <string name="plan_citation_changed">Beruht auf der Antwort im Elternplan zu „%1$s“, die sich seit dem Vorschlag geändert hat.</string>
+    <string name="plan_citation_changed_short">Antwort im Plan seit dem Vorschlag geändert: %1$s</string>
 </resources>

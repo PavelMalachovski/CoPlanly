@@ -417,7 +417,8 @@ private fun rememberPlanLabels(): PlanLabels = PlanLabels(
     // the same order on every composition.
     questions = ParentingPlanCatalogue.questions.mapNotNull { question ->
         PlanStrings.questionPrompt(question.id)?.let { question.id to stringResource(it) }
-    }.toMap()
+    }.toMap(),
+    cited = stringResource(R.string.export_plan_cited)
 )
 
 /** Hands [file] to the share sheet, through [recordShareIntent]. */

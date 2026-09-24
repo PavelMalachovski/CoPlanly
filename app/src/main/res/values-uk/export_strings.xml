@@ -87,4 +87,5 @@
     <string name="export_plan_last_changed">Остання зміна</string>
     <string name="export_plan_not_agreed">Не узгоджено</string>
     <string name="export_plan_retired">Відповіді на питання, яких у плані більше немає (збережені, не видалені)</string>
+    <string name="export_plan_cited">Запропоновано за відповіддю в батьківському плані на питання</string>
 </resources>

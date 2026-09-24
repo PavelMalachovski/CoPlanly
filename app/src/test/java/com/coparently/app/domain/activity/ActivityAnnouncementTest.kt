@@ -80,4 +80,18 @@ class ActivityAnnouncementTest {
 
         assertEquals("", ActivityAnnouncement.fromMap(map)?.title)
     }
+
+    @Test
+    fun `a plan citation is written under its own key and read back as written`() {
+        val proposal = ActivityAnnouncement(
+            kind = ActivityKind.CUSTODY_PROPOSED,
+            entityType = ActivityEntityType.CUSTODY_PROPOSAL,
+            entityId = "a__b",
+            title = "a__b",
+            planCitation = "p9|a-newer-format"
+        )
+
+        assertEquals("p9|a-newer-format", proposal.toMap()["planCitation"])
+        assertEquals(proposal, ActivityAnnouncement.fromMap(proposal.toMap()))
+    }
 }

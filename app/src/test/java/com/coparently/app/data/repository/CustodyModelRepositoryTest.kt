@@ -3,6 +3,8 @@ package com.coparently.app.data.repository
 import com.coparently.app.data.local.dao.CustodyModelDao
 import com.coparently.app.data.local.entity.CustodyModelEntity
 import com.coparently.app.data.remote.firebase.FirestoreCustodyDataSource
+import com.coparently.app.domain.activity.ActivityAnnouncer
+import com.coparently.app.domain.activity.ActivityKind
 import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.custody.CustodyTimestamp
 import com.coparently.app.domain.custody.SeasonalLayer
@@ -65,6 +67,7 @@ class CustodyModelRepositoryTest {
     private lateinit var custodyModelDao: CustodyModelDao
     private lateinit var userRepository: UserRepository
     private lateinit var firestoreCustodyDataSource: FirestoreCustodyDataSource
+    private lateinit var activityAnnouncer: ActivityAnnouncer
     private lateinit var repository: CustodyModelRepository
 
     @Before
@@ -76,11 +79,12 @@ class CustodyModelRepositoryTest {
         custodyModelDao = mockk(relaxed = true)
         userRepository = mockk()
         firestoreCustodyDataSource = mockk()
+        activityAnnouncer = mockk(relaxed = true)
         repository = CustodyModelRepository(
             custodyModelDao,
             userRepository,
             firestoreCustodyDataSource,
-            mockk(relaxed = true),
+            activityAnnouncer,
             mockk(relaxed = true),
             CoroutineScope(dispatcher)
         )
@@ -631,6 +635,37 @@ class CustodyModelRepositoryTest {
             repository.submitSeasonalLayers(listOf(SUMMER))
             assertNull(custody.captured.proposal?.planCitationWire)
         }
+
+    @Test
+    fun `the proposal's chat card carries the citation, so the export can still name it later`() =
+        runTest(dispatcher) {
+            coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID) } returns remoteCustody()
+
+            repository.createWeekOnWeekOff(START_DATE, planCitation = PLAN_CITATION)
+
+            coVerify(exactly = 1) {
+                activityAnnouncer.announce(
+                    match { it.kind == ActivityKind.CUSTODY_PROPOSED && it.planCitation == PLAN_CITATION },
+                    any(),
+                    any()
+                )
+            }
+        }
+
+    @Test
+    fun `a proposal built without the plan announces no citation`() = runTest(dispatcher) {
+        coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID) } returns remoteCustody()
+
+        repository.createWeekOnWeekOff(START_DATE)
+
+        coVerify(exactly = 1) {
+            activityAnnouncer.announce(
+                match { it.kind == ActivityKind.CUSTODY_PROPOSED && it.planCitation == null },
+                any(),
+                any()
+            )
+        }
+    }
 
     // ---- fixtures ---------------------------------------------------------
 

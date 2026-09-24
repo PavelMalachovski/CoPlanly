@@ -83,6 +83,14 @@ object PlanCitationCodec {
         }
     }
 
+    /**
+     * The question [wire] cites, or null for no citation or one this build cannot read. Says
+     * nothing about whether the plan still matches — that is [PlanScheduleLink.citationStatus]'s
+     * question, asked against the live plan; this is for a record of what was cited at the time.
+     */
+    fun questionIdOf(wire: String?): String? =
+        (decode(wire) as? DecodedCitation.Readable)?.citation?.questionId
+
     /** The truncated SHA-256 of [text], as [PlanCitation.answerHash] stores it. */
     fun hashOf(text: String): String {
         val digest = MessageDigest.getInstance("SHA-256").digest(text.toByteArray(StandardCharsets.UTF_8))

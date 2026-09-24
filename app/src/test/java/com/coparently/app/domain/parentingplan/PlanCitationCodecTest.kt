@@ -65,4 +65,11 @@ class PlanCitationCodecTest {
 
         assertTrue(wire.length <= PlanCitationCodec.MAX_WIRE_LENGTH)
     }
+
+    @Test
+    fun `the cited question is read from a readable citation only`() {
+        assertEquals("care_weekday", PlanCitationCodec.questionIdOf("p1|care_weekday|0123456789abcdef"))
+        assertNull(PlanCitationCodec.questionIdOf(null))
+        assertNull(PlanCitationCodec.questionIdOf("p2|care_weekday|0123456789abcdef|extra"))
+    }
 }

@@ -567,6 +567,18 @@ plan (their `hasOnly` lists do not name the key), and the repository falls back 
       from it. A builds week-on-week-off and saves → "sent for approval"; A's grid is unchanged.
 - [ ] B: the proposal card in the inbox (change requests) reads **"From the parenting plan: How
       will you divide weekdays, …"** under the description of what changes.
+- [ ] B, the same proposal on the other two surfaces: **Home's pop-up** carries the same line under
+      the description, in smaller grey text; the **calendar's** "review" banner above the grid is
+      one line taller, with "From the parenting plan: …" (ellipsised, not wrapped) under it. After
+      A edits the answer (next check) the banner reads **"Plan answer changed since proposed: …"**
+      and the pop-up the long "changed since" sentence. A proposal made without the plan leaves
+      both exactly as they were before MON-21 (a one-line banner).
+- [ ] **Export:** B, Settings → Family → *Export the record*, a period covering the proposal, both
+      formats. The chat's "proposed a new schedule" message carries **"Proposed from the parenting
+      plan answer to: How will you divide weekdays, …"** — under the message text in the PDF, in
+      the *Notes* column of that message's row in the CSV. It still names the question after the
+      proposal was accepted, and after the answer was edited (it records what was cited, not the
+      plan today). A proposal made before this build, or without the plan, prints no such line.
 - [ ] **Changed since:** before B answers, A edits the answer (the agreement lapses). B's card now
       says the answer **has changed since this was proposed**, live, without reopening. B accepts
       or declines; the card disappears, and a later proposal A makes without the plan shows no
@@ -587,7 +599,10 @@ plan (their `hasOnly` lists do not name the key), and the repository falls back 
   rest.
 - **If it fails:** tag `CustodySetupViewModel` / `SeasonalScheduleVM` / `ChangeRequestViewModel`;
   `domain/parentingplan/PlanScheduleLink.kt`, `PlanCitation.kt`,
-  `presentation/parentingplan/PlanReferenceSource.kt`, `firestore.rules` `planCitationValid`.
+  `presentation/parentingplan/PlanReferenceSource.kt`, `firestore.rules` `planCitationValid`; for
+  the other surfaces `presentation/home/AwaitingDialogs.kt`, `ChangeRequestBanner`
+  (`CalendarBanners.kt`), and for the export `RecordFormat.planCitation` and the
+  `CUSTODY_PROPOSED` card's `activity.planCitation`.
 
 ---
 

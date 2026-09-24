@@ -51,6 +51,9 @@ data class RecordLabels(
  * @property notAnswered An answer, or a question, nobody has written.
  * @property retired The heading over answers to questions the plan no longer asks.
  * @property questions Each catalogue question's wording by id; an id missing here prints as its id.
+ * @property cited The label before the plan question a schedule-proposal message cited (MON-21).
+ *   Printed beside the message whether or not the plan section is included, because it describes
+ *   the message, not the plan.
  */
 data class PlanLabels(
     val section: String,
@@ -64,7 +67,8 @@ data class PlanLabels(
     val notAgreed: String,
     val notAnswered: String,
     val retired: String,
-    val questions: Map<String, String>
+    val questions: Map<String, String>,
+    val cited: String
 ) {
     /** The status a question's agreement prints as. */
     fun agreement(agreement: PlanAgreement): String = when (agreement) {

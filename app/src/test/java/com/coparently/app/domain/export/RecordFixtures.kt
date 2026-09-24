@@ -86,7 +86,11 @@ internal object RecordFixtures {
         notAgreed = "Not agreed",
         notAnswered = "Not answered",
         retired = "NO LONGER ASKED",
-        questions = mapOf("residence_home" to "Where will the child live?")
+        questions = mapOf(
+            "residence_home" to "Where will the child live?",
+            "care_weekday" to "Who cares for the child on which weekdays?"
+        ),
+        cited = "FROM THE PLAN ANSWER TO"
     )
 
     /** A record id as the server mints them. */
@@ -166,6 +170,19 @@ internal object RecordFixtures {
         expenses: List<Expense> = emptyList(),
         serverReached: Boolean = true
     ) = RecordSources(revisions, currentEvents, messages, expenses, serverReached)
+
+    /** A citation of the weekday-care answer, as a proposal from the plan carries it (MON-21). */
+    const val CARE_CITATION = "p1|care_weekday|0123456789abcdef"
+
+    /** Bob's schedule-proposal card in the chat, citing [citation] — or nothing, like an older build's. */
+    fun proposalCard(citation: String? = CARE_CITATION) = MessageInput(
+        messageId = "m-proposal",
+        senderUid = BOB,
+        sentAtMillis = MARCH_10_0900,
+        text = "Bob proposed a new custody schedule",
+        delivered = true,
+        planCitation = citation
+    )
 
     /** 2026-03-09 18:00 in Prague — when Bob last changed his half of the plan. */
     const val MARCH_9_1800 = 1_773_075_600_000L

@@ -14,4 +14,5 @@
     <string name="plan_reference_note">Застосунок не читає цей текст за вас: налаштуйте описаний розклад нижче. Після збереження %1$s отримає його як пропозицію з посиланням на цю відповідь.</string>
     <string name="plan_citation_current">З батьківського плану: %1$s</string>
     <string name="plan_citation_changed">Складено за відповіддю в батьківському плані на запитання «%1$s», яка змінилася після надсилання пропозиції.</string>
+    <string name="plan_citation_changed_short">Відповідь у плані змінилася після пропозиції: %1$s</string>
 </resources>
