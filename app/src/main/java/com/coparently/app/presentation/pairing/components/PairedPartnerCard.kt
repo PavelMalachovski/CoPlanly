@@ -11,6 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.coparently.app.R
 import com.coparently.app.domain.model.PartnerSummary
@@ -48,20 +49,26 @@ fun PairedPartnerCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             AccountAvatar(name = displayName, photoUrl = partner.photoUrl)
+            // The name and the date first, the address last on one line (D-22): a long address
+            // wrapped over three lines above the one fact this card is for, the pairing.
+            // Middle ellipsis keeps both ends of an address, which is how people recognise one;
+            // TalkBack still reads it whole.
             Column(modifier = Modifier.padding(start = 16.dp)) {
                 Text(text = displayName, style = MaterialTheme.typography.titleMedium)
-                Text(
-                    text = displayEmail,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
                 partner.pairedSinceMillis?.let { millis ->
                     Text(
                         text = stringResource(R.string.pairing_paired_since, formatDate(millis)),
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+                Text(
+                    text = displayEmail,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.MiddleEllipsis
+                )
             }
         }
     }
