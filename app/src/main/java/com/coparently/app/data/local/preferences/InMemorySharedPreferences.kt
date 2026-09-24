@@ -15,13 +15,22 @@ import android.content.SharedPreferences
  * `context.getSharedPreferences("encrypted_prefs_memory", MODE_PRIVATE)`, which is an ordinary
  * file on disk under a name that says otherwise.
  *
+ * **It is also the in-memory half of the store that is written to disk** (SEC-5): given
+ * [persist], every commit hands the whole map to it while still holding the lock, so two edits can
+ * never be written in the wrong order. `EncryptedPreferences` seals that snapshot with a Keystore
+ * key and writes it; without [persist] nothing leaves memory, which is the fallback described
+ * above.
+ *
  * Synchronised on the backing map because `EncryptedPreferences` is a `@Singleton` reached from
  * several coroutines. Listeners are held and notified so the contract holds for any caller that
  * registers one; nothing in this app does today.
  */
-class InMemorySharedPreferences : SharedPreferences {
+class InMemorySharedPreferences(
+    initial: Map<String, Any?> = emptyMap(),
+    private val persist: ((Map<String, Any?>) -> Boolean)? = null
+) : SharedPreferences {
 
-    private val values = mutableMapOf<String, Any?>()
+    private val values = initial.toMutableMap()
     private val listeners = mutableSetOf<SharedPreferences.OnSharedPreferenceChangeListener>()
 
     override fun getAll(): MutableMap<String, *> = synchronized(values) { HashMap(values) }
@@ -121,7 +130,7 @@ class InMemorySharedPreferences : SharedPreferences {
 
         override fun commit(): Boolean {
             val changed = mutableListOf<String?>()
-            synchronized(values) {
+            val written = synchronized(values) {
                 if (clearRequested) {
                     changed.addAll(values.keys)
                     values.clear()
@@ -134,11 +143,16 @@ class InMemorySharedPreferences : SharedPreferences {
                     }
                     changed.add(key)
                 }
+                persist?.invoke(HashMap(values)) ?: true
             }
             notifyChanged(changed)
-            return true
+            return written
         }
 
+        /**
+         * Synchronous, unlike the framework's: the store is a few kilobytes, and an `apply` that
+         * returned before the sealed file was written could lose a token to a process kill.
+         */
         override fun apply() {
             commit()
         }

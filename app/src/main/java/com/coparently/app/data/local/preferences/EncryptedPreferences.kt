@@ -5,9 +5,10 @@ import android.content.SharedPreferences
 import android.util.Log
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import com.coparently.app.data.security.EncryptionManager
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.io.File
 import java.io.IOException
-import java.security.GeneralSecurityException
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -39,18 +40,63 @@ import javax.inject.Singleton
  * claimed but did not implement. Tokens then live for the process and no further, which is the
  * correct trade for a credential: an inconvenience is recoverable, a plaintext refresh token on
  * disk is not.
+ *
+ * **Where it lives now (SEC-5).** The store used to be `androidx.security:security-crypto`'s
+ * `EncryptedSharedPreferences`, on `1.1.0-alpha06` — a line Google stopped developing and later
+ * deprecated outright. It is now one file, `no_backup/secure_prefs.bin`: the whole map, encoded by
+ * [PreferenceBlobCodec] and sealed with AES-256-GCM under the Android Keystore key
+ * [EncryptionManager] already holds for the database passphrase (item 20), written to a temporary
+ * file and renamed into place so a killed process leaves the old version or the new one, never
+ * half of either. `no_backup`, because a restored copy could not be opened on another device's
+ * Keystore anyway.
+ *
+ * **The library stays for one job: reading the old store once.** On the first launch of this
+ * build, whatever `encrypted_prefs` holds — the Google tokens, the telemetry answer, the
+ * parent-slot markers [clear] protects — is copied into the new file, and the old file is deleted
+ * only after the new one has been written. It is never written to again. When no install older
+ * than this build can remain, the dependency and [readLegacyStore] go together.
+ *
+ * The same rules hold as before: a sealed file that cannot be opened is deleted and the store
+ * starts empty (the user re-authorises Calendar), and a device that cannot seal anything keeps the
+ * store in memory — never on disk in clear text.
  */
 @Singleton
-class EncryptedPreferences @Inject constructor(
-    @ApplicationContext private val context: Context
+class EncryptedPreferences internal constructor(
+    private val context: Context,
+    private val cipher: StoreCipher,
+    private val fileName: String = STORE_FILE,
+    private val legacyName: String = LEGACY_STORE_NAME
 ) {
-    private val encryptedPreferences: SharedPreferences = createEncryptedStore(context)
+
+    /** The production store: the Keystore key [encryptionManager] holds, the app's own files. */
+    @Inject
+    constructor(
+        @ApplicationContext context: Context,
+        encryptionManager: EncryptionManager
+    ) : this(context, KeystoreCipher(encryptionManager))
+
+    /** Seals and opens the store's text; [EncryptionManager] in production. */
+    interface StoreCipher {
+        /** [plain], sealed. */
+        fun seal(plain: String): String
+
+        /** The plaintext of [sealed]; throws when it cannot be opened. */
+        fun open(sealed: String): String
+    }
+
+    /** [StoreCipher] over the Keystore key [manager] holds. */
+    internal class KeystoreCipher(private val manager: EncryptionManager) : StoreCipher {
+        override fun seal(plain: String): String = manager.encrypt(plain)
+        override fun open(sealed: String): String = manager.decrypt(sealed)
+    }
+
+    private val store: SharedPreferences = openStore()
 
     /**
      * Stores an access token securely.
      */
     fun putAccessToken(token: String) {
-        encryptedPreferences.edit()
+        store.edit()
             .putString(KEY_ACCESS_TOKEN, token)
             .apply()
     }
@@ -59,14 +105,14 @@ class EncryptedPreferences @Inject constructor(
      * Retrieves the stored access token.
      */
     fun getAccessToken(): String? {
-        return encryptedPreferences.getString(KEY_ACCESS_TOKEN, null)
+        return store.getString(KEY_ACCESS_TOKEN, null)
     }
 
     /**
      * Stores a refresh token securely.
      */
     fun putRefreshToken(token: String) {
-        encryptedPreferences.edit()
+        store.edit()
             .putString(KEY_REFRESH_TOKEN, token)
             .apply()
     }
@@ -75,14 +121,14 @@ class EncryptedPreferences @Inject constructor(
      * Retrieves the stored refresh token.
      */
     fun getRefreshToken(): String? {
-        return encryptedPreferences.getString(KEY_REFRESH_TOKEN, null)
+        return store.getString(KEY_REFRESH_TOKEN, null)
     }
 
     /**
      * Stores token expiry time in milliseconds.
      */
     fun putTokenExpiry(expiryTimeMillis: Long) {
-        encryptedPreferences.edit()
+        store.edit()
             .putLong(KEY_TOKEN_EXPIRY, expiryTimeMillis)
             .apply()
     }
@@ -91,7 +137,7 @@ class EncryptedPreferences @Inject constructor(
      * Retrieves the stored token expiry time.
      */
     fun getTokenExpiry(): Long? {
-        val expiry = encryptedPreferences.getLong(KEY_TOKEN_EXPIRY, -1)
+        val expiry = store.getLong(KEY_TOKEN_EXPIRY, -1)
         return if (expiry == -1L) null else expiry
     }
 
@@ -99,7 +145,7 @@ class EncryptedPreferences @Inject constructor(
      * Stores Google Calendar ID.
      */
     fun putCalendarId(calendarId: String) {
-        encryptedPreferences.edit()
+        store.edit()
             .putString(KEY_CALENDAR_ID, calendarId)
             .apply()
     }
@@ -108,14 +154,14 @@ class EncryptedPreferences @Inject constructor(
      * Retrieves the stored Google Calendar ID.
      */
     fun getCalendarId(): String? {
-        return encryptedPreferences.getString(KEY_CALENDAR_ID, "primary")
+        return store.getString(KEY_CALENDAR_ID, "primary")
     }
 
     /**
      * Stores Google ID token (from Credential Manager).
      */
     fun putGoogleIdToken(token: String) {
-        encryptedPreferences.edit()
+        store.edit()
             .putString(KEY_GOOGLE_ID_TOKEN, token)
             .apply()
     }
@@ -124,14 +170,14 @@ class EncryptedPreferences @Inject constructor(
      * Retrieves the stored Google ID token.
      */
     fun getGoogleIdToken(): String? {
-        return encryptedPreferences.getString(KEY_GOOGLE_ID_TOKEN, null)
+        return store.getString(KEY_GOOGLE_ID_TOKEN, null)
     }
 
     /**
      * Stores user email from Google account.
      */
     fun putUserEmail(email: String) {
-        encryptedPreferences.edit()
+        store.edit()
             .putString(KEY_USER_EMAIL, email)
             .apply()
     }
@@ -140,7 +186,7 @@ class EncryptedPreferences @Inject constructor(
      * Retrieves the stored user email.
      */
     fun getUserEmail(): String? {
-        return encryptedPreferences.getString(KEY_USER_EMAIL, null)
+        return store.getString(KEY_USER_EMAIL, null)
     }
 
     /**
@@ -149,7 +195,7 @@ class EncryptedPreferences @Inject constructor(
      * @param isDarkTheme Whether dark theme is enabled
      */
     fun putDarkTheme(isDarkTheme: Boolean) {
-        encryptedPreferences.edit()
+        store.edit()
             .putBoolean(KEY_DARK_THEME, isDarkTheme)
             .apply()
     }
@@ -161,8 +207,8 @@ class EncryptedPreferences @Inject constructor(
      * @return True if dark theme, false if light theme, null if system default
      */
     fun getDarkTheme(): Boolean? {
-        return if (encryptedPreferences.contains(KEY_DARK_THEME)) {
-            encryptedPreferences.getBoolean(KEY_DARK_THEME, false)
+        return if (store.contains(KEY_DARK_THEME)) {
+            store.getBoolean(KEY_DARK_THEME, false)
         } else {
             null // Not set, use system default
         }
@@ -172,7 +218,7 @@ class EncryptedPreferences @Inject constructor(
      * Clears dark theme preference (reverts to system default).
      */
     fun clearDarkTheme() {
-        encryptedPreferences.edit()
+        store.edit()
             .remove(KEY_DARK_THEME)
             .apply()
     }
@@ -184,7 +230,7 @@ class EncryptedPreferences @Inject constructor(
      * @param value The boolean value
      */
     fun putBoolean(key: String, value: Boolean) {
-        encryptedPreferences.edit()
+        store.edit()
             .putBoolean(key, value)
             .apply()
     }
@@ -197,7 +243,7 @@ class EncryptedPreferences @Inject constructor(
      * @return The boolean value
      */
     fun getBoolean(key: String, defaultValue: Boolean): Boolean {
-        return encryptedPreferences.getBoolean(key, defaultValue)
+        return store.getBoolean(key, defaultValue)
     }
 
     /**
@@ -207,7 +253,7 @@ class EncryptedPreferences @Inject constructor(
      * @param value The string value
      */
     fun putString(key: String, value: String) {
-        encryptedPreferences.edit()
+        store.edit()
             .putString(key, value)
             .apply()
     }
@@ -220,7 +266,7 @@ class EncryptedPreferences @Inject constructor(
      * @return The string value
      */
     fun getString(key: String, defaultValue: String? = null): String? {
-        return encryptedPreferences.getString(key, defaultValue)
+        return store.getString(key, defaultValue)
     }
 
     /**
@@ -228,7 +274,7 @@ class EncryptedPreferences @Inject constructor(
      * Issue 1.3: Draft saving functionality.
      */
     fun putEventDraft(draftJson: String) {
-        encryptedPreferences.edit()
+        store.edit()
             .putString(KEY_EVENT_DRAFT, draftJson)
             .apply()
     }
@@ -238,7 +284,7 @@ class EncryptedPreferences @Inject constructor(
      * Issue 1.3: Draft saving functionality.
      */
     fun getEventDraft(): String? {
-        return encryptedPreferences.getString(KEY_EVENT_DRAFT, null)
+        return store.getString(KEY_EVENT_DRAFT, null)
     }
 
     /**
@@ -246,7 +292,7 @@ class EncryptedPreferences @Inject constructor(
      * Issue 1.3: Draft saving functionality.
      */
     fun clearEventDraft() {
-        encryptedPreferences.edit()
+        store.edit()
             .remove(KEY_EVENT_DRAFT)
             .apply()
     }
@@ -262,7 +308,7 @@ class EncryptedPreferences @Inject constructor(
      */
     fun putChatDraft(conversationId: String, text: String) {
         val key = PreferenceKeys.CHAT_DRAFT_PREFIX + conversationId
-        encryptedPreferences.edit().apply {
+        store.edit().apply {
             if (text.isEmpty()) remove(key) else putString(key, text)
         }.apply()
     }
@@ -273,7 +319,7 @@ class EncryptedPreferences @Inject constructor(
      * @param conversationId The thread to read the draft of.
      */
     fun getChatDraft(conversationId: String): String =
-        encryptedPreferences.getString(PreferenceKeys.CHAT_DRAFT_PREFIX + conversationId, null)
+        store.getString(PreferenceKeys.CHAT_DRAFT_PREFIX + conversationId, null)
             .orEmpty()
 
     /**
@@ -282,7 +328,7 @@ class EncryptedPreferences @Inject constructor(
      * @param basisPoints `0..10000`.
      */
     fun putSplitRatioBasisPoints(basisPoints: Int) {
-        encryptedPreferences.edit()
+        store.edit()
             .putInt(PreferenceKeys.SPLIT_RATIO_BASIS_POINTS, basisPoints)
             .apply()
     }
@@ -294,7 +340,7 @@ class EncryptedPreferences @Inject constructor(
      * facts, and only the caller knows which fallback belongs to it.
      */
     fun getSplitRatioBasisPoints(): Int? =
-        encryptedPreferences.getInt(PreferenceKeys.SPLIT_RATIO_BASIS_POINTS, -1)
+        store.getInt(PreferenceKeys.SPLIT_RATIO_BASIS_POINTS, -1)
             .takeIf { it >= 0 }
 
     /**
@@ -304,7 +350,7 @@ class EncryptedPreferences @Inject constructor(
      *   because from then on the pair's document is the record and the cache merely mirrors it.
      */
     fun putSplitRatioSlot(slot: String?) {
-        encryptedPreferences.edit()
+        store.edit()
             .apply {
                 if (slot == null) {
                     remove(PreferenceKeys.SPLIT_RATIO_SLOT)
@@ -317,7 +363,7 @@ class EncryptedPreferences @Inject constructor(
 
     /** The slot the cached share was captured under, or null when it was never recorded. */
     fun getSplitRatioSlot(): String? =
-        encryptedPreferences.getString(PreferenceKeys.SPLIT_RATIO_SLOT, null)
+        store.getString(PreferenceKeys.SPLIT_RATIO_SLOT, null)
 
     /**
      * Stores the app-wide default currency.
@@ -325,7 +371,7 @@ class EncryptedPreferences @Inject constructor(
      * @param code ISO 4217 currency code, e.g. "CZK"
      */
     fun putDefaultCurrency(code: String) {
-        encryptedPreferences.edit()
+        store.edit()
             .putString(KEY_DEFAULT_CURRENCY, code)
             .apply()
     }
@@ -336,7 +382,7 @@ class EncryptedPreferences @Inject constructor(
      * @return The ISO 4217 code, or null when the user has never had one resolved
      */
     fun getDefaultCurrency(): String? {
-        return encryptedPreferences.getString(KEY_DEFAULT_CURRENCY, null)
+        return store.getString(KEY_DEFAULT_CURRENCY, null)
     }
 
     /**
@@ -363,90 +409,133 @@ class EncryptedPreferences @Inject constructor(
      * in on this device from reading the first account's now-surviving marker as its own.
      */
     fun clear() {
-        val preservedMarkers = encryptedPreferences.all
+        val preservedMarkers = store.all
             .filterKeys { it.startsWith(PreferenceKeys.PARENT_SLOT_MARKER_PREFIX) }
             .mapNotNull { (key, value) -> (value as? String)?.let { key to it } }
 
-        encryptedPreferences.edit().apply {
+        store.edit().apply {
             clear()
             preservedMarkers.forEach { (key, value) -> putString(key, value) }
         }.apply()
     }
 
-    companion object {
-        private const val TAG = "EncryptedPreferences"
+    /**
+     * Opens the sealed store, migrating the old one on the first launch of this build.
+     *
+     * Every branch ends in a store that is encrypted on disk or not on disk at all; see the class
+     * KDoc for why "in memory" is the fallback and plaintext never is.
+     */
+    private fun openStore(): SharedPreferences {
+        val file = File(context.noBackupFilesDir, fileName)
+        val stored = readSealed(file)
+        val legacy = if (stored == null) readLegacyStore() else null
+        val values = stored ?: legacy.orEmpty()
 
-        /**
-         * The preferences file. It holds both the encrypted entries and the Tink keysets
-         * `EncryptedSharedPreferences` wraps with the master key, which is why clearing this one
-         * file is a complete reset of the store.
-         */
-        private const val STORE_NAME = "encrypted_prefs"
-
-        /**
-         * Opens the encrypted store, recovering once from a corrupt keyset and falling back to
-         * memory rather than to plaintext.
-         *
-         * A `create` failure is not exotic: the master key is invalidated by a lock-screen
-         * change on several OEM builds, by a Keystore restore, and by a Play Services update
-         * that rotates the provider. What follows the failure is what matters, and the only two
-         * acceptable outcomes are an encrypted store or no store on disk at all.
-         */
-        private fun createEncryptedStore(context: Context): SharedPreferences {
-            openEncrypted(context)?.let { return it }
-
-            // The keyset inside the file no longer matches the master key that wraps it. Remove
-            // the file — data and keysets together — and let `create` mint a fresh keyset. This
-            // discards the stored Google tokens, so the user re-authorises Calendar; nothing
-            // else in here is not re-derivable.
-            Log.w(TAG, "Encrypted store unreadable; clearing it and re-creating")
-            deleteStore(context)
-
-            openEncrypted(context)?.let { return it }
-
-            // Both attempts failed, so the device cannot give us an encrypted store at all.
-            // Keeping the tokens in memory means they are gone at process death and never
-            // touch the disk — see this class's KDoc for why plaintext is not the alternative.
+        // Writing now doubles as the probe: a device whose Keystore cannot seal anything learns
+        // it here, before a single token is handed to a store that could not keep it.
+        if (!writeSealed(file, values)) {
             Log.e(TAG, "No encrypted store available; keeping preferences in memory only")
-            return InMemorySharedPreferences()
+            return InMemorySharedPreferences(values)
         }
+        if (legacy != null) {
+            // Only now that the new file holds everything the old one did.
+            deleteLegacyStore()
+        }
+        return InMemorySharedPreferences(values) { snapshot -> writeSealed(file, snapshot) }
+    }
 
-        /** The encrypted store, or null when it cannot be opened for any reason. */
-        private fun openEncrypted(context: Context): SharedPreferences? = try {
+    /** The sealed store's entries, or null when there is no file or it cannot be opened. */
+    private fun readSealed(file: File): Map<String, Any?>? {
+        if (!file.exists()) return null
+        return try {
+            PreferenceBlobCodec.decode(cipher.open(file.readText()))
+        } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
+            // The Keystore key is gone (a lock-screen reset on some builds, a restore) or the file
+            // is damaged. The file is useless either way: start again, and the user re-authorises
+            // Calendar — nothing else in here is not re-derivable.
+            Log.w(TAG, "Encrypted store unreadable; clearing it and re-creating", e)
+            file.delete()
+            null
+        }
+    }
+
+    /**
+     * Seals [values] into [file] through a temporary file and a rename, so a process killed
+     * mid-write leaves the previous version intact.
+     *
+     * @return false when nothing could be written — the caller keeps the values in memory.
+     */
+    private fun writeSealed(file: File, values: Map<String, Any?>): Boolean = try {
+        file.parentFile?.mkdirs()
+        val partial = File(file.parentFile, "${file.name}.part")
+        partial.writeText(cipher.seal(PreferenceBlobCodec.encode(values)))
+        if (!partial.renameTo(file)) throw IOException("Could not move the sealed store into place")
+        true
+    } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
+        Log.e(TAG, "Could not write the encrypted store", e)
+        false
+    }
+
+    /**
+     * What the pre-SEC-5 `EncryptedSharedPreferences` store holds, or null when there is none or
+     * it cannot be opened (a corrupt keyset: its contents are lost, as that store's own recovery
+     * would have lost them).
+     *
+     * Checked through a plain handle first, which reads the file without decrypting it, so a
+     * fresh install never touches the old library at all.
+     */
+    private fun readLegacyStore(): Map<String, Any?>? {
+        val present = try {
+            context.getSharedPreferences(legacyName, Context.MODE_PRIVATE).all.isNotEmpty()
+        } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
+            Log.w(TAG, "Could not check for the old encrypted store", e)
+            false
+        }
+        if (!present) return null
+        return try {
             val masterKey = MasterKey.Builder(context)
                 .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
                 .build()
             EncryptedSharedPreferences.create(
                 context,
-                STORE_NAME,
+                legacyName,
                 masterKey,
                 EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
                 EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-            )
-        } catch (e: GeneralSecurityException) {
-            Log.e(TAG, "Encrypted preferences could not be opened", e)
-            null
-        } catch (e: IOException) {
-            Log.e(TAG, "Encrypted preferences could not be opened", e)
+            ).all.toMap()
+        } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
+            // Deliberately broad: besides the checked failures, the old library's Keystore path
+            // throws `ProviderException` and `IllegalStateException` on some builds, and nothing
+            // about reading an old store may stop the app from opening.
+            Log.e(TAG, "The old encrypted store could not be opened; its contents are lost", e)
+            deleteLegacyStore()
             null
         }
+    }
+
+    /**
+     * Removes the old store's file, keysets included. `deleteSharedPreferences` is API 24+ and
+     * this module is minSdk 26.
+     */
+    private fun deleteLegacyStore() {
+        try {
+            context.deleteSharedPreferences(legacyName)
+        } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
+            Log.e(TAG, "Could not delete the old encrypted store", e)
+        }
+    }
+
+    companion object {
+        private const val TAG = "EncryptedPreferences"
+
+        /** The sealed store, under `noBackupFilesDir`. */
+        private const val STORE_FILE = "secure_prefs.bin"
 
         /**
-         * Removes the preferences file, keysets included.
-         *
-         * `deleteSharedPreferences` is API 24+ and this module is minSdk 26, so the older
-         * clear-and-hope path is not needed. A `clear()` on the open store would not do:
-         * the failure being recovered from is one where the store cannot be opened.
+         * The pre-SEC-5 `EncryptedSharedPreferences` file. It held both the encrypted entries and
+         * the Tink keysets wrapped by the master key, which is why deleting it removes it whole.
          */
-        private fun deleteStore(context: Context) {
-            try {
-                context.deleteSharedPreferences(STORE_NAME)
-            } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
-                // Deliberately broad: whatever goes wrong here, the next step is the same —
-                // try to open the store again, and hold it in memory if that fails too.
-                Log.e(TAG, "Could not delete the corrupt encrypted store", e)
-            }
-        }
+        private const val LEGACY_STORE_NAME = "encrypted_prefs"
 
         private const val KEY_ACCESS_TOKEN = "access_token"
         private const val KEY_REFRESH_TOKEN = "refresh_token"

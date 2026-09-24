@@ -325,7 +325,10 @@ dependencies {
     implementation("com.google.api-client:google-api-client-android:2.2.0")
     implementation("com.google.apis:google-api-services-calendar:v3-rev20220715-2.0.0")
 
-    // Encrypted SharedPreferences - Updated to stable
+    // Read-only since SEC-5: EncryptedPreferences now seals its own file with the Keystore key
+    // EncryptionManager holds, and uses this library once, to read the pre-SEC-5 store on the first
+    // launch of that build. Remove it together with EncryptedPreferences.readLegacyStore once no
+    // older install can remain — never bump it to write with it again.
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
 
     // Gson for JSON - Updated to latest

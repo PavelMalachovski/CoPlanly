@@ -2,6 +2,7 @@ package com.coparently.app.e2e
 
 import android.content.Context
 import android.content.ContextWrapper
+import android.content.SharedPreferences
 import androidx.room.Room
 import com.coparently.app.data.chat.ChatAttachmentOutbox
 import com.coparently.app.data.documents.FamilyDocumentIndex
@@ -29,6 +30,7 @@ import com.coparently.app.data.repository.MessageRepositoryImpl
 import com.coparently.app.data.repository.PairingRepositoryImpl
 import com.coparently.app.data.repository.PostPairingConversationSetup
 import com.coparently.app.data.repository.UserRepositoryImpl
+import com.coparently.app.data.security.EncryptionManager
 import com.coparently.app.data.sync.SyncRequester
 import com.coparently.app.data.versions.EventVersionRecorder
 import com.coparently.app.domain.activity.ActivityAnnouncer
@@ -163,7 +165,12 @@ class EmulatorParent private constructor(
         userDao = database.userDao(),
         firebaseAuthService = authService,
         firestoreUserDataSource = userDataSource,
-        encryptedPreferences = EncryptedPreferences(context)
+        // A store of this phone's own: two instances over one file would each keep their own map
+        // and overwrite each other's writes (SEC-5's store is a sealed snapshot, not a shared file).
+        encryptedPreferences = EncryptedPreferences(
+            context = fileContext,
+            encryptionManager = EncryptionManager(context)
+        )
     )
 
     val pairingRepository = PairingRepositoryImpl(
@@ -226,11 +233,20 @@ class EmulatorParent private constructor(
         }
     }
 
-    /** [base] with `files` and `cache` directories of this phone's own. */
+    /**
+     * [base] with `files`, `cache` and `no_backup` directories, and preference names, of this
+     * phone's own — so neither phone reads, writes or deletes the app's real stores.
+     */
     private class PhoneDirectories(base: Context, phone: String) : ContextWrapper(base) {
-        private val root = File(base.cacheDir, "e2e-phones/$phone-${UUID.randomUUID()}")
+        private val id = "$phone-${UUID.randomUUID()}"
+        private val root = File(base.cacheDir, "e2e-phones/$id")
         override fun getFilesDir(): File = File(root, "files").apply { mkdirs() }
         override fun getCacheDir(): File = File(root, "cache").apply { mkdirs() }
+        override fun getNoBackupFilesDir(): File = File(root, "no_backup").apply { mkdirs() }
+        override fun getSharedPreferences(name: String?, mode: Int): SharedPreferences =
+            super.getSharedPreferences("e2e-$id-$name", mode)
+        override fun deleteSharedPreferences(name: String?): Boolean =
+            super.deleteSharedPreferences("e2e-$id-$name")
         override fun getApplicationContext(): Context = this
     }
 
