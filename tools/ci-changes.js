@@ -5,9 +5,10 @@
  *
  *   git diff --name-only "$BASE_SHA"...HEAD | node tools/ci-changes.js >> "$GITHUB_OUTPUT"
  *
- * It prints six `key=value` lines: `android`, `e2e`, `screenshots`, `upgrade`, `matrix` (the
- * emulator legs as a JSON array for the `instrumented` job's `strategy.matrix.include`) and
- * `r8runtime` (the minified build run on an emulator, `r8-runtime`). With `--all` it
+ * It prints seven `key=value` lines: `android`, `e2e`, `screenshots`, `upgrade`, `matrix` (the
+ * emulator legs as a JSON array for the `instrumented` job's `strategy.matrix.include`),
+ * `r8runtime` (the minified build run on an emulator, `r8-runtime`) and `web` (the verification
+ * page in a browser and the calendar feed through an RFC 5545 parser, `web`). With `--all` it
  * prints the answer for "run everything", which is what a push to `main`, a manual run, or a diff
  * that could not be computed gets.
  *
@@ -19,10 +20,10 @@
 'use strict';
 
 /** Paths that never need an Android build: docs, the server side, the rules and their tests. */
-const NON_ANDROID = /^(docs\/|functions\/|firestore-tests\/|\.cursor\/|[^/]*\.md$|.*\.rules(\.simple)?$|firestore\.indexes\.json$|firebase\.json$|\.gitignore$|LICENSE$)/;
+const NON_ANDROID = /^(docs\/|functions\/|firestore-tests\/|web-tests\/|\.cursor\/|[^/]*\.md$|.*\.rules(\.simple)?$|firestore\.indexes\.json$|firebase\.json$|\.gitignore$|LICENSE$)/;
 
 /** Paths the two-parent e2e job can never be affected by. */
-const NON_E2E = /^(docs\/|\.cursor\/|[^/]*\.md$|\.gitignore$|LICENSE$)/;
+const NON_E2E = /^(docs\/|web-tests\/|\.cursor\/|[^/]*\.md$|\.gitignore$|LICENSE$)/;
 
 /**
  * Android paths that are UI only, so the e2e job — the data layer against the real backend —
@@ -65,7 +66,7 @@ const UPGRADE_INPUTS = /^(app\/src\/main\/java\/com\/coparently\/app\/(data\/loc
  * `app/src/main/java/` as a whole is here because what reaches the stored data lives in the
  * directories [UPGRADE_INPUTS] names; a new package that stores something belongs there.
  */
-const UPGRADE_UNAFFECTED = /^(docs\/|functions\/|firestore-tests\/|web\/|\.cursor\/|[^/]*\.md$|.*\.rules(\.simple)?$|firestore\.indexes\.json$|firebase\.json$|\.gitignore$|LICENSE$|app\/src\/main\/java\/|app\/src\/main\/res\/|app\/src\/test\/|app\/src\/androidTest\/|app\/src\/debug\/|tools\/(test\/|e2e\/|(check-e2e-coverage|check-invariants|check-r8-mapping|ci-changes|ci-report|manual-test-plan|mocha-ci-reporter|screenshot-gallery|wrap-legal-page)\.js$|generate-[^/]+\.py$|with-screen-recording\.sh$))/;
+const UPGRADE_UNAFFECTED = /^(docs\/|functions\/|firestore-tests\/|web\/|web-tests\/|\.cursor\/|[^/]*\.md$|.*\.rules(\.simple)?$|firestore\.indexes\.json$|firebase\.json$|\.gitignore$|LICENSE$|app\/src\/main\/java\/|app\/src\/main\/res\/|app\/src\/test\/|app\/src\/androidTest\/|app\/src\/debug\/|tools\/(test\/|e2e\/|(check-e2e-coverage|check-invariants|check-r8-mapping|ci-changes|ci-report|manual-test-plan|mocha-ci-reporter|screenshot-gallery|wrap-legal-page)\.js$|generate-[^/]+\.py$|with-screen-recording\.sh$))/;
 
 /**
  * Android paths the R8 runtime probe (`r8-runtime` job) cannot be affected by: nothing in them is
@@ -77,6 +78,16 @@ const UPGRADE_UNAFFECTED = /^(docs\/|functions\/|firestore-tests\/|web\/|\.curso
  * and on `main` by the job itself.
  */
 const NON_R8_RUNTIME = /^(app\/src\/main\/res\/|app\/src\/test\/|app\/src\/androidTest\/|app\/src\/debug\/|app\/schemas\/|app\/config\/detekt\/|app\/src\/main\/java\/com\/coparently\/app\/presentation\/(?!event\/)|tools\/(e2e\/|screenshot-gallery\.js$|ci-report\.js$|manual-test-plan\.js$|mocha-ci-reporter\.js$|wrap-legal-page\.js$|check-e2e-coverage\.js$|with-screen-recording\.sh$))/;
+
+/**
+ * Paths the `web` job (web-tests/: `web/verify/` in Chromium against the Functions emulator, and
+ * the calendar feed through an independent RFC 5545 parser) is known not to depend on: docs, and
+ * the Android app and its build. Everything else runs it — `web/`, `web-tests/`, `functions/`
+ * (the callables and `calendar-feed.js` it exercises), `firebase.json` (the emulator ports),
+ * `firestore-tests/` (whose lock file pins the Firebase CLI it starts the emulators with), the
+ * workflow, and any path this file does not know.
+ */
+const NON_WEB = /^(docs\/|\.cursor\/|[^/]*\.md$|\.gitignore$|LICENSE$|app\/|build\.gradle\.kts$|settings\.gradle\.kts$|gradle\.properties$|gradle\/|gradlew(\.bat)?$)/;
 
 /**
  * The emulator legs. API 30 always runs when Android does; the other two by the rule above.
@@ -104,7 +115,7 @@ const FULL_MATRIX = [LEG_26, LEG_30, LEG_16KB];
 
 /** The answer for "run everything". */
 function everything() {
-  return { android: true, e2e: true, screenshots: true, upgrade: true, matrix: FULL_MATRIX, r8runtime: true };
+  return { android: true, e2e: true, screenshots: true, upgrade: true, matrix: FULL_MATRIX, r8runtime: true, web: true };
 }
 
 /**
@@ -122,7 +133,8 @@ function decide(paths) {
   const fullMatrix = build || changed.some((p) => EMULATOR_SENSITIVE.test(p));
   const upgrade = build || changed.some((p) => UPGRADE_INPUTS.test(p) || !UPGRADE_UNAFFECTED.test(p));
   const r8runtime = build || changed.some((p) => !NON_ANDROID.test(p) && !NON_R8_RUNTIME.test(p));
-  return { android, e2e, screenshots, upgrade, matrix: fullMatrix ? FULL_MATRIX : [LEG_30], r8runtime };
+  const web = changed.some((p) => !NON_WEB.test(p));
+  return { android, e2e, screenshots, upgrade, matrix: fullMatrix ? FULL_MATRIX : [LEG_30], r8runtime, web };
 }
 
 /** The `$GITHUB_OUTPUT` lines for a decision. */
@@ -134,6 +146,7 @@ function format(decision) {
     `upgrade=${decision.upgrade}`,
     `matrix=${JSON.stringify(decision.matrix)}`,
     `r8runtime=${decision.r8runtime}`,
+    `web=${decision.web}`,
   ].join('\n') + '\n';
 }
 
@@ -148,7 +161,7 @@ if (require.main === module) {
     process.stderr.write(
       `android=${decision.android} e2e=${decision.e2e} screenshots=${decision.screenshots} ` +
         `upgrade=${decision.upgrade} ` +
-        `emulators=[${legs}] r8runtime=${decision.r8runtime}\n`,
+        `emulators=[${legs}] r8runtime=${decision.r8runtime} web=${decision.web}\n`,
     );
   }
 }

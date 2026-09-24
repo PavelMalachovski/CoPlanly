@@ -22,8 +22,9 @@
     `functions/export-receipts.js` and docs/DESIGN-court-record.md §10 say why.
   - Every value from the server is written with `textContent`, never as HTML.
 
-  See web/README.md for hosting. FUNCTIONS_BASE below is the one thing to change if the project
-  or the functions' region ever does.
+  See web/README.md for hosting. PRODUCTION_FUNCTIONS_BASE below is the one thing to change if
+  the project or the functions' region ever does. web-tests/ drives this page in Chromium against
+  the Functions emulator, through a `?functions=` hook honoured only on a loopback address.
 -->
 <style>
   :root {
@@ -164,7 +165,31 @@
 
 // Where the Cloud Functions live: https://<region>-<project>.cloudfunctions.net. The functions
 // are deployed without a region, which is us-central1. Change only if the project or region does.
-const FUNCTIONS_BASE = 'https://us-central1-coparently-a39c9.cloudfunctions.net';
+const PRODUCTION_FUNCTIONS_BASE = 'https://us-central1-coparently-a39c9.cloudfunctions.net';
+
+/**
+ * The production base, except in one case that cannot happen on a hosted page: the page itself
+ * is served from this machine's loopback address **and** a `?functions=` parameter names a
+ * loopback address too. That is how web-tests/ points the page at the Functions emulator
+ * (`?functions=http://127.0.0.1:5001/demo-coplanly/us-central1`). A page served from any real
+ * host ignores the parameter, and so does a loopback page asked to talk to anything that is not
+ * loopback, so no link can send a verifier's fingerprint somewhere else.
+ */
+const FUNCTIONS_BASE = (() => {
+  const loopback = /^(localhost|127\.0\.0\.1|\[::1\])$/;
+  if (!loopback.test(location.hostname)) return PRODUCTION_FUNCTIONS_BASE;
+  const override = new URLSearchParams(location.search).get('functions');
+  if (!override) return PRODUCTION_FUNCTIONS_BASE;
+  try {
+    const url = new URL(override);
+    if ((url.protocol === 'http:' || url.protocol === 'https:') && loopback.test(url.hostname)) {
+      return url.href.replace(/\/+$/, '');
+    }
+  } catch (e) {
+    // Not a URL: fall through to production, as for any other parameter.
+  }
+  return PRODUCTION_FUNCTIONS_BASE;
+})();
 
 const TEXT = {
   en: {

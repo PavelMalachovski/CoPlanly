@@ -61,8 +61,9 @@ TalkBack, AppCompat's per-app locale switching, or a screen assembled from real 
 checks stay. A check marked **(screenshots)** only needs a glance on the phone, or none.
 
 **What CI now covers.** The `instrumented` job (API 26/30/35 emulators, debug build, Firebase mocked by
-`FakeFirebaseModule`, Room real) runs these on every Android pull request, and the `r8-runtime` job
-(the minified `r8Test` build, API 30) runs the last row. A check they cover is
+`FakeFirebaseModule`, Room real) runs these on every Android pull request, the `r8-runtime` job
+(the minified `r8Test` build, API 30) runs the `R8GsonProbe` row, and the `web` job (no Android
+at all: Chromium and Node against the Functions emulator) runs the `web-tests/` row. A check they cover is
 marked **[CI]** below: CI saw the mechanism work, so on the phone it is a quick confirmation, and
 a failure there points at something the emulator does not have — real Firebase, real data, a
 Play install, a vendor skin.
@@ -76,6 +77,7 @@ Play install, a vendor skin.
 | `presentation/navigation/MainNavigationSmokeTest` | A signed-in launch visiting Home, Calendar (month/week/day), Chat, Expenses and Settings without a crash; bottom bar on the tabs only; icon-only controls named and ≥ 48 dp | Everything that needs data, a co-parent or a server; TalkBack itself (§3.9) |
 | `upgrade/UpgradeSeedTest` → `adb install -r` → `upgrade/UpgradeVerifyTest` (the **`upgrade` job**, API 30, not `instrumented`) | §2.1 and §3.9's SEC-5 box for **one release step**: the base build (the PR's base commit, or the previous `main`) writes a family's rows into eight tables through its own SQLCipher open path, plus a refresh token, settings and the telemetry answer into the sealed store; this build is installed over it keeping the data, and must open the database with the **recovered** passphrase (the wrapped value unchanged), run every migration to the newest exported schema, read every row back (six tables also through its own DAOs), leave the file ciphertext, and keep the preferences and the consent answer | An upgrade from a build older than the base (a longer migration chain), the plaintext → encrypted conversion of an install that predates SEC-2, a hardware-backed Keystore, a reboot between launches, and a real family's volume of data |
 | `app/src/r8Test/.../R8GsonProbe` — not an `androidTest`: the **`r8-runtime`** job runs it inside the *minified* `r8Test` build (`release` plus the probe) on API 30 | §4.1's Gson half: a child's medical profile (blood type, intolerances, hereditary conditions, a dated vaccination), medications, activities, emergency contacts and school, and a pet, written through the real repositories into Room with the source key names and read back equal; custody swaps, the event draft, the chat and revision `TypeToken`s, and the Google Calendar `@Key` models parsed | The Firestore document itself (the probe never signs in), the co-parent's phone reading it, a real Google Calendar import, and the telemetry check — a signed release build with a real `google-services.json` |
+| `web-tests/verify-page.spec.js`, `calendar-feed.spec.js` — not an `androidTest`: the **`web`** job runs them with Playwright and Node against the Auth, Firestore and Functions emulators | §6's **verification page** in Chromium: receipts reserved and registered through the real callables, then the exported file (a match, with registered time, period, format and size), a copy with one byte changed (no match), the file against another record ID, the ID typed as people retype it, an unknown ID and a mere reservation (not found), a rate limit, a hostile server value shown as text; English and Czech, following the browser and switched by hand; 375 px wide with nothing scrolling sideways; only the fingerprint leaves the browser, and no uid, family id, e-mail or name is on the page or in the answer. The **calendar feed** (§3.11 and §3.13's feed boxes) through Mozilla's `ical.js` plus an octet-level RFC 5545 check — CRLF, 75-octet folding never inside a UTF-8 character, TEXT escaping, UID/DTSTAMP/DTSTART on every event, DTEND after DTSTART, UNTIL matching a floating DTSTART, unique and stable UIDs, every title round-tripping — for `buildFeed` in all five languages and for the real `calendarFeed` endpoint behind a link `createCalendarFeed` minted | The page **hosted** over https at its real address, and `EXPORT_VERIFY_URL` printed on a file; a file that travelled (e-mail, Drive, a USB stick) checked on a real computer in Safari or Firefox; a real calendar app (Apple Calendar on an iPhone, Google Calendar) subscribing to the link, refreshing, and drawing it |
 
 **What the `e2e` job covers between two parents.** Two accounts in one emulator, each with the
 production data layer, against the Auth, Firestore, Functions and Storage emulators and the real
@@ -624,7 +626,8 @@ base pattern; schema 38 (the Regenerate workflow must have exported `38.json` fo
       the newer phone (the rules allow the older build to drop the key; the mirror keeps its
       copy). No one-phone fallback: `custody-models.test.js` "seasonal layers" is the substitute.
 - [ ] **Calendar feed (MON-17), if deployed:** an iPhone subscribed to the feed shows the layer's
-      custody bars on its dates after the next refresh.
+      custody bars on its dates after the next refresh. **[CI]** the `web` job parses the feed —
+      layer, swap and contact windows included — as a calendar app would; what is left is the app.
 - **If it fails:** tag `SeasonalScheduleVM` / `CustodyModelRepo`; `presentation/custody/Seasonal*`,
   `HolidayFairnessCard.kt`, `domain/custody/SeasonalLayer.kt`, `HolidayFairness.kt`,
   `firestore.rules` `seasonalLayersKeptOrDropped`.
@@ -719,7 +722,8 @@ family's proposal can carry an override.
       schedule on the newer phone (the key is dropped, the mirror keeps its copy). No one-phone
       fallback: `custody-models.test.js` "per-child overrides (FAM-4)" is the substitute.
 - [ ] **Calendar feed (MON-17), if deployed:** the subscribed calendar still shows the **family**
-      schedule only — no per-child bars.
+      schedule only — no per-child bars. **[CI]** for the feed's validity (the `web` job); the
+      absence of per-child bars is `functions/test/calendar-feed.test.js`'s.
 - **If it fails:** tag `CustodySetupViewModel` / `CustodyModelRepo`; `presentation/custody/Child*`,
   `presentation/calendar/ChildCustodyBand.kt`, `presentation/home/ChildrenToday*.kt`,
   `domain/custody/ChildScheduleOverride.kt`, `ChildCustody.kt`, `firestore.rules`
@@ -999,7 +1003,16 @@ Preconditions:
       the entry inside the range under your **name**, and shows **Last edited** for the edited one.
 - [ ] The **share sheet** opens from both, and sending to e-mail or Drive delivers a file that
       opens.
-- **If it fails:** read the PR's own description for the file and tag names.
+- [ ] **Verification page (MON-16), once hosted · [CI]:** the `web` job already drives
+      `web/verify/` in Chromium against the emulator — match, one-byte change, wrong ID, unknown ID,
+      both languages, 375 px, nothing identifying on the page (see "What CI now covers"). Still
+      yours: on a **computer**, open the hosted page over **https** (it refuses to fingerprint over
+      plain http), choose the PDF **as it arrived by e-mail** — not a copy re-saved from a viewer —
+      and see **Match** with the registration time and the period you exported; open the PDF in a
+      viewer, print it to PDF again, and check the re-printed file: **No match**. Type the record ID
+      printed in the PDF footer: **Registered**. Once in Safari or Firefox as well as Chrome.
+- **If it fails:** read the PR's own description for the file and tag names; for the page,
+  `web/verify/index.html` and `functions/export-receipts.js`.
 
 ---
 

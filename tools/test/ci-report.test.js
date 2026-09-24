@@ -70,6 +70,7 @@ test('suite labels', () => {
   assert.equal(report.suiteLabel('junit-instrumented-api35-google_apis_ps16k'),
       'Instrumented, API 35 (google_apis_ps16k)');
   assert.equal(report.suiteLabel('junit-upgrade'), 'Upgrade over the base build');
+  assert.equal(report.suiteLabel('junit-web'), 'Web (verify page, calendar feed)');
 });
 
 test('collect reads junit-* and coverage-report directories', () => {
@@ -160,4 +161,28 @@ test('render: a matching verify run and a record fallback say which one they wer
       /All 113 screenshots match their committed baselines/);
   assert.match(report.render({screenshots: {mode: 'record', total: 113, changed: [], added: []}}),
       /compared nothing/);
+});
+
+test('Playwright\'s JUnit (the web job) is counted like the others', () => {
+  const xml = [
+    '<testsuites id="" name="" tests="3" failures="1" skipped="1" errors="0" time="1.2">',
+    '<testsuite name="verify-page.spec.js" tests="3" failures="1" skipped="1" time="1.2" errors="0">',
+    '<testcase name="against the Functions emulator › one changed byte is no match" classname="verify-page.spec.js" time="0.2">',
+    '<failure message="verify-page.spec.js:231:3 one changed byte is no match" type="FAILURE">',
+    '<![CDATA[  Error: expect(locator).toHaveText(expected) failed',
+    ']]></failure>',
+    '</testcase>',
+    '<testcase name="in Czech › follows the browser language" classname="verify-page.spec.js" time="0">',
+    '<skipped/>',
+    '</testcase>',
+    '<testcase name="a rate limit reads as one" classname="verify-page.spec.js" time="0.1">',
+    '</testcase>',
+    '</testsuite>',
+    '</testsuites>',
+  ].join('\n');
+  const r = report.parseJUnit(xml);
+  assert.equal(r.tests, 3);
+  assert.equal(r.failed, 1);
+  assert.equal(r.skipped, 1);
+  assert.equal(r.failures[0].name, 'verify-page.spec.js > against the Functions emulator › one changed byte is no match');
 });

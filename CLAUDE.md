@@ -216,6 +216,8 @@ crash with "migration from 3 to 9 required but not found".
 ```bash
 cd functions && npm test && npm run lint    # Cloud Functions (mocha + eslint)
 cd firestore-tests && npm test              # firestore.rules + storage.rules on the emulators
+cd web-tests && npm test                    # web/verify/ in Chromium + the calendar feed as RFC 5545,
+                                            # on the emulators (npm ci in functions/ and firestore-tests/ first)
 tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Functions emulators;
                                             # needs a running Android emulator (see the e2e job)
 ```
@@ -236,15 +238,15 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   degrades gracefully if it is missing (see the conditional apply in `app/build.gradle.kts`).
 - **GitHub CI runs on every pull request, and on every push to `main`** — a push to a
   feature branch with no PR open is not built (`.github/workflows/ci.yml`, added
-  August 2026 — this line used to say there was none). Thirteen jobs that test (this line used to
-  say eleven, before `upgrade` and `r8-runtime`; ten before detekt left the lint job; eight before `screenshots`
+  August 2026 — this line used to say there was none). Fourteen jobs that test (this line used to
+  say thirteen, before `web`; eleven before `upgrade` and `r8-runtime`; ten before detekt left the lint job; eight before `screenshots`
   and `e2e`; seven before `instrumented`), plus `report`, which only reads them (below): `changes` (a cheap gate,
   below), four Android ones — `build-test` (`assembleDebug` + `testDebugUnitTest` in a
   single invocation), `static` (`lint` alone — the id is kept), `detekt` (its own job since
   September 2026: the two ran in sequence, lint 5:15 then detekt 0:52), `release` (`assembleRelease`, where
   R8 runs, and where `node tools/check-r8-mapping.js` then reads R8's own `mapping.txt` and
-  fails if a field a keep rule names came out renamed) — plus Cloud Functions, the Firestore
-  rules suite against the emulator, and `invariants` (`node tools/check-invariants.js`, no
+  fails if a field a keep rule names came out renamed) — plus Cloud Functions, `web` (below), the
+  Firestore rules suite against the emulator, and `invariants` (`node tools/check-invariants.js`, no
   dependencies and no Android SDK: locale completeness, format-argument agreement across the
   five locales, the four-way push-type agreement item 15 states, and the rule that every type
   Gson reflects over is covered by a `-keepclassmembers ... { <fields>; }` rule *and* has a case
@@ -476,6 +478,36 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   far as `toFirestoreMap()`'s medical profile is the same Gson call as the Room column it checks.
   And it is gated on `changes`' `r8runtime` (Android changes outside screens, resources and tests,
   plus the build, rules, workflow and the probe); `main` always runs it.
+- **The `web` job tests what a court and an iPhone see** ("Web — verification page and calendar
+  feed", September 2026; check run "Web — verify page and ICS", artefact `junit-web`). `web-tests/`
+  is its own small package (Playwright and Mozilla's `ical.js`), deliberately **not** under `web/`,
+  which `firebase.json` hosts whole, and not in `functions/`, whose dependencies ship.
+  `web-tests/run-with-emulators.sh` starts Auth, Firestore and Functions with `firebase
+  emulators:exec` from `firestore-tests/`' pinned CLI (JDK 21 through `FIREBASE_JAVA_HOME`, as the
+  `e2e` job does, but no Android emulator) and runs one Playwright suite with a JUnit reporter.
+  `verify-page.spec.js` serves `web/` from loopback and drives `web/verify/` in Chromium: receipts
+  reserved and registered through the real callables in the order `ExportViewModel` uses, then the
+  exported file (match, with time, period, format, size), a one-byte-tampered copy (no match), the
+  file against another record ID, the ID as people retype it, an unknown ID and a bare reservation
+  (not found), Czech and English, 375 px with no sideways scroll, and — on every answer — no uid,
+  `familyId`, e-mail or name on the page or in the response, and nothing but the fingerprint in the
+  request. `calendar-feed.spec.js` validates `.ics` as a client would, not as `calendar-feed.js`
+  intends: `buildFeed` in all five languages and the real `calendarFeed` endpoint behind a link
+  `createCalendarFeed` minted, through `ical.js` plus our own octet-level RFC 5545 check (CRLF,
+  75-octet folds never inside a UTF-8 character, TEXT escaping, required properties, DTEND after
+  DTSTART, UNTIL floating like its DTSTART, UIDs unique and stable, titles round-tripping), and a
+  test that breaks each rule once so a pass means something. Four things not to undo. **The page
+  reaches the emulator only through `?functions=`, which it honours only when it is itself served
+  from a loopback address and the value names one too** — a hosted copy ignores it (a test serves
+  the file under an https origin to prove it), so no link can redirect a verifier's fingerprint;
+  don't widen it to "any origin" or read it from anywhere else. **Every test blocks
+  `*.cloudfunctions.net` at the browser**, so nothing reaches production.
+  **`COPLANLY_REQUIRE_EMULATORS=1`** (CI) fails an emulator test that would otherwise skip — the job
+  cannot pass by running only the stubbed half. And **one worker, no retries**: `verifyExport`
+  allows 30 lookups per address per ten minutes per instance, and the suite makes about ten. Gated
+  on `changes`' `web` (everything but docs and the Android app and its build). Behind a proxy that
+  ignores `NO_PROXY` for loopback the Functions emulator cannot register its Firestore triggers
+  ("Unable to parse JSON") — unset the proxy variables for the run; nothing in it needs the network.
 - **The `screenshots` job is how UI is reviewed without a phone** (September 2026). Roborazzi on
   Robolectric's native graphics renders the tests in `app/src/test/java/com/coparently/app/
   screenshots/` — Home's cards, the month grid with every `DayCellFills` layer, the calendar
@@ -512,7 +544,7 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   `ScreenshotFixtures`) so an image does not change with the calendar — keep it that way, or the
   suite can never move to verify.
 - **A pull request runs only the jobs its diff can affect** (September 2026). The `changes` job
-  pipes `git diff --name-only` into `tools/ci-changes.js`, which decides five outputs and is tested
+  pipes `git diff --name-only` into `tools/ci-changes.js`, which decides seven outputs and is tested
   by `tools/test/ci-changes.test.js` in `invariants`: docs/functions/rules only → no Android job;
   a screen-only change (`presentation/` outside `common/`, `res/`, `app/src/test/`) → no e2e
   (`common/` stays in because the e2e parents construct `ParentsSource`); nothing the screenshots
@@ -521,7 +553,9 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   `src/debug/`, the emulator script — or the build; and the `upgrade` job runs when the diff reaches
   what stored data depends on (`data/local/`, `data/security/`, `di/DatabaseModule.kt`, the
   telemetry answer's form, `app/schemas/`, the manifest, its own tests and scripts), the build, or
-  any path the script does not know. A push to `main` always runs everything, which
+  any path the script does not know; and the `web` job runs on anything but docs and the Android
+  app and its build — `web/`, `web-tests/`, `functions/`, `firebase.json`, `firestore-tests/`' lock
+  file, the workflow, or an unfamiliar path. A push to `main` always runs everything, which
   is the backstop for the legs a PR skipped; lint's NewApi check is the per-PR guard for a
   newer-API call. Three things not to get wrong. Every skip list is deliberately narrow — a path
   wrongly *on* one silently stops testing real changes, which is far worse than a path wrongly off
@@ -560,7 +594,8 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
 - **A CI result is meant to be read without opening a log** (September 2026). Three layers:
   - **Check runs.** Each test job publishes its JUnit XML through
     `mikepenz/action-junit-report@v6` as its own check run — "Unit tests (JVM)", "Instrumented
-    tests (API n)", "Cloud Functions tests", "Firestore and Storage rules tests" — with failures
+    tests (API n)", "Cloud Functions tests", "Firestore and Storage rules tests", "Web — verify
+    page and ICS" (Playwright's own JUnit reporter) — with failures
     as annotations. Mocha writes JUnit through `tools/mocha-ci-reporter.js` (spec output *and*
     xunit, no dependency), enabled only in CI: `functions` passes `--reporter`, `firestore-tests`
     has a `test:ci` script. Plain `npm test` is unchanged. Those jobs carry

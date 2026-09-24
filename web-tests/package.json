@@ -1,0 +1,18 @@
+{
+  "name": "coplanly-web-tests",
+  "description": "Browser tests for web/verify/ and RFC 5545 validation of the calendar feed, against the Firebase emulators",
+  "version": "1.0.0",
+  "private": true,
+  "type": "commonjs",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "bash run-with-emulators.sh",
+    "test:only": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.56.1",
+    "ical.js": "^2.2.1"
+  }
+}

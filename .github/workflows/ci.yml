@@ -78,6 +78,9 @@ jobs:
       matrix: ${{ steps.filter.outputs.matrix }}
       # The `r8-runtime` job: Android changes that can reach Gson, R8's rules or the probe.
       r8runtime: ${{ steps.filter.outputs.r8runtime }}
+      # The `web` job: anything but docs and the Android app — web/, web-tests/, functions/,
+      # firebase.json, the Firebase CLI's lock file, the workflow, or a path the script does not know.
+      web: ${{ steps.filter.outputs.web }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -1347,6 +1350,111 @@ jobs:
           # A job that died before writing results must not publish a green check.
           require_tests: true
 
+  # `web/verify/` in a real browser, and the calendar feed as a calendar app reads it (web-tests/,
+  # September 2026). Playwright drives Chromium against the page served from a loopback address and
+  # pointed at the Functions emulator (the page's `?functions=` hook is honoured only there): receipts
+  # are reserved and registered through the real callables as an Auth-emulator account, then the page
+  # is asked about the exported file, a one-byte-tampered copy, the record ID, an unknown ID, in both
+  # of its languages and at 375 px — and must never show a uid, a family id or a name. The feed half
+  # parses every `.ics` — `buildFeed` in all five languages, and the real `calendarFeed` endpoint
+  # behind a link `createCalendarFeed` minted — with Mozilla's ical.js plus an octet-level RFC 5545
+  # check (CRLF, 75-octet folding outside UTF-8 sequences, TEXT escaping, required properties).
+  #
+  # The emulators are started the way the e2e job starts them (web-tests/run-with-emulators.sh:
+  # `firebase emulators:exec` from firestore-tests/' pinned CLI, JDK 21 through FIREBASE_JAVA_HOME),
+  # without an Android emulator, so this job takes minutes. COPLANLY_REQUIRE_EMULATORS makes an
+  # emulator test that would skip fail instead, so the job cannot turn green by running nothing.
+  web:
+    name: Web — verification page and calendar feed
+    needs: changes
+    if: needs.changes.outputs.web == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      checks: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21 (Firebase emulators)
+        id: jdk21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: temurin
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: |
+            functions/package-lock.json
+            firestore-tests/package-lock.json
+            web-tests/package-lock.json
+
+      # `functions/` is what the Functions emulator loads, `firestore-tests/` pins the Firebase CLI
+      # (one emulator build for the rules, e2e and web jobs), `web-tests/` is Playwright and ical.js.
+      - name: Install the Cloud Functions, the Firebase CLI and the web tests
+        run: |
+          npm ci --prefix functions
+          npm ci --prefix firestore-tests
+          npm ci --prefix web-tests
+
+      # Browsers are keyed on the lock file that pins Playwright, whose version names the build.
+      - name: Cache Playwright's Chromium
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ hashFiles('web-tests/package-lock.json') }}
+
+      - name: Install Chromium for Playwright
+        working-directory: web-tests
+        run: npx playwright install --with-deps chromium
+
+      # Restore only: the `rules` job saves this key, and two jobs saving it would race.
+      - name: Restore the Firebase emulators
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/firebase/emulators
+          key: firebase-emulators-${{ hashFiles('firestore-tests/package-lock.json') }}
+
+      - name: Verification page and calendar feed on the emulators
+        env:
+          FIREBASE_JAVA_HOME: ${{ steps.jdk21.outputs.path }}
+          COPLANLY_REQUIRE_EMULATORS: '1'
+          PLAYWRIGHT_JUNIT_OUTPUT_FILE: ${{ runner.temp }}/junit/web.xml
+        run: bash web-tests/run-with-emulators.sh
+
+      - name: Upload test results (JUnit XML)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-web
+          path: ${{ runner.temp }}/junit/web.xml
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Publish test check run
+        if: always()
+        uses: mikepenz/action-junit-report@v6
+        with:
+          check_name: Web — verify page and ICS
+          report_paths: ${{ runner.temp }}/junit/web.xml
+          detailed_summary: true
+          # A job that died before writing results must not publish a green check.
+          require_tests: true
+
+      # Playwright keeps a trace (DOM snapshots, network, console) of each failed test: open it
+      # with `npx playwright show-trace <zip>` or at trace.playwright.dev.
+      - name: Upload Playwright traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-traces
+          path: web-tests/test-results/
+          if-no-files-found: ignore
+          retention-days: 14
+
   rules:
     name: Firestore security rules
     runs-on: ubuntu-latest
@@ -1420,7 +1528,7 @@ jobs:
   # `main` there is no pull request: the summary goes to the run's job summary only.
   report:
     name: CI report
-    needs: [changes, build-test, static, detekt, release, r8-runtime, screenshots, instrumented, e2e, upgrade, invariants, functions, rules]
+    needs: [changes, build-test, static, detekt, release, r8-runtime, screenshots, instrumented, e2e, upgrade, invariants, functions, web, rules]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 10

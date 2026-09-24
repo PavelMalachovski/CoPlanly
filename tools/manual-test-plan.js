@@ -178,11 +178,11 @@ const RULES = [
   },
   {
     sections: ['6'],
-    why: 'export, or the private journal it can carry',
+    why: 'export, the private journal it can carry, or the page that verifies it',
     paths: ['K/presentation/export/**', 'K/domain/export/**', 'K/data/export/**',
       'K/data/versions/**', 'app/src/main/res/xml/file_paths.xml',
       'K/presentation/journal/**', 'K/domain/journal/**',
-      'app/src/main/res/values*/journal_strings.xml'],
+      'app/src/main/res/values*/journal_strings.xml', 'web/verify/**'],
   },
   {
     sections: ['7'],
@@ -194,7 +194,7 @@ const RULES = [
 /**
  * Paths whose change needs no phone at all. They are neither mapped nor reported as unmapped.
  */
-const NO_DEVICE = ['docs/**', '**/*.md', '.github/**', 'tools/**', 'firestore-tests/**',
+const NO_DEVICE = ['docs/**', '**/*.md', '.github/**', 'tools/**', 'firestore-tests/**', 'web-tests/**',
   'app/src/test/**', 'app/config/detekt/**', '.cursor/**', '.gitignore', 'LICENSE'];
 
 /**
