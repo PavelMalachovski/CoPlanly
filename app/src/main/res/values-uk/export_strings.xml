@@ -2,7 +2,7 @@
 <!-- Експорт запису спілкування (MON-3). Абзаци export_statement_* друкуються на кожному файлі. -->
 <resources>
     <string name="export_settings_title">Експорт запису</string>
-    <string name="export_settings_description">Повідомлення, історія календаря та витрати у PDF або CSV</string>
+    <string name="export_settings_description">Повідомлення, історія календаря, витрати та батьківський план у PDF або CSV</string>
     <string name="export_title">Експорт запису</string>
     <string name="export_back">Назад</string>
     <string name="export_intro">Створіть файл із тим, що ви та інший з батьків записали й написали одне одному в CoPlanly, — для адвоката, медіатора чи суду. Він створюється на цьому телефоні й потрапляє лише туди, куди ви його надішлете.</string>
@@ -13,7 +13,7 @@
     <string name="export_pick_cancel">Скасувати</string>
     <string name="export_what_it_says">Що файл повідомляє про себе</string>
     <string name="export_csv">Експорт у CSV</string>
-    <string name="export_csv_supporting">Таблиця: по рядку на кожну версію, повідомлення й витрату</string>
+    <string name="export_csv_supporting">Таблиця: по рядку на кожну версію, повідомлення, витрату й відповідь у плані</string>
     <string name="export_pdf">Експорт у PDF</string>
     <string name="export_pdf_supporting">Документ для друку формату A4</string>
     <string name="export_working">Підготовка…</string>

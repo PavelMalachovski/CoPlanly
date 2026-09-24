@@ -2,7 +2,7 @@
 <!-- Export des Kommunikationsprotokolls (MON-3). Die Absätze export_statement_* stehen auf jeder Datei. -->
 <resources>
     <string name="export_settings_title">Protokoll exportieren</string>
-    <string name="export_settings_description">Nachrichten, Kalenderverlauf und Ausgaben als PDF oder CSV</string>
+    <string name="export_settings_description">Nachrichten, Kalenderverlauf, Ausgaben und der Elternplan als PDF oder CSV</string>
     <string name="export_title">Protokoll exportieren</string>
     <string name="export_back">Zurück</string>
     <string name="export_intro">Erstellen Sie eine Datei mit dem, was Sie und der andere Elternteil in CoPlanly festgehalten und einander geschrieben haben — für eine Anwältin, einen Mediator oder ein Gericht. Sie entsteht auf diesem Telefon und geht nur dorthin, wohin Sie sie teilen.</string>
@@ -13,7 +13,7 @@
     <string name="export_pick_cancel">Abbrechen</string>
     <string name="export_what_it_says">Was die Datei über sich selbst sagt</string>
     <string name="export_csv">Als CSV exportieren</string>
-    <string name="export_csv_supporting">Eine Tabelle: eine Zeile pro Version, Nachricht und Ausgabe</string>
+    <string name="export_csv_supporting">Eine Tabelle: eine Zeile pro Version, Nachricht, Ausgabe und Antwort im Plan</string>
     <string name="export_pdf">Als PDF exportieren</string>
     <string name="export_pdf_supporting">Ein druckbares A4-Dokument</string>
     <string name="export_working">Wird vorbereitet…</string>

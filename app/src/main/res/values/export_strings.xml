@@ -8,7 +8,7 @@
 -->
 <resources>
     <string name="export_settings_title">Export the record</string>
-    <string name="export_settings_description">Messages, calendar history and expenses, as PDF or CSV</string>
+    <string name="export_settings_description">Messages, calendar history, expenses and the parenting plan, as PDF or CSV</string>
     <string name="export_title">Export the record</string>
     <string name="export_back">Back</string>
     <string name="export_intro">Make a file of what you and your co-parent recorded and wrote to each other in CoPlanly — for a lawyer, a mediator or a court. It is made on this phone and goes only where you share it.</string>
@@ -19,7 +19,7 @@
     <string name="export_pick_cancel">Cancel</string>
     <string name="export_what_it_says">What the file says about itself</string>
     <string name="export_csv">Export as CSV</string>
-    <string name="export_csv_supporting">A spreadsheet: one row per revision, message and expense</string>
+    <string name="export_csv_supporting">A spreadsheet: one row per revision, message, expense and plan answer</string>
     <string name="export_pdf">Export as PDF</string>
     <string name="export_pdf_supporting">A printable A4 document</string>
     <string name="export_working">Preparing…</string>

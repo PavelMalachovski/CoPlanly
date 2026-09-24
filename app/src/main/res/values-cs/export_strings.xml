@@ -2,7 +2,7 @@
 <!-- Export záznamu komunikace (MON-3). Odstavce export_statement_* jsou vytištěny na každém souboru. -->
 <resources>
     <string name="export_settings_title">Export záznamu</string>
-    <string name="export_settings_description">Zprávy, historie kalendáře a výdaje jako PDF nebo CSV</string>
+    <string name="export_settings_description">Zprávy, historie kalendáře, výdaje a rodičovský plán jako PDF nebo CSV</string>
     <string name="export_title">Export záznamu</string>
     <string name="export_back">Zpět</string>
     <string name="export_intro">Vytvořte soubor s tím, co jste vy a druhý rodič v CoPlanly zaznamenali a napsali si — pro advokáta, mediátora nebo soud. Vzniká v tomto telefonu a dostane se jen tam, kam ho sami pošlete.</string>
@@ -13,7 +13,7 @@
     <string name="export_pick_cancel">Zrušit</string>
     <string name="export_what_it_says">Co soubor sám o sobě uvádí</string>
     <string name="export_csv">Exportovat jako CSV</string>
-    <string name="export_csv_supporting">Tabulka: jeden řádek na každou verzi, zprávu a výdaj</string>
+    <string name="export_csv_supporting">Tabulka: jeden řádek na každou verzi, zprávu, výdaj a odpověď v plánu</string>
     <string name="export_pdf">Exportovat jako PDF</string>
     <string name="export_pdf_supporting">Dokument k tisku ve formátu A4</string>
     <string name="export_working">Připravuje se…</string>
