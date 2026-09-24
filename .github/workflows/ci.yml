@@ -755,6 +755,9 @@ jobs:
     if: needs.changes.outputs.e2e == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 50
+    permissions:
+      contents: read
+      checks: write
     steps:
       - uses: actions/checkout@v4
 
@@ -847,7 +850,7 @@ jobs:
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           # Stops the emulator itself once the tests are done (tools/stop-emulator.sh), since a
           # snapshot boot is what the `instrumented` job's shutdown hang was seen on.
-          script: adb logcat -G 16M || true; bash tools/ci-background-build.sh wait && bash tools/e2e/run-two-parent-tests.sh; status=$?; echo "$status" > "$STATUS_FILE"; mkdir -p app/build/outputs && adb logcat -d -v time > app/build/outputs/e2e-logcat.txt 2>&1; echo "::group::logcat — E2E steps (timed), thread dumps, crashes"; grep -E "/E2E|AndroidRuntime" app/build/outputs/e2e-logcat.txt | tail -n 800; echo "::endgroup::"; bash tools/stop-emulator.sh; exit $status
+          script: adb logcat -G 16M || true; bash tools/ci-background-build.sh wait && bash tools/e2e/run-two-parent-tests.sh; status=$?; echo "$status" > "$STATUS_FILE"; mkdir -p app/build/outputs && adb logcat -d -v time > app/build/outputs/e2e-logcat.txt 2>&1; echo "::group::logcat — E2E steps (timed), failures, crashes"; grep -E "I/E2E|E/E2E.*FAILED|AndroidRuntime" app/build/outputs/e2e-logcat.txt | tail -n 400; echo "::endgroup::"; echo "::group::logcat — thread dumps of failed tests"; grep -E "E/E2E" app/build/outputs/e2e-logcat.txt | tail -n 800; echo "::endgroup::"; bash tools/stop-emulator.sh; exit $status
 
       - name: The two-parent tests finished and passed
         if: always()
@@ -887,6 +890,24 @@ jobs:
             echo "::error::A two-parent test was skipped — the emulator host argument did not arrive."
             exit 1
           fi
+
+      - name: Upload two-parent test results (JUnit XML)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-e2e
+          path: app/build/outputs/androidTest-results/connected/**/*.xml
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Publish two-parent test check run
+        if: always()
+        uses: mikepenz/action-junit-report@v6
+        with:
+          check_name: Two-parent tests (e2e)
+          report_paths: app/build/outputs/androidTest-results/connected/**/*.xml
+          detailed_summary: true
+          require_tests: true
 
       - name: Upload reports
         if: always()

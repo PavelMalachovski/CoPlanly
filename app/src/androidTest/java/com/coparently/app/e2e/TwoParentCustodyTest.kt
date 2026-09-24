@@ -196,9 +196,11 @@ class TwoParentCustodyTest : TwoParentTest() {
             PatternSubmission.PROPOSED,
             alice.custodyRepository.createWeekOnWeekOff(START, momFirst = false)
         )
-        val second = checkNotNull(
-            awaitShared(bob) { shared -> shared.proposal?.model?.id?.let { it != inForce.id } == true }.proposal
-        )
+        // A proposal has no id of its own — it reads back under the pair's document id, which the
+        // accepted pattern now carries too — so it is told apart by being pending at all: the
+        // first one was answered and cleared.
+        val second = checkNotNull(awaitShared(bob) { it.proposal?.proposedBy == alice.uid }.proposal)
+        assertEquals(CustodyModelType.WEEK_ON_WEEK_OFF, second.model.modelType)
         bob.custodyRepository.declineProposal().getOrThrow()
         EmulatorEnvironment.awaitQueuedPush(alice.uid, "custody_proposal_declined")
 
