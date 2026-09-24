@@ -51,7 +51,7 @@ import com.coparently.app.domain.expenses.SplitRatioProposal
 import com.coparently.app.domain.model.Expense
 import com.coparently.app.presentation.common.BannerTone
 import com.coparently.app.presentation.common.EmptyState
-import com.coparently.app.presentation.common.FamilyMemberChips
+import com.coparently.app.presentation.common.FamilyMemberFilterStrip
 import com.coparently.app.presentation.common.FamilySwitcherChip
 import com.coparently.app.presentation.common.InlineBanner
 import com.coparently.app.presentation.common.ListSkeleton
@@ -416,7 +416,7 @@ fun ExpenseScreen(
                                         // child sees the screen they always saw. Nothing selected is
                                         // the whole month, which is how a parent gets back out.
                                         item {
-                                            FamilyMemberChips(
+                                            FamilyMemberFilterStrip(
                                                 members = familyMembers,
                                                 selected = memberFilter,
                                                 onToggle = viewModel::toggleMemberFilter,

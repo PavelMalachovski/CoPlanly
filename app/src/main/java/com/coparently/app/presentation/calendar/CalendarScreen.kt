@@ -46,6 +46,7 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -70,7 +71,7 @@ import com.coparently.app.presentation.calendar.components.ChangeRequestBanner
 import com.coparently.app.presentation.calendar.components.CustodyChangedBanner
 import com.coparently.app.presentation.calendar.components.DaySwapSheet
 import com.coparently.app.presentation.calendar.components.EventTypeFilterSheet
-import com.coparently.app.presentation.common.FamilyMemberChips
+import com.coparently.app.presentation.common.FamilyMemberFilterStrip
 import com.coparently.app.presentation.common.PickerDates
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.common.rememberToday
@@ -260,6 +261,8 @@ fun CalendarScreen(
     val now = remember { YearMonth.now() }
 
     var showDatePicker by remember { mutableStateOf(false) }
+    // Whether the Day view on screen was opened by tapping a month cell, which Back undoes.
+    var dayOpenedFromMonth by rememberSaveable { mutableStateOf(false) }
     val datePickerState = rememberDatePickerState(
         // DatePickerState speaks UTC-midnight millis; PickerDates is the one conversion. Opens
         // on the selected day (or today), never on the 1st: "jump to a date" should start from
@@ -580,6 +583,19 @@ fun CalendarScreen(
     val proposalCitation by changeRequestViewModel.pendingProposalCitation.collectAsState()
     val proposerWaiting = pendingProposal != null && proposalAwaitingMe == null
 
+    // Back from a day opened by tapping a month cell returns to that month instead of leaving the
+    // tab (docs/AUDIT-2026-10-design.md D-11): the tap reads as drilling in, so Back has to read
+    // as coming back out. A Day view reached through the view picker keeps the default Back.
+    BackHandler(enabled = viewMode == CalendarViewMode.DAY && dayOpenedFromMonth) {
+        dayOpenedFromMonth = false
+        calendarViewModel.setViewMode(CalendarViewMode.MONTH)
+    }
+    // Leaving Day by any other route (the view picker, the date picker) ends the drill-down, so
+    // a Day view reached later through the picker keeps the default Back.
+    LaunchedEffect(viewMode) {
+        if (viewMode != CalendarViewMode.DAY) dayOpenedFromMonth = false
+    }
+
     Scaffold(
         topBar = {
             CalendarHeader(
@@ -786,7 +802,7 @@ fun CalendarScreen(
                     // they always saw. Placed with the banners rather than in the Filters sheet: the
                     // question "what does Anya's week look like" is asked at a glance, and the
                     // Expenses screen answers the same question the same way.
-                    FamilyMemberChips(
+                    FamilyMemberFilterStrip(
                         members = familyMembers,
                         selected = activeMemberFilter,
                         onToggle = { memberFilter = activeMemberFilter.toggling(it) },
@@ -895,6 +911,7 @@ fun CalendarScreen(
                                     // creating an event on a chosen day.
                                     onDayClick = { clickedDate ->
                                         calendarViewModel.setSelectedDate(clickedDate)
+                                        dayOpenedFromMonth = true
                                         calendarViewModel.setViewMode(CalendarViewMode.DAY)
                                     },
                                     // Paging is not choosing: the new month gets today if it

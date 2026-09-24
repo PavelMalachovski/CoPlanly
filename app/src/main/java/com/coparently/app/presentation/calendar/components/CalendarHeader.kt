@@ -40,6 +40,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.coparently.app.R
 import com.coparently.app.presentation.calendar.CalendarViewMode
+import com.coparently.app.presentation.common.rememberToday
 import com.coparently.app.presentation.theme.LayoutConstants
 import com.coparently.app.utils.LightDarkPreviews
 import com.coparently.app.utils.PreviewWrapper
@@ -122,12 +123,15 @@ private fun MonthTitle(
 ) {
     var menuOpen by remember { mutableStateOf(false) }
     val yearMonth = YearMonth.from(selectedDate)
-    val monthLabel = "${
-        yearMonth.month.getDisplayName(
-            java.time.format.TextStyle.FULL_STANDALONE,
-            java.util.Locale.getDefault()
-        ).replaceFirstChar { it.uppercase() }
-    } ${yearMonth.year}"
+    val monthName = yearMonth.month.getDisplayName(
+        java.time.format.TextStyle.FULL_STANDALONE,
+        java.util.Locale.getDefault()
+    ).replaceFirstChar { it.uppercase() }
+    // The year only when it is not this one, as calendar apps do: beside the Today and Filters
+    // pills "Сентябрь 2026" had no room and ended in an ellipsis (docs/AUDIT-2026-10-design.md
+    // D-3), while "Сентябрь" fits, and a month in another year still names its year.
+    val today by rememberToday()
+    val monthLabel = if (yearMonth.year == today.year) monthName else "$monthName ${yearMonth.year}"
 
     Box {
         Row(

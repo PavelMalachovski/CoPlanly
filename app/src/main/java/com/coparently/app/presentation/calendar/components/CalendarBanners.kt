@@ -100,17 +100,16 @@ fun ChangeRequestBanner(
                     pendingCount
                 ),
                 style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                color = MaterialTheme.colorScheme.onSurface
             )
+            // Neither line is capped: "2 change requests from your co-pare…" cut the one fact
+            // the banner exists for, in English at the default size (docs/AUDIT-2026-10-design.md
+            // D-3). A long message now costs the grid a line instead of its meaning.
             if (detail != null) {
                 Text(
                     text = detail,
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
