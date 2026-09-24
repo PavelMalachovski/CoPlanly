@@ -205,7 +205,6 @@
     <ID>MaximumLineLength:DatabaseMigrations.kt$DatabaseMigrations.&lt;no name provided&gt;$ </ID>
     <ID>MaximumLineLength:NavGraph.kt$ </ID>
     <ID>MaximumLineLength:SyncService.kt$SyncService$ </ID>
-    <ID>MemberNameEqualsClassName:EncryptedPreferences.kt$EncryptedPreferences$private val encryptedPreferences: SharedPreferences = createEncryptedStore(context)</ID>
     <ID>NestedBlockDepth:SyncService.kt$SyncService$private suspend fun syncEvents(userId: String): Int</ID>
     <ID>NoWildcardImports:ActivityEditor.kt$import androidx.compose.foundation.layout.*</ID>
     <ID>NoWildcardImports:ActivityEditor.kt$import androidx.compose.material3.*</ID>

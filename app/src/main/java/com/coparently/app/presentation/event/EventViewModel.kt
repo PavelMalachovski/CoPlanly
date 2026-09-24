@@ -483,7 +483,7 @@ class EventViewModel @Inject constructor(
                     endTime = endTime.toString()
                 )
                 val draftJson = gson.toJson(draft)
-                // EncryptedSharedPreferences does crypto on the calling thread; keep it off Main.
+                // EncryptedPreferences seals and writes on the calling thread; keep it off Main.
                 encryptedPreferences.putEventDraft(draftJson)
             } catch (e: Exception) {
                 // Silently fail - draft saving is not critical

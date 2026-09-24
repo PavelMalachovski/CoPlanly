@@ -108,7 +108,7 @@ invocation is yours.
 | Id | What | What has to be seen |
 | --- | --- | --- |
 | **SEC-1 §1** | Storage rules keyed on Firestore state (cross-service rules — the "this needs the proxy" claim was a factual error) | The **Storage emulator does not resolve cross-service calls**, so `firestore-tests/` cannot cover it. Settle the verification story — a staging bucket against a real project — before writing the rule. |
-| **SEC-5** | `androidx.security:security-crypto` is on an alpha holding OAuth tokens | A dependency bump compiles in CI; whether tokens survive it is a sign-in on a real device. |
+| **SEC-5 (built, unseen)** | `EncryptedPreferences` seals its own file with the Keystore key; the alpha `security-crypto` only reads the old store once | `EncryptedPreferencesMigrationTest` copies an old store on the emulators; only a phone upgraded over a previous build shows Calendar still connected (DEVICE-CHECKLIST, "SEC-5 upgrade"). |
 | **UX-8** | The second half: two surfaces colour a chip from two different sources | An owner's answer to "what does a chip's colour mean" — the event's owner, or whose day it falls on. |
 | **UX-13** | Light theme is no longer unverifiable: CI's `screenshots` job renders the main screens' pieces in light and dark on every Android PR (night window background and previews done before it) | Whether a dark cold start still flashes: only a device shows the window before Compose's first frame. |
 | **FAM-5** | The event chip does not say who it is about | Chips are single-line with ellipsis and every colour channel is spent. Worth an owner's eye on a real device rather than a treatment invented blind. |
@@ -123,7 +123,7 @@ invocation is yours.
 | **MON-14 (built, unseen)** | Seasonal layers over the base pattern, "Fill from school holidays", layer changes through the proposal flow | `DEVICE-CHECKLIST.md` §3.11: the grid on a layer's dates (no new colour), the proposal reaching the co-parent with "the seasonal schedules change too", and the mixed-version path. Needs `firebase deploy --only firestore:rules` for the `seasonalLayersKeptOrDropped` guard (without it the live rules refuse every proposal and swap write that carries the new key). |
 | **MON-20 (built, unseen)** | The holiday-fairness card | §3.11: nights add up to the year, names and colours are the parents' own, the year switch. |
 | **MON-21 (built, unseen)** | "Propose as the schedule" under an agreed custody or holiday answer, the quoted answer in the editor, and "From the parenting plan" / "changed since" on the co-parent's proposal card | `DEVICE-CHECKLIST.md` §3.12, two paired phones. The logic is unit-tested (`PlanScheduleLinkTest`, the ViewModel tests) and the rules offline (`custody-models.test.js`); only phones show the row, the quote, the auto-opened layer editor and the live "changed since". **Needs `firebase deploy --only firestore:rules` first** — until then the live rules' `hasOnly` lists refuse a proposal carrying `proposalPlanCitation`, and the repository falls back to a local save. |
-| **MON-23 (shipped, unseen)** | The document vault (Settings → Family → Documents) and chat attachments (the paperclip beside the composer) | Rules proved offline (`family-documents.test.js`, `storage-shared-files.test.js`), deletion and sweep in mocha, the Kotlin compiled by CI and seen by nobody. Two paired phones: A files a PDF and a camera photo, B sees both and opens them, B cannot delete A's; A sends an image and a PDF in chat, B sees the thumbnail and the chip and opens both; with A in flight mode the bubble says "Not uploaded yet" and never ticks, and delivers when the network returns. Offline, the vault shows the last server-confirmed list under "Can't reach the server — showing the list this phone saw last" (schema 43 cache), and the line goes once the server answers. `docs/DEVICE-CHECKLIST.md` §5.5. **Needs `firebase deploy --only storage` first** — until then every upload is refused. |
+| **MON-23 (shipped, unseen)** | The document vault (Settings → Family → Documents) and chat attachments (the paperclip beside the composer) | Rules proved offline (`family-documents.test.js`, `storage-shared-files.test.js`), deletion and sweep in mocha, and since PR #103 the client and the rules together on the Storage emulator (`TwoParentAttachmentsTest`: upload-before-message, the co-parent's verified download, a stranger refused, no delete for the co-parent, a tombstone for the uploader) — the screens seen by nobody. Two paired phones: A files a PDF and a camera photo, B sees both and opens them, B cannot delete A's; A sends an image and a PDF in chat, B sees the thumbnail and the chip and opens both; with A in flight mode the bubble says "Not uploaded yet" and never ticks, and delivers when the network returns. Offline, the vault shows the last server-confirmed list under "Can't reach the server — showing the list this phone saw last" (schema 43 cache), and the line goes once the server answers. `docs/DEVICE-CHECKLIST.md` §5.5. **Needs `firebase deploy --only storage` first** — until then every upload is refused. |
 | **MON-18 (shipped, unseen)** | Professional access: invite, the co-parent's consent, the professional's read-only calendar and plan, revoke | The rules and the callable are proved offline (emulator suite, mocha); the Kotlin is compiled by CI and seen by nobody. Three accounts (A, B, a professional P): A invites, P redeems, P sees "waiting"; B consents from Settings → Family → Professionals; P reads the calendar and plan and nothing else; either parent revokes and P's views empty at once. `docs/DEVICE-CHECKLIST.md` §5.4. Needs the functions **and** rules deploy first. |
 
 ### 💻 Yours only — no session can do these
@@ -631,12 +631,20 @@ Open, in the order they matter:
 - [ ] Messages accept any `timestamp`; a bound would break the offline outbox, so a back-dated
       message stays possible. Bound it server-side in `onChatMessageCreated` if it ever matters.
 
-### SEC-5 · P3 · S · `androidx.security:security-crypto` is on an alpha
+### SEC-5 · **BUILT (September 2026, PR #103)** · P3 · S · `androidx.security:security-crypto` is on an alpha
 
-**Where:** 👁 the bump compiles in CI; whether tokens survive it is a sign-in on a real device.
+**Where:** 👁 CI runs the migration on the emulators; a phone upgraded over the previous build is
+the acceptance.
 
 `1.1.0-alpha06`, holding OAuth tokens in production, on a branch that is effectively frozen.
-Decide: pin and document, or move off it.
+**Decided: move off it** rather than pin — a newer release of the same line would not have been a
+move to anything maintained. `EncryptedPreferences` is now one file, `no_backup/secure_prefs.bin`:
+the whole map, encoded by `PreferenceBlobCodec` and sealed with AES-256-GCM under the Keystore key
+`EncryptionManager` already holds for the database passphrase (SEC-2), written through a temporary
+file and a rename. The first launch of that build copies the old store (tokens, telemetry answer,
+the parent-slot markers `clear()` protects) and deletes it only after the new file is written.
+**Left:** the library stays for that one read; remove it with `readLegacyStore` once no install
+older than PR #103 can remain — for an app not yet published, that is the first Play release.
 
 ---
 
@@ -965,7 +973,7 @@ changing.
 | Dependency | Now | State |
 | --- | --- | --- |
 | `androidx.work` | **2.10.5** (was 2.9.0) | **Done.** 2.10.x fixes the Doze/foreground bugs that hit a 15-minute sync; same API, `hilt-work` 1.2.0 unchanged. 2.11 raises minSdk and changes more — a separate step. |
-| `androidx.security:security-crypto` | 1.1.0-alpha06 | **Left.** See **SEC-5** — whether stored OAuth tokens survive is a sign-in on a real device. |
+| `androidx.security:security-crypto` | 1.1.0-alpha06 | **Read-only since SEC-5** — it opens the pre-SEC-5 store once to migrate it and writes nothing. Remove, don't bump. |
 | `play-services-auth` | 21.2.0, deprecated | **Left.** Not a version bump: `CredentialManagerService` still calls `GoogleSignIn`/`GoogleSignInClient` for the Calendar scope, so dropping it means moving that flow to `AuthorizationClient` — a sign-in change only a device can judge. Both it and Credential Manager stay in the graph until then. |
 | `google-api-services-calendar` | `v3-rev20220715` | **Tried and reverted** (September 2026, PR #101). Maven Central was reachable: the current revision (`v3-rev20260708-2.0.0`) needs `google-api-client` **2.7.2**, and moving `google-api-client-android` there with it compiled — but the 2.7 line brings `google-auth-library` (two JARs with the same `META-INF/INDEX.LIST`), full `protobuf-java` and `google-http-client` 1.45, and R8 then failed on `io.grpc.InternalGlobalInterceptors`, referenced from `grpc-core`: the Calendar client's dependencies had moved part of the gRPC family Firestore runs on. A `-dontwarn` would turn that into a runtime failure in Firestore's channel. The bump needs the gRPC and protobuf families pinned to what the Firebase BoM resolves (or the Calendar client's transitive auth/protobuf excluded) and a device run of sync *and* one Calendar import and export — not a blind move. |
 | `firebase-functions` (Node) | ^4.5.0 (lockfile 4.9.0, the last 4.x), gen-1 API | **Left.** Already at the top of its major. 5.x/6.x move the gen-1 triggers behind `firebase-functions/v1` and v6 changes the default export; every function then needs a `firebase deploy` to prove it, which is yours. ESLint 8 → 9 needs a flat config and goes with it. |

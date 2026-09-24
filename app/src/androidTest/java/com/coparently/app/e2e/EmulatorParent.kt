@@ -1,8 +1,17 @@
 package com.coparently.app.e2e
 
 import android.content.Context
+import android.content.ContextWrapper
+import android.content.SharedPreferences
 import androidx.room.Room
+import com.coparently.app.data.chat.ChatAttachmentOutbox
+import com.coparently.app.data.documents.FamilyDocumentIndex
+import com.coparently.app.data.documents.FamilyDocumentIndexCache
+import com.coparently.app.data.documents.FamilyDocumentRepositoryImpl
 import com.coparently.app.data.family.SelectedFamilySource
+import com.coparently.app.data.files.SharedFileCache
+import com.coparently.app.data.files.SharedFileStager
+import com.coparently.app.data.files.SharedFileStorage
 import com.coparently.app.data.local.CoPlanlyDatabase
 import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.remote.firebase.FcmService
@@ -21,25 +30,28 @@ import com.coparently.app.data.repository.MessageRepositoryImpl
 import com.coparently.app.data.repository.PairingRepositoryImpl
 import com.coparently.app.data.repository.PostPairingConversationSetup
 import com.coparently.app.data.repository.UserRepositoryImpl
+import com.coparently.app.data.security.EncryptionManager
 import com.coparently.app.data.sync.SyncRequester
 import com.coparently.app.data.versions.EventVersionRecorder
 import com.coparently.app.domain.activity.ActivityAnnouncer
+import com.coparently.app.domain.chat.AttachmentUploadGate
+import com.coparently.app.domain.model.Message
 import com.coparently.app.domain.model.PairingState
 import com.coparently.app.presentation.common.ParentsSource
 import com.google.firebase.FirebaseApp
-import com.google.firebase.FirebaseOptions
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.UserProfileChangeRequest
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.FirebaseFirestoreSettings
-import com.google.firebase.firestore.MemoryCacheSettings
 import com.google.firebase.functions.FirebaseFunctions
+import com.google.firebase.storage.FirebaseStorage
 import io.mockk.mockk
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeout
 import java.io.Closeable
+import java.io.File
+import java.io.IOException
 import java.util.UUID
 
 /**
@@ -58,6 +70,8 @@ import java.util.UUID
  * Room is the production class: the data sources, `EventRepositoryImpl`, `ExpenseRepositoryImpl`,
  * `MessageRepositoryImpl`, `PairingRepositoryImpl` (which drives the real `acceptPairingInvitation`
  * callable), `UserRepositoryImpl`, `SelectedFamilySource`, `ParentsSource` and `ActivityAnnouncer`.
+ * `SharedFileStorage`, `ChatAttachmentOutbox`, `SharedFileCache` and `FamilyDocumentRepositoryImpl`
+ * are production too, over the Storage emulator, each phone with its own `files` and `cache`.
  * Two collaborators are stand-ins, both for things the emulator suite cannot provide: [FcmService]
  * (a relaxed mock — `FirebaseMessaging` exists only for the default app, and push delivery cannot
  * be emulated at all) and [SyncRequester] (a no-op — it enqueues WorkManager, whose `SyncService`
@@ -75,6 +89,15 @@ class EmulatorParent private constructor(
     val auth: FirebaseAuth = FirebaseAuth.getInstance(app)
     val firestore: FirebaseFirestore = FirebaseFirestore.getInstance(app)
     private val functions: FirebaseFunctions = FirebaseFunctions.getInstance(app)
+    val storage: FirebaseStorage = FirebaseStorage.getInstance(app)
+
+    /**
+     * This phone's own `files` and `cache` directories. Both parents run in one app process, and
+     * the chat outbox and the verified-download cache live under those two directories: shared,
+     * Bob would "open" Alice's attachment from the copy her upload left behind and never download
+     * it. Everything that touches files is given this context; nothing else needs it.
+     */
+    private val fileContext: Context = PhoneDirectories(context, name)
 
     /** This phone's Room database. In memory: each test starts from an empty install. */
     val database: CoPlanlyDatabase =
@@ -85,7 +108,27 @@ class EmulatorParent private constructor(
     private val userDataSource = FirestoreUserDataSource(firestore)
     private val messageDataSource = FirestoreMessageDataSource(firestore)
 
-    val messageRepository = MessageRepositoryImpl(database.messageDao(), authService, messageDataSource)
+    val sharedFileStorage = SharedFileStorage(storage)
+    val sharedFileCache = SharedFileCache(fileContext, sharedFileStorage)
+    private val stager = SharedFileStager(fileContext)
+
+    /** The production chat outbox: stages a file, uploads it, then lets the message be written. */
+    val attachmentOutbox = ChatAttachmentOutbox(fileContext, stager, sharedFileStorage, sharedFileCache, authService)
+
+    /** Sits in front of [attachmentOutbox] so a test can make this phone's uploads fail. */
+    val uploads = SwitchableUploads(attachmentOutbox)
+
+    val messageRepository = MessageRepositoryImpl(database.messageDao(), authService, messageDataSource, uploads)
+
+    /** The production vault: Firestore index, Storage bytes, Room cache of the index. */
+    val documentRepository = FamilyDocumentRepositoryImpl(
+        context = fileContext,
+        index = FamilyDocumentIndex(firestore, FamilyDocumentIndexCache(database.familyDocumentCacheDao())),
+        authService = authService,
+        stager = stager,
+        storage = sharedFileStorage,
+        cache = sharedFileCache
+    )
 
     val userRepository = UserRepositoryImpl(
         userDao = database.userDao(),
@@ -122,7 +165,12 @@ class EmulatorParent private constructor(
         userDao = database.userDao(),
         firebaseAuthService = authService,
         firestoreUserDataSource = userDataSource,
-        encryptedPreferences = EncryptedPreferences(context)
+        // A store of this phone's own: two instances over one file would each keep their own map
+        // and overwrite each other's writes (SEC-5's store is a sealed snapshot, not a shared file).
+        encryptedPreferences = EncryptedPreferences(
+            context = fileContext,
+            encryptionManager = EncryptionManager(context)
+        )
     )
 
     val pairingRepository = PairingRepositoryImpl(
@@ -159,11 +207,47 @@ class EmulatorParent private constructor(
             .first { it.partner.id == partnerUid }
     }
 
-    /** Signs out, closes Room and deletes the named Firebase app. */
+    /** Signs out, closes Room, deletes the named Firebase app and this phone's directories. */
     override fun close() {
         runCatching { auth.signOut() }
         runCatching { database.close() }
         runCatching { app.delete() }
+        runCatching { fileContext.filesDir.parentFile?.deleteRecursively() }
+    }
+
+    /**
+     * The chat outbox as this phone's `MessageRepositoryImpl` sees it, with a switch that makes
+     * every upload fail the way one does with no network — an `IOException` from the gate, before
+     * anything is written. What a test proves with it is the ordering the gate exists for: the
+     * message stays off the server while its file is not there, and goes once it is.
+     */
+    class SwitchableUploads(private val delegate: AttachmentUploadGate) : AttachmentUploadGate {
+
+        /** While true, every upload fails and no message with a file can be written. */
+        @Volatile
+        var failing: Boolean = false
+
+        override suspend fun ensureUploaded(message: Message) {
+            if (failing) throw IOException("Uploads are switched off for this phone")
+            delegate.ensureUploaded(message)
+        }
+    }
+
+    /**
+     * [base] with `files`, `cache` and `no_backup` directories, and preference names, of this
+     * phone's own — so neither phone reads, writes or deletes the app's real stores.
+     */
+    private class PhoneDirectories(base: Context, phone: String) : ContextWrapper(base) {
+        private val id = "$phone-${UUID.randomUUID()}"
+        private val root = File(base.cacheDir, "e2e-phones/$id")
+        override fun getFilesDir(): File = File(root, "files").apply { mkdirs() }
+        override fun getCacheDir(): File = File(root, "cache").apply { mkdirs() }
+        override fun getNoBackupFilesDir(): File = File(root, "no_backup").apply { mkdirs() }
+        override fun getSharedPreferences(name: String?, mode: Int): SharedPreferences =
+            super.getSharedPreferences("e2e-$id-$name", mode)
+        override fun deleteSharedPreferences(name: String?): Boolean =
+            super.deleteSharedPreferences("e2e-$id-$name")
+        override fun getApplicationContext(): Context = this
     }
 
     private object NoSyncRequester : SyncRequester {
@@ -186,28 +270,7 @@ class EmulatorParent private constructor(
          * callable requires is the one production writes, not a fixture.
          */
         suspend fun create(context: Context, name: String): EmulatorParent {
-            val host = EmulatorEnvironment.requireHost()
-            val options = FirebaseOptions.Builder()
-                .setProjectId(EmulatorEnvironment.PROJECT_ID)
-                .setApplicationId("1:000000000000:android:0000000000000000")
-                // Not a key: Firebase Installations (which Functions calls for a token) refuses
-                // any value that does not match `A[\w-]{38}`, emulator or not. Kept off the
-                // `AIza` shape so secret scanning never mistakes it for a Google API key.
-                .setApiKey("A-fake-key-for-the-firebase-emulators-x")
-                .build()
-            val app = FirebaseApp.initializeApp(context, options, "e2e-$name-${UUID.randomUUID()}")
-
-            FirebaseAuth.getInstance(app).useEmulator(host, EmulatorEnvironment.AUTH_PORT)
-            FirebaseFirestore.getInstance(app).apply {
-                useEmulator(host, EmulatorEnvironment.FIRESTORE_PORT)
-                // Memory only: a persisted cache would let a read be answered by this phone's
-                // own earlier write rather than by the server the other phone reads.
-                firestoreSettings = FirebaseFirestoreSettings.Builder()
-                    .setLocalCacheSettings(MemoryCacheSettings.newBuilder().build())
-                    .build()
-            }
-            FirebaseFunctions.getInstance(app).useEmulator(host, EmulatorEnvironment.FUNCTIONS_PORT)
-
+            val app = EmulatorEnvironment.startFirebaseApp(context, "e2e-$name-${UUID.randomUUID()}")
             val parent = EmulatorParent(name, context, app)
             val email = "${name.lowercase()}-${UUID.randomUUID()}@e2e.coplanly.test"
             val user = checkNotNull(

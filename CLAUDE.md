@@ -236,11 +236,12 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   degrades gracefully if it is missing (see the conditional apply in `app/build.gradle.kts`).
 - **GitHub CI runs on every pull request, and on every push to `main`** — a push to a
   feature branch with no PR open is not built (`.github/workflows/ci.yml`, added
-  August 2026 — this line used to say there was none). Ten jobs that test (this line used to say
-  eight, before `screenshots` and `e2e` were added, and seven before `instrumented`), plus
-  `report`, which only reads them (below): `changes` (a cheap gate,
-  below), three Android ones — `build-test` (`assembleDebug` + `testDebugUnitTest` in a
-  single invocation), `static` (`lint`, then `detekt`), `release` (`assembleRelease`, where
+  August 2026 — this line used to say there was none). Eleven jobs that test (this line used to
+  say ten, before detekt left the lint job; eight before `screenshots` and `e2e`; seven before
+  `instrumented`), plus `report`, which only reads them (below): `changes` (a cheap gate,
+  below), four Android ones — `build-test` (`assembleDebug` + `testDebugUnitTest` in a
+  single invocation), `static` (`lint` alone — the id is kept), `detekt` (its own job since
+  September 2026: the two ran in sequence, lint 5:15 then detekt 0:52), `release` (`assembleRelease`, where
   R8 runs, and where `node tools/check-r8-mapping.js` then reads R8's own `mapping.txt` and
   fails if a field a keep rule names came out renamed) — plus Cloud Functions, the Firestore
   rules suite against the emulator, and `invariants` (`node tools/check-invariants.js`, no
@@ -279,7 +280,10 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   of 34 tests. `HiltTestRunner` substituting `HiltTestApplication` does not help: it stops
   `CoPlanlyApplication.onCreate` running, not the graph being built. Fixed by
   `androidTest`'s `FakeFirebaseModule`, a `@TestInstallIn` replacing `FirebaseModule` with
-  relaxed mocks. **Do not "simplify" that by committing a fake `google-services.json`** — the
+  relaxed mocks — except in a run that carries the emulator host (the `e2e` job, below), where it
+  hands Auth, Firestore, Storage and Functions the real SDKs of `EmulatorEnvironment.appUnderTest`
+  so the app's own screens talk to the emulators; Messaging, Analytics and Crashlytics stay mocks
+  there too. **Do not "simplify" that by committing a fake `google-services.json`** — the
   Google Services and Crashlytics plugins apply only when that file is present, so adding one
   changes what every Android job builds in order to fix something that belongs to the tests.
   Room is deliberately left real, which is what makes this the first thing anywhere to execute
@@ -332,7 +336,7 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   `FirebaseOptions` for the credential-free `demo-coplanly` project, its own in-memory Room, and
   the production data layer constructed by hand from the constructors Hilt calls (one process has
   one `SingletonComponent`, and this needs two of everything). `tools/e2e/run-two-parent-tests.sh`
-  wraps `firebase emulators:exec --only auth,firestore,functions` around a Node smoke
+  wraps `firebase emulators:exec --only auth,firestore,functions,storage` around a Node smoke
   (`tools/e2e/pairing-smoke.js`, which pairs two accounts over REST in seconds and fails with a
   reason before an APK is installed) and `connectedDebugAndroidTest` filtered to that package with
   `-e coplanlyEmulatorHost 10.0.2.2`. What it proves, all against the real `firestore.rules` and
@@ -342,7 +346,19 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   **across the date line** (UTC+14 and UTC−11) reaching unread, DELIVERED and READ on the right
   phones — **CQ-18's logic, closed as far as software can close it**; a shared expense that puts
   half the amount on the *other* parent's balance (the `splitBetween` class); and M-8's second
-  family keeping its audience, `familyId` and announcement thread. Five things not to undo.
+  family keeping its audience, `familyId` and announcement thread. Since September 2026 also
+  **files** (`TwoParentAttachmentsTest`, Storage emulator and the real `storage.rules`): a chat
+  attachment stays off the server while its upload fails and arrives after the outbox retry, the
+  co-parent's download matches its bytes, a stranger's is refused, and a vault document opens for
+  the co-parent, who cannot delete it, while the uploader's delete is a tombstone. Each
+  `EmulatorParent` has `files`, `cache`, `no_backup` and preference names of its own
+  (`PhoneDirectories`) — shared, Bob would "open" Alice's file from her leftover copy, and two
+  `EncryptedPreferences` over one file overwrite each other (SEC-5). And **one parent on screen**
+  (`OneParentOnScreenTest`): `MainActivity` as Alice, signed up on the Auth emulator and paired
+  with Bob through the callable — Bob's event is drawn on her Home after one
+  `SyncService.performFullSync()` (the call `SyncWorker` makes), his message in her thread, and
+  what she types into the real composer reaches his phone. It starts `ChatMirror` itself, because
+  `HiltTestApplication` never runs `CoPlanlyApplication.onCreate`. Five things not to undo.
   **No `google-services.json`** here either, for the reason given above. **The tests skip
   themselves without the host argument**, so the `instrumented` job runs them as skipped and
   keeps `FakeFirebaseModule` for everything else — and the `e2e` job fails on any skip, so the
@@ -359,8 +375,8 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   and `EventDocument` threw on the `""` `toFirestoreMap()` writes for a missing end time, so the
   co-parent's sync skipped every event without one. **What it cannot do** stays on the device
   checklist: real FCM delivery (no emulator exists for it — the queue document is written, the
-  push is not sent), anything drawn on screen, and the chat UI's family switch (`ChatPartnerSource`,
-  M-8), which the e2e job does not drive.
+  push is not sent), two screens at once (Bob's side is the data layer), a file opened in a viewer
+  app, and the chat UI's family switch (`ChatPartnerSource`, M-8), which the e2e job does not drive.
 
   **A second workflow file exists and is not part of CI**: `.github/workflows/regenerate.yml` runs
   `detektBaseline` and exports the Room schema, then commits both back to the branch it ran on.
@@ -424,11 +440,22 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   counts as passing; nothing is a required check today, so this is safe, but marking one required
   later means a PR merges on a skip rather than a build.
 - **An emulator leg is decided by the tests' exit status, not by the emulator step** (September
-  2026). The API 26 x86 emulator repeatedly never exited after `adb emu kill` with every test
-  passed, and a detached `pkill` did not release the runner. The step has a 15-minute limit and
-  `continue-on-error`; `tools/with-screen-recording.sh` writes the tests' status to
-  `$STATUS_FILE`, and "The instrumented tests finished and passed" fails the job unless it exists
-  and says 0. When the suite outgrows 15 minutes that step says "did not finish" — raise the limit.
+  2026). The emulator repeatedly never exited after the action's `adb emu kill` with every test
+  passed — on API 26 first, and on PR #102 on API 30 too, 9–11 minutes a leg, which made the legs
+  the whole run's critical path. `tools/with-screen-recording.sh` writes the tests' status to
+  `$STATUS_FILE`, then (with `STOP_EMULATOR=true`) stops the emulator itself through
+  `tools/stop-emulator.sh` — synchronously: `adb emu kill`, wait, SIGKILL the qemu process, wait —
+  where the earlier attempt was a *detached* `pkill` nothing waited for — and then SIGKILLs the
+  emulator's `crashpad_handler`, which outlives it and holds the output pipe the action reads (on
+  PR #103 the e2e job's emulator stopped at 09:27 and the action waited on that handler until the
+  job's 50-minute limit). The `e2e` job has the same status file and backstop since. The step keeps
+  `continue-on-error` and a 10-minute limit as the backstop, and "The instrumented tests finished
+  and passed" fails the job unless the status file exists and says 0. When the suite outgrows the
+  limit that step says "did not finish" — raise the limit. **The APKs compile while the emulator
+  boots** (`tools/ci-background-build.sh start` before the AVD restores, `wait` as the script's
+  first line; a compile error still fails the leg through `$STATUS_FILE`), in `instrumented` and
+  in `e2e`, which also restores the API 30 AVD snapshot (restore-only, so the two jobs never race
+  to save it) and, like `rules`, caches the Firebase emulator jars.
 - **Gradle's configuration cache is on** (`gradle.properties`). CI keeps it between runs only when
   the `GRADLE_ENCRYPTION_KEY` repository secret is set (`setup-gradle`'s `cache-encryption-key`);
   without it the cache still helps within a job. An incompatible plugin or script fails the build
@@ -864,8 +891,8 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     open helper and converts an existing plaintext file on the way, `DatabaseKey` holds 256 random
     bits wrapped by `EncryptionManager` under a Keystore key, and `SqlCipherMigration` decides —
     from the files on disk, never from a flag — where a killed process left off. Four things not to
-    undo. **The passphrase does not go in `EncryptedPreferences`**, whose recovery clears the store
-    and mints a fresh keyset: correct for the OAuth token it was written for, and here it would
+    undo. **The passphrase does not go in `EncryptedPreferences`**, whose recovery deletes an
+    unreadable store and starts empty: correct for the OAuth token it was written for, and here it would
     hand out a different key on the next launch and leave the database unopenable. **It is written
     with `commit`, not `apply`** — it has to be on disk before anything is encrypted with it.
     **The plaintext file is deleted only after a verified encrypted copy exists beside it under a
@@ -880,6 +907,16 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     prove is an upgrade over a database an *older build* wrote, under a phone's hardware-backed
     Keystore, so the first launch on a device holding real data is still an acceptance step
     (`docs/DEVICE-CHECKLIST.md` §2.1).
+    **The preference store follows the same idea since SEC-5** (September 2026):
+    `EncryptedPreferences` is no longer `security-crypto`'s alpha `EncryptedSharedPreferences` but
+    one file, `no_backup/secure_prefs.bin` — the whole map (`PreferenceBlobCodec`, never Gson)
+    sealed with the same Keystore key through `EncryptionManager`, written to a `.part` file and
+    renamed, held in memory by `InMemorySharedPreferences`, which persists every commit under its
+    lock. The library is kept **read-only**, to copy the old store once on the first launch of
+    that build; the old file is deleted only after the new one is written. Don't write through the
+    library again, and don't make a second `EncryptedPreferences` over the same file — each keeps
+    its own map and they overwrite each other (the e2e phones get their own directories for that
+    reason).
 21. **A parenting plan is two halves and a derived agreement, and neither half may write the
     other** (MON-5, Aug 2026, schema 34). `parenting_plans/{familyId}` holds `answers`,
     `agreedTo`, `catalogueVersions` and `updatedAt` as maps keyed by uid, and `firestore.rules`

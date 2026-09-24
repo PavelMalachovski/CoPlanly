@@ -1,14 +1,28 @@
 package com.coparently.app.e2e
 
+import android.content.Context
+import android.util.Log
 import androidx.test.platform.app.InstrumentationRegistry
+import com.google.firebase.FirebaseApp
+import com.google.firebase.FirebaseOptions
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.FirebaseFirestoreSettings
+import com.google.firebase.firestore.MemoryCacheSettings
+import com.google.firebase.functions.FirebaseFunctions
+import com.google.firebase.storage.FirebaseStorage
 import org.junit.Assume.assumeTrue
+import org.junit.rules.TestWatcher
+import org.junit.rules.Timeout
+import org.junit.runner.Description
 import java.net.HttpURLConnection
 import java.net.URL
+import java.util.concurrent.TimeUnit
 
 /**
  * Where the Firebase emulators are, and whether this run has any.
  *
- * **The two-parent tests run only when asked to.** They need Auth, Firestore and Functions
+ * **The two-parent tests run only when asked to.** They need Auth, Firestore, Functions and Storage
  * emulators listening on the host, which only the `e2e` CI job (and `tools/e2e/run-two-parent-
  * tests.sh` locally) starts. Everything else — the ordinary `instrumented` job, a developer's
  * `connectedDebugAndroidTest` — passes no [HOST_ARGUMENT], and every test in this package then
@@ -34,6 +48,9 @@ object EmulatorEnvironment {
     /** `emulators.functions.port` in `firebase.json`. */
     const val FUNCTIONS_PORT = 5001
 
+    /** `emulators.storage.port` in `firebase.json`. */
+    const val STORAGE_PORT = 9199
+
     /**
      * The instrumentation argument naming the emulator host — `10.0.2.2` from an Android emulator,
      * which is its alias for the host machine's loopback.
@@ -48,6 +65,96 @@ object EmulatorEnvironment {
     val host: String?
         get() = InstrumentationRegistry.getArguments().getString(HOST_ARGUMENT)
             ?.takeIf { it.isNotBlank() }
+
+    /**
+     * The Firebase app the **app under test** uses — the Hilt graph's `FirebaseAuth`, `Firestore`,
+     * `Storage` and `Functions` — when this run has emulators, else null.
+     *
+     * `FakeFirebaseModule` reads it: with no emulator host it keeps providing relaxed mocks, which
+     * is every run of the ordinary `instrumented` job; with one, the app's own screens talk to the
+     * same emulators the other phone does (`OneParentOnScreenTest`). One per process, like the
+     * default app it stands in for.
+     */
+    val appUnderTest: FirebaseApp? by lazy {
+        host?.let {
+            startFirebaseApp(InstrumentationRegistry.getInstrumentation().targetContext, "e2e-app-under-test")
+        }
+    }
+
+    /**
+     * Initialises a named Firebase app for the credential-free [PROJECT_ID] and points every SDK
+     * the app uses at the emulators — before the first call on each, which is the only time
+     * redirection is allowed.
+     */
+    fun startFirebaseApp(context: Context, name: String): FirebaseApp {
+        val host = requireHost()
+        val options = FirebaseOptions.Builder()
+            .setProjectId(PROJECT_ID)
+            .setApplicationId("1:000000000000:android:0000000000000000")
+            // Not a key: Firebase Installations (which Functions calls for a token) refuses
+            // any value that does not match `A[\w-]{38}`, emulator or not. Kept off the
+            // `AIza` shape so secret scanning never mistakes it for a Google API key.
+            .setApiKey("A-fake-key-for-the-firebase-emulators-x")
+            // The Storage emulator serves any bucket name; this is the project's default one.
+            .setStorageBucket("$PROJECT_ID.appspot.com")
+            .build()
+        val app = FirebaseApp.initializeApp(context, options, name)
+        FirebaseAuth.getInstance(app).useEmulator(host, AUTH_PORT)
+        FirebaseFirestore.getInstance(app).apply {
+            useEmulator(host, FIRESTORE_PORT)
+            // Memory only: a persisted cache would let a read be answered by this phone's
+            // own earlier write rather than by the server the other phone reads.
+            firestoreSettings = FirebaseFirestoreSettings.Builder()
+                .setLocalCacheSettings(MemoryCacheSettings.newBuilder().build())
+                .build()
+        }
+        FirebaseFunctions.getInstance(app).useEmulator(host, FUNCTIONS_PORT)
+        FirebaseStorage.getInstance(app).useEmulator(host, STORAGE_PORT)
+        return app
+    }
+
+    /**
+     * A hard limit for one two-parent test, `@Before` and `@After` included, that fails it with the
+     * stack of the thread that was stuck instead of letting it hang. A run on PR #103 passed its
+     * first test and then printed nothing for ten minutes, until the CI step's own limit killed it
+     * with no result and no trace; this turns that into a failure that names the line.
+     */
+    fun testTimeout(): Timeout = Timeout.builder()
+        .withTimeout(TEST_TIMEOUT_MINUTES, TimeUnit.MINUTES)
+        .withLookingForStuckThread(true)
+        .build()
+
+    private const val TEST_TIMEOUT_MINUTES = 3L
+
+    /** The logcat tag of [step] and of the thread dump; the e2e job prints both on a failure. */
+    const val LOG_TAG = "E2E"
+
+    /**
+     * Marks where a two-parent test is, in logcat. When a test times out the stuck-thread
+     * detector names whichever thread it guesses — on PR #103 a Firebase `TokenRefresher` that
+     * was merely idle — so the last step logged is what says where the test itself was waiting.
+     */
+    fun step(name: String) {
+        Log.i(LOG_TAG, "step: $name")
+    }
+
+    /**
+     * On a failure, writes every thread's stack to logcat under [LOG_TAG], one entry per thread
+     * (a logcat entry is capped near 4 KB). Must sit *outside* the timeout rule so it runs while
+     * the abandoned test thread is still stuck where it was.
+     */
+    fun threadDumpOnFailure(): TestWatcher = object : TestWatcher() {
+        override fun failed(e: Throwable, description: Description) {
+            Log.e(LOG_TAG, "FAILED ${description.displayName}: $e")
+            for ((thread, frames) in Thread.getAllStackTraces()) {
+                if (frames.isEmpty()) continue
+                val stack = frames.take(MAX_FRAMES).joinToString("\n") { "    at $it" }
+                Log.e(LOG_TAG, "thread \"${thread.name}\" ${thread.state}\n$stack")
+            }
+        }
+    }
+
+    private const val MAX_FRAMES = 40
 
     /** Skips the calling test unless this run was started against the emulators. */
     fun assumeEmulators() {

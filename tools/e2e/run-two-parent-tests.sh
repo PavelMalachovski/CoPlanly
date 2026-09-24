@@ -19,7 +19,7 @@
 #                          PATH is already 21+.
 #   COPLANLY_EMULATOR_HOST The address the *device* reaches the host on. Default `10.0.2.2`, the
 #                          Android emulator's alias for the host loopback. For a physical phone,
-#                          run `adb reverse tcp:9099 tcp:9099` (and 8080, 5001) and set 127.0.0.1.
+#                          run `adb reverse tcp:9099 tcp:9099` (and 8080, 5001, 9199) and set 127.0.0.1.
 #   GRADLE_ARGS            Extra Gradle arguments.
 set -euo pipefail
 
@@ -45,6 +45,6 @@ gradle_command="./gradlew connectedDebugAndroidTest \
 -Pandroid.testInstrumentationRunnerArguments.coplanlyEmulatorHost=$host ${GRADLE_ARGS:-}"
 
 exec "$firebase" emulators:exec \
-  --only auth,firestore,functions \
+  --only auth,firestore,functions,storage \
   --project demo-coplanly \
   "node tools/e2e/pairing-smoke.js && $gradle_command"
