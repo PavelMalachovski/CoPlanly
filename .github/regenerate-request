@@ -40,3 +40,5 @@ requested: 2026-09-24 — screenshot baselines for the October 2026 audit's week
            summary gets a collapsed line (a new baseline), and a row's meta line may wrap; no
            schema change and no new detekt finding is expected, so the baseline half should
            only lose entries
+requested: 2026-09-24 — again for week 3: the first run stopped at a compile error in
+           ExpenseScreen (fixed in the commit before this one), so no screenshot was recorded
