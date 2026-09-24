@@ -19,5 +19,8 @@
     <string name="journal_pick_ok">OK</string>
     <string name="journal_pick_cancel">Cancel</string>
     <string name="journal_error_save">The entry could not be saved. Try again.</string>
+    <string name="journal_error_delete">The entry could not be deleted. Try again.</string>
+    <string name="journal_delete_confirm_title">Delete this entry?</string>
+    <string name="journal_delete_confirm_message">It is deleted from this phone. The journal is kept nowhere else, so the entry cannot be restored.</string>
     <string name="journal_error_signed_out">You are signed out. Sign in to save the entry.</string>
 </resources>

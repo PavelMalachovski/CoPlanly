@@ -62,6 +62,7 @@ import com.coparently.app.presentation.common.PhotoStrip
 import com.coparently.app.presentation.common.PhotoStripStrings
 import com.coparently.app.presentation.common.VaccinationListEditor
 import com.coparently.app.presentation.common.labelRes
+import com.coparently.app.presentation.common.rememberDiscardGuard
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.UUID
@@ -113,8 +114,16 @@ fun AddEditPetScreen(
 
     val currentPet by viewModel.currentPet.collectAsState()
 
+    // Seeded once per record, as the child form is: `currentPet` is an observation and emits again
+    // on every write to the row, and copying each emission into the fields overwrote whatever
+    // the parent was typing whenever a sync tick landed.
+    var seededForId by remember { mutableStateOf<String?>(null) }
+    // What the form was seeded with, so Back can tell an edit from an untouched form (D-11).
+    var seededFields by remember { mutableStateOf(PetFields.EMPTY) }
     LaunchedEffect(currentPet) {
-        currentPet?.let { pet ->
+        currentPet?.takeIf { it.id != seededForId }?.let { pet ->
+            seededForId = pet.id
+            seededFields = PetFields.of(pet)
             name = pet.name
             species = pet.species
             breed = pet.breed ?: ""
@@ -184,6 +193,24 @@ fun AddEditPetScreen(
         )
     }
 
+    // Asked before an edit is dropped (docs/AUDIT-2026-10-design.md D-11): Back used to leave
+    // with whatever was typed, without a word.
+    val formFields = PetFields(
+        name = name,
+        species = species,
+        breed = breed,
+        dateOfBirth = dateOfBirth,
+        medications = medications,
+        vaccinations = vaccinations,
+        specialNeeds = specialNeeds,
+        feedingNotes = feedingNotes,
+        vetName = vetName,
+        vetPhone = vetPhone,
+        pickedPhotos = pickedPhotos,
+        removedPhotos = removedPhotos
+    )
+    val leave = rememberDiscardGuard(dirty = formFields != seededFields && !isSaving, onLeave = onNavigateBack)
+
     if (showDeleteConfirm) {
         val pet = currentPet
         ConfirmationDialog(
@@ -217,7 +244,7 @@ fun AddEditPetScreen(
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
+                    IconButton(onClick = leave) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = stringResource(R.string.pets_back)
@@ -524,3 +551,53 @@ private fun petPhotoStripStrings() = PhotoStripStrings(
     remove = R.string.pet_photos_remove,
     close = R.string.pet_photos_close
 )
+
+/**
+ * The values the pet form edits, compared with what it was seeded with to tell whether Back
+ * would drop an edit (D-11). A photo picked or marked for removal counts as an edit.
+ */
+private data class PetFields(
+    val name: String,
+    val species: PetSpecies,
+    val breed: String,
+    val dateOfBirth: LocalDateTime?,
+    val medications: List<Medication>,
+    val vaccinations: List<Vaccination>,
+    val specialNeeds: String,
+    val feedingNotes: String,
+    val vetName: String,
+    val vetPhone: String,
+    val pickedPhotos: List<String>,
+    val removedPhotos: List<String>
+) {
+    /** A blank form, and the form seeded from a stored record. */
+    companion object {
+        val EMPTY = PetFields(
+            name = "",
+            species = PetSpecies.OTHER,
+            breed = "",
+            dateOfBirth = null,
+            medications = emptyList(),
+            vaccinations = emptyList(),
+            specialNeeds = "",
+            feedingNotes = "",
+            vetName = "",
+            vetPhone = "",
+            pickedPhotos = emptyList(),
+            removedPhotos = emptyList()
+        )
+
+        fun of(pet: Pet) = EMPTY.copy(
+            name = pet.name,
+            species = pet.species,
+            breed = pet.breed ?: "",
+            dateOfBirth = pet.dateOfBirth,
+            medications = pet.medications,
+            vaccinations = pet.vaccinations,
+            specialNeeds = pet.specialNeeds ?: "",
+            feedingNotes = pet.feedingNotes ?: "",
+            vetName = pet.vetName ?: "",
+            vetPhone = pet.vetPhone ?: ""
+        )
+    }
+}

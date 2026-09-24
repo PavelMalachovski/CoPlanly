@@ -19,12 +19,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.coparently.app.R
 import com.coparently.app.domain.expenses.CategorySlice
@@ -263,6 +266,7 @@ private fun FilterChip(
 @Composable
 private fun BreakdownTable(breakdown: CurrencyBreakdown) {
     val total = remember(breakdown) { currencyFormat(breakdown.currency).format(breakdown.total) }
+    val amountWidth = amountColumnWidth(breakdown)
 
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(
@@ -274,7 +278,7 @@ private fun BreakdownTable(breakdown: CurrencyBreakdown) {
             ColumnHeader(stringResource(R.string.expense_analytics_column_category), Modifier.weight(1f))
             ColumnHeader(
                 stringResource(R.string.expense_analytics_column_amount),
-                Modifier.width(AMOUNT_COLUMN_WIDTH),
+                Modifier.width(amountWidth),
                 TextAlign.End
             )
             ColumnHeader(
@@ -285,7 +289,7 @@ private fun BreakdownTable(breakdown: CurrencyBreakdown) {
         }
         SectionGroup {
             breakdown.slices.forEachIndexed { index, slice ->
-                BreakdownRow(slice = slice, currency = breakdown.currency)
+                BreakdownRow(slice = slice, currency = breakdown.currency, amountWidth = amountWidth)
                 if (index != breakdown.slices.lastIndex) Divider()
             }
         }
@@ -325,9 +329,30 @@ private fun ColumnHeader(
     )
 }
 
+/**
+ * How wide the amount column has to be for its widest figure: never narrower than the column's
+ * design width, and as wide as that figure needs at the reader's text size.
+ *
+ * A fixed 96 dp broke the figures at Russian 130 % ("450,00 C|ZK"): the formatter joins an amount
+ * to its code with a no-break space, so a figure wider than its column breaks inside the code
+ * rather than at the space (design item 15 — give it the width instead). The category's name,
+ * which may wrap, takes what is left.
+ */
+@Composable
+private fun amountColumnWidth(breakdown: CurrencyBreakdown): Dp {
+    val measurer = rememberTextMeasurer()
+    val style = MaterialTheme.typography.bodyMedium
+    val density = LocalDensity.current
+    return remember(breakdown, style, density, measurer) {
+        val format = currencyFormat(breakdown.currency)
+        val widest = breakdown.slices.maxOfOrNull { measurer.measure(format.format(it.amount), style).size.width } ?: 0
+        maxOf(AMOUNT_COLUMN_WIDTH, with(density) { widest.toDp() })
+    }
+}
+
 /** One category: its swatch, its name, its amount and its share. */
 @Composable
-private fun BreakdownRow(slice: CategorySlice, currency: String) {
+private fun BreakdownRow(slice: CategorySlice, currency: String, amountWidth: Dp) {
     val name = stringResource(slice.category.labelRes)
     val amount = currencyFormat(currency).format(slice.amount)
     val share = formatShare(slice.share)
@@ -356,7 +381,7 @@ private fun BreakdownRow(slice: CategorySlice, currency: String) {
             text = amount,
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.End,
-            modifier = Modifier.width(AMOUNT_COLUMN_WIDTH)
+            modifier = Modifier.width(amountWidth)
         )
         Text(
             text = share,

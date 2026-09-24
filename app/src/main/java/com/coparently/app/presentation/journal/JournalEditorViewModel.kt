@@ -29,7 +29,10 @@ import javax.inject.Inject
  * @property isNew Whether saving creates an entry rather than changing one.
  * @property entryDate The day the entry is about; today for a new one.
  * @property saved Set once the entry is in Room — the screen goes back when it sees it.
- * @property error What went wrong with the last save, for a snackbar; cleared once shown.
+ * @property deleted Set once the entry is gone from Room — the screen goes back when it sees it.
+ * @property error What went wrong with the last save or delete, for a snackbar; cleared once shown.
+ * @property seededDate The day the form opened on: the entry's, or today for a new one.
+ * @property seededText The text the form opened with: the entry's, or nothing for a new one.
  */
 data class JournalEditorState(
     val loading: Boolean,
@@ -38,10 +41,20 @@ data class JournalEditorState(
     val text: String = "",
     val saving: Boolean = false,
     val saved: Boolean = false,
-    val error: UiText? = null
+    val deleted: Boolean = false,
+    val error: UiText? = null,
+    val seededDate: LocalDate = entryDate,
+    val seededText: String = ""
 ) {
+    /** Whether leaving now would drop something the parent wrote (D-11). */
+    val hasUnsavedEdits: Boolean
+        get() = !saved && !deleted && (text != seededText || entryDate != seededDate)
+
     /** Whether Save does anything: there is text, and nothing is loading or saving. */
     val canSave: Boolean get() = !loading && !saving && text.isNotBlank()
+
+    /** Whether the entry can be deleted from here: it exists, and nothing is loading or saving. */
+    val canDelete: Boolean get() = !isNew && !loading && !saving
 }
 
 /**
@@ -86,7 +99,14 @@ class JournalEditorViewModel @Inject constructor(
                 // and saving writes a new entry rather than resurrecting that one.
                 current.copy(loading = false, isNew = true)
             } else {
-                current.copy(loading = false, isNew = false, entryDate = entry.entryDate, text = entry.text)
+                current.copy(
+                    loading = false,
+                    isNew = false,
+                    entryDate = entry.entryDate,
+                    text = entry.text,
+                    seededDate = entry.entryDate,
+                    seededText = entry.text
+                )
             }
         }
     }
@@ -119,6 +139,29 @@ class JournalEditorViewModel @Inject constructor(
             } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
                 Log.e(TAG, "Journal entry not saved", e)
                 _state.update { it.copy(error = UiText.Res(R.string.journal_error_save)) }
+            } finally {
+                _state.update { it.copy(saving = false) }
+            }
+        }
+    }
+
+    /**
+     * Deletes the entry being edited, once the screen has confirmed it. The list's swipe was the
+     * only way to delete one (docs/AUDIT-2026-10-design.md D-10); this is the visible route.
+     */
+    fun delete() {
+        val entry = original ?: return
+        if (!_state.value.canDelete) return
+        _state.update { it.copy(saving = true, error = null) }
+        viewModelScope.launch {
+            try {
+                repository.delete(entry.id, entry.createdByFirebaseUid)
+                _state.update { it.copy(deleted = true) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
+                Log.e(TAG, "Journal entry not deleted", e)
+                _state.update { it.copy(error = UiText.Res(R.string.journal_error_delete)) }
             } finally {
                 _state.update { it.copy(saving = false) }
             }

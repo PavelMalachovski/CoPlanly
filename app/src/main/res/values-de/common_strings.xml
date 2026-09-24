@@ -54,4 +54,5 @@
     <string name="common_keep_editing">Weiter bearbeiten</string>
     <string name="common_discard">Verwerfen</string>
     <string name="common_discard_changes_title">Änderungen verwerfen?</string>
+    <string name="common_discard_changes_message">Deine Änderungen hier sind noch nicht gespeichert. Wenn du jetzt gehst, gehen sie verloren.</string>
 </resources>

@@ -83,6 +83,8 @@
     <!-- Summary card: month switcher, total, and the budget chip strip. -->
     <string name="expenses_shared_spend">спільні витрати</string>
     <string name="expenses_month_and_count">%1$s · %2$s</string>
+    <!-- The month summary folded into one pinned line; %1$s is each currency's total, joined. -->
+    <string name="expenses_collapsed_totals">Спільні витрати: %1$s</string>
     <string name="expenses_row_meta">%1$s · %2$s</string>
     <string name="expenses_row_meta_with_receipt">%1$s · %2$s · чек</string>
     <string name="expenses_budget_chip">%1$s %2$s / %3$s</string>

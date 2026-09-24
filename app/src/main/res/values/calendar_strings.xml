@@ -82,11 +82,14 @@
     <string name="calendar_event_pickup_confirmed">Pickup confirmed by %1$s</string>
     <string name="calendar_resize_start_handle">Resize start time. Drag up or down (15-minute steps).</string>
     <string name="calendar_resize_end_handle">Resize end time. Drag up or down (15-minute steps).</string>
+    <!-- Accessibility actions on an event block in Day and Week view (D-10). -->
+    <string name="calendar_action_end_later">End 15 minutes later</string>
+    <string name="calendar_action_end_earlier">End 15 minutes earlier</string>
 
     <!-- Inline change-request banner, view-mode menu and the day agenda card. -->
     <plurals name="calendar_change_requests_banner">
-        <item quantity="one">%1$d change request from your co-parent</item>
-        <item quantity="other">%1$d change requests from your co-parent</item>
+        <item quantity="one">%1$d change request</item>
+        <item quantity="other">%1$d change requests</item>
     </plurals>
     <string name="calendar_change_requests_review">Review</string>
     <string name="calendar_change_view_mode">Change view, or jump to a date</string>

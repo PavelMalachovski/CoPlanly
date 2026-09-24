@@ -57,4 +57,5 @@
     <string name="common_keep_editing">Keep editing</string>
     <string name="common_discard">Discard</string>
     <string name="common_discard_changes_title">Discard changes?</string>
+    <string name="common_discard_changes_message">What you changed here has not been saved. If you leave now, it is lost.</string>
 </resources>

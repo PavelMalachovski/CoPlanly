@@ -39,6 +39,7 @@ import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -46,11 +47,15 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
@@ -70,7 +75,7 @@ import com.coparently.app.presentation.calendar.components.ChangeRequestBanner
 import com.coparently.app.presentation.calendar.components.CustodyChangedBanner
 import com.coparently.app.presentation.calendar.components.DaySwapSheet
 import com.coparently.app.presentation.calendar.components.EventTypeFilterSheet
-import com.coparently.app.presentation.common.FamilyMemberChips
+import com.coparently.app.presentation.common.FamilyMemberFilterStrip
 import com.coparently.app.presentation.common.PickerDates
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.common.rememberToday
@@ -260,6 +265,8 @@ fun CalendarScreen(
     val now = remember { YearMonth.now() }
 
     var showDatePicker by remember { mutableStateOf(false) }
+    // Whether the Day view on screen was opened by tapping a month cell, which Back undoes.
+    var dayOpenedFromMonth by rememberSaveable { mutableStateOf(false) }
     val datePickerState = rememberDatePickerState(
         // DatePickerState speaks UTC-midnight millis; PickerDates is the one conversion. Opens
         // on the selected day (or today), never on the 1st: "jump to a date" should start from
@@ -298,6 +305,10 @@ fun CalendarScreen(
     var showDeleteButton by remember { mutableStateOf(false) }
     var eventToDelete by remember { mutableStateOf<String?>(null) }
     var isDragOverDeleteButton by remember { mutableStateOf(false) }
+    // Where the red delete button is drawn, in window coordinates, while it is on screen. A drag
+    // in Day or Week view deletes only when it ends over this (D-10), not over a screen quadrant.
+    var deleteButtonBounds by remember { mutableStateOf<Rect?>(null) }
+    val deleteTarget: () -> Rect? = remember { { deleteButtonBounds } }
 
     // Event preview sheet: a tap opens the read-only preview, Edit goes to the editor
     var previewEventId by remember { mutableStateOf<String?>(null) }
@@ -332,6 +343,15 @@ fun CalendarScreen(
         }
     }
     var swapSheetOpen by remember { mutableStateOf(false) }
+    // Day view's visible "Swap this day" (D-10): one day, straight to the sheet. The long-press
+    // on a month cell had been the only way to offer a day.
+    val offerDayFromDayView: ((LocalDate) -> Unit)? = offerSwapDay?.let {
+        fun(date: LocalDate) {
+            swapAnchor = date
+            swapSelection = setOf(date)
+            swapSheetOpen = true
+        }
+    }
 
     // Unified custody lookup: an accepted one-off swap, then the active CustodyModel (Custody
     // Setup), then the legacy CustodyScheduleEntity rows. Views must use this — reading only the
@@ -580,6 +600,19 @@ fun CalendarScreen(
     val proposalCitation by changeRequestViewModel.pendingProposalCitation.collectAsState()
     val proposerWaiting = pendingProposal != null && proposalAwaitingMe == null
 
+    // Back from a day opened by tapping a month cell returns to that month instead of leaving the
+    // tab (docs/AUDIT-2026-10-design.md D-11): the tap reads as drilling in, so Back has to read
+    // as coming back out. A Day view reached through the view picker keeps the default Back.
+    BackHandler(enabled = viewMode == CalendarViewMode.DAY && dayOpenedFromMonth) {
+        dayOpenedFromMonth = false
+        calendarViewModel.setViewMode(CalendarViewMode.MONTH)
+    }
+    // Leaving Day by any other route (the view picker, the date picker) ends the drill-down, so
+    // a Day view reached later through the picker keeps the default Back.
+    LaunchedEffect(viewMode) {
+        if (viewMode != CalendarViewMode.DAY) dayOpenedFromMonth = false
+    }
+
     Scaffold(
         topBar = {
             CalendarHeader(
@@ -624,7 +657,11 @@ fun CalendarScreen(
                                 scaleX = if (isDragOverDeleteButton) 1.2f else 1f
                                 scaleY = if (isDragOverDeleteButton) 1.2f else 1f
                             }
+                            // After the scale, so a drag that reached the button keeps it while
+                            // the button grows under the finger.
+                            .onGloballyPositioned { deleteButtonBounds = it.boundsInWindow() }
                     ) {
+                        DisposableEffect(Unit) { onDispose { deleteButtonBounds = null } }
                         Icon(
                             imageVector = Icons.Default.Close,
                             contentDescription = stringResource(R.string.calendar_delete_event),
@@ -786,7 +823,7 @@ fun CalendarScreen(
                     // they always saw. Placed with the banners rather than in the Filters sheet: the
                     // question "what does Anya's week look like" is asked at a glance, and the
                     // Expenses screen answers the same question the same way.
-                    FamilyMemberChips(
+                    FamilyMemberFilterStrip(
                         members = familyMembers,
                         selected = activeMemberFilter,
                         onToggle = { memberFilter = activeMemberFilter.toggling(it) },
@@ -867,6 +904,9 @@ fun CalendarScreen(
                                     onDragOverDeleteButton = { isOver ->
                                         isDragOverDeleteButton = isOver
                                     },
+                                    deleteTargetBounds = deleteTarget,
+                                    // A child's own band (FAM-4) is not the schedule a swap moves.
+                                    onOfferDay = offerDayFromDayView?.takeIf { grid.followsFamily },
                                     holidays = holidays
                                 )
                             }
@@ -895,6 +935,7 @@ fun CalendarScreen(
                                     // creating an event on a chosen day.
                                     onDayClick = { clickedDate ->
                                         calendarViewModel.setSelectedDate(clickedDate)
+                                        dayOpenedFromMonth = true
                                         calendarViewModel.setViewMode(CalendarViewMode.DAY)
                                     },
                                     // Paging is not choosing: the new month gets today if it

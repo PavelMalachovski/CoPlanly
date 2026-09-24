@@ -19,5 +19,8 @@
     <string name="journal_pick_ok">ОК</string>
     <string name="journal_pick_cancel">Скасувати</string>
     <string name="journal_error_save">Не вдалося зберегти запис. Спробуйте ще раз.</string>
+    <string name="journal_error_delete">Не вдалося видалити запис. Спробуйте ще раз.</string>
+    <string name="journal_delete_confirm_title">Видалити цей запис?</string>
+    <string name="journal_delete_confirm_message">Запис буде видалено з цього телефона. Щоденник більше ніде не зберігається, тож відновити його не вийде.</string>
     <string name="journal_error_signed_out">Ви вийшли з облікового запису. Увійдіть, щоб зберегти запис.</string>
 </resources>

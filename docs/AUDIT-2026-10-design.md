@@ -132,20 +132,29 @@ Effort: XS < 1 h, S ≤ ½ day, M ≤ 2 days, L > 2 days.
     row with the other filters.
 - **Fix:**
   - Put the member filter inside Filters, and show its active state as a count on the Filters
-    pill.
+    pill. *(Not taken: `CalendarScreen.kt` records the strip's place over the grid as deliberate —
+    "what does Anya's week look like" is asked at a glance, and Expenses answers it the same way.
+    Week 3 made it one row, label first, instead.)*
   - Make the banner a single-line chip, "2 requests · Review", or collapse it into the header
     when scrolled.
   - Let the title take the remaining width, with *Today* as an icon button below Compact width.
 
 **D-4. Home leads with navigation, not the day.** Effort: S.
 
+- **The order is an owner decision, not an accident.** Like D-5, this first read as a defect.
+  `HomeScreen.kt` records that the owner's walkthrough (August 2026) put the emergency surface
+  first: who to call and the child's own record belong above the schedule, "because the moment
+  it is needed is the moment nobody scrolls". What follows is a proposal for the owner. It is not
+  a fix to apply.
 - **Evidence:** [shot 04] The first thing under the title is a `SectionGroup` of Contacts, Child
   Information and Pets. Those are links to reference screens, and they duplicate Settings →
   Family [shot 25]. The handover hero and the today card, the surfaces the design refresh made the
   point of Home and the best-designed ones in the app (V8), start below the fold on the RU
   variant.
-- **Fix:** Order Home as hero → today → week → "Bob changed" → stat tiles, and put the three
-  links last, or into a "Family" tab or hub (see D-12).
+- **Proposal (owner's call):** keep the emergency links first, but make them one row of three
+  labelled tiles (Contacts, Child, Pets) instead of three full-height rows. They stay one tap away
+  at the top, and the hero and the today card rise above the fold. Moving them last, or into a
+  Family hub (D-12), would reverse the owner's decision and is not proposed.
 
 **D-5. The pending swap is a modal dialog on launch.** Effort: S.
 
@@ -387,6 +396,33 @@ This is ordered for the closed test first. Each step leaves the app shippable.
      "заплатил(а)…", so the payer and the split are cut while the amount beside it is whole. Let
      it wrap to a second line.
    - D-10 gestures, D-11 back and discard guard.
+
+   Done in week 3's pull request:
+   - **D-3:**
+     - The member filter is one scrolling row with its label in front.
+     - The month title leaves out the current year, so "Сентябрь" fits beside the pills.
+     - The change-request banner says "2 change requests" and wraps instead of cutting.
+   - **D-6:** Analytics shows the month line instead of the balance cards, so the chart is on the
+     first screen. The list pins a collapsed month summary once the cards scroll away.
+   - **D-10:**
+     - A drag deletes only when it ends over the delete button itself.
+     - Resize handles are 48 dp wide and up to a third of the block tall. Each block also has
+       "End 15 minutes later/earlier" accessibility actions.
+     - Day view has a visible "Swap this day".
+     - The journal editor has a confirmed Delete.
+   - **D-11:**
+     - Back from a day opened from Month returns to Month.
+     - The event, expense, child and pet forms ask before dropping edits.
+     - The event and expense forms survive rotation.
+     - The expense form's Save is pinned (D-7).
+     - The pet form no longer lets a sync overwrite what is being typed.
+   - The expense row's meta line wraps to two lines.
+
+   Not done:
+   - D-4 waits for the owner (see above).
+   - The child and pet forms still lose edits on rotation. Their nested lists belong in the
+     ViewModels, which is a refactor of its own.
+   - Nothing previews a discard with `PredictiveBackHandler` yet.
 4. **Before public release:**
    - D-12 Family hub, D-13 push deep links and channels.
    - The adaptive shell, Expressive components.

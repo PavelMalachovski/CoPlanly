@@ -11,6 +11,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -60,14 +61,62 @@ fun FamilyMemberChips(
                 .horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            members.forEach { member ->
-                FilterChip(
-                    selected = selected.names(member.ref),
-                    onClick = { onToggle(member.ref) },
-                    label = { Text(member.name) }
-                )
-            }
+            MemberChips(members = members, selected = selected, onToggle = onToggle)
         }
+    }
+}
+
+/**
+ * The same chips as [FamilyMemberChips], as a **filter above a list or a grid**: the label leads
+ * the one scrolling row instead of taking a line of its own, so the strip costs the screen one
+ * line (docs/AUDIT-2026-10-design.md D-3). Above the calendar the two lines were part of what
+ * pushed the first hour a third of the way down the screen. Renders nothing below two members,
+ * for the reason [FamilyMemberChips] gives.
+ *
+ * @param members Everyone this family cares for, from [FamilyMembersSource].
+ * @param selected The references currently chosen; none means "everyone".
+ * @param onToggle Called with the chip's reference; the caller adds or removes it.
+ * @param label Leads the row, so the chips are not an unexplained row of names.
+ */
+@Composable
+fun FamilyMemberFilterStrip(
+    members: List<FamilyMember>,
+    selected: List<FamilyMemberRef>,
+    onToggle: (FamilyMemberRef) -> Unit,
+    @StringRes label: Int,
+    modifier: Modifier = Modifier
+) {
+    if (members.size < 2) return
+
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = stringResource(label),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        MemberChips(members = members, selected = selected, onToggle = onToggle)
+    }
+}
+
+/** One multi-select chip per member, named, never coloured. */
+@Composable
+private fun MemberChips(
+    members: List<FamilyMember>,
+    selected: List<FamilyMemberRef>,
+    onToggle: (FamilyMemberRef) -> Unit
+) {
+    members.forEach { member ->
+        FilterChip(
+            selected = selected.names(member.ref),
+            onClick = { onToggle(member.ref) },
+            label = { Text(member.name) }
+        )
     }
 }
 

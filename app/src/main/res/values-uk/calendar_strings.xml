@@ -59,13 +59,16 @@
     <string name="calendar_event_pickup_confirmed">Забір підтверджено: %1$s</string>
     <string name="calendar_resize_start_handle">Змінити час початку. Тягніть вгору або вниз (крок 15 хвилин).</string>
     <string name="calendar_resize_end_handle">Змінити час завершення. Тягніть вгору або вниз (крок 15 хвилин).</string>
+    <!-- Accessibility actions on an event block in Day and Week view (D-10). -->
+    <string name="calendar_action_end_later">Закінчити на 15 хвилин пізніше</string>
+    <string name="calendar_action_end_earlier">Закінчити на 15 хвилин раніше</string>
 
     <!-- Inline change-request banner, view-mode menu and the day agenda card. -->
     <plurals name="calendar_change_requests_banner">
-        <item quantity="one">%1$d запит на зміну від іншого з батьків</item>
-        <item quantity="few">%1$d запити на зміну від іншого з батьків</item>
-        <item quantity="many">%1$d запитів на зміну від іншого з батьків</item>
-        <item quantity="other">%1$d запитів на зміну від іншого з батьків</item>
+        <item quantity="one">%1$d запит на зміну</item>
+        <item quantity="few">%1$d запити на зміну</item>
+        <item quantity="many">%1$d запитів на зміну</item>
+        <item quantity="other">%1$d запитів на зміну</item>
     </plurals>
     <string name="calendar_change_requests_review">Переглянути</string>
     <string name="calendar_change_view_mode">Змінити вигляд або перейти до дати</string>

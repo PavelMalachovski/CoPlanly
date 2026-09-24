@@ -19,5 +19,8 @@
     <string name="journal_pick_ok">OK</string>
     <string name="journal_pick_cancel">Zrušit</string>
     <string name="journal_error_save">Záznam se nepodařilo uložit. Zkuste to znovu.</string>
+    <string name="journal_error_delete">Záznam se nepodařilo smazat. Zkuste to znovu.</string>
+    <string name="journal_delete_confirm_title">Smazat tento záznam?</string>
+    <string name="journal_delete_confirm_message">Záznam se smaže z tohoto telefonu. Deník není uložený nikde jinde, takže záznam nepůjde obnovit.</string>
     <string name="journal_error_signed_out">Jste odhlášeni. Přihlaste se, abyste mohli záznam uložit.</string>
 </resources>

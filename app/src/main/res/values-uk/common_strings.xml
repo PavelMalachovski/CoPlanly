@@ -54,4 +54,5 @@
     <string name="common_keep_editing">Продовжити редагування</string>
     <string name="common_discard">Не зберігати</string>
     <string name="common_discard_changes_title">Не зберігати зміни?</string>
+    <string name="common_discard_changes_message">Зміни тут ще не збережено. Якщо піти зараз, вони пропадуть.</string>
 </resources>

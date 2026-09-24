@@ -19,5 +19,8 @@
     <string name="journal_pick_ok">OK</string>
     <string name="journal_pick_cancel">Abbrechen</string>
     <string name="journal_error_save">Der Eintrag konnte nicht gespeichert werden. Bitte erneut versuchen.</string>
+    <string name="journal_error_delete">Der Eintrag konnte nicht gelöscht werden. Bitte erneut versuchen.</string>
+    <string name="journal_delete_confirm_title">Diesen Eintrag löschen?</string>
+    <string name="journal_delete_confirm_message">Der Eintrag wird von diesem Telefon gelöscht. Das Tagebuch ist nirgendwo sonst gespeichert, daher lässt er sich nicht wiederherstellen.</string>
     <string name="journal_error_signed_out">Sie sind abgemeldet. Melden Sie sich an, um den Eintrag zu speichern.</string>
 </resources>
