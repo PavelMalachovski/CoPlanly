@@ -4,7 +4,6 @@ import android.Manifest
 import android.content.ActivityNotFoundException
 import android.content.pm.PackageManager
 import android.net.Uri
-import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -46,6 +45,7 @@ import com.coparently.app.R
 import com.coparently.app.domain.documents.FamilyDocument
 import com.coparently.app.domain.files.SharedFilePolicy
 import com.coparently.app.presentation.common.EmptyState
+import com.coparently.app.presentation.common.LocalAppMessages
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.newSharedFileCaptureUri
 import com.coparently.app.presentation.common.openSharedFile
@@ -167,6 +167,7 @@ private class DocumentPickers(val pickFile: () -> Unit, val takePhoto: () -> Uni
 @Composable
 private fun rememberDocumentPickers(onPicked: (Uri) -> Unit): DocumentPickers {
     val context = LocalContext.current
+    val appMessages = LocalAppMessages.current
     var captureUri by rememberSaveable { mutableStateOf<String?>(null) }
     val filePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let(onPicked)
@@ -181,7 +182,7 @@ private fun rememberDocumentPickers(onPicked: (Uri) -> Unit): DocumentPickers {
         try {
             camera.launch(uri)
         } catch (e: ActivityNotFoundException) {
-            Toast.makeText(context, R.string.documents_camera_unavailable, Toast.LENGTH_LONG).show()
+            appMessages?.show(context.getString(R.string.documents_camera_unavailable))
         }
     }
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->

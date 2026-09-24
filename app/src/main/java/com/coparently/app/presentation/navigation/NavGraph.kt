@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -47,6 +48,7 @@ import com.coparently.app.presentation.chat.ChatViewModel
 import com.coparently.app.presentation.childinfo.ChildInfoScreen
 import com.coparently.app.presentation.common.ConnectivityBanner
 import com.coparently.app.presentation.common.ConnectivityViewModel
+import com.coparently.app.presentation.common.LocalAppMessages
 import com.coparently.app.presentation.common.animations.*
 import com.coparently.app.presentation.consent.TelemetryConsentScreen
 import com.coparently.app.presentation.consent.TelemetryConsentViewModel
@@ -141,6 +143,9 @@ fun NavGraph(
         // Empty while online, so the status-bar inset the NavHost consumes below is the
         // Scaffold's own; while offline the banner pads itself below the status bar instead.
         topBar = { ConnectivityBanner(offline = offline) },
+        // Messages that outlive their screen (D-25): a save that navigates away and still owes a
+        // warning. Above the bottom bar on a tab; at the bottom on a detail screen.
+        snackbarHost = { LocalAppMessages.current?.let { SnackbarHost(it.hostState) } },
         bottomBar = {
             AnimatedVisibility(
                 visible = currentRoute in BottomNavDestination.topLevelRoutes,

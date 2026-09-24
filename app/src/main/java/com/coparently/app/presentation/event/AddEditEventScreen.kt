@@ -1,7 +1,6 @@
 package com.coparently.app.presentation.event
 
 import android.net.Uri
-import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -101,6 +100,7 @@ import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.common.FamilyMemberChips
 import com.coparently.app.presentation.common.FamilyMemberRefListSaver
 import com.coparently.app.presentation.common.FullScreenImageDialog
+import com.coparently.app.presentation.common.LocalAppMessages
 import com.coparently.app.presentation.common.LocalDatePickerDialog
 import com.coparently.app.presentation.common.StickyActionBar
 import com.coparently.app.presentation.common.rememberDiscardGuard
@@ -271,6 +271,7 @@ fun AddEditEventScreen(
         ActivityResultContracts.PickVisualMedia()
     ) { uri -> if (uri != null) pickedImageUri = uri }
     val snackbarHostState = remember { SnackbarHostState() }
+    val appMessages = LocalAppMessages.current
     var isSaving by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var isDeleting by remember { mutableStateOf(false) }
@@ -581,15 +582,11 @@ fun AddEditEventScreen(
                 // had also failed — long after the event itself was written. The saved event is
                 // its own confirmation once the calendar is back.
                 //
-                // The upload warning still has to reach the user, so it goes out as a Toast,
-                // which survives navigation. This matches AddExpenseScreen, which already
-                // reports its receipt-upload warning the same way.
+                // The upload warning still has to reach the user, so it goes out through the
+                // app's message host, which survives navigation (D-25; it was a Toast). This
+                // matches AddExpenseScreen's receipt-upload warning.
                 if (imageUploadFailed) {
-                    Toast.makeText(
-                        context,
-                        context.getString(R.string.event_form_photo_upload_failed),
-                        Toast.LENGTH_LONG
-                    ).show()
+                    appMessages?.show(context.getString(R.string.event_form_photo_upload_failed))
                 }
                 onSave()
             } catch (e: Exception) {

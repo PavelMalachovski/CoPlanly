@@ -37,8 +37,10 @@ import com.coparently.app.domain.chat.ChatUri
 import com.coparently.app.domain.guests.GuestInviteUri
 import com.coparently.app.domain.pairing.PairingUri
 import com.coparently.app.domain.repository.PreferencesRepository
+import com.coparently.app.presentation.common.LocalAppMessages
 import com.coparently.app.presentation.common.ParentPaletteViewModel
 import com.coparently.app.presentation.common.UiText
+import com.coparently.app.presentation.common.rememberAppMessages
 import com.coparently.app.presentation.navigation.NavGraph
 import com.coparently.app.presentation.navigation.PendingChatLink
 import com.coparently.app.presentation.navigation.PendingChatOpen
@@ -256,11 +258,15 @@ class MainActivity : AppCompatActivity() {
                     // reveal it (auth state resolves underneath while it plays).
                     var showSplash by remember { mutableStateOf(true) }
                     val navController = rememberNavController()
+                    // Snackbars that outlive the screen that raised them (D-25), shown by the
+                    // navigation graph's root Scaffold.
+                    val appMessages = rememberAppMessages()
 
                     Box(modifier = Modifier.fillMaxSize()) {
                         CompositionLocalProvider(
                             LocalGoogleSignInCallback provides googleSignInCallback,
-                            LocalParentPalette provides parentPalette
+                            LocalParentPalette provides parentPalette,
+                            LocalAppMessages provides appMessages
                         ) {
                             NavGraph(
                                 navController = navController,
