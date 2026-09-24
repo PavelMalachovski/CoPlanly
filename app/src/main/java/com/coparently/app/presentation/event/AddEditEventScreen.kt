@@ -99,9 +99,11 @@ import com.coparently.app.R
 import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.common.FamilyMemberChips
+import com.coparently.app.presentation.common.FamilyMemberRefListSaver
 import com.coparently.app.presentation.common.FullScreenImageDialog
 import com.coparently.app.presentation.common.LocalDatePickerDialog
 import com.coparently.app.presentation.common.StickyActionBar
+import com.coparently.app.presentation.common.rememberDiscardGuard
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.common.toggling
 import com.coparently.app.presentation.components.TimePickerDialog
@@ -199,40 +201,44 @@ fun AddEditEventScreen(
     // first composition.
     val parentsLoaded = parentNames.parents.loaded
 
-    var title by remember { mutableStateOf("") }
-    var description by remember { mutableStateOf("") }
+    // The fields are saveable (D-11): turning the phone used to reload an edited event from Room
+    // over the parent's changes. `seeded` below makes the load and the draft restore run once.
+    var title by rememberSaveable { mutableStateOf("") }
+    var description by rememberSaveable { mutableStateOf("") }
     // Yours unless you say otherwise. Hardcoding "mom" here meant every event either parent
     // created was attributed to the same person. Seeded from the signed-in user's slot, which
     // is unknown (null) until ParentsSource resolves it - Save stays disabled until then
     // (see isFormValid) rather than silently falling back to "mom".
-    var parentOwner by remember { mutableStateOf(currentUser?.slot) }
-    var eventType by remember { mutableStateOf("general") }
+    var parentOwner by rememberSaveable { mutableStateOf(currentUser?.slot) }
+    var eventType by rememberSaveable { mutableStateOf("general") }
     // Snapshot of the loaded event so saving preserves sync/sharing fields
     var existingEvent by remember { mutableStateOf<Event?>(null) }
     // MVP1 fields: recurrence, reminder, privacy
-    var recurrencePattern by remember { mutableStateOf<String?>(null) }
-    var recurrenceEndDate by remember { mutableStateOf<LocalDate?>(null) }
+    var recurrencePattern by rememberSaveable { mutableStateOf<String?>(null) }
+    var recurrenceEndDate by rememberSaveable { mutableStateOf<LocalDate?>(null) }
     var showRecurrenceEndPicker by remember { mutableStateOf(false) }
-    var reminderMinutes by remember { mutableStateOf<Int?>(null) }
-    var isPrivate by remember { mutableStateOf(false) }
-    var isImportant by remember { mutableStateOf(false) }
+    var reminderMinutes by rememberSaveable { mutableStateOf<Int?>(null) }
+    var isPrivate by rememberSaveable { mutableStateOf(false) }
+    var isImportant by rememberSaveable { mutableStateOf(false) }
     // Which calendar friend takes part, or null. Not an owner — see Event.friendParticipates.
-    var friendParticipates by remember { mutableStateOf<String?>(null) }
+    var friendParticipates by rememberSaveable { mutableStateOf<String?>(null) }
     // The family's children and pets, and which of them this event is about. Empty is the whole
     // family — a different question from parentOwner, which is the custody slot whose day it
     // falls on. The picker renders nothing below two members, so nothing is asked of a family
     // with one child.
     val familyMembers by viewModel.familyMembers.collectAsState()
-    var forMembers by remember { mutableStateOf(emptyList<FamilyMemberRef>()) }
+    var forMembers by rememberSaveable(stateSaver = FamilyMemberRefListSaver) {
+        mutableStateOf(emptyList<FamilyMemberRef>())
+    }
     // Event photo: URL of an already-attached image, and a freshly picked local image
     // (not yet uploaded). Picking a new one supersedes the existing image on save.
-    var existingImageUrl by remember { mutableStateOf<String?>(null) }
-    var pickedImageUri by remember { mutableStateOf<Uri?>(null) }
+    var existingImageUrl by rememberSaveable { mutableStateOf<String?>(null) }
+    var pickedImageUri by rememberSaveable { mutableStateOf<Uri?>(null) }
     // Custom event types are read from encrypted prefs; load them off the main thread
     // so opening the screen isn't blocked by the (synchronous) decrypt on first composition.
     var customEventTypes by remember { mutableStateOf<List<String>>(emptyList()) }
-    var startDate by remember { mutableStateOf(initialDate ?: LocalDate.now()) }
-    var startTime by remember(initialHour, initialDate) {
+    var startDate by rememberSaveable { mutableStateOf(initialDate ?: LocalDate.now()) }
+    var startTime by rememberSaveable(initialHour, initialDate) {
         mutableStateOf(
             if (initialHour != null) {
                 LocalTime.of(initialHour, 0)
@@ -241,7 +247,7 @@ fun AddEditEventScreen(
             }
         )
     }
-    var endTime by remember(initialHour) {
+    var endTime by rememberSaveable(initialHour) {
         mutableStateOf(
             if (initialHour != null) {
                 LocalTime.of(initialHour, 0).plusHours(1)
@@ -356,12 +362,17 @@ fun AddEditEventScreen(
 
     // Load event if editing, or load draft if creating new event
     // Issue 1.3: Draft saving functionality
+    // Once per form, not once per composition: after a rotation the saved fields already hold
+    // what the parent typed, so the event is re-read only as the snapshot a save copies from.
+    var seeded by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(eventId) {
         if (eventId != null) {
             scope.launch {
                 val event = viewModel.getEventById(eventId)
                 event?.let {
                     existingEvent = it
+                    if (seeded) return@let
+                    seeded = true
                     title = it.title
                     description = it.description ?: ""
                     parentOwner = it.parentOwner
@@ -379,10 +390,11 @@ fun AddEditEventScreen(
                     existingImageUrl = it.imageUrl
                 }
             }
-        } else if (initialDate == null && initialHour == null) {
+        } else if (initialDate == null && initialHour == null && !seeded) {
             // Restore a saved draft only for a blank new event (opened via the "+" button).
             // When the user taps a specific time slot, that slot must be respected — the
             // draft's date/time must not override it (this was the "tap 15:00 -> 09:00" bug).
+            seeded = true
             scope.launch {
                 val draft = withContext(Dispatchers.IO) { viewModel.loadEventDraft() }
                 draft?.let {
@@ -452,6 +464,29 @@ fun AddEditEventScreen(
             )
         }
     }
+
+    // Asked before an edit is dropped (D-11). A new event needs no question: its draft is saved
+    // as the parent types and comes back on the next "+", which is what Issue 1.3 built.
+    val formFields = EventFields(
+        title = title,
+        description = description,
+        parentOwner = parentOwner,
+        eventType = eventType,
+        startDate = startDate,
+        startTime = startTime,
+        endTime = endTime,
+        recurrencePattern = recurrencePattern,
+        recurrenceEndDate = recurrenceEndDate,
+        reminderMinutes = reminderMinutes,
+        isPrivate = isPrivate,
+        isImportant = isImportant,
+        friendParticipates = friendParticipates,
+        forMembers = forMembers,
+        imageUrl = existingImageUrl,
+        newImage = pickedImageUri?.toString()
+    )
+    val editsUnsaved = existingEvent?.let { EventFields.of(it) != formFields } ?: false
+    val leave = rememberDiscardGuard(dirty = editsUnsaved && !isSaving && !isDeleting, onLeave = onCancel)
 
     // Shared save routine for the top-bar check and the sticky bottom Save button
     val performSave: () -> Unit = performSave@{
@@ -585,7 +620,7 @@ fun AddEditEventScreen(
                 navigationIcon = {
                     IconButton(onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        onCancel()
+                        leave()
                     }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -1626,6 +1661,54 @@ fun AddEditEventScreen(
                 }
             }
         )
+    }
+}
+
+/**
+ * The values the event form edits, compared to tell whether leaving would drop an edit (D-11).
+ * [of] mirrors the edit mode's prefill exactly, so an untouched form compares equal.
+ */
+private data class EventFields(
+    val title: String,
+    val description: String,
+    val parentOwner: String?,
+    val eventType: String,
+    val startDate: LocalDate,
+    val startTime: LocalTime,
+    val endTime: LocalTime,
+    val recurrencePattern: String?,
+    val recurrenceEndDate: LocalDate?,
+    val reminderMinutes: Int?,
+    val isPrivate: Boolean,
+    val isImportant: Boolean,
+    val friendParticipates: String?,
+    val forMembers: List<FamilyMemberRef>,
+    val imageUrl: String?,
+    val newImage: String?
+) {
+    /** The form's values for [event], as the edit mode prefills them. */
+    companion object {
+        fun of(event: Event): EventFields {
+            val start = event.startDateTime.toLocalTime()
+            return EventFields(
+                title = event.title,
+                description = event.description ?: "",
+                parentOwner = event.parentOwner,
+                eventType = event.eventType,
+                startDate = event.startDateTime.toLocalDate(),
+                startTime = start,
+                endTime = event.endDateTime?.toLocalTime() ?: start.plusHours(1),
+                recurrencePattern = if (event.isRecurring) event.recurrencePattern else null,
+                recurrenceEndDate = event.recurrenceEndDate,
+                reminderMinutes = event.reminderMinutes,
+                isPrivate = event.isPrivate,
+                isImportant = event.isImportant,
+                friendParticipates = event.friendParticipates,
+                forMembers = event.forMembers,
+                imageUrl = event.imageUrl,
+                newImage = null
+            )
+        }
     }
 }
 

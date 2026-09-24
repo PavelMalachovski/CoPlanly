@@ -22,6 +22,7 @@ import com.coparently.app.domain.model.*
 import com.coparently.app.presentation.childinfo.components.*
 import com.coparently.app.presentation.common.ConfirmationDialog
 import com.coparently.app.presentation.common.MedicalProfileEditor
+import com.coparently.app.presentation.common.rememberDiscardGuard
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.UUID
@@ -103,9 +104,12 @@ fun AddEditChildInfoScreen(
     // like the fields themselves: after a configuration change both reset, and the form is
     // seeded again from the stored record.
     var seededForId by remember { mutableStateOf<String?>(null) }
+    // What the form was seeded with, so Back can tell an edit from an untouched form (D-11).
+    var seededFields by remember { mutableStateOf(ChildFields.EMPTY) }
     LaunchedEffect(currentChildInfo) {
         currentChildInfo?.takeIf { it.id != seededForId }?.let { info ->
             seededForId = info.id
+            seededFields = ChildFields.of(info)
             childName = info.childName
             dateOfBirth = info.dateOfBirth
             medications = info.medications
@@ -118,6 +122,23 @@ fun AddEditChildInfoScreen(
             storedPhotos = info.medicalPhotos
         }
     }
+
+    // Asked before an edit is dropped (docs/AUDIT-2026-10-design.md D-11): a parent who typed out
+    // a medication and pressed Back lost it without a word.
+    val formFields = ChildFields(
+        childName = childName,
+        dateOfBirth = dateOfBirth,
+        medications = medications,
+        activities = activities,
+        allergies = allergies,
+        medicalNotes = medicalNotes,
+        emergencyContacts = emergencyContacts,
+        schoolInfo = schoolInfo,
+        medicalProfile = medicalProfile,
+        pickedPhotos = pickedPhotos,
+        removedPhotos = removedPhotos
+    )
+    val leave = rememberDiscardGuard(dirty = formFields != seededFields && !isSaving, onLeave = onNavigateBack)
 
     if (showDeleteConfirm) {
         val child = currentChildInfo
@@ -189,7 +210,7 @@ fun AddEditChildInfoScreen(
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
+                    IconButton(onClick = leave) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = stringResource(R.string.childinfo_back)
@@ -543,5 +564,52 @@ fun AddEditChildInfoScreen(
             // Bottom spacing
             Spacer(modifier = Modifier.height(16.dp))
         }
+    }
+}
+
+/**
+ * The values the child form edits, compared with what it was seeded with to tell whether Back
+ * would drop an edit (D-11). A photo picked or marked for removal counts as an edit.
+ */
+private data class ChildFields(
+    val childName: String,
+    val dateOfBirth: LocalDateTime?,
+    val medications: List<Medication>,
+    val activities: List<Activity>,
+    val allergies: List<String>,
+    val medicalNotes: String,
+    val emergencyContacts: List<EmergencyContact>,
+    val schoolInfo: SchoolInfo?,
+    val medicalProfile: MedicalProfile,
+    val pickedPhotos: List<String>,
+    val removedPhotos: List<String>
+) {
+    /** A blank form, and the form seeded from a stored record. */
+    companion object {
+        val EMPTY = ChildFields(
+            childName = "",
+            dateOfBirth = null,
+            medications = emptyList(),
+            activities = emptyList(),
+            allergies = emptyList(),
+            medicalNotes = "",
+            emergencyContacts = emptyList(),
+            schoolInfo = null,
+            medicalProfile = MedicalProfile(),
+            pickedPhotos = emptyList(),
+            removedPhotos = emptyList()
+        )
+
+        fun of(info: ChildInfo) = EMPTY.copy(
+            childName = info.childName,
+            dateOfBirth = info.dateOfBirth,
+            medications = info.medications,
+            activities = info.activities,
+            allergies = info.allergies,
+            medicalNotes = info.medicalNotes ?: "",
+            emergencyContacts = info.emergencyContacts,
+            schoolInfo = info.schoolInfo,
+            medicalProfile = info.medicalProfile
+        )
     }
 }
