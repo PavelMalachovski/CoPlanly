@@ -290,6 +290,8 @@ fun AddExpenseScreen(
     val leave = rememberDiscardGuard(dirty = dirty && !isSaving, onLeave = onBack)
 
     Scaffold(
+        // A back gesture over unsaved edits shrinks the form before it asks (D-11).
+        modifier = Modifier.then(leave.backPreview),
         topBar = {
             TopAppBar(
                 title = {

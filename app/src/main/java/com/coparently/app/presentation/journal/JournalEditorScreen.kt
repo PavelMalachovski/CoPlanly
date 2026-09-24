@@ -100,6 +100,8 @@ fun JournalEditorScreen(
     val leave = rememberDiscardGuard(dirty = state.hasUnsavedEdits && !state.saving, onLeave = onNavigateUp)
 
     Scaffold(
+        // A back gesture over unsaved edits shrinks the form before it asks (D-11).
+        modifier = Modifier.then(leave.backPreview),
         topBar = { EditorTopBar(isNew = state.isNew, onNavigateUp = leave) },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
