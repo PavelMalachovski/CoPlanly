@@ -11,6 +11,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -35,6 +36,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
+import com.coparently.app.presentation.common.ConfirmationDialog
 import com.coparently.app.presentation.common.LocalDatePickerDialog
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
@@ -58,9 +60,10 @@ fun JournalEditorScreen(
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     var picking by rememberSaveable { mutableStateOf(false) }
+    var confirmingDelete by rememberSaveable { mutableStateOf(false) }
 
-    LaunchedEffect(state.saved) {
-        if (state.saved) onNavigateUp()
+    LaunchedEffect(state.saved, state.deleted) {
+        if (state.saved || state.deleted) onNavigateUp()
     }
     LaunchedEffect(state.error) {
         state.error?.let {
@@ -81,6 +84,16 @@ fun JournalEditorScreen(
         )
     }
 
+    if (confirmingDelete) {
+        DeleteEntryDialog(
+            onConfirm = {
+                confirmingDelete = false
+                viewModel.delete()
+            },
+            onDismiss = { confirmingDelete = false }
+        )
+    }
+
     Scaffold(
         topBar = { EditorTopBar(isNew = state.isNew, onNavigateUp = onNavigateUp) },
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -97,17 +110,35 @@ fun JournalEditorScreen(
             state = state,
             onPickDate = { picking = true },
             onTextChange = viewModel::setText,
+            onDelete = { confirmingDelete = true },
             modifier = Modifier.padding(padding)
         )
     }
 }
 
-/** The notice, the day the entry is about, and the text. */
+/**
+ * Asks before deleting. Confirmed rather than undone: the entry exists on this phone alone, and
+ * the editor closes as it goes, so there is no list here to offer an Undo from.
+ */
+@Composable
+private fun DeleteEntryDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    ConfirmationDialog(
+        title = stringResource(R.string.journal_delete_confirm_title),
+        message = stringResource(R.string.journal_delete_confirm_message),
+        confirmText = stringResource(R.string.journal_delete),
+        onConfirm = onConfirm,
+        onDismiss = onDismiss,
+        isDestructive = true
+    )
+}
+
+/** The notice, the day the entry is about, the text, and — for an existing entry — Delete, last. */
 @Composable
 private fun EditorForm(
     state: JournalEditorState,
     onPickDate: () -> Unit,
     onTextChange: (String) -> Unit,
+    onDelete: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val editable = !state.loading && !state.saving
@@ -140,6 +171,18 @@ private fun EditorForm(
                 .fillMaxWidth()
                 .heightIn(min = TEXT_MIN_HEIGHT)
         )
+        // Last on the screen, per the destructive-action anatomy (design refresh item 8).
+        if (!state.isNew) {
+            SectionGroup {
+                SectionRow(
+                    title = stringResource(R.string.journal_delete),
+                    icon = Icons.Default.Delete,
+                    iconTint = MaterialTheme.colorScheme.error,
+                    titleColor = MaterialTheme.colorScheme.error,
+                    onClick = onDelete.takeIf { state.canDelete }
+                )
+            }
+        }
     }
 }
 

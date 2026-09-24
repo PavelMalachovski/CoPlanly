@@ -33,7 +33,8 @@ import kotlin.test.assertTrue
  *
  * Pinned: a new entry is stamped with its author and the family at create (item 18), read fresh
  * rather than from a shared flow (item 17); an edit is a copy that keeps the id, the first-written
- * time and the family; and a failed save is a sentence, not a silent return to the list.
+ * time and the family; a failed save is a sentence, not a silent return to the list; and Delete,
+ * the visible route beside the list's swipe, removes only an entry that exists.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class JournalEditorViewModelTest {
@@ -184,6 +185,47 @@ class JournalEditorViewModelTest {
 
         coVerify(exactly = 0) { repository.save(any()) }
         assertEquals(UiText.Res(R.string.journal_error_signed_out), model.state.value.error)
+    }
+
+    @Test
+    fun `delete removes the entry being edited, as its author, and closes the form`() = runTest(dispatcher) {
+        val model = editor("j1")
+        advanceUntilIdle()
+        assertTrue(model.state.value.canDelete)
+
+        model.delete()
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) { repository.delete("j1", ALICE) }
+        assertTrue(model.state.value.deleted)
+        assertFalse(model.state.value.saving)
+    }
+
+    @Test
+    fun `a new entry has nothing to delete`() = runTest(dispatcher) {
+        val model = editor(JournalEditorViewModel.NEW_ENTRY)
+        advanceUntilIdle()
+        assertFalse(model.state.value.canDelete)
+
+        model.delete()
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) { repository.delete(any(), any()) }
+        assertFalse(model.state.value.deleted)
+    }
+
+    @Test
+    fun `a failed delete says so and keeps the form open`() = runTest(dispatcher) {
+        coEvery { repository.delete(any(), any()) } throws IOException("disk full")
+        val model = editor("j1")
+        advanceUntilIdle()
+
+        model.delete()
+        advanceUntilIdle()
+
+        assertEquals(UiText.Res(R.string.journal_error_delete), model.state.value.error)
+        assertFalse(model.state.value.deleted)
+        assertFalse(model.state.value.saving)
     }
 
     private companion object {

@@ -19,5 +19,8 @@
     <string name="journal_pick_ok">ОК</string>
     <string name="journal_pick_cancel">Отмена</string>
     <string name="journal_error_save">Не удалось сохранить запись. Попробуйте ещё раз.</string>
+    <string name="journal_error_delete">Не удалось удалить запись. Попробуйте ещё раз.</string>
+    <string name="journal_delete_confirm_title">Удалить эту запись?</string>
+    <string name="journal_delete_confirm_message">Запись будет удалена с этого телефона. Дневник больше нигде не хранится, поэтому восстановить её не получится.</string>
     <string name="journal_error_signed_out">Вы вышли из аккаунта. Войдите, чтобы сохранить запись.</string>
 </resources>
