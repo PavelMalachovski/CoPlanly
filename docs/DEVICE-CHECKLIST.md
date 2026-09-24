@@ -73,6 +73,27 @@ Play install, a vendor skin.
 | `data/export/ExportFileWriterTest` | §6: a CSV (RFC 4180, statement first, formula guard, both clocks, no private event) and a PDF that `PdfRenderer` opens, written through the real writer; the share intent's `FileProvider` URI and read-only grant | Real revisions from the server, the share sheet, and a spreadsheet or PDF app opening the file |
 | `presentation/navigation/MainNavigationSmokeTest` | A signed-in launch visiting Home, Calendar (month/week/day), Chat, Expenses and Settings without a crash; bottom bar on the tabs only; icon-only controls named and ≥ 48 dp | Everything that needs data, a co-parent or a server; TalkBack itself (§3.9) |
 
+**What the `e2e` job covers between two parents.** Two accounts in one emulator, each with the
+production data layer, against the Auth, Firestore, Functions and Storage emulators and the real
+`firestore.rules`/`storage.rules` (CLAUDE.md, "The `e2e` job"). Every shared collection, storage
+path, push type and callable is either named by one of these tests or exempted with a reason in
+`tools/e2e/coverage.json`, and CI fails when a new one is neither — so a two-phone feature arrives
+here already exercised. A push is proved as far as the queue: the `notification_queue` document
+addressed to the right parent with the right type and family. Its **delivery** is always the
+phone's. A check below marked **[CI e2e]** is one of these, and the PR comment's manual plan says
+so.
+
+| Test (`app/src/androidTest/.../e2e/`) | Covers between the two parents | What only phones still add |
+| --- | --- | --- |
+| `TwoParentPairingTest` | Pairing on both phones, both slots, one conversation, `pairing_accepted` queued | The QR scan, the pairing screens |
+| `TwoParentEventsTest`, `MultiFamilyTest` | Events through the sync's own query, a private event never on the server, tombstones; a second family's audience (§5.2) | The grid as drawn, the switcher UI |
+| `TwoParentChatTest`, `OneParentOnScreenTest` | Chat across the date line to unread, DELIVERED, READ; one parent's real screens (§5.1) | Two screens at once, displayed times, the push |
+| `TwoParentAttachmentsTest` | Chat attachments and the vault, bytes and digests, a stranger refused (§5.5) | A viewer app opening the file |
+| `TwoParentExpensesTest`, `TwoParentAgreementsTest` | A shared expense on the other parent's balance; the split ratio agreed, proposed, accepted, declined, withdrawn; the parenting plan's agreement lapsing on a reword, the other half unwritable | The Expenses and plan screens, the banners |
+| `TwoParentFamilyRecordsTest` | Children, pets and budgets both ways with tombstones; records made before pairing shared and announced once; pet and medical photos (§3.10) | The forms, and the photo in the live bucket before `firebase deploy --only storage` |
+| `TwoParentRequestsAndEventPushesTest` | Change requests accepted, declined, cancelled; `event_created`; event revisions immutable, none for a private event; event photos | The request screens |
+| `TwoParentCustodyTest` | A pattern proposed, accepted, declined in two zones; single-day and group swaps; a self-accepted swap refused | The grid's band, markers and banners |
+
 ---
 
 ## 0. Before the session: owner ops
@@ -524,6 +545,8 @@ the Settings row, and it cannot see Android 13's system setting or a Play instal
       a hardware-backed Keystore.
 
 ### 3.10 Pet and medical photo upload · 1P
+
+> **[CI e2e]** `TwoParentFamilyRecordsTest` uploads both kinds through the production `FirebaseImageStorage` to the Storage emulator under the repository's `storage.rules`, and the co-parent opens them. That proves the client and the file agree; it cannot prove the live bucket has the deploy, which is what the first box below is about.
 
 - [ ] Pets → a pet → add a photo. Child → medical → add a photo.
   - **Before** `firebase deploy --only storage`: **expected to fail**. The logcat shows

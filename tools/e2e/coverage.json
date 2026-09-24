@@ -153,12 +153,18 @@
       "e2e": [
         "TwoParentFamilyRecordsTest#aPetPhotoAliceAttachesOpensOnBobsPhone",
         "TwoParentFamilyRecordsTest#aPhotoThatIsNotAJpegIsRefused"
+      ],
+      "checklist": [
+        "3.10"
       ]
     },
     "medical_photos": {
       "e2e": [
         "TwoParentFamilyRecordsTest#aMedicalPhotoAliceAttachesOpensOnBobsPhone",
         "TwoParentFamilyRecordsTest#aPhotoThatIsNotAJpegIsRefused"
+      ],
+      "checklist": [
+        "3.10"
       ]
     }
   },
