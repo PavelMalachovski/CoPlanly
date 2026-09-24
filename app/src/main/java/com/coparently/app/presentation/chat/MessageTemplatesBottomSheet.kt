@@ -19,10 +19,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import com.coparently.app.R
 import com.coparently.app.domain.model.DefaultMessageTemplates
 import com.coparently.app.domain.model.MessageTemplate
+import com.coparently.app.presentation.theme.Spacing
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,12 +41,12 @@ fun MessageTemplatesBottomSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .padding(Spacing.L)
         ) {
             Text(
                 text = stringResource(R.string.chat_templates_sheet_title),
                 style = MaterialTheme.typography.headlineSmall,
-                modifier = Modifier.padding(bottom = 16.dp)
+                modifier = Modifier.padding(bottom = Spacing.L)
             )
 
             LazyColumn {
@@ -55,7 +55,7 @@ fun MessageTemplatesBottomSheet(
                         text = stringResource(category.labelRes),
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(vertical = 8.dp)
+                        modifier = Modifier.padding(vertical = Spacing.S)
                     )
 
                     categoryTemplates.forEach { template ->
@@ -65,7 +65,7 @@ fun MessageTemplatesBottomSheet(
                         )
                     }
 
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                    HorizontalDivider(modifier = Modifier.padding(vertical = Spacing.S))
                 }
             }
         }

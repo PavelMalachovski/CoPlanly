@@ -43,6 +43,7 @@ import com.coparently.app.presentation.common.ConfirmationDialog
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.theme.ParentColors
+import com.coparently.app.presentation.theme.Spacing
 import kotlinx.coroutines.launch
 
 /**
@@ -107,7 +108,7 @@ fun FriendDetailScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
+                .padding(Spacing.L),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Row(

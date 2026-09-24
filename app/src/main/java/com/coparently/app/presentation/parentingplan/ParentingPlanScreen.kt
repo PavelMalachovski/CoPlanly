@@ -31,7 +31,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.data.repository.ParentingPlanPair
@@ -45,6 +44,7 @@ import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionGroupScope
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.rememberParentNames
+import com.coparently.app.presentation.theme.Spacing
 
 /**
  * The parenting plan: a question list, each parent's answer beside it, and where they agree
@@ -136,7 +136,7 @@ private fun NoCoParentBody(modifier: Modifier = Modifier) {
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(32.dp),
+            .padding(Spacing.XXL),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
@@ -144,7 +144,7 @@ private fun NoCoParentBody(modifier: Modifier = Modifier) {
             text = stringResource(R.string.parenting_plan_needs_coparent_title),
             style = MaterialTheme.typography.titleMedium
         )
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(Spacing.S))
         Text(
             text = stringResource(R.string.parenting_plan_needs_coparent_body),
             style = MaterialTheme.typography.bodyMedium,
@@ -168,8 +168,8 @@ private fun PlanBody(
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        contentPadding = PaddingValues(Spacing.L),
+        verticalArrangement = Arrangement.spacedBy(Spacing.L)
     ) {
         item(key = "header") {
             PlanHeader(agreed = agreed, answered = answered, total = total)
@@ -202,7 +202,7 @@ private fun PlanBody(
 
 @Composable
 private fun PlanHeader(agreed: Int, answered: Int, total: Int) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.S)) {
         Text(
             text = stringResource(R.string.parenting_plan_progress_agreed, agreed, total),
             style = MaterialTheme.typography.headlineSmall

@@ -65,6 +65,7 @@ import com.coparently.app.presentation.common.monthPagingTransition
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.common.valueOrNull
 import com.coparently.app.presentation.theme.Motion
+import com.coparently.app.presentation.theme.Spacing
 import kotlinx.coroutines.launch
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
@@ -315,7 +316,7 @@ fun ExpenseScreen(
                                 navigation = monthNavigation,
                                 modifier = Modifier
                                     .monthSwipe(monthNavigation)
-                                    .padding(horizontal = 14.dp, vertical = 8.dp)
+                                    .padding(horizontal = 14.dp, vertical = Spacing.S)
                             )
                             Box(
                                 modifier = Modifier
@@ -360,7 +361,7 @@ fun ExpenseScreen(
                                                     Modifier
                                                 }
                                             )
-                                            .padding(horizontal = 14.dp, vertical = 4.dp),
+                                            .padding(horizontal = 14.dp, vertical = Spacing.XS),
                                         monthNavigation = monthNavigation.takeIf { index == 0 }
                                     )
                                 }
@@ -372,7 +373,7 @@ fun ExpenseScreen(
                                 ViewSwitcher(
                                     showAnalytics = showAnalytics,
                                     onSelect = { showAnalytics = it },
-                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 4.dp)
+                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = Spacing.XS)
                                 )
                             }
 
@@ -387,7 +388,7 @@ fun ExpenseScreen(
                                     navigation = monthNavigation,
                                     modifier = Modifier
                                         .monthSwipe(monthNavigation)
-                                        .padding(horizontal = 14.dp, vertical = 8.dp)
+                                        .padding(horizontal = 14.dp, vertical = Spacing.S)
                                 )
                                 viewSwitcher()
                                 ExpenseAnalytics(
@@ -450,7 +451,7 @@ fun ExpenseScreen(
                                                     label = R.string.expenses_filter_members,
                                                     modifier = Modifier.padding(
                                                         horizontal = 14.dp,
-                                                        vertical = 4.dp
+                                                        vertical = Spacing.XS
                                                     )
                                                 )
                                             }

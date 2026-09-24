@@ -15,6 +15,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.coparently.app.presentation.theme.Spacing
 
 /**
  * The primary action pinned under a form — Save, nearly always (docs/AUDIT-2026-10-design.md
@@ -50,8 +51,8 @@ fun StickyActionBar(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+                .padding(Spacing.L),
+            verticalArrangement = Arrangement.spacedBy(Spacing.S)
         ) {
             notice?.invoke()
             Button(

@@ -77,6 +77,7 @@ import com.coparently.app.presentation.parentingplan.PlanReferenceCard
 import com.coparently.app.presentation.parentingplan.coParentLabel
 import com.coparently.app.presentation.theme.CoPlanlyCorners
 import com.coparently.app.presentation.theme.ParentColors
+import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.dimensions
 import java.time.DayOfWeek
 import java.time.format.DateTimeFormatter
@@ -272,7 +273,7 @@ fun CustodySetupScreen(
                                     CircleShape
                                 )
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(Spacing.S))
                         Text(
                             text = stringResource(
                                 rolesAnswerFor(uiState.selectedModelType),
@@ -465,10 +466,10 @@ fun CustodySetupScreen(
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.primary
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(Spacing.XS))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(2.dp)
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.XXS)
                     ) {
                         val tempModel = createTempModel(uiState)
                         repeat(14) { dayOffset ->
@@ -514,7 +515,7 @@ fun CustodySetupScreen(
                                 .size(10.dp)
                                 .background(ParentColors.chipFill("mom"), CircleShape)
                         )
-                        Spacer(modifier = Modifier.width(4.dp))
+                        Spacer(modifier = Modifier.width(Spacing.XS))
                         Text(
                             text = parentNames.labelFor("mom"),
                             style = MaterialTheme.typography.labelSmall,
@@ -523,13 +524,13 @@ fun CustodySetupScreen(
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f, fill = false)
                         )
-                        Spacer(modifier = Modifier.width(16.dp))
+                        Spacer(modifier = Modifier.width(Spacing.L))
                         Box(
                             modifier = Modifier
                                 .size(10.dp)
                                 .background(ParentColors.chipFill("dad"), CircleShape)
                         )
-                        Spacer(modifier = Modifier.width(4.dp))
+                        Spacer(modifier = Modifier.width(Spacing.XS))
                         Text(
                             text = parentNames.labelFor("dad"),
                             style = MaterialTheme.typography.labelSmall,

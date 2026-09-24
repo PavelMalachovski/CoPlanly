@@ -42,6 +42,7 @@ import com.coparently.app.presentation.common.animations.sectionEnter
 import com.coparently.app.presentation.common.animations.sectionExit
 import com.coparently.app.presentation.theme.CoPlanlyColors
 import com.coparently.app.presentation.theme.IconSizes
+import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.dimensions
 import com.coparently.app.presentation.theme.rememberReducedMotion
 import com.coparently.app.utils.findActivity
@@ -121,7 +122,7 @@ fun AuthScreen(
                     tint = CoPlanlyColors.BrandPrimary
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(Spacing.L))
 
                 Text(
                     text = stringResource(R.string.app_name),
@@ -147,8 +148,8 @@ fun AuthScreen(
                 )
             ) {
                 Column(
-                    modifier = Modifier.padding(24.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                    modifier = Modifier.padding(Spacing.XL),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.L)
                 ) {
                     // Title
                     Text(
@@ -171,7 +172,7 @@ fun AuthScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(Spacing.S))
 
                     // Email Field
                     OutlinedTextField(
@@ -274,7 +275,7 @@ fun AuthScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(dims.paddingSmall * 1.5f),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(Spacing.S),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Icon(
@@ -314,7 +315,7 @@ fun AuthScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(dims.paddingSmall * 1.5f),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(Spacing.S),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Icon(
@@ -332,7 +333,7 @@ fun AuthScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(Spacing.S))
 
                     // Google Sign-In Button
                     OutlinedButton(
@@ -382,13 +383,13 @@ fun AuthScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 16.dp),
+                            .padding(vertical = Spacing.L),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         HorizontalDivider(modifier = Modifier.weight(1f))
                         Text(
                             text = stringResource(R.string.auth_divider_or),
-                            modifier = Modifier.padding(horizontal = 16.dp),
+                            modifier = Modifier.padding(horizontal = Spacing.L),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -437,7 +438,7 @@ fun AuthScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(Spacing.XL))
 
             // Toggle Sign In/Sign Up
             Row(

@@ -25,6 +25,7 @@ import com.coparently.app.R
 import com.coparently.app.domain.guests.GuestAccessDuration
 import com.coparently.app.presentation.common.InviteCodeText
 import com.coparently.app.presentation.common.PillChip
+import com.coparently.app.presentation.theme.Spacing
 
 /**
  * Offering somebody read access to the family calendar (item 16).
@@ -60,7 +61,7 @@ fun FriendInviteSheet(
                 .fillMaxWidth()
                 .navigationBarsPadding()
                 .padding(horizontal = 20.dp)
-                .padding(bottom = 24.dp),
+                .padding(bottom = Spacing.XL),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Text(
@@ -78,7 +79,7 @@ fun FriendInviteSheet(
             if (code == null) {
                 // Step one. The chips stay visible after the code is minted only as history —
                 // see the `else` branch, which shows the code instead.
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
                     GuestAccessDuration.entries.forEach { duration ->
                         PillChip(
                             label = stringResource(duration.labelRes()),

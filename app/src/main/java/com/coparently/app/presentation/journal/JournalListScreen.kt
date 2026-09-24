@@ -50,6 +50,7 @@ import com.coparently.app.presentation.common.InlineBanner
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.asString
+import com.coparently.app.presentation.theme.Spacing
 import kotlinx.coroutines.launch
 
 /** How much of an entry's first line the list shows under its date. */
@@ -140,7 +141,12 @@ private fun JournalList(
     onDelete: (JournalEntry) -> Unit
 ) {
     if (entries.isEmpty()) {
-        Column(modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp, vertical = 8.dp)) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(horizontal = Spacing.L, vertical = Spacing.S)
+        ) {
             PrivacyNotice()
             EmptyState(
                 icon = Icons.Default.Lock,
@@ -155,8 +161,8 @@ private fun JournalList(
     }
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(padding),
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        contentPadding = PaddingValues(horizontal = Spacing.L, vertical = Spacing.S),
+        verticalArrangement = Arrangement.spacedBy(Spacing.S)
     ) {
         item { PrivacyNotice() }
         // Keyed by id: a journal entry is stored once, so the id is unique in this list.
@@ -172,7 +178,7 @@ private fun PrivacyNotice() {
     InlineBanner(
         text = stringResource(R.string.journal_private_notice),
         icon = Icons.Default.Lock,
-        modifier = Modifier.padding(bottom = 8.dp)
+        modifier = Modifier.padding(bottom = Spacing.S)
     )
 }
 

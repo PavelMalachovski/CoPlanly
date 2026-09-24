@@ -42,6 +42,7 @@ import com.coparently.app.presentation.calendar.CalendarViewMode
 import com.coparently.app.presentation.common.rememberToday
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.LayoutConstants
+import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.utils.LightDarkPreviews
 import com.coparently.app.utils.PreviewWrapper
 import java.time.LocalDate
@@ -143,7 +144,7 @@ private fun MonthTitle(
                 .clip(MaterialTheme.shapes.extraSmall)
                 .clickable(role = Role.Button) { menuOpen = true }
                 .defaultMinSize(minHeight = LayoutConstants.MIN_TOUCH_TARGET)
-                .padding(end = 4.dp),
+                .padding(end = Spacing.XS),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
@@ -210,7 +211,7 @@ private fun FiltersButton(onClick: () -> Unit, active: Boolean) {
                 modifier = Modifier.size(IconSizes.Inline)
             )
         },
-        modifier = Modifier.padding(end = 4.dp)
+        modifier = Modifier.padding(end = Spacing.XS)
     )
 }
 
@@ -225,8 +226,8 @@ private fun TodayButton(onClick: () -> Unit) {
     OutlinedButton(
         onClick = onClick,
         shape = MaterialTheme.shapes.small,
-        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
-        modifier = Modifier.padding(end = 2.dp)
+        contentPadding = PaddingValues(horizontal = 10.dp, vertical = Spacing.XXS),
+        modifier = Modifier.padding(end = Spacing.XXS)
     ) {
         Text(
             text = stringResource(R.string.calendar_today_button),

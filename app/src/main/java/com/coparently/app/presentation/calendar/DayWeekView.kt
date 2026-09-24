@@ -97,6 +97,7 @@ import com.coparently.app.presentation.theme.CoPlanlyCorners
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Motion
 import com.coparently.app.presentation.theme.ParentColors
+import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.dimensions
 import com.coparently.app.utils.localizedDate
 import java.time.LocalDate
@@ -339,7 +340,7 @@ private fun DayWeekPage(
                     modifier = Modifier
                         .fillMaxWidth()
                         .align(Alignment.Center),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.XS)
                 ) {
                     // Time column space - fixed width for consistency (matches content layout)
                     Box(
@@ -377,7 +378,7 @@ private fun DayWeekPage(
                                 modifier = Modifier.fillMaxWidth(),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(
-                                    12.dp,
+                                    Spacing.M,
                                     Alignment.CenterHorizontally
                                 )
                             ) {
@@ -460,8 +461,8 @@ private fun DayWeekPage(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            .padding(horizontal = Spacing.S),
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.XS)
                     ) {
                         // Hour label - static, outside AnimatedContent
                         // Fixed width to ensure consistent layout and single-line time display
@@ -503,7 +504,7 @@ private fun DayWeekPage(
                             // Background cells only (no events)
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                horizontalArrangement = Arrangement.spacedBy(Spacing.XS)
                             ) {
                                 currentDates.forEachIndexed { dayIndex, date ->
                                     val isToday = date == today
@@ -808,7 +809,7 @@ private fun ContactWindowBand(
                 color = ParentColors.text(window.parent),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(start = CONTACT_WINDOW_EDGE_WIDTH + 4.dp, top = 2.dp)
+                modifier = Modifier.padding(start = CONTACT_WINDOW_EDGE_WIDTH + Spacing.XS, top = Spacing.XXS)
             )
         }
     }
@@ -1106,7 +1107,7 @@ private fun EventChip(
                 // them. What it actually did was eat 24dp of a ~53dp week column, leaving
                 // roughly one and a half characters — which is why week blocks rendered as
                 // nothing but an ellipsis.
-                .padding(start = 5.dp, end = 3.dp, top = 4.dp, bottom = 4.dp)
+                .padding(start = 5.dp, end = 3.dp, top = Spacing.XS, bottom = Spacing.XS)
                 .pointerInput(
                     columnWidthPx,
                     hourHeightPx,
@@ -1268,7 +1269,7 @@ private fun EventChip(
             Surface(
                 modifier = Modifier
                     .align(Alignment.Center)
-                    .padding(4.dp),
+                    .padding(Spacing.XS),
                 shape = CoPlanlyCorners.Tag,
                 color = MaterialTheme.colorScheme.inverseSurface.copy(alpha = 0.9f),
                 shadowElevation = 4.dp
@@ -1280,7 +1281,7 @@ private fun EventChip(
                     color = MaterialTheme.colorScheme.inverseOnSurface,
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    modifier = Modifier.padding(horizontal = Spacing.S, vertical = Spacing.XS)
                 )
             }
         }
@@ -1378,7 +1379,7 @@ private fun EventChip(
 private fun OfferDayButton(onClick: () -> Unit) {
     OutlinedButton(
         onClick = onClick,
-        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+        contentPadding = PaddingValues(horizontal = Spacing.M, vertical = Spacing.XS)
     ) {
         Icon(
             imageVector = Icons.Default.SwapHoriz,
@@ -1643,7 +1644,7 @@ private fun CustodyWeekBand(
         modifier = modifier
             .fillMaxWidth()
             .height(CUSTODY_BAND_HEIGHT),
-        horizontalArrangement = Arrangement.spacedBy(4.dp)
+        horizontalArrangement = Arrangement.spacedBy(Spacing.XS)
     ) {
         Box(modifier = Modifier.width(gutterWidth))
 

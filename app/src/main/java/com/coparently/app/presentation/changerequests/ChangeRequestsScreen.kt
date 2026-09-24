@@ -42,7 +42,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.domain.changerequests.ChangeRequestHighlight
@@ -59,6 +58,7 @@ import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.custody.custodyDiffDescription
 import com.coparently.app.presentation.parentingplan.planCitationLine
+import com.coparently.app.presentation.theme.Spacing
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
@@ -178,7 +178,7 @@ fun ChangeRequestsScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)
-                    .padding(32.dp),
+                    .padding(Spacing.XXL),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
@@ -186,7 +186,7 @@ fun ChangeRequestsScreen(
                     text = stringResource(R.string.change_request_empty_title),
                     style = MaterialTheme.typography.titleMedium
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(Spacing.S))
                 Text(
                     text = stringResource(R.string.change_request_empty_hint),
                     style = MaterialTheme.typography.bodyMedium,
@@ -199,8 +199,8 @@ fun ChangeRequestsScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(Spacing.L),
+                verticalArrangement = Arrangement.spacedBy(Spacing.M)
             ) {
                 // A custody-pattern proposal leads: it is the largest change the inbox can carry
                 // — the whole schedule, not one day — and until it is answered the co-parent's
@@ -299,8 +299,8 @@ private fun AwaitingEventCard(
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier.padding(Spacing.L),
+            verticalArrangement = Arrangement.spacedBy(Spacing.S)
         ) {
             Text(text = event.title, style = MaterialTheme.typography.titleMedium)
             Text(
@@ -321,7 +321,7 @@ private fun AwaitingEventCard(
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
                 Button(onClick = onAccept) {
                     Text(stringResource(R.string.event_acceptance_accept))
                 }
@@ -364,8 +364,8 @@ private fun DaySwapCard(
 
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier.padding(Spacing.L),
+            verticalArrangement = Arrangement.spacedBy(Spacing.S)
         ) {
             Text(
                 text = if (group.dayCount == 1) {
@@ -415,7 +415,7 @@ private fun DaySwapCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             if (awaitsMe) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
                     Button(onClick = onAccept) {
                         Text(stringResource(R.string.day_swap_accept))
                     }
@@ -444,8 +444,8 @@ private fun CustodyProposalCard(
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier.padding(Spacing.L),
+            verticalArrangement = Arrangement.spacedBy(Spacing.S)
         ) {
             Text(
                 text = stringResource(R.string.custody_proposal_inbox_title),
@@ -476,7 +476,7 @@ private fun CustodyProposalCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
                 Button(onClick = onAccept) {
                     Text(stringResource(R.string.custody_proposal_accept))
                 }
@@ -544,8 +544,8 @@ fun ChangeRequestCard(
         )
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier.padding(Spacing.L),
+            verticalArrangement = Arrangement.spacedBy(Spacing.S)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -628,7 +628,7 @@ fun ChangeRequestCard(
                 if (isIncoming) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.S)
                     ) {
                         Button(onClick = onAccept, modifier = Modifier.weight(1f)) {
                             Text(stringResource(R.string.change_request_accept))

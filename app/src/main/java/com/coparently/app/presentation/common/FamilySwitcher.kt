@@ -38,6 +38,7 @@ import com.coparently.app.R
 import com.coparently.app.data.family.FamilyOption
 import com.coparently.app.data.family.FamilySignal
 import com.coparently.app.presentation.theme.LayoutConstants
+import com.coparently.app.presentation.theme.Spacing
 
 /** Wide enough for a first name and a surname; a longer one ellipsises. */
 private val CHIP_MAX_WIDTH = 160.dp
@@ -185,7 +186,7 @@ private fun FamilySwitcherRow(
             .fillMaxWidth()
             .selectable(selected = selected, role = Role.RadioButton, onClick = onSelect)
             .defaultMinSize(minHeight = LayoutConstants.MIN_TOUCH_TARGET)
-            .padding(vertical = 8.dp),
+            .padding(vertical = Spacing.S),
         verticalAlignment = Alignment.CenterVertically
     ) {
         // A radio button with no click of its own has no padding of its own either, so the name

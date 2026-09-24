@@ -51,6 +51,7 @@ import com.coparently.app.presentation.theme.CoPlanlyCorners
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.LayoutConstants
 import com.coparently.app.presentation.theme.ParentColors
+import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.dimensions
 import androidx.compose.foundation.layout.ExperimentalLayoutApi as FoundationExperimentalLayoutApi
 
@@ -139,7 +140,7 @@ fun EventTypeFilterSheet(
             )
 
             FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(Spacing.S)
             ) {
                 allEventTypes.forEach { type ->
                     val isVisible = type !in hiddenEventTypes
@@ -168,7 +169,7 @@ fun EventTypeFilterSheet(
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(Spacing.S)
             ) {
                 OutlinedTextField(
                     value = newTypeName,
@@ -248,9 +249,9 @@ private fun FilterPill(
             // A checkbox to TalkBack — on/off was said by colour and weight alone — and 48dp tall.
             .toggleable(value = selected, role = Role.Checkbox, onValueChange = { onClick() })
             .heightIn(min = LayoutConstants.MIN_TOUCH_TARGET)
-            .padding(horizontal = 14.dp, vertical = 8.dp),
+            .padding(horizontal = 14.dp, vertical = Spacing.S),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(Spacing.S)
     ) {
         Box(
             modifier = Modifier

@@ -63,6 +63,7 @@ import com.coparently.app.presentation.common.PillChip
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.common.valueOrNull
 import com.coparently.app.presentation.theme.Motion
+import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.utils.LightDarkPreviews
 import com.coparently.app.utils.PreviewWrapper
 import kotlinx.coroutines.delay
@@ -256,8 +257,8 @@ fun ChatScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .horizontalScroll(rememberScrollState())
-                        .padding(horizontal = 16.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        .padding(horizontal = Spacing.L, vertical = Spacing.XS),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.S)
                 ) {
                     PillChip(
                         label = stringResource(R.string.chat_request_change),
@@ -278,7 +279,7 @@ fun ChatScreen(
                 Row(verticalAlignment = Alignment.Bottom) {
                     ChatAttachButton(
                         conversationId = conversationId,
-                        modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
+                        modifier = Modifier.padding(start = Spacing.XS, bottom = Spacing.S)
                     )
                     MessageInput(
                         value = composerText,
@@ -434,9 +435,9 @@ private fun ChangeRequestEventPicker(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 24.dp)
-                .padding(bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+                .padding(horizontal = Spacing.XL)
+                .padding(bottom = Spacing.XL),
+            verticalArrangement = Arrangement.spacedBy(Spacing.S)
         ) {
             Text(
                 text = stringResource(R.string.chat_request_change_title),
@@ -509,7 +510,7 @@ internal fun ChatThreadHeader(title: String, messages: List<Message>, currentUse
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+        horizontalArrangement = Arrangement.spacedBy(Spacing.M)
     ) {
         Box(
             modifier = Modifier

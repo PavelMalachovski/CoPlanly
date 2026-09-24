@@ -42,6 +42,7 @@ import com.coparently.app.presentation.common.AccountAvatar
 import com.coparently.app.presentation.common.PillChip
 import com.coparently.app.presentation.theme.CoPlanlyColors
 import com.coparently.app.presentation.theme.ParentColors
+import com.coparently.app.presentation.theme.Spacing
 
 /**
  * The friend's own profile, authored by them (item 16).
@@ -101,7 +102,7 @@ fun FriendProfileScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
+                .padding(Spacing.L),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             // The Google account's own picture, taken at the first save. There is no upload
@@ -128,7 +129,7 @@ fun FriendProfileScreen(
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.SemiBold
             )
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
                 FriendRole.entries.forEach { option ->
                     PillChip(
                         label = stringResource(option.labelRes()),

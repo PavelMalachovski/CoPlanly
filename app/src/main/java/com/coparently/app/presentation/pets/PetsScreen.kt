@@ -39,6 +39,7 @@ import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.labelRes
+import com.coparently.app.presentation.theme.Spacing
 
 /**
  * The pets list: one row per pet, tapping opens the editor, the FAB adds a new one.
@@ -148,8 +149,8 @@ private fun PetsList(pets: List<Pet>, onEditPet: (String) -> Unit) {
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+            .padding(Spacing.L),
+        verticalArrangement = Arrangement.spacedBy(Spacing.L),
         contentPadding = PaddingValues(bottom = 88.dp)
     ) {
         item {

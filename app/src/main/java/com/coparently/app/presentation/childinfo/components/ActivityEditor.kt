@@ -13,11 +13,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.unit.dp
 import com.coparently.app.R
 import com.coparently.app.domain.model.Activity
 import com.coparently.app.presentation.common.animations.sectionEnter
 import com.coparently.app.presentation.common.animations.sectionExit
+import com.coparently.app.presentation.theme.Spacing
 
 /**
  * Editor for managing a list of child activities.
@@ -41,7 +41,7 @@ fun ActivityEditor(
 
     Column(
         modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(Spacing.S)
     ) {
         // List of existing activities
         activities.forEachIndexed { index, activity ->
@@ -92,7 +92,7 @@ fun ActivityEditor(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Icon(Icons.Default.Add, contentDescription = stringResource(R.string.childinfo_add))
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(Spacing.S))
                 Text(stringResource(R.string.childinfo_add_activity))
             }
         }
@@ -114,7 +114,7 @@ private fun ActivityCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
+                .padding(Spacing.M),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -195,8 +195,8 @@ private fun ActivityForm(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+                .padding(Spacing.M),
+            verticalArrangement = Arrangement.spacedBy(Spacing.S)
         ) {
             Text(
                 text = if (activity == null) {
@@ -258,7 +258,7 @@ private fun ActivityForm(
                 TextButton(onClick = onCancel) {
                     Text(stringResource(R.string.childinfo_cancel))
                 }
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(Spacing.S))
                 Button(
                     onClick = {
                         if (name.isNotBlank() && schedule.isNotBlank()) {

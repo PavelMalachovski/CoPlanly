@@ -24,6 +24,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.coparently.app.R
 import com.coparently.app.presentation.theme.IconSizes
+import com.coparently.app.presentation.theme.Spacing
 
 /**
  * The message composer: a borderless pill field beside a round filled send button — the
@@ -61,7 +62,7 @@ fun MessageInput(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+            .padding(horizontal = Spacing.M, vertical = Spacing.S),
         // Bottom, not centre: when the field grows to a second line the send button stays
         // anchored beside the line being typed, the way every messenger composer behaves.
         verticalAlignment = Alignment.Bottom
@@ -71,7 +72,7 @@ fun MessageInput(
             onValueChange = onValueChange,
             modifier = Modifier
                 .weight(1f)
-                .padding(end = 8.dp)
+                .padding(end = Spacing.S)
                 .focusRequester(focusRequester),
             placeholder = { Text(stringResource(R.string.chat_type_message)) },
             shape = MaterialTheme.shapes.large,

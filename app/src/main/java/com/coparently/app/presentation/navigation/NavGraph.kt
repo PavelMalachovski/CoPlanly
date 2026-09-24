@@ -29,7 +29,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
@@ -67,6 +66,7 @@ import com.coparently.app.presentation.pets.PetsScreen
 import com.coparently.app.presentation.settings.SettingsScreen
 import com.coparently.app.presentation.sync.AuthStateViewModel
 import com.coparently.app.presentation.sync.SyncViewModel
+import com.coparently.app.presentation.theme.Spacing
 import kotlinx.coroutines.flow.StateFlow
 
 /**
@@ -1364,7 +1364,7 @@ private fun LoadingScreen() {
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(Spacing.L)
         ) {
             CircularProgressIndicator()
             Text(

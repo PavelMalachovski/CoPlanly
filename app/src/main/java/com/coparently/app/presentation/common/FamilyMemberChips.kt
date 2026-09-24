@@ -14,9 +14,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.family.names
+import com.coparently.app.presentation.theme.Spacing
 
 /**
  * "Who is this about" — one chip per child and per pet, multi-select.
@@ -53,13 +53,13 @@ fun FamilyMemberChips(
 ) {
     if (members.size < 2) return
 
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(Spacing.S)) {
         Text(text = stringResource(label), style = MaterialTheme.typography.titleSmall)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(Spacing.S)
         ) {
             MemberChips(members = members, selected = selected, onToggle = onToggle)
         }
@@ -92,7 +92,7 @@ fun FamilyMemberFilterStrip(
         modifier = modifier
             .fillMaxWidth()
             .horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.S),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(

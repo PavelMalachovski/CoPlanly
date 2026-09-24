@@ -84,6 +84,7 @@ import com.coparently.app.presentation.event.EventUiState
 import com.coparently.app.presentation.event.EventViewModel
 import com.coparently.app.presentation.parentingplan.planCitationShortLine
 import com.coparently.app.presentation.theme.IconSizes
+import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.dimensions
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -1204,8 +1205,8 @@ private fun DaySwapSelectionBar(
         // and hid it. Every text here is now single-line and clipped rather than wrapped, so a
         // longer translation shortens the sentence instead of growing the bar.
         Column(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(2.dp)
+            modifier = Modifier.padding(horizontal = Spacing.L, vertical = Spacing.S),
+            verticalArrangement = Arrangement.spacedBy(Spacing.XXS)
         ) {
             Text(
                 text = LocalContext.current.resources.getQuantityString(
@@ -1226,7 +1227,7 @@ private fun DaySwapSelectionBar(
             )
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.S, Alignment.End),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 TextButton(onClick = onCancel) {

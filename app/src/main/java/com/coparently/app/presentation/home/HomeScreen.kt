@@ -95,6 +95,7 @@ import com.coparently.app.presentation.common.rememberToday
 import com.coparently.app.presentation.components.SkeletonBox
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.ParentColors
+import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.utils.LightDarkPreviews
 import com.coparently.app.utils.PreviewWrapper
 import com.coparently.app.utils.localizedDate
@@ -308,10 +309,10 @@ fun HomeScreen(
 @Composable
 private fun HomeSkeleton(modifier: Modifier = Modifier) {
     Column(
-        modifier = modifier.padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        modifier = modifier.padding(horizontal = Spacing.L),
+        verticalArrangement = Arrangement.spacedBy(Spacing.L)
     ) {
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(Spacing.S))
 
         // The handover hero.
         SkeletonBox(
@@ -322,7 +323,7 @@ private fun HomeSkeleton(modifier: Modifier = Modifier) {
         )
 
         // The two stat tiles, side by side as they render.
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
             repeat(2) {
                 SkeletonBox(
                     modifier = Modifier
@@ -361,8 +362,8 @@ private fun PairingInvitation(
     modifier: Modifier = Modifier
 ) {
     Column(
-        modifier = modifier.padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
+        modifier = modifier.padding(Spacing.XL),
+        verticalArrangement = Arrangement.spacedBy(Spacing.L, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
@@ -421,7 +422,7 @@ private fun Dashboard(
         modifier = Modifier
             .fillMaxSize()
             .padding(contentPadding),
-        contentPadding = PaddingValues(16.dp),
+        contentPadding = PaddingValues(Spacing.L),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         item {
@@ -681,7 +682,7 @@ internal fun HandoverHero(
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.S),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(
@@ -707,7 +708,7 @@ internal fun HandoverHero(
                 ),
                 fontWeight = FontWeight.Bold
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
                 PillChip(
                     label = info.date.format(localizedDate("EEEMMMd")),
                     container = ParentColors.container(info.toParent, alpha = 0.2f),
@@ -772,12 +773,12 @@ internal fun StatTiles(
         )
     }
     if (LocalDensity.current.fontScale >= STACK_TILES_FONT_SCALE) {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(Spacing.S)) {
             spendTile(Modifier.fillMaxWidth())
             if (unreadCount > 0) chatTile(Modifier.fillMaxWidth())
         }
     } else {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
             spendTile(Modifier.weight(1f))
             if (unreadCount > 0) chatTile(Modifier.weight(1f))
         }
@@ -831,7 +832,7 @@ private fun StatTile(
         )
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = Spacing.M),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -902,7 +903,7 @@ internal fun TimelineRow(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+        horizontalArrangement = Arrangement.spacedBy(Spacing.M)
     ) {
         Column(
             modifier = Modifier.width(20.dp),
@@ -910,7 +911,7 @@ internal fun TimelineRow(
         ) {
             Box(
                 modifier = Modifier
-                    .padding(top = 4.dp)
+                    .padding(top = Spacing.XS)
                     .size(12.dp)
                     .clip(CircleShape)
                     .background(ParentColors.fill(dotSlot))
@@ -918,7 +919,7 @@ internal fun TimelineRow(
             if (!isLast) {
                 Box(
                     modifier = Modifier
-                        .padding(top = 4.dp)
+                        .padding(top = Spacing.XS)
                         .width(2.dp)
                         .height(28.dp)
                         .background(MaterialTheme.colorScheme.outlineVariant)
@@ -987,8 +988,8 @@ private fun ActivityGroup(
                     .clickable {
                         if (item.isChangeRequest) onOpenChangeRequests() else onOpenEvent(item.eventId)
                     }
-                    .padding(horizontal = 14.dp, vertical = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    .padding(horizontal = 14.dp, vertical = Spacing.M),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.M),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(

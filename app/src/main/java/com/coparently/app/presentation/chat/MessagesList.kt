@@ -60,6 +60,7 @@ import com.coparently.app.domain.model.MessageSendStatus
 import com.coparently.app.domain.model.MessageType
 import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.theme.Motion
+import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.chatBubbleShape
 import com.coparently.app.utils.DAY_WITH_WEEKDAY
 import com.coparently.app.utils.isoDateText
@@ -255,8 +256,8 @@ fun MessagesList(
             LazyColumn(
                 state = listState,
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(2.dp)
+                contentPadding = PaddingValues(Spacing.L),
+                verticalArrangement = Arrangement.spacedBy(Spacing.XXS)
             ) {
                 // At index 0, above the oldest loaded message, and deliberately inside the list
                 // rather than pinned above it (CQ-6). The reader has to be at the top to see it,
@@ -498,7 +499,7 @@ fun MessageItem(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = if (startsGroup) 8.dp else 0.dp),
+            .padding(top = if (startsGroup) Spacing.S else 0.dp),
         horizontalAlignment = if (isCurrentUser) Alignment.End else Alignment.Start
     ) {
         // Files the message carries (MON-23), above its bubble. The bubble below still carries the
@@ -530,7 +531,7 @@ fun MessageItem(
                         Modifier
                     }
                 )
-                .padding(horizontal = 12.dp, vertical = 8.dp),
+                .padding(horizontal = Spacing.M, vertical = Spacing.S),
             // Bottom, not centre: the meta trailer sits beside the *last* line of a
             // multi-line message, hugging the bubble's bottom-end corner.
             verticalAlignment = Alignment.Bottom
@@ -550,7 +551,7 @@ fun MessageItem(
                     imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                     contentDescription = null,
                     modifier = Modifier
-                        .padding(start = 4.dp)
+                        .padding(start = Spacing.XS)
                         .size(RECEIPT_ICON_SIZE * CHEVRON_SCALE),
                     tint = if (isCurrentUser) {
                         MaterialTheme.colorScheme.onPrimary
@@ -562,7 +563,7 @@ fun MessageItem(
             BubbleMeta(
                 message = message,
                 isCurrentUser = isCurrentUser,
-                modifier = Modifier.padding(start = 8.dp)
+                modifier = Modifier.padding(start = Spacing.S)
             )
         }
 
@@ -575,7 +576,7 @@ fun MessageItem(
             // forever while the thread looked normal on this device.
             Row(
                 modifier = Modifier
-                    .padding(top = 2.dp, start = 4.dp, end = 4.dp)
+                    .padding(top = Spacing.XXS, start = Spacing.XS, end = Spacing.XS)
                     .then(
                         if (onRetryFailed == null) {
                             Modifier

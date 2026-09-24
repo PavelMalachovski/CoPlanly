@@ -14,6 +14,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.coparently.app.R
 import com.coparently.app.domain.model.AccountSummary
+import com.coparently.app.presentation.theme.Spacing
 
 /**
  * "Signed in as <name> / <email>", with the account's avatar.
@@ -41,7 +42,7 @@ fun SignedInAsRow(
         verticalAlignment = Alignment.CenterVertically
     ) {
         AccountAvatar(name = displayName, photoUrl = account.photoUrl, size = 36.dp)
-        Column(modifier = Modifier.padding(start = 12.dp)) {
+        Column(modifier = Modifier.padding(start = Spacing.M)) {
             Text(
                 text = stringResource(R.string.common_signed_in_as),
                 style = MaterialTheme.typography.labelSmall,

@@ -71,6 +71,7 @@ import com.coparently.app.presentation.pairing.components.IncomingInviteCard
 import com.coparently.app.presentation.pairing.components.InviteCodeCard
 import com.coparently.app.presentation.pairing.components.PairedPartnerCard
 import com.coparently.app.presentation.theme.IconSizes
+import com.coparently.app.presentation.theme.Spacing
 import kotlinx.coroutines.launch
 
 /**
@@ -153,8 +154,8 @@ fun PairingScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
-            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            contentPadding = PaddingValues(horizontal = Spacing.XL, vertical = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(Spacing.L)
         ) {
             // First, above every state: which of the two phones is this? The invite code
             // looks identical on both, so the account is what tells them apart. Kept to a
@@ -387,7 +388,7 @@ private fun LazyListScope.loadingSection(
     viewModel: PairingViewModel,
     actions: NotPairedActions
 ) {
-    item { CircularProgressIndicator(Modifier.padding(32.dp)) }
+    item { CircularProgressIndicator(Modifier.padding(Spacing.XXL)) }
     // There is no invite to share yet, so only the "enter a code" half is meaningful here.
     enterCodeSection(form, viewModel, actions)
     item { TrustPanel() }
@@ -607,12 +608,12 @@ private fun TrustPanel() {
         )
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier.padding(Spacing.L),
+            verticalArrangement = Arrangement.spacedBy(Spacing.S)
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(Spacing.S)
             ) {
                 Icon(
                     imageVector = Icons.Default.Lock,
@@ -645,7 +646,7 @@ private fun ScanQrButton(onClick: () -> Unit) {
         Icon(Icons.Default.QrCodeScanner, contentDescription = null)
         Text(
             text = stringResource(R.string.pairing_scan_qr_code),
-            modifier = Modifier.padding(start = 8.dp)
+            modifier = Modifier.padding(start = Spacing.S)
         )
     }
 }

@@ -43,6 +43,7 @@ import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.GroupLabel
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
+import com.coparently.app.presentation.theme.Spacing
 
 /**
  * Who outside the family can read it as a professional, and the controls that change that
@@ -93,8 +94,8 @@ fun ProfessionalsScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(Spacing.L),
+            verticalArrangement = Arrangement.spacedBy(Spacing.L)
         ) {
             FamilyGrantsSection(familyGrants, viewerUid, viewModel::openGrant, viewModel::openInvite)
             if (myGrants.isNotEmpty()) {
@@ -227,7 +228,7 @@ private fun RedeemSection(
     onCodeChange: (String) -> Unit,
     onRedeem: () -> Unit
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.S)) {
         GroupLabel(stringResource(R.string.professional_redeem_title))
         OutlinedTextField(
             value = state.code,

@@ -92,6 +92,7 @@ import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.rememberDiscardGuard
 import com.coparently.app.presentation.common.toggling
 import com.coparently.app.presentation.theme.CoPlanlyShapes
+import com.coparently.app.presentation.theme.Spacing
 import java.io.File
 import java.time.LocalDate
 import java.time.YearMonth
@@ -321,9 +322,9 @@ fun AddExpenseScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(16.dp)
+                .padding(Spacing.L)
                 .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(Spacing.L)
         ) {
             OutlinedTextField(
                 value = title,
@@ -334,7 +335,7 @@ fun AddExpenseScreen(
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.S),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 OutlinedTextField(
@@ -828,7 +829,7 @@ private fun ReceiptPicker(
     if (receiptUri == null) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(Spacing.S)
         ) {
             if (hasCamera) {
                 OutlinedButton(
@@ -872,7 +873,7 @@ private fun ReceiptPicker(
                 enabled = enabled,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .padding(8.dp)
+                    .padding(Spacing.S)
             ) {
                 Icon(Icons.Default.Close, contentDescription = stringResource(R.string.expense_remove_receipt))
             }
@@ -929,7 +930,7 @@ private fun SplitSection(
     onOverrideChange: (Int?) -> Unit,
     enabled: Boolean
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.XS)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,

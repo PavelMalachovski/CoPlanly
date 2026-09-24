@@ -23,6 +23,7 @@ import com.coparently.app.presentation.childinfo.components.*
 import com.coparently.app.presentation.common.ConfirmationDialog
 import com.coparently.app.presentation.common.MedicalProfileEditor
 import com.coparently.app.presentation.common.rememberDiscardGuard
+import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.utils.localizedDate
 import java.time.LocalDateTime
 import java.util.UUID
@@ -241,17 +242,17 @@ fun AddEditChildInfoScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(16.dp)
+                .padding(Spacing.L)
                 .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(Spacing.L)
         ) {
             // Basic Information Section
             Card(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    modifier = Modifier.padding(Spacing.L),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.M)
                 ) {
                     Text(
                         text = stringResource(R.string.childinfo_section_basic),
@@ -292,8 +293,8 @@ fun AddEditChildInfoScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    modifier = Modifier.padding(Spacing.L),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.S)
                 ) {
                     Text(
                         text = stringResource(R.string.childinfo_section_medications),
@@ -324,8 +325,8 @@ fun AddEditChildInfoScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    modifier = Modifier.padding(Spacing.L),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.S)
                 ) {
                     Text(
                         text = stringResource(R.string.childinfo_section_activities),
@@ -356,8 +357,8 @@ fun AddEditChildInfoScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    modifier = Modifier.padding(Spacing.L),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.S)
                 ) {
                     Text(
                         text = stringResource(R.string.childinfo_section_allergies),
@@ -383,8 +384,8 @@ fun AddEditChildInfoScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    modifier = Modifier.padding(Spacing.L),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.S)
                 ) {
                     Text(
                         text = stringResource(R.string.medical_section_title),
@@ -404,8 +405,8 @@ fun AddEditChildInfoScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    modifier = Modifier.padding(Spacing.L),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.S)
                 ) {
                     Text(
                         text = stringResource(R.string.childinfo_section_medical_notes),
@@ -450,8 +451,8 @@ fun AddEditChildInfoScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    modifier = Modifier.padding(Spacing.L),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.S)
                 ) {
                     Text(
                         text = stringResource(R.string.childinfo_section_emergency_contacts),
@@ -482,8 +483,8 @@ fun AddEditChildInfoScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    modifier = Modifier.padding(Spacing.L),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.S)
                 ) {
                     Text(
                         text = stringResource(R.string.childinfo_section_school),
@@ -550,7 +551,7 @@ fun AddEditChildInfoScreen(
                         strokeWidth = 2.dp,
                         color = MaterialTheme.colorScheme.onPrimary
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(Spacing.S))
                 }
                 Text(
                     if (childInfoId == "new") {
@@ -562,7 +563,7 @@ fun AddEditChildInfoScreen(
             }
 
             // Bottom spacing
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(Spacing.L))
         }
     }
 }

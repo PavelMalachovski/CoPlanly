@@ -12,10 +12,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import com.coparently.app.R
 import com.coparently.app.domain.model.PartnerSummary
 import com.coparently.app.presentation.common.AccountAvatar
+import com.coparently.app.presentation.theme.Spacing
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -45,7 +45,7 @@ fun PairedPartnerCard(
 
     Card(modifier = modifier.fillMaxWidth()) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            modifier = Modifier.fillMaxWidth().padding(Spacing.L),
             verticalAlignment = Alignment.CenterVertically
         ) {
             AccountAvatar(name = displayName, photoUrl = partner.photoUrl)
@@ -53,7 +53,7 @@ fun PairedPartnerCard(
             // wrapped over three lines above the one fact this card is for, the pairing.
             // Middle ellipsis keeps both ends of an address, which is how people recognise one;
             // TalkBack still reads it whole.
-            Column(modifier = Modifier.padding(start = 16.dp)) {
+            Column(modifier = Modifier.padding(start = Spacing.L)) {
                 Text(text = displayName, style = MaterialTheme.typography.titleMedium)
                 partner.pairedSinceMillis?.let { millis ->
                     Text(

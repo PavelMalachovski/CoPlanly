@@ -12,11 +12,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import com.coparently.app.R
 import com.coparently.app.domain.professionals.ProfessionalGrant
 import com.coparently.app.domain.professionals.ProfessionalGrantPolicy
 import com.coparently.app.domain.professionals.ProfessionalGrantStatus
+import com.coparently.app.presentation.theme.Spacing
 
 /**
  * One professional's card, as a parent reads it (MON-18): who they are, what they can read and
@@ -50,7 +50,7 @@ fun ProfessionalGrantDialog(
         onDismissRequest = onDismiss,
         title = { Text(grant.name) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.S)) {
                 Text(
                     text = stringResource(grant.role.labelRes()),
                     style = MaterialTheme.typography.labelLarge

@@ -53,6 +53,7 @@ import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.theme.ParentColors
+import com.coparently.app.presentation.theme.Spacing
 import kotlinx.coroutines.launch
 
 /**
@@ -138,7 +139,7 @@ fun EventListScreen(
                     Text(
                         text = stringResource(R.string.event_list_loading),
                         style = MaterialTheme.typography.bodyLarge,
-                        modifier = Modifier.padding(16.dp)
+                        modifier = Modifier.padding(Spacing.L)
                     )
                 }
             }
@@ -173,7 +174,7 @@ fun EventListScreen(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(paddingValues)
-                            .padding(horizontal = 16.dp)
+                            .padding(horizontal = Spacing.L)
                     ) {
                         if (awaitingCoParent.isNotEmpty()) {
                             item(key = "awaiting-strip") {
@@ -186,7 +187,7 @@ fun EventListScreen(
                                 parentNames = parentNames,
                                 onClick = { onEventClick(event.id) },
                                 onDelete = { deleteWithUndo(event) },
-                                modifier = Modifier.padding(vertical = 4.dp)
+                                modifier = Modifier.padding(vertical = Spacing.XS)
                             )
                         }
                     }
@@ -255,8 +256,8 @@ private fun EventCardContent(
             .clickable(onClick = onClick)
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+            modifier = Modifier.padding(Spacing.L),
+            verticalArrangement = Arrangement.spacedBy(Spacing.XS)
         ) {
             Text(
                 text = event.title,
@@ -306,6 +307,6 @@ private fun WaitingOnCoParentStrip(count: Int) {
             stringResource(R.string.event_acceptance_waiting_strip, count)
         },
         icon = Icons.Default.HourglassTop,
-        modifier = Modifier.padding(vertical = 8.dp)
+        modifier = Modifier.padding(vertical = Spacing.S)
     )
 }

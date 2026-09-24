@@ -14,7 +14,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import com.coparently.app.R
 import com.coparently.app.domain.custody.CustodyPatternDiff
 import com.coparently.app.domain.custody.CustodyProposal
@@ -23,6 +22,7 @@ import com.coparently.app.domain.parentingplan.CitationStatus
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.custody.custodyDiffDescription
 import com.coparently.app.presentation.parentingplan.planCitationLine
+import com.coparently.app.presentation.theme.Spacing
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
@@ -133,7 +133,7 @@ private fun ProposalDialog(
             )
             val diff = custodyDiffDescription(ask.diff, parentNames)
             val citation = planCitationLine(ask.citation)
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.M)) {
                 Text(if (diff == null) who else "$who\n\n$diff")
                 citation?.let { line ->
                     Text(

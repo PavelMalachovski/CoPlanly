@@ -36,12 +36,12 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import com.coparently.app.R
 import com.coparently.app.domain.chat.ChatSearchHit
 import com.coparently.app.domain.chat.SearchSnippet
 import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.ParentNames
+import com.coparently.app.presentation.theme.Spacing
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
@@ -174,7 +174,7 @@ private fun ResultList(
                     text = stringResource(R.string.chat_search_truncated, state.result.hits.size),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(16.dp)
+                    modifier = Modifier.padding(Spacing.L)
                 )
             }
         }

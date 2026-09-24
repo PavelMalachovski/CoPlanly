@@ -38,6 +38,7 @@ import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.PillChip
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.theme.ParentColors
+import com.coparently.app.presentation.theme.Spacing
 import java.text.NumberFormat
 import java.util.Locale
 
@@ -108,7 +109,7 @@ fun ExpenseAnalytics(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 14.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(Spacing.M)
     ) {
         if (payers.isNotEmpty()) {
             PayerFilter(
@@ -142,7 +143,7 @@ fun ExpenseAnalytics(
                 },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(vertical = 24.dp)
+                modifier = Modifier.padding(vertical = Spacing.XL)
             )
             return@Column
         }
@@ -154,7 +155,7 @@ fun ExpenseAnalytics(
             modifier = Modifier
                 .fillMaxWidth(PIE_WIDTH_FRACTION)
                 .align(Alignment.CenterHorizontally)
-                .padding(vertical = 8.dp)
+                .padding(vertical = Spacing.S)
         )
 
         BreakdownTable(breakdown = breakdown)
@@ -189,7 +190,7 @@ private fun PayerFilter(
             .fillMaxWidth()
             .horizontalScroll(rememberScrollState())
             .semantics { contentDescription = label },
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(Spacing.S)
     ) {
         FilterChip(
             label = stringResource(R.string.expense_analytics_payer_everyone),
@@ -219,7 +220,7 @@ private fun CurrencyChips(
             .fillMaxWidth()
             .horizontalScroll(rememberScrollState())
             .semantics { contentDescription = label },
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(Spacing.S)
     ) {
         currencies.forEach { currency ->
             FilterChip(
@@ -272,8 +273,8 @@ private fun BreakdownTable(breakdown: CurrencyBreakdown) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 16.dp + SWATCH_SIZE + 12.dp, end = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                .padding(start = Spacing.L + SWATCH_SIZE + Spacing.M, end = Spacing.L),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.M)
         ) {
             ColumnHeader(stringResource(R.string.expense_analytics_column_category), Modifier.weight(1f))
             ColumnHeader(
@@ -296,7 +297,7 @@ private fun BreakdownTable(breakdown: CurrencyBreakdown) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 10.dp),
+                .padding(horizontal = Spacing.L, vertical = 10.dp),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
@@ -359,11 +360,11 @@ private fun BreakdownRow(slice: CategorySlice, currency: String, amountWidth: Dp
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .padding(horizontal = Spacing.L, vertical = Spacing.M)
             // One description for the whole row: a screen reader reading "swatch, Food, 25.50,
             // 34%" as four separate nodes is the table read sideways.
             .semantics(mergeDescendants = true) { contentDescription = "$name, $amount, $share" },
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.M),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
@@ -446,7 +447,7 @@ private fun ParentLedger(
 
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+        horizontalArrangement = Arrangement.spacedBy(Spacing.M)
     ) {
         shownPayers.forEach { uid ->
             LedgerColumn(
@@ -487,7 +488,7 @@ private fun LedgerColumn(
         Row(
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(start = 4.dp)
+            modifier = Modifier.padding(start = Spacing.XS)
         ) {
             AccountAvatar(name = title, photoUrl = photoUrl, size = 20.dp)
             Text(
@@ -504,7 +505,7 @@ private fun LedgerColumn(
                 text = stringResource(R.string.expense_analytics_column_empty),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(start = 4.dp, top = 2.dp)
+                modifier = Modifier.padding(start = Spacing.XS, top = Spacing.XXS)
             )
         } else {
             SectionGroup {
@@ -525,11 +526,11 @@ private fun LedgerRow(expense: Expense, currency: String) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 10.dp, vertical = 8.dp)
+            .padding(horizontal = 10.dp, vertical = Spacing.S)
             .semantics(mergeDescendants = true) {
                 contentDescription = "${expense.title}, $name, $amount"
             },
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.S),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(

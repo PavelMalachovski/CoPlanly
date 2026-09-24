@@ -64,6 +64,7 @@ import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.parentingplan.PlanStrings
+import com.coparently.app.presentation.theme.Spacing
 import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate
 
@@ -169,7 +170,7 @@ private fun ExportContent(
         modifier = modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = Spacing.L, vertical = Spacing.S),
         verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
         Text(
@@ -186,8 +187,8 @@ private fun ExportContent(
                 shape = MaterialTheme.shapes.large
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    modifier = Modifier.padding(Spacing.L),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.S)
                 ) {
                     statement.forEach { paragraph ->
                         Text(text = paragraph, style = MaterialTheme.typography.bodySmall)

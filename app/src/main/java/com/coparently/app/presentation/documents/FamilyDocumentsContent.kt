@@ -35,7 +35,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.unit.dp
 import com.coparently.app.R
 import com.coparently.app.domain.documents.DocumentCategory
 import com.coparently.app.domain.documents.FamilyDocument
@@ -45,6 +44,7 @@ import com.coparently.app.presentation.common.GroupLabel
 import com.coparently.app.presentation.common.InlineBanner
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
+import com.coparently.app.presentation.theme.Spacing
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -91,8 +91,8 @@ internal fun DocumentsBody(
     }
     LazyColumn(
         modifier = modifier,
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        contentPadding = PaddingValues(Spacing.L),
+        verticalArrangement = Arrangement.spacedBy(Spacing.S)
     ) {
         item(key = "notice") { SharedNotice() }
         if (uploading) item(key = "uploading") { UploadingRow() }
@@ -104,7 +104,7 @@ internal fun DocumentsBody(
         }
         documents.groupBy { it.category }.forEach { (category, inCategory) ->
             item(key = "group-${category.wire}") {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.S)) {
                     GroupLabel(stringResource(category.labelRes()))
                     SectionGroup {
                         inCategory.forEachIndexed { index, document ->
@@ -142,7 +142,7 @@ private fun OutdatedNotice() {
 /** An upload in flight; the list gains the row only once the server holds it. */
 @Composable
 private fun UploadingRow() {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.XS)) {
         Text(stringResource(R.string.documents_uploading), style = MaterialTheme.typography.labelMedium)
         LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
     }
@@ -194,7 +194,7 @@ internal fun AddDocumentDialog(onConfirm: (String, DocumentCategory) -> Unit, on
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.documents_add_dialog_title)) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.S)) {
                 Text(stringResource(R.string.documents_shared_notice), style = MaterialTheme.typography.bodySmall)
                 OutlinedTextField(
                     value = title,
@@ -229,11 +229,11 @@ private fun CategoryOption(category: DocumentCategory, selected: Boolean, onSele
         modifier = Modifier
             .fillMaxWidth()
             .selectable(selected = selected, onClick = onSelect, role = Role.RadioButton)
-            .padding(vertical = 4.dp),
+            .padding(vertical = Spacing.XS),
         verticalAlignment = Alignment.CenterVertically
     ) {
         RadioButton(selected = selected, onClick = null)
-        Text(stringResource(category.labelRes()), modifier = Modifier.padding(start = 8.dp))
+        Text(stringResource(category.labelRes()), modifier = Modifier.padding(start = Spacing.S))
     }
 }
 

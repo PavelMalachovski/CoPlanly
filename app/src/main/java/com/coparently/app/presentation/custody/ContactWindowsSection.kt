@@ -43,6 +43,7 @@ import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.components.TimePickerDialog
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.ParentColors
+import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.dimensions
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -125,7 +126,7 @@ fun ContactWindowsSection(
             modifier = Modifier.padding(vertical = dims.paddingSmall)
         ) {
             Icon(imageVector = Icons.Default.Add, contentDescription = null, modifier = Modifier.size(IconSizes.Small))
-            Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.width(Spacing.S))
             Text(stringResource(R.string.custody_windows_add))
         }
         Spacer(modifier = Modifier.height(dims.paddingMedium))
@@ -162,7 +163,7 @@ private fun ContactWindowRow(
                 .size(10.dp)
                 .background(ParentColors.fill(window.parent), CircleShape)
         )
-        Spacer(modifier = Modifier.width(8.dp))
+        Spacer(modifier = Modifier.width(Spacing.S))
         Text(
             text = stringResource(
                 R.string.custody_window_summary,
@@ -257,7 +258,7 @@ private fun ContactWindowDialog(
 @Composable
 private fun WeekdayChips(selected: DayOfWeek, onSelect: (DayOfWeek) -> Unit) {
     DialogLabel(R.string.custody_window_weekday)
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
         DayOfWeek.entries.forEach { day ->
             FilterChip(
                 selected = selected == day,
@@ -276,7 +277,7 @@ private fun WeekdayChips(selected: DayOfWeek, onSelect: (DayOfWeek) -> Unit) {
 private fun WeekChips(weeks: Int, selected: Int?, onSelect: (Int?) -> Unit) {
     if (weeks <= 1) return
     DialogLabel(R.string.custody_window_week)
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
         FilterChip(
             selected = selected == null,
             onClick = { onSelect(null) },
@@ -296,8 +297,8 @@ private fun WeekChips(weeks: Int, selected: Int?, onSelect: (Int?) -> Unit) {
 @Composable
 private fun TimeButtons(draft: ContactWindowDraft, onPick: (TimeField) -> Unit) {
     Row(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier.padding(top = 12.dp)
+        horizontalArrangement = Arrangement.spacedBy(Spacing.S),
+        modifier = Modifier.padding(top = Spacing.M)
     ) {
         OutlinedButton(onClick = { onPick(TimeField.START) }) {
             Text(stringResource(R.string.custody_window_from, draft.start.format(WINDOW_TIME)))
@@ -311,7 +312,7 @@ private fun TimeButtons(draft: ContactWindowDraft, onPick: (TimeField) -> Unit) 
             text = stringResource(R.string.custody_window_invalid),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.error,
-            modifier = Modifier.padding(top = 4.dp)
+            modifier = Modifier.padding(top = Spacing.XS)
         )
     }
 }
@@ -320,7 +321,7 @@ private fun TimeButtons(draft: ContactWindowDraft, onPick: (TimeField) -> Unit) 
 @Composable
 private fun ParentChips(selected: String, parentNames: ParentNames, onSelect: (String) -> Unit) {
     DialogLabel(R.string.custody_window_with)
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
         listOf(ContactWindow.SLOT_ONE, ContactWindow.SLOT_TWO).forEach { slot ->
             FilterChip(
                 selected = selected == slot,
@@ -348,6 +349,6 @@ private fun DialogLabel(res: Int) {
         text = stringResource(res),
         style = MaterialTheme.typography.labelLarge,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(top = 12.dp, bottom = 4.dp)
+        modifier = Modifier.padding(top = Spacing.M, bottom = Spacing.XS)
     )
 }

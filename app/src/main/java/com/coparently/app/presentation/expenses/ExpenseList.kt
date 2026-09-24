@@ -57,6 +57,7 @@ import com.coparently.app.presentation.common.FullScreenImageDialog
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.ParentColors
+import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.utils.localizedDate
 import java.util.Locale
 
@@ -126,8 +127,8 @@ fun ExpenseList(
         contentPadding = PaddingValues(
             start = 14.dp,
             end = 14.dp,
-            top = 4.dp,
-            bottom = 4.dp + bottomClearance
+            top = Spacing.XS,
+            bottom = Spacing.XS + bottomClearance
         ),
         verticalArrangement = Arrangement.spacedBy(7.dp)
     ) {
@@ -266,9 +267,9 @@ fun ExpenseItem(
             .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier)
     ) {
         Row(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier.padding(Spacing.M),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(Spacing.M)
         ) {
             // A receipt photo, when present, keeps its own tappable thumbnail here: the viewer
             // is a working feature and losing its entry point to match a mockup would be a

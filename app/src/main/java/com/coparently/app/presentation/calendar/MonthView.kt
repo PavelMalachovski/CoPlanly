@@ -72,6 +72,7 @@ import com.coparently.app.presentation.common.monthPagingTween
 import com.coparently.app.presentation.common.rememberToday
 import com.coparently.app.presentation.theme.CoPlanlyColors
 import com.coparently.app.presentation.theme.ParentColors
+import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.dimensions
 import com.coparently.app.utils.localizedDate
 import com.kizitonwose.calendar.compose.CalendarState
@@ -223,7 +224,7 @@ fun MonthView(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 8.dp)
+            .padding(horizontal = Spacing.S)
     ) {
         WeekdayHeader(firstDayOfWeek)
 
@@ -779,7 +780,7 @@ private fun DayCell(
 
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(2.dp)
+            verticalArrangement = Arrangement.spacedBy(Spacing.XXS)
         ) {
             // Day number: filled circle for today, outlined ring for the selected day
             Box(

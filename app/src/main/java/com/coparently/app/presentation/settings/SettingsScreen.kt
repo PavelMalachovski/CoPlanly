@@ -137,6 +137,7 @@ import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Motion
 import com.coparently.app.presentation.theme.ParentColorChoice
 import com.coparently.app.presentation.theme.ParentColors
+import com.coparently.app.presentation.theme.Spacing
 import kotlinx.coroutines.launch
 import java.time.format.DateTimeFormatter
 
@@ -413,7 +414,7 @@ fun SettingsScreen(
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(paddingValues)
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .padding(horizontal = Spacing.L, vertical = Spacing.S),
             verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {
             // ── FAMILY ─────────────────────────────────────────────────────────
@@ -968,7 +969,7 @@ fun SettingsScreen(
                     account?.let { signedIn ->
                         SignedInAsRow(
                             account = signedIn,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)
+                            modifier = Modifier.padding(horizontal = Spacing.L, vertical = 14.dp)
                         )
                         Divider()
                     }
@@ -1034,7 +1035,7 @@ fun SettingsScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(Spacing.S))
         }
     }
 
@@ -1219,8 +1220,8 @@ private fun GoogleCalendarActions(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+            .padding(start = Spacing.L, end = Spacing.L, bottom = Spacing.L),
+        verticalArrangement = Arrangement.spacedBy(Spacing.S)
     ) {
         // The toggle, moved off the row above (UX-11). It reads as a labelled control here
         // rather than an unexplained switch in a trailing slot, and it sits with the sign-in
@@ -1312,7 +1313,7 @@ private fun GoogleCalendarActions(
 private fun StatusLine(text: String, color: Color, busy: Boolean = false) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(Spacing.S)
     ) {
         if (busy) {
             CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
@@ -1418,10 +1419,10 @@ private fun ChoiceRow(label: String, selected: Boolean, onSelect: () -> Unit) {
             // One focus stop that announces itself as a radio button, instead of a clickable row
             // and a second, separately focusable RadioButton inside it.
             .selectable(selected = selected, role = Role.RadioButton, onClick = onSelect)
-            .padding(vertical = 8.dp)
+            .padding(vertical = Spacing.S)
     ) {
         RadioButton(selected = selected, onClick = null)
-        Spacer(modifier = Modifier.width(8.dp))
+        Spacer(modifier = Modifier.width(Spacing.S))
         Text(text = label)
     }
 }
@@ -1506,7 +1507,7 @@ private fun ParentColorDialog(
                             .selectable(selected = chosen == choice.name, role = Role.RadioButton) {
                                 chosen = choice.name
                             }
-                            .padding(vertical = 8.dp),
+                            .padding(vertical = Spacing.S),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         RadioButton(
@@ -1519,7 +1520,7 @@ private fun ParentColorDialog(
                                 .clip(CircleShape)
                                 .background(ParentColors.choiceFill(choice))
                         )
-                        Spacer(modifier = Modifier.width(12.dp))
+                        Spacer(modifier = Modifier.width(Spacing.M))
                         // Named, not just shown: a swatch alone is unusable to anyone who cannot
                         // tell two of them apart, and a screen reader has nothing to announce.
                         Text(stringResource(choice.labelRes))
@@ -1578,14 +1579,14 @@ private fun CountryDialog(
                             .selectable(selected = chosen == entry.name, role = Role.RadioButton) {
                                 chosen = entry.name
                             }
-                            .padding(vertical = 8.dp),
+                            .padding(vertical = Spacing.S),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         RadioButton(
                             selected = chosen == entry.name,
                             onClick = null
                         )
-                        Spacer(modifier = Modifier.width(12.dp))
+                        Spacer(modifier = Modifier.width(Spacing.M))
                         Text(stringResource(entry.labelRes()))
                     }
                 }
@@ -1595,7 +1596,7 @@ private fun CountryDialog(
                     text = country.coverageNote(selectedRegion.takeIf { country == selected }),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 8.dp)
+                    modifier = Modifier.padding(top = Spacing.S)
                 )
             }
         },

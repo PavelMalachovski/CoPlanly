@@ -31,6 +31,7 @@ import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.PillChip
 import com.coparently.app.presentation.parentingplan.PlanReferenceCard
 import com.coparently.app.presentation.parentingplan.coParentLabel
+import com.coparently.app.presentation.theme.Spacing
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.util.Locale
@@ -131,7 +132,7 @@ private fun LayerEditorBody(
 ) {
     Column(
         modifier = Modifier.verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(Spacing.M)
     ) {
         // MON-21: the agreed answer, above the fields the parent fills in from it by hand.
         reference?.let { PlanReferenceCard(reference = it, coParentName = parentNames.coParentLabel()) }
@@ -169,7 +170,7 @@ private fun LayerEditorBody(
 @Composable
 private fun LayerRange(draft: SeasonalLayerDraft, onPick: (RangeEnd) -> Unit) {
     val format = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
         TextButton(onClick = { onPick(RangeEnd.FROM) }) {
             Text(stringResource(R.string.seasonal_from, draft.from.format(format)))
         }

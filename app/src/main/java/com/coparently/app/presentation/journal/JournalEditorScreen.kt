@@ -44,6 +44,7 @@ import com.coparently.app.presentation.common.StickyActionBar
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.rememberDiscardGuard
+import com.coparently.app.presentation.theme.Spacing
 
 /**
  * Writing or editing one private journal entry (MON-22): the day it is about, the text, and a
@@ -150,8 +151,8 @@ private fun EditorForm(
         modifier = modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .padding(horizontal = Spacing.L, vertical = Spacing.S),
+        verticalArrangement = Arrangement.spacedBy(Spacing.L)
     ) {
         Text(
             text = stringResource(R.string.journal_editor_notice),

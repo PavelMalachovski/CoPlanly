@@ -39,7 +39,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.domain.feed.CalendarFeedLink
@@ -50,6 +49,7 @@ import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.copySensitive
+import com.coparently.app.presentation.theme.Spacing
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -152,8 +152,8 @@ private fun FeedBody(
     Column(
         modifier = modifier
             .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .padding(Spacing.L),
+        verticalArrangement = Arrangement.spacedBy(Spacing.L)
     ) {
         FeedExplanation()
         val canCreate = !state.isBusy && state.familyId != null
@@ -185,7 +185,7 @@ private fun FeedBody(
 /** What the link is, what it carries, what it never carries, and who can read it. */
 @Composable
 private fun FeedExplanation() {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.S)) {
         listOf(
             R.string.calendar_feed_intro,
             R.string.calendar_feed_included,

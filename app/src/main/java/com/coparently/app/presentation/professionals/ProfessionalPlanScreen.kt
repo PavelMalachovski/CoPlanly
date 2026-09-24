@@ -25,7 +25,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.domain.parentingplan.ParentingPlanCatalogue
@@ -37,6 +36,7 @@ import com.coparently.app.presentation.common.PillChip
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.parentingplan.PlanStrings
+import com.coparently.app.presentation.theme.Spacing
 
 /**
  * The parenting plan as a professional reads it (MON-18): every question, both parents' answers,
@@ -96,11 +96,11 @@ private fun PlanList(state: ProfessionalPlanUiState.Ready, modifier: Modifier = 
         ?: fallback
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        contentPadding = PaddingValues(Spacing.L),
+        verticalArrangement = Arrangement.spacedBy(Spacing.L)
     ) {
         item(key = "header") {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.S)) {
                 Text(
                     text = professionalFamilyLabel(state.grant),
                     style = MaterialTheme.typography.titleMedium

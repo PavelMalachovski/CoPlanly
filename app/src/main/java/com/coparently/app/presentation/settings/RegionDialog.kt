@@ -23,12 +23,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.unit.dp
 import com.coparently.app.R
 import com.coparently.app.domain.holidays.HolidayCountry
 import com.coparently.app.presentation.common.coverageNote
 import com.coparently.app.presentation.common.regionLabelRes
 import com.coparently.app.presentation.common.regionNameRes
+import com.coparently.app.presentation.theme.Spacing
 
 /**
  * Picks the region whose own public holidays are added to [country]'s (MON-13, regional half).
@@ -64,14 +64,14 @@ internal fun RegionDialog(
                             .selectable(selected = chosen == code, role = Role.RadioButton) {
                                 chosen = code
                             }
-                            .padding(vertical = 8.dp),
+                            .padding(vertical = Spacing.S),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         RadioButton(
                             selected = chosen == code,
                             onClick = null
                         )
-                        Spacer(modifier = Modifier.width(12.dp))
+                        Spacer(modifier = Modifier.width(Spacing.M))
                         Text(label)
                     }
                 }
@@ -79,7 +79,7 @@ internal fun RegionDialog(
                     text = country.coverageNote(chosen),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 8.dp)
+                    modifier = Modifier.padding(top = Spacing.S)
                 )
             }
         },

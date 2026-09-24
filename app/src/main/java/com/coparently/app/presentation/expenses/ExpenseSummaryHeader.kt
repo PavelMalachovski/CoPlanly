@@ -46,6 +46,7 @@ import com.coparently.app.presentation.common.PillChip
 import com.coparently.app.presentation.theme.CoPlanlyCorners
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.ParentColors
+import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.utils.LightDarkPreviews
 import com.coparently.app.utils.PreviewWrapper
 import java.text.NumberFormat
@@ -123,7 +124,7 @@ fun ExpenseSummaryHeader(
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
         )
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(Spacing.L)) {
             if (monthNavigation != null) {
                 MonthSwitcherBar(
                     navigation = monthNavigation,
@@ -156,7 +157,7 @@ fun ExpenseSummaryHeader(
                     format = format,
                     monthLabel = monthLabel,
                     onSettleUp = onSettleUp,
-                    modifier = Modifier.padding(top = 12.dp)
+                    modifier = Modifier.padding(top = Spacing.M)
                 )
             }
         }
@@ -299,7 +300,7 @@ internal fun CollapsedMonthSummary(
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
         shadowElevation = 2.dp
     ) {
-        Column(modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 8.dp)) {
+        Column(modifier = Modifier.padding(start = Spacing.M, end = Spacing.M, bottom = Spacing.S)) {
             MonthSwitcherBar(navigation = navigation)
             Text(
                 text = stringResource(
@@ -382,7 +383,7 @@ private fun TotalWithLabel(total: String) {
                 text = label,
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(start = 10.dp, bottom = 4.dp)
+                modifier = Modifier.padding(start = 10.dp, bottom = Spacing.XS)
             )
         }
     }
@@ -487,7 +488,7 @@ private fun BalanceStrip(
         .fillMaxWidth()
         .clip(MaterialTheme.shapes.small)
         .background(accent.copy(alpha = BALANCE_STRIP_ALPHA))
-        .padding(horizontal = 12.dp, vertical = 10.dp)
+        .padding(horizontal = Spacing.M, vertical = 10.dp)
     val sentence: @Composable RowScope.() -> Unit = {
         Icon(
             imageVector = Icons.Default.AccountBalanceWallet,
@@ -515,7 +516,7 @@ private fun BalanceStrip(
         )
     }
     if (LocalDensity.current.fontScale >= STACK_FONT_SCALE) {
-        Column(modifier = strip, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(modifier = strip, verticalArrangement = Arrangement.spacedBy(Spacing.S)) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(9.dp),

@@ -63,6 +63,7 @@ import com.coparently.app.presentation.common.PhotoStripStrings
 import com.coparently.app.presentation.common.VaccinationListEditor
 import com.coparently.app.presentation.common.labelRes
 import com.coparently.app.presentation.common.rememberDiscardGuard
+import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.utils.localizedDate
 import java.time.LocalDateTime
 import java.util.UUID
@@ -270,9 +271,9 @@ fun AddEditPetScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(16.dp)
+                .padding(Spacing.L)
                 .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(Spacing.L)
         ) {
             BasicSection(
                 name = name,
@@ -417,7 +418,7 @@ fun AddEditPetScreen(
                         strokeWidth = 2.dp,
                         color = MaterialTheme.colorScheme.onPrimary
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(Spacing.S))
                 }
                 Text(
                     if (isNewPet) {
@@ -428,7 +429,7 @@ fun AddEditPetScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(Spacing.L))
         }
     }
 }
@@ -530,8 +531,8 @@ private fun SectionCard(title: String, content: @Composable () -> Unit) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+                .padding(Spacing.L),
+            verticalArrangement = Arrangement.spacedBy(Spacing.S)
         ) {
             Text(text = title, style = MaterialTheme.typography.titleMedium)
             content()

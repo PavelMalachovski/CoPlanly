@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import com.coparently.app.R
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Motion
+import com.coparently.app.presentation.theme.Spacing
 
 /**
  * The one line the app shows while the phone is offline, above every screen
@@ -66,10 +67,10 @@ fun ConnectivityBanner(offline: Boolean, modifier: Modifier = Modifier) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .windowInsetsPadding(WindowInsets.statusBars)
-                    .padding(horizontal = 16.dp, vertical = 6.dp)
+                    .padding(horizontal = Spacing.L, vertical = 6.dp)
                     .semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite },
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(Spacing.S)
             ) {
                 Icon(
                     imageVector = Icons.Default.CloudOff,

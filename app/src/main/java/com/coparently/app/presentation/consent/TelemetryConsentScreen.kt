@@ -27,6 +27,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.presentation.common.HeroIcon
 import com.coparently.app.presentation.common.PrivacyPolicyLink
+import com.coparently.app.presentation.theme.Spacing
 
 /**
  * The first-run question about analytics and crash reporting (REL-5).
@@ -57,9 +58,9 @@ fun TelemetryConsentScreen(
             .fillMaxSize()
             .systemBarsPadding()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 24.dp, vertical = 32.dp),
+            .padding(horizontal = Spacing.XL, vertical = Spacing.XXL),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(Spacing.L)
     ) {
         HeroIcon(Icons.Default.Lock)
         Text(

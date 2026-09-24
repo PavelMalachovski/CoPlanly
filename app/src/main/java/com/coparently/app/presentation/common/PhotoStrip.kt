@@ -38,6 +38,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
 import com.coparently.app.presentation.theme.IconSizes
+import com.coparently.app.presentation.theme.Spacing
 
 /** Edge of a square thumbnail in the strip. Large enough to recognise what is in it. */
 private val THUMBNAIL_SIZE = 96.dp
@@ -95,7 +96,7 @@ fun PhotoStrip(
 
     Column(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(Spacing.S)
     ) {
         Text(
             text = stringResource(strings.title),
@@ -113,7 +114,7 @@ fun PhotoStrip(
                 modifier = Modifier
                     .fillMaxWidth()
                     .horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(Spacing.S)
             ) {
                 photos.forEachIndexed { index, photo ->
                     Thumbnail(
@@ -137,7 +138,7 @@ fun PhotoStrip(
                 Icon(Icons.Default.AddAPhoto, contentDescription = null)
                 Text(
                     text = stringResource(strings.add),
-                    modifier = Modifier.padding(start = 8.dp)
+                    modifier = Modifier.padding(start = Spacing.S)
                 )
             }
             Text(
@@ -181,7 +182,7 @@ private fun Thumbnail(
                 onClick = { onRemove(photo) },
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .padding(4.dp)
+                    .padding(Spacing.XS)
                     .size(28.dp)
             ) {
                 Icon(
@@ -229,7 +230,7 @@ private fun FullScreenPhoto(
                 onClick = onClose,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .padding(12.dp)
+                    .padding(Spacing.M)
             ) {
                 Icon(
                     imageVector = Icons.Default.Close,

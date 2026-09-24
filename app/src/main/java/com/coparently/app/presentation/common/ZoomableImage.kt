@@ -28,13 +28,13 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntSize
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import coil.size.Size
 import com.coparently.app.R
+import com.coparently.app.presentation.theme.Spacing
 
 /** Furthest in a pinch may go. Beyond this a 1600px upload is only bigger, not clearer. */
 private const val MAX_SCALE = 5f
@@ -203,7 +203,7 @@ fun FullScreenImageDialog(
                 onClick = onDismiss,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .padding(12.dp)
+                    .padding(Spacing.M)
             ) {
                 Icon(
                     imageVector = Icons.Default.Close,

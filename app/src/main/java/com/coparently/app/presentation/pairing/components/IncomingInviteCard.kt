@@ -13,9 +13,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import com.coparently.app.R
 import com.coparently.app.domain.model.PairingInvite
+import com.coparently.app.presentation.theme.Spacing
 
 /** One invitation addressed to this user, with accept and decline. */
 @Composable
@@ -27,7 +27,7 @@ fun IncomingInviteCard(
 ) {
     Card(modifier = modifier.fillMaxWidth()) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            modifier = Modifier.fillMaxWidth().padding(Spacing.L),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {

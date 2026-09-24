@@ -29,7 +29,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.domain.model.Budget
@@ -38,6 +37,7 @@ import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.ListSkeleton
 import com.coparently.app.presentation.common.Loadable
 import com.coparently.app.presentation.common.valueOrNull
+import com.coparently.app.presentation.theme.Spacing
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -100,7 +100,7 @@ fun BudgetScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)
-                    .padding(16.dp)
+                    .padding(Spacing.L)
             ) {
                 // Active alerts
                 if (alerts.isNotEmpty()) {
@@ -167,12 +167,12 @@ fun BudgetScreen(
 
 @Composable
 fun AlertSection(alerts: List<BudgetAlert>) {
-    Column(modifier = Modifier.padding(bottom = 16.dp)) {
+    Column(modifier = Modifier.padding(bottom = Spacing.L)) {
         Text(
             text = stringResource(R.string.budget_alerts_title),
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.error,
-            modifier = Modifier.padding(bottom = 8.dp)
+            modifier = Modifier.padding(bottom = Spacing.S)
         )
 
         alerts.forEach { alert ->
@@ -182,9 +182,9 @@ fun AlertSection(alerts: List<BudgetAlert>) {
                 ),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 8.dp)
+                    .padding(bottom = Spacing.S)
             ) {
-                Column(modifier = Modifier.padding(12.dp)) {
+                Column(modifier = Modifier.padding(Spacing.M)) {
                     Text(
                         text = stringResource(
                             R.string.budget_alert_exceeded,

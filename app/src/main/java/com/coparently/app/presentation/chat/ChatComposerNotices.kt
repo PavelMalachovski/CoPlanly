@@ -23,10 +23,10 @@ import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import com.coparently.app.R
 import com.coparently.app.domain.chat.ToneNudge
 import com.coparently.app.presentation.theme.IconSizes
+import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.utils.LightDarkPreviews
 import com.coparently.app.utils.PreviewWrapper
 
@@ -44,12 +44,12 @@ fun PendingSendNotice(pending: PendingSend, onUndo: () -> Unit, modifier: Modifi
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 4.dp)
+            .padding(horizontal = Spacing.M, vertical = Spacing.XS)
             .clip(MaterialTheme.shapes.small)
             .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-            .padding(start = 12.dp),
+            .padding(start = Spacing.M),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(Spacing.S)
     ) {
         Icon(
             imageVector = Icons.Default.HourglassTop,
@@ -96,10 +96,10 @@ fun ToneNudgeHint(nudge: ToneNudge, modifier: Modifier = Modifier) {
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp)
+            .padding(horizontal = Spacing.L, vertical = Spacing.XS)
             // Polite: read once when it appears, never interrupting what is being typed.
             .semantics { liveRegion = LiveRegionMode.Polite },
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(Spacing.S)
     ) {
         Icon(
             imageVector = Icons.Outlined.Lightbulb,

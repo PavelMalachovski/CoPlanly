@@ -109,6 +109,7 @@ import com.coparently.app.presentation.components.TimePickerDialog
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Motion
 import com.coparently.app.presentation.theme.ParentColors
+import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.dimensions
 import com.coparently.app.utils.ValidationResult
 import com.coparently.app.utils.ValidationUtils
@@ -812,7 +813,7 @@ fun AddEditEventScreen(
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.M)
                 ) {
                     // Slots have an order, so when a card resolves to nobody a caption of
                     // "first"/"second" (never "You"/"Co-parent" positionally - an unpaired
@@ -899,7 +900,7 @@ fun AddEditEventScreen(
                             Column(
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .padding(12.dp),
+                                    .padding(Spacing.M),
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.Center
                             ) {
@@ -941,7 +942,7 @@ fun AddEditEventScreen(
             // Default types plus user-defined types created in the calendar filter sheet
             androidx.compose.foundation.layout.FlowRow(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(Spacing.S)
             ) {
                 val allTypes = listOf(
                     "general" to stringResource(R.string.event_type_general),
@@ -1057,7 +1058,7 @@ fun AddEditEventScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(dims.paddingMedium),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.M),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
@@ -1078,7 +1079,7 @@ fun AddEditEventScreen(
             // Time Pickers
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(Spacing.M)
             ) {
                 // Start Time
                 OutlinedCard(
@@ -1174,7 +1175,7 @@ fun AddEditEventScreen(
 
             androidx.compose.foundation.layout.FlowRow(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(Spacing.S)
             ) {
                 listOf(
                     null to stringResource(R.string.event_repeat_none),
@@ -1256,7 +1257,7 @@ fun AddEditEventScreen(
                 com.coparently.app.presentation.common.rememberNotificationPermissionRequester()
             androidx.compose.foundation.layout.FlowRow(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(Spacing.S)
             ) {
                 REMINDER_OPTIONS.forEach { (value, labelRes) ->
                     FilterChip(

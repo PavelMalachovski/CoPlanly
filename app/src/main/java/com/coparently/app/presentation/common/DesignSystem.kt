@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import com.coparently.app.presentation.theme.CoPlanlyCorners
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.LayoutConstants
+import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.utils.LightDarkPreviews
 import com.coparently.app.utils.PreviewWrapper
 import java.util.Locale
@@ -86,7 +87,7 @@ fun GroupLabel(
         fontWeight = FontWeight.SemiBold,
         color = MaterialTheme.colorScheme.primary,
         modifier = modifier
-            .padding(start = 4.dp, end = 4.dp, bottom = 6.dp)
+            .padding(start = Spacing.XS, end = Spacing.XS, bottom = 6.dp)
             // A heading, so TalkBack can move from group to group instead of row by row, read in
             // the case it was written: a screen reader may spell an all-caps word out letter by
             // letter (docs/AUDIT-2026-10-design.md D-17).
@@ -189,7 +190,7 @@ fun SectionRow(
             .fillMaxWidth()
             .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier)
             .defaultMinSize(minHeight = 56.dp)
-            .padding(horizontal = 16.dp, vertical = 14.dp),
+            .padding(horizontal = Spacing.L, vertical = 14.dp),
         horizontalArrangement = Arrangement.spacedBy(14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -304,7 +305,7 @@ fun PillChip(
                     Modifier
                 }
             )
-            .padding(PaddingValues(horizontal = 12.dp, vertical = 6.dp)),
+            .padding(PaddingValues(horizontal = Spacing.M, vertical = 6.dp)),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -389,9 +390,9 @@ fun EmptyState(
             modifier = Modifier
                 .fillMaxWidth()
                 .then(scrolling)
-                .padding(horizontal = 24.dp, vertical = 32.dp),
+                .padding(horizontal = Spacing.XL, vertical = Spacing.XXL),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically)
+            verticalArrangement = Arrangement.spacedBy(Spacing.M, Alignment.CenterVertically)
         ) {
             HeroIcon(icon)
             Text(
@@ -409,7 +410,7 @@ fun EmptyState(
                 )
             }
             if (actionLabel != null && onAction != null) {
-                Button(onClick = onAction, modifier = Modifier.padding(top = 4.dp)) {
+                Button(onClick = onAction, modifier = Modifier.padding(top = Spacing.XS)) {
                     Text(actionLabel)
                 }
             }
@@ -465,7 +466,7 @@ private fun EmptyStatePreview() {
 @Composable
 private fun SectionGroupPreview() {
     PreviewWrapper {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(Spacing.L)) {
             GroupLabel("Family")
             SectionGroup {
                 SectionRow(
