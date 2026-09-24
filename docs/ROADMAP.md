@@ -1923,7 +1923,7 @@ overrides, one day at a time.
 - School vacations outside Czechia come from MON-13's tables as they are, so suggestions follow
   what each country's table holds (Germany only with a Land).
 
-### MON-15 · **SHIPPED ON `LIKE`; FTS IS THE LATER STEP** · P1 · S · Search in chat
+### MON-15 · **SHIPPED ON `LIKE`; FTS MEASURED AND NOT ADOPTED** · P1 · S · Search in chat
 
 **Where:** ☁️ cloud (done, September 2026); 📱 a look on a phone (§1).
 
@@ -1953,14 +1953,31 @@ time, and an FTS table is a schema bump and a migration. So:
 
 **Known limits.** It searches what this phone holds: messages older than anything the mirror
 ever brought down (a fresh install receives the newest 200) are not there to be found. Folding a
-very long thread is linear work per query, off the main thread; FTS is the answer if a device
-shows that to be slow.
+very long thread is linear work per query, off the main thread; see below for what to do if a
+device shows that to be slow — it is not FTS.
 
-**The later step: FTS4.** A `messages_fts` table (external content on `messages.content`) with
-its triggers and a migration — run the Regenerate workflow after *that* bump, not after a batch
-(CLAUDE.md on the missing `35.json`). Even then the fold stays: FTS4's `unicode61` tokenizer
-removes diacritics but the snippet still has to be mapped back to the original text. Search in
-the export (MON-3) can use the same query.
+**FTS4, measured and not adopted (September 2026).** The step this entry used to promise was a
+`messages_fts` table as a faster prefilter in front of `ChatSearch`. It was tried against the one
+property a prefilter must have — never drop a message the search would accept — and fails it
+twice, measured on SQLite 3.45 with `unicode61`, `remove_diacritics` 1 and 2 alike:
+- **FTS matches tokens and token prefixes; the search matches substrings.** "ick*" does not find
+  "pickup", and a single-word query — the common case — can sit anywhere inside a word. Only the
+  *last* word of a query that has a separator before it is guaranteed to start a token.
+- **`unicode61` folds less than `TextFold`.** It removes Latin diacritics ("cas*" finds "čas") and
+  folds Cyrillic case, but not "й"→"и", "ё"→"е" or "ї"→"і", which NFD-and-drop-marks does. Russian
+  and Ukrainian queries typed without those marks — which is how many people type them — would lose
+  messages. Passing the unfolded query instead fails the other direction.
+So FTS could narrow the candidates only for a multi-word query whose last word is plain ASCII —
+a sliver of the searches, in one of the five languages — at the cost of a schema bump, sync
+triggers on every message write, and a second plaintext copy of every message in the database.
+Not worth it: **no FTS table was added and no schema version was spent** (the version this was
+planned as, v42, was not created). `ChatSearchTest` now pins the two behaviours a future
+prefilter would have to keep (an infix match; "иогурт" finding "йогурт"). If a long thread is ever
+measured to be slow, the correct shape is a column of `TextFold`ed text written with each message
+(and backfilled by a migration) under the same `LIKE` — exact rather than a superset, still a full
+scan of one conversation, and still a schema bump with its own Regenerate run. FTS5's `trigram`
+tokenizer would handle infixes but shares `unicode61`'s fold, and Room cannot declare an FTS5
+entity. Search in the export (MON-3) stays out of scope.
 
 ### MON-16 · **SHIPPED** · P1 · S · A verifiable export, without anybody's affidavit
 

@@ -58,6 +58,25 @@ class ChatSearchTest {
         assertEquals("İstanbul", matched("Letíme do İstanbul", "istanbul"))
     }
 
+    // ---- what a full-text index could not find (the MON-15 FTS finding) -----------------
+    //
+    // An FTS4 `unicode61` index answers token prefixes and folds only what its own tables fold.
+    // Measured against SQLite 3.45 (September 2026), `remove_diacritics` 1 and 2 alike: "ick*"
+    // does not find "pickup", and "иогурт*", "елка*", "іі*" find nothing where the text says
+    // "йогурт", "ёлка", "її". Any prefilter put in front of this search has to keep these, which
+    // is why the DAO's candidates are still a `LIKE` (docs/ROADMAP.md MON-15).
+
+    @Test
+    fun `a query matches inside a word, not only at its start`() {
+        assertEquals("ick", matched("Pickup at five", "ick"))
+    }
+
+    @Test
+    fun `a short i without its breve finds the letter with it`() {
+        assertEquals("йогурт", matched("Купи йогурт", "иогурт"))
+        assertEquals("її", matched("Забери її о п'ятій", "ії"))
+    }
+
     @Test
     fun `a message without the query does not match`() {
         assertNull(ChatSearch.findMatch("Uvidíme se v pět", ChatSearch.normalizeQuery("čas")))
