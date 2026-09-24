@@ -85,8 +85,8 @@
 
     <!-- Inline change-request banner, view-mode menu and the day agenda card. -->
     <plurals name="calendar_change_requests_banner">
-        <item quantity="one">%1$d change request from your co-parent</item>
-        <item quantity="other">%1$d change requests from your co-parent</item>
+        <item quantity="one">%1$d change request</item>
+        <item quantity="other">%1$d change requests</item>
     </plurals>
     <string name="calendar_change_requests_review">Review</string>
     <string name="calendar_change_view_mode">Change view, or jump to a date</string>

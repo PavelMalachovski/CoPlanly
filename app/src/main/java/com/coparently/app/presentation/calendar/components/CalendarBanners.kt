@@ -104,7 +104,9 @@ fun ChangeRequestBanner(
             )
             // Neither line is capped: "2 change requests from your co-pare…" cut the one fact
             // the banner exists for, in English at the default size (docs/AUDIT-2026-10-design.md
-            // D-3). A long message now costs the grid a line instead of its meaning.
+            // D-3). The count now leaves out who sent them — the one co-parent this calendar is
+            // shared with — so it fits one line in all five languages, and a larger font size
+            // costs the grid a line instead of the banner its meaning.
             if (detail != null) {
                 Text(
                     text = detail,

@@ -75,10 +75,10 @@
 
     <!-- Inline change-request banner, view-mode menu and the day agenda card. -->
     <plurals name="calendar_change_requests_banner">
-        <item quantity="one">%1$d žádost o změnu od druhého rodiče</item>
-        <item quantity="few">%1$d žádosti o změnu od druhého rodiče</item>
-        <item quantity="many">%1$d žádostí o změnu od druhého rodiče</item>
-        <item quantity="other">%1$d žádostí o změnu od druhého rodiče</item>
+        <item quantity="one">%1$d žádost o změnu</item>
+        <item quantity="few">%1$d žádosti o změnu</item>
+        <item quantity="many">%1$d žádostí o změnu</item>
+        <item quantity="other">%1$d žádostí o změnu</item>
     </plurals>
     <string name="calendar_change_requests_review">Zkontrolovat</string>
     <string name="calendar_change_view_mode">Změnit zobrazení nebo přejít na datum</string>

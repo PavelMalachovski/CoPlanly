@@ -62,10 +62,10 @@
 
     <!-- Inline change-request banner, view-mode menu and the day agenda card. -->
     <plurals name="calendar_change_requests_banner">
-        <item quantity="one">%1$d запит на зміну від іншого з батьків</item>
-        <item quantity="few">%1$d запити на зміну від іншого з батьків</item>
-        <item quantity="many">%1$d запитів на зміну від іншого з батьків</item>
-        <item quantity="other">%1$d запитів на зміну від іншого з батьків</item>
+        <item quantity="one">%1$d запит на зміну</item>
+        <item quantity="few">%1$d запити на зміну</item>
+        <item quantity="many">%1$d запитів на зміну</item>
+        <item quantity="other">%1$d запитів на зміну</item>
     </plurals>
     <string name="calendar_change_requests_review">Переглянути</string>
     <string name="calendar_change_view_mode">Змінити вигляд або перейти до дати</string>

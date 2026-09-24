@@ -60,8 +60,8 @@
 
     <!-- Inline change-request banner, view-mode menu and the day agenda card. -->
     <plurals name="calendar_change_requests_banner">
-        <item quantity="one">%1$d Änderungsanfrage vom anderen Elternteil</item>
-        <item quantity="other">%1$d Änderungsanfragen vom anderen Elternteil</item>
+        <item quantity="one">%1$d Änderungsanfrage</item>
+        <item quantity="other">%1$d Änderungsanfragen</item>
     </plurals>
     <string name="calendar_change_requests_review">Prüfen</string>
     <string name="calendar_change_view_mode">Ansicht wechseln oder zu einem Datum springen</string>
