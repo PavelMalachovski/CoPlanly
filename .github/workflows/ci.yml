@@ -1025,7 +1025,9 @@ jobs:
       # its own. Its own wrapper and Gradle version — it is the base commit's build, exactly.
       - name: Build the base build (app APK)
         working-directory: upgrade-base
-        run: ./gradlew assembleDebug
+        # The base build's daemon would otherwise keep its 4 GB heap beside this branch's
+        # daemon and the emulator on a 16 GB runner.
+        run: ./gradlew assembleDebug && ./gradlew --stop
 
       # This branch's app and test APKs, while the AVD restores and the emulator boots; the
       # emulator script's first line waits for it (tools/ci-background-build.sh).
