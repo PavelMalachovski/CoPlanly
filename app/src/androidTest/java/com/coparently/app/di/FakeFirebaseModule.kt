@@ -2,6 +2,7 @@ package com.coparently.app.di
 
 import com.coparently.app.data.remote.firebase.QRCodeService
 import com.coparently.app.e2e.EmulatorEnvironment
+import com.google.android.gms.tasks.Tasks
 import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.crashlytics.FirebaseCrashlytics
@@ -13,6 +14,7 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.components.SingletonComponent
 import dagger.hilt.testing.TestInstallIn
+import io.mockk.every
 import io.mockk.mockk
 import javax.inject.Singleton
 
@@ -68,7 +70,17 @@ object FakeFirebaseModule {
 
     @Provides
     @Singleton
-    fun provideFirebaseMessaging(): FirebaseMessaging = mockk(relaxed = true)
+    fun provideFirebaseMessaging(): FirebaseMessaging = mockk<FirebaseMessaging>(relaxed = true) {
+        // A relaxed mock's Task never completes, so every `await()` on one waits for ever: the
+        // e2e job's on-screen test hung for its whole time limit in `SyncService.syncUserData`,
+        // on `FcmService.getCurrentToken()`. Each call the app makes answers at once instead,
+        // the way it does on a device without FCM — a token that cannot be had, and topic and
+        // delete calls that simply finish.
+        every { token } returns Tasks.forException(IllegalStateException("No FCM in instrumented tests"))
+        every { deleteToken() } returns Tasks.forResult(null)
+        every { subscribeToTopic(any()) } returns Tasks.forResult(null)
+        every { unsubscribeFromTopic(any()) } returns Tasks.forResult(null)
+    }
 
     @Provides
     @Singleton
