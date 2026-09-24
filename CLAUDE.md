@@ -236,9 +236,9 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   degrades gracefully if it is missing (see the conditional apply in `app/build.gradle.kts`).
 - **GitHub CI runs on every pull request, and on every push to `main`** — a push to a
   feature branch with no PR open is not built (`.github/workflows/ci.yml`, added
-  August 2026 — this line used to say there was none). Eleven jobs that test (this line used to
-  say ten, before detekt left the lint job; eight before `screenshots` and `e2e`; seven before
-  `instrumented`), plus `report`, which only reads them (below): `changes` (a cheap gate,
+  August 2026 — this line used to say there was none). Twelve jobs that test (this line used to
+  say eleven, before `upgrade`; ten before detekt left the lint job; eight before `screenshots`
+  and `e2e`; seven before `instrumented`), plus `report`, which only reads them (below): `changes` (a cheap gate,
   below), four Android ones — `build-test` (`assembleDebug` + `testDebugUnitTest` in a
   single invocation), `static` (`lint` alone — the id is kept), `detekt` (its own job since
   September 2026: the two ran in sequence, lint 5:15 then detekt 0:52), `release` (`assembleRelease`, where
@@ -395,6 +395,38 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   manual plan then tells the tester the mechanism already ran and only what is drawn, the push
   and the real network are left — which is the point of the whole map.
 
+  The **`upgrade` job** ("Android — upgrade over main", September 2026) is `docs/DEVICE-CHECKLIST.md`
+  §2.1's install-over, for one release step, on the API 30 AVD. It builds the **base build** —
+  the PR's base commit, or on `main` the commit before the push (`github.event.before`) — in a
+  second checkout (`upgrade-base/`) and this branch's app and test APKs in the same job, so both
+  are signed by the one `~/.android/debug.keystore` (`tools/upgrade/run-upgrade-test.sh` compares
+  the three certificates with `apksigner` before installing anything). Then: install the base
+  app and the test APK fresh; `am instrument` `upgrade/UpgradeSeedTest`, which runs **in the base
+  build's process** and writes the real `coparently_database` through `buildCoPlanlyDatabase`
+  (rows in eight tables, by SQL) and the real sealed preference store (a refresh token, settings,
+  the telemetry answer), and leaves a marker; `adb install -r` this branch's app, keeping the
+  data; `am instrument` `upgrade/UpgradeVerifyTest`, which opens the database through this build
+  and asserts the passphrase was **recovered, not re-minted** (the wrapped value unchanged), the
+  schema is the newest exported one with Room's identity hash, every row reads back (by SQL and
+  through the DAOs), the file is still ciphertext, `lastUpdateTime` moved while
+  `firstInstallTime` did not, and the preferences and consent answer survived. Four things not to
+  undo. **The seed runs against the base build's classes**, so it calls only the signatures
+  `UpgradeFixture`'s KDoc lists and writes rows by SQL adapted to `PRAGMA table_info`, never
+  through a DAO: an entity's constructor changes with every added column, which is exactly the
+  pull request this job is for. A PR that changes a listed signature fails the seed with
+  `NoSuchMethodError` — adapt the fixture (reflection, or SQL) until the change is on the base.
+  **Both classes skip themselves without `-e coplanlyUpgradePhase seed|verify`**, which is what
+  keeps them — they write the real database and preference store — out of the `instrumented`
+  job; the seed also refuses to run over an existing database. **A skip is a failure here**:
+  `am instrument` prints "OK (1 test)" for one, so `tools/upgrade/instrument-results.js` (tested
+  in `invariants`) judges each phase from the raw per-test status codes and writes the JUnit XML
+  the check run and the PR comment read, with a skip as a failure. And **the status file decides
+  the job**, as in the other emulator jobs. **What it cannot prove**: an upgrade from a build older
+  than the base (a longer migration chain — `CoPlanlyDatabaseMigrationTest`'s job, as far as
+  schemas exist), SEC-2's plaintext → encrypted conversion of an install older than SQLCipher (the
+  base already encrypts, so this is encrypted → encrypted), a reboot, and a real phone's
+  hardware-backed Keystore — those stay on the device checklist.
+
   **A second workflow file exists and is not part of CI**: `.github/workflows/regenerate.yml` runs
   `detektBaseline` and exports the Room schema, then commits both back to the branch it ran on.
   It exists because those are the two artefacts only a machine with an Android SDK can produce,
@@ -441,13 +473,16 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   `ScreenshotFixtures`) so an image does not change with the calendar — keep it that way, or the
   suite can never move to verify.
 - **A pull request runs only the jobs its diff can affect** (September 2026). The `changes` job
-  pipes `git diff --name-only` into `tools/ci-changes.js`, which decides four outputs and is tested
+  pipes `git diff --name-only` into `tools/ci-changes.js`, which decides five outputs and is tested
   by `tools/test/ci-changes.test.js` in `invariants`: docs/functions/rules only → no Android job;
   a screen-only change (`presentation/` outside `common/`, `res/`, `app/src/test/`) → no e2e
   (`common/` stays in because the e2e parents construct `ParentsSource`); nothing the screenshots
   render → no screenshots; and the **emulator matrix is API 30 alone** unless the diff reaches
   what API 26 and 16 KB exist for — `data/local/` (SQLCipher, Room), the manifest, `androidTest/`,
-  `src/debug/`, the emulator script — or the build. A push to `main` always runs everything, which
+  `src/debug/`, the emulator script — or the build; and the `upgrade` job runs when the diff reaches
+  what stored data depends on (`data/local/`, `data/security/`, `di/DatabaseModule.kt`, the
+  telemetry answer's form, `app/schemas/`, the manifest, its own tests and scripts), the build, or
+  any path the script does not know. A push to `main` always runs everything, which
   is the backstop for the legs a PR skipped; lint's NewApi check is the per-PR guard for a
   newer-API call. Three things not to get wrong. Every skip list is deliberately narrow — a path
   wrongly *on* one silently stops testing real changes, which is far worse than a path wrongly off
@@ -926,10 +961,11 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     device-bound, so an encrypted field arrives at the co-parent's phone as ciphertext their
     Keystore cannot open — `SensitiveMedicalData` was deleted for saying otherwise. The SQLCipher
     calls **run in CI on emulators** (API 26, 30 and 35 with 16 KB pages): `EncryptedDatabaseTest`
-    drives every state `SqlCipherMigration` names through the production builder. What that cannot
-    prove is an upgrade over a database an *older build* wrote, under a phone's hardware-backed
-    Keystore, so the first launch on a device holding real data is still an acceptance step
-    (`docs/DEVICE-CHECKLIST.md` §2.1).
+    drives every state `SqlCipherMigration` names through the production builder, and the `upgrade`
+    job opens a database the *previous build* wrote (encrypted → encrypted, one release step; see
+    the CI section). What neither can prove is an upgrade from an older build, or under a phone's
+    hardware-backed Keystore, so the first launch on a device holding real data is still an
+    acceptance step (`docs/DEVICE-CHECKLIST.md` §2.1).
     **The preference store follows the same idea since SEC-5** (September 2026):
     `EncryptedPreferences` is no longer `security-crypto`'s alpha `EncryptedSharedPreferences` but
     one file, `no_backup/secure_prefs.bin` — the whole map (`PreferenceBlobCodec`, never Gson)

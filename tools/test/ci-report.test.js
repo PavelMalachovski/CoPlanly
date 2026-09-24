@@ -69,6 +69,7 @@ test('suite labels', () => {
   assert.equal(report.suiteLabel('junit-instrumented-api30-default'), 'Instrumented, API 30');
   assert.equal(report.suiteLabel('junit-instrumented-api35-google_apis_ps16k'),
       'Instrumented, API 35 (google_apis_ps16k)');
+  assert.equal(report.suiteLabel('junit-upgrade'), 'Upgrade over the base build');
 });
 
 test('collect reads junit-* and coverage-report directories', () => {
