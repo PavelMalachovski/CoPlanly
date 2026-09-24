@@ -963,6 +963,43 @@ class CoPlanlyDatabaseMigrationTest {
         }
     }
 
+    /**
+     * 40-to-41 adds the private journal (MON-22): a new, empty table, and nothing else moves. The
+     * insert at the end proves the table Room validated is the one the app writes — an author, an
+     * optional family, the day it is about as ISO text, the text and two epoch-millis times — with
+     * no outbox column, because nothing in it is ever uploaded. Needs `41.json`, which the
+     * Regenerate workflow exports.
+     */
+    @Test
+    fun migration40To41_addsAnEmptyJournal() {
+        val db = helper.createDatabase(TEST_DB, VERSION_40)
+        db.close()
+
+        val migrated = helper.runMigrationsAndValidate(
+            TEST_DB,
+            VERSION_41,
+            true,
+            DatabaseMigrations.MIGRATION_40_41
+        )
+
+        migrated.query("SELECT COUNT(*) FROM journal_entries").use {
+            assertTrue(it.moveToFirst())
+            assertEquals("nothing is backfilled", 0, it.getInt(0))
+        }
+        migrated.execSQL(
+            """
+            INSERT INTO journal_entries (id, createdByFirebaseUid, familyId, entryDate, text,
+                                         createdAtMillis, updatedAtMillis)
+            VALUES ('j1', 'alice', NULL, '2026-09-01', 'Late pickup', 1787000000000, 1787000000000)
+            """.trimIndent()
+        )
+        migrated.query("SELECT entryDate, familyId FROM journal_entries").use {
+            assertTrue(it.moveToFirst())
+            assertEquals("2026-09-01", it.getString(0))
+            assertTrue("an entry written while unpaired has no family", it.isNull(1))
+        }
+    }
+
     private companion object {
         const val TEST_DB = "coplanly-migration-test.db"
         const val VERSION_11 = 11
@@ -985,6 +1022,7 @@ class CoPlanlyDatabaseMigrationTest {
         const val VERSION_38 = 38
         const val VERSION_39 = 39
         const val VERSION_40 = 40
+        const val VERSION_41 = 41
 
         /** 2026-08-01T12:00:00 at UTC+05:30, i.e. 06:30:00Z. */
         const val NOON_AT_PLUS_FIVE_THIRTY_MILLIS = 1_785_565_800_000L

@@ -94,4 +94,13 @@
     <string name="export_plan_not_agreed">Not agreed</string>
     <string name="export_plan_retired">Answers to questions the plan no longer asks (kept, not deleted)</string>
     <string name="export_plan_cited">Proposed from the parenting plan answer to</string>
+
+    <!-- The private journal as an optional section (MON-22). -->
+    <string name="export_include_journal">My private journal</string>
+    <string name="export_include_journal_supporting">Your own entries about days in this period, marked in the file as your private notes. Off unless you tick it.</string>
+    <string name="export_journal_private_note">These are one parent\'s own private notes, kept on their phone. They were never shared with the other parent through the app, and the other parent has not seen them. They are included because that parent chose to include them.</string>
+    <string name="export_journal_clock_note">Each entry is dated by the day it is about. When it was written and last edited comes from that phone\'s clock; no server ever received these entries.</string>
+    <string name="export_journal_none">No journal entries about days in this period.</string>
+    <string name="export_journal_written">Written</string>
+    <string name="export_journal_edited">Last edited</string>
 </resources>

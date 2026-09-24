@@ -2306,14 +2306,42 @@ both parents can find it, and a photo of a prescription is a message, not an ema
   only), and live only until their upload lands.
 - **Not on a device yet** — see §1 and `docs/DEVICE-CHECKLIST.md` §5.5.
 
-### MON-22 · P2 · M · A private journal
+### MON-22 · **BUILT** · P2 · M · A private journal
 
-**Where:** ☁️ cloud.
+**Where:** ☁️ cloud, built; 📱 the device check is `docs/DEVICE-CHECKLIST.md` §6.
 
-**Answers:** AppClose's journal and notes. Entries are **local-only by default** (Room, under
-SQLCipher, never synced), and a parent may *attach* chosen entries to an export (MON-3/MON-16).
-They are not shared with the co-parent: a journal about the other parent that syncs to them is a
-different, worse product.
+**Answers:** AppClose's journal and notes. Entries are **local-only** (Room, under SQLCipher, never
+synced), and a parent may put their entries into an export (MON-3/MON-16). They are not shared with
+the co-parent: a journal about the other parent that syncs to them is a different, worse product.
+
+**What shipped (schema 41).**
+- `journal_entries` (`JournalEntryEntity`, `MIGRATION_40_41`): id, author uid, optional
+  `familyId` stamped at create and never re-derived (CLAUDE.md item 18), the day the entry is
+  *about* (`entryDate`, chosen by the parent), the text, and first-written / last-edited epoch
+  millis. **No `syncedToFirestore` column, no Firestore data source, no rule, no push** —
+  `JournalRepositoryImpl` depends on the DAO alone, so nothing can route an entry off the phone.
+  Every query is scoped to the author, belt and braces beside `AccountSwitchGuard`'s
+  `clearAllTables`, which wipes the table on an account switch and on account deletion like every
+  other table. Sign-out keeps it, as it keeps the rest of Room.
+- Settings → Family → **Private journal** (`presentation/journal`): the list says first, in plain
+  words, that entries stay on this phone, are not synced or backed up, are never shared, and go
+  with an uninstall or a different account signing in here. `EmptyState` when empty; swipe to
+  delete with Undo (the same entry, id and times intact); the editor has the day, the text and a
+  sticky Save. An edit is a `copy()` of the loaded entry.
+- **The export (MON-3):** an **Also include → My private journal** checkbox, **off by default**
+  (the plan's is on). The simpler honest design was chosen over per-entry picking: ticked, the
+  record carries *this parent's* entries about days in the period (and in the family the export
+  is for, or written while unpaired). Both formats label the section before any entry as one
+  parent's own private notes that the other parent never saw, say the times are that phone's
+  clock with no server behind them, show "last edited" where an entry changed, and say "no journal
+  entries" rather than dropping a section the parent asked for. It follows the expenses and
+  precedes the parenting plan (`RecordJournal.kt`). Being read from this phone, it can never make
+  the record incomplete.
+
+**Not done, deliberately.** No per-entry picker (a parent who wants fewer entries narrows the
+period or deletes them); no attachment of files to an entry; no backup — an encrypted export of the
+journal alone would be the way to add one, and it is a product decision, not a default. Needs
+`41.json` from the Regenerate workflow before its migration test can run.
 
 ## 8. [FAM] More than one child, more than one pet
 

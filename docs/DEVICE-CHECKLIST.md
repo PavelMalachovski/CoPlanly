@@ -853,6 +853,14 @@ Preconditions:
       that question now reads **Not agreed**. Untick the box: the section is gone.
 - [ ] In **airplane mode**, the plan section says it is **this phone's copy** and the record's face
       carries the incomplete line.
+- [ ] **Private journal (MON-22, schema 41).** Settings → Family → **Private journal**: the screen
+      says the entries stay on this phone and are never shared. Add two entries (one dated inside
+      the export range, one outside it), edit one, swipe one away and tap **Undo** — it comes back
+      with its text and day. On the **co-parent's phone** nothing of the journal appears anywhere.
+      Export with **My private journal** unticked (the default): no journal section. Tick it: both
+      files carry a **Private journal** section, after the expenses and before the plan, that
+      starts with "one parent's own private notes … the other parent has not seen them", lists only
+      the entry inside the range under your **name**, and shows **Last edited** for the edited one.
 - [ ] The **share sheet** opens from both, and sending to e-mail or Drive delivers a file that
       opens.
 - **If it fails:** read the PR's own description for the file and tag names.

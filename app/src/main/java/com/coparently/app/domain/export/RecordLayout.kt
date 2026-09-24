@@ -80,11 +80,15 @@ object RecordLayout {
     internal const val SMALL_GAP = 3f
 
     /**
-     * The record as paragraphs, in reading order. The parenting plan, when there is one, comes
-     * last: it is not bound to the period the three sections before it cover.
+     * The record as paragraphs, in reading order. The private journal, when the parent asked for it,
+     * follows the expenses — it covers the same period. The parenting plan, when there is one, comes
+     * last: it is not bound to the period the sections before it cover.
      */
     fun blocks(record: CommunicationRecord, labels: RecordLabels): List<RecordBlock> =
         header(record, labels) + events(record, labels) + messages(record, labels) + expenses(record, labels) +
+            record.journal?.let {
+                RecordJournalLayout.blocks(it, record.zone, labels.journal, labels.columns.by)
+            }.orEmpty() +
             record.plan?.let { RecordPlanLayout.blocks(it, record.zone, labels.plan) }.orEmpty()
 
     /**

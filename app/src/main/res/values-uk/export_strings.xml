@@ -88,4 +88,13 @@
     <string name="export_plan_not_agreed">Не узгоджено</string>
     <string name="export_plan_retired">Відповіді на питання, яких у плані більше немає (збережені, не видалені)</string>
     <string name="export_plan_cited">Запропоновано за відповіддю в батьківському плані на питання</string>
+
+    <!-- The private journal as an optional section (MON-22). -->
+    <string name="export_include_journal">Мій особистий щоденник</string>
+    <string name="export_include_journal_supporting">Ваші власні записи про дні цього періоду, позначені у файлі як ваші особисті нотатки. Вимкнено, доки ви не позначите.</string>
+    <string name="export_journal_private_note">Це особисті нотатки одного з батьків, що зберігаються на його телефоні. Через застосунок їх ніколи не надсилали іншому з батьків, і інший із батьків їх не бачив. Їх включено, бо цей із батьків вирішив їх включити.</string>
+    <string name="export_journal_clock_note">Кожен запис датовано днем, якого він стосується. Коли його написано й востаннє змінено — за годинником того телефона; жоден сервер цих записів не отримував.</string>
+    <string name="export_journal_none">Немає записів щоденника про дні цього періоду.</string>
+    <string name="export_journal_written">Написано</string>
+    <string name="export_journal_edited">Востаннє змінено</string>
 </resources>

@@ -11,6 +11,7 @@ package com.coparently.app.domain.export
  * @property statement The paragraphs that say what the record is and is not — printed first, on
  *   the face of both formats, and never shortened (`docs/DESIGN-court-record.md` §3).
  * @property plan The words of the parenting-plan section, printed only when the record carries one.
+ * @property journal The words of the private-journal section, printed only when the record carries one.
  */
 data class RecordLabels(
     val title: String,
@@ -31,7 +32,29 @@ data class RecordLabels(
     val revision: String,
     val page: String,
     val verification: VerificationLabels,
-    val plan: PlanLabels
+    val plan: PlanLabels,
+    val journal: JournalLabels
+)
+
+/**
+ * What the private-journal section prints (MON-22 in the record).
+ *
+ * @property section The section's heading — the journal's own name.
+ * @property privateNote That these are one parent's own private notes, kept on their phone, which
+ *   the other parent never saw. Printed before any entry, in both formats.
+ * @property clockNote That entries are dated by the day they are about, and that when each was
+ *   written and edited is that phone's clock, with no server time behind it.
+ * @property none For a period with no entries: said, since the parent asked for the section.
+ * @property written The label before when an entry was first written.
+ * @property edited The label before when an entry was last edited.
+ */
+data class JournalLabels(
+    val section: String,
+    val privateNote: String,
+    val clockNote: String,
+    val none: String,
+    val written: String,
+    val edited: String
 )
 
 /**

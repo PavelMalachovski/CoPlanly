@@ -1,6 +1,7 @@
 package com.coparently.app.domain.export
 
 import com.coparently.app.data.versions.EventVersionKind
+import com.coparently.app.domain.journal.JournalEntry
 import com.coparently.app.domain.model.Expense
 import com.coparently.app.domain.model.ExpenseCategory
 import com.coparently.app.domain.parentingplan.ParentingPlanEntry
@@ -70,7 +71,15 @@ internal object RecordFixtures {
             notRegistered = "NOT REGISTERED, CANNOT BE VERIFIED",
             notRegisteredShort = "NOT REGISTERED"
         ),
-        plan = planLabels()
+        plan = planLabels(),
+        journal = JournalLabels(
+            section = "Journal",
+            privateNote = "ONE PARENT'S PRIVATE NOTES, NEVER SHARED",
+            clockNote = "THAT PHONE'S CLOCK",
+            none = "NO JOURNAL ENTRIES",
+            written = "Written",
+            edited = "Last edited"
+        )
     )
 
     /** The parenting plan's section words, short and upper-case so a test can find them. */

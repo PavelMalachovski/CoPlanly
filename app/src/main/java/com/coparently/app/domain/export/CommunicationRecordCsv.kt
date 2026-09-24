@@ -22,7 +22,9 @@ import java.time.ZoneId
  * **The parenting plan, when the record carries one, comes last** — one row per parent per
  * question, then the rows for answers under questions the plan no longer asks, preceded by the
  * section's own notes (the disclaimer, "current state at export time", and whether the server was
- * read). Every one of those rows is padded to the header's width like any other.
+ * read). Every one of those rows is padded to the header's width like any other. The private
+ * journal, when the parent asked for it, sits just before the plan, after its own two notes
+ * (MON-22, [RecordJournalLayout]).
  *
  * Starts with a UTF-8 byte-order mark. Outside RFC 4180, harmless to a parser that follows it,
  * and the difference between Excel showing "Čeština" and "ÄŒeÅ¡tina" to the lawyer who opens it.
@@ -86,6 +88,7 @@ object CommunicationRecordCsv {
         record.events.flatMap { event -> event.revisions.map { eventRow(event, it, record.zone, labels) } } +
             record.messages.map { messageRow(it, record.zone, labels) } +
             record.expenses.map { expenseRow(it, labels) } +
+            record.journal?.let { RecordJournalLayout.csvRows(it, record.zone, labels.journal) }.orEmpty() +
             record.plan?.let { PlanCsvRows.rows(it, record.zone, labels.plan) }.orEmpty()
 
     private fun eventRow(

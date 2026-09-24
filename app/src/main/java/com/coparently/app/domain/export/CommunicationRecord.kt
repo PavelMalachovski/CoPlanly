@@ -30,6 +30,8 @@ import java.time.ZoneId
  * @property expenses Expenses dated in the range, oldest first.
  * @property plan The family's parenting plan as it stands at export time, or null when the parent
  *   chose to leave it out. Not bound to [from]…[to]: a plan has no period.
+ * @property journal The exporting parent's own private journal entries about days in the period,
+ *   or null when they did not ask for it — which is the default (MON-22).
  * @property verification Whether the file carries a registered record id (MON-16). The builder
  *   never decides this — it is set by the export flow once the server has reserved an id, and a
  *   record is [RecordVerification.Unregistered] until then, so nothing claims verifiability by
@@ -46,6 +48,7 @@ data class CommunicationRecord(
     val messages: List<RecordMessage>,
     val expenses: List<RecordExpense>,
     val plan: RecordPlan? = null,
+    val journal: RecordJournal? = null,
     val verification: RecordVerification = RecordVerification.Unregistered
 )
 

@@ -17,6 +17,7 @@ import com.coparently.app.domain.export.CurrentEventInput
 import com.coparently.app.domain.export.EventFacts
 import com.coparently.app.domain.export.EventRevisionInput
 import com.coparently.app.domain.export.ExportFormat
+import com.coparently.app.domain.export.JournalLabels
 import com.coparently.app.domain.export.MessageInput
 import com.coparently.app.domain.export.PlanLabels
 import com.coparently.app.domain.export.RecordActions
@@ -365,6 +366,14 @@ class ExportFileWriterTest {
                 retired = context.getString(R.string.export_plan_retired),
                 questions = emptyMap(),
                 cited = context.getString(R.string.export_plan_cited)
+            ),
+            journal = JournalLabels(
+                section = context.getString(R.string.journal_title),
+                privateNote = context.getString(R.string.export_journal_private_note),
+                clockNote = context.getString(R.string.export_journal_clock_note),
+                none = context.getString(R.string.export_journal_none),
+                written = context.getString(R.string.export_journal_written),
+                edited = context.getString(R.string.export_journal_edited)
             )
         )
     }

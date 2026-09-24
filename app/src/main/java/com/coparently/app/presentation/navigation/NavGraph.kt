@@ -49,6 +49,9 @@ import com.coparently.app.presentation.documents.FamilyDocumentsScreen
 import com.coparently.app.presentation.event.AddEditEventScreen
 import com.coparently.app.presentation.event.EventListScreen
 import com.coparently.app.presentation.export.ExportScreen
+import com.coparently.app.presentation.journal.JournalEditorScreen
+import com.coparently.app.presentation.journal.JournalEditorViewModel
+import com.coparently.app.presentation.journal.JournalListScreen
 import com.coparently.app.presentation.onboarding.OnboardingScreen
 import com.coparently.app.presentation.pairing.PairingScreen
 import com.coparently.app.presentation.parentingplan.ParentingPlanScreen
@@ -507,6 +510,9 @@ fun NavGraph(
                     onNavigateToDocuments = {
                         navController.navigate(Screen.Documents.route)
                     },
+                    onNavigateToJournal = {
+                        navController.navigate(Screen.Journal.route)
+                    },
                     onNavigateToMyProfile = {
                         navController.navigate(Screen.MyProfile.route)
                     },
@@ -562,6 +568,37 @@ fun NavGraph(
                 popExitTransition = { slideOutToRight() }
             ) {
                 FamilyDocumentsScreen(onNavigateUp = { navController.popBackStack() })
+            }
+
+            // The private journal (MON-22), after the vault: this parent's own notes, kept on this
+            // phone only. The list, then the editor as a third level, like Pets.
+            composable(
+                route = Screen.Journal.route,
+                enterTransition = { slideInFromRight() },
+                exitTransition = { slideOutToLeft() },
+                popEnterTransition = { slideInFromLeft() },
+                popExitTransition = { slideOutToRight() }
+            ) {
+                JournalListScreen(
+                    onNavigateUp = { navController.popBackStack() },
+                    onOpenEntry = { id -> navController.navigate(Screen.JournalEditor.createRoute(id)) },
+                    onNewEntry = {
+                        navController.navigate(Screen.JournalEditor.createRoute(JournalEditorViewModel.NEW_ENTRY))
+                    }
+                )
+            }
+
+            composable(
+                route = Screen.JournalEditor.route,
+                arguments = listOf(
+                    navArgument(JournalEditorViewModel.ARG_ENTRY_ID) { type = NavType.StringType }
+                ),
+                enterTransition = { slideInFromRight() },
+                exitTransition = { slideOutToLeft() },
+                popEnterTransition = { slideInFromLeft() },
+                popExitTransition = { slideOutToRight() }
+            ) {
+                JournalEditorScreen(onNavigateUp = { navController.popBackStack() })
             }
 
             composable(
@@ -1324,6 +1361,16 @@ sealed class Screen(val route: String) {
     data object ParentingPlan : Screen("parenting_plan")
     data object Export : Screen("export")
     data object Documents : Screen("family_documents")
+
+    /** The private journal's list (MON-22). */
+    data object Journal : Screen("journal")
+
+    /** One journal entry in the editor; `new` opens an empty one. */
+    data object JournalEditor : Screen("journal_entry/{entryId}") {
+        /** The route for [entryId], or for a new entry when it is [JournalEditorViewModel.NEW_ENTRY]. */
+        fun createRoute(entryId: String): String = "journal_entry/$entryId"
+    }
+
     data object Pets : Screen("pets")
     data object Pairing : Screen("pairing?code={code}&enter={enter}") {
         /** Optional invite code carried by a `coplanly://pair` deep link. */

@@ -170,9 +170,11 @@ const RULES = [
   },
   {
     sections: ['6'],
-    why: 'export',
+    why: 'export, or the private journal it can carry',
     paths: ['K/presentation/export/**', 'K/domain/export/**', 'K/data/export/**',
-      'K/data/versions/**', 'app/src/main/res/xml/file_paths.xml'],
+      'K/data/versions/**', 'app/src/main/res/xml/file_paths.xml',
+      'K/presentation/journal/**', 'K/domain/journal/**',
+      'app/src/main/res/values*/journal_strings.xml'],
   },
   {
     sections: ['7'],

@@ -161,6 +161,7 @@ private val syncTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
  * @param onNavigateToPets Opens the pets list
  * @param onNavigateToExport Opens the communication-record export (MON-3)
  * @param onNavigateToDocuments Opens the family document vault (MON-23)
+ * @param onNavigateToJournal Opens the private journal (MON-22)
  * @param onNavigateToPairing Opens co-parent pairing
  * @param onNavigateToFriends Opens the calendar-friend list (item 16)
  * @param onNavigateToCalendarFeed Opens the read-only calendar links (MON-17); the row shows
@@ -187,6 +188,7 @@ fun SettingsScreen(
     onNavigateToParentingPlan: (() -> Unit)? = null,
     onNavigateToExport: (() -> Unit)? = null,
     onNavigateToDocuments: (() -> Unit)? = null,
+    onNavigateToJournal: (() -> Unit)? = null,
     onNavigateToPets: (() -> Unit)? = null,
     onNavigateToPairing: (() -> Unit)? = null,
     onNavigateToFriends: (() -> Unit)? = null,
@@ -651,6 +653,22 @@ fun SettingsScreen(
                             icon = Icons.Default.FolderShared,
                             title = stringResource(R.string.documents_settings_title),
                             supporting = stringResource(R.string.documents_settings_description),
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                navigate()
+                            },
+                            trailing = { Chevron() }
+                        )
+                        Divider()
+                    }
+                    // The private journal (MON-22) after the shared papers: it is family business
+                    // a parent may put in an export, but it is theirs alone and never leaves the
+                    // phone — the row's description says so before it is opened.
+                    onNavigateToJournal?.let { navigate ->
+                        SectionRow(
+                            icon = Icons.Default.Lock,
+                            title = stringResource(R.string.journal_title),
+                            supporting = stringResource(R.string.journal_settings_description),
                             onClick = {
                                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 navigate()

@@ -907,6 +907,31 @@ object DatabaseMigrations {
     }
 
     /**
+     * v40 -> v41: the private journal (MON-22).
+     *
+     * A new table and nothing else: entries start on the day this ships, and no other table is
+     * touched. It has no `syncedToFirestore` column because nothing in it is ever uploaded — see
+     * `JournalEntryEntity`. The column list must match what Room generates for that entity, which
+     * `CoPlanlyDatabaseMigrationTest` checks against `41.json` once the Regenerate workflow has
+     * exported it.
+     */
+    val MIGRATION_40_41 = object : Migration(40, 41) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL(
+                "CREATE TABLE IF NOT EXISTS journal_entries (" +
+                    "id TEXT NOT NULL, " +
+                    "createdByFirebaseUid TEXT NOT NULL, " +
+                    "familyId TEXT, " +
+                    "entryDate TEXT NOT NULL, " +
+                    "text TEXT NOT NULL, " +
+                    "createdAtMillis INTEGER NOT NULL, " +
+                    "updatedAtMillis INTEGER NOT NULL, " +
+                    "PRIMARY KEY(id))"
+            )
+        }
+    }
+
+    /**
      * Writes each row's [wallClockToEpochMillis] reading of `updatedAt` into `updatedAtMillis`.
      *
      * Reads every value out first and writes afterwards — nothing iterates a cursor while
@@ -967,6 +992,7 @@ object DatabaseMigrations {
         MIGRATION_36_37,
         MIGRATION_37_38,
         MIGRATION_38_39,
-        MIGRATION_39_40
+        MIGRATION_39_40,
+        MIGRATION_40_41
     )
 }

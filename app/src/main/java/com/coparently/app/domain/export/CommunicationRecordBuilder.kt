@@ -2,6 +2,7 @@ package com.coparently.app.domain.export
 
 import com.coparently.app.data.versions.EventVersionKind
 import com.coparently.app.domain.chat.ChatAttachment
+import com.coparently.app.domain.journal.JournalEntry
 import com.coparently.app.domain.model.Expense
 import com.coparently.app.domain.parentingplan.PlanCitationCodec
 import java.time.LocalDate
@@ -65,6 +66,9 @@ data class MessageInput(
  * @property serverReached False when the server could not be asked, so the record is this phone's.
  * @property plan The parenting plan, or null when the parent chose to leave it out of the export.
  *   It carries its own [PlanSource.serverReached], which the record's completeness also reads.
+ * @property journal The exporting parent's own journal entries, or null when they left the journal
+ *   out (the default). Read from this phone, where it only ever exists, so it cannot make the
+ *   record incomplete.
  */
 data class RecordSources(
     val revisions: List<EventRevisionInput>,
@@ -72,7 +76,8 @@ data class RecordSources(
     val messages: List<MessageInput>,
     val expenses: List<Expense>,
     val serverReached: Boolean,
-    val plan: PlanSource? = null
+    val plan: PlanSource? = null,
+    val journal: List<JournalEntry>? = null
 )
 
 /**
@@ -111,6 +116,8 @@ data class RecordScope(
  * - **The child's medical profile is never in it** (design §4) — this type has no field for it.
  * - **The parenting plan is in it only when asked for**, whole and as it stands now (see
  *   [RecordPlanBuilder]); a plan that could not be read from the server makes the record incomplete.
+ * - **The private journal is in it only when asked for**, and only entries about days in the period
+ *   (see [RecordJournalBuilder]); it is off by default because nobody else has ever seen it.
  */
 object CommunicationRecordBuilder {
 
@@ -126,7 +133,8 @@ object CommunicationRecordBuilder {
             events = events(sources, scope),
             messages = messages(sources.messages, scope),
             expenses = expenses(sources.expenses, scope),
-            plan = sources.plan?.let { RecordPlanBuilder.build(it, scope.nameForUid) }
+            plan = sources.plan?.let { RecordPlanBuilder.build(it, scope.nameForUid) },
+            journal = sources.journal?.let { RecordJournalBuilder.build(it, scope) }
         )
 
     private fun events(sources: RecordSources, scope: RecordScope): List<RecordEvent> {
