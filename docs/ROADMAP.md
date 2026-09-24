@@ -76,7 +76,7 @@ invocation is yours.
 | Id | What | Pri | Size |
 | --- | --- | --- | --- |
 | **M-5** | Multi-family cleanup: delete `partnerId`, `User.role`, `Event.sharedWith`, `isPartnerOf` — **after** the ops steps in REL-3 | P2 | M |
-| **CQ-17** | Six dependencies worth moving | P3 | S |
+| **CQ-17** | Two moved (WorkManager; the Calendar client pair, PR #101); three wait on a device or a deploy | P3 | S |
 | **MON-2** | Market facts checked (23 Sep 2026): **app2us has an Android build**; left: mediator count, ARPU, Facebook groups, app2us price on a phone | P0 | S |
 | **MON-3** | The export ships, ungated; left: a PDF read on a device, and the paywall with MON-11 | P2 | S |
 | **MON-4** | **Built**, `Event.updatedAt`'s compared instant included (schema 39); left: the Regenerate run for `39.json` and the deploy in 💻 | P1 | — |
@@ -85,8 +85,8 @@ invocation is yours.
 | **MON-8** | Bakaláři / EduPage school import — the parsing, once you supply a real export | P2 | L |
 | **MON-11** | Payments (MVP 3) — the entitlement model, after MON-1 decides the price | P2 | L |
 | **MON-12** | Intelligent suggestions (MVP 3) — behind SEC-1's proxy, never with a key in the client | P3 | M |
-| **MON-13** | The tables, Germany's Länder and sourced school vacations (Slovakia and Austria nationwide, Germany per Land) are done — left: Austria's per-Land breaks, Slovakia's regional spring holidays, a grid marker for school vacations, whether Austria's patron-saint days are drawn at all, and ODbL attribution | P2 | M |
-| **FAM-4** | Custody per child | P2 | L |
+| **MON-13** | The tables, Germany's Länder and sourced school vacations (Slovakia and Austria nationwide, Germany per Land) are done — left: Austria's per-Land breaks, Slovakia's regional spring holidays, and whether Austria's patron-saint days are drawn at all (the grid marker and the ODbL attribution screen shipped in PR #101) | P2 | M |
+| **FAM-4** | **Wire half built** (codec, resolution, rules and rules tests, feed stays family); left: a Room column `custody_models.childOverridesJson` in the next schema version, the data-layer wiring, the three surfaces, and the rules deploy | P2 | M |
 | **MON-14** | **Built** (schema 38, rules, feed port, custody screen); left: the Regenerate run for `38.json`, the rules deploy, and a look at the grid — see the 👁 table | P1 | — |
 | **MON-15 (FTS)** | Chat search ships on `LIKE` plus a Kotlin fold; the FTS4 table is the later schema change, once the schema is free | P3 | S |
 | **MON-16** | **Built** (callables, closed rules, record ID on every export, `web/verify/`); left: the functions, rules and hosting deploys, then `publishedExportVerifyUrl` | P1 | — |
