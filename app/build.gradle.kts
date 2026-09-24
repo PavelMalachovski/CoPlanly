@@ -234,10 +234,6 @@ android {
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1,DEPENDENCIES}"
-            // A JAR index, meaningless in an APK. google-auth-library-oauth2-http and -credentials
-            // (both pulled in by google-api-client 2.7.x, CQ-17) each ship one, and two copies of
-            // the same path fail mergeJavaResource.
-            excludes += "/META-INF/INDEX.LIST"
         }
     }
 
@@ -325,10 +321,9 @@ dependencies {
     implementation("androidx.credentials:credentials-play-services-auth:1.2.2")
     implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
 
-    // Google Calendar API. The two move together (CQ-17): the calendar revision is built against
-    // google-api-client 2.7.2, so the Android extensions stay on the same release.
-    implementation("com.google.api-client:google-api-client-android:2.7.2")
-    implementation("com.google.apis:google-api-services-calendar:v3-rev20260708-2.0.0")
+    // Google Calendar API
+    implementation("com.google.api-client:google-api-client-android:2.2.0")
+    implementation("com.google.apis:google-api-services-calendar:v3-rev20220715-2.0.0")
 
     // Encrypted SharedPreferences - Updated to stable
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
