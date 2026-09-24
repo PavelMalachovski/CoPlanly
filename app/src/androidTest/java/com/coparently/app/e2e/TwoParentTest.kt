@@ -5,6 +5,8 @@ import androidx.test.platform.app.InstrumentationRegistry
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Before
+import org.junit.Rule
+import org.junit.rules.Timeout
 import java.util.TimeZone
 
 /**
@@ -18,6 +20,10 @@ import java.util.TimeZone
  * `runTest`'s virtual clock would expire a `withTimeout` before the first packet left.
  */
 abstract class TwoParentTest {
+
+    /** Fails a stuck test with the stuck thread's stack rather than hanging the job. */
+    @get:Rule
+    val timeout: Timeout = EmulatorEnvironment.testTimeout()
 
     protected val context: Context = InstrumentationRegistry.getInstrumentation().targetContext
 

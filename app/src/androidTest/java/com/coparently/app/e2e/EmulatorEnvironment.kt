@@ -11,8 +11,10 @@ import com.google.firebase.firestore.MemoryCacheSettings
 import com.google.firebase.functions.FirebaseFunctions
 import com.google.firebase.storage.FirebaseStorage
 import org.junit.Assume.assumeTrue
+import org.junit.rules.Timeout
 import java.net.HttpURLConnection
 import java.net.URL
+import java.util.concurrent.TimeUnit
 
 /**
  * Where the Firebase emulators are, and whether this run has any.
@@ -107,6 +109,19 @@ object EmulatorEnvironment {
         FirebaseStorage.getInstance(app).useEmulator(host, STORAGE_PORT)
         return app
     }
+
+    /**
+     * A hard limit for one two-parent test, `@Before` and `@After` included, that fails it with the
+     * stack of the thread that was stuck instead of letting it hang. A run on PR #103 passed its
+     * first test and then printed nothing for ten minutes, until the CI step's own limit killed it
+     * with no result and no trace; this turns that into a failure that names the line.
+     */
+    fun testTimeout(): Timeout = Timeout.builder()
+        .withTimeout(TEST_TIMEOUT_MINUTES, TimeUnit.MINUTES)
+        .withLookingForStuckThread(true)
+        .build()
+
+    private const val TEST_TIMEOUT_MINUTES = 3L
 
     /** Skips the calling test unless this run was started against the emulators. */
     fun assumeEmulators() {

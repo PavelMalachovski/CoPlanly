@@ -49,6 +49,7 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.Timeout
 import org.junit.runner.RunWith
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -85,6 +86,10 @@ class OneParentOnScreenTest {
 
     @get:Rule(order = 1)
     val composeTestRule = createEmptyComposeRule()
+
+    /** Innermost, so it bounds `@Before` and `@After` as well as the test body. */
+    @get:Rule(order = 2)
+    val timeout: Timeout = EmulatorEnvironment.testTimeout()
 
     @Inject
     lateinit var firebaseAuth: FirebaseAuth
