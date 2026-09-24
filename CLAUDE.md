@@ -378,7 +378,7 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   banners, a Settings group, `EmptyState`, the Expenses summary header, a chat thread, the event
   preview body, the consent screen and the family switcher chip — over a variant matrix of theme,
   the five languages, 1.0×/1.5× font scale and the default vs a purple/orange parent palette
-  (`ScreenshotVariants`: nine variants for text-heavy components, four for the rest, 113 images).
+  (`ScreenshotVariants`: nine variants for text-heavy components, four for the rest, 121 images — the count the committed baselines hold).
   **To view:** open the run's `screenshots` artefact, unzip, open `index.html`
   (`tools/screenshot-gallery.js`, no dependencies, filters by component/language/theme/scale/
   palette). Locally: `./gradlew recordRoborazziDebug` writes into `app/src/test/screenshots/` — don't commit what a laptop records (below).
