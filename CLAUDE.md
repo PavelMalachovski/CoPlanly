@@ -817,15 +817,15 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     document outright and has exactly one legitimate caller — an event turned private has to
     leave Firestore with no trace.
 15. **A push carries a type, never a sentence** (SEC-3). `data/remote/firebase/PushPayload.kt`
-    is the vocabulary; `CoPlanlyMessagingService` writes the text from *its own* string
-    resources and **drops a type it has no wording for**. Never reintroduce a `title`/`body`
+    is the vocabulary; `PushNotifier`, which `CoPlanlyMessagingService` hands every message to,
+    writes the text from *its own* string resources and **drops a type it has no wording for**. Never reintroduce a `title`/`body`
     fallback for an unrecognised type — that fallback is the forgery, not a nicety, and
     `firestore.rules` refuses both keys from a client precisely so nothing legitimate needs
     one. Two halves, and both are load-bearing: the rule's **allow-list** of client types keeps
     `pairing_accepted`, `pairing_removed` and `chat_message` producible only by Cloud Functions
     (which write as admin and bypass rules), so a co-parent cannot announce a pairing that did
     not happen. Adding a type means four places agreeing — `PushPayload`, the rule's allow-list,
-    `CoPlanlyMessagingService.PUSH_TEXT`, and the five `push_strings.xml` — and a type missing
+    `PushNotifier.PUSH_TEXT`, and the five `push_strings.xml` — and a type missing
     from any of them is a push that silently never appears. This is also why service-layer
     string extraction (**CQ-14**) was *not* a prerequisite: the string is read on the receiving
     device, which has a `Context` and all five translations.
@@ -837,6 +837,12 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     and the addressee both to be in it. The tap carries it as an intent extra **and** in the
     PendingIntent request code, and `MainActivity.readLaunchIntent` switches the family **before**
     arming any deep link — arming first would let `NavGraph` open the target on the wrong family.
+    **What the phone then shows is tested** (`androidTest/.../PushNotificationTest`, every leg
+    including 16 KB): every worded type posted and read back from `activeNotifications` in English
+    and German, composed in all five, an unknown type and another account's push posting nothing,
+    and each tap's PendingIntent matched to its deep link, family extra and request code. It words
+    through a configuration context because the service does: on API 32 and below AppCompat's
+    per-app language reaches activities only, so a push follows the *device* language there.
 16. **`sharedWith` is computed at upload time and never recomputed for a row already marked
     synced.** An event created while the account was unpaired is uploaded with an audience of
     one uid, and nothing revisits it — so it stays unreadable by a co-parent who arrives later.

@@ -123,7 +123,7 @@ const RULES = [
     sections: ['3.7'],
     why: 'push notifications',
     paths: ['K/data/remote/firebase/FcmService.kt', 'K/data/remote/firebase/PushPayload.kt',
-      'K/data/notification/**', 'K/domain/notification/**', '**/*MessagingService*',
+      'K/data/remote/firebase/PushNotifier.kt', 'K/data/notification/**', 'K/domain/notification/**', '**/*MessagingService*',
       'app/src/main/res/values*/push_strings.xml'],
   },
   {

@@ -71,6 +71,7 @@ Play install, a vendor skin.
 | `presentation/common/PickerDatesTest`, `LocalDatePickerDialogTest` | §3.1: every picker's conversion and both picker composables, tapped, in Prague, Kiritimati (+14), Los Angeles and Pago Pago (−11) | Each *screen* saving what its picker returned, and a stored date staying put across a zone change |
 | `presentation/settings/PerAppLocaleTest` | §3.6: `setApplicationLocales` to cs/de/ru/uk renders Settings in that language | The Settings row itself, Android 13's system setting, and §4.2 (a Play install) — never CI |
 | `data/export/ExportFileWriterTest` | §6: a CSV (RFC 4180, statement first, formula guard, both clocks, no private event) and a PDF that `PdfRenderer` opens, written through the real writer; the share intent's `FileProvider` URI and read-only grant | Real revisions from the server, the share sheet, and a spreadsheet or PDF app opening the file |
+| `data/remote/firebase/PushNotificationTest` | §3.7 and every push's wording: real data payloads through `PushNotifier` (what `CoPlanlyMessagingService` hands each message to), read back from `NotificationManager.activeNotifications` — every worded type in English and German, composed in all five languages with its names shown; an unknown type (even with a `title`/`body`) and a push for another account post nothing; each tap's PendingIntent matched to its deep link, `familyId` extra and request code, two families kept apart. Runs on all three legs, 16 KB included (not a Hilt test) | FCM delivering it, the shade as the phone's skin draws it, a tap actually switching family (§5.2), and the language on Android 12 or older when the app language differs from the phone's (a push follows the phone's there) |
 | `presentation/navigation/MainNavigationSmokeTest` | A signed-in launch visiting Home, Calendar (month/week/day), Chat, Expenses and Settings without a crash; bottom bar on the tabs only; icon-only controls named and ≥ 48 dp | Everything that needs data, a co-parent or a server; TalkBack itself (§3.9) |
 
 **What the `e2e` job covers between two parents.** Two accounts in one emulator, each with the
@@ -500,7 +501,14 @@ the Settings row, and it cannot see Android 13's system setting or a Play instal
 - The install that matters is the Play-like one in §4.2. A sideloaded APK always contains every
   language, so this part cannot catch the split bug.
 
-### 3.7 Push opt-out switch · 1P, full check 2P
+### 3.7 Push opt-out switch · 1P, full check 2P [CI]
+
+**[CI]** The JVM test `FcmServicePushSwitchTest` pins this device's side of the first two boxes:
+off deletes `fcmToken` from `users/{uid}` and the token itself, on writes a fresh token back,
+and while off nothing re-registers one. `PushNotificationTest` (instrumented) pins what arrives:
+a push for another account posts nothing and triggers no sync, every type is worded in the
+reader's language, and the tap carries the family. What only the phones add: the console showing
+the field gone, the OS permission turning the switch off, and a real push arriving or not.
 
 - [ ] Settings → App → **Push notifications** off. In the Firebase console → Firestore →
       `users/{A's uid}`, `fcmToken` is removed or empty.

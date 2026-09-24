@@ -142,12 +142,12 @@ function checkLocales() {
 // ---- 3: push types ----------------------------------------------------------
 
 const PAYLOAD_KT = 'app/src/main/java/com/coparently/app/data/remote/firebase/PushPayload.kt';
-const SERVICE_KT = 'app/src/main/java/com/coparently/app/data/remote/firebase/CoPlanlyMessagingService.kt';
+const SERVICE_KT = 'app/src/main/java/com/coparently/app/data/remote/firebase/PushNotifier.kt';
 const RULES = 'firestore.rules';
 const PUSH_STRINGS = 'app/src/main/res/values/push_strings.xml';
 
 /**
- * `chat_message` is composed by a branch of its own in `CoPlanlyMessagingService.compose()`,
+ * `chat_message` is composed by a branch of its own in `PushNotifier.compose()`,
  * ahead of the `PUSH_TEXT` lookup, because its text is not a frame: the title is who sent the
  * message and the body is what they wrote, and only the Cloud Function that saw the message
  * could supply either. It is renderable without a `PUSH_TEXT` entry — the one type that is.
@@ -218,7 +218,7 @@ function checkPushTypes() {
 
   for (const type of declared) {
     if (!rendered.has(type)) {
-      fail(`push type "${type}" is declared but CoPlanlyMessagingService has no wording for it — the push would be silently dropped on arrival`);
+      fail(`push type "${type}" is declared but PushNotifier has no wording for it — the push would be silently dropped on arrival`);
     }
   }
 
@@ -242,7 +242,7 @@ function checkPushTypes() {
     [...service.matchAll(/R\.(?:string|plurals)\.(push_[a-z_0-9]+)/g)].map((m) => m[1])
   );
   for (const name of referenced) {
-    if (!defined.has(name)) fail(`CoPlanlyMessagingService references R.string/plurals.${name}, which ${PUSH_STRINGS} does not define`);
+    if (!defined.has(name)) fail(`PushNotifier references R.string/plurals.${name}, which ${PUSH_STRINGS} does not define`);
   }
 
   console.log(
