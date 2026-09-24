@@ -486,6 +486,9 @@ fun NavGraph(
                     onNavigateToCalendarFeed = {
                         navController.navigate(Screen.CalendarFeed.route)
                     },
+                    onNavigateToDataSources = {
+                        navController.navigate(Screen.DataSources.route)
+                    },
                     onNavigateToProfessionals = {
                         navController.navigate(Screen.Professionals.route)
                     },
@@ -739,6 +742,13 @@ fun NavGraph(
             // Read-only calendar links for an iPhone (MON-17). A Settings detail route.
             composable(route = Screen.CalendarFeed.route) {
                 com.coparently.app.presentation.settings.CalendarFeedScreen(
+                    onNavigateUp = { navController.popBackStack() }
+                )
+            }
+
+            // Data sources and licences (MON-13's ODbL attribution). A Settings detail route.
+            composable(route = Screen.DataSources.route) {
+                com.coparently.app.presentation.settings.DataSourcesScreen(
                     onNavigateUp = { navController.popBackStack() }
                 )
             }
@@ -1351,6 +1361,9 @@ sealed class Screen(val route: String) {
 
     /** Read-only calendar links for an iPhone or any other calendar app (MON-17). */
     data object CalendarFeed : Screen("calendar_feed")
+
+    /** Where the calendar's holiday data comes from, and its licences (MON-13). */
+    data object DataSources : Screen("data_sources")
 
     /**
      * One friend as the parents read them — their face, phone number and blood group, and the

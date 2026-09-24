@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_data_sources_title">Datenquellen und Lizenzen</string>
+    <string name="settings_data_sources_description">Woher die Feiertage und Schulferien im Kalender stammen</string>
+    <string name="data_sources_intro">Die Feiertage und Schulferien im Kalender sind in die App eingebaut, bei der Nutzung wird also nichts heruntergeladen. Sie wurden aus den unten genannten Quellen erstellt.</string>
+    <string name="data_sources_group_holidays">Feiertage und Schulferien</string>
+    <string name="data_sources_openholidays_description">Schulferien für die Slowakei, Österreich und jedes deutsche Bundesland. Enthält Informationen aus den Daten der OpenHolidays API, die unter der Open Database License (ODbL) 1.0 bereitgestellt werden.</string>
+    <string name="data_sources_holidays_title">holidays (Python-Bibliothek)</string>
+    <string name="data_sources_holidays_description">Die Feiertage für die Slowakei, Deutschland, Österreich und Russland wurden Tag für Tag mit ihr abgeglichen. © Vacanza Team und Mitwirkende, MIT-Lizenz.</string>
+    <string name="data_sources_computed_note">Tschechische Feiertage und Schulferien berechnet die App selbst.</string>
+</resources>
