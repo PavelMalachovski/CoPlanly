@@ -77,7 +77,8 @@
     "parenting_plans": {
       "e2e": [
         "TwoParentAgreementsTest#planAgreementRecordsTheWordingAndLapsesWhenItChanges",
-        "TwoParentAgreementsTest#aWriteToTheCoParentsHalfIsRefused"
+        "TwoParentAgreementsTest#aWriteToTheCoParentsHalfIsRefused",
+        "TwoParentAccessTest#aProfessionalReadsNothingUntilBothParentsConsentAndNeverTheChat"
       ]
     },
     "change_requests": {
@@ -97,7 +98,8 @@
       "e2e": [
         "TwoParentCustodyTest#aPatternChangeWaitsForTheCoParentAndADeclineKeepsTheAgreedOne",
         "TwoParentCustodyTest#aSingleDaySwapIsOfferedOnOnePhoneAndAnsweredOnTheOther",
-        "TwoParentCustodyTest#aGroupSwapIsOfferedAndAnsweredAsOneAgreement"
+        "TwoParentCustodyTest#aGroupSwapIsOfferedAndAnsweredAsOneAgreement",
+        "TwoParentAccessTest#aProfessionalReadsNothingUntilBothParentsConsentAndNeverTheChat"
       ]
     },
     "notification_queue": {
@@ -111,7 +113,8 @@
       "e2e": [
         "TwoParentFamilyRecordsTest#aChildAliceSavesReachesBobIntactAndItsDeletionArrivesAsATombstone",
         "TwoParentFamilyRecordsTest#aChildEditTheSyncUploadsQueuesChildInfoUpdatedForBob",
-        "TwoParentFamilyRecordsTest#recordsMadeBeforePairingAreSharedWithTheNewCoParentAndAnnouncedOnce"
+        "TwoParentFamilyRecordsTest#recordsMadeBeforePairingAreSharedWithTheNewCoParentAndAnnouncedOnce",
+        "TwoParentAccessTest#aGuestReadsTheOneChildRecordSheWasInvitedToAndNothingElse"
       ]
     },
     "pets": {
@@ -123,6 +126,24 @@
     "budgets": {
       "e2e": [
         "TwoParentFamilyRecordsTest#aBudgetAliceSetsReachesBobWhoMayEditItAndAStrangerCannotReadIt"
+      ]
+    },
+    "calendar_friends": {
+      "e2e": [
+        "TwoParentAccessTest#aCalendarFriendReadsTheFamilysEventsUntilAParentRevokesTheGrant"
+      ]
+    },
+    "friend_profiles": {
+      "e2e": [
+        "TwoParentAccessTest#aCalendarFriendReadsTheFamilysEventsUntilAParentRevokesTheGrant"
+      ]
+    },
+    "professional_grants": {
+      "e2e": [
+        "TwoParentAccessTest#aProfessionalReadsNothingUntilBothParentsConsentAndNeverTheChat"
+      ],
+      "checklist": [
+        "5.4"
       ]
     }
   },
@@ -165,6 +186,11 @@
       ],
       "checklist": [
         "3.10"
+      ]
+    },
+    "receipts": {
+      "e2e": [
+        "TwoParentAccessTest#aReceiptPhotoAliceAttachesOpensForBobAndIsRefusedToASignedOutClient"
       ]
     }
   },
@@ -289,6 +315,19 @@
       "e2e": [
         "TwoParentFamilyRecordsTest#recordsMadeBeforePairingAreSharedWithTheNewCoParentAndAnnouncedOnce"
       ]
+    },
+    "professional_access_requested": {
+      "e2e": [
+        "TwoParentAccessTest#aProfessionalReadsNothingUntilBothParentsConsentAndNeverTheChat"
+      ],
+      "checklist": [
+        "5.4"
+      ]
+    },
+    "pairing_removed": {
+      "e2e": [
+        "TwoParentAccessTest#unpairingEndsTheLinkOnBothPhonesTellsBobAndNarrowsTheAudience"
+      ]
     }
   },
   "functions": {
@@ -311,6 +350,72 @@
     },
     "backfillParentSlots": {
       "exempt": "Operator-only maintenance callable, not a phone-to-phone feature; functions/test covers it."
+    },
+    "acceptCalendarFriendInvitation": {
+      "e2e": [
+        "TwoParentAccessTest#aCalendarFriendReadsTheFamilysEventsUntilAParentRevokesTheGrant"
+      ]
+    },
+    "acceptGuestInvitation": {
+      "e2e": [
+        "TwoParentAccessTest#aGuestReadsTheOneChildRecordSheWasInvitedToAndNothingElse"
+      ]
+    },
+    "acceptProfessionalInvitation": {
+      "e2e": [
+        "TwoParentAccessTest#aProfessionalReadsNothingUntilBothParentsConsentAndNeverTheChat"
+      ],
+      "checklist": [
+        "5.4"
+      ]
+    },
+    "unpairCoParent": {
+      "e2e": [
+        "TwoParentAccessTest#unpairingEndsTheLinkOnBothPhonesTellsBobAndNarrowsTheAudience"
+      ]
+    },
+    "createCalendarFeed": {
+      "e2e": [
+        "TwoParentAccessTest#aCalendarFeedServesTheSharedEventsOnlyAndStopsWhenRevoked"
+      ]
+    },
+    "listCalendarFeeds": {
+      "e2e": [
+        "TwoParentAccessTest#aCalendarFeedServesTheSharedEventsOnlyAndStopsWhenRevoked"
+      ]
+    },
+    "revokeCalendarFeed": {
+      "e2e": [
+        "TwoParentAccessTest#aCalendarFeedServesTheSharedEventsOnlyAndStopsWhenRevoked"
+      ]
+    },
+    "calendarFeed": {
+      "e2e": [
+        "TwoParentAccessTest#aCalendarFeedServesTheSharedEventsOnlyAndStopsWhenRevoked"
+      ]
+    },
+    "reserveExportRecordId": {
+      "e2e": [
+        "TwoParentAccessTest#anExportHashIsRegisteredOnceAndVerifiesWithoutAnAccount"
+      ]
+    },
+    "registerExportReceipt": {
+      "e2e": [
+        "TwoParentAccessTest#anExportHashIsRegisteredOnceAndVerifiesWithoutAnAccount"
+      ]
+    },
+    "verifyExport": {
+      "e2e": [
+        "TwoParentAccessTest#anExportHashIsRegisteredOnceAndVerifiesWithoutAnAccount"
+      ]
+    },
+    "deleteAccount": {
+      "e2e": [
+        "TwoParentAccessTest#deletingBobsAccountErasesHisRecordsAndUnpairsAlice"
+      ],
+      "checklist": [
+        "7"
+      ]
     }
   }
 }
