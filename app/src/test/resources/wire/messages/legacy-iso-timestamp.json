@@ -1,0 +1,32 @@
+{
+  "about": "A message from a build before epoch-millis send times (item 13): timestamp is a naive ISO string, read in the reading phone's zone (UTC here).",
+  "document": {
+    "attachments": [],
+    "content": "See you at five",
+    "conversationId": "uidA_uidB",
+    "id": "msg-1",
+    "isRead": false,
+    "messageType": "TEXT",
+    "replyToMessageId": "",
+    "senderId": "uidA",
+    "senderName": "Alice",
+    "timestamp": "2026-05-10T12:00:00"
+  },
+  "notPreserved": {
+    "timestamp": "re-sent as epoch millis. Only this phone's own outbox is ever re-sent — a message is never edited — so a legacy document is never rewritten"
+  },
+  "reads": {
+    "activityKind": null,
+    "activityPlanCitation": null,
+    "attachments": [],
+    "content": "See you at five",
+    "conversationId": "uidA_uidB",
+    "id": "msg-1",
+    "isRead": false,
+    "messageType": "TEXT",
+    "replyToMessageId": null,
+    "senderId": "uidA",
+    "senderName": "Alice",
+    "sentAtMillis": 1778414400000
+  }
+}

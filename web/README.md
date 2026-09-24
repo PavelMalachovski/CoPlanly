@@ -93,9 +93,15 @@ Czech behind a two-button switch, following the browser's language.
 - **It calls `verifyExport` without the Firebase SDK**, the way the SDK does it: `POST` JSON
   `{"data": {"sha256": "…"}}` (or `{"recordId": "…"}`) to
   `https://us-central1-<project>.cloudfunctions.net/verifyExport`, answered with `{"result": …}` or
-  `{"error": {"status": …}}`. The base URL is the `FUNCTIONS_BASE` constant at the top of the
-  script — the only line to change if the project or the functions' region does. CORS is handled
-  by the callable itself.
+  `{"error": {"status": …}}`. The base URL is the `PRODUCTION_FUNCTIONS_BASE` constant at the top
+  of the script — the only line to change if the project or the functions' region does. CORS is
+  handled by the callable itself.
+- **It is tested in a real browser** (`web-tests/`, the CI job "Web — verification page and
+  calendar feed"): Chromium opens this file against the Functions emulator, registers receipts
+  through the real callables and checks every answer, both languages and a 375 px viewport. The
+  page reaches the emulator through a `?functions=<base>` parameter that is honoured **only** when
+  the page is served from a loopback address and the parameter names one too; on any hosted copy
+  it is ignored and the page calls production, exactly as before.
 - **A record ID can be looked up without a file**, and typed beside a file so the page also checks
   that the file is the one registered under *that* ID.
 - **What the answer contains** is decided by the function, not the page: when, the period, the

@@ -3,23 +3,29 @@ package com.coparently.app.data.sync
 import com.coparently.app.data.local.entity.EventEntity
 import com.coparently.app.domain.events.EventTimestamp
 import com.coparently.app.domain.family.FamilyMemberRef
+import com.coparently.app.domain.model.Event
 import com.google.gson.Gson
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 /**
- * The one reader of an `events` Firestore document.
+ * The one reader of an `events` Firestore document, and its two full-document writers.
  *
- * `EventRepositoryImpl.toFirestoreMap()` is the single definition of how an event is *written*
- * (CLAUDE.md, "Things that are easy to get wrong", item 5). This is its counterpart, extracted
- * from `SyncService` when a second caller appeared: the change-request inbox now fetches an
- * event it does not have locally, and a second copy of this mapping would be one more place for
- * the schema to drift out of step.
+ * [fromEvent] (what `EventRepositoryImpl.toFirestoreMap()` delegates to) is the single definition
+ * of how an event is *written* (CLAUDE.md, "Things that are easy to get wrong", item 5), and
+ * [uploadDocument] is `SyncService`'s upload of a queued row. [toEntity] is their counterpart,
+ * extracted from `SyncService` when a second caller appeared: the change-request inbox now
+ * fetches an event it does not have locally, and a second copy of this mapping would be one more
+ * place for the schema to drift out of step.
+ *
+ * All three live here, pure, so the wire-format contract tests (`app/src/test/.../wire/`,
+ * fixtures in `app/src/test/resources/wire/`) run the production mappers on the JVM.
  */
 internal object EventDocument {
 
     private val formatter: DateTimeFormatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
+    private val dateOnlyFormatter: DateTimeFormatter = DateTimeFormatter.ISO_LOCAL_DATE
     private val gson = Gson()
 
     /**
@@ -90,6 +96,101 @@ internal object EventDocument {
         // Absent reads as null — "belongs to nobody but its creator" — which is what every
         // document written before the field existed is.
         familyId = (data["familyId"] as? String)?.takeIf { it.isNotEmpty() }
+    )
+
+    /**
+     * The document a save through `EventRepositoryImpl` writes. Single source of truth for the
+     * remote schema; moved here unchanged from the repository.
+     *
+     * @param event The event being saved.
+     * @param creatorUid Stamped as `createdByFirebaseUid`.
+     * @param audience The `sharedWith` uids this write publishes to.
+     */
+    fun fromEvent(event: Event, creatorUid: String, audience: List<String>): Map<String, Any?> = with(event) {
+        mapOf(
+            "id" to id,
+            "title" to title,
+            "description" to (description ?: ""),
+            "startDateTime" to startDateTime.format(formatter),
+            "endDateTime" to (endDateTime?.format(formatter) ?: ""),
+            "eventType" to eventType,
+            "parentOwner" to parentOwner,
+            "isRecurring" to isRecurring,
+            "recurrencePattern" to (recurrencePattern ?: ""),
+            "recurrenceEndDate" to (recurrenceEndDate?.format(dateOnlyFormatter) ?: ""),
+            "pickupConfirmedBy" to (pickupConfirmedBy ?: ""),
+            "pickupConfirmedAt" to (pickupConfirmedAt?.format(formatter) ?: ""),
+            "createdAt" to createdAt.format(formatter),
+            // UTC, offset-free: the field keeps its name and type so an older build still parses
+            // it, and only the zone it expresses changed (MON-4, see `EventTimestamp`).
+            "updatedAt" to EventTimestamp.toWire(EventTimestamp.ofWallClock(updatedAt)),
+            "createdByFirebaseUid" to creatorUid,
+            "sharedWith" to audience,
+            "lastModifiedBy" to (lastModifiedBy ?: creatorUid),
+            "permissions" to permissions,
+            "imageUrl" to (imageUrl ?: ""),
+            "acceptance" to acceptance.name,
+            "acceptedBy" to (acceptedBy ?: ""),
+            "acceptedAt" to (acceptedAt?.format(formatter) ?: ""),
+            "isImportant" to isImportant,
+            "friendParticipates" to (friendParticipates ?: ""),
+            // The relationship this event belongs to. It will replace `sharedWith` entirely:
+            // the rules read the family's members, so the audience stops being a copy carried
+            // on the document that can go stale (CLAUDE.md item 16). Both are written while the
+            // read rules still consult the old one.
+            "familyId" to (familyId ?: ""),
+            // Who the event is about, as prefixed strings. An empty array is "the whole family",
+            // never an absent key: the read side distinguishes neither, but a document whose
+            // fields are iterated should not have a hole where a schema field belongs.
+            "forMembers" to FamilyMemberRef.store(forMembers),
+            // Round-tripped, not dropped: omitting it here meant the download half of a full
+            // sync REPLACEd the creator's own row with a map that had no reminder, wiping the
+            // value and (on the next update) cancelling the scheduled WorkManager reminder.
+            "reminderMinutes" to reminderMinutes
+        )
+    }
+
+    /**
+     * The document `SyncService` uploads, with `set()`, for a queued Room row.
+     *
+     * Moved here from `SyncService.syncEvents`. It writes `null` where [fromEvent] writes `""`;
+     * [toEntity] reads both as absent. It now carries `reminderMinutes` too: without it, an event
+     * created offline and uploaded by the sync reached the server with no reminder, and the
+     * download half of the same sync then replaced the creator's own row with that document —
+     * the loss [fromEvent]'s comment describes, on the path it did not cover.
+     *
+     * @param entity The queued row.
+     * @param audience The `sharedWith` uids, from `SyncService.shareTargets`.
+     */
+    fun uploadDocument(entity: EventEntity, audience: List<String>): Map<String, Any?> = mapOf(
+        "id" to entity.id,
+        "title" to entity.title,
+        "description" to entity.description,
+        "startDateTime" to entity.startDateTime.format(formatter),
+        "endDateTime" to entity.endDateTime?.format(formatter),
+        "eventType" to entity.eventType,
+        "parentOwner" to entity.parentOwner,
+        "isRecurring" to entity.isRecurring,
+        "recurrencePattern" to entity.recurrencePattern,
+        "recurrenceEndDate" to entity.recurrenceEndDate?.toString(),
+        "pickupConfirmedBy" to entity.pickupConfirmedBy,
+        "pickupConfirmedAt" to entity.pickupConfirmedAt?.format(formatter),
+        "createdAt" to entity.createdAt.format(formatter),
+        // The instant, as UTC text — the same wire form [fromEvent] writes (MON-4).
+        "updatedAt" to EventTimestamp.toWire(entity.updatedAtMillis),
+        "createdByFirebaseUid" to entity.createdByFirebaseUid,
+        "sharedWith" to audience,
+        "lastModifiedBy" to entity.lastModifiedBy,
+        "permissions" to entity.permissions,
+        "imageUrl" to entity.imageUrl,
+        "acceptance" to entity.acceptance,
+        "acceptedBy" to entity.acceptedBy,
+        "acceptedAt" to entity.acceptedAt?.format(formatter),
+        "isImportant" to entity.isImportant,
+        "friendParticipates" to (entity.friendParticipates ?: ""),
+        "forMembers" to storedMembers(entity.forMembersJson),
+        "familyId" to (entity.familyId ?: ""),
+        "reminderMinutes" to entity.reminderMinutes
     )
 
     /**

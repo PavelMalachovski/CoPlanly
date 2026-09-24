@@ -29,20 +29,24 @@
     "conversations": {
       "e2e": [
         "TwoParentChatTest",
-        "TwoParentPairingTest#bothPhonesMirrorThePairingIntoRoomAndShareOneConversation"
+        "TwoParentPairingTest#bothPhonesMirrorThePairingIntoRoomAndShareOneConversation",
+        "OnScreenFamiliesTest"
       ],
       "checklist": [
-        "5.1"
+        "5.1",
+        "5.2"
       ]
     },
     "messages": {
       "e2e": [
         "TwoParentChatTest",
         "TwoParentAttachmentsTest",
-        "OneParentOnScreenTest"
+        "OneParentOnScreenTest",
+        "OnScreenFamiliesTest"
       ],
       "checklist": [
-        "5.1"
+        "5.1",
+        "5.2"
       ]
     },
     "expenses": {
@@ -85,7 +89,8 @@
       "e2e": [
         "TwoParentRequestsAndEventPushesTest#bobAcceptsAlicesChangeRequestAndEachSideIsNotified",
         "TwoParentRequestsAndEventPushesTest#bobDeclinesAChangeRequestAndAliceIsNotified",
-        "TwoParentRequestsAndEventPushesTest#aliceCancelsHerChangeRequestAndBobIsNotified"
+        "TwoParentRequestsAndEventPushesTest#aliceCancelsHerChangeRequestAndBobIsNotified",
+        "OnScreenAgreementsTest#bobsChangeRequestRaisesTheCalendarBannerAndAliceAcceptsItInTheInbox"
       ]
     },
     "event_versions": {
@@ -99,7 +104,11 @@
         "TwoParentCustodyTest#aPatternChangeWaitsForTheCoParentAndADeclineKeepsTheAgreedOne",
         "TwoParentCustodyTest#aSingleDaySwapIsOfferedOnOnePhoneAndAnsweredOnTheOther",
         "TwoParentCustodyTest#aGroupSwapIsOfferedAndAnsweredAsOneAgreement",
-        "TwoParentAccessTest#aProfessionalReadsNothingUntilBothParentsConsentAndNeverTheChat"
+        "TwoParentAccessTest#aProfessionalReadsNothingUntilBothParentsConsentAndNeverTheChat",
+        "OnScreenAgreementsTest"
+      ],
+      "checklist": [
+        "3.11"
       ]
     },
     "notification_queue": {

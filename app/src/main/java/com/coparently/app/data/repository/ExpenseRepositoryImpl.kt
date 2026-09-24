@@ -155,7 +155,7 @@ class ExpenseRepositoryImpl @Inject constructor(
      * [ownerUid]: [addExpense] passes the current user, [updateExpense] passes the document's
      * existing owner so ownership stays immutable across edits, as `firestore.rules` requires.
      */
-    private fun expenseToFirestoreMap(expense: Expense, ownerUid: String): Map<String, Any> = mapOf(
+    internal fun expenseToFirestoreMap(expense: Expense, ownerUid: String): Map<String, Any> = mapOf(
         "id" to expense.id,
         // Replaces the single `childId`, which is no longer written. Nothing is lost by
         // dropping it: no client ever set it, so every document in production carries "".
@@ -259,31 +259,7 @@ class ExpenseRepositoryImpl @Inject constructor(
                     // cast here used to crash both parents' Expenses screens on every open
                     // until the document went away.
                     val expense = runCatching {
-                        Expense(
-                            id = id,
-                            // A co-parent on a build that predates the reference type still writes
-                            // `childId`, so it is read as a fallback. In practice it converts
-                            // nothing — the field was never populated by any client.
-                            familyId = (data["familyId"] as? String)?.takeIf { it.isNotEmpty() },
-                            forMembers = FamilyMemberRef.parse(data["forMembers"])
-                                .ifEmpty { FamilyMemberRef.fromLegacyChildId(data["childId"] as? String) },
-                            title = data["title"] as String,
-                            amount = (data["amount"] as Number).toDouble(),
-                            currency = data["currency"] as String,
-                            category = ExpenseCategory.valueOf(data["category"] as String),
-                            paidBy = data["paidBy"] as String,
-                            splitBetween = (data["splitBetween"] as? List<*>)
-                                ?.filterIsInstance<String>() ?: emptyList(),
-                            date = LocalDate.parse(data["date"] as String, dateFormatter),
-                            receiptUrl = (data["receiptUrl"] as? String)?.takeIf { it.isNotEmpty() },
-                            notes = (data["notes"] as? String)?.takeIf { it.isNotEmpty() },
-                            createdAt = LocalDateTime.parse(data["createdAt"] as String, dateTimeFormatter),
-                            syncedToFirestore = true,
-                            createdByFirebaseUid =
-                            (data["createdByFirebaseUid"] as? String)?.takeIf { it.isNotEmpty() },
-                            splitBasisPoints = (data["splitBasisPoints"] as? Number)?.toInt()
-                                ?.takeIf { it >= 0 }
-                        )
+                        expenseFromDocument(data)
                     }.getOrElse { e ->
                         android.util.Log.w("ExpenseRepo", "Skipping an expense document that does not parse: $id", e)
                         return@forEach
@@ -358,7 +334,39 @@ class ExpenseRepositoryImpl @Inject constructor(
         )
     }
 
-    private fun ExpenseEntity.toDomain(): Expense {
+    /**
+     * An `expenses` document as a domain expense, as [observeRemote] downloads it. Throws on a
+     * document it cannot read; the caller skips that one document. `internal` so the wire-format
+     * contract tests run it on the JVM.
+     */
+    internal fun expenseFromDocument(data: Map<String, Any?>): Expense = Expense(
+        id = data["id"] as String,
+        // A co-parent on a build that predates the reference type still writes
+        // `childId`, so it is read as a fallback. In practice it converts
+        // nothing — the field was never populated by any client.
+        familyId = (data["familyId"] as? String)?.takeIf { it.isNotEmpty() },
+        forMembers = FamilyMemberRef.parse(data["forMembers"])
+            .ifEmpty { FamilyMemberRef.fromLegacyChildId(data["childId"] as? String) },
+        title = data["title"] as String,
+        amount = (data["amount"] as Number).toDouble(),
+        currency = data["currency"] as String,
+        category = ExpenseCategory.valueOf(data["category"] as String),
+        paidBy = data["paidBy"] as String,
+        splitBetween = (data["splitBetween"] as? List<*>)
+            ?.filterIsInstance<String>() ?: emptyList(),
+        date = LocalDate.parse(data["date"] as String, dateFormatter),
+        receiptUrl = (data["receiptUrl"] as? String)?.takeIf { it.isNotEmpty() },
+        notes = (data["notes"] as? String)?.takeIf { it.isNotEmpty() },
+        createdAt = LocalDateTime.parse(data["createdAt"] as String, dateTimeFormatter),
+        syncedToFirestore = true,
+        createdByFirebaseUid =
+        (data["createdByFirebaseUid"] as? String)?.takeIf { it.isNotEmpty() },
+        splitBasisPoints = (data["splitBasisPoints"] as? Number)?.toInt()
+            ?.takeIf { it >= 0 }
+    )
+
+    /** A Room row as a domain expense. `internal` for the wire-format contract tests. */
+    internal fun ExpenseEntity.toDomain(): Expense {
         val stringListType = object : TypeToken<List<String>>() {}.type
         val splitBetween: List<String> = gson.fromJson(splitBetweenJson, stringListType)
         val forMembers: List<String> = gson.fromJson(forMembersJson, stringListType)
@@ -383,7 +391,8 @@ class ExpenseRepositoryImpl @Inject constructor(
         )
     }
 
-    private fun Expense.toEntity(): ExpenseEntity {
+    /** A domain expense as a Room row. `internal` for the wire-format contract tests. */
+    internal fun Expense.toEntity(): ExpenseEntity {
         return ExpenseEntity(
             id = id,
             familyId = familyId,

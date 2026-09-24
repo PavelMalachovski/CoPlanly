@@ -1,0 +1,27 @@
+{
+  "about": "A document with no startDate cannot describe a pattern; it reads as no document at all.",
+  "document": {
+    "createdAt": "2026-03-01T09:00:00",
+    "id": "model-1",
+    "lastModifiedAt": "2026-03-15T09:00:00",
+    "lastModifiedBy": "uidA",
+    "modelType": "week_on_week_off",
+    "momDayIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ],
+    "participants": [
+      "uidA",
+      "uidB"
+    ],
+    "patternDays": 14,
+    "repeatYearly": true
+  },
+  "reads": null,
+  "skipped": "a half-parsed pattern would assign the wrong days; getCustody returns null"
+}

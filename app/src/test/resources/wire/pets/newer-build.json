@@ -1,0 +1,53 @@
+{
+  "about": "A newer build's pet: a species this build does not know (it reads OTHER) and a new key.",
+  "document": {
+    "breed": "Beagle",
+    "createdAt": "2026-03-01T09:30:00",
+    "createdByFirebaseUid": "uidA",
+    "dateOfBirth": null,
+    "familyId": "uidA__uidB",
+    "feedingNotes": null,
+    "id": "pet-1",
+    "lastModifiedBy": "uidA",
+    "medications": [],
+    "microchip": "203098100123456",
+    "name": "Rex",
+    "photos": [
+      "pet_photos/uidA/pet-1/1.jpg"
+    ],
+    "sharedWith": [
+      "uidA",
+      "uidB"
+    ],
+    "specialNeeds": null,
+    "species": "FERRET",
+    "updatedAt": "2026-03-01T10:00:00",
+    "vaccinations": [
+      {
+        "date": "2026-02-01",
+        "name": "Rabies"
+      }
+    ],
+    "vetName": null,
+    "vetPhone": null
+  },
+  "notPreserved": {
+    "microchip": "this build writes the document back with set(), which replaces it: a top-level key it does not know is dropped. A newer build must not keep anything it cannot afford to lose in a new top-level key of a collection older builds rewrite",
+    "species": "an unknown species reads as OTHER (PetSpecies.fromStored) and is written back as OTHER: an older build's edit of the pet erases the newer species"
+  },
+  "reads": {
+    "createdByFirebaseUid": "uidA",
+    "deleted": false,
+    "familyId": "uidA__uidB",
+    "id": "pet-1",
+    "name": "Rex",
+    "photos": [
+      "pet_photos/uidA/pet-1/1.jpg"
+    ],
+    "species": "OTHER",
+    "updatedAtMillis": 1772359200000,
+    "vaccinations": [
+      "Rabies@2026-02-01"
+    ]
+  }
+}

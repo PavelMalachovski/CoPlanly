@@ -1,0 +1,64 @@
+{
+  "about": "SyncService uploading a queued row with set() (EventDocument.uploadDocument).",
+  "document": {
+    "acceptance": "NOT_REQUIRED",
+    "acceptedAt": null,
+    "acceptedBy": null,
+    "createdAt": "2026-05-01T08:00:00",
+    "createdByFirebaseUid": "uidA",
+    "description": null,
+    "endDateTime": "2026-05-15T17:30:00",
+    "eventType": "handover",
+    "familyId": "uidA__uidB",
+    "forMembers": [
+      "child:c1",
+      "future:xyz"
+    ],
+    "friendParticipates": "",
+    "id": "evt-current-3",
+    "imageUrl": null,
+    "isImportant": false,
+    "isRecurring": false,
+    "lastModifiedBy": "uidA",
+    "parentOwner": "mom",
+    "permissions": "read_write",
+    "pickupConfirmedAt": null,
+    "pickupConfirmedBy": null,
+    "recurrenceEndDate": null,
+    "recurrencePattern": null,
+    "reminderMinutes": 15,
+    "sharedWith": [
+      "uidA",
+      "uidB"
+    ],
+    "startDateTime": "2026-05-15T17:00:00",
+    "title": "Handover",
+    "updatedAt": "2026-05-04T10:00:00"
+  },
+  "reads": {
+    "acceptance": "NOT_REQUIRED",
+    "createdByFirebaseUid": "uidA",
+    "deleted": false,
+    "description": null,
+    "endDateTime": "2026-05-15T17:30:00",
+    "eventType": "handover",
+    "familyId": "uidA__uidB",
+    "forMembers": [
+      "child:c1",
+      "future:xyz"
+    ],
+    "id": "evt-current-3",
+    "isImportant": false,
+    "isRecurring": false,
+    "parentOwner": "mom",
+    "recurrencePattern": null,
+    "reminderMinutes": 15,
+    "sharedWith": [
+      "uidA",
+      "uidB"
+    ],
+    "startDateTime": "2026-05-15T17:00:00",
+    "title": "Handover",
+    "updatedAtMillis": 1777888800000
+  }
+}

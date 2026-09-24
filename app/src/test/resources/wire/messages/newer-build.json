@@ -1,0 +1,43 @@
+{
+  "about": "A newer build's message: a type and an activity kind this build does not know (it shows the content as a text bubble and no card), and a new key.",
+  "document": {
+    "activity": {
+      "entityId": "uidA__uidB",
+      "entityType": "CUSTODY_PROPOSAL",
+      "kind": "SCHEDULE_REVIEWED",
+      "title": "Summer"
+    },
+    "attachments": [],
+    "content": "Poll: which weekend?",
+    "conversationId": "uidA_uidB",
+    "id": "msg-2",
+    "isRead": false,
+    "messageType": "POLL",
+    "reactions": {
+      "uidB": "thumbs_up"
+    },
+    "replyToMessageId": "",
+    "senderId": "uidA",
+    "senderName": "Alice",
+    "timestamp": 1778414400000
+  },
+  "notPreserved": {
+    "activity": "an unknown kind is dropped, not defaulted; create-only, never written back",
+    "messageType": "shown as TEXT; a message is create-only, so no build ever writes back one it read",
+    "reactions": "create-only, never written back"
+  },
+  "reads": {
+    "activityKind": null,
+    "activityPlanCitation": null,
+    "attachments": [],
+    "content": "Poll: which weekend?",
+    "conversationId": "uidA_uidB",
+    "id": "msg-2",
+    "isRead": false,
+    "messageType": "TEXT",
+    "replyToMessageId": null,
+    "senderId": "uidA",
+    "senderName": "Alice",
+    "sentAtMillis": 1778414400000
+  }
+}

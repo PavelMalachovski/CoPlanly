@@ -76,6 +76,11 @@ test('docs, CI and JVM tests need no phone and are not reported as unmapped', ()
   assert.deepEqual(result.unmapped, []);
 });
 
+test('a wire-format fixture change asks for the mixed-version check, a hand-written one does not', () => {
+  assert.deepEqual(sectionsFor(['app/src/test/resources/wire/current/events/sync-upload.json']), ['5.3']);
+  assert.deepEqual(sectionsFor(['app/src/test/resources/wire/events/older-build.json']), []);
+});
+
 test('an app source no rule claims is reported rather than dropped', () => {
   const file = K + 'presentation/guests/GuestScreen.kt';
   const result = plan.planFor([file], CHECKLIST);

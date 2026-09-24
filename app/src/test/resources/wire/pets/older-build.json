@@ -1,0 +1,42 @@
+{
+  "about": "A pet from a build before photos and familyId, with a naive updatedAt.",
+  "document": {
+    "breed": "Beagle",
+    "createdAt": "2026-03-01T09:30:00",
+    "createdByFirebaseUid": "uidA",
+    "dateOfBirth": null,
+    "feedingNotes": null,
+    "id": "pet-1",
+    "lastModifiedBy": "uidA",
+    "medications": [],
+    "name": "Rex",
+    "sharedWith": [
+      "uidA",
+      "uidB"
+    ],
+    "specialNeeds": null,
+    "species": "DOG",
+    "updatedAt": "2026-03-01T10:00:00",
+    "vaccinations": [
+      {
+        "date": "2026-02-01",
+        "name": "Rabies"
+      }
+    ],
+    "vetName": null,
+    "vetPhone": null
+  },
+  "reads": {
+    "createdByFirebaseUid": "uidA",
+    "deleted": false,
+    "familyId": null,
+    "id": "pet-1",
+    "name": "Rex",
+    "photos": [],
+    "species": "DOG",
+    "updatedAtMillis": 1772359200000,
+    "vaccinations": [
+      "Rabies@2026-02-01"
+    ]
+  }
+}

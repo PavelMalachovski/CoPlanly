@@ -1,0 +1,80 @@
+{
+  "about": "ChildInfoRepositoryImpl.upsertChildInfo's document: medical profile, a guest, a school.",
+  "document": {
+    "activities": [],
+    "allergies": [
+      "peanuts"
+    ],
+    "childName": "Anya",
+    "createdAt": "2026-05-01T08:00:00",
+    "createdByFirebaseUid": "uidA",
+    "dateOfBirth": "2019-04-02T00:00:00",
+    "emergencyContacts": [],
+    "familyId": "uidA__uidB",
+    "guests": {
+      "guest-1": {
+        "expiresAtMillis": 1780000000000,
+        "grantedAtMillis": 1778000000000,
+        "grantedBy": "uidA",
+        "name": "Grandma"
+      }
+    },
+    "id": "child-current-1",
+    "lastModifiedBy": "uidA",
+    "medicalNotes": "Asthma",
+    "medicalPhotos": [
+      "medical_photos/uidA/child-current-1/1.jpg"
+    ],
+    "medicalProfile": {
+      "hereditaryConditions": [],
+      "intolerances": [
+        "lactose"
+      ],
+      "vaccinations": []
+    },
+    "medications": [
+      {
+        "dosage": "2 puffs",
+        "frequency": "as needed",
+        "name": "Ventolin",
+        "notes": null
+      }
+    ],
+    "schoolInfo": {
+      "address": null,
+      "grade": "2",
+      "name": "ZS Vinohrady",
+      "phone": null,
+      "teacherEmail": null,
+      "teacherName": null
+    },
+    "sharedWith": [
+      "uidA",
+      "uidB",
+      "guest-1"
+    ],
+    "updatedAt": "2026-05-02T18:45:10"
+  },
+  "reads": {
+    "allergies": [
+      "peanuts"
+    ],
+    "childName": "Anya",
+    "createdByFirebaseUid": "uidA",
+    "dateOfBirth": "2019-04-02T00:00:00",
+    "deleted": false,
+    "familyId": "uidA__uidB",
+    "guests": [
+      "guest-1"
+    ],
+    "id": "child-current-1",
+    "intolerances": [
+      "lactose"
+    ],
+    "medications": [
+      "Ventolin"
+    ],
+    "school": "ZS Vinohrady",
+    "updatedAtMillis": 1777747510000
+  }
+}

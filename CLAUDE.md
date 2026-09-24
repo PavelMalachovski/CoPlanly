@@ -216,6 +216,8 @@ crash with "migration from 3 to 9 required but not found".
 ```bash
 cd functions && npm test && npm run lint    # Cloud Functions (mocha + eslint)
 cd firestore-tests && npm test              # firestore.rules + storage.rules on the emulators
+cd web-tests && npm test                    # web/verify/ in Chromium + the calendar feed as RFC 5545,
+                                            # on the emulators (npm ci in functions/ and firestore-tests/ first)
 tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Functions emulators;
                                             # needs a running Android emulator (see the e2e job)
 ```
@@ -236,15 +238,15 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   degrades gracefully if it is missing (see the conditional apply in `app/build.gradle.kts`).
 - **GitHub CI runs on every pull request, and on every push to `main`** — a push to a
   feature branch with no PR open is not built (`.github/workflows/ci.yml`, added
-  August 2026 — this line used to say there was none). Thirteen jobs that test (this line used to
-  say eleven, before `upgrade` and `r8-runtime`; ten before detekt left the lint job; eight before `screenshots`
+  August 2026 — this line used to say there was none). Fourteen jobs that test (this line used to
+  say thirteen, before `web`; eleven before `upgrade` and `r8-runtime`; ten before detekt left the lint job; eight before `screenshots`
   and `e2e`; seven before `instrumented`), plus `report`, which only reads them (below): `changes` (a cheap gate,
   below), four Android ones — `build-test` (`assembleDebug` + `testDebugUnitTest` in a
   single invocation), `static` (`lint` alone — the id is kept), `detekt` (its own job since
   September 2026: the two ran in sequence, lint 5:15 then detekt 0:52), `release` (`assembleRelease`, where
   R8 runs, and where `node tools/check-r8-mapping.js` then reads R8's own `mapping.txt` and
-  fails if a field a keep rule names came out renamed) — plus Cloud Functions, the Firestore
-  rules suite against the emulator, and `invariants` (`node tools/check-invariants.js`, no
+  fails if a field a keep rule names came out renamed) — plus Cloud Functions, `web` (below), the
+  Firestore rules suite against the emulator, and `invariants` (`node tools/check-invariants.js`, no
   dependencies and no Android SDK: locale completeness, format-argument agreement across the
   five locales, the four-way push-type agreement item 15 states, and the rule that every type
   Gson reflects over is covered by a `-keepclassmembers ... { <fields>; }` rule *and* has a case
@@ -360,7 +362,14 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   with Bob through the callable — Bob's event is drawn on her Home after one
   `SyncService.performFullSync()` (the call `SyncWorker` makes), his message in her thread, and
   what she types into the real composer reaches his phone. It starts `ChatMirror` itself, because
-  `HiltTestApplication` never runs `CoPlanlyApplication.onCreate`. Five things not to undo.
+  `HiltTestApplication` never runs `CoPlanlyApplication.onCreate`. Its setup is the abstract
+  `AliceOnScreenTest`, which two more classes share: `OnScreenAgreementsTest` (Bob's change request
+  raising the calendar banner and accepted from the inbox; his custody proposal, day swaps and a
+  seasonal layer popping up on Home and answered there, the layer then naming him in today's
+  month-cell description) and `OnScreenFamiliesTest` (a third parent's message dotting the family
+  switcher, the switch bringing her thread onto the Chat tab). They find everything through the
+  app's own string resources and content descriptions — no test tag was added for them — with
+  the Compose clock paused and every wait bounded. Five things not to undo.
   **No `google-services.json`** here either, for the reason given above. **The tests skip
   themselves without the host argument**, so the `instrumented` job runs them as skipped and
   keeps `FakeFirebaseModule` for everything else — and the `e2e` job fails on any skip, so the
@@ -378,7 +387,7 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   co-parent's sync skipped every event without one. **What it cannot do** stays on the device
   checklist: real FCM delivery (no emulator exists for it — the queue document is written, the
   push is not sent), two screens at once (Bob's side is the data layer), a file opened in a viewer
-  app, and the chat UI's family switch (`ChatPartnerSource`, M-8), which the e2e job does not drive.
+  app, and the push from another family switching families on tap (M-8).
 
   **A feature that works between two phones ships with its two-parent test** (September 2026).
   `tools/check-e2e-coverage.js` (run in `invariants`) discovers every shared surface from the
@@ -427,7 +436,12 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   than the base (a longer migration chain — `CoPlanlyDatabaseMigrationTest`'s job, as far as
   schemas exist), SEC-2's plaintext → encrypted conversion of an install older than SQLCipher (the
   base already encrypts, so this is encrypted → encrypted), a reboot, and a real phone's
-  hardware-backed Keystore — those stay on the device checklist.
+  hardware-backed Keystore — those stay on the device checklist. **The job also runs the base
+  build's `WireContractTest` over this branch's `wire/current/`** (item 5 of "Things that are easy
+  to get wrong"), after the base's APK and before the emulator: skipped with a notice while the base
+  predates that class or when the fixtures are unchanged, `continue-on-error` so the install-over
+  still runs, and failed at the end by its own step. It costs the base's unit-test compile, and only
+  on a wire-format change — `app/src/test/resources/wire/current/` is one of the job's inputs.
 
   **A second workflow file exists and is not part of CI**: `.github/workflows/regenerate.yml` runs
   `detektBaseline` and exports the Room schema, then commits both back to the branch it ran on.
@@ -469,6 +483,36 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   far as `toFirestoreMap()`'s medical profile is the same Gson call as the Room column it checks.
   And it is gated on `changes`' `r8runtime` (Android changes outside screens, resources and tests,
   plus the build, rules, workflow and the probe); `main` always runs it.
+- **The `web` job tests what a court and an iPhone see** ("Web — verification page and calendar
+  feed", September 2026; check run "Web — verify page and ICS", artefact `junit-web`). `web-tests/`
+  is its own small package (Playwright and Mozilla's `ical.js`), deliberately **not** under `web/`,
+  which `firebase.json` hosts whole, and not in `functions/`, whose dependencies ship.
+  `web-tests/run-with-emulators.sh` starts Auth, Firestore and Functions with `firebase
+  emulators:exec` from `firestore-tests/`' pinned CLI (JDK 21 through `FIREBASE_JAVA_HOME`, as the
+  `e2e` job does, but no Android emulator) and runs one Playwright suite with a JUnit reporter.
+  `verify-page.spec.js` serves `web/` from loopback and drives `web/verify/` in Chromium: receipts
+  reserved and registered through the real callables in the order `ExportViewModel` uses, then the
+  exported file (match, with time, period, format, size), a one-byte-tampered copy (no match), the
+  file against another record ID, the ID as people retype it, an unknown ID and a bare reservation
+  (not found), Czech and English, 375 px with no sideways scroll, and — on every answer — no uid,
+  `familyId`, e-mail or name on the page or in the response, and nothing but the fingerprint in the
+  request. `calendar-feed.spec.js` validates `.ics` as a client would, not as `calendar-feed.js`
+  intends: `buildFeed` in all five languages and the real `calendarFeed` endpoint behind a link
+  `createCalendarFeed` minted, through `ical.js` plus our own octet-level RFC 5545 check (CRLF,
+  75-octet folds never inside a UTF-8 character, TEXT escaping, required properties, DTEND after
+  DTSTART, UNTIL floating like its DTSTART, UIDs unique and stable, titles round-tripping), and a
+  test that breaks each rule once so a pass means something. Four things not to undo. **The page
+  reaches the emulator only through `?functions=`, which it honours only when it is itself served
+  from a loopback address and the value names one too** — a hosted copy ignores it (a test serves
+  the file under an https origin to prove it), so no link can redirect a verifier's fingerprint;
+  don't widen it to "any origin" or read it from anywhere else. **Every test blocks
+  `*.cloudfunctions.net` at the browser**, so nothing reaches production.
+  **`COPLANLY_REQUIRE_EMULATORS=1`** (CI) fails an emulator test that would otherwise skip — the job
+  cannot pass by running only the stubbed half. And **one worker, no retries**: `verifyExport`
+  allows 30 lookups per address per ten minutes per instance, and the suite makes about ten. Gated
+  on `changes`' `web` (everything but docs and the Android app and its build). Behind a proxy that
+  ignores `NO_PROXY` for loopback the Functions emulator cannot register its Firestore triggers
+  ("Unable to parse JSON") — unset the proxy variables for the run; nothing in it needs the network.
 - **The `screenshots` job is how UI is reviewed without a phone** (September 2026). Roborazzi on
   Robolectric's native graphics renders the tests in `app/src/test/java/com/coparently/app/
   screenshots/` — Home's cards, the month grid with every `DayCellFills` layer, the calendar
@@ -505,7 +549,7 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   `ScreenshotFixtures`) so an image does not change with the calendar — keep it that way, or the
   suite can never move to verify.
 - **A pull request runs only the jobs its diff can affect** (September 2026). The `changes` job
-  pipes `git diff --name-only` into `tools/ci-changes.js`, which decides five outputs and is tested
+  pipes `git diff --name-only` into `tools/ci-changes.js`, which decides seven outputs and is tested
   by `tools/test/ci-changes.test.js` in `invariants`: docs/functions/rules only → no Android job;
   a screen-only change (`presentation/` outside `common/`, `res/`, `app/src/test/`) → no e2e
   (`common/` stays in because the e2e parents construct `ParentsSource`); nothing the screenshots
@@ -513,8 +557,11 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   what API 26 and 16 KB exist for — `data/local/` (SQLCipher, Room), the manifest, `androidTest/`,
   `src/debug/`, the emulator script — or the build; and the `upgrade` job runs when the diff reaches
   what stored data depends on (`data/local/`, `data/security/`, `di/DatabaseModule.kt`, the
-  telemetry answer's form, `app/schemas/`, the manifest, its own tests and scripts), the build, or
-  any path the script does not know. A push to `main` always runs everything, which
+  telemetry answer's form, `app/schemas/`, the manifest, its own tests and scripts, the
+  `wire/current/` fixtures), the build, or
+  any path the script does not know; and the `web` job runs on anything but docs and the Android
+  app and its build — `web/`, `web-tests/`, `functions/`, `firebase.json`, `firestore-tests/`' lock
+  file, the workflow, or an unfamiliar path. A push to `main` always runs everything, which
   is the backstop for the legs a PR skipped; lint's NewApi check is the per-PR guard for a
   newer-API call. Three things not to get wrong. Every skip list is deliberately narrow — a path
   wrongly *on* one silently stops testing real changes, which is far worse than a path wrongly off
@@ -553,7 +600,8 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
 - **A CI result is meant to be read without opening a log** (September 2026). Three layers:
   - **Check runs.** Each test job publishes its JUnit XML through
     `mikepenz/action-junit-report@v6` as its own check run — "Unit tests (JVM)", "Instrumented
-    tests (API n)", "Cloud Functions tests", "Firestore and Storage rules tests" — with failures
+    tests (API n)", "Cloud Functions tests", "Firestore and Storage rules tests", "Web — verify
+    page and ICS" (Playwright's own JUnit reporter) — with failures
     as annotations. Mocha writes JUnit through `tools/mocha-ci-reporter.js` (spec output *and*
     xunit, no dependency), enabled only in CI: `functions` passes `--reporter`, `firestore-tests`
     has a `test:ci` script. Plain `npm test` is unchanged. Those jobs carry
@@ -739,8 +787,38 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
 4. **Recurring events** are stored once and expanded to occurrences at query time via
    `RecurrenceExpander` (wired in `EventRepositoryImpl.getEventsByDateRange`).
    Occurrences share the master event id — don't use the id as a unique list key.
-5. **The Firestore document schema for events** is defined in one place:
-   `EventRepositoryImpl.toFirestoreMap()`. `SyncService` maps must stay in sync with it.
+5. **The Firestore document schema for events** is defined in one place, `data/sync/EventDocument.kt`:
+   `fromEvent` (what `EventRepositoryImpl.toFirestoreMap()` delegates to), `uploadDocument`
+   (`SyncService`'s `set()` of a queued row — which dropped `reminderMinutes` until the wire contracts
+   below caught it) and `toEntity`, the reader. `SyncService`'s conflict-branch `update()` map must stay
+   in sync with them.
+   **A wire-format change arrives with its fixture diff** (September 2026) — how "a co-parent on the
+   previous build" is checked without a second phone. `app/src/test/resources/wire/` is the contract
+   between builds: `wire/<collection>/` holds documents *other* builds write, by hand — older shapes
+   with keys missing, newer ones with unknown keys, `FamilyMemberRef`s and codec versions (`C2;…`,
+   `L2;…`, `p2|…`) — and `wire/current/<collection>/` holds what *this* build writes, generated.
+   `WireContractTest` (`app/src/test/java/com/coparently/app/wire/`) runs every fixture through the
+   production reader and writer of its collection (one `WireContract` each: `events`,
+   `custody_models`, `messages`, `child_info`, `pets`, `expenses`, `budgets`, `event_versions`) and
+   checks that it reads what `reads` says (or is skipped, where `skipped` says why), and that a
+   read-then-write loses exactly the paths `notPreserved` declares, each with its reason — so an
+   unreadable codec entry, an unknown member or a proposal's citation that stops surviving turns it
+   red, and so does a loss that was fixed but is still declared. `CurrentWireFixturesTest` fails when a
+   writer's output no longer matches `wire/current/`: regenerate with
+   `UPDATE_WIRE_FIXTURES=1 ./gradlew testDebugUnitTest --tests '*CurrentWireFixturesTest*' --rerun`
+   and review the diff like a screenshot baseline. **The other direction runs in the `upgrade` job**:
+   it copies this branch's `wire/current/` into the base checkout and runs the *base's own*
+   `WireContractTest` over it, so the previous build's code reads what this one writes and writes it
+   back; a key an older build may lose that way must be declared in `CurrentWrite.olderBuildsMayDrop`.
+   Three things to know. **A new top-level key is not safe from an older build**: these collections
+   are rewritten with `set()`, so anything a newer build must not lose goes in a list older builds
+   carry verbatim (items 24, 30, 33), not in a new key — the fixtures record what drops today (an
+   unknown top-level key everywhere, an unknown `medicalProfile` field, a pet species read as
+   `OTHER`, a swap in an unknown state), and a newer expense category makes the whole expense
+   invisible to an older build. **A new synced collection or full-document writer gets a contract and
+   fixtures** — `CurrentWireFixturesTest` also fails on a contract without hand-written fixtures. And
+   **it is not the device check**: real sync timing, the older build's screens and the conflict rule
+   stay in `docs/DEVICE-CHECKLIST.md` §3.5, §3.11 and §5.3.
 6. **Calendar query ranges** come from `queryRangeFor()` in `CalendarScreen.kt` —
    extend that function instead of inlining new range math.
 7. **View modes** are `MONTH, WEEK, DAY` (roadmap order). There is no 3-day view anymore.

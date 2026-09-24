@@ -1,0 +1,42 @@
+{
+  "about": "A deleted event: the saved document with Tombstone.fields merged in by update().",
+  "document": {
+    "acceptance": "NOT_REQUIRED",
+    "acceptedAt": "",
+    "acceptedBy": "",
+    "createdAt": "2026-05-01T08:00:00",
+    "createdByFirebaseUid": "uidA",
+    "deletedAtMillis": 1778000000000,
+    "deletedBy": "uidA",
+    "description": "",
+    "endDateTime": "",
+    "eventType": "activity",
+    "familyId": "",
+    "forMembers": [],
+    "friendParticipates": "",
+    "id": "evt-current-2",
+    "imageUrl": "",
+    "isImportant": false,
+    "isRecurring": false,
+    "lastModifiedBy": "uidA",
+    "parentOwner": "dad",
+    "permissions": "read_write",
+    "pickupConfirmedAt": "",
+    "pickupConfirmedBy": "",
+    "recurrenceEndDate": "",
+    "recurrencePattern": "",
+    "reminderMinutes": null,
+    "sharedWith": [
+      "uidA",
+      "uidB"
+    ],
+    "startDateTime": "2026-05-14T16:00:00",
+    "title": "Swim",
+    "updatedAt": "2026-05-01T08:00:00"
+  },
+  "reads": {
+    "deleted": true,
+    "deletedAtMillis": 1778000000000,
+    "id": "evt-current-2"
+  }
+}

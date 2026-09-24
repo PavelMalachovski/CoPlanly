@@ -1,0 +1,28 @@
+{
+  "about": "A document with no startDateTime cannot be an event; the sync skips it, alone.",
+  "document": {
+    "createdAt": "2026-03-01T09:30:00",
+    "createdByFirebaseUid": "uidA",
+    "description": "",
+    "endDateTime": "",
+    "eventType": "school",
+    "id": "evt-old-1",
+    "imageUrl": "",
+    "isRecurring": false,
+    "lastModifiedBy": "uidA",
+    "parentOwner": "mom",
+    "permissions": "read_write",
+    "pickupConfirmedAt": "",
+    "pickupConfirmedBy": "",
+    "recurrenceEndDate": "",
+    "recurrencePattern": "",
+    "sharedWith": [
+      "uidA",
+      "uidB"
+    ],
+    "title": "School play",
+    "updatedAt": "2026-03-01T10:00:00"
+  },
+  "reads": null,
+  "skipped": "EventDocument.toEntity throws on a missing required field; SyncService catches per document"
+}

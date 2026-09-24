@@ -1,0 +1,36 @@
+{
+  "about": "A CUSTODY_PROPOSED card carrying the parenting-plan citation the export reads (item 32).",
+  "document": {
+    "activity": {
+      "entityId": "uidA__uidB",
+      "entityType": "CUSTODY_PROPOSAL",
+      "kind": "CUSTODY_PROPOSED",
+      "planCitation": "p1|care_weekday|0123456789abcdef",
+      "title": "Week on, week off"
+    },
+    "attachments": [],
+    "content": "Custody schedule proposed",
+    "conversationId": "uidA_uidB",
+    "id": "msg-current-2",
+    "isRead": false,
+    "messageType": "ACTIVITY",
+    "replyToMessageId": "",
+    "senderId": "uidB",
+    "senderName": "Bob",
+    "timestamp": 1778583600000
+  },
+  "reads": {
+    "activityKind": "CUSTODY_PROPOSED",
+    "activityPlanCitation": "p1|care_weekday|0123456789abcdef",
+    "attachments": [],
+    "content": "Custody schedule proposed",
+    "conversationId": "uidA_uidB",
+    "id": "msg-current-2",
+    "isRead": false,
+    "messageType": "ACTIVITY",
+    "replyToMessageId": null,
+    "senderId": "uidB",
+    "senderName": "Bob",
+    "sentAtMillis": 1778583600000
+  }
+}

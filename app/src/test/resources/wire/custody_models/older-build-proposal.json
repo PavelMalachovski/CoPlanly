@@ -1,0 +1,103 @@
+{
+  "about": "A proposal written by a build before contact windows, over an agreed schedule that has one: the proposed model keeps the agreed window (a missing key is not a proposal to remove it), and the write sends the proposal back without the key, as it came.",
+  "document": {
+    "contactWindows": [
+      "9|15:00|19:00|dad"
+    ],
+    "createdAt": "2026-03-01T09:00:00",
+    "id": "model-1",
+    "lastModifiedAt": "2026-03-15T09:00:00",
+    "lastModifiedBy": "uidA",
+    "modelType": "week_on_week_off",
+    "momDayIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ],
+    "participants": [
+      "uidA",
+      "uidB"
+    ],
+    "patternDays": 14,
+    "proposal": {
+      "modelType": "week_on_week_off",
+      "momDayIndices": [
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13
+      ],
+      "patternDays": 14,
+      "proposedAt": "2026-05-06T10:00:00",
+      "proposedBy": "uidB",
+      "repeatYearly": true,
+      "startDate": "2026-03-02"
+    },
+    "repeatYearly": true,
+    "startDate": "2026-03-02"
+  },
+  "reads": {
+    "childOverrides": [],
+    "childOverridesWire": null,
+    "contactWindows": [
+      "9|15:00|19:00|dad"
+    ],
+    "contactWindowsWire": [
+      "9|15:00|19:00|dad"
+    ],
+    "dayOverrides": {},
+    "id": "model-1",
+    "lastDecision": null,
+    "lastModifiedAtMillis": 1773565200000,
+    "lastModifiedBy": "uidA",
+    "lastModifiedKind": "PATTERN",
+    "lastSwapDate": null,
+    "modelType": "week_on_week_off",
+    "momDayIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ],
+    "patternDays": 14,
+    "proposal": {
+      "childOverrides": [],
+      "childOverridesWire": null,
+      "contactWindows": [
+        "9|15:00|19:00|dad"
+      ],
+      "contactWindowsWire": null,
+      "momDayIndices": [
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13
+      ],
+      "patternDays": 14,
+      "planCitation": null,
+      "planCitationQuestion": null,
+      "proposedBy": "uidB",
+      "seasonalLayers": [],
+      "seasonalLayersWire": null
+    },
+    "repeatYearly": true,
+    "seasonalLayers": [],
+    "seasonalLayersWire": null,
+    "startDate": "2026-03-02",
+    "unreadableChildOverrides": [],
+    "unreadableLayers": []
+  }
+}

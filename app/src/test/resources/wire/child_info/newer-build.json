@@ -1,0 +1,67 @@
+{
+  "about": "A newer build's child record: a medical-profile field and a top-level key this build does not know.",
+  "document": {
+    "activities": [],
+    "allergies": [
+      "peanuts"
+    ],
+    "bloodDonorCard": true,
+    "childName": "Anya",
+    "createdAt": "2026-03-01T09:30:00",
+    "createdByFirebaseUid": "uidA",
+    "dateOfBirth": "2019-04-02T00:00:00",
+    "emergencyContacts": [],
+    "familyId": "uidA__uidB",
+    "guests": {},
+    "id": "child-1",
+    "lastModifiedBy": "uidA",
+    "medicalNotes": "Asthma",
+    "medicalPhotos": [],
+    "medicalProfile": {
+      "hereditaryConditions": [],
+      "insuranceNumber": "CZ-123",
+      "intolerances": [
+        "lactose"
+      ],
+      "vaccinations": []
+    },
+    "medications": [
+      {
+        "dosage": "2 puffs",
+        "frequency": "as needed",
+        "name": "Ventolin",
+        "notes": null
+      }
+    ],
+    "schoolInfo": null,
+    "sharedWith": [
+      "uidA",
+      "uidB"
+    ],
+    "updatedAt": "2026-05-02T18:45:10"
+  },
+  "notPreserved": {
+    "bloodDonorCard": "this build writes the document back with set(), which replaces it: a top-level key it does not know is dropped. A newer build must not keep anything it cannot afford to lose in a new top-level key of a collection older builds rewrite",
+    "medicalProfile.insuranceNumber": "the medical profile goes through Gson into MedicalProfile and back, so a field the class does not have is dropped on the next save"
+  },
+  "reads": {
+    "allergies": [
+      "peanuts"
+    ],
+    "childName": "Anya",
+    "createdByFirebaseUid": "uidA",
+    "dateOfBirth": "2019-04-02T00:00:00",
+    "deleted": false,
+    "familyId": "uidA__uidB",
+    "guests": [],
+    "id": "child-1",
+    "intolerances": [
+      "lactose"
+    ],
+    "medications": [
+      "Ventolin"
+    ],
+    "school": null,
+    "updatedAtMillis": 1777747510000
+  }
+}

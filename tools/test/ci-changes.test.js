@@ -80,7 +80,7 @@ test('the database, the manifest and the instrumented tests run all three emulat
   }
 });
 
-test('the build and the workflow run everything', () => {
+test('the build and the workflow run every Android job; the workflow runs the web job too', () => {
   for (const path of [
     'app/build.gradle.kts',
     'gradle/libs.versions.toml',
@@ -88,7 +88,10 @@ test('the build and the workflow run everything', () => {
     '.github/workflows/ci.yml',
     'app/proguard-rules.pro',
   ]) {
-    assert.deepEqual(decide([path]), everything(), path);
+    const { web, ...android } = decide([path]);
+    const { web: _all, ...everythingAndroid } = everything();
+    assert.deepEqual(android, everythingAndroid, path);
+    assert.equal(web, path.startsWith('.github/'), path);
   }
 });
 
@@ -100,7 +103,8 @@ test('an unfamiliar path is never skipped by the Android gate', () => {
 
 test('format writes one GITHUB_OUTPUT line per key, the matrix as one-line JSON', () => {
   const lines = format(decide(['app/src/main/res/values/strings.xml'])).trim().split('\n');
-  assert.deepEqual(lines.map((l) => l.split('=')[0]), ['android', 'e2e', 'screenshots', 'upgrade', 'matrix', 'r8runtime']);
+  assert.deepEqual(lines.map((l) => l.split('=')[0]),
+    ['android', 'e2e', 'screenshots', 'upgrade', 'matrix', 'r8runtime', 'web']);
   const matrix = JSON.parse(lines[4].slice('matrix='.length));
   assert.equal(matrix[0]['api-level'], 30);
 });
@@ -127,6 +131,8 @@ test('the upgrade job runs on the database, the stored preferences, the schemas 
     'app/src/androidTest/java/com/coparently/app/HiltTestRunner.kt',
     'tools/upgrade/run-upgrade-test.sh',
     'tools/stop-emulator.sh',
+    // A wire-format change: the base build's WireContractTest reads the new documents in this job.
+    'app/src/test/resources/wire/current/events/sync-upload.json',
     'app/build.gradle.kts',
     'gradle/libs.versions.toml',
     '.github/workflows/ci.yml',
@@ -144,6 +150,9 @@ test('the upgrade job skips what cannot reach stored data', () => {
     'app/src/main/java/com/coparently/app/data/sync/SyncService.kt',
     'app/src/main/res/values/strings.xml',
     'app/src/test/java/com/coparently/app/domain/FooTest.kt',
+    // Another build's documents, read by this build's own tests: build-test runs those.
+    'app/src/test/resources/wire/events/older-build.json',
+    'app/src/test/java/com/coparently/app/wire/WireContractTest.kt',
     'app/src/androidTest/java/com/coparently/app/e2e/TwoParentChatTest.kt',
     'tools/ci-report.js',
     'tools/test/ci-changes.test.js',
@@ -195,4 +204,44 @@ test('the build, the proguard rules and the workflow run the R8 runtime probe', 
     assert.equal(decide([path]).r8runtime, true, path);
   }
   assert.equal(everything().r8runtime, true);
+});
+
+test('the web job runs on the page, its tests, the functions, the emulator config and the workflow', () => {
+  for (const path of [
+    'web/verify/index.html',
+    'web/README.md',
+    'web-tests/verify-page.spec.js',
+    'web-tests/package-lock.json',
+    'functions/calendar-feed.js',
+    'functions/export-receipts.js',
+    'functions/package-lock.json',
+    'firebase.json',
+    'firestore-tests/package-lock.json',
+    '.github/workflows/ci.yml',
+    'tools/something-new.js',
+  ]) {
+    assert.equal(decide([path]).web, true, path);
+  }
+  assert.equal(everything().web, true);
+});
+
+test('the web job skips Android-only and docs-only changes', () => {
+  for (const path of [
+    'docs/DEVICE-CHECKLIST.md',
+    'CLAUDE.md',
+    'app/src/main/java/com/coparently/app/presentation/export/ExportViewModel.kt',
+    'app/src/main/res/values/strings.xml',
+    'app/build.gradle.kts',
+    'gradle/libs.versions.toml',
+  ]) {
+    assert.equal(decide([path]).web, false, path);
+  }
+});
+
+test('a change to web-tests alone runs no Android job, no e2e and no upgrade', () => {
+  const d = decide(['web-tests/calendar-feed.spec.js']);
+  assert.equal(d.android, false);
+  assert.equal(d.e2e, false);
+  assert.equal(d.upgrade, false);
+  assert.equal(d.web, true);
 });

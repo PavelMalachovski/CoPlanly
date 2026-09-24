@@ -1,0 +1,26 @@
+{
+  "about": "A budget from a build before member references, familyId and isActive (absent reads as active).",
+  "document": {
+    "alertThreshold": 0.8,
+    "category": "EDUCATION",
+    "childId": "",
+    "createdAt": "2026-03-01T09:30:00",
+    "createdByFirebaseUid": "uidA",
+    "currency": "CZK",
+    "id": "budget-1",
+    "monthlyLimit": 3000
+  },
+  "notPreserved": {
+    "childId": "no longer written; it was \"\" on every document, which reads as no member"
+  },
+  "reads": {
+    "alertThreshold": 0.8,
+    "category": "EDUCATION",
+    "currency": "CZK",
+    "familyId": null,
+    "forMembers": [],
+    "id": "budget-1",
+    "isActive": true,
+    "monthlyLimit": 3000.0
+  }
+}

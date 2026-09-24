@@ -1,0 +1,70 @@
+{
+  "about": "A newer build's event: a member reference and an acceptance state this build does not know (both carried through), and a top-level key it has never heard of.",
+  "document": {
+    "acceptance": "COUNTER_PROPOSED",
+    "acceptedAt": "",
+    "acceptedBy": "",
+    "attendanceMode": "video",
+    "createdAt": "2026-03-01T09:30:00",
+    "createdByFirebaseUid": "uidA",
+    "description": "",
+    "endDateTime": "2026-04-22T10:00:00",
+    "eventType": "medical",
+    "familyId": "uidA__uidB",
+    "forMembers": [
+      "child:c1",
+      "pet:p1",
+      "future:xyz"
+    ],
+    "friendParticipates": "",
+    "id": "evt-new-1",
+    "imageUrl": "",
+    "isImportant": true,
+    "isRecurring": false,
+    "lastModifiedBy": "uidA",
+    "parentOwner": "mom",
+    "permissions": "read_write",
+    "pickupConfirmedAt": "",
+    "pickupConfirmedBy": "",
+    "recurrenceEndDate": "",
+    "recurrencePattern": "",
+    "reminderMinutes": 30,
+    "sharedWith": [
+      "uidA",
+      "uidB"
+    ],
+    "startDateTime": "2026-04-22T09:30:00",
+    "title": "Dentist",
+    "updatedAt": "2026-04-20T07:15:00"
+  },
+  "notPreserved": {
+    "attendanceMode": "this build writes the document back with set(), which replaces it: a top-level key it does not know is dropped. A newer build must not keep anything it cannot afford to lose in a new top-level key of a collection older builds rewrite. Only the sync's upload of a row edited offline does this; an edit through EventRepositoryImpl is an update() and merges."
+  },
+  "reads": {
+    "acceptance": "COUNTER_PROPOSED",
+    "createdByFirebaseUid": "uidA",
+    "deleted": false,
+    "description": "",
+    "endDateTime": "2026-04-22T10:00:00",
+    "eventType": "medical",
+    "familyId": "uidA__uidB",
+    "forMembers": [
+      "child:c1",
+      "pet:p1",
+      "future:xyz"
+    ],
+    "id": "evt-new-1",
+    "isImportant": true,
+    "isRecurring": false,
+    "parentOwner": "mom",
+    "recurrencePattern": null,
+    "reminderMinutes": 30,
+    "sharedWith": [
+      "uidA",
+      "uidB"
+    ],
+    "startDateTime": "2026-04-22T09:30:00",
+    "title": "Dentist",
+    "updatedAtMillis": 1776669300000
+  }
+}

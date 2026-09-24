@@ -1,0 +1,37 @@
+{
+  "about": "A deleted child (CQ-19): read as a deletion before anything is mapped, never written back.",
+  "document": {
+    "activities": [],
+    "allergies": [
+      "peanuts"
+    ],
+    "childName": "Anya",
+    "createdAt": "2026-03-01T09:30:00",
+    "createdByFirebaseUid": "uidA",
+    "dateOfBirth": "2019-04-02T00:00:00",
+    "deletedAtMillis": 1778414400000,
+    "deletedBy": "uidA",
+    "emergencyContacts": [],
+    "id": "child-1",
+    "lastModifiedBy": "uidA",
+    "medicalNotes": "Asthma",
+    "medications": [
+      {
+        "dosage": "2 puffs",
+        "frequency": "as needed",
+        "name": "Ventolin",
+        "notes": null
+      }
+    ],
+    "schoolInfo": null,
+    "sharedWith": [
+      "uidA",
+      "uidB"
+    ],
+    "updatedAt": "2026-03-01T10:00:00"
+  },
+  "reads": {
+    "deleted": true,
+    "id": "child-1"
+  }
+}

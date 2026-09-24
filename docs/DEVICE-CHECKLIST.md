@@ -61,8 +61,9 @@ TalkBack, AppCompat's per-app locale switching, or a screen assembled from real 
 checks stay. A check marked **(screenshots)** only needs a glance on the phone, or none.
 
 **What CI now covers.** The `instrumented` job (API 26/30/35 emulators, debug build, Firebase mocked by
-`FakeFirebaseModule`, Room real) runs these on every Android pull request, and the `r8-runtime` job
-(the minified `r8Test` build, API 30) runs the last row. A check they cover is
+`FakeFirebaseModule`, Room real) runs these on every Android pull request, the `r8-runtime` job
+(the minified `r8Test` build, API 30) runs the `R8GsonProbe` row, and the `web` job (no Android
+at all: Chromium and Node against the Functions emulator) runs the `web-tests/` row. A check they cover is
 marked **[CI]** below: CI saw the mechanism work, so on the phone it is a quick confirmation, and
 a failure there points at something the emulator does not have — real Firebase, real data, a
 Play install, a vendor skin.
@@ -76,6 +77,7 @@ Play install, a vendor skin.
 | `presentation/navigation/MainNavigationSmokeTest` | A signed-in launch visiting Home, Calendar (month/week/day), Chat, Expenses and Settings without a crash; bottom bar on the tabs only; icon-only controls named and ≥ 48 dp | Everything that needs data, a co-parent or a server; TalkBack itself (§3.9) |
 | `upgrade/UpgradeSeedTest` → `adb install -r` → `upgrade/UpgradeVerifyTest` (the **`upgrade` job**, API 30, not `instrumented`) | §2.1 and §3.9's SEC-5 box for **one release step**: the base build (the PR's base commit, or the previous `main`) writes a family's rows into eight tables through its own SQLCipher open path, plus a refresh token, settings and the telemetry answer into the sealed store; this build is installed over it keeping the data, and must open the database with the **recovered** passphrase (the wrapped value unchanged), run every migration to the newest exported schema, read every row back (six tables also through its own DAOs), leave the file ciphertext, and keep the preferences and the consent answer | An upgrade from a build older than the base (a longer migration chain), the plaintext → encrypted conversion of an install that predates SEC-2, a hardware-backed Keystore, a reboot between launches, and a real family's volume of data |
 | `app/src/r8Test/.../R8GsonProbe` — not an `androidTest`: the **`r8-runtime`** job runs it inside the *minified* `r8Test` build (`release` plus the probe) on API 30 | §4.1's Gson half: a child's medical profile (blood type, intolerances, hereditary conditions, a dated vaccination), medications, activities, emergency contacts and school, and a pet, written through the real repositories into Room with the source key names and read back equal; custody swaps, the event draft, the chat and revision `TypeToken`s, and the Google Calendar `@Key` models parsed | The Firestore document itself (the probe never signs in), the co-parent's phone reading it, a real Google Calendar import, and the telemetry check — a signed release build with a real `google-services.json` |
+| `web-tests/verify-page.spec.js`, `calendar-feed.spec.js` — not an `androidTest`: the **`web`** job runs them with Playwright and Node against the Auth, Firestore and Functions emulators | §6's **verification page** in Chromium: receipts reserved and registered through the real callables, then the exported file (a match, with registered time, period, format and size), a copy with one byte changed (no match), the file against another record ID, the ID typed as people retype it, an unknown ID and a mere reservation (not found), a rate limit, a hostile server value shown as text; English and Czech, following the browser and switched by hand; 375 px wide with nothing scrolling sideways; only the fingerprint leaves the browser, and no uid, family id, e-mail or name is on the page or in the answer. The **calendar feed** (§3.11 and §3.13's feed boxes) through Mozilla's `ical.js` plus an octet-level RFC 5545 check — CRLF, 75-octet folding never inside a UTF-8 character, TEXT escaping, UID/DTSTAMP/DTSTART on every event, DTEND after DTSTART, UNTIL matching a floating DTSTART, unique and stable UIDs, every title round-tripping — for `buildFeed` in all five languages and for the real `calendarFeed` endpoint behind a link `createCalendarFeed` minted | The page **hosted** over https at its real address, and `EXPORT_VERIFY_URL` printed on a file; a file that travelled (e-mail, Drive, a USB stick) checked on a real computer in Safari or Firefox; a real calendar app (Apple Calendar on an iPhone, Google Calendar) subscribing to the link, refreshing, and drawing it |
 
 **What the `e2e` job covers between two parents.** Two accounts in one emulator, each with the
 production data layer, against the Auth, Firestore, Functions and Storage emulators and the real
@@ -90,13 +92,15 @@ so.
 | Test (`app/src/androidTest/.../e2e/`) | Covers between the two parents | What only phones still add |
 | --- | --- | --- |
 | `TwoParentPairingTest` | Pairing on both phones, both slots, one conversation, `pairing_accepted` queued | The QR scan, the pairing screens |
-| `TwoParentEventsTest`, `MultiFamilyTest` | Events through the sync's own query, a private event never on the server, tombstones; a second family's audience (§5.2) | The grid as drawn, the switcher UI |
+| `TwoParentEventsTest`, `MultiFamilyTest` | Events through the sync's own query, a private event never on the server, tombstones; a second family's audience (§5.2) | The grid as drawn |
 | `TwoParentChatTest`, `OneParentOnScreenTest` | Chat across the date line to unread, DELIVERED, READ; one parent's real screens (§5.1) | Two screens at once, displayed times, the push |
 | `TwoParentAttachmentsTest` | Chat attachments and the vault, bytes and digests, a stranger refused (§5.5) | A viewer app opening the file |
 | `TwoParentExpensesTest`, `TwoParentAgreementsTest` | A shared expense on the other parent's balance; the split ratio agreed, proposed, accepted, declined, withdrawn; the parenting plan's agreement lapsing on a reword, the other half unwritable | The Expenses and plan screens, the banners |
 | `TwoParentFamilyRecordsTest` | Children, pets and budgets both ways with tombstones; records made before pairing shared and announced once; pet and medical photos (§3.10) | The forms, and the photo in the live bucket before `firebase deploy --only storage` |
 | `TwoParentRequestsAndEventPushesTest` | Change requests accepted, declined, cancelled; `event_created`; event revisions immutable, none for a private event; event photos | The request screens |
 | `TwoParentCustodyTest` | A pattern proposed, accepted, declined in two zones; single-day and group swaps; a self-accepted swap refused | The grid's band, markers and banners |
+| `OnScreenAgreementsTest` | A's **real app** answering B on screen: B's change request raises the calendar's inline banner, A opens the inbox from it and accepts, B holds it accepted and the event moved; B's custody proposal pops up on A's Home naming B, accepted then (a second one) declined; B's day swaps pop up on Home, one accepted, one declined; a seasonal layer A accepts makes today's month cell say "With B" (§3.11) | Two screens at once, the push that makes A look, the band's colours and motion, the plan citation line (§3.12), a child's own band (§3.13) |
+| `OnScreenFamiliesTest` | A paired with B and C, B's family on screen: C's message puts the dot on Home's switcher chip, named "New messages in another family"; C's row in the dialog says so; switching there brings C's thread onto the Chat tab, and A's reply reaches C (§5.2) | The push from the other family switching on tap, the chip on Expenses, TalkBack, change-request and schedule dots |
 | `TwoParentAccessTest` | A calendar friend, a guest and a professional (two consents, never the chat, §5.4) redeemed and revoked; unpair on both phones with `pairing_removed`; a calendar feed serving shared events only until revoked; an export hash registered once and verified without an account; receipt photos; account deletion unpairing the co-parent (§7) | The invitation screens, a calendar app subscribing to the feed, the verification page |
 
 ---
@@ -493,7 +497,12 @@ who does **not** have today.
       B. Try a swap and a proposal each way. Windows survive a write from the newer phone. A
       write from the old phone may drop them, and that is allowed. A proposal or swap from the
       new phone never *changes* them. There is no one-phone fallback: the rules suite
-      (`custody-models.test.js`) is the substitute.
+      (`custody-models.test.js`) is the substitute. **[CI]** the wire contracts
+      (`WireContractTest`, `custody_models` fixtures) run both builds' mappers over each other's
+      documents: an older build's document keeps its missing `contactWindows` key through a write,
+      an unreadable window survives a swap write verbatim, and the `upgrade` job has the *previous*
+      build read this one's pattern and swap writes. The phone still shows the grid each build draws
+      and the real timing of two syncs.
 - **If it fails:** `presentation/custody/ContactWindowsSection.kt`, `MonthView.kt`,
   `DayWeekView.kt`, `CustodyResolver.contactWindowsResolver` [branch]; tag `CustodyModelRepo`.
 
@@ -587,6 +596,8 @@ the field gone, the OS permission turning the switch off, and a real push arrivi
 
 ### 3.11 Seasonal schedules and holiday fairness (MON-14, MON-20) · 1P, proposal check 2P
 
+> **[CI e2e]** `OnScreenAgreementsTest` runs the **2P proposal check's** mechanism on one real screen: B proposes a one-day layer, the proposal pops up on A's Home naming B, A accepts, and today's month cell then says "With B" on A's grid while B's phone holds the decision. The phone still adds the editor itself, the band's colour, B's grid, and everything above the 2P line.
+
 Custody setup, below the preview: **Seasonal schedules**, then **Holiday fairness**. Needs a saved
 base pattern; schema 38 (the Regenerate workflow must have exported `38.json` for CI to be green).
 
@@ -619,8 +630,13 @@ base pattern; schema 38 (the Regenerate workflow must have exported `38.json` fo
 - [ ] **2P, mixed versions:** a swap or a proposal from a build without MON-14 keeps the layers on
       the newer phone (the rules allow the older build to drop the key; the mirror keeps its
       copy). No one-phone fallback: `custody-models.test.js` "seasonal layers" is the substitute.
+      **[CI]** the wire contracts cover the document half: an `L2;…` layer and a `C2;…` child
+      schedule are kept verbatim through a swap write *and* a pattern write, a `p2|…` citation
+      survives, and the previous build reads this build's writes in the `upgrade` job. What is left
+      here is the grid on each phone and the proposal banner.
 - [ ] **Calendar feed (MON-17), if deployed:** an iPhone subscribed to the feed shows the layer's
-      custody bars on its dates after the next refresh.
+      custody bars on its dates after the next refresh. **[CI]** the `web` job parses the feed —
+      layer, swap and contact windows included — as a calendar app would; what is left is the app.
 - **If it fails:** tag `SeasonalScheduleVM` / `CustodyModelRepo`; `presentation/custody/Seasonal*`,
   `HolidayFairnessCard.kt`, `domain/custody/SeasonalLayer.kt`, `HolidayFairness.kt`,
   `firestore.rules` `seasonalLayersKeptOrDropped`.
@@ -715,7 +731,8 @@ family's proposal can carry an override.
       schedule on the newer phone (the key is dropped, the mirror keeps its copy). No one-phone
       fallback: `custody-models.test.js` "per-child overrides (FAM-4)" is the substitute.
 - [ ] **Calendar feed (MON-17), if deployed:** the subscribed calendar still shows the **family**
-      schedule only — no per-child bars.
+      schedule only — no per-child bars. **[CI]** for the feed's validity (the `web` job); the
+      absence of per-child bars is `functions/test/calendar-feed.test.js`'s.
 - **If it fails:** tag `CustodySetupViewModel` / `CustodyModelRepo`; `presentation/custody/Child*`,
   `presentation/calendar/ChildCustodyBand.kt`, `presentation/home/ChildrenToday*.kt`,
   `domain/custody/ChildScheduleOverride.kt`, `ChildCustody.kt`, `firestore.rules`
@@ -815,7 +832,7 @@ Preconditions: A and B are paired, and each phone has its own account signed in.
 
 ### 5.2 Family switcher and chat following the selected family (M-8) · 3A, 2P or 1P fallback
 
-> **[CI e2e]** `MultiFamilyTest` proves the data side: with a second co-parent selected, a new event gets that family's audience and `familyId` and its announcement goes to that thread, and none of it reaches the first co-parent. The switcher UI, the chat tab re-keying and pushes stay manual.
+> **[CI e2e]** `MultiFamilyTest` proves the data side: with a second co-parent selected, a new event gets that family's audience and `familyId` and its announcement goes to that thread, and none of it reaches the first co-parent. `OnScreenFamiliesTest` drives the switcher on A's real screens: with B's family on screen, C's chat message puts the dot on Home's chip (its description names "New messages"), C's row in the dialog says the same, choosing it brings C's thread onto the Chat tab, and A's reply reaches C. Still manual: the push from the other family, the chip on Expenses, the change-request and schedule kinds of the dot, TalkBack, and live arrival on several screens at once.
 
 Preconditions: A is paired with **both** B and C (two families). Invite C from Settings → Family.
 
@@ -861,6 +878,8 @@ Preconditions: A is paired with **both** B and C (two families). Invite C from S
 ### 5.3 Also worth doing while two phones are paired · 2P
 
 > Real FCM delivery cannot be emulated: the e2e job sees the `notification_queue` document written, never the push arrive.
+>
+> **[CI e2e]** `OnScreenAgreementsTest` answers the co-parent on one real screen: a change request's calendar banner and the inbox's Accept, Home's pop-ups for a custody proposal (accept and decline) and for day swaps (accept and decline), each confirmed on the other phone's data. What two phones add here is both screens at once and the push that brings the second parent to the screen.
 
 - [ ] UX-15 with both parents on non-default colours (§3.3).
 - [ ] MON-6b with mixed versions (§3.5).
@@ -873,6 +892,14 @@ Preconditions: A is paired with **both** B and C (two families). Invite C from S
       `EventRepository`. The conflict rule itself (`ConflictResolverTest`, two zones) is hard to
       reach by hand: the sync uploads a phone's own edits before it downloads, so it only
       decides when an upload failed and the download that follows succeeded.
+      **[CI]** "one phone on the previous build" is now a wire contract first (CLAUDE.md, the rule
+      under item 5 of "Things that are easy to get wrong"): `WireContractTest` reads older and newer
+      builds' `events`, `messages` (legacy ISO `timestamp` included), `child_info`, `pets`,
+      `expenses`, `budgets` and `event_versions` documents through this build's mappers and writes
+      them back, and the `upgrade` job runs the *previous* build's copy of it over what this build
+      writes. A PR that changes `app/src/test/resources/wire/current/` is the one to do this check
+      for; otherwise it confirms what CI saw. The phone adds the real sync timing, both builds'
+      screens, and the conflict rule under a failed upload.
 
 ### 5.4 Professional access (MON-18) · 3A, 2P or 1P fallback
 
@@ -993,7 +1020,16 @@ Preconditions:
       the entry inside the range under your **name**, and shows **Last edited** for the edited one.
 - [ ] The **share sheet** opens from both, and sending to e-mail or Drive delivers a file that
       opens.
-- **If it fails:** read the PR's own description for the file and tag names.
+- [ ] **Verification page (MON-16), once hosted · [CI]:** the `web` job already drives
+      `web/verify/` in Chromium against the emulator — match, one-byte change, wrong ID, unknown ID,
+      both languages, 375 px, nothing identifying on the page (see "What CI now covers"). Still
+      yours: on a **computer**, open the hosted page over **https** (it refuses to fingerprint over
+      plain http), choose the PDF **as it arrived by e-mail** — not a copy re-saved from a viewer —
+      and see **Match** with the registration time and the period you exported; open the PDF in a
+      viewer, print it to PDF again, and check the re-printed file: **No match**. Type the record ID
+      printed in the PDF footer: **Registered**. Once in Safari or Firefox as well as Chrome.
+- **If it fails:** read the PR's own description for the file and tag names; for the page,
+  `web/verify/index.html` and `functions/export-receipts.js`.
 
 ---
 

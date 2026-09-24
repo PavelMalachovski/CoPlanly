@@ -1,0 +1,58 @@
+{
+  "about": "EventVersionRecorder's revision of an edit, before the data source adds recordedAt.",
+  "document": {
+    "deviceTimeMillis": 1778000000000,
+    "editorUid": "uidA",
+    "event": {
+      "acceptance": "NOT_REQUIRED",
+      "acceptedAt": "",
+      "acceptedBy": "",
+      "createdAt": "2026-05-01T08:00:00",
+      "createdByFirebaseUid": "uidA",
+      "description": "",
+      "endDateTime": "",
+      "eventType": "medical",
+      "familyId": "uidA__uidB",
+      "forMembers": [],
+      "friendParticipates": "",
+      "id": "evt-current-1",
+      "imageUrl": "",
+      "isImportant": false,
+      "isRecurring": false,
+      "lastModifiedBy": "uidA",
+      "parentOwner": "mom",
+      "permissions": "read_write",
+      "pickupConfirmedAt": "",
+      "pickupConfirmedBy": "",
+      "recurrenceEndDate": "",
+      "recurrencePattern": "",
+      "reminderMinutes": 15,
+      "sharedWith": [
+        "uidA",
+        "uidB"
+      ],
+      "startDateTime": "2026-05-12T09:30:00",
+      "title": "Dentist",
+      "updatedAt": "2026-05-05T16:53:20"
+    },
+    "eventId": "evt-current-1",
+    "familyId": "uidA__uidB",
+    "formatVersion": 1,
+    "kind": "updated",
+    "sharedWith": [
+      "uidA",
+      "uidB"
+    ]
+  },
+  "reads": {
+    "deviceTimeMillis": 1778000000000,
+    "editorUid": "uidA",
+    "eventId": "evt-current-1",
+    "eventTitle": "Dentist",
+    "familyId": "uidA__uidB",
+    "kind": "updated",
+    "recordedAtMillis": null,
+    "recordedByServer": false,
+    "writeKey": "saved|2026-05-05T16:53:20"
+  }
+}

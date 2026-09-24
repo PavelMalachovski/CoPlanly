@@ -1,0 +1,79 @@
+{
+  "about": "A pattern write, as CustodyModelRepository.pushToFirestore builds it: every list key.",
+  "document": {
+    "childOverrides": [
+      "C1;child:c1;2026-05-04;7;0,1,2;"
+    ],
+    "contactWindows": [
+      "9|15:00|19:00|dad"
+    ],
+    "createdAt": "2026-05-01T09:00:00",
+    "id": "model-current",
+    "lastModifiedAt": "2026-05-04T08:00:00",
+    "lastModifiedBy": "uidA",
+    "lastModifiedKind": "PATTERN",
+    "modelType": "week_on_week_off",
+    "momDayIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ],
+    "participants": [
+      "uidA",
+      "uidB"
+    ],
+    "patternDays": 14,
+    "repeatYearly": true,
+    "seasonalLayers": [
+      "L1;summer;0;2026-07-01;2026-08-31;2026-07-01;14;0,1,2,3,4,5,6;;Summer%202026"
+    ],
+    "startDate": "2026-05-04"
+  },
+  "reads": {
+    "childOverrides": [
+      "c1"
+    ],
+    "childOverridesWire": [
+      "C1;child:c1;2026-05-04;7;0,1,2;"
+    ],
+    "contactWindows": [
+      "9|15:00|19:00|dad"
+    ],
+    "contactWindowsWire": [
+      "9|15:00|19:00|dad"
+    ],
+    "dayOverrides": {},
+    "id": "model-current",
+    "lastDecision": null,
+    "lastModifiedAtMillis": 1777881600000,
+    "lastModifiedBy": "uidA",
+    "lastModifiedKind": "PATTERN",
+    "lastSwapDate": null,
+    "modelType": "week_on_week_off",
+    "momDayIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ],
+    "patternDays": 14,
+    "proposal": null,
+    "repeatYearly": true,
+    "seasonalLayers": [
+      "summer"
+    ],
+    "seasonalLayersWire": [
+      "L1;summer;0;2026-07-01;2026-08-31;2026-07-01;14;0,1,2,3,4,5,6;;Summer%202026"
+    ],
+    "startDate": "2026-05-04",
+    "unreadableChildOverrides": [],
+    "unreadableLayers": []
+  }
+}

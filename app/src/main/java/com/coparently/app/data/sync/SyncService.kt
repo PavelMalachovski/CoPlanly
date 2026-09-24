@@ -222,38 +222,10 @@ class SyncService @Inject constructor(
                 userId = userId,
                 partnerId = partnerId
             )
-            val eventData = mapOf(
-                "id" to entity.id,
-                "title" to entity.title,
-                "description" to entity.description,
-                "startDateTime" to entity.startDateTime.format(formatter),
-                "endDateTime" to entity.endDateTime?.format(formatter),
-                "eventType" to entity.eventType,
-                "parentOwner" to entity.parentOwner,
-                "isRecurring" to entity.isRecurring,
-                "recurrencePattern" to entity.recurrencePattern,
-                "recurrenceEndDate" to entity.recurrenceEndDate?.toString(),
-                "pickupConfirmedBy" to entity.pickupConfirmedBy,
-                "pickupConfirmedAt" to entity.pickupConfirmedAt?.format(formatter),
-                "createdAt" to entity.createdAt.format(formatter),
-                // The instant, as UTC text — the same wire form `toFirestoreMap()` writes (MON-4).
-                "updatedAt" to EventTimestamp.toWire(entity.updatedAtMillis),
-                "createdByFirebaseUid" to entity.createdByFirebaseUid,
-                "sharedWith" to audience,
-                "lastModifiedBy" to entity.lastModifiedBy,
-                "permissions" to entity.permissions,
-                "imageUrl" to entity.imageUrl,
-                "acceptance" to entity.acceptance,
-                "acceptedBy" to entity.acceptedBy,
-                "acceptedAt" to entity.acceptedAt?.format(formatter),
-                "isImportant" to entity.isImportant,
-                "friendParticipates" to (entity.friendParticipates ?: ""),
-                // Through `EventDocument` rather than converted here: that file is the one
-                // definition of the events wire format, and a second copy of this conversion is
-                // one more place for the schema to drift (CLAUDE.md item 5).
-                "forMembers" to EventDocument.storedMembers(entity.forMembersJson),
-                "familyId" to (entity.familyId ?: "")
-            )
+            // Through `EventDocument` rather than built here: that file is the one definition of
+            // the events wire format, and a second copy is one more place for the schema to drift
+            // (CLAUDE.md item 5). The wire-format contract tests run it on the JVM.
+            val eventData = EventDocument.uploadDocument(entity, audience)
 
             val result = firestoreEventDataSource.insertEvent(entity.id, eventData)
             if (result.isSuccess) {

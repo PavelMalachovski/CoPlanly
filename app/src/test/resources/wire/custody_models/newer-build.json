@@ -1,0 +1,166 @@
+{
+  "about": "A newer build's document: a contact window, a seasonal layer and a child schedule in formats this build cannot read (kept verbatim through a swap write, and through a pattern write for layers and children), a p2 plan citation, a swap in a state it does not know, and a new top-level key.",
+  "document": {
+    "childOverrides": [
+      "C1;child:c1;2026-05-04;7;0,1,2;",
+      "C2;child:c2;2026-05-04;7;0,1,2;;weekly"
+    ],
+    "contactWindows": [
+      "9|15:00|19:00|dad",
+      "3|15:00|19:00|grandma"
+    ],
+    "createdAt": "2026-03-01T09:00:00",
+    "dayOverrides": {
+      "2026-05-16": {
+        "decidedAt": "2026-05-05T09:30:00",
+        "decidedBy": "uidB",
+        "requestedAt": "2026-05-05T08:00:00",
+        "requestedBy": "uidA",
+        "status": "ACCEPTED",
+        "toParent": "dad"
+      },
+      "2026-05-23": {
+        "requestedAt": "2026-05-06T08:00:00",
+        "requestedBy": "uidB",
+        "status": "COUNTERED",
+        "toParent": "mom"
+      }
+    },
+    "handoverLocation": "school",
+    "id": "model-1",
+    "lastModifiedAt": "2026-03-15T09:00:00",
+    "lastModifiedBy": "uidA",
+    "lastModifiedKind": "SWAP",
+    "lastSwapDate": "2026-05-23",
+    "modelType": "week_on_week_off",
+    "momDayIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ],
+    "participants": [
+      "uidA",
+      "uidB"
+    ],
+    "patternDays": 14,
+    "proposal": {
+      "childOverrides": [
+        "C2;child:c2;2026-05-04;7;0,1,2;;weekly"
+      ],
+      "contactWindows": [],
+      "modelType": "week_on_week_off",
+      "momDayIndices": [
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13
+      ],
+      "patternDays": 14,
+      "proposedAt": "2026-05-06T10:00:00",
+      "proposedBy": "uidB",
+      "repeatYearly": true,
+      "seasonalLayers": [
+        "L1;summer;0;2026-07-01;2026-08-31;2026-07-01;14;0,1,2,3,4,5,6;;Summer%202026",
+        "L2;winter;0;2026-12-20;2027-01-03;2026-12-20;14;0,1,2,3,4,5,6;;;Winter;school-calendar"
+      ],
+      "startDate": "2026-03-02"
+    },
+    "proposalPlanCitation": "p2|care_weekday|0123456789abcdef0123",
+    "repeatYearly": true,
+    "seasonalLayers": [
+      "L1;summer;0;2026-07-01;2026-08-31;2026-07-01;14;0,1,2,3,4,5,6;;Summer%202026",
+      "L2;winter;0;2026-12-20;2027-01-03;2026-12-20;14;0,1,2,3,4,5,6;;;Winter;school-calendar"
+    ],
+    "startDate": "2026-03-02"
+  },
+  "notPreserved": {
+    "dayOverrides.2026-05-23": "a swap whose status this build does not know is dropped on read rather than guessed (FirestoreCustodyDataSource.toDayOverrides), so this build's next whole-document write loses it",
+    "handoverLocation": "this build writes the document back with set(), which replaces it: a top-level key it does not know is dropped. A newer build must not keep anything it cannot afford to lose in a new top-level key of a collection older builds rewrite"
+  },
+  "reads": {
+    "childOverrides": [
+      "c1"
+    ],
+    "childOverridesWire": [
+      "C1;child:c1;2026-05-04;7;0,1,2;",
+      "C2;child:c2;2026-05-04;7;0,1,2;;weekly"
+    ],
+    "contactWindows": [
+      "9|15:00|19:00|dad"
+    ],
+    "contactWindowsWire": [
+      "9|15:00|19:00|dad",
+      "3|15:00|19:00|grandma"
+    ],
+    "dayOverrides": {
+      "2026-05-16": "ACCEPTED"
+    },
+    "id": "model-1",
+    "lastDecision": null,
+    "lastModifiedAtMillis": 1773565200000,
+    "lastModifiedBy": "uidA",
+    "lastModifiedKind": "SWAP",
+    "lastSwapDate": "2026-05-23",
+    "modelType": "week_on_week_off",
+    "momDayIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ],
+    "patternDays": 14,
+    "proposal": {
+      "childOverrides": [],
+      "childOverridesWire": [
+        "C2;child:c2;2026-05-04;7;0,1,2;;weekly"
+      ],
+      "contactWindows": [],
+      "contactWindowsWire": [],
+      "momDayIndices": [
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13
+      ],
+      "patternDays": 14,
+      "planCitation": "p2|care_weekday|0123456789abcdef0123",
+      "planCitationQuestion": null,
+      "proposedBy": "uidB",
+      "seasonalLayers": [
+        "summer"
+      ],
+      "seasonalLayersWire": [
+        "L1;summer;0;2026-07-01;2026-08-31;2026-07-01;14;0,1,2,3,4,5,6;;Summer%202026",
+        "L2;winter;0;2026-12-20;2027-01-03;2026-12-20;14;0,1,2,3,4,5,6;;;Winter;school-calendar"
+      ]
+    },
+    "repeatYearly": true,
+    "seasonalLayers": [
+      "summer"
+    ],
+    "seasonalLayersWire": [
+      "L1;summer;0;2026-07-01;2026-08-31;2026-07-01;14;0,1,2,3,4,5,6;;Summer%202026",
+      "L2;winter;0;2026-12-20;2027-01-03;2026-12-20;14;0,1,2,3,4,5,6;;;Winter;school-calendar"
+    ],
+    "startDate": "2026-03-02",
+    "unreadableChildOverrides": [
+      "C2;child:c2;2026-05-04;7;0,1,2;;weekly"
+    ],
+    "unreadableLayers": [
+      "L2;winter;0;2026-12-20;2027-01-03;2026-12-20;14;0,1,2,3,4,5,6;;;Winter;school-calendar"
+    ]
+  }
+}

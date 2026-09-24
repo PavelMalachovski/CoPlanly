@@ -51,7 +51,6 @@ class EventRepositoryImpl @Inject constructor(
 ) : EventRepository {
 
     private val dateFormatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
-    private val dateOnlyFormatter = DateTimeFormatter.ISO_LOCAL_DATE
     private val gson = Gson()
 
     override fun getAllEvents(): Flow<List<Event>> {
@@ -432,52 +431,11 @@ class EventRepositoryImpl @Inject constructor(
     }
 
     /**
-     * Builds the Firestore document map for this event.
-     * Single source of truth for the remote schema.
+     * Builds the Firestore document map for this event — see [EventDocument.fromEvent], the single
+     * source of truth for the remote schema, where the wire-format contract tests can reach it.
      */
-    private fun Event.toFirestoreMap(creatorUid: String, audience: List<String>): Map<String, Any?> {
-        return mapOf(
-            "id" to id,
-            "title" to title,
-            "description" to (description ?: ""),
-            "startDateTime" to startDateTime.format(dateFormatter),
-            "endDateTime" to (endDateTime?.format(dateFormatter) ?: ""),
-            "eventType" to eventType,
-            "parentOwner" to parentOwner,
-            "isRecurring" to isRecurring,
-            "recurrencePattern" to (recurrencePattern ?: ""),
-            "recurrenceEndDate" to (recurrenceEndDate?.format(dateOnlyFormatter) ?: ""),
-            "pickupConfirmedBy" to (pickupConfirmedBy ?: ""),
-            "pickupConfirmedAt" to (pickupConfirmedAt?.format(dateFormatter) ?: ""),
-            "createdAt" to createdAt.format(dateFormatter),
-            // UTC, offset-free: the field keeps its name and type so an older build still parses
-            // it, and only the zone it expresses changed (MON-4, see `EventTimestamp`).
-            "updatedAt" to EventTimestamp.toWire(EventTimestamp.ofWallClock(updatedAt)),
-            "createdByFirebaseUid" to creatorUid,
-            "sharedWith" to audience,
-            "lastModifiedBy" to (lastModifiedBy ?: creatorUid),
-            "permissions" to permissions,
-            "imageUrl" to (imageUrl ?: ""),
-            "acceptance" to acceptance.name,
-            "acceptedBy" to (acceptedBy ?: ""),
-            "acceptedAt" to (acceptedAt?.format(dateFormatter) ?: ""),
-            "isImportant" to isImportant,
-            "friendParticipates" to (friendParticipates ?: ""),
-            // The relationship this event belongs to. It will replace `sharedWith` entirely:
-            // the rules read the family's members, so the audience stops being a copy carried
-            // on the document that can go stale (CLAUDE.md item 16). Both are written while the
-            // read rules still consult the old one.
-            "familyId" to (familyId ?: ""),
-            // Who the event is about, as prefixed strings. An empty array is "the whole family",
-            // never an absent key: the read side distinguishes neither, but a document whose
-            // fields are iterated should not have a hole where a schema field belongs.
-            "forMembers" to FamilyMemberRef.store(forMembers),
-            // Round-tripped, not dropped: omitting it here meant the download half of a full
-            // sync REPLACEd the creator's own row with a map that had no reminder, wiping the
-            // value and (on the next update) cancelling the scheduled WorkManager reminder.
-            "reminderMinutes" to reminderMinutes
-        )
-    }
+    private fun Event.toFirestoreMap(creatorUid: String, audience: List<String>): Map<String, Any?> =
+        EventDocument.fromEvent(this, creatorUid, audience)
 
     /**
      * Maps EventEntity to Event domain model.

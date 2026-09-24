@@ -1,0 +1,49 @@
+{
+  "about": "ExpenseRepositoryImpl.addExpense's document: shared, priced at an agreed split, tagged.",
+  "document": {
+    "amount": 1250.5,
+    "category": "ACTIVITIES",
+    "createdAt": "2026-05-10T12:00:00",
+    "createdByFirebaseUid": "uidA",
+    "currency": "CZK",
+    "date": "2026-05-10",
+    "familyId": "uidA__uidB",
+    "forMembers": [
+      "child:c1",
+      "pet:p1",
+      "future:xyz"
+    ],
+    "id": "exp-current-1",
+    "notes": "Spring term",
+    "paidBy": "uidA",
+    "receiptUrl": "receipts/uidA/exp-current-1.jpg",
+    "splitBasisPoints": 6000,
+    "splitBetween": [
+      "uidA",
+      "uidB"
+    ],
+    "title": "Swimming course"
+  },
+  "reads": {
+    "amount": 1250.5,
+    "category": "ACTIVITIES",
+    "createdByFirebaseUid": "uidA",
+    "currency": "CZK",
+    "date": "2026-05-10",
+    "deleted": false,
+    "familyId": "uidA__uidB",
+    "forMembers": [
+      "child:c1",
+      "pet:p1",
+      "future:xyz"
+    ],
+    "id": "exp-current-1",
+    "paidBy": "uidA",
+    "splitBasisPoints": 6000,
+    "splitBetween": [
+      "uidA",
+      "uidB"
+    ],
+    "title": "Swimming course"
+  }
+}

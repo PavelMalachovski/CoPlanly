@@ -1,0 +1,49 @@
+{
+  "about": "A child record from a build before the medical profile, photos, guests and familyId, with a naive updatedAt (read as UTC). The write adds the missing keys and loses nothing.",
+  "document": {
+    "activities": [],
+    "allergies": [
+      "peanuts"
+    ],
+    "childName": "Anya",
+    "createdAt": "2026-03-01T09:30:00",
+    "createdByFirebaseUid": "uidA",
+    "dateOfBirth": "2019-04-02T00:00:00",
+    "emergencyContacts": [],
+    "id": "child-1",
+    "lastModifiedBy": "uidA",
+    "medicalNotes": "Asthma",
+    "medications": [
+      {
+        "dosage": "2 puffs",
+        "frequency": "as needed",
+        "name": "Ventolin",
+        "notes": null
+      }
+    ],
+    "schoolInfo": null,
+    "sharedWith": [
+      "uidA",
+      "uidB"
+    ],
+    "updatedAt": "2026-03-01T10:00:00"
+  },
+  "reads": {
+    "allergies": [
+      "peanuts"
+    ],
+    "childName": "Anya",
+    "createdByFirebaseUid": "uidA",
+    "dateOfBirth": "2019-04-02T00:00:00",
+    "deleted": false,
+    "familyId": null,
+    "guests": [],
+    "id": "child-1",
+    "intolerances": [],
+    "medications": [
+      "Ventolin"
+    ],
+    "school": null,
+    "updatedAtMillis": 1772359200000
+  }
+}
