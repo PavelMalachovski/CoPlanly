@@ -93,6 +93,16 @@ const NON_R8_RUNTIME = /^(app\/src\/main\/res\/|app\/src\/test\/|app\/src\/andro
 const NON_WEB = /^(docs\/|\.cursor\/|[^/]*\.md$|\.gitignore$|LICENSE$|app\/|build\.gradle\.kts$|settings\.gradle\.kts$|gradle\.properties$|gradle\/|gradlew(\.bat)?$)/;
 
 /**
+ * Paths no CI job reads: the UI tour's request file, its workflow and its scripts. The tour is a
+ * separate, manual workflow (`.github/workflows/ui-tour.yml`); asking for one — which is a commit
+ * to `.github/ui-tour-request` — must not cost a pull request a full CI run. They are dropped
+ * before any other rule looks, so a diff of nothing else runs nothing, and one with anything else
+ * is decided by that. The tour's *tests* live in `app/src/androidTest/` and are not here: they
+ * compile in every Android job, and the e2e job excludes them by name.
+ */
+const UI_TOUR_ONLY = /^(\.github\/ui-tour-request$|\.github\/workflows\/ui-tour\.yml$|tools\/ui-tour\/)/;
+
+/**
  * The emulator legs. API 30 always runs when Android does; the other two by the rule above.
  *
  * `record` turns on tools/with-screen-recording.sh's video, and only API 26 has it. On the API 30
@@ -121,13 +131,20 @@ function everything() {
   return { android: true, e2e: true, screenshots: true, upgrade: true, matrix: FULL_MATRIX, r8runtime: true, web: true };
 }
 
+/** The answer for a diff no job reads. */
+function nothing() {
+  return { android: false, e2e: false, screenshots: false, upgrade: false, matrix: [LEG_30], r8runtime: false, web: false };
+}
+
 /**
  * Decides the jobs for [paths], the files a pull request changes. An empty list is treated as
  * unknown and runs everything.
  */
 function decide(paths) {
-  const changed = paths.map((p) => p.trim()).filter(Boolean);
-  if (changed.length === 0) return everything();
+  const all = paths.map((p) => p.trim()).filter(Boolean);
+  if (all.length === 0) return everything();
+  const changed = all.filter((p) => !UI_TOUR_ONLY.test(p));
+  if (changed.length === 0) return nothing();
 
   const build = changed.some((p) => BUILD.test(p));
   const android = changed.some((p) => !NON_ANDROID.test(p));
@@ -169,4 +186,4 @@ if (require.main === module) {
   }
 }
 
-module.exports = { decide, format, everything, FULL_MATRIX, LEG_30 };
+module.exports = { decide, format, everything, nothing, FULL_MATRIX, LEG_30 };

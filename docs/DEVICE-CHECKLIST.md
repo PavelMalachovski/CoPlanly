@@ -18,6 +18,13 @@ hand. The same comment links the PR's debug APK — a **UI-only** build, because
 account, build locally as §1 describes. If you renumber a section, update `RULES` in that script
 in the same commit; its test in the CI `invariants` job fails otherwise.
 
+**To look at whole screens without a phone**, use the UI tour rather than this script: touch
+`.github/ui-tour-request` on a branch and push, and `.github/workflows/ui-tour.yml` photographs
+every main screen of the real app on an emulator — signed in, paired, with a family's worth of
+data — in light, dark and Russian at font 1.3, and commits the PNGs and an `index.html` gallery to
+the branch `ui-tour/<branch>` (`git fetch` it). It shows what is drawn; it proves nothing this
+checklist asks for, and a skipped screen is listed in each variant's `manifest.json`.
+
 **Markers**
 
 | Marker | Means |

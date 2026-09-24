@@ -1,0 +1,188 @@
+# The UI tour: full-screen screenshots of the real app, with a realistic family in it, for a design
+# or UX review by somebody who has no phone — or who can only `git fetch`.
+#
+# **What it does.** Builds the debug app and test APKs, boots an API 30 emulator with a Pixel 6
+# screen (1080×2400), starts the Firebase emulators, and runs `UiTourTest` and
+# `UiTourOnboardingTest` (app/src/androidTest/.../e2e/) three times — light/English/font 1.0,
+# dark/English/font 1.0, light/Russian/font 1.3 — through `tools/ui-tour/run-ui-tour.sh`. Each run
+# signs Alice up on the Auth emulator, pairs her with Bob through the real callable, seeds a few
+# weeks of family life through the production repositories (custody with contact afternoons and an
+# autumn break, Emma, Leo and Max, events, expenses in CZK and EUR, budgets, a parenting plan, chat,
+# a vault document, a pending swap and change request) and photographs every main screen through the
+# app's own navigation. A screen the tour cannot reach is listed as skipped in `manifest.json`.
+#
+# **Where the images land.** A single fresh commit on the branch `ui-tour/<source branch, with "/"
+# replaced by "-">` — `ui-tour/<variant>/NN_<screen>.png`, each variant's `manifest.json`, and an
+# `index.html` gallery with the variants side by side — force-pushed, because the branch is this
+# workflow's alone and only its latest tour matters. The same files are the `ui-tour` artifact.
+#
+#   git fetch origin ui-tour/claude-my-branch && git checkout FETCH_HEAD -- ui-tour index.html
+#
+# **Not part of CI.** Nothing gates on it and it never writes to the branch it ran for. Two ways to
+# ask for it, as with regenerate.yml:
+#
+#   * `workflow_dispatch` — once this file is on the default branch.
+#   * touching `.github/ui-tour-request` — works on any branch, merged or not: commit any change to
+#     that file and the tour runs on that branch.
+#
+# It cannot loop: its own push goes to `ui-tour/**`, which is excluded below, touches only tour
+# files, and is made with the workflow's token, which starts no workflow anyway.
+name: UI tour
+
+on:
+  workflow_dispatch:
+  push:
+    branches-ignore:
+      - 'ui-tour/**'
+    paths:
+      - '.github/ui-tour-request'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ui-tour-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tour:
+    name: UI tour (three variants)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21 (Firebase emulators)
+        id: jdk21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: temurin
+
+      - name: Set up JDK 17 (Gradle)
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: temurin
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: |
+            functions/package-lock.json
+            firestore-tests/package-lock.json
+
+      - name: Install the Cloud Functions and the Firebase CLI
+        run: |
+          npm ci --prefix functions
+          npm ci --prefix firestore-tests
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+
+      # Built while the emulator boots (tools/ci-background-build.sh); the tour script's first
+      # line waits for it.
+      - name: Start building the APKs in the background
+        run: bash tools/ci-background-build.sh start
+
+      - name: Cache the Firebase emulators
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/firebase/emulators
+          key: firebase-emulators-${{ hashFiles('firestore-tests/package-lock.json') }}
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      # Decided by the status file, as in ci.yml's emulator jobs: the script stops the emulator
+      # itself (tools/stop-emulator.sh) so the action's own shutdown has nothing to hang on.
+      - name: Take the tour
+        id: tour
+        timeout-minutes: 45
+        continue-on-error: true
+        uses: reactivecircus/android-emulator-runner@v2
+        env:
+          FIREBASE_JAVA_HOME: ${{ steps.jdk21.outputs.path }}
+          STATUS_FILE: ${{ runner.temp }}/ui-tour-status
+          UI_TOUR_OUT: build/ui-tour-site
+        with:
+          api-level: 30
+          arch: x86_64
+          target: google_apis
+          profile: pixel_6
+          ram-size: 4096M
+          disk-size: 6000M
+          force-avd-creation: false
+          disable-animations: true
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: bash tools/ci-background-build.sh wait && bash tools/ui-tour/run-ui-tour.sh; status=$?; echo "$status" > "$STATUS_FILE"; bash tools/stop-emulator.sh; exit $status
+
+      - name: Upload the tour
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-tour
+          path: build/ui-tour-site/
+          if-no-files-found: ignore
+          retention-days: 14
+
+      # One fresh commit on ui-tour/<branch>: the images, the manifests and the gallery — never the
+      # logs, and never anything on the branch the tour ran for.
+      - name: Publish to the ui-tour branch
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_REF: ${{ github.ref_name }}
+          SOURCE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          site=build/ui-tour-site
+          if [ -z "$(find "$site/ui-tour" -name '*.png' 2>/dev/null | head -n 1)" ]; then
+            echo "::error::The tour produced no screenshot; nothing to publish."
+            exit 1
+          fi
+          branch="ui-tour/${SOURCE_REF//\//-}"
+          short="${SOURCE_SHA:0:7}"
+          export UI_TOUR_SOURCE="$SOURCE_REF @ $short"
+          node tools/ui-tour/gallery.js "$site" light-en-100 dark-en-100 light-ru-130
+          publish="$RUNNER_TEMP/ui-tour-publish"
+          rm -rf "$publish"
+          mkdir -p "$publish"
+          cp -R "$site/ui-tour" "$site/index.html" "$publish/"
+          cd "$publish"
+          git init -q
+          git checkout -q -b "$branch"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "chore: UI tour of $SOURCE_REF at $short"
+          git push --force "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:refs/heads/$branch"
+          {
+            echo "### UI tour"
+            echo ""
+            echo "Branch \`$branch\` — \`git fetch origin $branch\`, then open \`index.html\`."
+            echo ""
+            echo "$(find ui-tour -name '*.png' | wc -l | tr -d ' ') screenshots from \`$SOURCE_REF\` at \`$short\`."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: The tour finished
+        if: always()
+        env:
+          STATUS_FILE: ${{ runner.temp }}/ui-tour-status
+        run: |
+          if [ ! -f "$STATUS_FILE" ]; then
+            echo "::error::The tour did not finish: the emulator step died or timed out first. Whatever it captured was still published."
+            exit 1
+          fi
+          status=$(cat "$STATUS_FILE")
+          if [ "$status" != "0" ]; then
+            echo "::error::The tour script exited with status $status — see the step's log and the artifact's logs/."
+            exit 1
+          fi

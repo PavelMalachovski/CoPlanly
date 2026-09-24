@@ -1,5 +1,6 @@
 package com.coparently.app.e2e
 
+import android.content.Context
 import android.util.Log
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.hasAnyAncestor
@@ -128,6 +129,20 @@ abstract class AliceOnScreenTest {
     private var scenario: ActivityScenario<MainActivity>? = null
     private var savedConsent: String? = null
 
+    /**
+     * Whether `@Before` marks Alice's onboarding done and waits for Home. `UiTourOnboardingTest`
+     * turns it off to open the app on the first-run wizard instead.
+     */
+    protected open val opensOnHome: Boolean = true
+
+    /**
+     * Where [string] reads the app's text from. The application context by default; a test that
+     * switches the app's language (the UI tour) points it at that language, because on API 32 and
+     * below AppCompat's per-app locale reaches activities only, not the application context.
+     */
+    protected open val strings: Context
+        get() = context
+
     /** Alice's uid, once `@Before` has signed her up. */
     protected lateinit var aliceUid: String
 
@@ -137,7 +152,7 @@ abstract class AliceOnScreenTest {
 
     @Before
     fun startAliceOnScreenAndBobBesideHer() {
-        EmulatorEnvironment.assumeEmulators()
+        assumeRunnable()
         initializeWorkManager()
         hiltRule.inject()
         savedConsent = encryptedPreferences.getString(PreferenceKeys.TELEMETRY_CONSENT, null)
@@ -156,19 +171,33 @@ abstract class AliceOnScreenTest {
                     .first { it.partner.id == phone.uid }
             }
             val row = checkNotNull(userDao.getUserById(aliceUid)) { "ensureProfile wrote no Room row" }
-            userDao.updateUser(row.copy(onboardingCompletedAt = "2026-09-01T00:00:00"))
+            if (opensOnHome) userDao.updateUser(row.copy(onboardingCompletedAt = "2026-09-01T00:00:00"))
             // "No": nothing in a test should switch collection on.
             preferencesRepository.setTelemetryConsent(TelemetryConsent.DENIED)
         }
         chatMirror.start()
+        beforeLaunch()
         step("before: launch MainActivity")
 
         composeTestRule.mainClock.autoAdvance = false
         scenario = ActivityScenario.launch(MainActivity::class.java)
-        composeTestRule.pumpUntil("Home with the bottom bar", HOME_TIMEOUT_MS) { exists(bottomBar) }
+        if (opensOnHome) {
+            composeTestRule.pumpUntil("Home with the bottom bar", HOME_TIMEOUT_MS) { exists(bottomBar) }
+        }
         composeTestRule.settle()
-        step("before: Home is up")
+        step("before: the app is up")
     }
+
+    /**
+     * Skips the test unless this run can do it: the emulator host by default, and the UI tour's own
+     * switch on top of it for the tour. Called first in `@Before`, before anything is signed up.
+     */
+    protected open fun assumeRunnable() {
+        EmulatorEnvironment.assumeEmulators()
+    }
+
+    /** Runs after Alice is signed up and paired, just before `MainActivity` starts: theme, language. */
+    protected open fun beforeLaunch() = Unit
 
     @After
     fun tearDown() {
@@ -221,9 +250,9 @@ abstract class AliceOnScreenTest {
         tap(hasContentDescription(string(R.string.chat_send)) and hasClickAction())
     }
 
-    /** The app's own string, in whatever language the emulator runs. */
+    /** The app's own string, in the language [strings] reads — the emulator's, unless a test switched it. */
     protected fun string(id: Int, vararg args: Any): String =
-        if (args.isEmpty()) context.getString(id) else context.getString(id, *args)
+        if (args.isEmpty()) strings.getString(id) else strings.getString(id, *args)
 
     /** A few characters that make a title or a message unique to this run. */
     protected fun shortId(): String = UUID.randomUUID().toString().take(SHORT_ID_LENGTH)

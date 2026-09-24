@@ -450,6 +450,26 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   at that moment. Trigger it with `workflow_dispatch` from `main`, or, on a branch that has not
   merged, by touching `.github/regenerate-request`.
 
+  **A third, also not CI: the UI tour** (`.github/workflows/ui-tour.yml`, September 2026) — full
+  device screenshots of every main screen of the real app, for a design review by someone without
+  a phone. `e2e/UiTourTest` and `UiTourOnboardingTest` are `AliceOnScreenTest`s that assert
+  nothing: `UiTourSeed` fills both phones with a realistic family through the production
+  repositories (custody with contact windows and a seasonal layer, Emma, Leo and Max, events,
+  expenses in two currencies, budgets, plan, chat, a vault document, Bob's pending swap and
+  request), `UiTourDriver` walks the app's own navigation by string resource, and `UiTourCamera`
+  saves `UiAutomation.takeScreenshot()` PNGs plus a `manifest.json` in which a screen it could not
+  reach is **skipped with its reason, never a failure**. `tools/ui-tour/run-ui-tour.sh` runs them
+  with `am instrument` (not Gradle, which uninstalls the app and its files) three times on an API
+  30 Pixel 6 emulator — `light-en-100`, `dark-en-100`, `light-ru-130`, the device's font scale set
+  between runs — and `tools/ui-tour/gallery.js` writes the side-by-side `index.html`. The workflow
+  force-pushes one fresh commit to `ui-tour/<branch, "/" → "-">` (and uploads the `ui-tour`
+  artifact); it never writes to the branch it ran for. Trigger it with `workflow_dispatch`, or by
+  touching `.github/ui-tour-request` on any branch — a change to that file, the workflow or
+  `tools/ui-tour/` alone runs no CI job (`tools/ci-changes.js`). Two things to keep: the tour
+  needs `-e coplanlyUiTour true` on top of the emulator host (`EmulatorEnvironment.assumeUiTour`),
+  and `tools/e2e/run-two-parent-tests.sh` excludes its classes by name — skipped, they would fail
+  the `e2e` job's no-skip check. A new screen gets a `camera.shot` in the tour.
+
   Still run the build locally before pushing — CI is a backstop, not a substitute.
   After switching branches, prefer `clean` — stale Hilt/KSP generated sources from another branch cause
   errors like "Could not find class file for '…Application'".

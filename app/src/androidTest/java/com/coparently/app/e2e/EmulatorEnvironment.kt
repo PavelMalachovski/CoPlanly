@@ -60,6 +60,21 @@ object EmulatorEnvironment {
      */
     const val HOST_ARGUMENT = "coplanlyEmulatorHost"
 
+    /**
+     * The instrumentation argument that asks for the UI tour (`UiTourTest`, `UiTourOnboardingTest`):
+     * `-e coplanlyUiTour true`, on top of [HOST_ARGUMENT]. Only `.github/workflows/ui-tour.yml`
+     * passes it (through `tools/ui-tour/run-ui-tour.sh`); the `e2e` job does not, so the tour never
+     * runs there — and `tools/e2e/run-two-parent-tests.sh` excludes its classes by name, so they do
+     * not report as skipped either, which that job counts as a failure.
+     */
+    const val UI_TOUR_ARGUMENT = "coplanlyUiTour"
+
+    /**
+     * The instrumentation argument naming the tour's variant, `<theme>-<language>-<font scale %>`,
+     * such as `light-en-100` or `light-ru-130`. See `UiTourVariant`.
+     */
+    const val UI_TOUR_VARIANT_ARGUMENT = "coplanlyUiTourVariant"
+
     private const val HTTP_OK = 200
     private const val HTTP_NOT_FOUND = 404
     private const val CONNECT_TIMEOUT_MS = 10_000
@@ -123,11 +138,18 @@ object EmulatorEnvironment {
      * with no result and no trace; this turns that into a failure that names the line.
      */
     fun testTimeout(): Timeout = Timeout.builder()
-        .withTimeout(TEST_TIMEOUT_MINUTES, TimeUnit.MINUTES)
+        .withTimeout(if (uiTour) UI_TOUR_TIMEOUT_MINUTES else TEST_TIMEOUT_MINUTES, TimeUnit.MINUTES)
         .withLookingForStuckThread(true)
         .build()
 
     private const val TEST_TIMEOUT_MINUTES = 3L
+
+    /** One UI tour walks forty-odd screens after seeding a family; three minutes is one test's worth. */
+    private const val UI_TOUR_TIMEOUT_MINUTES = 30L
+
+    /** Whether this run was asked for the UI tour ([UI_TOUR_ARGUMENT]). */
+    val uiTour: Boolean
+        get() = InstrumentationRegistry.getArguments().getString(UI_TOUR_ARGUMENT) == "true"
 
     /** The logcat tag of [step] and of the thread dump; the e2e job prints both on a failure. */
     const val LOG_TAG = "E2E"
@@ -165,6 +187,15 @@ object EmulatorEnvironment {
             "No -e $HOST_ARGUMENT: the two-parent tests need the Firebase emulators",
             host != null
         )
+    }
+
+    /**
+     * Skips the calling test unless this run has the emulators **and** asked for the UI tour — so
+     * an ordinary e2e or instrumented run never spends half an hour taking screenshots.
+     */
+    fun assumeUiTour() {
+        assumeEmulators()
+        assumeTrue("No -e $UI_TOUR_ARGUMENT true: the UI tour runs only when asked for", uiTour)
     }
 
     /** [host], for code that only runs after [assumeEmulators] has passed. */
