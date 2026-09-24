@@ -81,9 +81,9 @@ data class UiTourVariant(val name: String, val dark: Boolean, val language: Stri
  *
  * Each [shot] is a **full device screenshot** (`UiAutomation.takeScreenshot`): status and navigation
  * bars, dialogs, bottom sheets and the keyboard included, which a Compose node capture cannot see.
- * Files go to `<external files dir>/ui-tour/<variant>/NN_<screen>.png` —
- * `/sdcard/Android/data/app.coplanly/files/ui-tour/…` on the device, which the app may write
- * without a permission and `adb pull` may read on API 30 (`tools/ui-tour/run-ui-tour.sh` pulls it).
+ * Files go to `<files dir>/ui-tour/<variant>/NN_<screen>.png`, the app's internal storage, which
+ * `tools/ui-tour/run-ui-tour.sh` streams out with `run-as` (the debug build is debuggable). The
+ * external app-specific directory was tried first: on API 30 neither `adb pull` nor `run-as` read it.
  *
  * **A screen that cannot be reached is skipped, never fatal.** [shot] runs its preparation, and any
  * failure — a node that never appeared, a tap that threw — is written to the manifest's `skipped`
@@ -107,10 +107,9 @@ class UiTourCamera(
 ) {
     private val context = InstrumentationRegistry.getInstrumentation().targetContext
     private val variant = UiTourVariant.current()
-    private val directory = File(
-        checkNotNull(context.getExternalFilesDir(null)) { "No external files directory" },
-        "ui-tour/${variant.name}"
-    ).apply { mkdirs() }
+    // The app's internal files dir, streamed out by `run-as` (tools/ui-tour/run-ui-tour.sh): on API 30
+    // neither `adb pull` nor `run-as` could read the external app-specific directory.
+    private val directory = File(context.filesDir, "ui-tour/${variant.name}").apply { mkdirs() }
     private var number = firstNumber - 1
     private val captured = JSONArray()
     private val skipped = JSONArray()

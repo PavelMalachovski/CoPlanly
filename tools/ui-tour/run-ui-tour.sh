@@ -17,8 +17,8 @@
 #        - sets the device's night mode and font scale (`cmd uimode night`, `font_scale`),
 #        - `am instrument`s UiTourTest and UiTourOnboardingTest with `-e coplanlyUiTour true` and
 #          `-e coplanlyUiTourVariant <variant>` (the test switches the app's theme and language),
-#        - pulls /sdcard/Android/data/app.coplanly/files/ui-tour/<variant>/ — the PNGs and
-#          manifest.json UiTourCamera writes there, which adb may read on API 30;
+#        - streams files/ui-tour/<variant>/ out of the app's data dir with `run-as` — the PNGs
+#          and manifest.json UiTourCamera writes there (adb pull cannot read an app's files);
 #   3. writes index.html (tools/ui-tour/gallery.js).
 #
 # `am instrument` is used rather than connectedDebugAndroidTest because Gradle uninstalls the app
@@ -46,7 +46,7 @@ OUT="${UI_TOUR_OUT:-build/ui-tour-site}"
 VARIANTS="${UI_TOUR_VARIANTS:-light-en-100 dark-en-100 light-ru-130}"
 HOST="${COPLANLY_EMULATOR_HOST:-10.0.2.2}"
 CLASSES="com.coparently.app.e2e.UiTourTest,com.coparently.app.e2e.UiTourOnboardingTest"
-REMOTE="/sdcard/Android/data/$APP_ID/files/ui-tour"
+REMOTE="files/ui-tour"  # relative to the app's data dir, which is where run-as starts
 
 fail() {
   echo "::error::$*"
@@ -111,16 +111,13 @@ for variant in $VARIANTS; do
     "$instrumentation" | tr -d '\r' | tee "$OUT/logs/$variant-instrument.txt" || true
   adb logcat -d -v time >"$OUT/logs/$variant-logcat.txt" 2>&1 || true
   rm -rf "${OUT:?}/ui-tour/$variant"
-  # On API 30 the shell user may not read another app's /sdcard/Android/data (adb pull answers
-  # "Permission denied"), so the files are streamed out as the app itself: the debug build is
-  # debuggable, which is what `run-as` needs, and the app's uid may read its own external dir.
+  # The tour writes into the app's internal files dir (UiTourCamera), which only the app's own uid
+  # may read; the debug build is debuggable, so `run-as` streams it out as that uid.
   mkdir -p "$OUT/ui-tour"
-  if ! adb pull "$REMOTE/$variant" "$OUT/ui-tour/" 2>/dev/null; then
-    rm -rf "${OUT:?}/ui-tour/$variant"
-    if ! adb exec-out run-as "$APP_ID" tar -cf - -C "$REMOTE" "$variant" | tar -xf - -C "$OUT/ui-tour/" \
-      || [ -z "$(find "$OUT/ui-tour/$variant" -name '*.png' 2>/dev/null | head -n 1)" ]; then
-      echo "::warning::Nothing to pull for $variant from $REMOTE/$variant — see logs/$variant-logcat.txt"
-    fi
+  adb exec-out run-as "$APP_ID" tar -cf - -C "$REMOTE" "$variant" 2>"$OUT/logs/$variant-pull.txt" \
+    | tar -xf - -C "$OUT/ui-tour/" 2>>"$OUT/logs/$variant-pull.txt" || true
+  if [ -z "$(find "$OUT/ui-tour/$variant" -name '*.png' 2>/dev/null | head -n 1)" ]; then
+    echo "::warning::Nothing pulled for $variant from $REMOTE/$variant — see logs/$variant-pull.txt"
   fi
   echo "::endgroup::"
   echo "::group::logcat — $variant: tour steps, skips, crashes"
