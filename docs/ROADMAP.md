@@ -77,7 +77,7 @@ invocation is yours.
 | --- | --- | --- | --- |
 | **M-5** | Multi-family cleanup: delete `partnerId`, `User.role`, `Event.sharedWith`, `isPartnerOf` — **after** the ops steps in REL-3 | P2 | M |
 | **CQ-17** | WorkManager moved; the Calendar client pair was tried in PR #101 and reverted (it splits Firestore's gRPC family under R8). Pinning gRPC to what the Firebase BoM resolves needs Google Maven (`dl.google.com`), which cloud sessions cannot reach — so the next attempt is a machine with an SDK (`./gradlew :app:dependencies`), then a device | P3 | S |
-| **MON-2** | Market facts checked (23 Sep 2026): **app2us has an Android build**; left: mediator count, ARPU, Facebook groups, app2us price on a phone | P0 | S |
+| **MON-2** | Market facts checked (23 and 24 Sep 2026): **app2us has an Android build**, ~309 registered mediators (half in Prague), ~12.5k divorces a year with children, 27.4% alternating care; left: the family-mediator subset, ARPU, closed Facebook groups, app2us price on a phone | P0 | S |
 | **MON-3** | The export ships, ungated; left: a PDF read on a device, and the paywall with MON-11 | P2 | S |
 | **MON-4** | **Built**, `Event.updatedAt`'s compared instant included (schema 39, `39.json` committed); left: the deploy in 💻 | P1 | — |
 | **MON-5** | The plan ships; swapping in the Ministry's own wording needs the form itself | P1 | S |
@@ -1350,6 +1350,56 @@ The original list, in order of how much each answer moves the plan (audit §10.7
 5. Czech mobile ARPU by country (only a global Android figure was available).
 6. Current single-parent household numbers — the figure found (~175,700) is from 2015.
 7. Czech Facebook groups: closed groups are not indexed and need manual search. *(yours)*
+
+**Checked again 24 September 2026** (cloud session; every primary page still refused by the egress
+policy — csu.gov.cz, mediace.justice.cz, amcr.cz, ceska-justice.cz, facebook.com — so "index" means
+the page is in the search index stating the figure, not that it was opened).
+
+**1. Family mediators.** The register reports **about 309 active registered mediators, 153 of them
+seated in Prague** (next: Brno-město, 27) — mediace.justice.cz/mapa-sidel-zapsanych-mediatoru/
+(index; the snapshot date is not shown). Česká justice (Aug 2025) puts the profession at "roughly
+three hundred", with about a tenth suspended or ended in three years; older articles say ~400
+(ceska-justice.cz/2025/08/prvni-setkani-u-mediatora-zdrazi-na-1000-korun-za-hodinu/, index). From
+1 Jan 2026 the court-ordered first meeting pays 1,000 CZK/hour (was 400). **How many carry the
+family-mediation specialisation is still not found.** The register has that field (a separate
+exam, 5,000 CZK fee), but no index snippet counts it; the audit's "~25" stays unverified. No member
+count was found for the Asociace mediátorů ČR. *So the mediator channel (MON-9) is roughly 300
+people in total, half in Prague; the family subset needs the register's filter, opened on a machine.*
+
+**2. Co-parenting app pricing** (§10.10 of `AUDIT-2026-08.md` already has AppClose, TalkingParents,
+OFW, CXC, Fayr, Cozi; additions only):
+- **app2us: 149 CZK/month, 1,490 CZK/year ("12 months for the price of 11")**, now attributed by
+  the index to the app2us.cz home page — which resolves §10.10 row 4's missing attribution. Still
+  worth one look on a phone before quoting it publicly.
+- **2houses:** $169.99/year per family, one subscription covers both parents, 14-day trial
+  (2houses.com/en/pricing, index); one secondary source (a competitor's blog) gives €5.99/month for
+  Europe — the European price is still conflicting.
+- **OurFamilyWizard Essentials:** $149.99/year **per parent** ($299.98 per family), agreeing with
+  §10.10 row 17 (secondary).
+- **Czech ARPU: still not found** — Statista's and Sensor Tower's country data are paywalled.
+
+**3. Czech and Slovak Facebook communities.** No *group* on střídavá péče is indexed (closed groups
+are not crawled — still manual). Public pages: "Klub svobodných matek" ~20,900 followers; "Unie
+otců" ~2,400 likes; SK "Iniciatíva za vymazaných rodičov" 26,000+ likes; SK "Striedavá
+starostlivosť" and "Otcovia.sk" with no count shown (all index). They are advocacy pages, and the
+fathers' and mothers' camps are split — worth knowing before choosing where to announce.
+
+**4. Czech demographics.**
+- **2025: 21.2k divorces (+2%); 59.0% with at least one minor child (≈12.5k); at least 20.3k
+  children affected** (csu.gov.cz/rychle-informace/pohyb-obyvatelstva-rok-2025, index).
+- 2024: 20,796 divorces, **12,030 with minor children** (57.8%), 19.3k children, 1.60 children per
+  divorce with children (csu.gov.cz, index).
+- These count **marriages only**; unmarried parents (roughly half of Czech births) separate through
+  the custody courts and are not in this figure, so the real yearly inflow is larger.
+- **Care decisions (Ministry of Justice yearbook 2024, via secondary sites):** both parents
+  (alternating/joint) **5.2% (2012) → 27.4% (2024)**; mother alone **86.6% → 64.5%**; 2022 was 71.4%
+  mother, 20.2% alternating — which resolves §10.10 row 25 ("20.2%" is the 2022 figure). Since
+  1 Jan 2026 (zákon 268/2025 Sb.) courts no longer name custody categories, so this series may stop
+  being comparable after 2025.
+
+**Still left (not doable from the cloud):** the family-mediator count via the register's filter;
+app2us's price seen on a phone; Czech app ARPU (paid data); closed Facebook groups by manual search;
+the unmarried-parents custody figure (likely in the justice yearbook's opatrovnické statistics).
 
 ### MON-3 · **SHIPPED, UNGATED** · P1 · M · Export to PDF/CSV — the first paid feature
 
