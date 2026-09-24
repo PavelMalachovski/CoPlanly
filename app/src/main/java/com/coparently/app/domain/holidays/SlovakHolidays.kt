@@ -22,15 +22,16 @@ import java.time.LocalDate
  * Only days off are drawn. A state holiday that is a working day — 28 October among them — is not
  * a day a parent plans a handover around, and drawing it would say otherwise.
  *
- * **School vacations: the nationwide ones, as the ministry published them** (MŠVVaM SR,
- * "Termíny prázdnin", per school year). They are not computable, so they are a dated table,
- * [vacations], from school year 2025/26 to the last one published — the summer of 2028 at the
- * dataset commit the fixture pins. Two things are deliberately missing. The **spring holidays**
- * are set per region (kraj) in three staggered weeks, and the app has no Slovak region, so they
- * are left out — the trade [CzechHolidays] makes for its district-dependent spring break. And the
- * one-day **half-year holiday** (polročné prázdniny) is not in the source dataset, so it is not
- * drawn rather than typed from memory. `SchoolVacationReferenceTest` holds the table to the
- * fixture `tools/generate-school-vacation-fixture.py` writes from the OpenHolidays dataset.
+ * **School vacations, as the ministry published them** (MŠVVaM SR, "Termíny prázdnin", per
+ * school year). They are not computable, so they are a dated table, [vacations], from school year
+ * 2025/26 to the last one published — the summer of 2028 at the dataset commit the fixture pins.
+ * The **spring holidays** are set per region (kraj) in three staggered weeks, so this object —
+ * the calendar of a parent who has not named a kraj — leaves them out rather than guessing the
+ * week, and [forRegion] adds the kraj's own from [SLOVAK_SPRING_VACATIONS] (see [SlovakRegion]).
+ * The one-day **half-year holiday** (polročné prázdniny) is not in the source dataset, so it is
+ * not drawn rather than typed from memory. `SchoolVacationReferenceTest` holds the nationwide
+ * table and every kraj's to the fixture `tools/generate-school-vacation-fixture.py` writes from
+ * the OpenHolidays dataset.
  *
  * Names and dates are the Python `holidays` library's (v0.105), and `HolidayReferenceTest` holds
  * this table to it for every year of its fixture (2020–2035). Earlier years are not modelled —
@@ -126,4 +127,32 @@ object SlovakHolidays : HolidayProvider {
 
     override fun schoolVacations(year: Int): List<Pair<ClosedRange<LocalDate>, Pair<String, String>>> =
         vacations.overlapping(year)
+
+    override val regions: List<String> = SlovakRegion.entries.map { it.code }
+
+    /** One provider per kraj, built once: the grid asks on every range change. */
+    private val byRegion: Map<SlovakRegion, HolidayProvider> by lazy {
+        SlovakRegion.entries.associateWith { region ->
+            KrajHolidays((vacations + SLOVAK_SPRING_VACATIONS[region].orEmpty()).sortedBy { it.dates.start })
+        }
+    }
+
+    override fun forRegion(regionCode: String?): HolidayProvider =
+        SlovakRegion.fromCode(regionCode)?.let { byRegion.getValue(it) } ?: this
+
+    /**
+     * One kraj's calendar: the nationwide public holidays (which do not vary by kraj) and the
+     * nationwide school vacations with the kraj's spring week among them. Has no regions of its
+     * own — a kraj is the finest division the school calendar uses.
+     */
+    private class KrajHolidays(private val vacations: List<SchoolVacation>) : HolidayProvider {
+        override val localLanguage: String = SlovakHolidays.localLanguage
+
+        override val hasSchoolVacations: Boolean = true
+
+        override fun publicHolidays(year: Int): List<Holiday> = SlovakHolidays.publicHolidays(year)
+
+        override fun schoolVacations(year: Int): List<Pair<ClosedRange<LocalDate>, Pair<String, String>>> =
+            vacations.overlapping(year)
+    }
 }

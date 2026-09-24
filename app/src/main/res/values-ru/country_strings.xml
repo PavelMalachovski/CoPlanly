@@ -13,7 +13,7 @@
     <string name="country_other">Другая</string>
 
     <string name="country_holidays_supported">В календаре показываются государственные праздники и школьные каникулы. Весенние каникулы зависят от района и не показываются.</string>
-    <string name="country_holidays_school_sk">В календаре показываются государственные праздники и школьные каникулы в том виде, в каком их публикует министерство. Весенние каникулы зависят от края и не показываются.</string>
+    <string name="country_holidays_school_sk">В календаре показываются государственные праздники и школьные каникулы в том виде, в каком их публикует министерство. Весенние каникулы зависят от края: выберите свой край, чтобы добавить их.</string>
     <string name="country_holidays_school_at">В календаре показываются государственные праздники и школьные каникулы, общие для всей Австрии. Семестровые и летние каникулы зависят от федеральной земли и не показываются.</string>
     <string name="country_holidays_unavailable">Праздников для страны «%1$s» в приложении пока нет, поэтому они не показываются.</string>
     <string name="country_holidays_public_only">В календаре показываются общегосударственные праздники. Школьных каникул для страны «%1$s» в приложении нет.</string>
@@ -25,6 +25,16 @@
     <string name="holiday_region_none">Только общегосударственные</string>
     <string name="country_holidays_pick_region">В календаре показываются общегосударственные праздники. Школьные каникулы устанавливает каждая федеральная земля: выберите её, чтобы добавить её каникулы и собственные праздники.</string>
     <string name="country_holidays_with_region">В календаре показываются общегосударственные праздники, а также праздники и школьные каникулы земли «%1$s».</string>
+
+    <!-- MON-13, regional half: Slovakia's kraje, which add their spring holidays. -->
+    <string name="holiday_region_label_sk">Край</string>
+    <string name="holiday_region_settings_summary_sk">Добавляет весенние каникулы этого края</string>
+    <string name="country_holidays_with_region_sk">В календаре показываются государственные праздники и школьные каникулы, включая весенние каникулы (%1$s).</string>
+
+    <!-- The wording for any other country that gains regions. -->
+    <string name="holiday_region_label">Регион</string>
+    <string name="holiday_region_settings_summary_generic">Добавляет праздники и школьные каникулы этого региона</string>
+    <string name="country_holidays_with_region_generic">В календаре показываются общегосударственные праздники, а также праздники и школьные каникулы региона «%1$s».</string>
 
     <string name="region_de_bb">Бранденбург</string>
     <string name="region_de_be">Берлин</string>

@@ -382,10 +382,17 @@ October–November 2026 and check the dates below.
 - [ ] **Czechia:** 28 Sep, 28 Oct, 17 Nov drawn. The coverage note mentions school vacations.
       **29–30 Oct 2026** carry the school-vacation line (below).
 - [ ] **Slovakia:** 1 Nov drawn. **15 Sep 2026 and 17 Nov 2026 not drawn** (both are working
-      days by law in 2026). The note says school vacations are shown and spring holidays are not.
-      **Day view on 29 Oct 2026** is labelled "Jesenné prázdniny" (app in Slovak or matching
-      language) or "Autumn vacation"; **Day view on 17 Feb 2027** has no label (spring holidays
-      are regional and not drawn).
+      days by law in 2026). The note says school vacations are shown and the spring holidays need
+      a region. **Day view on 29 Oct 2026** is labelled "Jesenné prázdniny" (app in Slovak or
+      matching language) or "Autumn vacation"; **Day view on 17 Feb 2027** has no label (no kraj
+      chosen, so no spring week).
+  - A **Region (kraj)** row appears under Country (and region chips in the onboarding profile
+    step), listing the eight kraje by their Slovak names after "Nationwide only".
+  - **Banskobystrický kraj**: the note now says its spring holidays are shown; **17 Feb 2027**
+    is labelled "Jarné prázdniny"/"Spring vacation" and 15–19 Feb 2027 carry the school-vacation
+    line; **24 Feb 2027** has no label. **Košický kraj**: 22–26 Feb 2027 instead.
+  - Change the country to Germany with a kraj chosen: the row turns into **State**, shows
+    "Nationwide only", and no Slovak spring week stays on the grid.
 - [ ] **Germany**, no state: 3 Oct drawn, and the note asks you to pick a state to add its
       school vacations and public holidays. **Day view on 2 Nov 2026 has no label.**
   - **Bavaria** adds 1 Nov and 6 Jan 2027, and the note now mentions school vacations.

@@ -135,13 +135,49 @@ class HolidayCountryTest {
     }
 
     @Test
-    fun `only Germany offers regions`() {
-        // Austria's public holidays are nationwide; its patron-saint days are bank holidays. A
-        // region picker there would change nothing on the grid.
+    fun `only Germany and Slovakia offer regions`() {
+        // Austria's public holidays are nationwide; its patron-saint days are bank holidays and
+        // its per-Land school breaks have no final dates past 2025/26. A region picker there would
+        // change nothing on the grid.
         assertEquals(16, HolidayCountry.GERMANY.regions.size)
-        HolidayCountry.entries.filter { it != HolidayCountry.GERMANY }.forEach { country ->
+        assertEquals(
+            listOf("BC", "BL", "KI", "NI", "PV", "TA", "TC", "ZI"),
+            HolidayCountry.SLOVAKIA.regions.sorted()
+        )
+        val withRegions = setOf(HolidayCountry.GERMANY, HolidayCountry.SLOVAKIA)
+        HolidayCountry.entries.filter { it !in withRegions }.forEach { country ->
             assertEquals(emptyList(), country.regions, country.code)
         }
+    }
+
+    @Test
+    fun `Slovakia draws school vacations with or without a kraj`() {
+        // Without one: the nationwide periods (the note says the spring week needs a kraj). With
+        // one: those and the kraj's spring week. A stale German code reads as no kraj.
+        assertEquals(HolidayCoverage.PUBLIC_AND_SCHOOL, HolidayCountry.SLOVAKIA.coverageIn(null))
+        HolidayCountry.SLOVAKIA.regions.forEach { region ->
+            assertEquals(HolidayCoverage.PUBLIC_AND_SCHOOL, HolidayCountry.SLOVAKIA.coverageIn(region), region)
+        }
+        assertEquals(HolidayCoverage.PUBLIC_AND_SCHOOL, HolidayCountry.SLOVAKIA.coverageIn("BY"))
+    }
+
+    @Test
+    fun `a region code means something only with its own country`() {
+        // NI is Lower Saxony in Germany and Nitra in Slovakia; ZI and BY belong to one each.
+        assertEquals("NI", HolidayCountry.SLOVAKIA.regionOrNull(" ni "))
+        assertEquals("NI", HolidayCountry.GERMANY.regionOrNull("NI"))
+        assertNull(HolidayCountry.GERMANY.regionOrNull("ZI"))
+        assertNull(HolidayCountry.SLOVAKIA.regionOrNull("BY"))
+
+        val moved = HolidayLocation.of("SK", "BY")
+        assertEquals(HolidayCountry.SLOVAKIA, moved.country)
+        assertNull(moved.regionCode)
+        assertEquals(SlovakHolidays, moved.provider)
+
+        val nitra = HolidayLocation.of("SK", "NI").provider!!
+        assertTrue(nitra != SlovakHolidays)
+        assertEquals("sk", nitra.localLanguage)
+        assertEquals(SlovakHolidays.publicHolidays(2026), nitra.publicHolidays(2026))
     }
 
     @Test

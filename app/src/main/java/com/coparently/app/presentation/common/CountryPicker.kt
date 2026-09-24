@@ -35,29 +35,85 @@ fun HolidayCountry.labelRes(): Int = when (this) {
 }
 
 /**
- * What this country calls the regions its holidays vary by — "State"/"Bundesland" for Germany —
- * or null for a country with none, which is every other country today.
+ * The words a country with regions uses for them: what the picker is titled, what the Settings
+ * row says the choice does, and the note shown once one is chosen (`%1$s` is the region's name).
+ */
+private data class RegionWording(
+    @StringRes val label: Int,
+    @StringRes val summary: Int,
+    @StringRes val withRegion: Int
+)
+
+/**
+ * The [RegionWording] for this country, or null for a country with no regions.
  *
- * Per country rather than one generic "Region" label, because the word a German parent looks
- * for is the Land; a second country with regions would bring its own word.
+ * Per country, because the word a German parent looks for is the Land and a Slovak parent's is
+ * the kraj — and what a region adds differs too: a Land adds public holidays and school
+ * vacations, a kraj only its spring week. Any other country that gains [HolidayCountry.regions]
+ * gets the generic wording, so the picker appears for it without a change here (MON-13).
+ */
+private fun HolidayCountry.regionWording(): RegionWording? = when {
+    regions.isEmpty() -> null
+    this == HolidayCountry.GERMANY -> RegionWording(
+        label = R.string.holiday_region_label_de,
+        summary = R.string.holiday_region_settings_summary,
+        withRegion = R.string.country_holidays_with_region
+    )
+    this == HolidayCountry.SLOVAKIA -> RegionWording(
+        label = R.string.holiday_region_label_sk,
+        summary = R.string.holiday_region_settings_summary_sk,
+        withRegion = R.string.country_holidays_with_region_sk
+    )
+    else -> RegionWording(
+        label = R.string.holiday_region_label,
+        summary = R.string.holiday_region_settings_summary_generic,
+        withRegion = R.string.country_holidays_with_region_generic
+    )
+}
+
+/**
+ * What this country calls the regions its holidays vary by — "State"/"Bundesland" for Germany,
+ * "Region (kraj)"/"Kraj" for Slovakia — or null for a country with none.
  */
 @StringRes
-fun HolidayCountry.regionLabelRes(): Int? = when (this) {
-    HolidayCountry.GERMANY -> R.string.holiday_region_label_de
+fun HolidayCountry.regionLabelRes(): Int? = regionWording()?.label
+
+/** What the Settings row says choosing a region adds, or null for a country with none. */
+@StringRes
+fun HolidayCountry.regionSummaryRes(): Int? = regionWording()?.summary
+
+/**
+ * What region [code] of this country is called on screen, or null for a code this build has no
+ * name for.
+ *
+ * Keyed on the country *and* the stored code — `NI` is Lower Saxony in Germany and Nitra in
+ * Slovakia — rather than on the domain's `GermanState`/`SlovakRegion`, which are internal to the
+ * holiday tables; the codes are the ISO 3166-2 suffixes `HolidayCountry.regions` lists.
+ */
+@StringRes
+fun HolidayCountry.regionNameRes(code: String): Int? = when (this) {
+    HolidayCountry.GERMANY -> GERMAN_REGION_LABELS[code]
+    HolidayCountry.SLOVAKIA -> SLOVAK_REGION_LABELS[code]
     else -> null
 }
 
 /**
- * What region [code] is called on screen, or null for a code this build has no name for.
- *
- * Keyed on the stored code rather than on the domain's `GermanState`, which is internal to the
- * holiday tables; the codes are the ISO 3166-2 suffixes `HolidayCountry.regions` lists.
+ * Slovakia's eight kraje by ISO 3166-2 suffix; see `SlovakRegion` for what each adds. Their names
+ * are proper names in Slovak, the form a Slovak school letter uses, and are not translated.
  */
-@StringRes
-fun holidayRegionLabelRes(code: String): Int? = REGION_LABELS[code]
+private val SLOVAK_REGION_LABELS: Map<String, Int> = mapOf(
+    "BC" to R.string.region_sk_bc,
+    "BL" to R.string.region_sk_bl,
+    "KI" to R.string.region_sk_ki,
+    "NI" to R.string.region_sk_ni,
+    "PV" to R.string.region_sk_pv,
+    "TA" to R.string.region_sk_ta,
+    "TC" to R.string.region_sk_tc,
+    "ZI" to R.string.region_sk_zi
+)
 
 /** Germany's sixteen Länder by ISO 3166-2 suffix; see `GermanState` for what each adds. */
-private val REGION_LABELS: Map<String, Int> = mapOf(
+private val GERMAN_REGION_LABELS: Map<String, Int> = mapOf(
     "BB" to R.string.region_de_bb,
     "BE" to R.string.region_de_be,
     "BW" to R.string.region_de_bw,
@@ -82,7 +138,7 @@ private val REGION_LABELS: Map<String, Int> = mapOf(
  */
 @Composable
 fun HolidayCountry.regionName(regionCode: String?): String {
-    val res = regionOrNull(regionCode)?.let { holidayRegionLabelRes(it) }
+    val res = regionOrNull(regionCode)?.let { regionNameRes(it) }
     return stringResource(res ?: R.string.holiday_region_none)
 }
 
@@ -95,11 +151,12 @@ fun HolidayCountry.regionName(regionCode: String?): String {
  * Germany has them only with a Land — or call Ukraine's holidays "not in the app yet" when the
  * truth is that martial law suspended them.
  *
- * Where a country's school vacations are drawn but part of them is not — Czechia's and Slovakia's
- * spring breaks, Austria's semester and summer breaks, all set per region — the sentence says
- * which part, per country ([schoolNoteRes]). For a country with regions it also says whether the
- * region's own days are in: "nationwide only" would under-state a Bavarian calendar that has
- * Epiphany and the Bavarian school holidays on it.
+ * Where a country's school vacations are drawn but part of them is not — Czechia's spring break,
+ * Austria's semester and summer breaks, Slovakia's spring holidays until a kraj is chosen, all set
+ * per region — the sentence says which part, per country ([schoolNoteRes]). For a country with
+ * regions it also says whether the region's own days are in, in that country's words
+ * ([regionWording]): "nationwide only" would under-state a Bavarian calendar that has Epiphany and
+ * the Bavarian school holidays on it, or a Bratislava one with its spring week.
  *
  * @param regionCode The region stored for this country, if any; ignored when it is not one of
  *   the country's regions.
@@ -108,10 +165,11 @@ fun HolidayCountry.regionName(regionCode: String?): String {
 fun HolidayCountry.coverageNote(regionCode: String? = null): String {
     val name = stringResource(labelRes())
     val region = regionOrNull(regionCode)
+    val withRegion = regionWording()?.withRegion
     return when (coverageIn(region)) {
-        HolidayCoverage.PUBLIC_AND_SCHOOL -> when (region) {
-            null -> stringResource(schoolNoteRes())
-            else -> stringResource(R.string.country_holidays_with_region, regionName(region))
+        HolidayCoverage.PUBLIC_AND_SCHOOL -> when {
+            region == null || withRegion == null -> stringResource(schoolNoteRes())
+            else -> stringResource(withRegion, regionName(region))
         }
         HolidayCoverage.PUBLIC_ONLY -> when {
             regions.isEmpty() -> stringResource(R.string.country_holidays_public_only, name)
@@ -141,16 +199,17 @@ private fun HolidayCountry.schoolNoteRes(): Int = when (this) {
  * what is offered — and, more importantly, on **what is admitted**. The supporting line under
  * the chips ([coverageNote]) states outright what the chosen country's calendar contains: public
  * holidays and school vacations for Czechia, Slovakia and Austria (each saying which regional
- * part is left out), public holidays for Germany with its Land's school vacations once a Land is
- * chosen, public holidays alone for Russia, and nothing — with the reason — for Ukraine and
+ * part is left out — for Slovakia, until a kraj is chosen), public holidays for Germany with its
+ * Land's school vacations once a Land is chosen, public holidays alone for Russia, and nothing —
+ * with the reason — for Ukraine and
  * "Other". A picker that offered a country and then quietly drew less than it implied would be
  * the affordance design rule 8 forbids, and one that drew *Czech* holidays for a German family is
  * the bug this whole item exists to fix.
  *
  * The region chips (MON-13, regional half) appear only when the chosen country has regions —
- * Germany's sixteen Länder, which add their own public holidays and school vacations — and only
- * when the caller takes a region at all, so a picker that has no region to store never offers
- * one.
+ * Germany's sixteen Länder, which add their own public holidays and school vacations, and
+ * Slovakia's eight kraje, which add their spring holidays — and only when the caller takes a
+ * region at all, so a picker that has no region to store never offers one.
  *
  * @param selected The country currently stored on the profile.
  * @param onSelect Called with the new country; the caller persists it.
@@ -183,8 +242,8 @@ fun CountryPicker(
         val regionLabel = selected.regionLabelRes()
         if (onSelectRegion != null && regionLabel != null && selected.regions.isNotEmpty()) {
             RegionChips(
+                country = selected,
                 label = stringResource(regionLabel),
-                regions = selected.regions,
                 selectedRegion = selected.regionOrNull(selectedRegion),
                 onSelectRegion = onSelectRegion
             )
@@ -208,8 +267,8 @@ fun CountryPicker(
  */
 @Composable
 private fun RegionChips(
+    country: HolidayCountry,
     label: String,
-    regions: List<String>,
     selectedRegion: String?,
     onSelectRegion: (String?) -> Unit
 ) {
@@ -228,8 +287,8 @@ private fun RegionChips(
             onClick = { onSelectRegion(null) },
             label = { Text(stringResource(R.string.holiday_region_none)) }
         )
-        regions.forEach { code ->
-            val name = holidayRegionLabelRes(code)?.let { stringResource(it) } ?: code
+        country.regions.forEach { code ->
+            val name = country.regionNameRes(code)?.let { stringResource(it) } ?: code
             FilterChip(
                 selected = selectedRegion == code,
                 onClick = { onSelectRegion(code) },

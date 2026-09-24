@@ -13,7 +13,7 @@
     <string name="country_other">Anderes</string>
 
     <string name="country_holidays_supported">Feiertage und Schulferien werden im Kalender angezeigt. Die Frühjahrsferien sind je nach Bezirk verschieden und werden nicht angezeigt.</string>
-    <string name="country_holidays_school_sk">Feiertage und Schulferien werden im Kalender angezeigt, wie das Ministerium sie veröffentlicht. Die Frühjahrsferien sind je nach Region verschieden und werden nicht angezeigt.</string>
+    <string name="country_holidays_school_sk">Feiertage und Schulferien werden im Kalender angezeigt, wie das Ministerium sie veröffentlicht. Die Frühjahrsferien sind je nach Region verschieden: Wählen Sie Ihre Region, um sie hinzuzufügen.</string>
     <string name="country_holidays_school_at">Feiertage und die in ganz Österreich gleichen Schulferien werden im Kalender angezeigt. Semester- und Sommerferien sind je nach Bundesland verschieden und werden nicht angezeigt.</string>
     <string name="country_holidays_unavailable">Feiertage für %1$s sind noch nicht in der App, daher werden keine angezeigt.</string>
     <string name="country_holidays_public_only">Bundesweite Feiertage werden im Kalender angezeigt. Schulferien für %1$s sind nicht in der App.</string>
@@ -25,6 +25,16 @@
     <string name="holiday_region_none">Nur bundesweit</string>
     <string name="country_holidays_pick_region">Bundesweite Feiertage werden im Kalender angezeigt. Schulferien legt jedes Bundesland fest: Wählen Sie eines, um seine Schulferien und eigenen Feiertage hinzuzufügen.</string>
     <string name="country_holidays_with_region">Bundesweite Feiertage sowie die Feiertage und Schulferien von %1$s werden im Kalender angezeigt.</string>
+
+    <!-- MON-13, regional half: Slovakia's kraje, which add their spring holidays. -->
+    <string name="holiday_region_label_sk">Region (Kraj)</string>
+    <string name="holiday_region_settings_summary_sk">Ergänzt die Frühjahrsferien der Region</string>
+    <string name="country_holidays_with_region_sk">Feiertage und Schulferien werden im Kalender angezeigt, mit den Frühjahrsferien von %1$s.</string>
+
+    <!-- The wording for any other country that gains regions. -->
+    <string name="holiday_region_label">Region</string>
+    <string name="holiday_region_settings_summary_generic">Ergänzt die Feiertage und Schulferien der Region</string>
+    <string name="country_holidays_with_region_generic">Landesweite Feiertage sowie die Feiertage und Schulferien von %1$s werden im Kalender angezeigt.</string>
 
     <string name="region_de_bb">Brandenburg</string>
     <string name="region_de_be">Berlin</string>

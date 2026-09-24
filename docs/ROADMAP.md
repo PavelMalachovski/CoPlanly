@@ -1700,10 +1700,10 @@ before launch.
 ### MON-13 · **TABLES, REGIONS AND SOURCED SCHOOL VACATIONS DONE** · P2 · M · Holidays by country — regional school breaks are left
 
 **Where:** ☁️ done: the setting, the registry, five tables verified against a maintained dataset,
-Germany's sixteen Länder, and school vacations for Slovakia, Austria and every German Land from a
-second, pinned dataset. What remains is either data nobody publishes in final form yet (Austria's
-per-Land breaks), a region the app does not model (Slovakia's kraje), or a product decision
-(Austria's patron-saint days). The grid marker for school vacations and the ODbL attribution
+Germany's sixteen Länder, Slovakia's eight kraje, and school vacations for Slovakia (nationwide and
+per kraj), Austria and every German Land from a second, pinned dataset. What remains is either data
+nobody publishes in final form yet (Austria's per-Land breaks), data the dataset does not carry
+(Slovakia's half-year day), or a product decision (Austria's patron-saint days). The grid marker for school vacations and the ODbL attribution
 screen are done (September 2026, below).
 
 MVP 1 asked for "holidays and vacations by country" and shipped one country. There was **no country
@@ -1819,9 +1819,39 @@ memory.
     general schools only (not `MV-BBS`); Schleswig-Holstein's island exceptions dropped.
   - **Austria, the nationwide periods** (autumn 27–31 Oct, All Souls' Day, Christmas, Easter,
     Whitsun; to Christmas 2028/29).
-  - **Slovakia, the nationwide periods** (autumn, Christmas, Easter, summer; to summer 2028).
+  - **Slovakia, the nationwide periods** (autumn, Christmas, Easter, summer; to summer 2028),
+    and **each kraj's spring week** once a kraj is chosen (below).
 - **Where they show.** Day view's header label, and — since the marker below — the month grid.
   Week view still shows none.
+
+**Done (September 2026): Slovakia's kraje.** The spring holidays (jarné prázdniny) are the one
+part of the Slovak school calendar that is not nationwide: the ministry staggers them across the
+eight kraje in three consecutive weeks (west: Bratislava, Nitra, Trnava; central: Banská Bystrica,
+Žilina, Trenčín; east: Košice, Prešov), rotating the order each year. They are now drawn the way a
+German Land's school vacations are — `SlovakHolidays.regions`/`forRegion`, no schema change
+(`users.regionCode` already carries any country's ISO 3166-2 suffix).
+- **The data.** The same OpenHolidays commit the other tables are pinned to (`a42b397`, which is
+  still the dataset's `HEAD`, so no other fixture moved) carries every kraj's spring week for
+  2025/26, 2026/27 and 2027/28, none of them `Provisional`, matching minedu.sk's 2025/26 dates
+  (16 Feb–6 Mar 2026) that the generator's docstring already recorded. `SlovakRegion.kt` holds the
+  eight kraje (the dataset's `sk/subdivisions.csv` codes: BC, BL, KI, NI, PV, TA, TC, ZI) and the
+  nine weeks, written per week as the ministry publishes them; `SchoolBreak.JARNE_PRAZDNINY` is
+  the name. No extrapolation: spring 2029 draws nothing until the ministry publishes it.
+- **Verified.** `generate-school-vacation-fixture.py` now writes an `SK-<kraj>` key per kraj
+  (nationwide periods plus that kraj's spring weeks) beside `SK`, and exits on a spring row naming
+  a region it does not know; `SchoolVacationReferenceTest` holds all eight period by period and
+  checks each kraj keeps every nationwide period and gains exactly one week a year. Public holidays
+  do not vary by kraj (Act 241/1993 is national, and the `holidays` library has no Slovak
+  subdivision), so the kraje have no `--regions` fixture; `HolidayReferenceTest` checks every
+  kraj's public holidays equal the nationwide ones instead.
+- **The picker.** The region row and chips now appear for **any** country with regions: the
+  wording is per country (`CountryPicker.kt`'s `RegionWording` — "Region (kraj)"/"Kraj"/"Край"
+  for Slovakia, "State"/"Bundesland" for Germany, a generic "Region" for a future third), and a
+  region's name is looked up by country *and* code, because `NI` is Lower Saxony in Germany and
+  Nitra in Slovakia. The kraje are named in Slovak (`translatable="false"`), the form a Slovak
+  school letter uses. Slovakia without a kraj still says "public holidays and school vacations"
+  (the nationwide periods are real) and now asks for a region to add the spring week; with one,
+  it names the kraj whose spring holidays are shown.
 
 **Done (September 2026): a school-vacation marker on the month grid.** The grid had none since the
 month banner was removed for changing the grid's height mid-swipe, and before the banner the July
@@ -1867,9 +1897,9 @@ rows belong in it.
   semester break) disagrees with bmb.gv.at's published 2026/27 list. So there is **no Austrian Land
   picker** — it would add only a past school year (design rule 8). When a source with final Land
   dates is reachable, add a regional table and the picker together.
-- **Slovakia's spring holidays** are set per kraj in three staggered weeks; the app has no Slovak
-  region, so they are not drawn (the Czech spring-break trade). The ministry's one-day
-  **half-year holiday** (polročné prázdniny) is **not in the dataset** and is therefore missing.
+- **Slovakia's half-year holiday.** The ministry's one-day **polročné prázdniny** is **not in the
+  dataset** and is therefore missing, nationwide and in every kraj. (The spring holidays are done,
+  per kraj — above.)
 - **Austria's patron-saint days** — school-free in their Land, bank holidays for employees — are
   still not drawn at all; **owner call** above.
 - **Russia** — school vacations are set per region or per school; none.
