@@ -1,8 +1,7 @@
 package com.coparently.app.data.sync
 
-import com.coparently.app.data.local.entity.EventEntity
 import com.coparently.app.data.local.entity.ChildInfoEntity
-import java.time.LocalDateTime
+import com.coparently.app.data.local.entity.EventEntity
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -18,8 +17,14 @@ class ConflictResolver @Inject constructor() {
      *
      * Strategy:
      * 1. If one is deleted, mark as deleted
-     * 2. Latest timestamp wins
+     * 2. Latest save wins, by [EventEntity.updatedAtMillis]
      * 3. For ties, prefer current user's changes
+     *
+     * The comparison is between two **instants** (MON-4). It used to be between the two rows'
+     * `updatedAt`, a naive `LocalDateTime`: a parent in Prague saving at 12:00 and a parent in
+     * New York saving at 09:00 the same morning — three hours *later* in real time — compared as
+     * 12:00 against 09:00, and the earlier edit won. The wall clock is still on the row, for
+     * display, and is deliberately not consulted here.
      *
      * @param local Local event entity
      * @param remote Remote event entity
@@ -31,23 +36,24 @@ class ConflictResolver @Inject constructor() {
         remote: EventEntity,
         currentUserId: String
     ): ConflictResolution<EventEntity> {
-        // Check if either is marked as deleted (if we implement soft delete in the future)
-        // For now, we'll use timestamp-based resolution
-
+        // A tombstone never reaches this function: `SyncService.syncEvents` answers a deleted
+        // document, and a pending local deletion, before it maps anything to an entity.
+        val localMillis = local.updatedAtMillis
+        val remoteMillis = remote.updatedAtMillis
         return when {
             // Remote is newer - use remote
-            remote.updatedAt > local.updatedAt -> {
+            remoteMillis > localMillis -> {
                 ConflictResolution.UseRemote(
                     data = remote,
-                    reason = "Remote version is newer (${remote.updatedAt} > ${local.updatedAt})"
+                    reason = "Remote version is newer ($remoteMillis > $localMillis epoch ms)"
                 )
             }
 
             // Local is newer - use local
-            local.updatedAt > remote.updatedAt -> {
+            localMillis > remoteMillis -> {
                 ConflictResolution.UseLocal(
                     data = local,
-                    reason = "Local version is newer (${local.updatedAt} > ${remote.updatedAt})"
+                    reason = "Local version is newer ($localMillis > $remoteMillis epoch ms)"
                 )
             }
 

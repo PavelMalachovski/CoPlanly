@@ -59,13 +59,16 @@ data class MessageInput(
  * Everything [CommunicationRecordBuilder] draws from, gathered by the data layer.
  *
  * @property serverReached False when the server could not be asked, so the record is this phone's.
+ * @property plan The parenting plan, or null when the parent chose to leave it out of the export.
+ *   It carries its own [PlanSource.serverReached], which the record's completeness also reads.
  */
 data class RecordSources(
     val revisions: List<EventRevisionInput>,
     val currentEvents: List<CurrentEventInput>,
     val messages: List<MessageInput>,
     val expenses: List<Expense>,
-    val serverReached: Boolean
+    val serverReached: Boolean,
+    val plan: PlanSource? = null
 )
 
 /**
@@ -102,6 +105,8 @@ data class RecordScope(
  *   having no history, rather than dressed up as a "created" revision dated today.
  * - **Private events are never in it** (CLAUDE.md item 3), whatever the source hands over.
  * - **The child's medical profile is never in it** (design §4) — this type has no field for it.
+ * - **The parenting plan is in it only when asked for**, whole and as it stands now (see
+ *   [RecordPlanBuilder]); a plan that could not be read from the server makes the record incomplete.
  */
 object CommunicationRecordBuilder {
 
@@ -113,10 +118,11 @@ object CommunicationRecordBuilder {
             zone = scope.zone,
             generatedAtMillis = scope.generatedAtMillis,
             parents = scope.parents,
-            complete = sources.serverReached,
+            complete = sources.serverReached && sources.plan?.serverReached != false,
             events = events(sources, scope),
             messages = messages(sources.messages, scope),
-            expenses = expenses(sources.expenses, scope)
+            expenses = expenses(sources.expenses, scope),
+            plan = sources.plan?.let { RecordPlanBuilder.build(it, scope.nameForUid) }
         )
 
     private fun events(sources: RecordSources, scope: RecordScope): List<RecordEvent> {

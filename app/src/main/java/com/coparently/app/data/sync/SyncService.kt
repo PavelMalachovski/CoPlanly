@@ -20,6 +20,7 @@ import com.coparently.app.data.repository.ParentSlotMigrator
 import com.coparently.app.data.repository.ParentingPlanRepository
 import com.coparently.app.data.session.AccountSwitchGuard
 import com.coparently.app.data.versions.EventVersionRecorder
+import com.coparently.app.domain.events.EventTimestamp
 import com.coparently.app.domain.guests.GuestGrantPolicy
 import com.coparently.app.domain.repository.ChangeRequestRepository
 import com.coparently.app.domain.repository.MessageRepository
@@ -235,7 +236,8 @@ class SyncService @Inject constructor(
                 "pickupConfirmedBy" to entity.pickupConfirmedBy,
                 "pickupConfirmedAt" to entity.pickupConfirmedAt?.format(formatter),
                 "createdAt" to entity.createdAt.format(formatter),
-                "updatedAt" to entity.updatedAt.format(formatter),
+                // The instant, as UTC text — the same wire form `toFirestoreMap()` writes (MON-4).
+                "updatedAt" to EventTimestamp.toWire(entity.updatedAtMillis),
                 "createdByFirebaseUid" to entity.createdByFirebaseUid,
                 "sharedWith" to audience,
                 "lastModifiedBy" to entity.lastModifiedBy,
@@ -292,8 +294,8 @@ class SyncService @Inject constructor(
                 // A tombstone is the co-parent telling this device the event is gone. It is
                 // answered from the raw document, before it is mapped to an entity: a deletion
                 // is the one thing that must not depend on the rest of the document still
-                // parsing. And it is answered regardless of timestamps — `updatedAt` is a naive
-                // `LocalDateTime` whose cross-time-zone ordering is known wrong (SEC-4), and a
+                // parsing. And it is answered regardless of timestamps — `updatedAt` is an instant
+                // now (MON-4), but an older build still writes its own wall clock there, and a
                 // rule that cannot be wrong beats one that is usually right when the question is
                 // whether a cancelled event stays on a parent's calendar.
                 //
@@ -344,7 +346,7 @@ class SyncService @Inject constructor(
                                 "pickupConfirmedBy" to localEntity.pickupConfirmedBy,
                                 "pickupConfirmedAt" to localEntity.pickupConfirmedAt?.format(formatter),
                                 "createdAt" to localEntity.createdAt.format(formatter),
-                                "updatedAt" to LocalDateTime.now().format(formatter),
+                                "updatedAt" to EventTimestamp.toWire(System.currentTimeMillis()),
                                 "createdByFirebaseUid" to localEntity.createdByFirebaseUid,
                                 "lastModifiedBy" to userId,
                                 "imageUrl" to localEntity.imageUrl,

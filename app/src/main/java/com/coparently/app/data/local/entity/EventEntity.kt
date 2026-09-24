@@ -17,7 +17,8 @@ import java.time.LocalDateTime
  * @property isRecurring Whether the event is recurring
  * @property recurrencePattern Pattern for recurring events (e.g., "daily", "weekly", "monthly")
  * @property createdAt Timestamp when the event was created
- * @property updatedAt Timestamp when the event was last updated
+ * @property updatedAt Wall-clock time the event was last updated, for display
+ * @property updatedAtMillis When the event was last updated, epoch millis; what conflicts compare
  * @property syncedToFirestore Whether the event has been synced to Firestore
  * @property createdByFirebaseUid Firebase UID of the user who created this event
  * @property sharedWithJson JSON string of Firebase UIDs that this event is shared with
@@ -44,6 +45,15 @@ data class EventEntity(
     val recurrencePattern: String? = null,
     val createdAt: LocalDateTime,
     val updatedAt: LocalDateTime,
+    /**
+     * When the event was last saved, epoch millis — the value `ConflictResolver` compares.
+     *
+     * [updatedAt] stays as the wall clock the app displays; this is the instant, so two parents
+     * in different time zones order their edits by real time (MON-4, schema 39). No default on
+     * purpose: every construction site must say when, because a forgotten value would upload as
+     * 1970 and lose every conflict. See [com.coparently.app.domain.events.EventTimestamp].
+     */
+    val updatedAtMillis: Long,
     val syncedToFirestore: Boolean = false,
     val createdByFirebaseUid: String? = null,
     val sharedWithJson: String = "[]", // JSON array of Firebase UIDs

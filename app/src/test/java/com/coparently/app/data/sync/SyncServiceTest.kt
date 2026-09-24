@@ -18,6 +18,7 @@ import com.coparently.app.data.remote.firebase.PushPayload
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.ParentSlotMigrator
 import com.coparently.app.data.session.AccountSwitchGuard
+import com.coparently.app.domain.events.EventTimestamp
 import com.coparently.app.domain.repository.PetRepository
 import com.google.firebase.auth.FirebaseUser
 import com.google.gson.Gson
@@ -34,6 +35,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
 import java.io.File
+import java.time.Instant
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import kotlin.test.assertEquals
@@ -857,6 +859,24 @@ class SyncServiceTest {
         return source.substring(0, declaredAt).substringAfterLast("@Query(")
     }
 
+    @Test
+    fun `an uploaded event is dated by its instant, as UTC text`() = runTest {
+        // MON-4: the field keeps its name and its offset-free ISO type, so an older build still
+        // parses it, and only the zone it expresses changes. 12:00 at UTC+2 goes up as 10:00.
+        pairWith(partnerId = BOB)
+        val saved = eventEntity(createdByFirebaseUid = ALICE, sharedWith = listOf(ALICE)).copy(
+            updatedAtMillis = Instant.parse("2026-08-01T10:00:00Z").toEpochMilli()
+        )
+        coEvery { eventDao.getUnsyncedEvents() } returns listOf(saved)
+        val uploaded = slot<Map<String, Any?>>()
+        coEvery { firestoreEventDataSource.insertEvent(EVENT_ID, capture(uploaded)) } returns
+            Result.success(Unit)
+
+        syncService.performFullSync()
+
+        assertEquals("2026-08-01T10:00:00", uploaded.captured["updatedAt"])
+    }
+
     /** The Firestore document `SyncService` would write for [entity]. */
     private fun eventDocument(entity: EventEntity, sharedWith: List<String>): Map<String, Any?> =
         mapOf(
@@ -873,7 +893,7 @@ class SyncServiceTest {
             "pickupConfirmedBy" to entity.pickupConfirmedBy,
             "pickupConfirmedAt" to entity.pickupConfirmedAt?.format(formatter),
             "createdAt" to entity.createdAt.format(formatter),
-            "updatedAt" to entity.updatedAt.format(formatter),
+            "updatedAt" to EventTimestamp.toWire(entity.updatedAtMillis),
             "createdByFirebaseUid" to entity.createdByFirebaseUid,
             "sharedWith" to sharedWith,
             "lastModifiedBy" to entity.lastModifiedBy,
@@ -902,6 +922,7 @@ class SyncServiceTest {
         parentOwner = "mom",
         createdAt = now,
         updatedAt = now,
+        updatedAtMillis = EventTimestamp.ofWallClock(now),
         createdByFirebaseUid = createdByFirebaseUid,
         sharedWithJson = gson.toJson(sharedWith)
     )

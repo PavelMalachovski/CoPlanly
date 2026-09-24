@@ -160,8 +160,8 @@ When touching the UI, keep these invariants:
    a chip strip on the Expenses screen itself. Tab switches, including Home's stat-tile deep
    links, go through `NavHostController.navigateToTab` so they share one back-stack policy.)*
 2. **Toolchain**: compileSdk/targetSdk 36, Kotlin 2.1 (+ `kotlin.plugin.compose`),
-   Compose BOM 2025.10 (Material 3 1.4 / M3 Expressive), Room 2.7.2 (2.6.x kapt breaks on
-   Kotlin 2.x metadata), Navigation 2.9.3, Hilt 2.56.2, predictive back on.
+   Compose BOM 2025.10 (Material 3 1.4 / M3 Expressive), Room 2.7.2 (2.6.x breaks on
+   Kotlin 2.x metadata), Hilt and Room on **KSP** (`2.1.0-1.0.29`; kapt is gone — move KSP with Kotlin), Navigation 2.9.3, Hilt 2.56.2, predictive back on.
 3. **Calendar**: month view is a classic grid from the 1st with horizontal month paging
    (kizitonwose `HorizontalCalendar`); day/week use `HorizontalPager` with fling physics.
    Event chips are single-line (`softWrap = false` + ellipsis). School vacation is a thin
@@ -247,7 +247,9 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   red build green; fix the finding, or regenerate the baseline through the Regenerate workflow so
   that accepting debt is a visible commit. The **`instrumented` job** closes **CQ-1** as far as it
   can be closed, and the shape of "as far as" matters. `reactivecircus/android-emulator-runner`
-  with the KVM udev rule runs `connectedDebugAndroidTest` as a **matrix of three emulators**
+  with the KVM udev rule runs `connectedDebugAndroidTest` as a **matrix of up to three emulators**
+  (all three on `main` and when a PR reaches what they test — see "only the jobs its diff can
+  affect" below)
   (`fail-fast: false`, AVD cached per level): **API 26** (minSdk, 32-bit x86 — a newer-API call
   only throws on an old device, and it is a second ABI for SQLCipher's native library), **API 30**
   (where the job was first made green), and **API 35 on `google_apis_ps16k`** (16 KB memory pages,
@@ -313,8 +315,8 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   artifact this build does not declare.
   What stops the gap growing is a **step in `ci.yml`**: `git status --porcelain -- app/schemas`
   after the build, failing when the build produced a schema nobody committed. It is deliberately
-  *not* `DatabaseSchemaExportTest`, which this line used to credit and which cannot do it — kapt
-  writes that directory during the build immediately before the test reads it, so the file it
+  *not* `DatabaseSchemaExportTest`, which this line used to credit and which cannot do it — KSP
+  (Room) writes that directory during the build immediately before the test reads it, so the file it
   looks for has just been created whether or not it is in the repository.
 
   The **`e2e` job** ("Android — two parents on the Firebase emulators", September 2026) is the
@@ -361,7 +363,7 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   merged, by touching `.github/regenerate-request`.
 
   Still run the build locally before pushing — CI is a backstop, not a substitute.
-  After switching branches, prefer `clean` — stale Hilt/kapt stubs from another branch cause
+  After switching branches, prefer `clean` — stale Hilt/KSP generated sources from another branch cause
   errors like "Could not find class file for '…Application'".
 - **The `screenshots` job is how UI is reviewed without a phone** (September 2026). Roborazzi on
   Robolectric's native graphics renders the tests in `app/src/test/java/com/coparently/app/
@@ -387,15 +389,32 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   opens its own window that a node capture does not see. Every fixture date is pinned (May 2026,
   `ScreenshotFixtures`) so an image does not change with the calendar — keep it that way, or the
   suite can never move to verify.
-- **A docs/functions/rules-only pull request skips the Android jobs.** The `changes` job
-  diffs against the base and sets one output; the Android jobs are `if:`-gated on it.
-  Two things not to get wrong. The ignore list is deliberately conservative — a path wrongly
-  *on* it silently stops building real changes, which is far worse than a path wrongly off it
-  costing a few free runner minutes — and `.github/workflows/**` is deliberately **not** on
-  it, because editing the workflow is exactly when you want the build it describes to run. A
-  gated-out job reports as *skipped*, which branch protection counts as passing; nothing is a
-  required check today, so this is safe, but marking one required later means a docs-only PR
-  merges on a skip rather than a build.
+- **A pull request runs only the jobs its diff can affect** (September 2026). The `changes` job
+  pipes `git diff --name-only` into `tools/ci-changes.js`, which decides four outputs and is tested
+  by `tools/test/ci-changes.test.js` in `invariants`: docs/functions/rules only → no Android job;
+  a screen-only change (`presentation/` outside `common/`, `res/`, `app/src/test/`) → no e2e
+  (`common/` stays in because the e2e parents construct `ParentsSource`); nothing the screenshots
+  render → no screenshots; and the **emulator matrix is API 30 alone** unless the diff reaches
+  what API 26 and 16 KB exist for — `data/local/` (SQLCipher, Room), the manifest, `androidTest/`,
+  `src/debug/`, the emulator script — or the build. A push to `main` always runs everything, which
+  is the backstop for the legs a PR skipped; lint's NewApi check is the per-PR guard for a
+  newer-API call. Three things not to get wrong. Every skip list is deliberately narrow — a path
+  wrongly *on* one silently stops testing real changes, which is far worse than a path wrongly off
+  it costing a few free runner minutes — so an unfamiliar path runs everything. The build files and
+  `.github/workflows/**` run everything, because editing the workflow is exactly when you want the
+  build it describes to run. And a gated-out job reports as *skipped*, which branch protection
+  counts as passing; nothing is a required check today, so this is safe, but marking one required
+  later means a PR merges on a skip rather than a build.
+- **An emulator leg is decided by the tests' exit status, not by the emulator step** (September
+  2026). The API 26 x86 emulator repeatedly never exited after `adb emu kill` with every test
+  passed, and a detached `pkill` did not release the runner. The step has a 15-minute limit and
+  `continue-on-error`; `tools/with-screen-recording.sh` writes the tests' status to
+  `$STATUS_FILE`, and "The instrumented tests finished and passed" fails the job unless it exists
+  and says 0. When the suite outgrows 15 minutes that step says "did not finish" — raise the limit.
+- **Gradle's configuration cache is on** (`gradle.properties`). CI keeps it between runs only when
+  the `GRADLE_ENCRYPTION_KEY` repository secret is set (`setup-gradle`'s `cache-encryption-key`);
+  without it the cache still helps within a job. An incompatible plugin or script fails the build
+  with a report — fix it rather than turning the cache off.
 - **No Gradle invocation in CI passes `--no-daemon`** — `gradle/actions/setup-gradle` manages
   the daemon itself and asks you not to, and without one every invocation re-pays JVM and
   Kotlin-compiler startup. `org.gradle.caching=true` and a 4 GB heap live in
@@ -431,9 +450,12 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   **What testers download** (each linked from the comment, 14-day retention, GitHub login
   needed): `coplanly-debug-apk` from `build-test` — **a UI-only build**: CI has no
   `google-services.json` (and must not get one, see above), so sign-in and sync do not work in
-  it; for full testing build locally with the file. `emulator-video-api<n>-<target>` from each
-  `instrumented` leg — `tools/with-screen-recording.sh` records in 170 s segments around
-  `connectedDebugAndroidTest`, keeps the tests' exit status, and cannot fail the job.
+  it; for full testing build locally with the file. `emulator-video-api<n>-<target>` from the
+  `instrumented` legs that record — `tools/with-screen-recording.sh` records in 170 s segments around
+  `connectedDebugAndroidTest`, keeps the tests' exit status, and cannot fail the job. **Only API 26
+  records** (`record` in `tools/ci-changes.js`): on the API 30 image screenrecord's software
+  encoder aborted `media.codec` and surfaceflinger followed, which Gradle reports as "System has
+  crashed" mid-suite — the recorder had become the failure it was meant to explain.
   `coverage-report` — Kover (`org.jetbrains.kotlinx.kover` 0.9.9, `app/build.gradle.kts`, Hilt/Room/
   Compose-generated classes filtered out). Coverage is **visibility, not a gate**: there is no
   verification rule, and its step is the one place in `ci.yml` where `continue-on-error` is
@@ -566,7 +588,7 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
 
 ```
 domain/    — models, repository interfaces, use cases, holidays, ReminderScheduler
-data/      — Room (v38 + migrations), Firestore/Google clients, repository impls, sync
+data/      — Room (v39 + migrations), Firestore/Google clients, repository impls, sync
 presentation/ — Compose screens per feature + ViewModels + theme
 di/        — Hilt modules (Database, Firebase, Google, UseCase, Notification, …)
 ```
@@ -676,7 +698,7 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     the conversation as `{uid: epochMillis}` maps — one write per event — and the ticks and
     unread badge are derived from them by `ChatReadState`, never stored per message.
     Message times are stored the same way: `Message.sentAtMillis`, epoch millis (Room
-    schema v13, since superseded — the database is at v38), not a naive `LocalDateTime`, so two
+    schema v13, since superseded — the database is at v39), not a naive `LocalDateTime`, so two
     parents in different time zones agree
     on what a mark means and on when a message was sent. The Firestore field keeps its name
     (`timestamp`) and the read path still accepts a legacy ISO string, so a co-parent on an
@@ -688,6 +710,11 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     decides which phone's schedule survives. Its wire form is the one to copy when the same
     question comes up again — see `domain/custody/CustodyTimestamp.kt`, which explains why the
     Firestore field kept both its name *and* its type and only changed the zone it expresses.
+    **`EventEntity.updatedAtMillis` copied it (MON-4, schema 39)**: `ConflictResolver` compares the
+    instant, `events.updatedAt` carries it as offset-free UTC text (`domain/events/EventTimestamp.kt`
+    — no `Z`, because an older build's `ISO_LOCAL_DATE_TIME` parse would throw and skip the event),
+    and `EventRepositoryImpl.toEntity` derives it from the `updatedAt` wall clock every save already
+    stamps, so no save path can forget it. `Event.updatedAt` stays a `LocalDateTime` for display.
 14. **A delete is a tombstone, never a document removal** (CQ-3). `data/sync/Tombstone.kt` is
     the one definition: the client writes `deletedAtMillis` (epoch millis) and `deletedBy` onto
     the document with `update()` — never `set()`, which would replace the `createdByFirebaseUid`
@@ -697,8 +724,9 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     remote write lands. Four things not to undo. **Do not reconcile by absence** — "delete what
     is not in the snapshot" takes the whole calendar the first time `sharedWith` narrows at
     unpair, a download window bounds the query (CQ-5), or a snapshot comes back partial.
-    **Do not decide a deletion by timestamp**: `updatedAt` is a naive `LocalDateTime` with
-    SEC-4's ordering defect, so a tombstone beats a concurrent edit by rule, deliberately —
+    **Do not decide a deletion by timestamp**: `updatedAt` names an instant since MON-4, but an
+    older build still writes its own wall clock there, so a tombstone beats a concurrent edit by
+    rule, deliberately —
     an event that should not exist is visible and can be deleted again, an edit that loses is
     gone. **Do not filter tombstones out of `getUnsyncedEvents`/`getUnsyncedExpenses`**, which
     are the outbox. And **do not shorten the 90-day sweep** (`sweepDeletedDocuments`): it is
@@ -962,9 +990,11 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     **there is no stored revision number**: two phones offline would mint the same one and the
     create-only rule would refuse the second for ever; order comes from the two clocks and the
     export numbers revisions when it renders. Calendar friends cannot read revisions — the
-    history is the parents' communication record, not the calendar. Not done, and recorded in
-    ROADMAP MON-4: `Event.updatedAt` is still a naive `LocalDateTime` although `ConflictResolver`
-    compares it, and the events rule does not *require* a revision beside each write, so an older
+    history is the parents' communication record, not the calendar. Done since (schema 39): the
+    compared timestamp is `EventEntity.updatedAtMillis` (item 13), so a revision's embedded
+    `updatedAt` is UTC text from an upgraded build and a wall clock from an older one — the export
+    keeps labelling `deviceTimeMillis` and `recordedAt` as the clocks. Not done, and recorded in
+    ROADMAP MON-4: the events rule does not *require* a revision beside each write, so an older
     build's edits go unrecorded.
 
 26. **The export is a communication record, says so on its face, and is made on the phone**
@@ -1015,6 +1045,14 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     the line rather than printing a dead link. The chat immutability pin §4 called missing lives in
     `firestore-tests/rules/event-versions.test.js`'s last block: both parents, every field,
     `set()`, delete and a stranger, with `isRead` as the control.
+    **The parenting plan is an optional last section** (MON-5 in the record, September 2026; a
+    checkbox, on by default, `domain/export/RecordPlan.kt`). It prints `parenting_plan_disclaimer`
+    and says it is the plan as it stood at export time, not for the period; lists every catalogue
+    question, each parent's answer **by name**, and agreement exactly as
+    `ParentingPlanComparison.statusOf` derives it — never a stored flag; keeps answers under retired
+    ids under a "no longer asked" heading rather than dropping them (item 21); reads with
+    `Source.SERVER` and, when that fails, prints this phone's copy *labelled as such* and marks the
+    record incomplete; and says "no parenting plan recorded" rather than inventing one.
 
 27. **A calendar-feed token is the whole authorisation, so it is hashed, scoped and never served
     past what the app itself would show** (MON-17, September 2026). `functions/calendar-feed.js`

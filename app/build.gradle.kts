@@ -6,7 +6,7 @@ plugins {
     id("io.gitlab.arturbosch.detekt")
     id("io.github.takahirom.roborazzi")
     id("org.jetbrains.kotlinx.kover")
-    kotlin("kapt")
+    id("com.google.devtools.ksp")
 }
 
 // The Google Services and Firebase Crashlytics Gradle plugins both require a
@@ -237,7 +237,7 @@ android {
         }
     }
 
-    // Exported Room schemas (see the "room.schemaLocation" kapt arg below) are the fixtures
+    // Exported Room schemas (see the "room.schemaLocation" KSP arg below) are the fixtures
     // MigrationTestHelper reads to create a database at a past version and to validate the
     // rebuilt schema after a migration — without this, CoPlanlyDatabaseMigrationTest cannot
     // find 11.json/12.json at instrumentation runtime.
@@ -281,16 +281,16 @@ dependencies {
 
     // Hilt - Updated to latest stable
     implementation("com.google.dagger:hilt-android:2.56.2")
-    kapt("com.google.dagger:hilt-compiler:2.56.2")
+    ksp("com.google.dagger:hilt-compiler:2.56.2")
     implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
     implementation("androidx.hilt:hilt-work:1.2.0")
-    kapt("androidx.hilt:hilt-compiler:1.2.0")
+    ksp("androidx.hilt:hilt-compiler:1.2.0")
 
-    // Room - 2.7.x is required for Kotlin 2.x metadata (2.6.x kapt fails on it)
+    // Room - 2.7.x is required for Kotlin 2.x metadata (2.6.x fails on it)
     val roomVersion = "2.7.2"
     implementation("androidx.room:room-runtime:$roomVersion")
     implementation("androidx.room:room-ktx:$roomVersion")
-    kapt("androidx.room:room-compiler:$roomVersion")
+    ksp("androidx.room:room-compiler:$roomVersion")
     // MigrationTestHelper — instrumented tests that run a real migration against a real
     // SQLite database and validate the result against the exported schema JSON.
     androidTestImplementation("androidx.room:room-testing:$roomVersion")
@@ -403,9 +403,9 @@ dependencies {
 
     // Hilt testing - Updated to match Hilt version
     testImplementation("com.google.dagger:hilt-android-testing:2.56.2")
-    kaptTest("com.google.dagger:hilt-compiler:2.56.2")
+    kspTest("com.google.dagger:hilt-compiler:2.56.2")
     androidTestImplementation("com.google.dagger:hilt-android-testing:2.56.2")
-    kaptAndroidTest("com.google.dagger:hilt-compiler:2.56.2")
+    kspAndroidTest("com.google.dagger:hilt-compiler:2.56.2")
 
     // Navigation Testing
     androidTestImplementation("androidx.navigation:navigation-testing:2.9.3")
@@ -435,11 +435,18 @@ configurations.named("androidTestImplementation") {
     exclude(group = "org.junit.platform")
 }
 
-kapt {
-    correctErrorTypes = true
-    arguments {
-        arg("room.schemaLocation", "$projectDir/schemas")
-    }
+// Hilt and Room run on KSP, not kapt: kapt generated Java stubs for every Kotlin file before
+// processing, the single slowest phase of every build in CI. Room writes
+// `schemas/<version>.json` from this argument. It is a plain string, so Gradle does not know the
+// directory is an output — a KSP task restored from the build cache writes nothing there, which
+// is why the Regenerate workflow runs `kspDebugKotlin --rerun`.
+//
+// `room.generateKotlin = false` keeps Room emitting the Java it emitted under kapt. Room's Kotlin
+// output is stricter about nullability in queries; switching to it is a separate change with its
+// own review, not something to ride on a change of processor.
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+    arg("room.generateKotlin", "false")
 }
 
 // Detekt configuration for static code analysis
@@ -499,7 +506,7 @@ tasks.withType<Test>().configureEach {
 //
 // The exclusions are code nobody here writes: Hilt/Dagger's generated factories, injectors and
 // components, Room's `_Impl` DAOs and database, Compose's lambda singletons and previews, and
-// BuildConfig. Counting them would make the percentage mostly a measure of how much kapt emits.
+// BuildConfig. Counting them would make the percentage mostly a measure of how much the annotation processors emit.
 // In Kover's class filters `*` matches any characters, dots and `$` included.
 kover {
     reports {

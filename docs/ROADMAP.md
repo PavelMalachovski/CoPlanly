@@ -79,7 +79,7 @@ invocation is yours.
 | **CQ-17** | Six dependencies worth moving | P3 | S |
 | **MON-2** | Market facts checked (23 Sep 2026): **app2us has an Android build**; left: mediator count, ARPU, Facebook groups, app2us price on a phone | P0 | S |
 | **MON-3** | The export ships, ungated; left: a PDF read on a device, and the paywall with MON-11 | P2 | S |
-| **MON-4** | Decided and built; left: `Event.updatedAt` to epoch millis (answer 3's last compared field) | P1 | M |
+| **MON-4** | **Built**, `Event.updatedAt`'s compared instant included (schema 39); left: the Regenerate run for `39.json` and the deploy in 💻 | P1 | — |
 | **MON-5** | The plan ships; swapping in the Ministry's own wording needs the form itself | P1 | S |
 | **MON-6b** | Contact windows ship (schema 36), on the grid and on Home's today card; left: verifying the mixed-version path on two phones | P2 | S |
 | **MON-8** | Bakaláři / EduPage school import — the parsing, once you supply a real export | P2 | L |
@@ -130,7 +130,7 @@ invocation is yours.
 | Id | What | Note |
 | --- | --- | --- |
 | **REL-3 ops** | `firebase deploy --only functions` → invoke `backfillFamilyDocuments` → invoke `backfillRecordFamilyIds` → `firebase deploy --only firestore:rules` | **The order matters.** PR #76's isolation is inert until this runs, and running the rules deploy before the record backfill leaves each co-parent's expenses looking empty on the other phone. The functions deploy also ships the `onFamilyCreated` re-stamp trigger and the `sweepLapsedCalendarFriends` schedule. `functions/README.md` has the runbook. |
-| **MON-4 deploy** | `firebase deploy --only firestore:rules` (the `event_versions` block) and `firebase deploy --only functions` (account deletion reaches revisions); trigger the Regenerate workflow for `37.json` | Until the rules are deployed every revision upload is refused and stays queued on the phone — nothing is lost, but nothing is recorded server-side either. The schema export is the one artefact only a machine with an Android SDK can produce; CI's schema guard fails until it is committed. Fold the rules deploy into REL-3's order: after the record backfill, like every rules deploy. |
+| **MON-4 deploy** | `firebase deploy --only firestore:rules` (the `event_versions` block) and `firebase deploy --only functions` (account deletion reaches revisions); trigger the Regenerate workflow for `37.json`, and again for `39.json` (`events.updatedAtMillis`) | Until the rules are deployed every revision upload is refused and stays queued on the phone — nothing is lost, but nothing is recorded server-side either. The schema export is the one artefact only a machine with an Android SDK can produce; CI's schema guard fails until it is committed. Fold the rules deploy into REL-3's order: after the record backfill, like every rules deploy. |
 | **MON-16 deploy** | `firebase deploy --only functions` (`reserveExportRecordId`, `registerExportReceipt`, `verifyExport`, and account deletion scrubbing receipts), `firebase deploy --only firestore:rules` (the closed `export_receipts` block), `firebase deploy --only hosting` (`web/verify/`); then set `publishedExportVerifyUrl` in `app/build.gradle.kts` | Until the functions are deployed every export says "not registered" — honestly, and nothing is lost. Until the page is hosted and the URL set, a registered file prints its record ID without an address. `verifyExport` must be publicly invokable (a callable is by default); check `allUsers` has the Cloud Functions Invoker role after the first deploy. Rules order as for MON-4: after REL-3's record backfill. |
 | **REL-3 storage** | `firebase deploy --only storage` | One command that fixes a live bug: every pet and medical photo upload is refused today because the bucket still runs the July rules. **MON-23 needs the same deploy**: the vault and chat attachments live under `family_documents/` and `chat_attachments/`, which the live bucket refuses outright until it runs. |
 | **MON-23 deploy** | `firebase deploy --only storage`, `firebase deploy --only firestore:rules,firestore:indexes` (the `family_documents` block and its index, the `messages` attachment cap), `firebase deploy --only functions` (the vault in account deletion and the tombstone sweep, chat files erased with the chat) | Rules order as for MON-4: after REL-3's record backfill. Without the storage deploy nothing can be uploaded; without the rules the vault list and every filing are refused; without the functions an erased account leaves its vault files and chat files in the bucket. |
@@ -149,11 +149,11 @@ invocation is yours.
 
 In this order, and each is genuinely finishable in the cloud:
 
-1. **MON-4's last item** — `Event.updatedAt` to epoch millis, the one compared field answer 3
-   still reaches. Read `domain/custody/CustodyTimestamp.kt` first; the wire form keeps its name and
-   type.
-2. **MON-3's next slice** — the parenting plan is the other document worth exporting, and it is
-   not in the record yet.
+1. **MON-21** — from the agreed parenting plan to a proposed schedule, through the proposal flow
+   the custody screen already has.
+2. ~~**MON-4's last item**~~ — **done** (September 2026): event edits compare by instant (schema 39).
+3. ~~**MON-3's next slice**~~ — **done** (September 2026): the parenting plan is in the record, an
+   optional section on by default; see MON-3.
 *(Everything that headed this list — **MON-4** and **MON-3**'s first version, **M-6**, **CQ-19**, **CQ-12**, **CQ-1**'s bleeding half,
 **CQ-5**, **CQ-6 + CQ-8**, **SEC-2**, the three honesty gaps **CQ-20**, **UX-17**, **UX-18**, and
 **UX-15**, which un-hid the colour picker, the **MON-13** holiday tables, and **CQ-13**'s ViewModel
@@ -1371,9 +1371,22 @@ flag standing in for one would be the kind of gate this project has learned not 
 **The paywall arrives with MON-11's entitlement layer**, and the export is the first thing it gates.
 Until then the feature is free, which is also the honest way to learn whether anyone uses it.
 
+**The parenting plan (MON-5) is in it** (September 2026, the slice this entry used to list first).
+A checkbox on the export screen, on by default, adds a last section: every catalogue question in
+catalogue order, each parent's answer under their name, and whether the two agree — derived by
+`ParentingPlanComparison.statusOf`, the plan screen's own rule, so each parent must have ticked the
+other's answer *as it reads now*. It is read from `parenting_plans/{familyId}` with `Source.SERVER`;
+when that fails the section prints this phone's copy and says so, and the record's face carries the
+incomplete line. A family with no plan gets "no parenting plan recorded". The section prints
+`parenting_plan_disclaimer` (the wording is this project's, not the Ministry's form) and says it is
+the plan as it stood at export time, not for the period, with each parent's last change. **Answers
+under retired question ids are listed after the catalogue under a "no longer asked" heading**, by
+id — the app keeps them (CLAUDE.md item 21), so the record does not quietly drop them.
+`domain/export/RecordPlan.kt` builds it, `RecordPlanLayout` and `CommunicationRecordCsv` lay it out,
+`data/export/ParentingPlanRecordSource` reads it; `RecordPlanTest` pins all three.
+
 **Not in this version, and worth doing next:**
 
-- **The parenting plan (MON-5)** — the other document two parents hand to a court.
 - **Handover punctuality** — `HandoverCalculator` knows the schedule; nothing records whether a
   handover happened, and inventing it would break the record's own claim. Needs a product decision
   about what "on time" is recorded as, and by whom.
@@ -1414,11 +1427,31 @@ allows `create` only. See CLAUDE.md item 25 for the invariants and the design do
 collection is top-level, why there is no stored revision number, and why a missing event does not
 refuse a revision.
 
-**Left from answer 3 (☁️ cloud, M):** `Event.updatedAt` is still a naive `LocalDateTime`, and it is
-compared — `ConflictResolver` decides a sync conflict on it. Move it to epoch millis the way SEC-4
-moved custody, reading `domain/custody/CustodyTimestamp.kt` first: the Firestore field keeps its
-name and ISO-string type and only changes the zone it expresses, so a co-parent on an older build
-keeps reading it. The revisions do not depend on this, which is why it did not ship with them.
+**Answer 3's last compared field — done (September 2026, schema 39).** `ConflictResolver` decided a
+sync conflict on `Event.updatedAt`, a naive `LocalDateTime`; it now compares
+`EventEntity.updatedAtMillis`, epoch millis, the way SEC-4 moved custody. `domain/events/EventTimestamp.kt`
+is the one definition and says why, and four decisions are worth knowing before touching it:
+
+- **The wire form is `CustodyTimestamp`'s**: `events.updatedAt` keeps its name and its ISO-string
+  type, and only the zone it expresses changed, to UTC — **with no offset suffix**. An older build
+  parses the field with `ISO_LOCAL_DATE_TIME`, which rejects `Z`, and its sync skips a document it
+  cannot parse; an offset would have hidden every new event from a co-parent who has not updated. A
+  legacy value is read as UTC, wrong by its writer's offset — irreducible, as for custody.
+- **The instant is derived at the mapping boundary, not set at each save site.** Every save path
+  already stamps `updatedAt = LocalDateTime.now()`; `EventRepositoryImpl.toEntity` and
+  `toFirestoreMap` turn that into the instant in the phone's zone, so a new save path cannot forget
+  it. The cost is the repeated hour when clocks go back (the earlier instant is chosen). The one
+  path that builds a row without the domain model, the Google import, stamps `System.currentTimeMillis()`.
+- **The domain model keeps its `LocalDateTime`**, now the *display* value: a downloaded event shows
+  the instant in the viewer's zone. A legacy document therefore shows shifted by its writer's
+  offset until it is next saved — once, and only on events nobody has edited since the upgrade.
+- **`MIGRATION_38_39` reads the stored wall clock in the device's zone** (28→29's choice): the only
+  rows ever compared are this device's unsynced edits, written here. Downloaded rows are read in
+  the wrong zone, are never compared while synced, and are replaced on the next download.
+
+Not changed, and the same defect: `ChildInfoEntity.updatedAt` is still naive and still compared by
+`resolveChildInfoConflict`; pets carry the same field. Neither is in answer 3's scope, which named
+events.
 
 **Left as a limit, not a task:** the events rule does not *require* a revision beside each write,
 so an older build or a modified client can still edit without recording one. Demanding it
@@ -2418,8 +2451,9 @@ Not a wish-list ordering — a dependency ordering. Each block assumes the one a
 **Then the product bets, in descending confidence**
 
 10. ~~**MON-4 then MON-3**~~ — **done in that order** (September 2026): the owner decided what the
-    record guarantees, events became versioned, and the export shipped ungated. Left: MON-4's
-    `Event.updatedAt` migration, and the deploy in §1 ("MON-4 deploy").
+    record guarantees, events became versioned, the export shipped ungated, and
+    `Event.updatedAt`'s compared instant moved to epoch millis. Left: the deploy in §1 ("MON-4
+    deploy").
 11. **MON-5** — the Rodičovský plán. The cheapest local moat and the reason a mediator recommends
     you.
 12. **MON-1** then **MON-11** — decide the price before writing the entitlement layer, and decide

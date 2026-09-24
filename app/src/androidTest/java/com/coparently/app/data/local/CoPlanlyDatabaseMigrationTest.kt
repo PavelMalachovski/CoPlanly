@@ -865,6 +865,50 @@ class CoPlanlyDatabaseMigrationTest {
         }
     }
 
+    /**
+     * 38-to-39 dates every event by an instant (MON-4): `updatedAtMillis` is backfilled from the
+     * stored `updatedAt` wall clock, read in this device's zone — the forced UTC+05:30 above —
+     * because every row `ConflictResolver` will ever compare was written on this device.
+     *
+     * The wall clock itself must survive untouched (the app still displays it), and a value that
+     * cannot be read must land on the epoch, where it loses every comparison, rather than fail the
+     * upgrade. Needs `39.json`, which the Regenerate workflow exports (`.github/regenerate-request`).
+     */
+    @Test
+    fun migration38To39_datesEveryEventByItsInstant() {
+        val db = helper.createDatabase(TEST_DB, VERSION_38)
+        listOf("e1" to "2026-08-01T12:00:00", "e2" to "not a date").forEach { (id, updatedAt) ->
+            db.execSQL(
+                """
+                INSERT INTO events (id, title, startDateTime, eventType, parentOwner, isRecurring,
+                                    createdAt, updatedAt, syncedToFirestore, sharedWithJson,
+                                    permissions, isPrivate, acceptance, isImportant, forMembersJson)
+                VALUES (?, 'Pickup', '2026-08-02T15:00:00', 'pickup', 'mom', 0,
+                        '2026-08-01T09:00:00', ?, 0, '[]', 'read_write', 0, 'NOT_REQUIRED', 0, '[]')
+                """.trimIndent(),
+                arrayOf<Any>(id, updatedAt)
+            )
+        }
+        db.close()
+
+        val migrated = helper.runMigrationsAndValidate(
+            TEST_DB,
+            VERSION_39,
+            true,
+            DatabaseMigrations.MIGRATION_38_39
+        )
+
+        migrated.query("SELECT id, updatedAt, updatedAtMillis FROM events ORDER BY id").use {
+            assertTrue(it.moveToFirst())
+            assertEquals("e1", it.getString(0))
+            assertEquals("the displayed wall clock is kept", "2026-08-01T12:00:00", it.getString(1))
+            assertEquals(NOON_AT_PLUS_FIVE_THIRTY_MILLIS, it.getLong(2))
+            assertTrue(it.moveToNext())
+            assertEquals("e2", it.getString(0))
+            assertEquals("an unreadable value lands on the epoch", 0L, it.getLong(2))
+        }
+    }
+
     private companion object {
         const val TEST_DB = "coplanly-migration-test.db"
         const val VERSION_11 = 11
@@ -885,6 +929,7 @@ class CoPlanlyDatabaseMigrationTest {
         const val VERSION_36 = 36
         const val VERSION_37 = 37
         const val VERSION_38 = 38
+        const val VERSION_39 = 39
 
         /** 2026-08-01T12:00:00 at UTC+05:30, i.e. 06:30:00Z. */
         const val NOON_AT_PLUS_FIVE_THIRTY_MILLIS = 1_785_565_800_000L

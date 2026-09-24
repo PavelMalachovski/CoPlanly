@@ -9,13 +9,16 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.TableChart
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -39,21 +42,25 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.data.export.ExportedFile
 import com.coparently.app.domain.export.ExportFormat
+import com.coparently.app.domain.export.PlanLabels
 import com.coparently.app.domain.export.RecordActions
 import com.coparently.app.domain.export.RecordColumns
 import com.coparently.app.domain.export.RecordLabels
 import com.coparently.app.domain.export.VerificationLabels
+import com.coparently.app.domain.parentingplan.ParentingPlanCatalogue
 import com.coparently.app.presentation.common.GroupLabel
 import com.coparently.app.presentation.common.LocalDatePickerDialog
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.asString
+import com.coparently.app.presentation.parentingplan.PlanStrings
 import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate
 
@@ -123,19 +130,28 @@ fun ExportScreen(
             state = state,
             statement = labels.statement,
             modifier = Modifier.padding(padding),
-            onPick = { end -> picking = end },
-            onExport = { format -> viewModel.export(format, labels, fallbacks) }
+            actions = ExportActions(
+                onPick = { end -> picking = end },
+                onIncludePlan = viewModel::setIncludePlan,
+                onExport = { format -> viewModel.export(format, labels, fallbacks) }
+            )
         )
     }
 }
 
-/** The range, the statement the file makes about itself, and the two formats. */
+/** What the export screen's controls do, passed as one value so the content takes few parameters. */
+private class ExportActions(
+    val onPick: (RangeEnd) -> Unit,
+    val onIncludePlan: (Boolean) -> Unit,
+    val onExport: (ExportFormat) -> Unit
+)
+
+/** The range, whether the plan goes in, the statement the file makes about itself, and the two formats. */
 @Composable
 private fun ExportContent(
     state: ExportUiState,
     statement: List<String>,
-    onPick: (RangeEnd) -> Unit,
-    onExport: (ExportFormat) -> Unit,
+    actions: ExportActions,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -150,24 +166,12 @@ private fun ExportContent(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        Column {
-            GroupLabel(stringResource(R.string.export_range_label))
-            SectionGroup {
-                SectionRow(
-                    icon = Icons.Default.DateRange,
-                    title = stringResource(R.string.export_from),
-                    supporting = UiText.Date(state.from).asString(),
-                    onClick = { onPick(RangeEnd.FROM) }.takeIf { state.working == null }
-                )
-                Divider()
-                SectionRow(
-                    icon = Icons.Default.DateRange,
-                    title = stringResource(R.string.export_to),
-                    supporting = UiText.Date(state.to).asString(),
-                    onClick = { onPick(RangeEnd.TO) }.takeIf { state.working == null }
-                )
-            }
-        }
+        RangeGroup(state = state, onPick = actions.onPick)
+        IncludePlanGroup(
+            included = state.includePlan,
+            enabled = state.working == null,
+            onChange = actions.onIncludePlan
+        )
         Column {
             GroupLabel(stringResource(R.string.export_what_it_says))
             Surface(
@@ -190,9 +194,65 @@ private fun ExportContent(
             }
         }
         SectionGroup {
-            ExportRow(format = ExportFormat.PDF, working = state.working, onClick = { onExport(ExportFormat.PDF) })
+            ExportRow(
+                format = ExportFormat.PDF,
+                working = state.working,
+                onClick = { actions.onExport(ExportFormat.PDF) }
+            )
             Divider()
-            ExportRow(format = ExportFormat.CSV, working = state.working, onClick = { onExport(ExportFormat.CSV) })
+            ExportRow(
+                format = ExportFormat.CSV,
+                working = state.working,
+                onClick = { actions.onExport(ExportFormat.CSV) }
+            )
+        }
+    }
+}
+
+/** The two ends of the period, each opening a date picker while no export runs. */
+@Composable
+private fun RangeGroup(state: ExportUiState, onPick: (RangeEnd) -> Unit) {
+    Column {
+        GroupLabel(stringResource(R.string.export_range_label))
+        SectionGroup {
+            SectionRow(
+                icon = Icons.Default.DateRange,
+                title = stringResource(R.string.export_from),
+                supporting = UiText.Date(state.from).asString(),
+                onClick = { onPick(RangeEnd.FROM) }.takeIf { state.working == null }
+            )
+            Divider()
+            SectionRow(
+                icon = Icons.Default.DateRange,
+                title = stringResource(R.string.export_to),
+                supporting = UiText.Date(state.to).asString(),
+                onClick = { onPick(RangeEnd.TO) }.takeIf { state.working == null }
+            )
+        }
+    }
+}
+
+/**
+ * Whether the family's parenting plan goes into the file. The plan has no period, so the row says
+ * it is printed as it stands now, whatever range is picked above.
+ */
+@Composable
+private fun IncludePlanGroup(included: Boolean, enabled: Boolean, onChange: (Boolean) -> Unit) {
+    Column {
+        GroupLabel(stringResource(R.string.export_include_label))
+        SectionGroup {
+            SectionRow(
+                modifier = Modifier.toggleable(
+                    value = included,
+                    enabled = enabled,
+                    role = Role.Checkbox,
+                    onValueChange = onChange
+                ),
+                icon = Icons.AutoMirrored.Filled.Assignment,
+                title = stringResource(R.string.export_include_plan),
+                supporting = stringResource(R.string.export_include_plan_supporting),
+                trailing = { Checkbox(checked = included, onCheckedChange = null, enabled = enabled) }
+            )
         }
     }
 }
@@ -335,7 +395,29 @@ private fun rememberRecordLabels(): RecordLabels = RecordLabels(
         instructionNoUrl = stringResource(R.string.export_verify_instruction_no_url),
         notRegistered = stringResource(R.string.export_verify_not_registered),
         notRegisteredShort = stringResource(R.string.export_verify_not_registered_short)
-    )
+    ),
+    plan = rememberPlanLabels()
+)
+
+/** The parenting-plan section's words; the questions are the plan screen's own wording. */
+@Composable
+private fun rememberPlanLabels(): PlanLabels = PlanLabels(
+    section = stringResource(R.string.parenting_plan_title),
+    disclaimer = stringResource(R.string.parenting_plan_disclaimer),
+    currentState = stringResource(R.string.export_plan_current_state),
+    notFromServer = stringResource(R.string.export_plan_not_from_server),
+    unsentHere = stringResource(R.string.export_plan_unsent_here),
+    noPlan = stringResource(R.string.export_plan_none),
+    lastChanged = stringResource(R.string.export_plan_last_changed),
+    agreed = stringResource(R.string.parenting_plan_status_agreed),
+    notAgreed = stringResource(R.string.export_plan_not_agreed),
+    notAnswered = stringResource(R.string.parenting_plan_not_answered),
+    retired = stringResource(R.string.export_plan_retired),
+    // The catalogue is fixed for the life of the process, so this loop calls the same resources in
+    // the same order on every composition.
+    questions = ParentingPlanCatalogue.questions.mapNotNull { question ->
+        PlanStrings.questionPrompt(question.id)?.let { question.id to stringResource(it) }
+    }.toMap()
 )
 
 /** Hands [file] to the share sheet, through [recordShareIntent]. */

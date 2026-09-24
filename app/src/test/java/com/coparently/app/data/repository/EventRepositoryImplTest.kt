@@ -10,6 +10,7 @@ import com.coparently.app.data.versions.EventVersionKind
 import com.coparently.app.data.versions.EventVersionRecorder
 import com.coparently.app.domain.activity.ActivityAnnouncer
 import com.coparently.app.domain.events.EventAcceptance
+import com.coparently.app.domain.events.EventTimestamp
 import com.coparently.app.domain.model.Event
 import com.google.firebase.auth.FirebaseUser
 import com.google.gson.Gson
@@ -24,7 +25,9 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
+import java.time.Instant
 import java.time.LocalDateTime
+import java.util.TimeZone
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -483,6 +486,52 @@ class EventRepositoryImplTest {
         assertEquals(false, captured.captured["isImportant"])
     }
 
+    @Test
+    fun `a save stamps the instant its wall clock names in this phone's zone`() = runTest {
+        // MON-4: the instant is derived at the mapping boundary every save crosses, so a save
+        // path that sets `updatedAt = LocalDateTime.now()` cannot forget it. 10:00 at UTC+2 is
+        // 08:00Z — on the row, and as offset-free UTC text in the document.
+        withDefaultZone("GMT+02:00") {
+            signIn(uid = "uidA", partnerId = "uidB")
+            val row = slot<EventEntity>()
+            coEvery { eventDao.insertEvent(capture(row)) } returns Unit
+            val document = slot<Map<String, Any?>>()
+            coEvery { firestoreEventDataSource.insertEvent(any(), capture(document)) } returns
+                Result.success(Unit)
+
+            repository.insertEvent(baseDomain())
+
+            assertEquals(Instant.parse("2026-07-23T08:00:00Z").toEpochMilli(), row.captured.updatedAtMillis)
+            assertEquals("2026-07-23T08:00:00", document.captured["updatedAt"])
+        }
+    }
+
+    @Test
+    fun `the same wall clock in another zone is a different instant`() = runTest {
+        // The defect in one line: two phones stamping "10:00" were compared as equal. They are
+        // not, and the row now says so.
+        val atPlusTwo = withDefaultZone("GMT+02:00") { saveAndReadMillis() }
+        val atMinusFive = withDefaultZone("GMT-05:00") { saveAndReadMillis() }
+        assertEquals(7L * 60 * 60 * 1000, atMinusFive - atPlusTwo)
+    }
+
+    private suspend fun saveAndReadMillis(): Long {
+        val row = slot<EventEntity>()
+        coEvery { eventDao.updateEvent(capture(row)) } returns Unit
+        repository.updateEvent(baseDomain())
+        return row.captured.updatedAtMillis
+    }
+
+    private inline fun <T> withDefaultZone(id: String, block: () -> T): T {
+        val original = TimeZone.getDefault()
+        TimeZone.setDefault(TimeZone.getTimeZone(id))
+        return try {
+            block()
+        } finally {
+            TimeZone.setDefault(original)
+        }
+    }
+
     private fun baseEntity() = EventEntity(
         id = "e1",
         title = "Soccer",
@@ -491,7 +540,8 @@ class EventRepositoryImplTest {
         eventType = "sports",
         parentOwner = "mom",
         createdAt = now,
-        updatedAt = now
+        updatedAt = now,
+        updatedAtMillis = EventTimestamp.ofWallClock(now)
     )
 
     private fun baseDomain() = Event(

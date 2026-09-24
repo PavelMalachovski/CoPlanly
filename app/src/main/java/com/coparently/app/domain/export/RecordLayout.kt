@@ -70,15 +70,22 @@ data class PageGeometry(
  */
 object RecordLayout {
 
-    private const val SECTION_GAP = 14f
+    /** The gap above a section's heading; shared with [RecordPlanLayout]. */
+    internal const val SECTION_GAP = 14f
 
     /** The gap above an item; shared with [RecordVerificationLayout] so the header reads as one. */
     internal const val ITEM_GAP = 8f
-    private const val SMALL_GAP = 3f
 
-    /** The record as paragraphs, in reading order. */
+    /** The gap above a line inside an item; shared with [RecordPlanLayout]. */
+    internal const val SMALL_GAP = 3f
+
+    /**
+     * The record as paragraphs, in reading order. The parenting plan, when there is one, comes
+     * last: it is not bound to the period the three sections before it cover.
+     */
     fun blocks(record: CommunicationRecord, labels: RecordLabels): List<RecordBlock> =
-        header(record, labels) + events(record, labels) + messages(record, labels) + expenses(record, labels)
+        header(record, labels) + events(record, labels) + messages(record, labels) + expenses(record, labels) +
+            record.plan?.let { RecordPlanLayout.blocks(it, record.zone, labels.plan) }.orEmpty()
 
     /**
      * Wraps [blocks] to the page and breaks them across pages.

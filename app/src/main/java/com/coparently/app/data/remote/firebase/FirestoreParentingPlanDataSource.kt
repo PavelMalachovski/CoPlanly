@@ -5,6 +5,7 @@ import com.coparently.app.domain.parentingplan.ParentingPlanEntry
 import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
+import com.google.firebase.firestore.Source
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -47,6 +48,17 @@ class FirestoreParentingPlanDataSource @Inject constructor(
             }
         awaitClose { registration.remove() }
     }
+
+    /**
+     * Both halves of [familyId]'s plan as the **server** holds them now — the export's read (MON-3).
+     *
+     * `Source.SERVER`, never the cache: a record assembled from whatever this phone had cached
+     * would be a record of this phone, and the export must be able to say it could not ask. A
+     * missing document is an empty map, as in [observePlan]. Throws when the server cannot be
+     * reached or refuses; the caller decides what the record says about that.
+     */
+    suspend fun fetchFromServer(familyId: String): Map<String, ParentingPlanEntry> =
+        halvesOf(firestore.collection(COLLECTION).document(familyId).get(Source.SERVER).await().data.orEmpty())
 
     /**
      * Writes [entry] as [uid]'s half, leaving the co-parent's untouched.

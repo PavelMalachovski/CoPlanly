@@ -1,8 +1,14 @@
 package com.coparently.app.data.sync
 
+import com.coparently.app.domain.events.EventTimestamp
 import com.coparently.app.domain.family.FamilyMemberRef
 import org.junit.Test
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.format.DateTimeParseException
+import java.util.TimeZone
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 
 /**
@@ -68,6 +74,62 @@ class EventDocumentTest {
         val entity = EventDocument.toEntity(document)
         assertEquals("e1", entity.id)
         assertNull(entity.endDateTime)
+    }
+
+    @Test
+    fun `updatedAt is read as the instant its UTC text names`() {
+        // MON-4: an upgraded build writes the instant as offset-free UTC text. The row carries
+        // that instant for `ConflictResolver`, and this phone's own wall clock for display.
+        val entity = withDefaultZone("GMT+02:00") {
+            EventDocument.toEntity(minimalDocument(updatedAt = "2026-09-23T09:00:00"))
+        }
+        assertEquals(Instant.parse("2026-09-23T09:00:00Z").toEpochMilli(), entity.updatedAtMillis)
+        assertEquals(LocalDateTime.of(2026, 9, 23, 11, 0), entity.updatedAt)
+    }
+
+    @Test
+    fun `a legacy naive updatedAt is still read, as UTC`() {
+        // An older build writes its own wall clock with no offset. Nothing recovers the offset it
+        // was written in, so it is read as UTC — and, above all, read: throwing here would skip
+        // every event a co-parent on an older build creates.
+        val entity = EventDocument.toEntity(minimalDocument(updatedAt = "2026-09-23T09:00:00.250"))
+        assertEquals(Instant.parse("2026-09-23T09:00:00.250Z").toEpochMilli(), entity.updatedAtMillis)
+    }
+
+    @Test
+    fun `what this build writes is what it reads back`() {
+        val millis = Instant.parse("2026-09-23T07:30:15.125Z").toEpochMilli()
+        val entity = EventDocument.toEntity(minimalDocument(updatedAt = EventTimestamp.toWire(millis)))
+        assertEquals(millis, entity.updatedAtMillis)
+    }
+
+    @Test
+    fun `a document with an unreadable updatedAt is refused, not dated`() {
+        // As before MON-4: the caller skips the document rather than inventing a time that would
+        // win or lose a conflict it has no business deciding.
+        assertFailsWith<DateTimeParseException> {
+            EventDocument.toEntity(minimalDocument(updatedAt = "not a date"))
+        }
+    }
+
+    private fun minimalDocument(updatedAt: String) = mapOf<String, Any?>(
+        "id" to "e1",
+        "title" to "Pickup",
+        "startDateTime" to "2026-09-24T15:00:00",
+        "eventType" to "pickup",
+        "parentOwner" to "mom",
+        "createdAt" to "2026-09-23T09:00:00",
+        "updatedAt" to updatedAt
+    )
+
+    private inline fun <T> withDefaultZone(id: String, block: () -> T): T {
+        val original = TimeZone.getDefault()
+        TimeZone.setDefault(TimeZone.getTimeZone(id))
+        return try {
+            block()
+        } finally {
+            TimeZone.setDefault(original)
+        }
     }
 
     @Test

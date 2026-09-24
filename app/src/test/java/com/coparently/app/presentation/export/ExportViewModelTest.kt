@@ -7,9 +7,11 @@ import com.coparently.app.data.export.CommunicationRecordSource
 import com.coparently.app.data.export.ExportFileWriter
 import com.coparently.app.data.export.ExportReceipts
 import com.coparently.app.data.export.ExportedFile
+import com.coparently.app.data.export.ParentingPlanRecordSource
 import com.coparently.app.domain.export.CommunicationRecord
 import com.coparently.app.domain.export.ExportFingerprint
 import com.coparently.app.domain.export.ExportFormat
+import com.coparently.app.domain.export.PlanSource
 import com.coparently.app.domain.export.RecordFixtures
 import com.coparently.app.domain.export.RecordSources
 import com.coparently.app.domain.export.RecordVerification
@@ -58,6 +60,7 @@ class ExportViewModelTest {
         role = "dad"
     )
     private val source = mockk<CommunicationRecordSource>()
+    private val planSource = mockk<ParentingPlanRecordSource>()
     private val writer = mockk<ExportFileWriter>()
     private val receipts = mockk<ExportReceipts>()
     private val userRepository = mockk<UserRepository>()
@@ -74,6 +77,7 @@ class ExportViewModelTest {
             expenses = emptyList(),
             serverReached = true
         )
+        coEvery { planSource.read(any(), any()) } returns PLAN
         every { receipts.verifyUrl } returns VERIFY_URL
         // Offline by default: the tests that are about something else must not depend on a server.
         coEvery { receipts.reserve(any(), any(), any(), any()) } returns null
@@ -85,7 +89,8 @@ class ExportViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun viewModel() = ExportViewModel(source, writer, receipts, testParentsSource(me, partner), userRepository)
+    private fun viewModel() =
+        ExportViewModel(source, planSource, writer, receipts, testParentsSource(me, partner), userRepository)
 
     /** Distinct bytes per verification state, so a test can tell which rendering was saved. */
     private fun bytesFor(record: CommunicationRecord): ByteArray = when (val v = record.verification) {
@@ -193,6 +198,40 @@ class ExportViewModelTest {
         assertFalse(vm.state.value.error != null)
     }
 
+    // ---- MON-5 in the record: the parenting plan is in by default, and can be left out --------
+
+    @Test
+    fun `the plan is included by default, read for the pair on screen`() = runTest {
+        val record = slot<CommunicationRecord>()
+        coEvery { writer.save(any(), capture(record), any()) } returns ExportedFile(mockk<Uri>(), "text/csv")
+        val vm = viewModel()
+        assertEquals(true, vm.state.value.includePlan)
+
+        vm.files.test {
+            vm.export(ExportFormat.CSV, RecordFixtures.labels(), fallbacks)
+            awaitItem()
+        }
+
+        coVerify { planSource.read("u1", "u2") }
+        assertEquals(listOf("Alice", "Bob"), record.captured.plan?.questions?.first()?.answers?.map { it.parentName })
+    }
+
+    @Test
+    fun `a plan left out is not read, and the record carries none`() = runTest {
+        val record = slot<CommunicationRecord>()
+        coEvery { writer.save(any(), capture(record), any()) } returns ExportedFile(mockk<Uri>(), "text/csv")
+        val vm = viewModel()
+
+        vm.setIncludePlan(false)
+        vm.files.test {
+            vm.export(ExportFormat.CSV, RecordFixtures.labels(), fallbacks)
+            awaitItem()
+        }
+
+        coVerify(exactly = 0) { planSource.read(any(), any()) }
+        assertEquals(null, record.captured.plan)
+    }
+
     // ---- MON-16: the record id is inside the bytes it vouches for -------------------------
 
     @Test
@@ -251,7 +290,7 @@ class ExportViewModelTest {
     @Test
     fun `an account with no co-parent reserves under a blank family`() = runTest {
         coEvery { writer.save(any(), any(), any()) } returns ExportedFile(mockk<Uri>(), "text/csv")
-        val vm = ExportViewModel(source, writer, receipts, testParentsSource(me, null), userRepository)
+        val vm = ExportViewModel(source, planSource, writer, receipts, testParentsSource(me, null), userRepository)
 
         vm.files.test {
             vm.export(ExportFormat.CSV, RecordFixtures.labels(), fallbacks)
@@ -264,5 +303,6 @@ class ExportViewModelTest {
     private companion object {
         const val RECORD_ID = "7K3Q0ABCDEFGHJKM"
         const val VERIFY_URL = "https://coplanly.example/verify/"
+        val PLAN = PlanSource(listOf("u1", "u2"), emptyMap(), serverReached = true, unsentHere = false)
     }
 }
