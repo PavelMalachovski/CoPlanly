@@ -57,3 +57,5 @@ requested: 2026-09-24 — week 6 (the Today widget, the readable column on a wid
            screenshot component, schema or detekt finding changes, so this run should commit
            nothing. It also puts back the lines above the week-5 request, which that request
            wrote over instead of appending to
+requested: 2026-09-24 — again for week 6: the first run stopped at a compile error in NavGraph
+           (a return label left behind by pane()), fixed in the commit before this one
