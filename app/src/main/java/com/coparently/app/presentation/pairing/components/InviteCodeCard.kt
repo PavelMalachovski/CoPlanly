@@ -34,12 +34,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.coparently.app.R
 import com.coparently.app.domain.model.PairingInvite
+import com.coparently.app.presentation.common.InviteCodeText
 import com.coparently.app.presentation.common.dashedRoundedBorder
 import kotlinx.coroutines.delay
 import java.util.concurrent.TimeUnit
@@ -109,13 +108,7 @@ fun InviteCodeCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text(
-                    text = invite.code,
-                    fontSize = 36.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 7.sp,
-                    color = MaterialTheme.colorScheme.primary
-                )
+                InviteCodeText(code = invite.code, color = MaterialTheme.colorScheme.primary)
                 Icon(
                     imageVector = Icons.Default.ContentCopy,
                     contentDescription = stringResource(R.string.pairing_copy_code),

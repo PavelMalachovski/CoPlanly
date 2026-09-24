@@ -24,13 +24,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.coparently.app.R
 import com.coparently.app.domain.guests.GuestAccessDuration
 import com.coparently.app.domain.guests.GuestInviteUri
 import com.coparently.app.presentation.childinfo.GuestInviteState
+import com.coparently.app.presentation.common.InviteCodeText
 import com.coparently.app.presentation.common.PillChip
 import java.time.Instant
 import java.time.ZoneId
@@ -154,12 +153,7 @@ private fun MintedCode(code: String, grantEndsAtMillis: Long, onShare: (String) 
         DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG)
             .format(Instant.ofEpochMilli(grantEndsAtMillis).atZone(ZoneId.systemDefault()))
     }
-    Text(
-        text = code,
-        style = MaterialTheme.typography.displaySmall,
-        fontWeight = FontWeight.Bold,
-        letterSpacing = CODE_TRACKING
-    )
+    InviteCodeText(code = code)
     Text(
         text = stringResource(R.string.guest_invite_ends_on, ends),
         style = MaterialTheme.typography.bodyMedium,
@@ -187,6 +181,3 @@ private fun GuestAccessDuration.labelRes(): Int = when (this) {
 
 /** Matches the height of the button label it replaces, so the button does not resize. */
 private val SPINNER = 20.dp
-
-/** Wide enough that six characters read as six characters when spoken over the phone. */
-private val CODE_TRACKING = 8.sp

@@ -26,11 +26,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.coparently.app.R
 import com.coparently.app.domain.professionals.ProfessionalAccessDuration
 import com.coparently.app.domain.professionals.ProfessionalRole
 import com.coparently.app.presentation.common.GroupLabel
+import com.coparently.app.presentation.common.InviteCodeText
 import com.coparently.app.presentation.common.PillChip
 
 /**
@@ -158,12 +158,7 @@ private fun InviteCode(code: String) {
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
-    Text(
-        text = code,
-        style = MaterialTheme.typography.displaySmall,
-        fontWeight = FontWeight.Bold,
-        fontSize = 34.sp
-    )
+    InviteCodeText(code = code)
     OutlinedButton(
         onClick = { context.startActivity(shareIntent(context, code)) },
         modifier = Modifier.fillMaxWidth()
