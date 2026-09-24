@@ -130,6 +130,12 @@ fun ChangeRequestBanner(
  * month-level fact: the strip stopped distinguishing anything precisely when it was most
  * visible. One banner says the same thing and gives the grid its bottom edge back.
  *
+ * **Not rendered by the calendar any more**: a banner present only in some months changed the
+ * grid's height mid-swipe, so `CalendarScreen` dropped it, and the month grid now marks each
+ * vacation day with a thin neutral line instead (`DayCellFill.schoolVacation`, MON-13) — neutral
+ * where the old strip was teal, which is now the calendar friend's colour. Kept for the screenshot
+ * suite and for a surface that does not page.
+ *
  * @param label Vacation name, or a range description
  * @param modifier Modifier for the banner
  */

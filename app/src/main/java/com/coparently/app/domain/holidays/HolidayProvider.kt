@@ -129,6 +129,27 @@ interface HolidayProvider {
         }
         return result
     }
+
+    /**
+     * Every day between [start] and [end] inclusive that falls inside a school vacation,
+     * **whether or not it is also a public holiday**.
+     *
+     * A separate question from [holidaysInRange], which keys one [Holiday] per date and so answers
+     * "Christmas" rather than "school is out" on 24–26 December — the right answer for a name,
+     * and the wrong one for the month grid's school-vacation line, which would otherwise break on
+     * exactly the days a vacation is most obviously on. Empty wherever [schoolVacations] is.
+     */
+    fun schoolVacationDaysInRange(start: LocalDate, end: LocalDate): Set<LocalDate> {
+        val periods = (start.year..end.year).flatMap { schoolVacations(it) }.map { it.first }
+        val result = mutableSetOf<LocalDate>()
+        var date = start
+        while (!date.isAfter(end)) {
+            val day = date
+            if (periods.any { day in it }) result += day
+            date = date.plusDays(1)
+        }
+        return result
+    }
 }
 
 /**

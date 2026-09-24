@@ -19,8 +19,9 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * The calendar's month grid with every layer `DayCellFills` stacks — the weekend base, the custody
- * band with its Monday handover diagonal, the two public holidays, event dots, a pending swap and
- * the Wednesday contact-window corners (MON-6b) — plus the three banners that sit over it.
+ * band with its Monday handover diagonal, the two public holidays, event dots, a pending swap,
+ * the Wednesday contact-window corners (MON-6b) and the school-vacation line across the month's
+ * end (MON-13) — plus the three banners that sit over it.
  *
  * The grid is where a raw `MomPink`/`DadBlue` would be most visible, and where light theme was
  * least reviewed; its weekday header and banners are translated, so it takes the full set.
@@ -44,6 +45,7 @@ class CalendarScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant
                 onDayClick = {},
                 onMonthChange = {},
                 holidays = ScreenshotFixtures.holidays,
+                schoolVacationDays = ScreenshotFixtures.schoolVacationDays,
                 pendingSwapDates = setOf(ScreenshotFixtures.MONTH.atDay(PENDING_SWAP_DAY))
             )
         }

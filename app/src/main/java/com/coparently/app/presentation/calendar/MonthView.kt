@@ -41,7 +41,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.luminance
@@ -105,9 +107,8 @@ private const val HOLIDAY_TINT_ALPHA = 0.10f
  * Classic month grid: always starts at the 1st of the month, pages horizontally
  * between months with follow-the-finger physics (kizitonwose HorizontalCalendar).
  *
- * Day cells show custody colouring (slot 1 pink / slot 2 blue), public holidays and
- * parent-coloured event dots. School vacation is a month-level banner above the grid,
- * not a per-day marker.
+ * Day cells show custody colouring (slot 1 pink / slot 2 blue), public holidays,
+ * parent-coloured event dots and — along the bottom edge — a neutral school-vacation line.
  *
  * @param parentNames Resolves a slot to that parent's name, for the cells' accessibility
  *   descriptions — the grid says the colour out loud for anyone not reading it.
@@ -118,6 +119,10 @@ private const val HOLIDAY_TINT_ALPHA = 0.10f
  *   nothing is pending. Separate from [getCustody] for the same reason [pendingSwapDates] is: a
  *   proposal has changed nothing yet. The days it *would* move are washed in the proposed
  *   parent's hue at a lower alpha, over the agreed day, which keeps its full strength underneath.
+ * @param schoolVacationDays Days inside a school vacation, public holidays inside one included
+ *   (`HolidayProvider.schoolVacationDaysInRange`). Drawn as a thin neutral line along the cell's
+ *   bottom edge that takes no height, so a month with a vacation is exactly as tall as one without
+ *   — the constraint the removed month banner broke (see `CalendarScreen`).
  * @param pendingSwapDates Dates a one-off swap is being negotiated on. Deliberately separate from
  *   [getCustody]: a pending swap has changed nothing about whose day it is, and saying otherwise
  *   in the cell's colour would be a lie both parents act on.
@@ -147,6 +152,7 @@ fun MonthView(
     onDayClick: (LocalDate) -> Unit,
     onMonthChange: (YearMonth) -> Unit,
     holidays: Map<LocalDate, Holiday> = emptyMap(),
+    schoolVacationDays: Set<LocalDate> = emptySet(),
     pendingSwapDates: Set<LocalDate> = emptySet(),
     swappedDates: Set<LocalDate> = emptySet(),
     onDayLongClick: ((LocalDate) -> Unit)? = null,
@@ -277,6 +283,7 @@ fun MonthView(
                         parentNames = parentNames,
                         onDayClick = onDayClick,
                         holiday = holidays[day.date],
+                        isSchoolVacation = day.date in schoolVacationDays,
                         isSwapPending = day.date in pendingSwapDates,
                         isSwapped = day.date in swappedDates,
                         previousSwapped = day.date.minusDays(1) in swappedDates,
@@ -296,6 +303,9 @@ fun MonthView(
 
 /** Outline width on a day picked for a multi-day swap. */
 private val SWAP_SELECTION_BORDER = 2.dp
+
+/** Thickness of the school-vacation line along a month cell's bottom edge (MON-13). */
+private val VACATION_LINE_HEIGHT = 2.dp
 
 /** Side of the corner triangle that marks a day with a contact window (MON-6b). */
 private val CONTACT_WINDOW_MARKER_SIZE = 10.dp
@@ -380,6 +390,7 @@ private fun DayCell(
     parentNames: ParentNames,
     onDayClick: (LocalDate) -> Unit,
     holiday: Holiday? = null,
+    isSchoolVacation: Boolean = false,
     isSwapPending: Boolean = false,
     isSwapped: Boolean = false,
     previousSwapped: Boolean = false,
@@ -405,8 +416,8 @@ private fun DayCell(
     // Two layers, not one pick: see DayCellFills for why a single `when` made the weekend
     // unreachable on every account with a custody model. Custody is still the product's core
     // signal and still wins over the holiday tint. School vacation is intentionally NOT a
-    // full-cell fill at all (it used to drown custody colors); it renders as a thin strip at
-    // the bottom instead.
+    // full-cell fill at all (it used to drown custody colors); it is a thin neutral line along
+    // the bottom edge instead — see `DayCellFill.schoolVacation`.
     val previousCustody = getCustody(date.minusDays(1))
     val proposedCustody = getProposedCustody(date)
     val fill = DayCellFills.monthCell(
@@ -417,7 +428,8 @@ private fun DayCell(
         isPublicHoliday = isPublicHoliday,
         proposedCustody = proposedCustody,
         isSwapped = isSwapped,
-        previousSwapped = previousSwapped
+        previousSwapped = previousSwapped,
+        isSchoolVacation = isSchoolVacation
     )
     val baseColor = when (fill.base) {
         DayCellBase.WEEKEND ->
@@ -466,6 +478,15 @@ private fun DayCell(
     // fight the five this cell stacks. The hours are in the description and in Day view, one tap
     // away. On a borrowed day the marker is scaled like the band: a window is part of the pattern,
     // and the pattern crosses the month boundary.
+    // The school-vacation line: the theme's `outline` role, a neutral that is no parent's, the
+    // friend's or the holiday's, and scaled on a borrowed day like the band. Resolved here because
+    // the draw lambda below is not composable.
+    val vacationLineColor = if (fill.schoolVacation) {
+        MaterialTheme.colorScheme.outline.copy(alpha = adjacentScale(fill.isAdjacentMonth))
+    } else {
+        null
+    }
+
     val contactWindows = getContactWindows(date)
     val windowMarkerColor = contactWindows.firstOrNull()?.let {
         ParentColors.fill(it.parent).copy(alpha = adjacentScale(fill.isAdjacentMonth))
@@ -490,6 +511,13 @@ private fun DayCell(
             R.string.calendar_day_desc_proposal_pending,
             parentNames.labelFor(proposedCustody.orEmpty())
         )
+    }
+    // Spoken only when the holiday's own name does not already say it: on a vacation day the name
+    // *is* the vacation ("Summer vacation"), on Christmas Eve inside the break it is not.
+    val vacationLabel = if (fill.schoolVacation && holiday?.isSchoolVacation != true) {
+        stringResource(R.string.calendar_day_desc_school_vacation)
+    } else {
+        null
     }
     val swapLabel = if (isSwapPending) {
         stringResource(R.string.calendar_day_desc_swap_pending)
@@ -521,6 +549,10 @@ private fun DayCell(
         holiday?.let {
             append(", ")
             append(if (Locale.getDefault().language == it.localLanguage) it.nameLocal else it.nameEn)
+        }
+        vacationLabel?.let {
+            append(", ")
+            append(it)
         }
         custodyLabel?.let {
             append(", ")
@@ -678,6 +710,16 @@ private fun DayCell(
                 // handover boundary drawn inside it must be previewed too rather than punching
                 // a hole in it.
                 proposalColor?.let { drawRect(it) }
+                // The school-vacation line along the bottom edge, full width so consecutive days
+                // read as one run. Under the contact-window corner, which is the rarer mark.
+                vacationLineColor?.let { color ->
+                    val thickness = VACATION_LINE_HEIGHT.toPx()
+                    drawRect(
+                        color = color,
+                        topLeft = Offset(0f, size.height - thickness),
+                        size = Size(size.width, thickness)
+                    )
+                }
                 // The contact-window corner, last so no fill covers it (see `windowMarkerColor`).
                 windowMarkerColor?.let { color ->
                     val side = CONTACT_WINDOW_MARKER_SIZE.toPx()

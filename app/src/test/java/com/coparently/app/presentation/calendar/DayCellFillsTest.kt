@@ -2,7 +2,9 @@ package com.coparently.app.presentation.calendar
 
 import org.junit.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 /**
  * The branching that decides a day cell's fill.
@@ -431,4 +433,69 @@ class DayCellFillsTest {
         assertNull(fill.pendingProposalFor)
     }
 
+    @Test
+    fun `a school-vacation day is a line over the custody band, not a fill`() {
+        // MON-13: the vacation must not take the cell's colour away from whose day it is — the
+        // teal strip it replaces was removed for washing every cell of August.
+        assertEquals(
+            DayCellFill(
+                base = DayCellBase.WEEKEND,
+                overlay = DayCellOverlay.CUSTODY_DAD,
+                schoolVacation = true
+            ),
+            DayCellFills.monthCell(
+                isWeekend = true,
+                isCurrentMonth = true,
+                custody = "dad",
+                previousCustody = "dad",
+                isPublicHoliday = false,
+                isSchoolVacation = true
+            )
+        )
+    }
+
+    @Test
+    fun `a public holiday inside a school vacation keeps both its tint and the line`() {
+        val fill = DayCellFills.monthCell(
+            isWeekend = false,
+            isCurrentMonth = true,
+            custody = null,
+            previousCustody = null,
+            isPublicHoliday = true,
+            isSchoolVacation = true
+        )
+
+        assertEquals(DayCellOverlay.PUBLIC_HOLIDAY, fill.overlay)
+        assertTrue(fill.schoolVacation)
+    }
+
+    @Test
+    fun `a borrowed day keeps the school-vacation line, like the custody band`() {
+        // A vacation is a run of days, and nothing on it can be acted on, so it crosses the month
+        // boundary the way the band does; the caller draws it recessively.
+        val fill = DayCellFills.monthCell(
+            isWeekend = false,
+            isCurrentMonth = false,
+            custody = "mom",
+            previousCustody = "mom",
+            isPublicHoliday = false,
+            isSchoolVacation = true
+        )
+
+        assertTrue(fill.schoolVacation)
+        assertTrue(fill.isAdjacentMonth)
+    }
+
+    @Test
+    fun `an ordinary day has no school-vacation line`() {
+        val fill = DayCellFills.monthCell(
+            isWeekend = false,
+            isCurrentMonth = true,
+            custody = "mom",
+            previousCustody = "mom",
+            isPublicHoliday = false
+        )
+
+        assertFalse(fill.schoolVacation)
+    }
 }

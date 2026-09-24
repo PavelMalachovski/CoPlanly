@@ -84,6 +84,20 @@ object ScreenshotFixtures {
         Holiday(MONTH.atDay(8), "Liberation Day", "Den vítězství", "cs")
     ).associateBy { it.date }
 
+    /**
+     * A school vacation that runs off the end of the month: Baden-Württemberg's Whitsun break,
+     * 26 May – 5 June 2026, as `GermanHolidays.forRegion("BW")` returns it. Mixed with Czech public
+     * holidays on purpose — the grid draws whatever it is handed, and this puts the vacation line
+     * (MON-13) on in-month days, on a weekend, and on the June days the last row borrows.
+     */
+    val schoolVacationDays: Set<LocalDate> =
+        generateSequence(MONTH.atDay(WHITSUN_BREAK_START)) { it.plusDays(1) }
+            .takeWhile { !it.isAfter(MONTH.plusMonths(1).atDay(WHITSUN_BREAK_END)) }
+            .toSet()
+
+    private const val WHITSUN_BREAK_START = 26
+    private const val WHITSUN_BREAK_END = 5
+
     private val stamp: LocalDateTime = MONTH.atDay(1).atStartOfDay()
 
     /** An event in May with the fields the screens read; everything else at its default. */

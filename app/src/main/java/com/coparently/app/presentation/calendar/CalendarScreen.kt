@@ -203,8 +203,9 @@ internal fun eventsByDay(events: List<Event>): Map<LocalDate, List<Event>> {
  *
  * Restructured by the August 2026 design review: the header is one row (its four actions and
  * the segmented view-mode bar under it are now a title menu, a Today pill and one Filters
- * chip), change requests and school vacation surface as labelled banners over the grid, and
- * the month cells carry event dots with the selected day's titles listed underneath.
+ * chip), change requests surface as labelled banners over the grid, and the month cells carry
+ * event dots. School vacation, a banner in that review, is a neutral line along each vacation
+ * day's bottom edge since MON-13 (the banner changed the grid's height between months).
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -440,6 +441,24 @@ fun CalendarScreen(
         }
     }
 
+    // The days the month grid underlines as school vacation. Asked separately from `holidays`,
+    // which keys one entry per date with the public holiday first — so Christmas Eve would drop
+    // out of the Christmas break. Same switch, same range, same parent's country.
+    val schoolVacationDays: Set<LocalDate> = remember(
+        viewMode,
+        queryAnchorDate,
+        showHolidays,
+        holidayLocation
+    ) {
+        val provider = holidayLocation.provider
+        if (!showHolidays || provider == null || viewMode != CalendarViewMode.MONTH) {
+            emptySet()
+        } else {
+            val (start, end) = queryRangeFor(viewMode, queryAnchorDate)
+            provider.schoolVacationDaysInRange(start.toLocalDate(), end.toLocalDate())
+        }
+    }
+
     // Load events based on view mode
     LaunchedEffect(viewMode, queryAnchorDate) {
         val (start, end) = queryRangeFor(viewMode, queryAnchorDate)
@@ -659,13 +678,14 @@ fun CalendarScreen(
                 // roughness — and reported week and day view as the smoothest precisely
                 // because nothing there changes height between pages.
                 //
-                // Removed rather than hidden because that is what was asked for now. **This
-                // loses the school-vacation signal entirely** — the July 2026 design replaced
-                // a per-day teal strip with this banner, so there is no longer any other
-                // marker for it. When it comes back, it must reserve its height in every
-                // month, vacation or not, or it will reintroduce exactly this defect.
-                // `VacationBanner` itself is left in `CalendarBanners.kt`; the label helper
-                // that fed it is recoverable from this commit's parent.
+                // Removed rather than hidden because that is what was asked for then. The signal
+                // came back in September 2026 (MON-13) *inside* the cells rather than above them:
+                // a thin neutral line along each vacation day's bottom edge, drawn over the
+                // fills and taking no height (`DayCellFill.schoolVacation`), so every month is
+                // the same height whether it holds a vacation or not. Don't bring the banner
+                // back on top of it — it would reintroduce exactly this defect.
+                // `VacationBanner` itself is left in `CalendarBanners.kt` (the screenshot suite
+                // still renders it); the label helper that fed it is recoverable from history.
 
                 // The banners share one container that animates its height, so a banner arriving
                 // or leaving moves the grid over the standard duration instead of shoving it in
@@ -862,7 +882,8 @@ fun CalendarScreen(
                                     onMonthChange = { newMonth ->
                                         calendarViewModel.showMonth(newMonth)
                                     },
-                                    holidays = holidays
+                                    holidays = holidays,
+                                    schoolVacationDays = schoolVacationDays
                                 )
                             }
                         }
