@@ -1472,11 +1472,10 @@ private fun caresForSummary(kinds: Set<FamilyKind>): String {
     val children = stringResource(R.string.onboarding_family_children)
     val pets = stringResource(R.string.onboarding_family_pets)
     return when {
-        kinds.containsAll(FamilyKind.ALL) -> stringResource(
-            R.string.settings_family_kind_both,
-            children,
-            pets
-        )
+        // One phrase per language, not the two labels joined: each label is a title, capitalised
+        // on its own, so "%1$s and %2$s" read "Children and Pets" (docs/AUDIT-2026-10-design.md
+        // D-21, found by the week-4 tour).
+        kinds.containsAll(FamilyKind.ALL) -> stringResource(R.string.settings_family_kind_both)
         FamilyKind.PETS in kinds -> pets
         else -> children
     }

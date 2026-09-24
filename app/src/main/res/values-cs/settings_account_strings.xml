@@ -56,7 +56,7 @@
     <string name="settings_account_delete_progress">Mažeme váš účet…</string>
     <string name="settings_account_delete_failed">Účet se nepodařilo smazat. Zkuste to prosím znovu.</string>
     <string name="settings_family_kind_title">Co vychováváte společně</string>
-    <string name="settings_family_kind_both">%1$s a %2$s</string>
+    <string name="settings_family_kind_both">Děti a mazlíčci</string>
     <string name="settings_family_kind_save">Uložit</string>
     <string name="settings_family_kind_cancel">Zrušit</string>
     <string name="settings_family_kind_kept_by_co_parent">Uloženo. Sekce, kterou jste odebrali, zůstává viditelná, protože ji druhý rodič má dál.</string>
