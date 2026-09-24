@@ -111,8 +111,16 @@ for variant in $VARIANTS; do
     "$instrumentation" | tr -d '\r' | tee "$OUT/logs/$variant-instrument.txt" || true
   adb logcat -d -v time >"$OUT/logs/$variant-logcat.txt" 2>&1 || true
   rm -rf "${OUT:?}/ui-tour/$variant"
-  if ! adb pull "$REMOTE/$variant" "$OUT/ui-tour/"; then
-    echo "::warning::Nothing to pull for $variant from $REMOTE/$variant — see logs/$variant-logcat.txt"
+  # On API 30 the shell user may not read another app's /sdcard/Android/data (adb pull answers
+  # "Permission denied"), so the files are streamed out as the app itself: the debug build is
+  # debuggable, which is what `run-as` needs, and the app's uid may read its own external dir.
+  mkdir -p "$OUT/ui-tour"
+  if ! adb pull "$REMOTE/$variant" "$OUT/ui-tour/" 2>/dev/null; then
+    rm -rf "${OUT:?}/ui-tour/$variant"
+    if ! adb exec-out run-as "$APP_ID" tar -cf - -C "$REMOTE" "$variant" | tar -xf - -C "$OUT/ui-tour/" \
+      || [ -z "$(find "$OUT/ui-tour/$variant" -name '*.png' 2>/dev/null | head -n 1)" ]; then
+      echo "::warning::Nothing to pull for $variant from $REMOTE/$variant — see logs/$variant-logcat.txt"
+    fi
   fi
   echo "::endgroup::"
   echo "::group::logcat — $variant: tour steps, skips, crashes"
