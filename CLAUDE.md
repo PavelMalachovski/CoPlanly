@@ -53,8 +53,9 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
    - `ConnectivityBanner` is the offline line in the root Scaffold's top bar.
 
    `GroupLabel` and the screens' section headers carry `heading()` semantics for TalkBack. Don't
-   draw a second anatomy for any of these. The calendar's one-line banners over the grid
-   (`CalendarBanners.kt`) are the deliberate exception.
+   draw a second anatomy for any of these. The calendar's compact banners over the grid
+   (`CalendarBanners.kt`, one row of icon, text and action, which wraps rather than cuts) are the
+   deliberate exception.
 2. **Parent colours go through `presentation/theme/ParentColors.kt`**: `fill()` for dots,
    bars and tints; `text()` for anything that is a foreground (it picks the theme-aware
    `*Light`/`*Dark` partner). The raw `MomPink`/`DadBlue` are fill-only — using them as text
@@ -75,7 +76,13 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
    cells carry event **dots**, tapping a day selects it **and opens Day view** (an owner
    decision from the Aug 2026 walkthrough — a select-only tap left no route to creating an
    event on a chosen day; an empty hour slot in Day view is that route), and
-   the grid fills its screen. *(Aug 2026, second pass: the `DayAgendaCard` no longer sits
+   the grid fills its screen. **Back from a Day view opened that way returns to Month** (D-11);
+   a Day view chosen in the title's picker keeps the default Back. Day view's header carries
+   **"Swap this day"** beside the date (D-10), the visible twin of the month cell's long-press.
+   The member filter is **one scrolling row, label first** (`FamilyMemberFilterStrip`) and stays
+   with the banners over the grid on purpose, not in Filters. The month title omits the current
+   year. In Day and Week view **a drag deletes only when it ends over the red delete button**
+   (its bounds, via a file-private local in `DayWeekView`), never over a screen region. *(Aug 2026, second pass: the `DayAgendaCard` no longer sits
    under the grid — it renders on Home as the "today" card (`HomeWeek.todayOf`), fed by the
    same `DayAgendaCard` composable so the two surfaces cannot drift. Month paging is snapped
    by `MonthView`'s own nestedScroll settle — one 500 ms tween, identical in both
@@ -192,6 +199,22 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     currency formatter joins the amount to its code with a no-break space, so a figure wider than
     its column never breaks at the space but inside the code ("CZ|K") — give it the width instead. A
     title or a row's meta line may still end in an ellipsis; the amount beside it may not.
+
+16. **A form keeps what was typed until the parent says otherwise** (October 2026 audit, D-11).
+    `presentation/common/DiscardGuard.kt`'s `rememberDiscardGuard(dirty, onLeave)` asks "Discard
+    changes?" on the system Back and on the up arrow (it returns the arrow's handler) while a form
+    holds edits, and leaves at once when it does not. The event (when editing), expense, child, pet
+    and journal forms use it. Three things not to undo. **Dirty means different from what the form
+    was seeded with**, compared as a data class of the fields (`EventFields`, `ExpenseFields`,
+    `ChildFields`, `PetFields`), never "has the user touched anything". **A form seeds once per
+    record**: the event and expense forms keep their fields in `rememberSaveable` (the member chips
+    through `FamilyMemberRefListSaver`) and load under a saveable `seeded`/`prefilled` flag, so a
+    rotation keeps the edits instead of reloading the stored record over them; the child and pet
+    forms key the seeding on the record's id, because their observed record re-emits on every sync
+    write and copying each emission overwrote what was being typed. **A new event asks nothing**:
+    its draft is saved as the parent types and returns on the next "+". The child and pet forms
+    still lose edits on rotation — their nested lists belong in the ViewModels (the project's rule
+    for state).
 
 ## UX/UI overhaul (July 2026 design review) — implemented, keep consistent
 
@@ -581,12 +604,12 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   Robolectric's native graphics renders the tests in `app/src/test/java/com/coparently/app/
   screenshots/` — Home's cards, the month grid with every `DayCellFills` layer, the calendar
   banners, a Settings group, `EmptyState`, `ErrorState`, `InlineBanner`, `StickyActionBar`, the
-  offline banner, the Expenses summary header, a chat thread, the event preview body, the consent
-  screen and the family switcher chip — over a variant matrix of theme,
+  offline banner, the Expenses summary header and its collapsed line, a chat thread, the event
+  preview body, the consent screen and the family switcher chip — over a variant matrix of theme,
   the five languages, 1.0×/1.5×/2.0× font scale (2.0× in German only, added after the October 2026
   audit found money cut off at sizes the matrix never rendered) and the default vs a purple/orange
   parent palette (`ScreenshotVariants`: ten variants for text-heavy components, four for the rest,
-  174 images — the count the committed baselines hold).
+  184 images — the count the committed baselines hold).
   **To view:** open the run's `screenshots` artefact, unzip, open `index.html`
   (`tools/screenshot-gallery.js`, no dependencies, filters by component/language/theme/scale/
   palette). Locally: `./gradlew recordRoborazziDebug` writes into `app/src/test/screenshots/` — don't commit what a laptop records (below).
