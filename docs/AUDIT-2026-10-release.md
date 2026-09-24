@@ -164,8 +164,18 @@ scroll over moving "+" into the top bar.
 | Grid | The 6/10/14/18/20 dp paddings and gaps snapped to `Spacing` steps; the calendar banners' 9 dp is the one gap left off the grid, commented; the grid cells' own marks keep their literals |
 | Weights | Eight of the thirteen `fontWeight` overrides became `*Emphasized` roles (one new, `bodyLargeEmphasized`) or the button's own role. Left: the chat search highlight (a span, not a style) and four `Normal` weights on the calendar's quiet labels, which have no role lighter than their style |
 
-R-8 (tabs on a wide window) is week 8's. The screenshot baselines move with the grid, the weights
-and the 12-hour English times, so this week's Regenerate commit is expected to change images.
+R-8 (tabs on a wide window) is week 8's. The Regenerate run moved 118 of the 200 screenshot
+baselines (the grid, the weights and the 12-hour English times) and dropped one detekt baseline
+entry, adding none.
+
+The UI tour on the regenerated head walked every screen in all four variants, with no section cut
+short. It shows the fixes on device:
+- after "Later", Home opens with no dialog (shot 04)
+- the last expense's amount rests clear of the "+" (23)
+- the Add expense form opens on CZK for the tour's Czech family on an English (US) device (25)
+- the pet form's date of birth is the date field (38)
+- the onboarding split step carries its own footnote (86)
+- English times are 12-hour in both the today card and the week list (04)
 
 ## 5. How this audit was made, and how to repeat it
 
