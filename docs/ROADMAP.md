@@ -1646,7 +1646,8 @@ before launch.
 Germany's sixteen Länder, and school vacations for Slovakia, Austria and every German Land from a
 second, pinned dataset. What remains is either data nobody publishes in final form yet (Austria's
 per-Land breaks), a region the app does not model (Slovakia's kraje), or a product decision
-(Austria's patron-saint days, a grid marker for school vacations).
+(Austria's patron-saint days). The grid marker for school vacations and the ODbL attribution
+screen are done (September 2026, below).
 
 MVP 1 asked for "holidays and vacations by country" and shipped one country. There was **no country
 setting anywhere in the app** — no field, no picker, not even a constant — so `CalendarScreen`
@@ -1762,10 +1763,46 @@ memory.
   - **Austria, the nationwide periods** (autumn 27–31 Oct, All Souls' Day, Christmas, Easter,
     Whitsun; to Christmas 2028/29).
   - **Slovakia, the nationwide periods** (autumn, Christmas, Easter, summer; to summer 2028).
-- **Where they show.** Only in Day view's header label today: the month grid has had no
-  school-vacation marker since the banner was removed for the month-swipe height (see
-  `CalendarScreen`), and Week view shows none. That was already true of Czechia; a marker that
-  reserves its height in every month is a design task, not part of this item.
+- **Where they show.** Day view's header label, and — since the marker below — the month grid.
+  Week view still shows none.
+
+**Done (September 2026): a school-vacation marker on the month grid.** The grid had none since the
+month banner was removed for changing the grid's height mid-swipe, and before the banner the July
+2026 design had removed a per-day **teal** strip for washing every cell of August. The marker
+answers both: a **2 dp line along the bottom edge** of each vacation day, in the theme's `outline`
+role, drawn over every fill and taking no height (`DayCellFill.schoolVacation`,
+`DayCellFills.monthCell(isSchoolVacation)`, drawn in `MonthView`). Four decisions.
+- **Neutral, not a hue.** Pink and blue are the parents, teal is now the calendar friend, grey is
+  the weekend base, red the public holiday; the line adds no colour channel, and a line is not a
+  tint, so the custody band keeps its full meaning underneath.
+- **It crosses into the borrowed days**, at `ADJACENT_MONTH_TINT_SCALE`, like the custody band: a
+  vacation is a run of days with nothing on it to act on, so it has none of the reasons the holiday
+  tint has to stop at the month's edge.
+- **A public holiday inside a break is still a vacation day.** `HolidayProvider.holidaysInRange`
+  keys one entry per date with the holiday first, which would have broken the line on 24–26
+  December; `HolidayProvider.schoolVacationDaysInRange` answers the question separately
+  (`SchoolVacationDaysTest`).
+- **The cell's spoken description** adds "School vacation" when the holiday's own name does not
+  already say it (Christmas Eve inside the break), in all five locales.
+  The Roborazzi month grid now shows it across the end of May into the borrowed June days.
+  **Owner call on the look:** in Czechia every cell of July and August carries the line, which is
+  the "per-day noise for a month-level fact" the teal strip was criticised for — at 2 dp in a
+  neutral grey it should read as texture, and it is what lets the German and Austrian single days
+  (Buß- und Bettag, All Souls') show at all, which a month banner could not. The device checklist
+  (§3.4) asks for that judgement in light and dark.
+
+**Done (September 2026): the ODbL attribution.** Settings → App → **Data sources and licences**
+(`presentation/settings/DataSourcesScreen.kt`, a detail route) says the holiday data is built into
+the app, attributes the school vacations as "Contains information from OpenHolidays API data,
+which is made available under the Open Database License (ODbL) 1.0" with a row that opens the
+licence, and names the Python `holidays` library (© Vacanza Team and contributors, MIT) that the
+public-holiday tables are checked against — a courtesy rather than an obligation, since none of its
+code or data ships. The notice list is data (`DataSources.notices`) held by `DataSourcesTest`. The
+calendar and the country picker's coverage note do **not** repeat the source: ODbL asks for the
+notice where a person would look for one, and a licence line under every country chip would be
+noise on the one screen where a parent decides what their calendar shows. There is no general
+open-source-licences screen in the app (no `oss-licenses` plugin); if one is added, this screen's
+rows belong in it.
 
 **Left.**
 - **Austria's semester and summer breaks, per Land.** The dataset has final Land dates only for
@@ -1782,10 +1819,10 @@ memory.
 - **The data ends.** Each table runs out where its publisher stopped (SK 2028, AT early 2029,
   DE 2030/31). Regenerate the fixture from a newer commit before then; nothing warns the user
   when a year has no data.
-- **ODbL 1.0.** The dataset's licence asks for attribution wherever the data is used publicly
-  (and share-alike for a derived *database*). Before a Play release, name "OpenHolidays API
-  (openholidaysapi.org), ODbL 1.0" in the app's notices/licences screen; the source files and the
-  generator already carry the attribution.
+- **ODbL share-alike.** Attribution is done (above). The licence's share-alike applies to a
+  derived *database* made public, not to the app that displays one; the tables in the source tree
+  are such a derivative only if the repository is published, and then they must stay under ODbL
+  (`GermanSchoolVacations.kt` and the generator name the source and the licence).
 - **Per viewer, not per child.** School vacations still follow the viewer's country (and Land),
   as the public holidays do. A per-family school calendar remains the honest fix for a child whose
   school is not where the viewing parent lives.

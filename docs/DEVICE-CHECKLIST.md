@@ -380,8 +380,7 @@ Settings → Family → **Country** (and **State** when it appears). Open the ca
 October–November 2026 and check the dates below.
 
 - [ ] **Czechia:** 28 Sep, 28 Oct, 17 Nov drawn. The coverage note mentions school vacations.
-      Record whether any school vacation actually appears: AUDIT §4.2 says `VacationBanner` has
-      no caller.
+      **29–30 Oct 2026** carry the school-vacation line (below).
 - [ ] **Slovakia:** 1 Nov drawn. **15 Sep 2026 and 17 Nov 2026 not drawn** (both are working
       days by law in 2026). The note says school vacations are shown and spring holidays are not.
       **Day view on 29 Oct 2026** is labelled "Jesenné prázdniny" (app in Slovak or matching
@@ -399,9 +398,22 @@ October–November 2026 and check the dates below.
 - [ ] **Austria:** 26 Oct, 1 Nov, 8 Dec drawn. There is no state picker. The note says the
       nationwide school vacations are shown and the semester and summer breaks are not. **Day view
       on 28 Oct 2026** is labelled "Herbstferien"; **2 Nov 2026** "Allerseelen".
-- [ ] **School vacations are not marked on the month grid** for any country, Czechia included —
-      record it, do not fail it: the month banner was removed on purpose (ROADMAP MON-13, "Where
-      they show").
+- [ ] **School-vacation line on the month grid, and how it looks.** Germany → Bavaria, month
+      view, **November 2026**: 2–6 Nov and 18 Nov each carry a thin grey line along the cell's
+      bottom edge; the days around them do not. Then Czechia, **December 2026**: 23–31 Dec carry
+      it, **24–26 Dec included** (public holidays inside the break keep both the red tint and the
+      line), and the January days the last row borrows (1–2 Jan 2027) carry it too, fainter, like
+      the custody band there. Judge it in **light and dark theme**, on a custody-coloured cell, on
+      a weekend and on a Wednesday with a contact-window corner: the line must read as a line
+      under the cell — never as a colour of its own, a parent's hue or the friend's teal — and must
+      not hide whose day it is. Swipe between October and November: **the grid does not change
+      height** (the reason the old month banner was removed). Then **Czechia, July–August 2026**:
+      every cell carries it; record whether that reads as calm texture or as noise — that is the
+      owner call ROADMAP MON-13 names. With TalkBack, a vacation day reads its vacation's name,
+      and 24 Dec reads "Christmas Eve" and "School vacation".
+- [ ] **Settings → App → Data sources and licences** opens a screen with an up-arrow and no
+      bottom bar; the OpenHolidays row names ODbL 1.0, and tapping the licence row opens
+      opendatacommons.org in the browser. Check the screen in one non-English language.
 - [ ] **Russia:** 4 Nov drawn.
 - [ ] **Ukraine:** nothing drawn, and the note says holidays are suspended under martial law.
 - [ ] **Other:** nothing drawn, and the note says so.
