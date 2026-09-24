@@ -263,6 +263,49 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     nothing loses contrast; `ContrastScreenshots` renders three components at high contrast. The
     parent colours, the weekend grey and the holiday reds are the app's own tokens and do not
     change with the level; they are held to AA by `ParentColorsTest` in both themes.
+18. **The "Today" widget is Home's today card on the home screen, never a second opinion**
+    (October 2026 audit, week 6; `presentation/widget/`). A Glance 1.1.1 widget: whose day it is,
+    the day's contact windows, the next handover and today's events. The compact layout counts the
+    events; the tall one lists four and says how many it left out. Five things not to undo. **One
+    computation**: `TodayWidgetModel` calls `HomeWeek.todayOf`, `HandoverCalculator` and
+    `CustodyResolver` over the same Room rows Home reads, so swaps, contact windows and private
+    events follow Home's rules. Don't give the widget a rule of its own. **One wording**:
+    `TodayWidgetText` uses the app's string for every line it shares with Home ("Today with
+    Alex", the hero's handover sentence, the card's contact window and empty day), names parents
+    through `ParentNames` and colours them from the family's palette. `widget_strings.xml` holds
+    only what the app never says. **Room and nothing else**: the co-parent's name lives in
+    Firestore alone, so the app remembers the parents for the widget while `MainActivity` is
+    started (`TodayWidgetRefresher.followParents` → `TodayWidgetNames`, in `EncryptedPreferences`,
+    cleared with them and refused for another uid). Never attach `ParentsSource` from a widget
+    update, which would cost three Firestore listeners for a label. **Every redraw has a trigger**:
+    a Room write to `events` or `custody_models` (the invalidation tracker, debounced), a change
+    of names, a unique periodic work a minute past midnight, and hourly `updatePeriodMillis` as the
+    backstop. A table the widget starts to read joins `WATCHED_TABLES`. **Nothing the schema does
+    not hold**: a handover is a day and a person, never an hour, as on Home. It is home-screen
+    only. It adds no XML layout: `initialLayout` is Glance's own, and the picker preview is a
+    vector drawable. Its text takes the today card's type roles through `role()` (the role's size,
+    and the nearest lighter of the three weights a widget's system font has), its corner is the
+    launcher's own `system_app_widget_background_radius`, and its paddings are `Spacing` steps —
+    no size of its own. It follows the system's dark theme, because the launcher draws it, not the
+    app's own theme setting. It speaks the context's language: the per-app choice on Android 13 and
+    later, the device's before, as pushes do. `TodayWidgetTextTest` holds the wording (Robolectric,
+    English and Russian), and the UI tour draws the widget's own `RemoteViews` in every variant
+    (`UiTourWidget`).
+19. **Every screen that is not a tab is one readable column** (October 2026 audit, week 6). A
+    destination is declared with `pane()` (`navigation/ReadablePane.kt`), which is `composable()`
+    with the screen laid out at most 640 dp wide, centred, top bar included. Only the four tabs
+    and the loading screen use `composable()` directly; a new detail screen uses `pane()`. Don't
+    cap inside a screen: every detail screen brings its own Scaffold, and the cap belongs to the
+    one place that knows which destinations are tabs. On a phone it changes nothing.
+    `ReadablePaneTest` measures both widths. The UI tour's `light-en-100-wide` variant (a
+    1280 × 800 dp display) shows it next to the rail.
+20. **There is no handover Live Update, on purpose** (October 2026 audit, correction §1.6). Android
+    16's Live Updates are for an activity the user started and watches until it ends, like a ride
+    or a delivery. Google's guidelines name "upcoming calendar events" and activities "triggered
+    by other parties" as not allowed. A promoted notification posted from the custody schedule is
+    both, and the schema holds no handover hour or place for it to show. Don't add one. If the
+    owner wants the feature, it is a parent-started "on my way to the handover" flow, and that is
+    the owner's decision to make first.
 
 ## UX/UI overhaul (July 2026 design review) — implemented, keep consistent
 

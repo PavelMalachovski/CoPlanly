@@ -85,6 +85,20 @@ of their claims:
    `material3/api/1.4.0-beta03.txt`). Expressive lives in the 1.5 line, which on 2026-09-24 was at
    1.5.0-alpha29. Adopting it means shipping an alpha component library, which is the owner's call,
    so §4's Expressive row is a decision rather than a fix.
+6. **A handover Live Update is not one the platform allows.** *(Found in week 6.)* §4 proposed
+   "Leo → Bob at 17:00, school gate" as a Live Update, and the roadmap put it in week 6. Two things
+   stop it:
+   - **Policy.** Android's Live Update guidelines accept "active navigation, ongoing phone calls,
+     active rideshare tracking, and active food delivery tracking". They name "upcoming calendar
+     events" as inappropriate, and say "Don't allow activities triggered by other parties to
+     generate Live Updates". A promoted notification posted from the custody schedule is an
+     upcoming calendar event, set off by a schedule both parents keep.
+   - **Data.** The schema holds a handover's day and the parent it goes to. It holds no hour and
+     no place (`CustodyModel` carries days), so "at 17:00, school gate" would be invented, which
+     design item 8 forbids.
+
+   A flow the parent starts would qualify: "on my way to the handover", ending when the handover
+   is confirmed. That is a new feature and a question for the owner (week 6), not a fix.
 
 ## 2. Findings, prioritised
 
@@ -365,16 +379,16 @@ Effort: S.
 | 2026 expectation | Status | Evidence and what to do |
 | --- | --- | --- |
 | **Material 3 Expressive** | ✗ not available on stable | Not in material3 1.4.0's public API (§1.5); alpha in 1.5. If the owner accepts an alpha dependency, start where it pays:<br>• the calendar's Month/Week/Day picker → connected `ButtonGroup`<br>• list skeleton spinners → `LoadingIndicator`<br>• the Week/Day FAB plus actions → `FloatingToolbar`<br>• a `MotionScheme` set once in `CoPlanlyTheme`, so the spring tokens replace per-call tweens |
-| **Edge-to-edge** (enforced from targetSdk 35) | ◐ on, insets wrong | D-2 (doubled top) and D-9 (keyboard). The system-bar scrims are fine |
+| **Edge-to-edge** (enforced from targetSdk 35) | ✓ week 1 | D-2: the NavHost consumes the system bars once, so no screen starts 24 dp low. D-9: the window resizes for the keyboard instead of panning. The system-bar scrims are fine |
 | **Predictive back** | ✓ week 5 | `enableOnBackInvokedCallback="true"`. Navigation 2.9 animates a Back between destinations with the gesture, M3's sheets do their own, and a form with unsaved edits shrinks under the gesture before it asks (`DiscardGuard.backPreview`) |
-| **Adaptive layouts** (Android 16 ignores orientation locks at ≥ 600 dp) | ◐ week 5 | A `NavigationRail` replaces the bar from 600 dp. Still to do: `widthIn(max = 640.dp)` on forms and Settings, and list-detail for Chat and Expenses. A family tablet is a real device for this audience |
-| **Live Updates / progress notifications** (Android 16) | ✗ | Handover day is a natural Live Update: "Leo → Bob at 17:00, school gate" |
-| **Widgets** (Glance) | ✗ | Add a "Today" widget, whose data the today card already has |
+| **Adaptive layouts** (Android 16 ignores orientation locks at ≥ 600 dp) | ✓ weeks 5–6 | A `NavigationRail` replaces the bar from 600 dp (week 5). Every screen that is not a tab is one column at most 640 dp wide (`pane()`, week 6). The tour's `-wide` variant checks both at 1280 × 800 dp. List-detail for Chat and Expenses is not built; the week 6 record says why |
+| **Live Updates / progress notifications** (Android 16) | — by policy | See correction §1.6. A handover posted from the schedule is an "upcoming calendar event", which the guidelines exclude, and the schema holds no hour for it. A parent-started "on my way" flow would qualify; that is the owner's decision |
+| **Widgets** (Glance) | ✓ week 6 | The "Today" widget: Home's today card and handover hero, from the same Room rows and strings (CLAUDE.md design item 18) |
 | **Themed icon** | ✓ | The adaptive icon has a `monochrome` layer |
 | **Per-app language** | ✓ | AppCompat locales in five languages |
 | **Dynamic colour** | — deliberate | Brand colour plus parent colours. Right for this product. The dead `dynamicColor` branch is deleted (week 4) |
 | **Contrast levels** (Android 14+) | ✓ week 4 | The theme follows the system's contrast setting live. The medium and high schemes are generated from the standard ones (foregrounds to Material's targets, backgrounds unchanged) and held by `ContrastSchemesTest` |
-| **Typography** | ◐ week 2 | D-8 done: Onest covers all five languages. The emphasised styles of M3 Expressive wait with the rest of it (§1.5) |
+| **Typography** | ✓ weeks 2 and 5 | D-8: Onest covers all five languages. The emphasised roles are the app's own (`Typography.*Emphasized`, week 5); Material's Expressive type waits with the rest of it (§1.5) |
 
 ## 5. Roadmap
 
@@ -502,19 +516,75 @@ This is ordered for the closed test first. Each step leaves the app shippable.
    Not done, and why:
    - **The width cap on forms and Settings** needs each screen's content column capped and
      centred. That is a pass over a dozen screens, which the tour cannot check (it runs on a
-     phone).
+     phone). *Done in week 6, once, at the navigation graph, and the tour got a wide variant.*
    - **List-detail for Chat and Expenses** waits for the width cap.
 6. **Week 6, 2026 features:** the "Today" widget, the handover Live Update, and whatever the owner
    decides on D-4, D-5, D-12 and Expressive.
+
+   Done in week 6's pull request:
+   - **The "Today" widget** (Glance 1.1.1, `presentation/widget/`, CLAUDE.md design item 18).
+     - It shows whose day it is, the contact windows, the next handover and today's events.
+     - The compact layout counts the events; the tall one lists four.
+     - Home's own functions compute it over the same Room rows, and Home's own strings word it.
+     - The co-parent's name comes from a snapshot the app keeps while it is open.
+     - It redraws on a Room write, a change of names, after midnight and hourly.
+     - The UI tour draws it in every variant.
+   - **The width cap** (from week 5). Every screen that is not a tab is one column at most
+     640 dp wide (`pane()`, design item 19). A fourth tour variant at 1280 × 800 dp shows it and
+     the rail.
+   - **Found on the way:**
+     - The tour's budgets step pressed a chip removed in August (owner decision, `85f1afb`), so
+       it timed out on every run. The step is gone, and CLAUDE.md no longer says budgets are a
+       chip strip.
+     - The Settings row "What you co-parent" joined two title-case labels ("Children and Pets");
+       fixed in week 5's pull request.
+
+   Not done, and why:
+   - **The handover Live Update.** Correction §1.6: as specified, the platform's policy excludes
+     it, and the schema has no hour. A parent-started flow is the owner's decision.
+   - **List-detail for Chat and Expenses.** Both are product shapes more than layout fixes:
+     - The Chat tab renders the one thread in place for the one-family case, which is nearly
+       everyone (design item 7). List-detail would help only a parent with two families.
+     - Expenses has no detail screen to put beside its list: a tap opens the edit form.
+   - **D-4, D-5, D-12, Settle up, Expressive and the time format** are the owner's decisions. The
+     questions are in week 6's pull request.
+
+### Where the grades stand after week 6
+
+My estimate from the code and the tours, not a measurement. The device checklist (§3.2, §3.14
+and §3.15) is still to be walked on a phone.
+
+| Area | Before | After week 6 | What stands between it and an A |
+| --- | --- | --- | --- |
+| Colour and roles | B | **A−** | A walk of §3.14 on a phone |
+| Typography | C | **B+** | Seven weight overrides left on purpose; Material's Expressive type (owner) |
+| Shape and spacing | C | **B+** | About 100 off-grid dp literals, each to be decided rather than snapped |
+| Components | C+ | **A−** | — |
+| States | C | **A−** | — |
+| Layout and IA | C+ | **B** | D-4 (Home's links) and D-12 (the Family hub): the owner's decisions |
+| Gestures | C | **A−** | — |
+| Navigation and back | C | **A−** | — |
+| Motion | B+ | **A** | — |
+| Platform 2026 | C− | **B+** | List-detail; App Links need a domain; the Live Update is out by policy (§1.6) |
+| Accessibility | C+ | **A−** | A TalkBack walk on a phone |
+| UX flows | B− | **B** | D-12 (Settings → Family's 17 rows) and "Settle up" records nothing: the owner's decisions |
+
+Ten of the twelve areas are at B+ or better. The other two wait on decisions only the owner can
+make.
 
 ## 6. How to repeat this audit
 
 - **Screenshots:** touch `.github/ui-tour-request` on any branch (or run *UI tour* via
   `workflow_dispatch`). About 25 minutes later the branch `ui-tour/<branch>` holds
   `ui-tour/<variant>/NN_screen.png`, `index.html` and `logs/`.
-- **A new screen** gets a `camera.shot` in `app/src/androidTest/java/com/coparently/app/e2e/UiTourTest.kt`.
+- **A new screen** gets a `camera.shot` in `app/src/androidTest/java/com/coparently/app/e2e/UiTourTest.kt`;
+  something that is not on the app's screen, like the widget, gets a `camera.picture`.
+- **Variants** (since week 6): `light-en-100`, `dark-en-100`, `light-ru-130`, and
+  `light-en-100-wide`, a 1280 × 800 dp display for the rail and the width cap.
 - **Known gaps in the tour:**
   - The two auth screens are skipped: under the paused Compose clock, a GMS Task resumes off the
     main thread. This is a test-environment limit, not an app defect.
   - The tour runs at API 30 only, so there is no Android 16 edge-to-edge enforcement and no
     predictive-back animation.
+  - The widget is drawn from its own `RemoteViews`, not photographed on a launcher, and API 30
+    ignores its rounded corners.
