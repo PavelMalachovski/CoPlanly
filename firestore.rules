@@ -372,9 +372,11 @@ service cloud.firestore {
     function swapWriteTouchesOnlyTheSwap(before, after) {
       return after.diff(before).affectedKeys()
                   .hasOnly(['dayOverrides', 'lastSwapDate', 'lastModifiedBy', 'lastModifiedKind',
-                            'contactWindows', 'seasonalLayers', 'proposalPlanCitation']) &&
+                            'contactWindows', 'seasonalLayers', 'childOverrides',
+                            'proposalPlanCitation']) &&
              contactWindowsKeptOrDropped(before, after) &&
              seasonalLayersKeptOrDropped(before, after) &&
+             childOverridesKeptOrDropped(before, after) &&
              planCitationKeptOrDropped(before, after);
     }
 
@@ -411,6 +413,19 @@ service cloud.firestore {
              !after.diff(before).affectedKeys().hasAny(['seasonalLayers']);
     }
 
+    // True when a write leaves `childOverrides` (FAM-4) exactly as it was, or drops the key.
+    //
+    // The same rule as the two above, for the same two reasons. A child's own schedule is part of
+    // the agreed arrangement — it decides whose every day is for that child — so only a pattern
+    // write, which stamps `lastModifiedBy` and is announced, may change it; a swap or proposal
+    // write that did would move a child in silence. And a build that predates the key rewrites
+    // the whole document without it, so dropping it stays allowed; a build that knows the key
+    // reads its absence as an older build's write and keeps its own copy.
+    function childOverridesKeptOrDropped(before, after) {
+      return !('childOverrides' in after) ||
+             !after.diff(before).affectedKeys().hasAny(['childOverrides']);
+    }
+
     // True when a write only puts, clears, or records the outcome of a custody *proposal* (item
     // 7) — it never touches the agreed pattern, its dates, or `lastModifiedBy`. That is the whole
     // safety property: a proposal write can never move anyone's calendar, so it is allowed
@@ -421,9 +436,10 @@ service cloud.firestore {
     function proposalWriteTouchesOnlyProposal(before, after) {
       return after.diff(before).affectedKeys()
                   .hasOnly(['proposal', 'lastDecision', 'contactWindows', 'seasonalLayers',
-                            'proposalPlanCitation']) &&
+                            'childOverrides', 'proposalPlanCitation']) &&
              contactWindowsKeptOrDropped(before, after) &&
-             seasonalLayersKeptOrDropped(before, after);
+             seasonalLayersKeptOrDropped(before, after) &&
+             childOverridesKeptOrDropped(before, after);
     }
 
     // True when a write leaves `proposalPlanCitation` (MON-21) exactly as it was, or drops the

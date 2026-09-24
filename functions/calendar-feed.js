@@ -18,6 +18,11 @@
  * legacy per-parent schedule never reached Firestore, so none of those is read. If this file and
  * the Kotlin ever disagree, the Kotlin is right and `test/calendar-feed.test.js` is where the
  * fixture goes.
+ *
+ * **A per-child override (FAM-4, `childOverrides`) is deliberately not read: the feed is the
+ * family schedule.** A subscribed calendar has no member filter to narrow to one child, and one
+ * feed event per child per run would say which child is where through titles the subscriber's
+ * calendar app shows to whoever glances at it. The app names children apart; the feed does not.
  */
 
 const crypto = require('crypto');

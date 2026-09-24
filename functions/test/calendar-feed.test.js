@@ -303,6 +303,18 @@ describe('calendar feed: the custody port', () => {
     assert.strictEqual(feed.custodyOn(model, day('2026-07-06')), 'dad');
   });
 
+  it('serves the family schedule whatever per-child overrides the document carries (FAM-4)', () => {
+    const withOverride = feed.parseCustodyModel(Object.assign({}, WEEK_ON_WEEK_OFF, {
+      // The same wire form as `ChildOverrideCodec`: this child is with slot 1 every day.
+      childOverrides: ['C1;child:baby-1;2026-09-07;1;0;'],
+    }));
+    const plain = feed.parseCustodyModel(WEEK_ON_WEEK_OFF);
+    assert.deepStrictEqual(
+        feed.custodyRuns(withOverride, day('2026-09-07'), day('2026-10-05')),
+        feed.custodyRuns(plain, day('2026-09-07'), day('2026-10-05')));
+    assert.strictEqual(feed.custodyOn(withOverride, day('2026-09-14')), 'dad');
+  });
+
   it('refuses a document without a pattern rather than guessing one', () => {
     assert.strictEqual(feed.parseCustodyModel({patternDays: 14}), null);
     assert.strictEqual(feed.parseCustodyModel({startDate: '2026-02-30', patternDays: 14}), null);

@@ -710,6 +710,107 @@ describe('custody_models', () => {
     });
   });
 
+  describe('per-child overrides (FAM-4)', () => {
+    // A child's own schedule, as `ChildOverrideCodec` strings, beside the family pattern. Part of
+    // the agreed arrangement — it decides every day of that child — so only a pattern write,
+    // which stamps its author and is announced, may change it: item 24's three wire rules.
+    const BABY = 'C1;child:baby-1;2026-09-07;1;0;';
+    const TEEN = 'C1;child:teen-1;2026-09-07;14;7,8,9,10,11,12,13;2|15:00|19:00|mom';
+    const OVERRIDES = [BABY, TEEN].sort();
+    const DATE = '2026-09-05';
+    const proposal = (by, extra) => Object.assign({
+      modelType: 'WEEK_ON_WEEK_OFF',
+      patternDays: 14,
+      momDayIndices: [0, 1, 2, 3, 4, 5, 6],
+      startDate: '2026-08-03',
+      repeatYearly: true,
+      proposedBy: by,
+      proposedAt: '2026-08-24T10:00:00',
+    }, extra);
+    const swap = {
+      dayOverrides: {[DATE]: pendingSwap(MOM, 'dad')},
+      lastModifiedBy: MOM,
+      lastModifiedKind: 'SWAP',
+      lastSwapDate: DATE,
+    };
+
+    it('lets a participant create the document with overrides', async () => {
+      const db = env.authenticatedContext(MOM).firestore();
+      await assertSucceeds(db.doc(PATH).set(custodyDoc({childOverrides: OVERRIDES})));
+    });
+
+    it('lets a pattern write set, change and clear them', async () => {
+      await seed(env, {[PATH]: custodyDoc({})});
+      const db = env.authenticatedContext(DAD).firestore();
+      await assertSucceeds(db.doc(PATH).update({childOverrides: OVERRIDES, lastModifiedBy: DAD}));
+      await assertSucceeds(db.doc(PATH).update({childOverrides: [BABY], lastModifiedBy: DAD}));
+      // A removal is an explicit empty list, which is how a build that knows the key says "none".
+      await assertSucceeds(db.doc(PATH).update({childOverrides: [], lastModifiedBy: DAD}));
+    });
+
+    it('lets accepting a proposal replace the overrides, as the pattern write it is', async () => {
+      await seed(env, {[PATH]: custodyDoc({
+        childOverrides: [BABY],
+        proposal: proposal(MOM, {childOverrides: OVERRIDES}),
+      })});
+      const db = env.authenticatedContext(DAD).firestore();
+      await assertSucceeds(db.doc(PATH).set(custodyDoc({
+        childOverrides: OVERRIDES,
+        lastModifiedBy: DAD,
+        lastModifiedAt: '2026-08-25T10:00:00',
+        lastDecision: {outcome: 'ACCEPTED', by: DAD, at: '2026-08-25T10:00:00', proposalAt: '2026-08-24T10:00:00'},
+      })));
+    });
+
+    it('lets a proposal name new overrides while carrying the stored ones unchanged', async () => {
+      await seed(env, {[PATH]: custodyDoc({childOverrides: [BABY]})});
+      const db = env.authenticatedContext(DAD).firestore();
+      await assertSucceeds(db.doc(PATH).set(custodyDoc({
+        childOverrides: [BABY],
+        proposal: proposal(DAD, {childOverrides: OVERRIDES}),
+      })));
+    });
+
+    it('lets an older build propose, although its set() drops the overrides', async () => {
+      await seed(env, {[PATH]: custodyDoc({childOverrides: OVERRIDES})});
+      const db = env.authenticatedContext(DAD).firestore();
+      await assertSucceeds(db.doc(PATH).set(custodyDoc({proposal: proposal(DAD)})));
+    });
+
+    it('refuses a proposal-only write that rewrites, clears or adds overrides', async () => {
+      // A proposal write does not stamp its author and raises no banner: changing a child's
+      // schedule through one would move that child in silence.
+      await seed(env, {[PATH]: custodyDoc({childOverrides: OVERRIDES})});
+      const db = env.authenticatedContext(DAD).firestore();
+      await assertFails(db.doc(PATH).update({proposal: proposal(DAD), childOverrides: [BABY]}));
+      await assertFails(db.doc(PATH).update({proposal: proposal(DAD), childOverrides: []}));
+
+      await seed(env, {[PATH]: custodyDoc({})});
+      await assertFails(db.doc(PATH).update({proposal: proposal(DAD), childOverrides: OVERRIDES}));
+    });
+
+    it('lets a swap carry the overrides unchanged, and an older build\'s swap drop them', async () => {
+      await seed(env, {[PATH]: custodyDoc({childOverrides: OVERRIDES})});
+      const db = env.authenticatedContext(MOM).firestore();
+      await assertSucceeds(db.doc(PATH).set(custodyDoc(Object.assign({childOverrides: OVERRIDES}, swap))));
+
+      await seed(env, {[PATH]: custodyDoc({childOverrides: OVERRIDES})});
+      await assertSucceeds(db.doc(PATH).set(custodyDoc(swap)));
+    });
+
+    it('refuses a swap write that changes, clears or adds overrides', async () => {
+      // A SWAP stamp suppresses the banner, so an override riding on one would hand a child's
+      // every day to one parent with nobody told.
+      await seed(env, {[PATH]: custodyDoc({childOverrides: OVERRIDES})});
+      const db = env.authenticatedContext(MOM).firestore();
+      await assertFails(db.doc(PATH).update(Object.assign({childOverrides: [TEEN]}, swap)));
+      await assertFails(db.doc(PATH).update(Object.assign({childOverrides: []}, swap)));
+
+      await seed(env, {[PATH]: custodyDoc({})});
+      await assertFails(db.doc(PATH).update(Object.assign({childOverrides: OVERRIDES}, swap)));
+    });
+  });
+
   describe('custody-pattern proposals (item 7)', () => {
     const proposal = (by) => ({
       modelType: 'WEEK_ON_WEEK_OFF',
