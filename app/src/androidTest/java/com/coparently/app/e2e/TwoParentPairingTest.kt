@@ -50,6 +50,11 @@ class TwoParentPairingTest : TwoParentTest() {
         assertEquals(setOf(alice.uid, bob.uid), slots.keys)
         assertEquals(aliceAsSeenByBob.role, slots[alice.uid])
         assertEquals(bobAsSeenByAlice.role, slots[bob.uid])
+
+        // The callable tells the inviter, and names the new family so the tap lands on it (M-8).
+        val push = EmulatorEnvironment.awaitQueuedPush(alice.uid, "pairing_accepted")
+        assertEquals(familyId, push["familyId"])
+        assertEquals(bob.name, push["actorName"])
     }
 
     @Test

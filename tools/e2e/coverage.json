@@ -1,0 +1,421 @@
+{
+  "_comment": "Every feature two phones share, and the two-parent test that covers it (tools/check-e2e-coverage.js). 'e2e' names classes or Class#method in app/src/androidTest/java/com/coparently/app/e2e/; 'exempt' says why no emulator run can cover it and what does instead. A new collection, storage prefix, push type or callable fails the invariants job until it has an entry here. Optional 'checklist' names the docs/DEVICE-CHECKLIST.md sections whose mechanism the named tests already run; the PR comment's manual plan then tells the tester only what is drawn is left.",
+  "firestore": {
+    "users": {
+      "e2e": [
+        "TwoParentPairingTest#bothProfilesNameTheOtherParentAndTheFamilyHasTwoSlots"
+      ]
+    },
+    "families": {
+      "e2e": [
+        "TwoParentPairingTest#bothProfilesNameTheOtherParentAndTheFamilyHasTwoSlots"
+      ]
+    },
+    "invitations": {
+      "e2e": [
+        "TwoParentPairingTest"
+      ]
+    },
+    "events": {
+      "e2e": [
+        "TwoParentEventsTest",
+        "MultiFamilyTest",
+        "OneParentOnScreenTest"
+      ],
+      "checklist": [
+        "5.2"
+      ]
+    },
+    "conversations": {
+      "e2e": [
+        "TwoParentChatTest",
+        "TwoParentPairingTest#bothPhonesMirrorThePairingIntoRoomAndShareOneConversation"
+      ],
+      "checklist": [
+        "5.1"
+      ]
+    },
+    "messages": {
+      "e2e": [
+        "TwoParentChatTest",
+        "TwoParentAttachmentsTest",
+        "OneParentOnScreenTest"
+      ],
+      "checklist": [
+        "5.1"
+      ]
+    },
+    "expenses": {
+      "e2e": [
+        "TwoParentExpensesTest"
+      ]
+    },
+    "family_documents": {
+      "e2e": [
+        "TwoParentAttachmentsTest#aVaultDocumentOpensForBobWhoCannotDeleteItAndAliceDeletesItAsATombstone"
+      ],
+      "checklist": [
+        "5.5"
+      ]
+    },
+    "google_oauth": {
+      "exempt": "Server-only (closed to every client) and needs a real Google OAuth exchange; functions/test covers the hash check, firestore-tests the closed rule."
+    },
+    "calendar_feeds": {
+      "exempt": "Closed to every client; the callables that write it are listed under functions."
+    },
+    "export_receipts": {
+      "exempt": "Closed to every client; the callables that write it are listed under functions."
+    },
+    "family_settings": {
+      "e2e": [
+        "TwoParentAgreementsTest#firstRatioOnAFreshPairAppliesAndIsAnnouncedAsAgreed",
+        "TwoParentAgreementsTest#proposalIsSeenPendingAcceptedAndBothPhonesHoldTheNewRatio",
+        "TwoParentAgreementsTest#proposerWithdrawsAndTheCoParentCannot"
+      ]
+    },
+    "parenting_plans": {
+      "e2e": [
+        "TwoParentAgreementsTest#planAgreementRecordsTheWordingAndLapsesWhenItChanges",
+        "TwoParentAgreementsTest#aWriteToTheCoParentsHalfIsRefused",
+        "TwoParentAccessTest#aProfessionalReadsNothingUntilBothParentsConsentAndNeverTheChat"
+      ]
+    },
+    "change_requests": {
+      "e2e": [
+        "TwoParentRequestsAndEventPushesTest#bobAcceptsAlicesChangeRequestAndEachSideIsNotified",
+        "TwoParentRequestsAndEventPushesTest#bobDeclinesAChangeRequestAndAliceIsNotified",
+        "TwoParentRequestsAndEventPushesTest#aliceCancelsHerChangeRequestAndBobIsNotified"
+      ]
+    },
+    "event_versions": {
+      "e2e": [
+        "TwoParentRequestsAndEventPushesTest#revisionsOfASharedEventReachBobAndNeitherParentCanChangeThem",
+        "TwoParentRequestsAndEventPushesTest#aPrivateEventRecordsNoRevision"
+      ]
+    },
+    "custody_models": {
+      "e2e": [
+        "TwoParentCustodyTest#aPatternChangeWaitsForTheCoParentAndADeclineKeepsTheAgreedOne",
+        "TwoParentCustodyTest#aSingleDaySwapIsOfferedOnOnePhoneAndAnsweredOnTheOther",
+        "TwoParentCustodyTest#aGroupSwapIsOfferedAndAnsweredAsOneAgreement",
+        "TwoParentAccessTest#aProfessionalReadsNothingUntilBothParentsConsentAndNeverTheChat"
+      ]
+    },
+    "notification_queue": {
+      "e2e": [
+        "TwoParentAgreementsTest#firstRatioOnAFreshPairAppliesAndIsAnnouncedAsAgreed",
+        "TwoParentCustodyTest",
+        "TwoParentChatTest#aMessageCrossesTheDateLineAsUnreadThenDeliveredThenRead"
+      ]
+    },
+    "child_info": {
+      "e2e": [
+        "TwoParentFamilyRecordsTest#aChildAliceSavesReachesBobIntactAndItsDeletionArrivesAsATombstone",
+        "TwoParentFamilyRecordsTest#aChildEditTheSyncUploadsQueuesChildInfoUpdatedForBob",
+        "TwoParentFamilyRecordsTest#recordsMadeBeforePairingAreSharedWithTheNewCoParentAndAnnouncedOnce",
+        "TwoParentAccessTest#aGuestReadsTheOneChildRecordSheWasInvitedToAndNothingElse"
+      ]
+    },
+    "pets": {
+      "e2e": [
+        "TwoParentFamilyRecordsTest#aPetAliceSavesReachesBobAndItsDeletionArrivesAsATombstone",
+        "TwoParentFamilyRecordsTest#aPetPhotoAliceAttachesOpensOnBobsPhone"
+      ]
+    },
+    "budgets": {
+      "e2e": [
+        "TwoParentFamilyRecordsTest#aBudgetAliceSetsReachesBobWhoMayEditItAndAStrangerCannotReadIt"
+      ]
+    },
+    "calendar_friends": {
+      "e2e": [
+        "TwoParentAccessTest#aCalendarFriendReadsTheFamilysEventsUntilAParentRevokesTheGrant"
+      ]
+    },
+    "friend_profiles": {
+      "e2e": [
+        "TwoParentAccessTest#aCalendarFriendReadsTheFamilysEventsUntilAParentRevokesTheGrant"
+      ]
+    },
+    "professional_grants": {
+      "e2e": [
+        "TwoParentAccessTest#aProfessionalReadsNothingUntilBothParentsConsentAndNeverTheChat"
+      ],
+      "checklist": [
+        "5.4"
+      ]
+    }
+  },
+  "storage": {
+    "chat_attachments": {
+      "e2e": [
+        "TwoParentAttachmentsTest"
+      ],
+      "checklist": [
+        "5.5"
+      ]
+    },
+    "family_documents": {
+      "e2e": [
+        "TwoParentAttachmentsTest#aVaultDocumentOpensForBobWhoCannotDeleteItAndAliceDeletesItAsATombstone"
+      ],
+      "checklist": [
+        "5.5"
+      ]
+    },
+    "event_images": {
+      "e2e": [
+        "TwoParentRequestsAndEventPushesTest#anEventPhotoAliceUploadsDownloadsOnBobsPhone",
+        "TwoParentRequestsAndEventPushesTest#anEventPhotoIsRefusedSignedOutAndAsAnythingButJpeg"
+      ]
+    },
+    "pet_photos": {
+      "e2e": [
+        "TwoParentFamilyRecordsTest#aPetPhotoAliceAttachesOpensOnBobsPhone",
+        "TwoParentFamilyRecordsTest#aPhotoThatIsNotAJpegIsRefused"
+      ],
+      "checklist": [
+        "3.10"
+      ]
+    },
+    "medical_photos": {
+      "e2e": [
+        "TwoParentFamilyRecordsTest#aMedicalPhotoAliceAttachesOpensOnBobsPhone",
+        "TwoParentFamilyRecordsTest#aPhotoThatIsNotAJpegIsRefused"
+      ],
+      "checklist": [
+        "3.10"
+      ]
+    },
+    "receipts": {
+      "e2e": [
+        "TwoParentAccessTest#aReceiptPhotoAliceAttachesOpensForBobAndIsRefusedToASignedOutClient"
+      ]
+    }
+  },
+  "push": {
+    "chat_message": {
+      "e2e": [
+        "TwoParentChatTest#aMessageCrossesTheDateLineAsUnreadThenDeliveredThenRead"
+      ],
+      "checklist": [
+        "5.1"
+      ]
+    },
+    "pairing_accepted": {
+      "e2e": [
+        "TwoParentPairingTest#bothProfilesNameTheOtherParentAndTheFamilyHasTwoSlots"
+      ]
+    },
+    "split_ratio_agreed": {
+      "e2e": [
+        "TwoParentAgreementsTest#firstRatioOnAFreshPairAppliesAndIsAnnouncedAsAgreed",
+        "TwoParentAgreementsTest#ratioChosenBeforePairingIsPublishedToTheNewPair"
+      ]
+    },
+    "split_ratio_proposed": {
+      "e2e": [
+        "TwoParentAgreementsTest#proposalIsSeenPendingAcceptedAndBothPhonesHoldTheNewRatio"
+      ]
+    },
+    "split_ratio_accepted": {
+      "e2e": [
+        "TwoParentAgreementsTest#proposalIsSeenPendingAcceptedAndBothPhonesHoldTheNewRatio"
+      ]
+    },
+    "split_ratio_declined": {
+      "e2e": [
+        "TwoParentAgreementsTest#declinedProposalLeavesTheAgreedRatioOnBothPhones"
+      ]
+    },
+    "change_request_created": {
+      "e2e": [
+        "TwoParentRequestsAndEventPushesTest#bobAcceptsAlicesChangeRequestAndEachSideIsNotified"
+      ]
+    },
+    "change_request_accepted": {
+      "e2e": [
+        "TwoParentRequestsAndEventPushesTest#bobAcceptsAlicesChangeRequestAndEachSideIsNotified"
+      ]
+    },
+    "change_request_declined": {
+      "e2e": [
+        "TwoParentRequestsAndEventPushesTest#bobDeclinesAChangeRequestAndAliceIsNotified"
+      ]
+    },
+    "change_request_cancelled": {
+      "e2e": [
+        "TwoParentRequestsAndEventPushesTest#aliceCancelsHerChangeRequestAndBobIsNotified"
+      ]
+    },
+    "event_created": {
+      "e2e": [
+        "TwoParentRequestsAndEventPushesTest#anEventAliceCreatesQueuesEventCreatedForBobFromTheServer"
+      ]
+    },
+    "event_updated": {
+      "exempt": "Nothing produces it: SyncService.notifyEventUpdate is only called with \"created\", and the only event trigger in functions/ writes event_created. It survives in PushPayload, PUSH_TEXT and the rules allow-list for older builds."
+    },
+    "event_deleted": {
+      "exempt": "Nothing produces it: no client path or function queues it. It survives in PushPayload, PUSH_TEXT and the rules allow-list for older builds."
+    },
+    "custody_proposal_proposed": {
+      "e2e": [
+        "TwoParentCustodyTest#aPatternChangeWaitsForTheCoParentAndADeclineKeepsTheAgreedOne"
+      ]
+    },
+    "custody_proposal_accepted": {
+      "e2e": [
+        "TwoParentCustodyTest#aPatternChangeWaitsForTheCoParentAndADeclineKeepsTheAgreedOne"
+      ]
+    },
+    "custody_proposal_declined": {
+      "e2e": [
+        "TwoParentCustodyTest#aPatternChangeWaitsForTheCoParentAndADeclineKeepsTheAgreedOne"
+      ]
+    },
+    "day_swap_offered": {
+      "e2e": [
+        "TwoParentCustodyTest#aSingleDaySwapIsOfferedOnOnePhoneAndAnsweredOnTheOther"
+      ]
+    },
+    "day_swap_accepted": {
+      "e2e": [
+        "TwoParentCustodyTest#aSingleDaySwapIsOfferedOnOnePhoneAndAnsweredOnTheOther"
+      ]
+    },
+    "day_swap_declined": {
+      "e2e": [
+        "TwoParentCustodyTest#aSingleDaySwapIsOfferedOnOnePhoneAndAnsweredOnTheOther"
+      ]
+    },
+    "day_swap_group_offered": {
+      "e2e": [
+        "TwoParentCustodyTest#aGroupSwapIsOfferedAndAnsweredAsOneAgreement"
+      ]
+    },
+    "day_swap_group_accepted": {
+      "e2e": [
+        "TwoParentCustodyTest#aGroupSwapIsOfferedAndAnsweredAsOneAgreement"
+      ]
+    },
+    "day_swap_group_declined": {
+      "e2e": [
+        "TwoParentCustodyTest#aGroupSwapIsOfferedAndAnsweredAsOneAgreement"
+      ]
+    },
+    "child_info_updated": {
+      "e2e": [
+        "TwoParentFamilyRecordsTest#aChildEditTheSyncUploadsQueuesChildInfoUpdatedForBob",
+        "TwoParentFamilyRecordsTest#anUpdatedChildDocumentMakesTheServerQueueChildInfoUpdatedForBob"
+      ]
+    },
+    "records_shared": {
+      "e2e": [
+        "TwoParentFamilyRecordsTest#recordsMadeBeforePairingAreSharedWithTheNewCoParentAndAnnouncedOnce"
+      ]
+    },
+    "professional_access_requested": {
+      "e2e": [
+        "TwoParentAccessTest#aProfessionalReadsNothingUntilBothParentsConsentAndNeverTheChat"
+      ],
+      "checklist": [
+        "5.4"
+      ]
+    },
+    "pairing_removed": {
+      "e2e": [
+        "TwoParentAccessTest#unpairingEndsTheLinkOnBothPhonesTellsBobAndNarrowsTheAudience"
+      ]
+    }
+  },
+  "functions": {
+    "acceptPairingInvitation": {
+      "e2e": [
+        "TwoParentPairingTest"
+      ]
+    },
+    "exchangeGoogleAuthCode": {
+      "exempt": "Needs a real Google authorization code; functions/test covers the exchange and the refresh-token hash."
+    },
+    "refreshGoogleAccessToken": {
+      "exempt": "Needs a real Google refresh token; functions/test covers the oracle check."
+    },
+    "backfillRecordFamilyIds": {
+      "exempt": "Operator-only maintenance callable, not a phone-to-phone feature; functions/test covers it."
+    },
+    "backfillFamilyDocuments": {
+      "exempt": "Operator-only maintenance callable, not a phone-to-phone feature; functions/test covers it."
+    },
+    "backfillParentSlots": {
+      "exempt": "Operator-only maintenance callable, not a phone-to-phone feature; functions/test covers it."
+    },
+    "acceptCalendarFriendInvitation": {
+      "e2e": [
+        "TwoParentAccessTest#aCalendarFriendReadsTheFamilysEventsUntilAParentRevokesTheGrant"
+      ]
+    },
+    "acceptGuestInvitation": {
+      "e2e": [
+        "TwoParentAccessTest#aGuestReadsTheOneChildRecordSheWasInvitedToAndNothingElse"
+      ]
+    },
+    "acceptProfessionalInvitation": {
+      "e2e": [
+        "TwoParentAccessTest#aProfessionalReadsNothingUntilBothParentsConsentAndNeverTheChat"
+      ],
+      "checklist": [
+        "5.4"
+      ]
+    },
+    "unpairCoParent": {
+      "e2e": [
+        "TwoParentAccessTest#unpairingEndsTheLinkOnBothPhonesTellsBobAndNarrowsTheAudience"
+      ]
+    },
+    "createCalendarFeed": {
+      "e2e": [
+        "TwoParentAccessTest#aCalendarFeedServesTheSharedEventsOnlyAndStopsWhenRevoked"
+      ]
+    },
+    "listCalendarFeeds": {
+      "e2e": [
+        "TwoParentAccessTest#aCalendarFeedServesTheSharedEventsOnlyAndStopsWhenRevoked"
+      ]
+    },
+    "revokeCalendarFeed": {
+      "e2e": [
+        "TwoParentAccessTest#aCalendarFeedServesTheSharedEventsOnlyAndStopsWhenRevoked"
+      ]
+    },
+    "calendarFeed": {
+      "e2e": [
+        "TwoParentAccessTest#aCalendarFeedServesTheSharedEventsOnlyAndStopsWhenRevoked"
+      ]
+    },
+    "reserveExportRecordId": {
+      "e2e": [
+        "TwoParentAccessTest#anExportHashIsRegisteredOnceAndVerifiesWithoutAnAccount"
+      ]
+    },
+    "registerExportReceipt": {
+      "e2e": [
+        "TwoParentAccessTest#anExportHashIsRegisteredOnceAndVerifiesWithoutAnAccount"
+      ]
+    },
+    "verifyExport": {
+      "e2e": [
+        "TwoParentAccessTest#anExportHashIsRegisteredOnceAndVerifiesWithoutAnAccount"
+      ]
+    },
+    "deleteAccount": {
+      "e2e": [
+        "TwoParentAccessTest#deletingBobsAccountErasesHisRecordsAndUnpairsAlice"
+      ],
+      "checklist": [
+        "7"
+      ]
+    }
+  }
+}

@@ -111,7 +111,7 @@ function suiteLabel(artifact) {
   const inst = /^instrumented-api(\d+)-?(.*)$/.exec(name);
   if (inst) return `Instrumented, API ${inst[1]}${inst[2] && inst[2] !== 'default' ? ` (${inst[2]})` : ''}`;
   return ({unit: 'Unit (JVM)', functions: 'Cloud Functions', rules: 'Firestore / Storage rules',
-    screenshots: 'Screenshots (Roborazzi)'})[name] ||
+    screenshots: 'Screenshots (Roborazzi)', e2e: 'Two parents (e2e)'})[name] ||
     name;
 }
 

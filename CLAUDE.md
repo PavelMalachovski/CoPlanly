@@ -378,6 +378,23 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   push is not sent), two screens at once (Bob's side is the data layer), a file opened in a viewer
   app, and the chat UI's family switch (`ChatPartnerSource`, M-8), which the e2e job does not drive.
 
+  **A feature that works between two phones ships with its two-parent test** (September 2026).
+  `tools/check-e2e-coverage.js` (run in `invariants`) discovers every shared surface from the
+  sources that define it — each top-level `match` in `firestore.rules`, each prefix in
+  `storage.rules`, each push type in `PushPayload.kt`, each callable and HTTPS function exported
+  from `functions/index.js` — and fails unless `tools/e2e/coverage.json` names, for each one, a
+  test in `app/src/androidTest/.../e2e/` (`"Class"` or `"Class#method"`, checked to exist) or an
+  `exempt` reason. So a new collection, bucket path, push type or callable turns CI red until a
+  test covers it; an entry naming a test that was renamed away turns it red too. Three things not
+  to do. **Don't exempt what a test could run** — an exemption is for what no two-phone run can
+  reach (Google OAuth, a type nothing produces any more), and its reason is read in review. **Don't
+  cover a push by asserting a count alone**: read it back from `notification_queue` addressed to
+  the right parent (`EmulatorEnvironment.awaitQueuedPush`, `EmulatorParent.queuedFor`), because
+  the queue is exactly what the rules and the four-way agreement of item 15 decide. And **name the
+  `checklist` sections** a test's mechanism covers (`"checklist": ["5.5"]`): the PR comment's
+  manual plan then tells the tester the mechanism already ran and only what is drawn, the push
+  and the real network are left — which is the point of the whole map.
+
   **A second workflow file exists and is not part of CI**: `.github/workflows/regenerate.yml` runs
   `detektBaseline` and exports the Room schema, then commits both back to the branch it ran on.
   It exists because those are the two artefacts only a machine with an Android SDK can produce,
