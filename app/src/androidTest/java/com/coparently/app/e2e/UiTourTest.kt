@@ -73,6 +73,7 @@ class UiTourTest : AliceOnScreenTest() {
             seed.seedPending(aliceUid, bob)
         }
         homeSection()
+        widgetSection()
         calendarSection()
         eventFormSection()
         chatSection()
@@ -116,6 +117,17 @@ class UiTourTest : AliceOnScreenTest() {
             driver.linger()
         }
         driver.backToTabs()
+    }
+
+    // ---- The Today widget -----------------------------------------------------------------------
+
+    /**
+     * The home-screen widget, drawn from what Home has just shown: the same Room rows, and the names
+     * the app remembered for it while Home was on screen.
+     */
+    private fun widgetSection() {
+        camera.picture("widget_today_compact") { UiTourWidget.render(variant, UiTourWidget.COMPACT) }
+        camera.picture("widget_today_tall") { UiTourWidget.render(variant, UiTourWidget.TALL) }
     }
 
     // ---- Calendar -------------------------------------------------------------------------------

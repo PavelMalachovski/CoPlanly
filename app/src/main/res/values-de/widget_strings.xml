@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_today_name">Heute</string>
+    <string name="widget_today_description">Wessen Tag heute ist, die nächste Übergabe und die Termine von heute</string>
+    <string name="widget_today_title">Heute · %1$s</string>
+    <string name="widget_today_signed_out">Melde dich bei CoPlanly an, um deinen Tag zu sehen.</string>
+    <plurals name="widget_today_more">
+        <item quantity="one">+%1$d weiterer</item>
+        <item quantity="other">+%1$d weitere</item>
+    </plurals>
+    <plurals name="widget_today_events_count">
+        <item quantity="one">%1$d Termin heute</item>
+        <item quantity="other">%1$d Termine heute</item>
+    </plurals>
+</resources>

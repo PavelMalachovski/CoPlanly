@@ -331,6 +331,12 @@ dependencies {
     // separate step.
     implementation("androidx.work:work-runtime-ktx:2.10.5")
 
+    // The "Today" home-screen widget (presentation/widget). Glance 1.1.1, the stable line: it
+    // renders Compose-style code to RemoteViews, and glance-material3 fills its theme from the
+    // app's own colour schemes. Its sessions run on WorkManager, above.
+    implementation("androidx.glance:glance-appwidget:1.1.1")
+    implementation("androidx.glance:glance-material3:1.1.1")
+
     // Calendar - Check for updates at https://github.com/kizitonwose/Calendar
     implementation("com.kizitonwose.calendar:compose:2.6.1")
 
@@ -447,6 +453,8 @@ dependencies {
     testImplementation("io.github.takahirom.roborazzi:roborazzi:1.60.0")
     testImplementation(composeBom)
     testImplementation("androidx.compose.ui:ui-test-junit4")
+    // The widget's layout, composed and asserted on the JVM (TodayWidgetContentTest).
+    testImplementation("androidx.glance:glance-appwidget-testing:1.1.1")
 }
 
 // androidx.room:room-testing-android pulls in JUnit 5 (junit-jupiter/junit-platform)

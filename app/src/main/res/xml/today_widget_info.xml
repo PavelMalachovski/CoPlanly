@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The "Today" widget (presentation/widget/TodayWidget.kt).
+
+  Three cells by two by default, resizable down to the compact layout (whose day it is, the
+  handover and a count of today's events) and up to the tall one (the events themselves). Home
+  screen only: the family's day does not belong on a lock screen or a shared hub.
+
+  updatePeriodMillis is the backstop, hourly. The redraws that matter come from the app itself —
+  a change in Room, the parents' names, midnight — through TodayWidgetRefresher.
+
+  initialLayout is Glance's own loading layout, from the library; this app adds no XML layout.
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/widget_today_description"
+    android:initialLayout="@layout/glance_default_loading_layout"
+    android:minWidth="180dp"
+    android:minHeight="110dp"
+    android:minResizeWidth="110dp"
+    android:minResizeHeight="110dp"
+    android:previewImage="@drawable/widget_today_preview"
+    android:resizeMode="horizontal|vertical"
+    android:targetCellWidth="3"
+    android:targetCellHeight="2"
+    android:updatePeriodMillis="3600000"
+    android:widgetCategory="home_screen" />

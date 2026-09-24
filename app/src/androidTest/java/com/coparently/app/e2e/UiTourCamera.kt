@@ -133,6 +133,28 @@ class UiTourCamera(
         writeManifest()
     }
 
+    /**
+     * Saves the bitmap [render] draws as `NN_[screen].png`, for what is not on the app's screen — the
+     * home-screen widget; skips it on failure, as [shot] does.
+     */
+    @Suppress("TooGenericExceptionCaught") // a tour goes on past any one picture, whatever broke it
+    fun picture(screen: String, render: () -> Bitmap) {
+        number += 1
+        val file = String.format(Locale.ROOT, "%02d_%s.png", number, screen)
+        step("tour: $file")
+        try {
+            val bitmap = render()
+            FileOutputStream(File(directory, file)).use { bitmap.compress(Bitmap.CompressFormat.PNG, PNG_QUALITY, it) }
+            bitmap.recycle()
+            captured.put(JSONObject().put("file", file).put("screen", screen))
+        } catch (e: Exception) {
+            recordSkip(screen, e)
+        } catch (e: AssertionError) {
+            recordSkip(screen, e)
+        }
+        writeManifest()
+    }
+
     /** Records [screen] as not captured, for a [reason] known without trying (e.g. no such feature). */
     fun skip(screen: String, reason: String) {
         number += 1
