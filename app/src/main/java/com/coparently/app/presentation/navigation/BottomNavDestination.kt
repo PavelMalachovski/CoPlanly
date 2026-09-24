@@ -1,5 +1,6 @@
 package com.coparently.app.presentation.navigation
 
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.automirrored.outlined.Chat
@@ -14,10 +15,13 @@ import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationRail
+import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -95,6 +99,37 @@ enum class BottomNavDestination(
 }
 
 /**
+ * Which navigation the window gets: the bottom bar on a phone held upright, and a rail down the
+ * start edge from Material's medium width, 600 dp — a tablet, an unfolded foldable, a phone on its
+ * side (docs/AUDIT-2026-10-design.md §4). A bar stretched across a tablet puts four targets a
+ * thumb's length apart at the bottom of a screen held with two hands, and a phone on its side has
+ * height to spare for nothing.
+ */
+enum class NavigationLayout {
+    /** The bottom bar ([CoPlanlyBottomBar]). */
+    BAR,
+
+    /** The rail ([CoPlanlyNavigationRail]). */
+    RAIL
+}
+
+/** The window width from which the rail replaces the bar: Material's medium width class. */
+private const val RAIL_FROM_WIDTH_DP = 600
+
+/**
+ * The [NavigationLayout] for the current window, which follows it through a rotation, a fold and
+ * a resized multi-window pane.
+ *
+ * @return [NavigationLayout.RAIL] from 600 dp wide, otherwise [NavigationLayout.BAR]
+ */
+@Composable
+fun rememberNavigationLayout(): NavigationLayout =
+    if (LocalConfiguration.current.screenWidthDp >= RAIL_FROM_WIDTH_DP) NavigationLayout.RAIL else NavigationLayout.BAR
+
+/** Test tag on the navigation rail, the rail's counterpart of [BOTTOM_BAR_TEST_TAG]. */
+const val NAVIGATION_RAIL_TEST_TAG = "navigation_rail"
+
+/**
  * Material 3 bottom navigation bar with the four top-level destinations.
  *
  * Stateless by design: [chatUnreadCount] is a plain `Int` rather than this composable
@@ -120,34 +155,76 @@ fun CoPlanlyBottomBar(
             NavigationBarItem(
                 selected = selected,
                 onClick = { if (!selected) onNavigate(destination) },
-                icon = {
-                    val icon = if (selected) destination.selectedIcon else destination.unselectedIcon
-                    if (destination == BottomNavDestination.CHAT && chatUnreadCount > 0) {
-                        val unreadDescription = pluralStringResource(
-                            R.plurals.chat_unread_messages_badge,
-                            chatUnreadCount,
-                            chatUnreadCount
-                        )
-                        val badgeText = if (chatUnreadCount > MAX_BADGE_DISPLAY_COUNT) {
-                            stringResource(R.string.chat_unread_count_overflow, MAX_BADGE_DISPLAY_COUNT)
-                        } else {
-                            chatUnreadCount.toString()
-                        }
-                        BadgedBox(
-                            badge = {
-                                Badge(modifier = Modifier.semantics { contentDescription = unreadDescription }) {
-                                    Text(badgeText)
-                                }
-                            }
-                        ) {
-                            Icon(imageVector = icon, contentDescription = null)
-                        }
-                    } else {
-                        Icon(imageVector = icon, contentDescription = null)
-                    }
-                },
+                icon = { TabIcon(destination, selected, chatUnreadCount) },
                 label = { Text(stringResource(destination.labelRes)) }
             )
         }
+    }
+}
+
+/**
+ * The same four destinations as [CoPlanlyBottomBar], as a rail down the start edge for a wide
+ * window ([NavigationLayout.RAIL]). The caller has already applied the system bars, so the rail
+ * applies none of its own.
+ *
+ * @param currentRoute Route of the currently displayed destination
+ * @param onNavigate Callback invoked with the destination the user tapped
+ * @param chatUnreadCount Unread messages from the co-parent, badged as on the bar
+ */
+@Composable
+fun CoPlanlyNavigationRail(
+    currentRoute: String?,
+    onNavigate: (BottomNavDestination) -> Unit,
+    chatUnreadCount: Int = 0
+) {
+    NavigationRail(
+        modifier = Modifier.testTag(NAVIGATION_RAIL_TEST_TAG),
+        windowInsets = WindowInsets(0, 0, 0, 0)
+    ) {
+        BottomNavDestination.entries.forEach { destination ->
+            val selected = currentRoute == destination.route
+            NavigationRailItem(
+                selected = selected,
+                onClick = { if (!selected) onNavigate(destination) },
+                icon = { TabIcon(destination, selected, chatUnreadCount) },
+                label = { Text(stringResource(destination.labelRes)) }
+            )
+        }
+    }
+}
+
+/**
+ * A destination's icon, filled when selected, with the Chat tab's unread badge: the bar and the
+ * rail draw the same thing.
+ *
+ * @param destination The tab
+ * @param selected Whether it is the tab on screen
+ * @param chatUnreadCount Unread messages from the co-parent; badged on Chat above zero
+ */
+@Composable
+private fun TabIcon(destination: BottomNavDestination, selected: Boolean, chatUnreadCount: Int) {
+    val icon = if (selected) destination.selectedIcon else destination.unselectedIcon
+    if (destination == BottomNavDestination.CHAT && chatUnreadCount > 0) {
+        val unreadDescription = pluralStringResource(
+            R.plurals.chat_unread_messages_badge,
+            chatUnreadCount,
+            chatUnreadCount
+        )
+        val badgeText = if (chatUnreadCount > MAX_BADGE_DISPLAY_COUNT) {
+            stringResource(R.string.chat_unread_count_overflow, MAX_BADGE_DISPLAY_COUNT)
+        } else {
+            chatUnreadCount.toString()
+        }
+        BadgedBox(
+            badge = {
+                Badge(modifier = Modifier.semantics { contentDescription = unreadDescription }) {
+                    Text(badgeText)
+                }
+            }
+        ) {
+            Icon(imageVector = icon, contentDescription = null)
+        }
+    } else {
+        Icon(imageVector = icon, contentDescription = null)
     }
 }
