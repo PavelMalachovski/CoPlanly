@@ -471,13 +471,6 @@ private fun DayCell(
         else -> null
     }
 
-    // A contact window (MON-6b) is marked, not filled: a small corner in the window parent's
-    // full hue — the saturation rule's "marker" strength — laid over everything else, so the
-    // weekend base, the custody band and the handover diagonal all read exactly as before. The
-    // whole-day tint cannot carry it (it already says whose day it is), and a sixth fill would
-    // fight the five this cell stacks. The hours are in the description and in Day view, one tap
-    // away. On a borrowed day the marker is scaled like the band: a window is part of the pattern,
-    // and the pattern crosses the month boundary.
     // The school-vacation line: the theme's `outline` role, a neutral that is no parent's, the
     // friend's or the holiday's, and scaled on a borrowed day like the band. Resolved here because
     // the draw lambda below is not composable.
@@ -487,6 +480,13 @@ private fun DayCell(
         null
     }
 
+    // A contact window (MON-6b) is marked, not filled: a small corner in the window parent's
+    // full hue — the saturation rule's "marker" strength — laid over everything else, so the
+    // weekend base, the custody band and the handover diagonal all read exactly as before. The
+    // whole-day tint cannot carry it (it already says whose day it is), and a sixth fill would
+    // fight the five this cell stacks. The hours are in the description and in Day view, one tap
+    // away. On a borrowed day the marker is scaled like the band: a window is part of the pattern,
+    // and the pattern crosses the month boundary.
     val contactWindows = getContactWindows(date)
     val windowMarkerColor = contactWindows.firstOrNull()?.let {
         ParentColors.fill(it.parent).copy(alpha = adjacentScale(fill.isAdjacentMonth))
