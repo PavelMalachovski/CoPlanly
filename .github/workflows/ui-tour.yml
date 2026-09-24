@@ -3,8 +3,10 @@
 #
 # **What it does.** Builds the debug app and test APKs, boots an API 30 emulator with a Pixel 6
 # screen (1080×2400), starts the Firebase emulators, and runs `UiTourTest` and
-# `UiTourOnboardingTest` (app/src/androidTest/.../e2e/) three times — light/English/font 1.0,
-# dark/English/font 1.0, light/Russian/font 1.3 — through `tools/ui-tour/run-ui-tour.sh`. Each run
+# `UiTourOnboardingTest` (app/src/androidTest/.../e2e/) four times — light/English/font 1.0,
+# dark/English/font 1.0, light/Russian/font 1.3, and light/English on a 1280 × 800 dp display (a
+# tablet held sideways, where the rail and the detail screens' width cap show) — through
+# `tools/ui-tour/run-ui-tour.sh`. Each run
 # signs Alice up on the Auth emulator, pairs her with Bob through the real callable, seeds a few
 # weeks of family life through the production repositories (custody with contact afternoons and an
 # autumn break, Emma, Leo and Max, events, expenses in CZK and EUR, budgets, a parenting plan, chat,
@@ -46,7 +48,7 @@ concurrency:
 
 jobs:
   tour:
-    name: UI tour (three variants)
+    name: UI tour (four variants)
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
@@ -151,7 +153,7 @@ jobs:
           branch="ui-tour/${SOURCE_REF//\//-}"
           short="${SOURCE_SHA:0:7}"
           export UI_TOUR_SOURCE="$SOURCE_REF @ $short"
-          node tools/ui-tour/gallery.js "$site" light-en-100 dark-en-100 light-ru-130
+          node tools/ui-tour/gallery.js "$site" light-en-100 dark-en-100 light-ru-130 light-en-100-wide
           publish="$RUNNER_TEMP/ui-tour-publish"
           rm -rf "$publish"
           mkdir -p "$publish"

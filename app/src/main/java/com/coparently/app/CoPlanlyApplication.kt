@@ -9,6 +9,7 @@ import com.coparently.app.data.chat.ChatMirror
 import com.coparently.app.data.session.SessionProfileSynchronizer
 import com.coparently.app.data.sync.SyncWorker
 import com.coparently.app.data.telemetry.TelemetryConsentApplier
+import com.coparently.app.presentation.widget.TodayWidgetRefresher
 import com.google.firebase.FirebaseApp
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
@@ -49,6 +50,9 @@ class CoPlanlyApplication : Application(), Configuration.Provider {
     @Inject
     lateinit var chatMirror: ChatMirror
 
+    @Inject
+    lateinit var todayWidgetRefresher: TodayWidgetRefresher
+
     /**
      * Provides WorkManager configuration with HiltWorkerFactory.
      * This enables dependency injection in WorkManager workers.
@@ -81,6 +85,10 @@ class CoPlanlyApplication : Application(), Configuration.Provider {
 
         // The chat mirror, from here rather than from `NavGraph`'s Activity-scoped ChatViewModel.
         chatMirror.start()
+
+        // The Today widget redraws when an event or the custody schedule changes in Room — a
+        // parent's own edit or the co-parent's arriving by sync — whether or not a screen is open.
+        todayWidgetRefresher.start()
 
         // Make sure the signed-in user has a profile document carrying their name and
         // email. This has to happen here, not on a screen: the co-parent reads that

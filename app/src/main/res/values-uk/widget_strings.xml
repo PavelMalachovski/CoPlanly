@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_today_name">Сьогодні</string>
+    <string name="widget_today_description">Чий сьогодні день, найближча передача і події на сьогодні</string>
+    <string name="widget_today_title">Сьогодні · %1$s</string>
+    <string name="widget_today_signed_out">Увійдіть у CoPlanly, щоб побачити свій день.</string>
+    <plurals name="widget_today_more">
+        <item quantity="one">ще %1$d</item>
+        <item quantity="few">ще %1$d</item>
+        <item quantity="many">ще %1$d</item>
+        <item quantity="other">ще %1$d</item>
+    </plurals>
+    <plurals name="widget_today_events_count">
+        <item quantity="one">%1$d подія сьогодні</item>
+        <item quantity="few">%1$d події сьогодні</item>
+        <item quantity="many">%1$d подій сьогодні</item>
+        <item quantity="other">%1$d події сьогодні</item>
+    </plurals>
+</resources>

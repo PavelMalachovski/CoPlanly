@@ -30,7 +30,7 @@ class UiTourOnboardingTest : AliceOnScreenTest() {
 
     private val variant by lazy { UiTourVariant.current() }
     private val localized by lazy { variant.localized(context) }
-    private val driver by lazy { UiTourDriver(composeTestRule, bottomBar) }
+    private val driver by lazy { UiTourDriver(composeTestRule, tabBar) }
     private val camera by lazy { UiTourCamera(composeTestRule, SECTION, FIRST_NUMBER) {} }
 
     override val opensOnHome: Boolean = false

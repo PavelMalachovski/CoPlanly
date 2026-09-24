@@ -49,6 +49,7 @@ import com.coparently.app.presentation.sync.AuthStateViewModel
 import com.coparently.app.presentation.sync.SyncViewModel
 import com.coparently.app.presentation.theme.CoPlanlyTheme
 import com.coparently.app.presentation.theme.LocalParentPalette
+import com.coparently.app.presentation.widget.TodayWidgetRefresher
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -88,6 +89,9 @@ class MainActivity : AppCompatActivity() {
 
     @Inject
     lateinit var selectedFamilySource: SelectedFamilySource
+
+    @Inject
+    lateinit var todayWidgetRefresher: TodayWidgetRefresher
 
     private val _darkThemeState = MutableStateFlow<Boolean?>(null)
     private val darkThemeState: StateFlow<Boolean?> = _darkThemeState
@@ -207,6 +211,10 @@ class MainActivity : AppCompatActivity() {
         splashScreen.setKeepOnScreenCondition {
             firstScreenUnknown() && SystemClock.uptimeMillis() < splashDeadline
         }
+
+        // While the app is on screen, the Today widget learns the parents' names from the same
+        // source every screen uses; the widget itself cannot reach the co-parent's.
+        todayWidgetRefresher.followParents(this)
 
         // Enable edge-to-edge display for modern Android UI
         // This makes the app draw behind the system bars

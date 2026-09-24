@@ -90,6 +90,14 @@ const RULES = [
       'tools/generate-contrast-schemes.py'],
   },
   {
+    sections: ['3.15'],
+    why: 'the Today widget, or the functions it computes the day with',
+    paths: ['K/presentation/widget/**', 'app/src/main/res/xml/today_widget_info.xml',
+      'app/src/main/res/values*/widget_strings.xml',
+      'app/src/main/res/drawable/widget_today_preview.xml', 'K/domain/home/HomeWeek.kt',
+      'K/domain/custody/HandoverCalculator.kt'],
+  },
+  {
     sections: ['3.3'],
     why: 'parent colours',
     paths: ['K/presentation/theme/ParentColors.kt', 'K/presentation/theme/ParentPalette.kt',

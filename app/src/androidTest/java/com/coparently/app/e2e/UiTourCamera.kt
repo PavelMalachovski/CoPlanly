@@ -20,8 +20,10 @@ import java.io.FileOutputStream
 import java.util.Locale
 
 /**
- * One way of looking at the app in the UI tour, named `<theme>-<language>-<font scale %>`:
- * `light-en-100`, `dark-en-100`, `light-ru-130`.
+ * One way of looking at the app in the UI tour, named `<theme>-<language>-<font scale %>[-wide]`:
+ * `light-en-100`, `dark-en-100`, `light-ru-130`, `light-en-100-wide`. A `-wide` variant runs on a
+ * 1280 × 800 dp display, which `tools/ui-tour/run-ui-tour.sh` sets with `wm size` and `wm density`;
+ * like the font scale, the name only records it.
  *
  * The theme and the language are applied by the test ([applyTo]) — the app's own theme preference,
  * and AppCompat's per-app locale, exactly what Settings → Theme and Settings → Language write. The
@@ -124,6 +126,28 @@ class UiTourCamera(
         try {
             prepare()
             save(file)
+            captured.put(JSONObject().put("file", file).put("screen", screen))
+        } catch (e: Exception) {
+            recordSkip(screen, e)
+        } catch (e: AssertionError) {
+            recordSkip(screen, e)
+        }
+        writeManifest()
+    }
+
+    /**
+     * Saves the bitmap [render] draws as `NN_[screen].png`, for what is not on the app's screen — the
+     * home-screen widget; skips it on failure, as [shot] does.
+     */
+    @Suppress("TooGenericExceptionCaught") // a tour goes on past any one picture, whatever broke it
+    fun picture(screen: String, render: () -> Bitmap) {
+        number += 1
+        val file = String.format(Locale.ROOT, "%02d_%s.png", number, screen)
+        step("tour: $file")
+        try {
+            val bitmap = render()
+            FileOutputStream(File(directory, file)).use { bitmap.compress(Bitmap.CompressFormat.PNG, PNG_QUALITY, it) }
+            bitmap.recycle()
             captured.put(JSONObject().put("file", file).put("screen", screen))
         } catch (e: Exception) {
             recordSkip(screen, e)

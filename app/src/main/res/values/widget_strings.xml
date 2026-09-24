@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The "Today" home-screen widget (presentation/widget). The widget words its lines with
+         the home and calendar strings wherever it says the same thing as the today card and the
+         handover hero; these are only what it says and they do not. -->
+    <string name="widget_today_name">Today</string>
+    <string name="widget_today_description">Whose day it is, the next handover and today\'s events</string>
+    <!-- %1$s = today's date, formatted for the reader's locale -->
+    <string name="widget_today_title">Today · %1$s</string>
+    <string name="widget_today_signed_out">Sign in to CoPlanly to see your day.</string>
+    <!-- Events that did not fit on the widget. %1$d = how many. -->
+    <plurals name="widget_today_more">
+        <item quantity="one">+%1$d more</item>
+        <item quantity="other">+%1$d more</item>
+    </plurals>
+    <!-- The compact widget lists no events and counts them instead. %1$d = how many. -->
+    <plurals name="widget_today_events_count">
+        <item quantity="one">%1$d event today</item>
+        <item quantity="other">%1$d events today</item>
+    </plurals>
+</resources>

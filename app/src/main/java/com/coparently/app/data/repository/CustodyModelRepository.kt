@@ -189,6 +189,19 @@ class CustodyModelRepository(
     }
 
     /**
+     * The stored pattern and its accepted swaps, from Room alone and from one row, so the two
+     * cannot come from different writes.
+     *
+     * For a caller outside every screen — the Today widget — which must not attach the Firestore
+     * mirror [getActiveModel] and [observeDayOverrides] merge in: it draws what this device
+     * holds, which is what Home draws a moment after it opens.
+     */
+    suspend fun storedCustody(): Pair<CustodyModel?, Map<String, DayOverride>> {
+        val entity = custodyModelDao.getActiveModelSync()
+        return entity?.toDomainModel() to DayOverrideJson.decode(entity?.dayOverridesJson)
+    }
+
+    /**
      * Publishes this device's active pattern to the pair, if the pair has none yet.
      *
      * A schedule saved before pairing never left the phone: [saveAndActivate] pushes only when

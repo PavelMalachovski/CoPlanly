@@ -12,9 +12,11 @@
 #
 #   1. installs the app and test APKs (built beforehand — no Gradle here, so the three runs share
 #      one install and the app's data survives until this script clears it);
-#   2. for each variant `<theme>-<language>-<font scale %>`:
+#   2. for each variant `<theme>-<language>-<font scale %>[-wide]`:
 #        - `pm clear` the app (each run signs up a new Alice; nothing of the last one may show),
-#        - sets the device's night mode and font scale (`cmd uimode night`, `font_scale`),
+#        - sets the device's night mode and font scale (`cmd uimode night`, `font_scale`), and for
+#          a `-wide` variant a 1280 × 800 dp display (`wm size` and `wm density`: a tablet held
+#          sideways, where the navigation rail and the detail screens' width cap show),
 #        - `am instrument`s UiTourTest and UiTourOnboardingTest with `-e coplanlyUiTour true` and
 #          `-e coplanlyUiTourVariant <variant>` (the test switches the app's theme and language),
 #        - streams files/ui-tour/<variant>/ out of the app's data dir with `run-as` — the PNGs
@@ -30,7 +32,8 @@
 # the manifest as skipped, with the reason.
 #
 # Environment:
-#   UI_TOUR_VARIANTS        Space-separated variants. Default: light-en-100 dark-en-100 light-ru-130.
+#   UI_TOUR_VARIANTS        Space-separated variants.
+#                           Default: light-en-100 dark-en-100 light-ru-130 light-en-100-wide.
 #   UI_TOUR_OUT             Output directory. Default: build/ui-tour-site.
 #   COPLANLY_EMULATOR_HOST  The host as the device reaches it. Default 10.0.2.2 (see the e2e script).
 #   FIREBASE_JAVA_HOME      A JDK 21+ for the emulators.
@@ -43,7 +46,9 @@ APP_ID="${APP_ID:-app.coplanly}"
 APP_APK="${APP_APK:-app/build/outputs/apk/debug/app-debug.apk}"
 TEST_APK="${TEST_APK:-app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk}"
 OUT="${UI_TOUR_OUT:-build/ui-tour-site}"
-VARIANTS="${UI_TOUR_VARIANTS:-light-en-100 dark-en-100 light-ru-130}"
+VARIANTS="${UI_TOUR_VARIANTS:-light-en-100 dark-en-100 light-ru-130 light-en-100-wide}"
+WIDE_SIZE="2560x1600"   # pixels; at WIDE_DENSITY, 1280 x 800 dp
+WIDE_DENSITY="320"
 HOST="${COPLANLY_EMULATOR_HOST:-10.0.2.2}"
 CLASSES="com.coparently.app.e2e.UiTourTest,com.coparently.app.e2e.UiTourOnboardingTest"
 REMOTE="files/ui-tour"  # relative to the app's data dir, which is where run-as starts
@@ -51,6 +56,25 @@ REMOTE="files/ui-tour"  # relative to the app's data dir, which is where run-as 
 fail() {
   echo "::error::$*"
   exit 1
+}
+
+# A system dialog takes the window focus from the app, and every Back the tour presses then waits
+# for a focus that never returns. The week-5 tour stopped at its third screen in every variant
+# behind "Pixel Launcher isn't responding", raised while the emulator booted and never answered.
+# The tour reviews the app, not the runner's load, so error dialogs are hidden for the session
+# (`hide_error_dialogs`, which the system reads as it changes) and an open one is closed: stopping
+# the launcher dismisses its dialog with it, and the app on top never needs the launcher; the
+# close-dialogs broadcast answers the rest.
+clear_system_dialogs() {
+  adb shell settings put global hide_error_dialogs 1 >/dev/null 2>&1 || true
+  local home
+  home="$(adb shell cmd package resolve-activity --brief \
+    -a android.intent.action.MAIN -c android.intent.category.HOME 2>/dev/null | tr -d '\r' | tail -n 1)"
+  case "$home" in
+    android/* | '') ;;
+    */*) adb shell am force-stop "${home%%/*}" >/dev/null 2>&1 || true ;;
+  esac
+  adb shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS >/dev/null 2>&1 || true
 }
 
 if [ "${1:-}" != "--inside-emulators" ]; then
@@ -76,6 +100,7 @@ adb logcat -G 16M >/dev/null 2>&1 || true
 echo "::group::Install the app and the test APK"
 adb install -r -t "$APP_APK"
 adb install -r -t "$TEST_APK"
+clear_system_dialogs
 echo "::endgroup::"
 
 # "instrumentation:app.coplanly.test/com.coparently.app.HiltTestRunner (target=app.coplanly)"
@@ -88,8 +113,13 @@ instrumentation="$(adb shell pm list instrumentation | tr -d '\r' \
 mkdir -p "$OUT/ui-tour" "$OUT/logs"
 
 for variant in $VARIANTS; do
-  theme="${variant%%-*}"
-  percent="${variant##*-}"
+  base="$variant"
+  wide=no
+  case "$variant" in
+    *-wide) wide=yes; base="${variant%-wide}" ;;
+  esac
+  theme="${base%%-*}"
+  percent="${base##*-}"
   case "$percent" in
     '' | *[!0-9]*) fail "Variant $variant does not end in a font scale percentage" ;;
   esac
@@ -97,10 +127,18 @@ for variant in $VARIANTS; do
   night=no
   [ "$theme" = dark ] && night=yes
 
-  echo "::group::UI tour — $variant (night $night, font scale $scale)"
+  echo "::group::UI tour — $variant (night $night, font scale $scale, wide $wide)"
   adb shell pm clear "$APP_ID" >/dev/null 2>&1 || true
   adb shell cmd uimode night "$night" || true
   adb shell settings put system font_scale "$scale" || true
+  if [ "$wide" = yes ]; then
+    adb shell wm size "$WIDE_SIZE" || true
+    adb shell wm density "$WIDE_DENSITY" || true
+  else
+    adb shell wm size reset || true
+    adb shell wm density reset || true
+  fi
+  clear_system_dialogs
   adb logcat -c || true
   # `|| true`: a crashed run still leaves whatever it captured, and the manifest says how far it got.
   adb shell am instrument -w -r \
@@ -127,6 +165,8 @@ done
 
 adb shell settings put system font_scale 1.0 || true
 adb shell cmd uimode night no || true
+adb shell wm size reset || true
+adb shell wm density reset || true
 
 # shellcheck disable=SC2086 # the variant list is word-split on purpose
 node tools/ui-tour/gallery.js "$OUT" $VARIANTS

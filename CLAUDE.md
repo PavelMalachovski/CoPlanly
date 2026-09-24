@@ -263,6 +263,49 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     nothing loses contrast; `ContrastScreenshots` renders three components at high contrast. The
     parent colours, the weekend grey and the holiday reds are the app's own tokens and do not
     change with the level; they are held to AA by `ParentColorsTest` in both themes.
+18. **The "Today" widget is Home's today card on the home screen, never a second opinion**
+    (October 2026 audit, week 6; `presentation/widget/`). A Glance 1.1.1 widget: whose day it is,
+    the day's contact windows, the next handover and today's events. The compact layout counts the
+    events; the tall one lists four and says how many it left out. Five things not to undo. **One
+    computation**: `TodayWidgetModel` calls `HomeWeek.todayOf`, `HandoverCalculator` and
+    `CustodyResolver` over the same Room rows Home reads, so swaps, contact windows and private
+    events follow Home's rules. Don't give the widget a rule of its own. **One wording**:
+    `TodayWidgetText` uses the app's string for every line it shares with Home ("Today with
+    Alex", the hero's handover sentence, the card's contact window and empty day), names parents
+    through `ParentNames` and colours them from the family's palette. `widget_strings.xml` holds
+    only what the app never says. **Room and nothing else**: the co-parent's name lives in
+    Firestore alone, so the app remembers the parents for the widget while `MainActivity` is
+    started (`TodayWidgetRefresher.followParents` → `TodayWidgetNames`, in `EncryptedPreferences`,
+    cleared with them and refused for another uid). Never attach `ParentsSource` from a widget
+    update, which would cost three Firestore listeners for a label. **Every redraw has a trigger**:
+    a Room write to `events` or `custody_models` (the invalidation tracker, debounced), a change
+    of names, a unique periodic work a minute past midnight, and hourly `updatePeriodMillis` as the
+    backstop. A table the widget starts to read joins `WATCHED_TABLES`. **Nothing the schema does
+    not hold**: a handover is a day and a person, never an hour, as on Home. It is home-screen
+    only. It adds no XML layout: `initialLayout` is Glance's own, and the picker preview is a
+    vector drawable. Its text takes the today card's type roles through `role()` (the role's size,
+    and the nearest lighter of the three weights a widget's system font has), its corner is the
+    launcher's own `system_app_widget_background_radius`, and its paddings are `Spacing` steps —
+    no size of its own. It follows the system's dark theme, because the launcher draws it, not the
+    app's own theme setting. It speaks the context's language: the per-app choice on Android 13 and
+    later, the device's before, as pushes do. `TodayWidgetTextTest` holds the wording (Robolectric,
+    English and Russian), and the UI tour draws the widget's own `RemoteViews` in every variant
+    (`UiTourWidget`).
+19. **Every screen that is not a tab is one readable column** (October 2026 audit, week 6). A
+    destination is declared with `pane()` (`navigation/ReadablePane.kt`), which is `composable()`
+    with the screen laid out at most 640 dp wide, centred, top bar included. Only the four tabs
+    and the loading screen use `composable()` directly; a new detail screen uses `pane()`. Don't
+    cap inside a screen: every detail screen brings its own Scaffold, and the cap belongs to the
+    one place that knows which destinations are tabs. On a phone it changes nothing.
+    `ReadablePaneTest` measures both widths. The UI tour's `light-en-100-wide` variant (a
+    1280 × 800 dp display) shows it next to the rail.
+20. **There is no handover Live Update, on purpose** (October 2026 audit, correction §1.6). Android
+    16's Live Updates are for an activity the user started and watches until it ends, like a ride
+    or a delivery. Google's guidelines name "upcoming calendar events" and activities "triggered
+    by other parties" as not allowed. A promoted notification posted from the custody schedule is
+    both, and the schema holds no handover hour or place for it to show. Don't add one. If the
+    owner wants the feature, it is a parent-started "on my way to the handover" flow, and that is
+    the owner's decision to make first.
 
 ## UX/UI overhaul (July 2026 design review) — implemented, keep consistent
 
@@ -278,8 +321,12 @@ When touching the UI, keep these invariants:
    screen's top bar and is a detail screen (`onNavigateUp = popBackStack`, bottom bar
    hidden). `QuickActionsBottomSheet` was dead code and is gone — genuinely so as of the
    August 2026 audit; the file had in fact survived this note by several months.
-   *(Aug 2026: budgets no longer open from an unlabelled Expenses top-bar action — they are
-   a chip strip on the Expenses screen itself. Tab switches, including Home's stat-tile deep
+   *(Aug 2026: budgets no longer open from an unlabelled Expenses top-bar action — and since
+   `85f1afb` they open from nowhere: the chip strip that replaced it was dropped with the
+   Expenses scroll fix (owner decision), so `BudgetScreen` and its ViewModel are unreachable
+   until a separate change deletes them with their data layer. This line said they were a chip
+   strip for a month after that, and the UI tour kept a budgets step that timed out on every
+   run. Tab switches, including Home's stat-tile deep
    links, go through `NavHostController.navigateToTab` so they share one back-stack policy.)*
 2. **Toolchain**: compileSdk/targetSdk 36, Kotlin 2.1 (+ `kotlin.plugin.compose`),
    Compose BOM 2025.10 (Material 3 1.4 — whose public API has none of M3 Expressive:
@@ -578,16 +625,23 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   request), `UiTourDriver` walks the app's own navigation by string resource, and `UiTourCamera`
   saves `UiAutomation.takeScreenshot()` PNGs plus a `manifest.json` in which a screen it could not
   reach is **skipped with its reason, never a failure**. `tools/ui-tour/run-ui-tour.sh` runs them
-  with `am instrument` (not Gradle, which uninstalls the app and its files) three times on an API
+  with `am instrument` (not Gradle, which uninstalls the app and its files) four times on an API
   30 Pixel 6 emulator — `light-en-100`, `dark-en-100`, `light-ru-130`, the device's font scale set
-  between runs — and `tools/ui-tour/gallery.js` writes the side-by-side `index.html`. The workflow
+  between runs, and `light-en-100-wide` on a 1280 × 800 dp display (`wm size`/`wm density`, a
+  tablet held sideways: the rail and the detail screens' width cap) — and `tools/ui-tour/gallery.js`
+  writes the side-by-side `index.html`. The workflow
   force-pushes one fresh commit to `ui-tour/<branch, "/" → "-">` (and uploads the `ui-tour`
   artifact); it never writes to the branch it ran for. Trigger it with `workflow_dispatch`, or by
   touching `.github/ui-tour-request` on any branch — a change to that file, the workflow or
   `tools/ui-tour/` alone runs no CI job (`tools/ci-changes.js`). Two things to keep: the tour
   needs `-e coplanlyUiTour true` on top of the emulator host (`EmulatorEnvironment.assumeUiTour`),
   and `tools/e2e/run-two-parent-tests.sh` excludes its classes by name — skipped, they would fail
-  the `e2e` job's no-skip check. A new screen gets a `camera.shot` in the tour.
+  the `e2e` job's no-skip check. A new screen gets a `camera.shot` in the tour. It never fails on a
+  screen: a step that throws inside a shot skips that shot, and one that throws *between* shots
+  skips the rest of its section as `section_<name>`, with the reason, and the tour goes on. The
+  script hides system error dialogs and stops the launcher before each variant, because a launcher
+  that stopped answering while the emulator booted once held the window focus for a whole run, and
+  every Back the tour pressed waited on it (week 5's tour stopped at its third screen).
 
   Still run the build locally before pushing — CI is a backstop, not a substitute.
   After switching branches, prefer `clean` — stale Hilt/KSP generated sources from another branch cause

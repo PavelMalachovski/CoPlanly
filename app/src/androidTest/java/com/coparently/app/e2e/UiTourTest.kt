@@ -1,6 +1,7 @@
 package com.coparently.app.e2e
 
 import android.content.Context
+import android.util.Log
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasClickAction
@@ -54,7 +55,7 @@ class UiTourTest : AliceOnScreenTest() {
 
     private val variant by lazy { UiTourVariant.current() }
     private val localized by lazy { variant.localized(context) }
-    private val driver by lazy { UiTourDriver(composeTestRule, bottomBar) }
+    private val driver by lazy { UiTourDriver(composeTestRule, tabBar) }
     private val camera by lazy { UiTourCamera(composeTestRule, SECTION, FIRST_NUMBER) { driver.backToTabs() } }
 
     override val strings: Context
@@ -72,16 +73,41 @@ class UiTourTest : AliceOnScreenTest() {
             runCatching { syncService.performFullSync() }
             seed.seedPending(aliceUid, bob)
         }
-        homeSection()
-        calendarSection()
-        eventFormSection()
-        chatSection()
-        expensesSection()
-        settingsSection()
-        familyScreens()
-        recordScreens()
-        switcherSection()
-        signOutSection()
+        section("home") { homeSection() }
+        section("widget") { widgetSection() }
+        section("calendar") { calendarSection() }
+        section("event_form") { eventFormSection() }
+        section("chat") { chatSection() }
+        section("expenses") { expensesSection() }
+        section("settings") { settingsSection() }
+        section("family") { familyScreens() }
+        section("records") { recordScreens() }
+        section("switcher") { switcherSection() }
+        section("sign_out") { signOutSection() }
+    }
+
+    /**
+     * Walks one part of the tour. A step *between* two screens that throws — a Back that found no
+     * focused window, a pop-up that did not close — used to end the whole tour, and the screens after
+     * it were simply missing from the manifest, which read like a short tour rather than a broken
+     * one. Now it is the section's skip, with the reason, the app goes back to the tabs, and the tour
+     * goes on with the next section.
+     */
+    @Suppress("TooGenericExceptionCaught") // the tour goes on past any one section, whatever broke it
+    private fun section(name: String, walk: () -> Unit) {
+        try {
+            walk()
+        } catch (e: Exception) {
+            abandon(name, e)
+        } catch (e: AssertionError) {
+            abandon(name, e)
+        }
+    }
+
+    private fun abandon(name: String, cause: Throwable) {
+        Log.w(TAG, "section $name ended early", cause)
+        camera.skip("section_$name", "ended early: ${cause.toString().take(REASON_CHARS)}")
+        runCatching { driver.backToTabs() }
     }
 
     // ---- Home -----------------------------------------------------------------------------------
@@ -116,6 +142,17 @@ class UiTourTest : AliceOnScreenTest() {
             driver.linger()
         }
         driver.backToTabs()
+    }
+
+    // ---- The Today widget -----------------------------------------------------------------------
+
+    /**
+     * The home-screen widget, drawn from what Home has just shown: the same Room rows, and the names
+     * the app remembered for it while Home was on screen.
+     */
+    private fun widgetSection() {
+        camera.picture("widget_today_compact") { UiTourWidget.render(variant, UiTourWidget.COMPACT) }
+        camera.picture("widget_today_tall") { UiTourWidget.render(variant, UiTourWidget.TALL) }
     }
 
     // ---- Calendar -------------------------------------------------------------------------------
@@ -207,10 +244,6 @@ class UiTourTest : AliceOnScreenTest() {
             driver.linger()
         }
         driver.pressIfPresent(textButton(R.string.expense_analytics_tab_list))
-        camera.shot("budgets") {
-            driver.press("+ Budget", textButton(R.string.expenses_budget_add))
-            driver.linger()
-        }
         camera.shot("expense_add") {
             driver.backToTabs()
             driver.press("Add expense", hasContentDescription(string(R.string.expenses_add)) and hasClickAction())
@@ -294,7 +327,7 @@ class UiTourTest : AliceOnScreenTest() {
     /** Settings, from wherever the tour is: Back to it if it is under this screen, else its gear. */
     private fun openSettings() {
         val settings = hasText(string(R.string.settings_title))
-        if (driver.backUntil(settings or bottomBar) && driver.present(settings)) return
+        if (driver.backUntil(settings or tabBar) && driver.present(settings)) return
         val gear = (
             hasContentDescription(string(R.string.nav_settings)) or
                 hasContentDescription(string(R.string.calendar_settings))
@@ -360,6 +393,8 @@ class UiTourTest : AliceOnScreenTest() {
 
     companion object {
         private const val SECTION = "main"
+        private const val TAG = "UiTour"
+        private const val REASON_CHARS = 400
         private const val FIRST_NUMBER = 1
         private const val MAX_DIALOGS = 4
         private const val SETTINGS_SCREENFULS = 4

@@ -8,8 +8,54 @@
 # It is not automatic on purpose: regenerating a detekt baseline accepts every violation that
 # exists at that moment, so a job doing it unattended would absolve each new one silently.
 
+requested: 2026-08-25 — CQ-12 (first baseline since CI landed) and CQ-1 (export schema 33)
+requested: 2026-08-31 — CQ-1 (export schema 34, added by MON-5's `parenting_plan_entries`)
+requested: 2026-09-23 — export schemas 35 (`users.regionCode`, MON-13) and 36
+           (`custody_models.contactWindowsJson`, MON-6b)
+
+  Note for whoever reads this next: this run is wanted for the **schema** only. The job also
+  regenerates the detekt baseline, which accepts whatever violations exist at that moment — so
+  check the baseline half of its commit before merging. If it grew entries under the files the
+  same pull request added, that is a finding being absolved rather than fixed.
+requested: 2026-09-23 — export schema 37 (event_version_outbox, MON-4)
+requested: 2026-09-23 — export schema 38 (custody_models seasonal layers, MON-14)
+requested: 2026-09-23 — export schema 39 (events.updatedAtMillis, MON-4)
+requested: 2026-09-24 — export schema 40 (child_info/pets.updatedAtMillis, MON-4 finding)
+requested: 2026-09-24 — export schema 41 (journal_entries, MON-22)
+requested: 2026-09-24 — export schema 42 (custody_models.childOverridesJson, FAM-4)
+requested: 2026-09-24 — export schema 43 (family_documents_cache, MON-23)
+requested: 2026-09-24 — screenshot baselines after the October 2026 audit's week-1 fixes (D-1's
+           unclipped money, the stacked layouts from 1.3x) and the new de_light_fs200 variant;
+           no schema change and no detekt finding is expected, so the baseline half should be empty
+requested: 2026-09-24 — again for expenses_summary_header: the settle-up sentence now stacks over
+           its chip from 1.3x (the first regeneration showed "820,0|0 CZK" at 2.0x)
+requested: 2026-09-24 — screenshot baselines for the October 2026 audit's week 2: every image
+           changes with the Onest typeface, and the new components (connectivity banner, sticky
+           action bar, inline banner, error state) get their first baselines; no schema change
+           and no new detekt finding is expected, so the baseline half should only lose entries
+requested: 2026-09-24 — again for expenses_summary_header: the paid-by amounts now stack from 1.3x
+           (the first week-2 regeneration showed "1.480,00 CZ|K" in German at 2.0x with Onest)
+requested: 2026-09-24 — screenshot baselines for the October 2026 audit's week 3: the calendar
+           banners wrap instead of cutting and count requests without a name, the Expenses
+           summary gets a collapsed line (a new baseline), and a row's meta line may wrap; no
+           schema change and no new detekt finding is expected, so the baseline half should
+           only lose entries
+requested: 2026-09-24 — again for week 3: the first run stopped at a compile error in
+           ExpenseScreen (fixed in the commit before this one), so no screenshot was recorded
+requested: 2026-09-24 — again for week 3: the change-request banner stacks its action from 1.3x,
+           the custody and vacation banners and the month line wrap instead of cutting
+requested: 2026-09-24 — screenshot baselines for the October 2026 audit's week 4: icon sizes on
+           five steps, HeroIcon, sentence case, localised dates, the emerald tertiary container,
+           and the first high-contrast images (ContrastScreenshots); no schema change and no new
+           detekt finding is expected, so the baseline half should only lose entries
 requested: 2026-09-24 — screenshot baselines for the October 2026 audit's week 5: corners from
            Shape.kt, the 4 dp spacing grid, emphasised type roles, the tonal add buttons, text
            buttons on the confirmation dialog, the rail's new images, and "Children and pets";
            no schema change and no new detekt finding is expected, so the baseline half should
            only lose entries
+requested: 2026-09-24 — week 6 (the Today widget, the readable column on a wide window): no
+           screenshot component, schema or detekt finding changes, so this run should commit
+           nothing. It also puts back the lines above the week-5 request, which that request
+           wrote over instead of appending to
+requested: 2026-09-24 — again for week 6: the first run stopped at a compile error in NavGraph
+           (a return label left behind by pane()), fixed in the commit before this one

@@ -33,6 +33,7 @@ import com.coparently.app.e2e.EmulatorEnvironment.step
 import com.coparently.app.presentation.MainActivity
 import com.coparently.app.presentation.navigation.BOTTOM_BAR_TEST_TAG
 import com.coparently.app.presentation.navigation.BottomNavDestination
+import com.coparently.app.presentation.navigation.NAVIGATION_RAIL_TEST_TAG
 import com.coparently.app.testing.exists
 import com.coparently.app.testing.pumpUntil
 import com.coparently.app.testing.settle
@@ -121,8 +122,12 @@ abstract class AliceOnScreenTest {
 
     protected val context = InstrumentationRegistry.getInstrumentation().targetContext
 
-    /** The bottom navigation bar; its presence is what says a tab is on screen. */
-    protected val bottomBar: SemanticsMatcher = hasTestTag(BOTTOM_BAR_TEST_TAG)
+    /**
+     * The tab bar — the bottom bar on a phone, the rail on a wide window (the UI tour's `-wide`
+     * variant); its presence is what says a tab is on screen. Both carry the same four tabs, so a
+     * tab is tapped by its label on either.
+     */
+    protected val tabBar: SemanticsMatcher = hasTestTag(BOTTOM_BAR_TEST_TAG) or hasTestTag(NAVIGATION_RAIL_TEST_TAG)
 
     private var coParent: EmulatorParent? = null
     private val otherPhones = mutableListOf<EmulatorParent>()
@@ -182,7 +187,7 @@ abstract class AliceOnScreenTest {
         composeTestRule.mainClock.autoAdvance = false
         scenario = ActivityScenario.launch(MainActivity::class.java)
         if (opensOnHome) {
-            composeTestRule.pumpUntil("Home with the bottom bar", HOME_TIMEOUT_MS) { exists(bottomBar) }
+            composeTestRule.pumpUntil("Home with the tab bar", HOME_TIMEOUT_MS) { exists(tabBar) }
         }
         composeTestRule.settle()
         step("before: the app is up")
@@ -238,9 +243,9 @@ abstract class AliceOnScreenTest {
     protected fun dialogButton(labelRes: Int): SemanticsMatcher =
         hasAnyAncestor(isDialog()) and hasText(string(labelRes)) and hasClickAction()
 
-    /** Opens one of the four tabs through the bottom bar. */
+    /** Opens one of the four tabs through the tab bar. */
     protected fun openTab(destination: BottomNavDestination) {
-        tap(hasAnyAncestor(bottomBar) and hasText(string(destination.labelRes)) and hasClickAction())
+        tap(hasAnyAncestor(tabBar) and hasText(string(destination.labelRes)) and hasClickAction())
     }
 
     /** Types [text] into the chat composer on screen and presses Send. */
