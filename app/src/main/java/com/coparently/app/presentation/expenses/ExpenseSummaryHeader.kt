@@ -12,7 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.ZeroCornerSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -43,6 +43,7 @@ import com.coparently.app.presentation.common.NamedParent
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.PillChip
+import com.coparently.app.presentation.theme.CoPlanlyCorners
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.utils.LightDarkPreviews
@@ -117,7 +118,7 @@ fun ExpenseSummaryHeader(
 
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
+        shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
         )
@@ -294,7 +295,7 @@ internal fun CollapsedMonthSummary(
 ) {
     Surface(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp),
+        shape = MaterialTheme.shapes.large.copy(topStart = ZeroCornerSize, topEnd = ZeroCornerSize),
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
         shadowElevation = 2.dp
     ) {
@@ -394,7 +395,7 @@ private fun SplitBar(momShare: Float, modifier: Modifier = Modifier) {
         modifier = modifier
             .fillMaxWidth()
             .height(SPLIT_BAR_HEIGHT)
-            .clip(RoundedCornerShape(4.dp))
+            .clip(CoPlanlyCorners.Tag)
     ) {
         if (momShare > 0f) {
             Box(
@@ -484,7 +485,7 @@ private fun BalanceStrip(
 ) {
     val strip = modifier
         .fillMaxWidth()
-        .clip(RoundedCornerShape(12.dp))
+        .clip(MaterialTheme.shapes.small)
         .background(accent.copy(alpha = BALANCE_STRIP_ALPHA))
         .padding(horizontal = 12.dp, vertical = 10.dp)
     val sentence: @Composable RowScope.() -> Unit = {

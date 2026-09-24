@@ -16,7 +16,6 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -69,14 +68,6 @@ private const val PAYER_TINT_ALPHA = 0.18f
  * thumbnail is padded out to the 48dp minimum with `minimumInteractiveComponentSize`.
  */
 private val TILE_SIZE = 40.dp
-
-/**
- * Corner radius of an expense row **and** of the delete surface behind it.
- *
- * The two must be the same value: the swipe backdrop sits directly under the row at rest, so a
- * backdrop with tighter corners shows as a red outline around every row in the list.
- */
-private val ROW_CORNER = 12.dp
 
 /**
  * Slot 1, whose share the stored ratio counts. Never shown as the word — [ParentNames] turns it
@@ -266,7 +257,7 @@ fun ExpenseItem(
     }
 
     Surface(
-        shape = RoundedCornerShape(ROW_CORNER),
+        shape = MaterialTheme.shapes.small,
         // Was surfaceContainerLow, a 1.2:1 separation from the background in dark — the rows
         // barely read as cards at all.
         color = MaterialTheme.colorScheme.surfaceContainer,
@@ -292,14 +283,14 @@ fun ExpenseItem(
                     modifier = Modifier
                         .minimumInteractiveComponentSize()
                         .size(TILE_SIZE)
-                        .clip(RoundedCornerShape(12.dp))
+                        .clip(MaterialTheme.shapes.small)
                         .clickable(role = Role.Button) { onReceiptClick(receiptUrl) }
                 )
             } else {
                 Box(
                     modifier = Modifier
                         .size(TILE_SIZE)
-                        .clip(RoundedCornerShape(12.dp))
+                        .clip(MaterialTheme.shapes.small)
                         .background(payerTint(payerColor)),
                     contentAlignment = Alignment.Center
                 ) {
@@ -387,7 +378,7 @@ private fun SwipeToDeleteRow(
                     .fillMaxSize()
                     .background(
                         color = MaterialTheme.colorScheme.error,
-                        shape = RoundedCornerShape(ROW_CORNER)
+                        shape = MaterialTheme.shapes.small
                     )
                     .padding(horizontal = 20.dp),
                 contentAlignment = Alignment.CenterEnd

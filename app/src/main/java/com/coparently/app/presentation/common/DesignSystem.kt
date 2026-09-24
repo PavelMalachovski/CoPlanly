@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Balance
@@ -44,6 +43,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.coparently.app.presentation.theme.CoPlanlyCorners
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.LayoutConstants
 import com.coparently.app.utils.LightDarkPreviews
@@ -62,12 +62,6 @@ import java.util.Locale
  * Everything below takes its colours from `MaterialTheme.colorScheme`, never from literal hex,
  * so the same composables render correctly in light and dark.
  */
-
-/** Corner radius of a grouped section container. */
-private val GROUP_CORNER = 16.dp
-
-/** Corner radius of a pill chip; large enough to always read as fully rounded. */
-private val PILL_CORNER = 16.dp
 
 /**
  * An uppercase label above a [SectionGroup], e.g. "FAMILY".
@@ -120,7 +114,7 @@ fun SectionGroup(
 ) {
     Surface(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(GROUP_CORNER),
+        shape = MaterialTheme.shapes.medium,
         color = MaterialTheme.colorScheme.surfaceContainer
     ) {
         Column {
@@ -274,7 +268,7 @@ fun PillChip(
     onClick: (() -> Unit)? = null,
     selected: Boolean? = null
 ) {
-    val shape = RoundedCornerShape(PILL_CORNER)
+    val shape = CoPlanlyCorners.Pill
     Row(
         modifier = modifier
             .clip(shape)

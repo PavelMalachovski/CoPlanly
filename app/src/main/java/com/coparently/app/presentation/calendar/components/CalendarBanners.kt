@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PriorityHigh
@@ -38,6 +37,7 @@ import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.theme.CoPlanlyColors
+import com.coparently.app.presentation.theme.CoPlanlyCorners
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.LayoutConstants
 import com.coparently.app.presentation.theme.ParentColors
@@ -95,7 +95,7 @@ fun ChangeRequestBanner(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
+            .clip(MaterialTheme.shapes.small)
             .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f))
             // A button to TalkBack, and a 48dp target: the padded row was about 36dp.
             .clickable(role = Role.Button, onClick = onReview)
@@ -163,7 +163,7 @@ fun VacationBanner(label: String, modifier: Modifier = Modifier) {
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
+            .clip(MaterialTheme.shapes.extraSmall)
             .background(CoPlanlyColors.VacationTint.copy(alpha = BANNER_TINT_ALPHA))
             .padding(horizontal = 11.dp, vertical = 5.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -173,7 +173,7 @@ fun VacationBanner(label: String, modifier: Modifier = Modifier) {
             modifier = Modifier
                 .width(10.dp)
                 .height(3.dp)
-                .clip(RoundedCornerShape(2.dp))
+                .clip(CoPlanlyCorners.Mark)
                 .background(CoPlanlyColors.VacationTint)
         )
         Text(
@@ -211,7 +211,7 @@ fun CustodyChangedBanner(byName: String, onDismiss: () -> Unit, modifier: Modifi
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
+            .clip(MaterialTheme.shapes.extraSmall)
             .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = BANNER_TINT_ALPHA))
             .padding(start = 11.dp, top = 5.dp, bottom = 5.dp, end = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -221,7 +221,7 @@ fun CustodyChangedBanner(byName: String, onDismiss: () -> Unit, modifier: Modifi
             modifier = Modifier
                 .width(10.dp)
                 .height(3.dp)
-                .clip(RoundedCornerShape(2.dp))
+                .clip(CoPlanlyCorners.Mark)
                 .background(MaterialTheme.colorScheme.secondary)
         )
         Text(
@@ -278,7 +278,7 @@ fun DayAgendaCard(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(MaterialTheme.shapes.medium)
             .background(MaterialTheme.colorScheme.surfaceContainer)
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -337,7 +337,7 @@ fun DayAgendaCard(
                         modifier = Modifier
                             .width(3.dp)
                             .height(28.dp)
-                            .clip(RoundedCornerShape(2.dp))
+                            .clip(CoPlanlyCorners.Mark)
                             .background(ParentColors.fill(event.parentOwner))
                     )
                     Column(modifier = Modifier.weight(1f)) {
@@ -401,7 +401,7 @@ private fun ContactWindowLine(
             modifier = Modifier
                 .width(10.dp)
                 .height(3.dp)
-                .clip(RoundedCornerShape(2.dp))
+                .clip(CoPlanlyCorners.Mark)
                 .background(ParentColors.fill(window.parent))
         )
         Text(

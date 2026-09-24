@@ -10,7 +10,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -21,6 +20,7 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -141,7 +141,7 @@ fun AuthScreen(
             // Auth Card with elevated design
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(24.dp),
+                shape = MaterialTheme.shapes.large,
                 elevation = CardDefaults.cardElevation(
                     defaultElevation = 8.dp
                 )
@@ -192,7 +192,7 @@ fun AuthScreen(
                             keyboardType = KeyboardType.Email,
                             imeAction = ImeAction.Next
                         ),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = MaterialTheme.shapes.small
                     )
 
                     // Password Field
@@ -237,7 +237,7 @@ fun AuthScreen(
                             keyboardType = KeyboardType.Password,
                             imeAction = ImeAction.Done
                         ),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = MaterialTheme.shapes.small
                     )
 
                     // Sign-in only: a fresh account has no password to have forgotten. Needs only
@@ -268,7 +268,7 @@ fun AuthScreen(
                             colors = CardDefaults.cardColors(
                                 containerColor = MaterialTheme.colorScheme.secondaryContainer
                             ),
-                            shape = RoundedCornerShape(8.dp)
+                            shape = MaterialTheme.shapes.extraSmall
                         ) {
                             Row(
                                 modifier = Modifier
@@ -308,7 +308,7 @@ fun AuthScreen(
                             colors = CardDefaults.cardColors(
                                 containerColor = MaterialTheme.colorScheme.errorContainer
                             ),
-                            shape = RoundedCornerShape(8.dp)
+                            shape = MaterialTheme.shapes.extraSmall
                         ) {
                             Row(
                                 modifier = Modifier
@@ -345,7 +345,7 @@ fun AuthScreen(
                             .fillMaxWidth()
                             .height(dims.buttonHeight),
                         enabled = !uiState.isLoading,
-                        shape = RoundedCornerShape(16.dp),
+                        shape = MaterialTheme.shapes.medium,
                         border = ButtonDefaults.outlinedButtonBorder(enabled = true).copy(
                             width = 2.dp
                         )
@@ -414,7 +414,7 @@ fun AuthScreen(
                             uiState.password.isNotBlank(),
                         // Theme primary, not BrandPrimary: the brand indigo is light-theme-only
                         // (2.73:1 on the dark surface) and under onPrimary's dark text in dark theme.
-                        shape = RoundedCornerShape(16.dp)
+                        shape = MaterialTheme.shapes.medium
                     ) {
                         if (uiState.isLoading) {
                             CircularProgressIndicator(

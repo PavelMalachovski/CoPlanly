@@ -22,7 +22,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -351,7 +350,7 @@ private fun WeekdayHeader(firstDayOfWeek: DayOfWeek) {
                         } else {
                             Color.Transparent
                         },
-                        shape = RoundedCornerShape(dims.cornerRadius / 2)
+                        shape = MaterialTheme.shapes.extraSmall
                     )
                     .padding(dims.paddingSmall / 2),
                 contentAlignment = Alignment.Center
@@ -659,11 +658,11 @@ private fun DayCell(
             .padding(dims.paddingSmall / 8)
             .background(
                 color = baseColor,
-                shape = RoundedCornerShape(dims.cornerRadius / 2)
+                shape = MaterialTheme.shapes.extraSmall
             )
             .background(
                 color = overlayColor,
-                shape = RoundedCornerShape(dims.cornerRadius / 2)
+                shape = MaterialTheme.shapes.extraSmall
             )
             // A handover day is split on a diagonal: the parent who had the child yesterday in
             // the top-left triangle, today's parent in the bottom-right, reading the way time
@@ -679,7 +678,7 @@ private fun DayCell(
             // two translucent parent hues stacked would read as a muddy third colour — and the
             // second lays yesterday's parent over it at the same custody alpha. The weekend base
             // still shows through both halves, so this file's invariant survives.
-            .clip(RoundedCornerShape(dims.cornerRadius / 2))
+            .clip(MaterialTheme.shapes.extraSmall)
             // A day picked for a multi-day swap gets an outline, not a fill. The cell already
             // stacks a weekend base, a custody overlay, a handover diagonal, a proposal preview
             // and a today circle; a sixth fill would fight all of them, and the one thing the
@@ -689,7 +688,7 @@ private fun DayCell(
                     Modifier.border(
                         width = SWAP_SELECTION_BORDER,
                         color = MaterialTheme.colorScheme.primary,
-                        shape = RoundedCornerShape(dims.cornerRadius / 2)
+                        shape = MaterialTheme.shapes.extraSmall
                     )
                 } else {
                     Modifier

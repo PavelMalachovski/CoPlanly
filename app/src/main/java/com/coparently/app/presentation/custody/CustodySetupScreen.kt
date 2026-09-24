@@ -25,7 +25,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -76,6 +75,7 @@ import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.parentingplan.PlanReferenceCard
 import com.coparently.app.presentation.parentingplan.coParentLabel
+import com.coparently.app.presentation.theme.CoPlanlyCorners
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.dimensions
 import java.time.DayOfWeek
@@ -343,7 +343,7 @@ fun CustodySetupScreen(
                             Box(
                                 modifier = Modifier
                                     .size(40.dp)
-                                    .clip(RoundedCornerShape(8.dp))
+                                    .clip(MaterialTheme.shapes.extraSmall)
                                     .background(
                                         ParentColors.container(
                                             if (isMomDay) "mom" else "dad",
@@ -353,7 +353,7 @@ fun CustodySetupScreen(
                                     .border(
                                         width = 2.dp,
                                         color = ParentColors.fill(if (isMomDay) "mom" else "dad"),
-                                        shape = RoundedCornerShape(8.dp)
+                                        shape = MaterialTheme.shapes.extraSmall
                                     )
                                     .clickable { viewModel.toggleCustomMomDay(dayIndex) },
                                 contentAlignment = Alignment.Center
@@ -488,7 +488,7 @@ fun CustodySetupScreen(
                                     // `heightIn`, not `height`: a fixed box clips its own
                                     // label as soon as the reader's font scale grows.
                                     .heightIn(min = 24.dp)
-                                    .background(color, RoundedCornerShape(4.dp)),
+                                    .background(color, CoPlanlyCorners.Tag),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(

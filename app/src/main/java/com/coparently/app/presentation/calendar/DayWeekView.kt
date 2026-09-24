@@ -33,7 +33,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Lock
@@ -94,6 +93,7 @@ import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.rememberToday
 import com.coparently.app.presentation.theme.CoPlanlyColors
+import com.coparently.app.presentation.theme.CoPlanlyCorners
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Motion
 import com.coparently.app.presentation.theme.ParentColors
@@ -126,9 +126,6 @@ private const val TODAY_TINT_ALPHA = 0.05f
 
 /** Full-hue edge on a contact-window band: the marker that carries whose afternoon it is. */
 private val CONTACT_WINDOW_EDGE_WIDTH = 3.dp
-
-/** Corner radius of a contact-window band, matching the hour cells it lies over. */
-private val CONTACT_WINDOW_CORNER = 4.dp
 
 /** Timestamp format of a contact window's label in Day view. */
 private val CONTACT_WINDOW_TIME: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
@@ -366,7 +363,7 @@ private fun DayWeekPage(
                                     } else {
                                         Color.Transparent
                                     },
-                                    shape = RoundedCornerShape(8.dp)
+                                    shape = MaterialTheme.shapes.extraSmall
                                 ),
                             contentAlignment = Alignment.Center
                         ) {
@@ -576,15 +573,15 @@ private fun DayWeekPage(
                                             .height(hourCellHeight)
                                             .background(
                                                 color = baseColor,
-                                                shape = RoundedCornerShape(dims.paddingSmall)
+                                                shape = MaterialTheme.shapes.extraSmall
                                             )
                                             .background(
                                                 color = overlayColor,
-                                                shape = RoundedCornerShape(dims.paddingSmall)
+                                                shape = MaterialTheme.shapes.extraSmall
                                             )
                                             .background(
                                                 color = proposalColor,
-                                                shape = RoundedCornerShape(dims.paddingSmall)
+                                                shape = MaterialTheme.shapes.extraSmall
                                             )
                                             // Hour cells had no outline at all, so on a dark
                                             // surface the grid read as one flat block and the
@@ -593,7 +590,7 @@ private fun DayWeekPage(
                                                 width = 1.dp,
                                                 color = MaterialTheme.colorScheme.outlineVariant
                                                     .copy(alpha = GRIDLINE_ALPHA),
-                                                shape = RoundedCornerShape(dims.paddingSmall)
+                                                shape = MaterialTheme.shapes.extraSmall
                                             )
                                             .clickable {
                                                 onAddEventClick(date, hour)
@@ -781,7 +778,7 @@ private fun ContactWindowBand(
     showLabel: Boolean
 ) {
     val density = LocalDensity.current
-    val shape = RoundedCornerShape(CONTACT_WINDOW_CORNER)
+    val shape = CoPlanlyCorners.Tag
     val from = window.start.format(CONTACT_WINDOW_TIME)
     val to = window.end.format(CONTACT_WINDOW_TIME)
     val description = stringResource(R.string.calendar_contact_window_desc, parentName, from, to)
@@ -980,7 +977,7 @@ private fun EventChip(
                 // localToWindow converts local coordinates to window coordinates
                 eventGlobalPosition = coordinates.localToWindow(Offset.Zero)
             }
-            .clip(RoundedCornerShape(6.dp))
+            .clip(MaterialTheme.shapes.extraSmall)
             .background(
                 color = if (isDraggingEvent && isOverDeleteButton) {
                     MaterialTheme.colorScheme.error.copy(alpha = 0.3f)
@@ -997,7 +994,7 @@ private fun EventChip(
             .border(
                 width = 1.dp,
                 color = borderColor,
-                shape = RoundedCornerShape(6.dp)
+                shape = MaterialTheme.shapes.extraSmall
             )
             .pointerInput(event.id, onDelete, onLongPressStart, onLongPressEnd) {
                 if (onDelete != null && onLongPressStart != null && onLongPressEnd != null) {
@@ -1272,7 +1269,7 @@ private fun EventChip(
                 modifier = Modifier
                     .align(Alignment.Center)
                     .padding(4.dp),
-                shape = RoundedCornerShape(4.dp),
+                shape = CoPlanlyCorners.Tag,
                 color = MaterialTheme.colorScheme.inverseSurface.copy(alpha = 0.9f),
                 shadowElevation = 4.dp
             ) {
@@ -1663,7 +1660,7 @@ private fun CustodyWeekBand(
                 modifier = Modifier
                     .weight(days.toFloat())
                     .fillMaxHeight()
-                    .background(color, RoundedCornerShape(4.dp)),
+                    .background(color, CoPlanlyCorners.Tag),
                 contentAlignment = Alignment.Center
             ) {
                 if (custody != null && days >= 2) {

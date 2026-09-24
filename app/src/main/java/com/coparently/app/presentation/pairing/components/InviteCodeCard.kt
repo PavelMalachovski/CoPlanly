@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Refresh
@@ -78,7 +77,7 @@ fun InviteCodeCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
+        shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
         )
@@ -99,7 +98,7 @@ fun InviteCodeCard(
             // Dashed container + copy glyph: the affordance the old bare code had none of.
             Row(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(16.dp))
+                    .clip(MaterialTheme.shapes.medium)
                     .dashedRoundedBorder(
                         color = MaterialTheme.colorScheme.outline,
                         cornerRadius = 16.dp
@@ -133,7 +132,7 @@ fun InviteCodeCard(
             Box(
                 modifier = Modifier
                     .size(QR_SIZE)
-                    .clip(RoundedCornerShape(16.dp))
+                    .clip(MaterialTheme.shapes.medium)
                     .background(MaterialTheme.colorScheme.inverseOnSurface),
                 contentAlignment = Alignment.Center
             ) {

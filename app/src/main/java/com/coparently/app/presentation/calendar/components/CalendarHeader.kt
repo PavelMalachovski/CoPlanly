@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ExpandMore
@@ -141,7 +140,7 @@ private fun MonthTitle(
             // bare `clickable` Row does not. It measured about 28dp and announced no role, so
             // TalkBack did not call it a control at all.
             modifier = Modifier
-                .clip(RoundedCornerShape(8.dp))
+                .clip(MaterialTheme.shapes.extraSmall)
                 .clickable(role = Role.Button) { menuOpen = true }
                 .defaultMinSize(minHeight = LayoutConstants.MIN_TOUCH_TARGET)
                 .padding(end = 4.dp),
@@ -225,7 +224,7 @@ private fun FiltersButton(onClick: () -> Unit, active: Boolean) {
 private fun TodayButton(onClick: () -> Unit) {
     OutlinedButton(
         onClick = onClick,
-        shape = RoundedCornerShape(12.dp),
+        shape = MaterialTheme.shapes.small,
         contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
         modifier = Modifier.padding(end = 2.dp)
     ) {

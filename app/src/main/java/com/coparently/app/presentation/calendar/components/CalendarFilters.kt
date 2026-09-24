@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.toggleable
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
@@ -48,6 +47,7 @@ import com.coparently.app.R
 import com.coparently.app.presentation.calendar.ParentFilter
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.theme.CoPlanlyColors
+import com.coparently.app.presentation.theme.CoPlanlyCorners
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.LayoutConstants
 import com.coparently.app.presentation.theme.ParentColors
@@ -238,12 +238,12 @@ private fun FilterPill(
 ) {
     Row(
         modifier = Modifier
-            .clip(RoundedCornerShape(50))
+            .clip(CoPlanlyCorners.Pill)
             .background(if (selected) color.copy(alpha = 0.15f) else Color.Transparent)
             .border(
                 width = if (selected) 1.5.dp else 1.dp,
                 color = if (selected) color else MaterialTheme.colorScheme.outlineVariant,
-                shape = RoundedCornerShape(50)
+                shape = CoPlanlyCorners.Pill
             )
             // A checkbox to TalkBack — on/off was said by colour and weight alone — and 48dp tall.
             .toggleable(value = selected, role = Role.Checkbox, onValueChange = { onClick() })
@@ -255,7 +255,7 @@ private fun FilterPill(
         Box(
             modifier = Modifier
                 .size(10.dp)
-                .clip(RoundedCornerShape(50))
+                .clip(CoPlanlyCorners.Pill)
                 .background(color)
         )
         Text(

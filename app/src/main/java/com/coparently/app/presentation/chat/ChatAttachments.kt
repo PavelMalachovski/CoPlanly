@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Image
@@ -199,7 +198,7 @@ private fun ImageAttachment(attachment: ChatAttachment, file: File?, onOpen: () 
     Box(
         modifier = Modifier
             .size(THUMBNAIL_SIZE)
-            .clip(RoundedCornerShape(16.dp))
+            .clip(MaterialTheme.shapes.medium)
             .background(MaterialTheme.colorScheme.surfaceContainerHigh)
             .clickable(onClickLabel = label, role = Role.Image, onClick = onOpen),
         contentAlignment = Alignment.Center
@@ -224,7 +223,7 @@ private fun FileAttachment(attachment: ChatAttachment, onOpen: () -> Unit) {
     Row(
         modifier = Modifier
             .widthIn(max = THUMBNAIL_SIZE * 2)
-            .clip(RoundedCornerShape(16.dp))
+            .clip(MaterialTheme.shapes.medium)
             .background(MaterialTheme.colorScheme.surfaceContainerHigh)
             .clickable(onClickLabel = label, role = Role.Button, onClick = onOpen)
             .padding(horizontal = 12.dp, vertical = 10.dp),

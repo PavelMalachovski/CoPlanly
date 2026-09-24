@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.Message
@@ -61,6 +60,7 @@ import com.coparently.app.domain.model.MessageSendStatus
 import com.coparently.app.domain.model.MessageType
 import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.theme.Motion
+import com.coparently.app.presentation.theme.chatBubbleShape
 import com.coparently.app.utils.DAY_WITH_WEEKDAY
 import com.coparently.app.utils.isoDateText
 import kotlinx.coroutines.delay
@@ -393,7 +393,7 @@ private fun RevealHighlight(highlighted: Boolean, content: @Composable () -> Uni
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(REVEAL_CORNER))
+            .clip(MaterialTheme.shapes.small)
             .background(tint)
     ) {
         content()
@@ -415,7 +415,7 @@ private fun DaySeparator(date: LocalDate) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier
                 .padding(vertical = 10.dp)
-                .clip(RoundedCornerShape(10.dp))
+                .clip(MaterialTheme.shapes.small)
                 .background(MaterialTheme.colorScheme.surfaceContainer)
                 .padding(horizontal = 10.dp, vertical = 3.dp)
         )
@@ -510,7 +510,7 @@ fun MessageItem(
         Row(
             modifier = Modifier
                 .widthIn(max = BUBBLE_MAX_WIDTH)
-                .clip(bubbleShape(isCurrentUser, startsGroup, endsGroup))
+                .clip(chatBubbleShape(isCurrentUser, startsGroup, endsGroup))
                 .background(
                     if (isCurrentUser) {
                         MaterialTheme.colorScheme.primary
@@ -711,52 +711,6 @@ private fun DeliveryReceipt(message: Message, baseTint: Color, readTint: Color) 
     }
 }
 
-/**
- * Bubble corners.
- *
- * The two corners on the far side from the sender stay fully round. On the sender's own side
- * the corners between adjacent bubbles of one run are the mid radius, so the run stacks into
- * one visual block; the run's *last* bubble alone takes the tight tail corner, which is what
- * points the block at its sender. A lone message is both first and last, so it gets the round
- * top and the tail.
- *
- * @param isCurrentUser Which side the bubble sits on
- * @param startsGroup Whether this is the first bubble of a run by the same sender
- * @param endsGroup Whether this is the last bubble of a run — the tail's owner
- */
-private fun bubbleShape(
-    isCurrentUser: Boolean,
-    startsGroup: Boolean,
-    endsGroup: Boolean
-): RoundedCornerShape {
-    val innerTop = if (startsGroup) CORNER_ROUND else CORNER_MID
-    val innerBottom = if (endsGroup) CORNER_TAIL else CORNER_MID
-    return if (isCurrentUser) {
-        RoundedCornerShape(
-            topStart = CORNER_ROUND,
-            topEnd = innerTop,
-            bottomStart = CORNER_ROUND,
-            bottomEnd = innerBottom
-        )
-    } else {
-        RoundedCornerShape(
-            topStart = innerTop,
-            topEnd = CORNER_ROUND,
-            bottomStart = innerBottom,
-            bottomEnd = CORNER_ROUND
-        )
-    }
-}
-
-/** Fully rounded bubble corner. */
-private val CORNER_ROUND = 18.dp
-
-/** Sender-side corner between two adjacent bubbles of one run. */
-private val CORNER_MID = 6.dp
-
-/** The tail: the tight sender-side bottom corner on the last bubble of a run. */
-private val CORNER_TAIL = 4.dp
-
 /** Widest a bubble may grow before its text wraps. */
 private val BUBBLE_MAX_WIDTH = 300.dp
 
@@ -777,9 +731,6 @@ private const val CHEVRON_SCALE = 1.4f
 
 /** Opacity of the wash behind a message a search result jumped to. */
 private const val REVEAL_TINT_ALPHA = 0.6f
-
-/** Corner of that wash — a step rounder than the day pill, so it frames the bubble. */
-private val REVEAL_CORNER = 12.dp
 
 /** Brief pause after a manual refresh so the spinner does not flash out instantly. */
 private const val REFRESH_SETTLE_MS = 500L

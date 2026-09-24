@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
@@ -651,7 +650,7 @@ fun CalendarScreen(
                             MaterialTheme.colorScheme.error
                         },
                         contentColor = MaterialTheme.colorScheme.onError,
-                        shape = RoundedCornerShape(dims.cornerRadius),
+                        shape = MaterialTheme.shapes.small,
                         modifier = Modifier
                             .offset(y = (-64).dp)
                             .graphicsLayer {
@@ -681,7 +680,7 @@ fun CalendarScreen(
                     },
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    shape = RoundedCornerShape(dims.cornerRadius)
+                    shape = MaterialTheme.shapes.small
                 ) {
                     Icon(
                         imageVector = Icons.Default.Add,
