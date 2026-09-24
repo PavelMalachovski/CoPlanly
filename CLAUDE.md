@@ -1017,9 +1017,18 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     history is the parents' communication record, not the calendar. Done since (schema 39): the
     compared timestamp is `EventEntity.updatedAtMillis` (item 13), so a revision's embedded
     `updatedAt` is UTC text from an upgraded build and a wall clock from an older one — the export
-    keeps labelling `deviceTimeMillis` and `recordedAt` as the clocks. Not done, and recorded in
-    ROADMAP MON-4: the events rule does not *require* a revision beside each write, so an older
-    build's edits go unrecorded.
+    keeps labelling `deviceTimeMillis` and `recordedAt` as the clocks. **An older build's edits are
+    recorded by the server** (September 2026, design §11): `recordServerEventRevision`
+    (`functions/event-revisions.js`) writes `event_versions/srv_<eventId>_<commit time>` with
+    `recordedBy: 'server'`, `deviceTimeMillis: null` and the editor the saved document names, only
+    when no phone's revision matches the write key (`saved|<updatedAt>` / `deleted|<deletedAtMillis>`,
+    defined in `EventVersionDocument.writeKey` and the function alike — change both). It skips a
+    write that leaves the key unchanged (sweeps, backfills, re-uploads), a removed document and a
+    private one. The export drops a server revision when a phone's revision of the same save exists
+    and labels the rest `export_action_server_recorded`. Clients may neither write `recordedBy` nor
+    create a `srv_` id. Do not make the events rule require a revision instead — it would refuse
+    every edit from an older build. A server revision proves that the document changed, not who
+    changed it: `lastModifiedBy` is not pinned.
 
 26. **The export is a communication record, says so on its face, and is made on the phone**
     (MON-3, September 2026; the owner's MON-4 answer). Settings → Family → *Export the record*
