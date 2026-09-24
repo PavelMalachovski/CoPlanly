@@ -29,3 +29,7 @@ requested: 2026-09-24 — screenshot baselines after the October 2026 audit's we
            no schema change and no detekt finding is expected, so the baseline half should be empty
 requested: 2026-09-24 — again for expenses_summary_header: the settle-up sentence now stacks over
            its chip from 1.3x (the first regeneration showed "820,0|0 CZK" at 2.0x)
+requested: 2026-09-24 — screenshot baselines for the October 2026 audit's week 2: every image
+           changes with the Onest typeface, and the new components (connectivity banner, sticky
+           action bar, inline banner, error state) get their first baselines; no schema change
+           and no new detekt finding is expected, so the baseline half should only lose entries
