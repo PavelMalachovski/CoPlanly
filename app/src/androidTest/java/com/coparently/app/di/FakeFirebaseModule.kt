@@ -1,6 +1,7 @@
 package com.coparently.app.di
 
 import com.coparently.app.data.remote.firebase.QRCodeService
+import com.coparently.app.e2e.EmulatorEnvironment
 import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.crashlytics.FirebaseCrashlytics
@@ -38,6 +39,13 @@ import javax.inject.Singleton
  * composables and about Room. What matters is that the graph builds and that
  * [com.coparently.app.data.local.CoPlanlyDatabase] is still the real one, so opening it through
  * SQLCipher (SEC-2) is genuinely exercised rather than stubbed out.
+ *
+ * **One exception, and only on the emulators.** When the run was started with an emulator host —
+ * the `e2e` job, which runs nothing but `com.coparently.app.e2e` — Auth, Firestore, Storage and
+ * Functions are the real SDKs of [EmulatorEnvironment.appUnderTest], pointed at the Firebase
+ * emulators, so the app's own screens can be driven against a co-parent on the same backend
+ * (`OneParentOnScreenTest`). Messaging, Analytics and Crashlytics stay mocks there too: FCM has no
+ * emulator, and telemetry must never switch on in a test. Every other run sees exactly the mocks.
  */
 @Module
 @TestInstallIn(components = [SingletonComponent::class], replaces = [FirebaseModule::class])
@@ -45,15 +53,18 @@ object FakeFirebaseModule {
 
     @Provides
     @Singleton
-    fun provideFirebaseAuth(): FirebaseAuth = mockk(relaxed = true)
+    fun provideFirebaseAuth(): FirebaseAuth =
+        EmulatorEnvironment.appUnderTest?.let { FirebaseAuth.getInstance(it) } ?: mockk(relaxed = true)
 
     @Provides
     @Singleton
-    fun provideFirebaseFirestore(): FirebaseFirestore = mockk(relaxed = true)
+    fun provideFirebaseFirestore(): FirebaseFirestore =
+        EmulatorEnvironment.appUnderTest?.let { FirebaseFirestore.getInstance(it) } ?: mockk(relaxed = true)
 
     @Provides
     @Singleton
-    fun provideFirebaseStorage(): FirebaseStorage = mockk(relaxed = true)
+    fun provideFirebaseStorage(): FirebaseStorage =
+        EmulatorEnvironment.appUnderTest?.let { FirebaseStorage.getInstance(it) } ?: mockk(relaxed = true)
 
     @Provides
     @Singleton
@@ -69,7 +80,8 @@ object FakeFirebaseModule {
 
     @Provides
     @Singleton
-    fun provideFirebaseFunctions(): FirebaseFunctions = mockk(relaxed = true)
+    fun provideFirebaseFunctions(): FirebaseFunctions =
+        EmulatorEnvironment.appUnderTest?.let { FirebaseFunctions.getInstance(it) } ?: mockk(relaxed = true)
 
     /**
      * The real service, not a mock: it encodes a bitmap with ZXing and touches no Firebase

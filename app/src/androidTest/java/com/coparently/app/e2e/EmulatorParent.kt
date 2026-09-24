@@ -37,12 +37,9 @@ import com.coparently.app.domain.model.Message
 import com.coparently.app.domain.model.PairingState
 import com.coparently.app.presentation.common.ParentsSource
 import com.google.firebase.FirebaseApp
-import com.google.firebase.FirebaseOptions
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.UserProfileChangeRequest
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.FirebaseFirestoreSettings
-import com.google.firebase.firestore.MemoryCacheSettings
 import com.google.firebase.functions.FirebaseFunctions
 import com.google.firebase.storage.FirebaseStorage
 import io.mockk.mockk
@@ -257,31 +254,7 @@ class EmulatorParent private constructor(
          * callable requires is the one production writes, not a fixture.
          */
         suspend fun create(context: Context, name: String): EmulatorParent {
-            val host = EmulatorEnvironment.requireHost()
-            val options = FirebaseOptions.Builder()
-                .setProjectId(EmulatorEnvironment.PROJECT_ID)
-                .setApplicationId("1:000000000000:android:0000000000000000")
-                // Not a key: Firebase Installations (which Functions calls for a token) refuses
-                // any value that does not match `A[\w-]{38}`, emulator or not. Kept off the
-                // `AIza` shape so secret scanning never mistakes it for a Google API key.
-                .setApiKey("A-fake-key-for-the-firebase-emulators-x")
-                // The Storage emulator serves any bucket name; this is the project's default one.
-                .setStorageBucket("${EmulatorEnvironment.PROJECT_ID}.appspot.com")
-                .build()
-            val app = FirebaseApp.initializeApp(context, options, "e2e-$name-${UUID.randomUUID()}")
-
-            FirebaseAuth.getInstance(app).useEmulator(host, EmulatorEnvironment.AUTH_PORT)
-            FirebaseFirestore.getInstance(app).apply {
-                useEmulator(host, EmulatorEnvironment.FIRESTORE_PORT)
-                // Memory only: a persisted cache would let a read be answered by this phone's
-                // own earlier write rather than by the server the other phone reads.
-                firestoreSettings = FirebaseFirestoreSettings.Builder()
-                    .setLocalCacheSettings(MemoryCacheSettings.newBuilder().build())
-                    .build()
-            }
-            FirebaseFunctions.getInstance(app).useEmulator(host, EmulatorEnvironment.FUNCTIONS_PORT)
-            FirebaseStorage.getInstance(app).useEmulator(host, EmulatorEnvironment.STORAGE_PORT)
-
+            val app = EmulatorEnvironment.startFirebaseApp(context, "e2e-$name-${UUID.randomUUID()}")
             val parent = EmulatorParent(name, context, app)
             val email = "${name.lowercase()}-${UUID.randomUUID()}@e2e.coplanly.test"
             val user = checkNotNull(

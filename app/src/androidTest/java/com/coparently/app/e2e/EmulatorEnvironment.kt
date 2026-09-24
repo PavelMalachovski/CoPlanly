@@ -1,6 +1,15 @@
 package com.coparently.app.e2e
 
+import android.content.Context
 import androidx.test.platform.app.InstrumentationRegistry
+import com.google.firebase.FirebaseApp
+import com.google.firebase.FirebaseOptions
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.FirebaseFirestoreSettings
+import com.google.firebase.firestore.MemoryCacheSettings
+import com.google.firebase.functions.FirebaseFunctions
+import com.google.firebase.storage.FirebaseStorage
 import org.junit.Assume.assumeTrue
 import java.net.HttpURLConnection
 import java.net.URL
@@ -51,6 +60,53 @@ object EmulatorEnvironment {
     val host: String?
         get() = InstrumentationRegistry.getArguments().getString(HOST_ARGUMENT)
             ?.takeIf { it.isNotBlank() }
+
+    /**
+     * The Firebase app the **app under test** uses — the Hilt graph's `FirebaseAuth`, `Firestore`,
+     * `Storage` and `Functions` — when this run has emulators, else null.
+     *
+     * `FakeFirebaseModule` reads it: with no emulator host it keeps providing relaxed mocks, which
+     * is every run of the ordinary `instrumented` job; with one, the app's own screens talk to the
+     * same emulators the other phone does (`OneParentOnScreenTest`). One per process, like the
+     * default app it stands in for.
+     */
+    val appUnderTest: FirebaseApp? by lazy {
+        host?.let {
+            startFirebaseApp(InstrumentationRegistry.getInstrumentation().targetContext, "e2e-app-under-test")
+        }
+    }
+
+    /**
+     * Initialises a named Firebase app for the credential-free [PROJECT_ID] and points every SDK
+     * the app uses at the emulators — before the first call on each, which is the only time
+     * redirection is allowed.
+     */
+    fun startFirebaseApp(context: Context, name: String): FirebaseApp {
+        val host = requireHost()
+        val options = FirebaseOptions.Builder()
+            .setProjectId(PROJECT_ID)
+            .setApplicationId("1:000000000000:android:0000000000000000")
+            // Not a key: Firebase Installations (which Functions calls for a token) refuses
+            // any value that does not match `A[\w-]{38}`, emulator or not. Kept off the
+            // `AIza` shape so secret scanning never mistakes it for a Google API key.
+            .setApiKey("A-fake-key-for-the-firebase-emulators-x")
+            // The Storage emulator serves any bucket name; this is the project's default one.
+            .setStorageBucket("$PROJECT_ID.appspot.com")
+            .build()
+        val app = FirebaseApp.initializeApp(context, options, name)
+        FirebaseAuth.getInstance(app).useEmulator(host, AUTH_PORT)
+        FirebaseFirestore.getInstance(app).apply {
+            useEmulator(host, FIRESTORE_PORT)
+            // Memory only: a persisted cache would let a read be answered by this phone's
+            // own earlier write rather than by the server the other phone reads.
+            firestoreSettings = FirebaseFirestoreSettings.Builder()
+                .setLocalCacheSettings(MemoryCacheSettings.newBuilder().build())
+                .build()
+        }
+        FirebaseFunctions.getInstance(app).useEmulator(host, FUNCTIONS_PORT)
+        FirebaseStorage.getInstance(app).useEmulator(host, STORAGE_PORT)
+        return app
+    }
 
     /** Skips the calling test unless this run was started against the emulators. */
     fun assumeEmulators() {
