@@ -9,8 +9,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -41,10 +43,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
@@ -182,6 +186,7 @@ fun MessagesList(
     onRevealed: () -> Unit = {}
 ) {
     val listState = rememberLazyListState()
+    FollowNewestWhileKeyboardOpens(listState)
     val pullToRefreshState = rememberPullToRefreshState()
     val scope = rememberCoroutineScope()
     var isRefreshing by remember { mutableStateOf(false) }
@@ -292,6 +297,47 @@ fun MessagesList(
             }
         }
     }
+}
+
+/**
+ * Keeps the newest message in view while the keyboard opens.
+ *
+ * The window resizes above the keyboard (adjustResize, `docs/AUDIT-2026-10-design.md` D-9), and
+ * a LazyColumn that gets shorter keeps its first visible item — so the newest messages would
+ * slide out of view under the composer at the moment the parent starts a reply. The window used
+ * to pan instead, which kept them in view but scrolled the thread header away.
+ *
+ * Two limits keep this from fighting the reader. It follows only when the newest entry was on
+ * screen before the keyboard grew, so a parent reading history keeps their place. And only the
+ * keyboard *growing* moves the list: a scroll made while it is up, or the keyboard closing (the
+ * list then only gets taller), leaves the position alone.
+ */
+@Composable
+private fun FollowNewestWhileKeyboardOpens(listState: LazyListState) {
+    val density = LocalDensity.current
+    val ime = WindowInsets.ime
+    LaunchedEffect(listState, ime, density) {
+        var newestWasVisible = true
+        var lastKeyboardHeight = 0
+        snapshotFlow { ime.getBottom(density) to listState.isNewestVisible() }
+            .collect { (keyboardHeight, newestVisible) ->
+                val keyboardGrew = keyboardHeight > lastKeyboardHeight
+                lastKeyboardHeight = keyboardHeight
+                if (!keyboardGrew) {
+                    newestWasVisible = newestVisible
+                } else if (newestWasVisible && !listState.isScrollInProgress) {
+                    val lastIndex = listState.layoutInfo.totalItemsCount - 1
+                    if (lastIndex >= 0) listState.scrollToItem(lastIndex)
+                }
+            }
+    }
+}
+
+/** Whether the list's last item is at least partly on screen; true before the first layout. */
+private fun LazyListState.isNewestVisible(): Boolean {
+    val info = layoutInfo
+    val lastVisible = info.visibleItemsInfo.lastOrNull() ?: return true
+    return lastVisible.index >= info.totalItemsCount - 1
 }
 
 /**
