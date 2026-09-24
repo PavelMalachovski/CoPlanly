@@ -594,7 +594,7 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
 
 ```
 domain/    — models, repository interfaces, use cases, holidays, ReminderScheduler
-data/      — Room (v39 + migrations), Firestore/Google clients, repository impls, sync
+data/      — Room (v41 + migrations), Firestore/Google clients, repository impls, sync
 presentation/ — Compose screens per feature + ViewModels + theme
 di/        — Hilt modules (Database, Firebase, Google, UseCase, Notification, …)
 ```
@@ -708,7 +708,7 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     the conversation as `{uid: epochMillis}` maps — one write per event — and the ticks and
     unread badge are derived from them by `ChatReadState`, never stored per message.
     Message times are stored the same way: `Message.sentAtMillis`, epoch millis (Room
-    schema v13, since superseded — the database is at v39), not a naive `LocalDateTime`, so two
+    schema v13, since superseded — the database is at v41), not a naive `LocalDateTime`, so two
     parents in different time zones agree
     on what a mark means and on when a message was sent. The Firestore field keeps its name
     (`timestamp`) and the read path still accepts a legacy ISO string, so a co-parent on an
@@ -725,6 +725,11 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     — no `Z`, because an older build's `ISO_LOCAL_DATE_TIME` parse would throw and skip the event),
     and `EventRepositoryImpl.toEntity` derives it from the `updatedAt` wall clock every save already
     stamps, so no save path can forget it. `Event.updatedAt` stays a `LocalDateTime` for display.
+    **`ChildInfoEntity`/`PetEntity.updatedAtMillis` followed (schema 40)**: `resolveChildInfoConflict`
+    compares the instant; `ChildInfoRepositoryImpl`, `PetRepositoryImpl` and `SyncService`'s two
+    child maps write `updatedAt` through `EventTimestamp` as offset-free UTC text, and `toEntity`
+    derives the instant from the wall clock each save stamps. Pets have no conflict comparison;
+    their column keeps the two collections on one wire form.
 14. **A delete is a tombstone, never a document removal** (CQ-3). `data/sync/Tombstone.kt` is
     the one definition: the client writes `deletedAtMillis` (epoch millis) and `deletedBy` onto
     the document with `update()` — never `set()`, which would replace the `createdByFirebaseUid`
@@ -1094,8 +1099,10 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     screen, which follows `ChatPartnerSource` (M-8). `MessageDao.searchCandidates` is only a
     `LIKE … ESCAPE '\'` prefilter: SQLite folds ASCII case and nothing else, so the decision is
     `domain/chat/ChatSearch` over `TextFold` (case and diacritics ignored, "cas" finds "čas"). Don't
-    "simplify" it into a bare `LIKE` — four of the five languages break — and don't add an FTS table
-    without the schema bump and Regenerate run that MON-15 describes. The hold (`SendHold`) keeps a
+    "simplify" it into a bare `LIKE` — four of the five languages break — and don't put an FTS4 table
+    in front of it: `unicode61` matches token prefixes and does not fold й/ё/ї, so it would drop
+    messages the search accepts (measured, ROADMAP MON-15; `ChatSearchTest` pins both). If a thread
+    is ever measured slow, the prefilter is a `TextFold`ed column under the same `LIKE`. The hold (`SendHold`) keeps a
     message out of Room and the outbox until the pause ends, which is what makes Undo real, and hands
     a held message back to the draft store if the ViewModel is cleared rather than sending it. The
     hint (`ToneCheck`) is three string tests computed while rendering: it never disables Send, is
@@ -1256,6 +1263,16 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     with their parent (names, never colours) only on a day they disagree. **The calendar feed
     stays the family schedule** and ignores the key. See ROADMAP FAM-4 and
     `docs/DESIGN-custody-per-child.md` for what is wired so far.
+
+34. **The private journal never leaves the phone** (MON-22, schema 41). `journal_entries` has no
+    `syncedToFirestore` column, no Firestore data source, no rule and no push;
+    `JournalRepositoryImpl` depends on `JournalDao` alone, and every query is scoped to the author.
+    `clearAllTables` (account switch, deletion) wipes it; sign-out keeps it. `familyId` is stamped
+    at create and never re-derived (item 18). The only exit is the export's "My private journal"
+    checkbox, **off by default**, which prints this parent's entries for the period after the
+    expenses, labelled in both formats as one parent's private notes the other never saw, with that
+    phone's clock (`domain/export/RecordJournal.kt`). Don't add a sync path, a backup or an outbox
+    column.
 
 ## Known issues / do not "fix" silently
 
