@@ -143,6 +143,30 @@ and Settle up take UX flows to A−.*
 **Release track (owner, in parallel with weeks 7–8).** §3.2 items 1–9 in order. Items 5 and 9 are
 the long poles — a lawyer's calendar and a fortnight that cannot be compressed — so start both now.
 
+### Week 7 record
+
+The owner answered four questions before the code: the time follows the reader's clock, "Later"
+holds until the ask changes, the school-import row stays in debug builds only, and the default
+currency goes country → last expense → device. For R-1 the owner chose the button that hides on
+scroll over moving "+" into the top bar.
+
+| # | What changed |
+| --- | --- |
+| R-1 | `ScrollAwareFab` (`common/FabScrollVisibility.kt`): the Expenses "+" leaves while the list moves forward, returns on the way back and at the end, where the existing 88 dp clearance keeps the last amount clear. A TalkBack scroll does not hide it |
+| R-2 | `PutOffAsksViewModel` stores what "Later" put off, under each ask's revision (`DaySwapGroup.revision`, the proposal's time, the number of requests), and forgets what is no longer waiting |
+| R-3 | The split step has its own footnote (`onboarding_split_footnote`, five locales) |
+| R-4 | The Bakaláři / EduPage row renders only when `BuildConfig.DEBUG` |
+| R-5 | `PreferencesRepositoryImpl.getDefaultCurrencyFlow` resolves, when nothing was chosen, from `CurrencyHints` (country, last expense) before the device guess |
+| R-6 | "Date of birth" in sentence case, and the child's detail prints the reader's date |
+| R-7 | `DatePickerField` on My details, the child and pet forms and onboarding; the expense date uses it too |
+| R-9 | `shortTime()`/`dateWithTime()` follow `ClockFormat` (the device setting); twenty literal `"HH:mm"` and three locale-style formatters replaced, the widget and reminders read the setting themselves |
+| R-10 | The friend screen's field says "Enter the code you were given" |
+| Grid | The 6/10/14/18/20 dp paddings and gaps snapped to `Spacing` steps; the calendar banners' 9 dp is the one gap left off the grid, commented; the grid cells' own marks keep their literals |
+| Weights | Eight of the thirteen `fontWeight` overrides became `*Emphasized` roles (one new, `bodyLargeEmphasized`) or the button's own role. Left: the chat search highlight (a span, not a style) and four `Normal` weights on the calendar's quiet labels, which have no role lighter than their style |
+
+R-8 (tabs on a wide window) is week 8's. The screenshot baselines move with the grid, the weights
+and the 12-hour English times, so this week's Regenerate commit is expected to change images.
+
 ## 5. How this audit was made, and how to repeat it
 
 As in `AUDIT-2026-10-design.md` §6. Since week 6 the tour clears system error dialogs before each

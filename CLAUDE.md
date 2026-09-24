@@ -53,6 +53,12 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
    - `ConnectivityBanner` is the offline line in the root Scaffold's top bar.
    - `HeroIcon` (in `DesignSystem.kt`) is the icon a whole screen leads with, on its tonal disc:
      `EmptyState`, `ErrorState` and the telemetry question share it.
+   - `DatePickerField` is how a form shows a date it opens a picker for (release audit R-7, week
+     7): an outlined field with its label and the calendar glyph. A date of birth was an outlined
+     button on four forms; don't bring the button back.
+   - `ScrollAwareFab` with `rememberFabScrollVisibility` (`FabScrollVisibility.kt`) is a floating
+     button over a list whose trailing column is money: it leaves while the list moves forward
+     and returns on the way back and at the end (R-1). Expenses uses it.
 
    **Icon sizes come from `theme/IconSizes.kt`** (October 2026 audit, D-25): `Inline` 16 dp (a
    mark in a line of text), `Small` 18 (buttons, chips, banners, status lines — Material's own),
@@ -228,6 +234,8 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     currency formatter joins the amount to its code with a no-break space, so a figure wider than
     its column never breaks at the space but inside the code ("CZ|K") — give it the width instead. A
     title or a row's meta line may still end in an ellipsis; the amount beside it may not.
+    A floating button counts too: on Expenses the "+" sat on the second row's amount before any
+    scroll (release audit R-1), which is why it now hides while the list scrolls (item 1).
 
 16. **A form keeps what was typed until the parent says otherwise** (October 2026 audit, D-11).
     `presentation/common/DiscardGuard.kt`'s `rememberDiscardGuard(dirty, onLeave)` asks "Discard
@@ -1818,6 +1826,10 @@ whatever you were doing; a stale "known issue" costs more than a missing one.
   on the Expenses screen; the Home "this month" tile joins per-currency subtotals). There is still
   no FX conversion between currencies (spec §10) — deliberately: totals stay honest within each
   currency rather than being normalised. Do not reintroduce a single cross-currency total.
+  The **default** currency of a new expense is the parent's own choice in Settings when they
+  made one, else the country's currency, else the currency of the last expense, else the device
+  region's (`resolveDefaultCurrency`, `data/money/CurrencyHints`, release audit R-5, owner
+  decision) — a Czech account on an English (US) phone used to be offered dollars.
 
 - **A failed chat Firestore listener now reconnects, but only for a while.** Both mirror branches
   in `MessageRepositoryImpl` go through `reconnecting()` — `retryWhen` with exponential backoff,
@@ -2031,6 +2043,13 @@ Ukrainian** (`values-cs/`, `values-de/`, `values-ru/`, `values-uk/`). Rules:
   endonyms in the picker ("Čeština", "Русский", …) are `translatable="false"`.
 - Dates/day/month names come from `java.time` formatters with the default locale —
   never from string arrays.
+- **A time of day goes through `utils/LocalizedDates.kt`'s `shortTime()`** (or `dateWithTime`),
+  never a literal `"HH:mm"` (release audit R-9, owner decision: the reader's clock). It follows
+  the device's 12/24-hour setting, which `MainActivity` reads into `ClockFormat` on create and on
+  every resume; code that can run without the activity — the widget, a reminder — passes
+  `DateFormat.is24HourFormat(context)` itself. The one `"HH:mm"` left is a wire format
+  (`ContactWindowCodec`), and the export's `RecordFormat` keeps its fixed `Locale.ROOT` patterns
+  on purpose.
 - There is no `values-en/` — base `values/` IS English; don't recreate it.
 - **English is written in sentence case** (October 2026 audit, D-21): "Event title", "Week on /
   week off", "Save changes" — only the first word and proper names (Google Calendar, CoPlanly)

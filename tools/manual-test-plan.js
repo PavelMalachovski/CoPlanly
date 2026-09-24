@@ -90,6 +90,13 @@ const RULES = [
       'tools/generate-contrast-schemes.py'],
   },
   {
+    sections: ['3.16'],
+    why: 'the Add button, "Later", the default currency or the reader\'s clock',
+    paths: ['K/presentation/common/FabScrollVisibility.kt', 'K/presentation/expenses/ExpenseScreen.kt',
+      'K/presentation/home/AwaitingDialogs.kt', 'K/presentation/home/PutOffAsksViewModel.kt',
+      'K/data/money/**', 'K/data/repository/PreferencesRepositoryImpl.kt', 'K/utils/LocalizedDates.kt'],
+  },
+  {
     sections: ['3.15'],
     why: 'the Today widget, or the functions it computes the day with',
     paths: ['K/presentation/widget/**', 'app/src/main/res/xml/today_widget_info.xml',
