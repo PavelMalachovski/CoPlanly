@@ -77,6 +77,18 @@ const RULES = [
       'K/presentation/calendar/MonthView.kt'],
   },
   {
+    sections: ['3.2'],
+    why: 'the splash, a form\'s transition or a looping decoration',
+    paths: ['K/presentation/MainActivity.kt', 'K/presentation/common/animations/**',
+      'K/presentation/components/SkeletonLoading.kt'],
+  },
+  {
+    sections: ['3.14'],
+    why: 'the colour schemes or the contrast level',
+    paths: ['K/presentation/theme/Theme.kt', 'K/presentation/theme/Contrast*',
+      'tools/generate-contrast-schemes.py'],
+  },
+  {
     sections: ['3.3'],
     why: 'parent colours',
     paths: ['K/presentation/theme/ParentColors.kt', 'K/presentation/theme/ParentPalette.kt',

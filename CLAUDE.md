@@ -51,6 +51,15 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
    - `ErrorState` is the `EmptyState` anatomy with Retry. It is not red.
    - `InviteCodeText` is how every invitation code is drawn.
    - `ConnectivityBanner` is the offline line in the root Scaffold's top bar.
+   - `HeroIcon` (in `DesignSystem.kt`) is the icon a whole screen leads with, on its tonal disc:
+     `EmptyState`, `ErrorState` and the telemetry question share it.
+
+   **Icon sizes come from `theme/IconSizes.kt`** (October 2026 audit, D-25): `Inline` 16 dp (a
+   mark in a line of text), `Small` 18 (buttons, chips, banners, status lines — Material's own),
+   `Standard` 24 (list rows, icon buttons, FABs), `Large` 32, `Hero` 36. A literal dp on an icon
+   is the finding the audit counted seven sizes of; the dense calendar and chat marks (a cell's
+   swap arrows, a block's lock, a bubble's ticks) keep named sizes of their own. Icons do not
+   scale with the font; `Dimensions.hourGutterWidth`, which holds a number, does.
 
    `GroupLabel` and the screens' section headers carry `heading()` semantics for TalkBack. Don't
    draw a second anatomy for any of these. The calendar's compact banners over the grid
@@ -131,12 +140,19 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
 
 11. **Motion has one vocabulary** (September 2026 audit, `docs/AUDIT-2026-09.md` §4).
     `presentation/theme/Motion.kt` holds the only durations — `SHORT_MS` 150 (fades, crossfades),
-    `MEDIUM_MS` 300 (navigation, forms), `LONG_MS` 500 (a month changing, the splash exit) — and
+    `MEDIUM_MS` 300 (navigation, forms), `LONG_MS` 500 (a month changing) — and
     `MONTH_PAGING_MS` is an alias of `LONG_MS`. Detail screens push (`slideInFromRight` …, also
     the `NavHost` default so a route that names nothing does not get Navigation's own 700 ms
-    fade); **the four tabs fade-through between each other** (`tabEnter`/`tabExit` in
-    `NavGraph.kt`), because peers have no direction. Don't add a literal duration — pick a
-    token, or add one here with its reason.
+    fade) — **forms included**: seven form routes zoomed in from 0.8 until the October 2026 audit
+    (D-25), and now name no transition at all. **The four tabs fade-through between each other**
+    (`tabEnter`/`tabExit` in `NavGraph.kt`), because peers have no direction. Nothing springs
+    (the one bouncy spring went in D-25), and decoration that loops — the sign-in logo's pulse,
+    the skeleton shimmer — stands still under `rememberReducedMotion()`. **There is one splash,
+    the system's** (`installSplashScreen` in `MainActivity`), held by `setKeepOnScreenCondition`
+    until `startDestinationFor` no longer answers Loading, for at most `SPLASH_HOLD_MAX_MS`; the
+    branded Compose splash that followed it is gone, so don't add a second one. `MotionScheme`
+    is not set because material3 1.4 does not make it public — it is alpha with the rest of M3
+    Expressive. Don't add a literal duration — pick a token, or add one here with its reason.
 12. **The chosen parent colour reaches every screen through one CompositionLocal** (UX-15,
     September 2026). `MainActivity` provides `LocalParentPalette` (`theme/ParentColors.kt`) from
     `ParentPaletteViewModel`, which maps `ParentsSource`'s `Parents.palette`; `ParentColors.fill`,
@@ -215,6 +231,21 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     its draft is saved as the parent types and returns on the next "+". The child and pet forms
     still lose edits on rotation — their nested lists belong in the ViewModels (the project's rule
     for state).
+17. **The theme follows the system's contrast setting** (October 2026 audit, D-25). On Android 14
+    and later `CoPlanlyTheme` reads `UiModeManager`'s contrast and follows it while it changes
+    (`theme/ContrastLevel.kt`), choosing the standard scheme or a medium or high one. Those two are
+    **generated**: `tools/generate-contrast-schemes.py` reads the standard schemes out of
+    `Theme.kt` and `Color.kt` and writes `theme/ContrastSchemes.kt` — don't edit that file by hand;
+    change the standard scheme and regenerate. Three things not to undo. **Only foregrounds move**:
+    text, icons, outlines and accents go to Material's targets for the level against every surface
+    and container, and the backgrounds stay, because a re-toned container (Material's own way)
+    would make worse the pairings this app draws that are not Material's. **Every role the standard
+    scheme uses is set in it**: `tertiaryContainer` was left to Material's baseline pink, which
+    tinted events that belong to neither parent in a parent's hue — a role left unset is a colour
+    nobody chose. **`ContrastSchemesTest` holds the targets**, the untouched backgrounds and that
+    nothing loses contrast; `ContrastScreenshots` renders three components at high contrast. The
+    parent colours, the weekend grey and the holiday reds are the app's own tokens and do not
+    change with the level; they are held to AA by `ParentColorsTest` in both themes.
 
 ## UX/UI overhaul (July 2026 design review) — implemented, keep consistent
 
@@ -232,7 +263,9 @@ When touching the UI, keep these invariants:
    a chip strip on the Expenses screen itself. Tab switches, including Home's stat-tile deep
    links, go through `NavHostController.navigateToTab` so they share one back-stack policy.)*
 2. **Toolchain**: compileSdk/targetSdk 36, Kotlin 2.1 (+ `kotlin.plugin.compose`),
-   Compose BOM 2025.10 (Material 3 1.4 / M3 Expressive), Room 2.7.2 (2.6.x breaks on
+   Compose BOM 2025.10 (Material 3 1.4 — whose public API has none of M3 Expressive:
+   `ButtonGroup`, `LoadingIndicator`, `MotionScheme` and the rest are still alpha, in 1.5; this line
+   used to say the BOM shipped them), Room 2.7.2 (2.6.x breaks on
    Kotlin 2.x metadata), Hilt and Room on **KSP** (`2.1.0-1.0.29`; kapt is gone — move KSP with Kotlin), Navigation 2.9.3, Hilt 2.56.2, predictive back on.
 3. **Calendar**: month view is a classic grid from the 1st with horizontal month paging
    (kizitonwose `HorizontalCalendar`); day/week use `HorizontalPager` with fling physics.
@@ -609,10 +642,11 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   the five languages, 1.0×/1.5×/2.0× font scale (2.0× in German only, added after the October 2026
   audit found money cut off at sizes the matrix never rendered) and the default vs a purple/orange
   parent palette (`ScreenshotVariants`: ten variants for text-heavy components, four for the rest,
-  184 images — the count the committed baselines hold).
+  and high contrast in both themes for the month grid, a Settings group and a banner
+  (`ContrastScreenshots`, design item 17); 190 images — the count the committed baselines hold).
   **To view:** open the run's `screenshots` artefact, unzip, open `index.html`
   (`tools/screenshot-gallery.js`, no dependencies, filters by component/language/theme/scale/
-  palette). Locally: `./gradlew recordRoborazziDebug` writes into `app/src/test/screenshots/` — don't commit what a laptop records (below).
+  palette/contrast). Locally: `./gradlew recordRoborazziDebug` writes into `app/src/test/screenshots/` — don't commit what a laptop records (below).
   Five things to know. **It verifies against committed baselines** in `app/src/test/screenshots/`
   (`roborazzi { outputDir }`, the one directory record writes and verify reads), and **only the
   Regenerate workflow records them** — on the same runner image and JDK, because Robolectric's
@@ -741,7 +775,7 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   (e.g. `LocalDate.ofInstant` is API 34+; use `Instant.atZone(...).toLocalDate()`).
 - **KDoc** on public classes/functions; code and comments in **English**.
 - Material 3 components; theme tokens from `presentation/theme/`
-  (`CoPlanlyColors`, `Typography`, `CoPlanlyShapes`, `dimensions()`).
+  (`CoPlanlyColors`, `Typography`, `CoPlanlyShapes`, `IconSizes`, `dimensions()`).
 - **The typeface is Onest** (`theme/Type.kt`, four static weights cut from the variable font; SIL
   OFL 1.1 in `third_party/fonts/onest/` and Settings → Data sources and licences). It replaced
   Poppins, which has no Cyrillic, so Russian and Ukrainian fell back to Roboto mid-line. Any
