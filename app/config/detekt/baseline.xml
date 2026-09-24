@@ -18,7 +18,6 @@
     <ID>CyclomaticComplexMethod:DayWeekView.kt$@Composable private fun EventChip( event: Event, onClick: () -&gt; Unit, columnWidthPx: Float, hourHeightPx: Float, baseDate: LocalDate, baseHour: Int, parentNames: ParentNames, onDragDrop: ((String, LocalDate, Int) -&gt; Unit)?, onResize: ((String, LocalDateTime?, LocalDateTime?) -&gt; Unit)? = null, onDelete: ((String) -&gt; Unit)? = null, onLongPressStart: ((String) -&gt; Unit)? = null, onLongPressEnd: (() -&gt; Unit)? = null, onDragOverDeleteButton: ((Boolean) -&gt; Unit)? = null, // Visible segment of the event within the current day (differs from the real event // times for multi-day / overnight events, which are clamped to each day). displayStart: LocalDateTime = event.startDateTime, displayEnd: LocalDateTime = event.endDateTime ?: event.startDateTime.plusHours(1), // Continuation segments of multi-day events are not resizable/movable (ambiguous). resizable: Boolean = true, draggable: Boolean = true, // Day view spells the time out under the title; week view leaves it to the block's // vertical position and spends the row on the title instead. showTime: Boolean = true )</ID>
     <ID>CyclomaticComplexMethod:DayWeekView.kt$private fun layoutDayEvents(events: List&lt;Event&gt;, date: LocalDate): List&lt;EventSegment&gt;</ID>
     <ID>CyclomaticComplexMethod:MessagesList.kt$@Composable // Already over detekt's LongMethod threshold before this task added the clickable chevron (the // codebase's own baseline records that); explicit like the other screen composables that carry // the same suppression rather than relying on a baseline entry keyed to an exact signature. @Suppress("LongMethod") fun MessageItem( message: Message, isCurrentUser: Boolean, startsGroup: Boolean = true, endsGroup: Boolean = true, onEventLinkClick: ((String) -&gt; Unit)? = null, onOpenInbox: (() -&gt; Unit)? = null, onRetryFailed: (() -&gt; Unit)? = null )</ID>
-    <ID>CyclomaticComplexMethod:NavGraph.kt$@Composable // A NavHost's body is one flat list of route declarations, not branching logic — splitting it // would only relocate the length into a second file without reducing what a reader has to scan // to find a given route. Same reasoning HomeScreen.kt applies to its own linear column of // dashboard sections. @Suppress("LongMethod") fun NavGraph( navController: NavHostController, syncViewModel: SyncViewModel, pendingInviteCodes: PendingInviteCodes, pendingChatOpen: PendingChatOpen )</ID>
     <ID>CyclomaticComplexMethod:PairingFunctions.kt$PairingFunctions.Companion$fun toPairingError(e: Throwable): PairingError</ID>
     <ID>CyclomaticComplexMethod:RecurrenceExpander.kt$RecurrenceExpander$fun expand(event: Event, rangeStart: LocalDateTime, rangeEnd: LocalDateTime): List&lt;Event&gt;</ID>
     <ID>CyclomaticComplexMethod:SyncService.kt$SyncService$private suspend fun syncChildInfo(userId: String): Int</ID>
@@ -60,7 +59,6 @@
     <ID>LongMethod:PetsScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun PetsScreen( onNavigateBack: () -&gt; Unit, onEditPet: (String) -&gt; Unit, viewModel: PetsViewModel = hiltViewModel() )</ID>
     <ID>LongMethod:SchoolInfoEditor.kt$@Composable fun SchoolInfoEditor( schoolInfo: SchoolInfo?, onSave: (SchoolInfo?) -&gt; Unit, modifier: Modifier = Modifier )</ID>
     <ID>LongMethod:SettingsScreen.kt$@Composable @Suppress("LongParameterList") // one call site; splitting it would only add a wrapper type private fun GoogleCalendarActions( isSignedIn: Boolean, isSyncEnabled: Boolean, onToggleSync: (Boolean) -&gt; Unit, syncState: GoogleCalendarSyncState, onSignIn: () -&gt; Unit, onSyncNow: () -&gt; Unit, onCalendarSignOut: () -&gt; Unit )</ID>
-    <ID>LongMethod:SplashScreen.kt$@Composable fun SplashScreen( onFinished: () -&gt; Unit = {} )</ID>
     <ID>LongMethod:SyncService.kt$SyncService$private suspend fun syncChildInfo(userId: String): Int</ID>
     <ID>LongMethod:SyncService.kt$SyncService$private suspend fun syncEvents(userId: String): Int</ID>
     <ID>LongParameterList:AddEditEventScreen.kt$( eventId: String?, initialDate: LocalDate? = null, initialHour: Int? = null, onSave: () -&gt; Unit, onCancel: () -&gt; Unit, onRequestChange: ((String) -&gt; Unit)? = null, viewModel: EventViewModel = hiltViewModel(), friendViewModel: com.coparently.app.presentation.friends.FriendViewModel = hiltViewModel() )</ID>
@@ -90,8 +88,6 @@
     <ID>MagicNumber:AdaptiveDimensions.kt$0.9f</ID>
     <ID>MagicNumber:AdaptiveDimensions.kt$1.3f</ID>
     <ID>MagicNumber:AdaptiveDimensions.kt$1.5f</ID>
-    <ID>MagicNumber:AddEditEventScreen.kt$0.75f</ID>
-    <ID>MagicNumber:AddEditEventScreen.kt$1.17f</ID>
     <ID>MagicNumber:AddEditEventScreen.kt$1.43f</ID>
     <ID>MagicNumber:AddEditEventScreen.kt$1.5f</ID>
     <ID>MagicNumber:AddEditEventScreen.kt$1000</ID>
@@ -100,7 +96,6 @@
     <ID>MagicNumber:AddEditEventScreen.kt$500</ID>
     <ID>MagicNumber:AuthScreen.kt$1.5f</ID>
     <ID>MagicNumber:AuthScreen.kt$2000</ID>
-    <ID>MagicNumber:AuthScreen.kt$3.33f</ID>
     <ID>MagicNumber:BudgetItem.kt$100</ID>
     <ID>MagicNumber:BudgetScreen.kt$100</ID>
     <ID>MagicNumber:CalendarFilters.kt$50</ID>
@@ -140,7 +135,6 @@
     <ID>MagicNumber:DayWeekView.kt$0.5f</ID>
     <ID>MagicNumber:DayWeekView.kt$0.8f</ID>
     <ID>MagicNumber:DayWeekView.kt$1.07f</ID>
-    <ID>MagicNumber:DayWeekView.kt$1.33f</ID>
     <ID>MagicNumber:DayWeekView.kt$1.6f</ID>
     <ID>MagicNumber:DayWeekView.kt$15</ID>
     <ID>MagicNumber:DayWeekView.kt$23</ID>
@@ -171,9 +165,6 @@
     <ID>MagicNumber:RecurrenceExpander.kt$RecurrenceExpander$23</ID>
     <ID>MagicNumber:RecurrenceExpander.kt$RecurrenceExpander$59</ID>
     <ID>MagicNumber:SkeletonLoading.kt$200f</ID>
-    <ID>MagicNumber:SplashScreen.kt$0.6f</ID>
-    <ID>MagicNumber:SplashScreen.kt$24f</ID>
-    <ID>MagicNumber:SplashScreen.kt$900</ID>
     <ID>MagicNumber:SyncService.kt$SyncService$10</ID>
     <ID>MagicNumber:SyncService.kt$SyncService$100</ID>
     <ID>MagicNumber:SyncService.kt$SyncService$40</ID>
