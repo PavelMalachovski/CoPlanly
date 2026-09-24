@@ -2368,44 +2368,52 @@ about" reference, and events knowing who they are about. Two remain.
 
 ### FAM-4 · P2 · L · Custody per child
 
-**Where:** ☁️ cloud. **SEC-4** was its prerequisite and is done. **Status (September 2026): the
-wire half is built; the app half waits for one Room column.** `docs/DESIGN-custody-per-child.md`
-is the design.
+**Where:** 👁 **Built** (September 2026, schema 42); what is left is the Regenerate run for
+`42.json`, the rules deploy and a look on one and two phones (`docs/DEVICE-CHECKLIST.md` §3.13).
+`docs/DESIGN-custody-per-child.md` is the design.
 
 One schedule per pair stays the default; a per-child schedule is an override. It drags Home's
-handover hero (singular today), the calendar banners and `getCustody` with it. The reason it waited
-was SEC-4: `lastModifiedAt` was a naive local date-time that already decided which phone's schedule
-survived, and multiplying the documents would have multiplied that defect before fixing it. That is
-now fixed, so the blocker is gone.
+handover hero (singular until now), the calendar banners and `getCustody` with it. The reason it
+waited was SEC-4: `lastModifiedAt` was a naive local date-time that already decided which phone's
+schedule survived, and multiplying the documents would have multiplied that defect before fixing
+it. That is fixed, so the blocker was gone.
 
 Genuinely rarer than FAM-2 and FAM-3 — a teenager who negotiated their own arrangement, an infant
-who stays with one parent — which is why it is last rather than never.
+who stays with one parent — which is why it came last rather than never.
 
-**Built.** An override lives inside the one custody document under `childOverrides`, as
-`ChildOverrideCodec` strings (`C1;child:<id>;<anchor>;<cycle>;<slot-1 days>;<windows>`,
-`domain/custody/ChildScheduleOverride.kt`): pattern, anchor and contact windows, nothing else —
-**the family's seasonal layers and accepted swaps do not move an overridden child** (design §3).
-Unreadable entries are kept verbatim. `domain/custody/ChildCustody.kt` answers the three questions
-the UI will ask — the grid follows an override only when FAM-3's filter is exactly one child who has
-one; Home's hero names each child with their parent only when the children disagree; nothing
-appears below two children and one override — and `ChildScheduleOverrideTest` pins all of it.
-`firestore.rules` gained `childOverridesKeptOrDropped` in both `hasOnly` lists (item 24's rules,
-tested in `custody-models.test.js`, "per-child overrides (FAM-4)"). The calendar feed deliberately
-stays the family schedule and ignores the key (a test pins that).
+**Built.**
+- **Wire.** An override lives inside the one custody document under `childOverrides`, as
+  `ChildOverrideCodec` strings (`C1;child:<id>;<anchor>;<cycle>;<slot-1 days>;<windows>`,
+  `domain/custody/ChildScheduleOverride.kt`): pattern, anchor and contact windows, nothing else —
+  **the family's seasonal layers and accepted swaps do not move an overridden child** (design §3).
+  Unreadable entries are kept verbatim. `firestore.rules` has `childOverridesKeptOrDropped` in both
+  `hasOnly` lists (item 24's rules, `custody-models.test.js` "per-child overrides (FAM-4)").
+- **Room and sync (schema 42).** `custody_models.childOverridesJson` (null = none), `MIGRATION_41_42`
+  and its migration test. `CustodyModel.childOverrides`, `SharedCustody.childOverridesWire` and
+  `CustodyProposal.childOverridesWire` carry the list exactly as `seasonalLayers` is carried: a
+  missing key keeps the mirror's copy (`ChildOverrideJson.mirrored`), a pattern write always writes
+  the key, proposal and swap writes carry the stored list verbatim, and a proposal from an older
+  build keeps the agreed overrides. Saving the base pattern carries them
+  (`CustodyModelRepository.withActiveLayers`), and `submitChildOverride` sends a change through
+  `submitPattern` — a proposal for a paired family, never an overwrite. `CustodyPatternDiff` says
+  "A child's own schedule changes too" when that is all a proposal moves.
+- **Three surfaces, each appearing at two children and one override only.** The calendar band
+  follows a child's schedule only when FAM-3's member filter is exactly that child
+  (`presentation/calendar/ChildCustodyBand.kt`); the swap long-press and swap markers step aside
+  while it does, because a swap is about the family schedule. Home's handover hero adds
+  "<child> is with <parent> today" per child on a day they are apart (`ChildrenToday`, names
+  only). Custody setup has **Different schedule for a child**, which opens the same editor scoped
+  to that child (`CustodySetupViewModel.editSchedule`), with "Follow the family schedule again".
+- **Calendar feed:** deliberately stays the family schedule and ignores the key (a test pins it).
 
 **Left.**
-1. **A Room column**, `custody_models.childOverridesJson TEXT` (nullable, null = none, like
-   `seasonalLayersJson`), in the next free schema version, plus its Regenerate run.
-   `CustodyModelEntity` has no column that round-trips unknown document keys, and without one this
-   build cannot keep a mirror copy or write `[]` safely — so until then the data layer neither
-   reads nor writes the key, exactly as an older build, which the rules allow.
-2. With it: `CustodyModel`/`SharedCustody`/`CustodyProposal` carry the list the way they carry
-   `seasonalLayers` (design §6), saving the base pattern carries the agreed overrides, and a change
-   goes through `submitPattern` (a proposal for a paired family, never an overwrite).
-3. The UI: the grid's `getCustody` through `ChildCustody.overrideForFilter`, Home's hero through
-   `whereaboutsOn` (names, never colours), and a "Different schedule for a child" section in
-   custody setup, at two or more children, opening the same pattern editor scoped to the child.
-4. The rules deploy.
+1. The Regenerate run for `42.json` (`.github/regenerate-request`), without which the 41→42
+   migration test cannot run.
+2. `firebase deploy --only firestore:rules`, without which the live rules refuse every proposal or
+   swap write that carries `childOverrides` and the repository falls back to a local save.
+3. A look on a phone, and the two-phone proposal round (§3.13).
+4. Not built, on purpose: per-child seasonal layers and per-child swaps (design §3), and a marker
+   on an individual event chip (FAM-5).
 
 ### FAM-5 · P2 · S · The event chip does not say who it is about
 

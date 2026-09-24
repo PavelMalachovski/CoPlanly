@@ -1,7 +1,7 @@
 # Custody per child (FAM-4)
 
-September 2026. Status: **the wire half is built; the app half waits for one Room column.**
-`docs/ROADMAP.md` FAM-4 carries the live status.
+September 2026. Status: **built** (schema 42); what is left is the Regenerate run, the rules
+deploy and a look on a phone. `docs/ROADMAP.md` FAM-4 carries the live status.
 
 ## 1. What it is
 
@@ -77,28 +77,40 @@ has **at least two children and at least one override** (FAM-1).
 | Calendar feed (`functions/calendar-feed.js`) | **Stays the family schedule**, and ignores the key (pinned by a test). A subscribed calendar has no member filter, and titles naming which child is where would be read by whoever glances at the subscriber's calendar. |
 | Holiday fairness (MON-20), export | Family schedule, unchanged. |
 
-## 6. What is not built, and why
+## 6. How it is wired
 
-`CustodyModelEntity` has one column per document key (`contactWindowsJson`,
-`seasonalLayersJson`, …) and **no column that round-trips unknown keys**, and this branch may not
-change the Room schema. Without a place to keep the list, this build cannot honour rule 1 or 2:
-writing `childOverrides: []` on a pattern write would erase a newer build's overrides. So until the
-column exists **the data layer does not read or write the key at all** — it behaves exactly as an
-older build, which the rules already allow.
+- **Room (schema 42):** `custody_models.childOverridesJson TEXT`, nullable, null = none (so a row
+  with no overrides is byte-identical to one written before the column, which the mirror's equality
+  guard needs). `MIGRATION_41_42` adds it; `CoPlanlyDatabaseMigrationTest.migration41To42_…` proves
+  it once the Regenerate workflow exports `42.json`. `ChildOverrideJson` is the Room form: a JSON
+  array of the codec strings, never Gson over the data class.
+- **Model:** `CustodyModel.childOverrides` / `unreadableChildOverrides`, `childOverridesWire()`,
+  `childOverrideFor(childId)`. `complemented` flips each override with the slots; `isEquivalentTo`
+  compares the canonical wire lists, so a pairing conflict that differs only in a child's schedule
+  is shown to a person rather than settled silently. `getCustodyFor` does not read them.
+- **Document:** `SharedCustody.childOverridesWire` and `CustodyProposal.childOverridesWire`, both
+  "exactly as stored, or null for no key". `FirestoreCustodyDataSource` writes the key only when the
+  wire is non-null, reads a proposal with no key as keeping the agreed overrides, and
+  `CustodyProposalTransition` states the list on `propose` and makes it the agreed one on `accept`.
+- **Repository:** the mirror keeps its copy for a missing key (`ChildOverrideJson.mirrored`);
+  `pushToFirestore` always writes it (`[]` for none); `withActiveLayers` carries the agreed
+  overrides into every base-pattern save; `submitChildOverride(childId, override?)` replaces one
+  child's entry (null removes it) through `submitPattern`.
+- **Calendar:** `ChildCustodyBand.of` returns the family's `GridCustody` unless
+  `ChildCustody.overrideForFilter` finds the one child; then the band, the proposal preview and the
+  contact windows are the child's, and `followsFamily = false` turns off the swap markers and the
+  swap long-press. The swap sheet itself keeps reading the family `getCustody`.
+- **Home:** `ChildrenToday.of` → `HomeUiState.Dashboard.childrenToday` → `ChildrenTodayLines` in
+  the hero. The children come from `FamilyMembersSource`, added to `HomeIdentityDependencies` so the
+  ViewModel's constructor did not grow.
+- **Custody setup:** `ChildSchedulesSection` (hidden below two children), `editSchedule(child)`
+  scoping the one editor, `ChildScopeHeader` with "Follow the family schedule again"
+  (`save(followFamily = true)`). An override has no stored type, so it reopens as a custom pattern
+  with the same days; a custom child schedule may give every day to slot 2.
 
-The column the app half needs, in the next free schema version:
+## 7. Not built
 
-```kotlin
-/**
- * The per-child overrides (FAM-4) as a JSON array of `ChildOverrideCodec` strings — unreadable
- * entries included, verbatim — or null for none (null, not "[]", like seasonalLayersJson).
- */
-val childOverridesJson: String? = null
-```
-
-`ALTER TABLE custody_models ADD COLUMN childOverridesJson TEXT` (nullable, no default), plus the
-Regenerate run for its schema JSON. With it, the wiring is: `CustodyModel.childOverrides` /
-`unreadableChildOverrides` (flipped by `complemented`, compared in `isEquivalentTo`, described by
-`CustodyPatternDiff`), `SharedCustody.childOverridesWire` and `CustodyProposal.childOverridesWire`
-mirroring the `seasonalLayersWire` pair, `FirestoreCustodyDataSource` reading and writing the key,
-`withActiveLayers`' twin for overrides, then the three surfaces in §5.
+- Per-child seasonal layers and per-child one-off swaps (§3). Either is a new field later, not a
+  new meaning for this one.
+- A marker on an individual event chip saying which child it is about (FAM-5).
+- The calendar feed stays the family schedule (§5).

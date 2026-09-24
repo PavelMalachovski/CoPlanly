@@ -616,6 +616,48 @@ plan (their `hasOnly` lists do not name the key), and the repository falls back 
   (`CalendarBanners.kt`), and for the export `RecordFormat.planCitation` and the
   `CUSTODY_PROPOSED` card's `activity.planCitation`.
 
+### 3.13 A child's own schedule (FAM-4) · 1P, proposal check 2P [branch]
+
+Custody setup with a saved family pattern and **two children** (Settings → Family → children).
+Schema 42 (the Regenerate workflow must have exported `42.json` for CI to be green); the
+`childOverridesKeptOrDropped` rule needs `firebase deploy --only firestore:rules` before a paired
+family's proposal can carry an override.
+
+- [ ] **With one child** there is no "Different schedule for a child" section at all, Home's hero
+      is the one family sentence, and the calendar looks exactly as before. Add a second child:
+      the section appears under the seasonal schedules, one row per child, each reading "Follows
+      the family schedule". Pets are never listed.
+- [ ] Tap a child: the same editor opens titled **"Schedule for <name>"**, with a line saying
+      seasonal schedules and one-off swaps do not change it; it starts from the family pattern.
+      The seasonal section and the child rows are gone. Back (arrow and system back) returns to
+      the family editor, unchanged; it does not leave the screen.
+- [ ] Unpaired: choose **Custom**, clear every day (the child is always with the other parent) →
+      Save is enabled → Save. The row now reads "Own schedule". Reopen it: it opens as Custom with
+      the same days.
+- [ ] Calendar, month view: the band is still the family's. Filter to **that child alone** → the
+      band becomes the child's (all one parent here), with **no new colour**; swap arrows are gone
+      and a long press offers no swap. Filter to both children, or to the other child → the family
+      band again.
+- [ ] Home on a day the family schedule gives the children to the other parent: under the hero's
+      chips, one line per child — "Ema is with <name> today", "Tomáš is with <name> today" — names
+      only, no dot or tint. On a day they are all with the same parent the lines are absent.
+- [ ] Reopen the child → **Follow the family schedule again** → the screen closes, the row reads
+      "Follows the family schedule", and Home and the filtered grid are the family's again.
+- [ ] **2P, paired, schedule already shared:** A gives a child their own schedule → "Sent to your
+      co-parent for approval"; A's grid is unchanged. B's proposal description says "A child's own
+      schedule changes too" even though no family day moves. B accepts → both phones' filtered
+      grids and Home heroes follow it. A then changes the **family** pattern: B's proposal keeps
+      the child's schedule (it is not proposed away).
+- [ ] **2P, mixed versions:** a swap or proposal from a build without FAM-4 keeps the child's
+      schedule on the newer phone (the key is dropped, the mirror keeps its copy). No one-phone
+      fallback: `custody-models.test.js` "per-child overrides (FAM-4)" is the substitute.
+- [ ] **Calendar feed (MON-17), if deployed:** the subscribed calendar still shows the **family**
+      schedule only — no per-child bars.
+- **If it fails:** tag `CustodySetupViewModel` / `CustodyModelRepo`; `presentation/custody/Child*`,
+  `presentation/calendar/ChildCustodyBand.kt`, `presentation/home/ChildrenToday*.kt`,
+  `domain/custody/ChildScheduleOverride.kt`, `ChildCustody.kt`, `firestore.rules`
+  `childOverridesKeptOrDropped`.
+
 ---
 
 ## 4. Release-build checks
