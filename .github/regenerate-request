@@ -35,3 +35,8 @@ requested: 2026-09-24 — screenshot baselines for the October 2026 audit's week
            and no new detekt finding is expected, so the baseline half should only lose entries
 requested: 2026-09-24 — again for expenses_summary_header: the paid-by amounts now stack from 1.3x
            (the first week-2 regeneration showed "1.480,00 CZ|K" in German at 2.0x with Onest)
+requested: 2026-09-24 — screenshot baselines for the October 2026 audit's week 3: the calendar
+           banners wrap instead of cutting and count requests without a name, the Expenses
+           summary gets a collapsed line (a new baseline), and a row's meta line may wrap; no
+           schema change and no new detekt finding is expected, so the baseline half should
+           only lose entries
