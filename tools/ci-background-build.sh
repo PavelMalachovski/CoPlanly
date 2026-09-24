@@ -15,8 +15,12 @@
 #
 # Nothing here is needed for correctness: without `start`, `wait` returns at once and Gradle
 # builds as it always did.
+#
+# BACKGROUND_BUILD_TASKS overrides what `start` builds (the `r8-runtime` job builds
+# `assembleR8Test`); unset, it is the two APKs the instrumented and e2e jobs install.
 set -u
 
+TASKS="${BACKGROUND_BUILD_TASKS:-assembleDebug assembleDebugAndroidTest}"
 DIR="${BACKGROUND_BUILD_DIR:-${RUNNER_TEMP:-/tmp}/background-build}"
 LOG="$DIR/build.log"
 STATUS="$DIR/status"
@@ -27,12 +31,13 @@ case "${1:-}" in
     mkdir -p "$DIR"
     rm -f "$STATUS"
     # setsid + nohup: the build must not die with the step's shell, and must not hold its stdout.
+    # $2 is deliberately unquoted inside: it is a list of task names.
     setsid nohup bash -c '
-      ./gradlew assembleDebug assembleDebugAndroidTest >"$0" 2>&1
+      ./gradlew $2 >"$0" 2>&1
       echo $? >"$1"
-    ' "$LOG" "$STATUS" </dev/null >/dev/null 2>&1 &
+    ' "$LOG" "$STATUS" "$TASKS" </dev/null >/dev/null 2>&1 &
     echo $! >"$PID"
-    echo "Background build started (pid $(cat "$PID")); log: $LOG"
+    echo "Background build of '$TASKS' started (pid $(cat "$PID")); log: $LOG"
     ;;
   wait)
     if [ ! -f "$PID" ]; then

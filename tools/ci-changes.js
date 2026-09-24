@@ -5,8 +5,9 @@
  *
  *   git diff --name-only "$BASE_SHA"...HEAD | node tools/ci-changes.js >> "$GITHUB_OUTPUT"
  *
- * It prints five `key=value` lines: `android`, `e2e`, `screenshots`, `upgrade` and `matrix` (the
- * emulator legs as a JSON array for the `instrumented` job's `strategy.matrix.include`). With `--all` it
+ * It prints six `key=value` lines: `android`, `e2e`, `screenshots`, `upgrade`, `matrix` (the
+ * emulator legs as a JSON array for the `instrumented` job's `strategy.matrix.include`) and
+ * `r8runtime` (the minified build run on an emulator, `r8-runtime`). With `--all` it
  * prints the answer for "run everything", which is what a push to `main`, a manual run, or a diff
  * that could not be computed gets.
  *
@@ -67,6 +68,17 @@ const UPGRADE_INPUTS = /^(app\/src\/main\/java\/com\/coparently\/app\/(data\/loc
 const UPGRADE_UNAFFECTED = /^(docs\/|functions\/|firestore-tests\/|web\/|\.cursor\/|[^/]*\.md$|.*\.rules(\.simple)?$|firestore\.indexes\.json$|firebase\.json$|\.gitignore$|LICENSE$|app\/src\/main\/java\/|app\/src\/main\/res\/|app\/src\/test\/|app\/src\/androidTest\/|app\/src\/debug\/|tools\/(test\/|e2e\/|(check-e2e-coverage|check-invariants|check-r8-mapping|ci-changes|ci-report|manual-test-plan|mocha-ci-reporter|screenshot-gallery|wrap-legal-page)\.js$|generate-[^/]+\.py$|with-screen-recording\.sh$))/;
 
 /**
+ * Android paths the R8 runtime probe (`r8-runtime` job) cannot be affected by: nothing in them is
+ * handed to Gson, compiled into the probe, or read by R8 as a rule. Everything else Android runs
+ * it — the data, domain and DI layers (the models, their converters and the constructors the probe
+ * calls), `presentation/event/` (`EventDraft`), the manifest, the probe itself and its scripts —
+ * and the build files, proguard rules and workflow run everything through `BUILD`. A new Gson call
+ * in a skipped path is still caught the same day by `invariants` (check-invariants.js check 5),
+ * and on `main` by the job itself.
+ */
+const NON_R8_RUNTIME = /^(app\/src\/main\/res\/|app\/src\/test\/|app\/src\/androidTest\/|app\/src\/debug\/|app\/schemas\/|app\/config\/detekt\/|app\/src\/main\/java\/com\/coparently\/app\/presentation\/(?!event\/)|tools\/(e2e\/|screenshot-gallery\.js$|ci-report\.js$|manual-test-plan\.js$|mocha-ci-reporter\.js$|wrap-legal-page\.js$|check-e2e-coverage\.js$|with-screen-recording\.sh$))/;
+
+/**
  * The emulator legs. API 30 always runs when Android does; the other two by the rule above.
  *
  * `record` turns on tools/with-screen-recording.sh's video, and only API 26 has it. On the API 30
@@ -92,7 +104,7 @@ const FULL_MATRIX = [LEG_26, LEG_30, LEG_16KB];
 
 /** The answer for "run everything". */
 function everything() {
-  return { android: true, e2e: true, screenshots: true, upgrade: true, matrix: FULL_MATRIX };
+  return { android: true, e2e: true, screenshots: true, upgrade: true, matrix: FULL_MATRIX, r8runtime: true };
 }
 
 /**
@@ -109,7 +121,8 @@ function decide(paths) {
   const screenshots = android && (build || changed.some((p) => SCREENSHOT_INPUTS.test(p)));
   const fullMatrix = build || changed.some((p) => EMULATOR_SENSITIVE.test(p));
   const upgrade = build || changed.some((p) => UPGRADE_INPUTS.test(p) || !UPGRADE_UNAFFECTED.test(p));
-  return { android, e2e, screenshots, upgrade, matrix: fullMatrix ? FULL_MATRIX : [LEG_30] };
+  const r8runtime = build || changed.some((p) => !NON_ANDROID.test(p) && !NON_R8_RUNTIME.test(p));
+  return { android, e2e, screenshots, upgrade, matrix: fullMatrix ? FULL_MATRIX : [LEG_30], r8runtime };
 }
 
 /** The `$GITHUB_OUTPUT` lines for a decision. */
@@ -120,6 +133,7 @@ function format(decision) {
     `screenshots=${decision.screenshots}`,
     `upgrade=${decision.upgrade}`,
     `matrix=${JSON.stringify(decision.matrix)}`,
+    `r8runtime=${decision.r8runtime}`,
   ].join('\n') + '\n';
 }
 
@@ -134,7 +148,7 @@ if (require.main === module) {
     process.stderr.write(
       `android=${decision.android} e2e=${decision.e2e} screenshots=${decision.screenshots} ` +
         `upgrade=${decision.upgrade} ` +
-        `emulators=[${legs}]\n`,
+        `emulators=[${legs}] r8runtime=${decision.r8runtime}\n`,
     );
   }
 }

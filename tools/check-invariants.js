@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
- * Offline checks for three invariants CLAUDE.md states and no CI job enforces.
+ * Offline checks for invariants CLAUDE.md states and no other CI job enforces.
  *
- * All three are pure text comparisons over resources and sources, so they need neither an
+ * All of them are pure text comparisons over resources and sources, so they need neither an
  * Android SDK nor a device — which is the point. Each of them has a reason it is not already
  * covered:
  *
@@ -22,6 +22,9 @@
  *     release builds only. This shipped once (see `app/proguard-rules.pro`) and was found a
  *     second time in `DayOverride`, which sits in `domain.custody` rather than under the
  *     `domain.model.**` wildcard. Debug never reproduces it, because debug does not minify.
+ *  5. **Gson models are probed at runtime.** Every type check 4 finds must have a case in the R8
+ *     runtime probe (`app/src/r8Test/`), which the `r8-runtime` CI job runs inside a minified
+ *     build on an emulator; `tools/check-r8-probe.js` then requires each case to pass.
  *
  * Exits non-zero listing every problem found, so it can gate a build.
  */
@@ -312,15 +315,41 @@ function keepMatches(pattern, fqcn) {
   return rx.test(fqcn);
 }
 
-function checkGsonKeepRules() {
+/**
+ * The arguments of every `fromJson(` call in [src], each up to its own closing parenthesis.
+ *
+ * A call split over lines — `gson.fromJson(\n json,\n SchoolInfo::class.java\n)` — is invisible
+ * to a line-scoped pattern, and that is how `SchoolInfo` went undiscovered. Balancing the
+ * parentheses stays inside the one call, so it cannot run on into unrelated code the way an
+ * unanchored multi-line pattern would.
+ */
+function fromJsonArguments(src) {
+  const out = [];
+  for (const m of src.matchAll(/fromJson\s*(?:<[^>]*>)?\s*\(/g)) {
+    let depth = 1;
+    let i = m.index + m[0].length;
+    const start = i;
+    while (i < src.length && depth > 0) {
+      if (src[i] === '(') depth++;
+      else if (src[i] === ')') depth--;
+      i++;
+    }
+    out.push(src.slice(start, i - 1));
+  }
+  return out;
+}
+
+/**
+ * Every project type the app hands to Gson, as fully-qualified name -> the file that does.
+ *
+ * Types named as a Gson target: `X::class.java`, `Array<X>::class.java`, and every type argument
+ * of a `TypeToken<...>`. Anything the project does not declare is a platform or library type and
+ * cannot be renamed into a stored key. Exported for `tools/check-r8-probe.js`, which requires the
+ * runtime probe to have passed a case for each of these.
+ */
+function gsonTargets() {
   const files = kotlinFiles();
   const index = declaredTypes(files);
-  const patterns = fieldKeepPatterns(read(PROGUARD));
-  if (!patterns.length) fail(`${PROGUARD} declares no \`-keepclassmembers ... { <fields>; }\` rule at all`);
-
-  // Types named as a Gson target: `X::class.java`, `Array<X>::class.java`, and every type
-  // argument of a `TypeToken<...>`. Anything the project does not declare is a platform or
-  // library type and cannot be renamed into a stored key.
   const targets = new Map();
   for (const file of files) {
     const src = fs.readFileSync(path.join(ROOT, file), 'utf8');
@@ -328,7 +357,8 @@ function checkGsonKeepRules() {
 
     // Line-scoped on purpose. An unanchored `TypeToken<...>` or `fromJson(...)` pattern runs
     // past its own statement and swallows unrelated identifiers further down the file, which
-    // reports repositories and navigation routes as Gson models.
+    // reports repositories and navigation routes as Gson models. Multi-line `fromJson` calls
+    // are read by balancing their parentheses instead (`fromJsonArguments`).
     const named = [];
     for (const line of src.split('\n')) {
       for (const m of line.matchAll(/Array<([\w.]+)>::class\.java/g)) named.push(m[1]);
@@ -336,6 +366,10 @@ function checkGsonKeepRules() {
       for (const m of line.matchAll(/TypeToken<([^<>]*(?:<[^<>]*>[^<>]*)*)>/g)) {
         for (const id of m[1].matchAll(/[\w.]+/g)) named.push(id[0]);
       }
+    }
+    for (const args of fromJsonArguments(src)) {
+      for (const m of args.matchAll(/Array<([\w.]+)>::class\.java/g)) named.push(m[1]);
+      for (const m of args.matchAll(/(?:^|[^\w.>])([\w.]+)::class\.java/g)) named.push(m[1]);
     }
 
     for (const raw of named) {
@@ -346,6 +380,13 @@ function checkGsonKeepRules() {
       if (!targets.has(fqcn)) targets.set(fqcn, file);
     }
   }
+  return targets;
+}
+
+function checkGsonKeepRules() {
+  const patterns = fieldKeepPatterns(read(PROGUARD));
+  if (!patterns.length) fail(`${PROGUARD} declares no \`-keepclassmembers ... { <fields>; }\` rule at all`);
+  const targets = gsonTargets();
 
   for (const [fqcn, file] of targets) {
     if (!patterns.some((p) => keepMatches(p, fqcn))) {
@@ -360,15 +401,56 @@ function checkGsonKeepRules() {
   console.log(`gson models: ${targets.size} project types reflected, ${patterns.length} field-keep rules`);
 }
 
+// ---- 5: every Gson model is probed at runtime --------------------------------
+
+const PROBE_SOURCES = 'app/src/r8Test/java';
+
+/**
+ * Every Gson target must be named, as a string literal, in the R8 runtime probe
+ * (`app/src/r8Test/`, run by the `r8-runtime` CI job).
+ *
+ * A keep rule (check 4) and a kept field name (`check-r8-mapping.js`) are not the same as the
+ * minified app reading its own JSON back; the probe is. It reports each case under the source's
+ * fully-qualified name, a literal because R8 renames the classes themselves, and the CI check
+ * requires a passing case for every type found here. This catches the omission a PR earlier,
+ * without an emulator: a new model must arrive with a probe case.
+ */
+function checkProbeCoverage() {
+  const dir = path.join(ROOT, PROBE_SOURCES);
+  if (!fs.existsSync(dir)) {
+    fail(`${PROBE_SOURCES} is missing — the R8 runtime probe lives there`);
+    return;
+  }
+  const probeSource = kotlinFiles(PROBE_SOURCES)
+    .map((f) => fs.readFileSync(path.join(ROOT, f), 'utf8'))
+    .join('\n');
+  const targets = gsonTargets();
+  for (const [fqcn, file] of targets) {
+    if (!probeSource.includes(`"${fqcn}"`)) {
+      fail(
+        `${fqcn} is serialised by Gson (${file}) but the R8 runtime probe (${PROBE_SOURCES}) has no ` +
+          `case for it — add one to R8GsonProbe that writes it through the production call site and ` +
+          `reports it as "${fqcn}"`
+      );
+    }
+  }
+  console.log(`r8 probe: ${targets.size} Gson model(s) named in ${PROBE_SOURCES}`);
+}
+
 // ---- run --------------------------------------------------------------------
 
-checkLocales();
-checkPushTypes();
-checkGsonKeepRules();
+if (require.main === module) {
+  checkLocales();
+  checkPushTypes();
+  checkGsonKeepRules();
+  checkProbeCoverage();
 
-if (problems.length) {
-  console.error(`\n${problems.length} problem(s):`);
-  for (const p of problems) console.error(`  - ${p}`);
-  process.exit(1);
+  if (problems.length) {
+    console.error(`\n${problems.length} problem(s):`);
+    for (const p of problems) console.error(`  - ${p}`);
+    process.exit(1);
+  }
+  console.log('\nAll invariants hold.');
 }
-console.log('\nAll invariants hold.');
+
+module.exports = { gsonTargets };

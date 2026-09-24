@@ -236,8 +236,8 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   degrades gracefully if it is missing (see the conditional apply in `app/build.gradle.kts`).
 - **GitHub CI runs on every pull request, and on every push to `main`** — a push to a
   feature branch with no PR open is not built (`.github/workflows/ci.yml`, added
-  August 2026 — this line used to say there was none). Twelve jobs that test (this line used to
-  say eleven, before `upgrade`; ten before detekt left the lint job; eight before `screenshots`
+  August 2026 — this line used to say there was none). Thirteen jobs that test (this line used to
+  say eleven, before `upgrade` and `r8-runtime`; ten before detekt left the lint job; eight before `screenshots`
   and `e2e`; seven before `instrumented`), plus `report`, which only reads them (below): `changes` (a cheap gate,
   below), four Android ones — `build-test` (`assembleDebug` + `testDebugUnitTest` in a
   single invocation), `static` (`lint` alone — the id is kept), `detekt` (its own job since
@@ -247,9 +247,11 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   rules suite against the emulator, and `invariants` (`node tools/check-invariants.js`, no
   dependencies and no Android SDK: locale completeness, format-argument agreement across the
   five locales, the four-way push-type agreement item 15 states, and the rule that every type
-  Gson reflects over is covered by a `-keepclassmembers ... { <fields>; }` rule). The last two
+  Gson reflects over is covered by a `-keepclassmembers ... { <fields>; }` rule *and* has a case
+  in the R8 runtime probe). The last two
   are one defect from two sides — the source says a rule exists, the mapping says it worked, and
-  a typo in a package name passes the first and fails the second. They run **in parallel**; the Android three were one sequential job until the August 2026 CI
+  a typo in a package name passes the first and fails the second. A third side, the minified app
+  actually *running*, is `r8-runtime` (below). They run **in parallel**; the Android three were one sequential job until the August 2026 CI
   pass, which is why a run took 13:22 for about 7 minutes of critical path. Two caveats, both
   deliberate. **detekt gates again** as of CQ-12 — do not add `continue-on-error` back to turn a
   red build green; fix the finding, or regenerate the baseline through the Regenerate workflow so
@@ -437,6 +439,36 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   Still run the build locally before pushing — CI is a backstop, not a substitute.
   After switching branches, prefer `clean` — stale Hilt/KSP generated sources from another branch cause
   errors like "Could not find class file for '…Application'".
+- **The `r8-runtime` job runs the minified app** ("Android — minified build at runtime (R8)",
+  REL-7, September 2026). `release` and the mapping check prove R8 ran and kept the field names;
+  neither sees R8 full mode's runtime failures — a `TypeToken` whose generic signature was stripped
+  (Gson throws), a constructor or member removed, a class merged — nor that the JSON the app writes
+  reads back. The `r8Test` build type (`app/build.gradle.kts`) is `initWith(release)`: the same
+  proguard files plus `app/proguard-r8test.pro`, which keeps **only** the probe's entry point;
+  non-debuggable (AGP runs R8 in a weaker debug mode for a debuggable build), signed with the debug
+  key, telemetry flags off, no `applicationIdSuffix` (so a local `google-services.json` still
+  matches). Its own source set, `app/src/r8Test/`, adds `R8ProbeInstrumentation`, a
+  **self-targeting `<instrumentation>`**: `am instrument` starts it inside the minified process, it
+  skips `Application.onCreate` (whose Hilt graph needs a default FirebaseApp, which CI has no
+  `google-services.json` for — and must not get one), and `R8GsonProbe` builds the production
+  classes by hand the way the e2e parents do: a child and a pet through `ChildInfoRepositoryImpl`/
+  `PetRepositoryImpl` into an in-memory Room, signed out on a named `demo-coplanly` FirebaseApp, then
+  the stored JSON columns and the repositories' own read-back; `DayOverrideJson`; the draft Gson from
+  `SerializationModule`; the chat and revision mappers' `TypeToken`s; `Converters`; the calendar's
+  `@Key` models. `tools/run-r8-probe.sh` installs and runs it on API 30; `tools/check-r8-probe.js`
+  fails, one `::error::` each, on a key that is not the source field name (`bloodType`, never `a`),
+  a value that does not read back equal, a probe that did not finish, and a Gson model
+  `check-invariants.js` discovers with no case — and `invariants` already refuses that last one
+  (check 5), so **a new Gson model arrives with a probe case**: name its fully-qualified type as a
+  string literal in `R8GsonProbe` (a literal, because R8 renames the classes the report is about).
+  Four things to know. **Never add an app keep rule to `proguard-r8test.pro`** — the probe would
+  pass on a class the shipped build still breaks. **It is not byte-identical to `release`**: the
+  probe adds callers, so R8 may inline differently; what it decides by rule (names, signatures) is
+  the same, and that is what is checked. **It never reaches Firestore** — the documents' keys and a
+  second phone reading them stay `docs/DEVICE-CHECKLIST.md` §4.1, argued for by the probe only as
+  far as `toFirestoreMap()`'s medical profile is the same Gson call as the Room column it checks.
+  And it is gated on `changes`' `r8runtime` (Android changes outside screens, resources and tests,
+  plus the build, rules, workflow and the probe); `main` always runs it.
 - **The `screenshots` job is how UI is reviewed without a phone** (September 2026). Roborazzi on
   Robolectric's native graphics renders the tests in `app/src/test/java/com/coparently/app/
   screenshots/` — Home's cards, the month grid with every `DayCellFills` layer, the calendar
