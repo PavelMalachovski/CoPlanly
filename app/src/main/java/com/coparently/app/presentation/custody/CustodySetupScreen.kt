@@ -29,12 +29,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -72,6 +69,7 @@ import com.coparently.app.R
 import com.coparently.app.domain.model.CustodyModelType
 import com.coparently.app.presentation.common.LocalDatePickerDialog
 import com.coparently.app.presentation.common.ParentNames
+import com.coparently.app.presentation.common.StickyActionBar
 import com.coparently.app.presentation.common.animations.sectionEnter
 import com.coparently.app.presentation.common.animations.sectionExit
 import com.coparently.app.presentation.common.asString
@@ -150,35 +148,12 @@ fun CustodySetupScreen(
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
-            // Save button
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(dims.paddingMedium)
-            ) {
-                Button(
-                    onClick = { viewModel.save() },
-                    enabled = uiState.isValid && !uiState.isLoading,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(dims.buttonHeight)
-                ) {
-                    if (uiState.isLoading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(24.dp),
-                            color = MaterialTheme.colorScheme.onPrimary
-                        )
-                    } else {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(stringResource(R.string.custody_save_button))
-                    }
-                }
-            }
+            StickyActionBar(
+                label = stringResource(R.string.custody_save_button),
+                onClick = { viewModel.save() },
+                enabled = uiState.isValid,
+                busy = uiState.isLoading
+            )
         }
     ) { paddingValues ->
         Column(
