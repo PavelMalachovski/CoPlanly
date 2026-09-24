@@ -234,6 +234,10 @@ android {
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1,DEPENDENCIES}"
+            // A JAR index, meaningless in an APK. google-auth-library-oauth2-http and -credentials
+            // (both pulled in by google-api-client 2.7.x, CQ-17) each ship one, and two copies of
+            // the same path fail mergeJavaResource.
+            excludes += "/META-INF/INDEX.LIST"
         }
     }
 
