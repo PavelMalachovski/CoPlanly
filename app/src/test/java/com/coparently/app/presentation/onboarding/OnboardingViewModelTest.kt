@@ -5,6 +5,7 @@ import com.coparently.app.data.repository.FamilySettingsRepository
 import com.coparently.app.data.sync.SyncRequester
 import com.coparently.app.domain.expenses.FamilySettings
 import com.coparently.app.domain.expenses.SplitRatio
+import com.coparently.app.domain.holidays.HolidayCountry
 import com.coparently.app.domain.model.ChildInfo
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.CustodyModelType
@@ -15,9 +16,11 @@ import com.coparently.app.domain.model.PartnerSummary
 import com.coparently.app.domain.model.Pet
 import com.coparently.app.domain.model.PetSpecies
 import com.coparently.app.domain.model.User
+import com.coparently.app.domain.money.SupportedCurrency
 import com.coparently.app.domain.repository.ChildInfoRepository
 import com.coparently.app.domain.repository.PairingRepository
 import com.coparently.app.domain.repository.PetRepository
+import com.coparently.app.domain.repository.PreferencesRepository
 import com.coparently.app.domain.repository.UserRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -68,6 +71,7 @@ class OnboardingViewModelTest {
     private lateinit var pairingRepository: PairingRepository
     private lateinit var custodyModelRepository: CustodyModelRepository
     private lateinit var syncRequester: SyncRequester
+    private lateinit var preferencesRepository: PreferencesRepository
     private lateinit var pairing: MutableStateFlow<PairingState>
     private lateinit var viewModel: OnboardingViewModel
 
@@ -112,6 +116,7 @@ class OnboardingViewModelTest {
             every { getActiveModel() } returns flowOf(null)
         }
         syncRequester = mockk(relaxed = true)
+        preferencesRepository = mockk(relaxed = true)
         viewModel = newViewModel()
     }
 
@@ -125,7 +130,8 @@ class OnboardingViewModelTest {
         familySettingsRepository,
         pairingRepository,
         custodyModelRepository,
-        syncRequester
+        syncRequester,
+        preferencesRepository
     )
 
     /** Walks to [step], answering the one required field on the way. */
@@ -556,6 +562,37 @@ class OnboardingViewModelTest {
             assertEquals("Olya", profileWrite.name)
             assertNull(profileWrite.partnerId, "a held snapshot would have put the pairing back")
         }
+
+    @Test
+    fun `confirming the country on the profile step suggests its currency`() = runTest(dispatcher) {
+        advanceUntilIdle()
+        // The link, the intro and Family, then Profile, as in the test above.
+        viewModel.next()
+        viewModel.next()
+        viewModel.next()
+        viewModel.updateName("Olya")
+        viewModel.updateCountry(HolidayCountry.SLOVAKIA)
+        viewModel.next()
+        advanceUntilIdle()
+
+        // A suggestion, not a choice: the repository keeps a currency picked in Settings.
+        coVerify(exactly = 1) { preferencesRepository.suggestDefaultCurrency(SupportedCurrency.EUR) }
+        coVerify(exactly = 0) { preferencesRepository.setDefaultCurrency(any()) }
+    }
+
+    @Test
+    fun `a profile country whose currency the app does not offer suggests none`() = runTest(dispatcher) {
+        advanceUntilIdle()
+        viewModel.next()
+        viewModel.next()
+        viewModel.next()
+        viewModel.updateName("Olya")
+        viewModel.updateCountry(HolidayCountry.UKRAINE)
+        viewModel.next()
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) { preferencesRepository.suggestDefaultCurrency(any()) }
+    }
 
     @Test
     fun `skipping a step writes nothing, because a skip is not a deletion`() = runTest(dispatcher) {

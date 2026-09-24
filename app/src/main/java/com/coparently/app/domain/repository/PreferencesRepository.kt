@@ -8,6 +8,9 @@ import kotlinx.coroutines.flow.Flow
  * Repository for managing user preferences.
  * Abstracts the data layer for application settings.
  */
+// One read, and one or two writes, per preference: the count grows with the settings the app has,
+// and splitting it by preference would only scatter them across injected types.
+@Suppress("TooManyFunctions")
 interface PreferencesRepository {
     /**
      * Gets the dark theme preference as a Flow.
@@ -46,11 +49,24 @@ interface PreferencesRepository {
     fun getDefaultCurrencyFlow(): Flow<SupportedCurrency>
 
     /**
-     * Sets the app-wide default currency used to pre-fill new expenses.
+     * Sets the app-wide default currency used to pre-fill new expenses. This is the parent's own
+     * choice, and no later [suggestDefaultCurrency] replaces it.
      *
      * @param currency Currency to store as the default
      */
     suspend fun setDefaultCurrency(currency: SupportedCurrency)
+
+    /**
+     * Replaces the default currency with [currency] unless the parent has chosen one themselves.
+     *
+     * The first default is the device region's, which says little about the family: a Czech
+     * parent whose phone runs in English (United States) got dollars. The country they give for
+     * the calendar (MON-13) is a better guess, so confirming it calls this — and a parent who
+     * picked a currency in Settings keeps theirs.
+     *
+     * @param currency The currency of the country the parent just confirmed
+     */
+    suspend fun suggestDefaultCurrency(currency: SupportedCurrency)
 
     /**
      * The analytics and crash-reporting consent, as a Flow.

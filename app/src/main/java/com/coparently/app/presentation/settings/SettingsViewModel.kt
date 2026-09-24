@@ -13,6 +13,7 @@ import com.coparently.app.domain.holidays.HolidayCountry
 import com.coparently.app.domain.model.AccountSummary
 import com.coparently.app.domain.model.FamilyKind
 import com.coparently.app.domain.money.SupportedCurrency
+import com.coparently.app.domain.money.currencyOfRegion
 import com.coparently.app.domain.repository.PreferencesRepository
 import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.presentation.common.FamilyKindSource
@@ -207,6 +208,10 @@ class SettingsViewModel @Inject constructor(
      */
     fun setCountry(chosen: HolidayCountry) {
         viewModelScope.launch {
+            // The country is a better guess at the family's currency than the device region the
+            // first default came from; a currency the parent picked in Settings stays. Before the
+            // same-country check, so confirming the country already stored counts too.
+            currencyOfRegion(chosen.code)?.let { preferencesRepository.suggestDefaultCurrency(it) }
             val fresh = userRepository.getCurrentUser() ?: return@launch
             if (fresh.countryCode == chosen.code) return@launch
             // A region belongs to its country: moving to Austria clears Bavaria rather than

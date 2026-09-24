@@ -1,6 +1,7 @@
 package com.coparently.app.presentation.settings
 
 import com.coparently.app.data.remote.firebase.FcmService
+import com.coparently.app.domain.holidays.HolidayCountry
 import com.coparently.app.domain.money.SupportedCurrency
 import com.coparently.app.domain.repository.PreferencesRepository
 import com.coparently.app.domain.repository.UserRepository
@@ -120,5 +121,27 @@ class SettingsViewModelTest {
 
         coVerify(exactly = 1) { preferences.setPauseBeforeSending(true) }
         assertTrue(vm.pauseBeforeSending.value)
+    }
+
+    @Test
+    fun `choosing a country suggests its currency, and never overrides one as a choice`() = runTest(dispatcher) {
+        val vm = viewModel()
+
+        vm.setCountry(HolidayCountry.SLOVAKIA)
+        advanceUntilIdle()
+
+        // A suggestion: the repository keeps a currency the parent picked in Settings themselves.
+        coVerify(exactly = 1) { preferences.suggestDefaultCurrency(SupportedCurrency.EUR) }
+        coVerify(exactly = 0) { preferences.setDefaultCurrency(any()) }
+    }
+
+    @Test
+    fun `a country whose currency the app does not offer suggests none`() = runTest(dispatcher) {
+        val vm = viewModel()
+
+        vm.setCountry(HolidayCountry.UKRAINE)
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) { preferences.suggestDefaultCurrency(any()) }
     }
 }

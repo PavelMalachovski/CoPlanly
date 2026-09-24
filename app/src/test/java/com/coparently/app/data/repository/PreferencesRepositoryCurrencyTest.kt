@@ -1,6 +1,7 @@
 package com.coparently.app.data.repository
 
 import com.coparently.app.data.local.preferences.EncryptedPreferences
+import com.coparently.app.data.local.preferences.PreferenceKeys
 import com.coparently.app.domain.money.SupportedCurrency
 import io.mockk.every
 import io.mockk.mockk
@@ -75,6 +76,38 @@ class PreferencesRepositoryCurrencyTest {
                 assertEquals(SupportedCurrency.EUR, repository.getDefaultCurrencyFlow().first())
             }
             verify { preferences.putDefaultCurrency("EUR") }
+            verify { preferences.putBoolean(PreferenceKeys.DEFAULT_CURRENCY_CHOSEN, true) }
+        }
+    }
+
+    @Test
+    fun `a suggestion replaces the device region's guess`() {
+        // A Czech parent whose phone runs in English (United States): the first default is dollars.
+        withLocale("en", "US") {
+            val preferences = prefs(storedCurrency = null)
+            val repository = PreferencesRepositoryImpl(preferences)
+
+            runBlocking {
+                repository.suggestDefaultCurrency(SupportedCurrency.CZK)
+                assertEquals(SupportedCurrency.CZK, repository.getDefaultCurrencyFlow().first())
+            }
+            verify { preferences.putDefaultCurrency("CZK") }
+        }
+    }
+
+    @Test
+    fun `a suggestion never replaces a currency the parent chose`() {
+        withLocale("cs", "CZ") {
+            val preferences = prefs(storedCurrency = "EUR").also {
+                every { it.getBoolean(PreferenceKeys.DEFAULT_CURRENCY_CHOSEN, false) } returns true
+            }
+            val repository = PreferencesRepositoryImpl(preferences)
+
+            runBlocking {
+                repository.suggestDefaultCurrency(SupportedCurrency.CZK)
+                assertEquals(SupportedCurrency.EUR, repository.getDefaultCurrencyFlow().first())
+            }
+            verify(exactly = 0) { preferences.putDefaultCurrency("CZK") }
         }
     }
 }
