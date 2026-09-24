@@ -629,15 +629,16 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
    nationwide days, plus the chosen Land's own — below), Austria and Russia (statutory art. 112
    days, no annual transfer decree) have tables; **Ukraine deliberately has none** — its holidays are not days off under martial
    law, and the row says so. **School vacations are sourced, never invented** (September 2026):
-   Czechia's are computed (`CzechHolidays`); Slovakia's and Austria's *nationwide* periods and each
-   German **Land's** list are dated tables (`SchoolVacation.kt`, `GermanSchoolVacations.kt`) from
+   Czechia's are computed (`CzechHolidays`); Slovakia's and Austria's *nationwide* periods, each
+   **Slovak kraj's** spring week (`SlovakRegion.kt`) and each German **Land's** list are dated
+   tables (`SchoolVacation.kt`, `SlovakHolidays.kt`, `GermanSchoolVacations.kt`) from
    the OpenHolidays dataset (`github.com/openpotato/openholidaysapi.data`, ODbL 1.0 — the official
    KMK/BMBWF/MŠVVaM sites and the APIs are blocked from cloud sessions, the GitHub data repo is
    not), read at a pinned commit by `tools/generate-school-vacation-fixture.py` and held period by
    period by `SchoolVacationReferenceTest`. From school year 2025/26 to whatever the dataset
-   publishes — no extrapolation. What is set per region the app does not model stays out: Slovak
-   spring holidays (by kraj), Austrian semester and summer breaks (by Land; the dataset's later
-   ones are all `Provisional`), and Germany without a Land draws none. Russia has none. Day view
+   publishes — no extrapolation. What is set per region the app does not model stays out: Austrian
+   semester and summer breaks (by Land; the dataset's later ones are all `Provisional`), and
+   Germany without a Land and Slovakia without a kraj draw no regional breaks. Russia has none. Day view
    labels a school-vacation day and the month grid underlines it; the grid reads
    `HolidayProvider.schoolVacationDaysInRange`, not the `holidaysInRange` map, because that map
    names a public holiday first and would break the line over Christmas. The OpenHolidays data's
@@ -659,13 +660,21 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
    `users.regionCode`, nullable = nationwide). `HolidayProvider.regions`/`forRegion` and
    `HolidayLocation` carry it; the calendar reads `HolidayLocation.provider`, and
    `HolidayCountry.regionOrNull` drops a code that is not the country's, so a parent who moved
-   from Germany to Austria never keeps drawing Bavaria. Only Germany has regions, and a Land adds
-   both its public holidays and its school vacations. Austria's Länder add no *public* holiday in
+   from Germany to Austria never keeps drawing Bavaria. **A region code means nothing
+   without its country** — `NI` is Lower Saxony and Nitra — so the UI names a region by
+   `HolidayCountry.regionNameRes(code)`, never by code alone. Two countries have regions: a German
+   **Land** adds both its public holidays and its school vacations; a Slovak **kraj**
+   (`SlovakRegion`, the dataset's eight codes, named in Slovak and not translated) adds only its
+   spring week (jarné prázdniny) — Slovak public holidays are national, which
+   `HolidayReferenceTest` checks for every kraj, so Slovakia has no `--regions` fixture. The
+   picker's label, summary and note are worded per country (`CountryPicker.kt`'s
+   `RegionWording`), and the row appears for any country whose `regions` is non-empty. Austria's Länder add no *public* holiday in
    the reference data (the patron-saint days are bank holidays) and no *final* school dates past
    2025/26, so it gets no picker — a row that changed nothing is item 8 again. The picker's note
    reads `HolidayCountry.coverageIn(region)`, so "school vacations" appears for Germany only
-   once a Land is chosen. The German
-   states are pinned by a second fixture (`--regions`, only what each state *adds*), and the
+   once a Land is chosen and Slovakia asks for a kraj to add its spring holidays. The German
+   states are pinned by a second fixture (`--regions`, only what each state *adds*), the kraje by
+   `SK-<kraj>` keys in the school-vacation fixture, and the
    library's `catholic` category and the Augsburg pseudo-state are excluded on purpose —
    `GermanState`'s KDoc says why. The Room schema JSON for v36 (which carries this column) is exported by the Regenerate
    workflow, not by hand.

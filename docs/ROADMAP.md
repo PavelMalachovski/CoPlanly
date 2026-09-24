@@ -85,7 +85,7 @@ invocation is yours.
 | **MON-8** | Bakaláři / EduPage school import — the parsing, once you supply a real export | P2 | L |
 | **MON-11** | Payments (MVP 3) — the entitlement model, after MON-1 decides the price | P2 | L |
 | **MON-12** | Intelligent suggestions (MVP 3) — behind SEC-1's proxy, never with a key in the client | P3 | M |
-| **MON-13** | The tables, Germany's Länder and sourced school vacations (Slovakia and Austria nationwide, Germany per Land) are done — left: Austria's per-Land breaks, Slovakia's regional spring holidays, and whether Austria's patron-saint days are drawn at all (the grid marker and the ODbL attribution screen shipped in PR #101) | P2 | M |
+| **MON-13** | The tables, Germany's Länder, Slovakia's kraje and sourced school vacations (Slovakia nationwide and per kraj, Austria nationwide, Germany per Land) are done — left: Austria's per-Land breaks (not final in the source), Slovakia's half-year day (not in the dataset), and whether Austria's patron-saint days are drawn at all | P2 | M |
 | **FAM-4** | **Built** (schema 42, PR #101: per-child overrides in the one custody document, rules and rules tests, grid band behind the one-child filter, Home hero, custody-setup section; feed stays family); left: the rules deploy and a look on one and two phones — see DEVICE-CHECKLIST §3.13 | P2 | — |
 | **MON-14** | **Built** (schema 38, `38.json` committed; rules, feed port, custody screen); left: the rules deploy and a look at the grid — see the 👁 table | P1 | — |
 | **MON-15 (FTS)** | **Measured and not adopted** (PR #101): token-prefix matching and `unicode61`'s narrower fold would drop messages the search accepts; chat search stays on `LIKE` plus the Kotlin fold. No action | P3 | — |
