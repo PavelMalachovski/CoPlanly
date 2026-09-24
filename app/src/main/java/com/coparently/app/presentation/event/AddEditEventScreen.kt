@@ -111,6 +111,7 @@ import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.dimensions
 import com.coparently.app.utils.ValidationResult
 import com.coparently.app.utils.ValidationUtils
+import com.coparently.app.utils.localizedDate
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -1002,7 +1003,7 @@ fun AddEditEventScreen(
                         role = Role.Button
                         contentDescription = context.getString(
                             R.string.event_form_cd_select_date,
-                            startDate.format(DateTimeFormatter.ofPattern("EEEE, MMMM dd, yyyy"))
+                            startDate.format(localizedDate("yMMMMEEEEd"))
                         )
                     },
                 onClick = {
@@ -1033,9 +1034,7 @@ fun AddEditEventScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
-                                text = startDate.format(
-                                    DateTimeFormatter.ofPattern("EEEE, MMM dd, yyyy")
-                                ),
+                                text = startDate.format(localizedDate("yMMMEEEEd")),
                                 style = MaterialTheme.typography.bodyLarge
                             )
                         }
@@ -1232,9 +1231,8 @@ fun AddEditEventScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
-                                text = recurrenceEndDate?.format(
-                                    DateTimeFormatter.ofPattern("EEEE, MMM dd, yyyy")
-                                ) ?: stringResource(R.string.event_form_repeat_forever),
+                                text = recurrenceEndDate?.format(localizedDate("yMMMEEEEd"))
+                                    ?: stringResource(R.string.event_form_repeat_forever),
                                 style = MaterialTheme.typography.bodyLarge
                             )
                         }

@@ -13,6 +13,8 @@ import androidx.core.app.NotificationCompat
 import com.coparently.app.R
 import com.coparently.app.domain.chat.ChatUri
 import com.coparently.app.domain.pairing.PairingUri
+import com.coparently.app.utils.DAY_IN_SENTENCE
+import com.coparently.app.utils.isoDateText
 
 /**
  * Turns a push's data into the notification a person sees — or into nothing.
@@ -117,7 +119,12 @@ class PushNotifier(private val context: Context) {
         return when (spec.args) {
             BodyArgs.ACTOR_AND_SUBJECT -> context.getString(spec.body, actor, data[PushPayload.SUBJECT].orEmpty())
             BodyArgs.ACTOR -> context.getString(spec.body, actor)
-            BodyArgs.DATE -> context.getString(spec.body, data[PushPayload.DATE].orEmpty())
+            // The date travels as ISO text; the reader's language says it (D-18). An unreadable
+            // one is shown as it came rather than dropped.
+            BodyArgs.DATE -> context.getString(
+                spec.body,
+                isoDateText(data[PushPayload.DATE], DAY_IN_SENTENCE, context.resources.configuration.locales[0])
+            )
             // An unparseable count composes nothing rather than announcing "0 days" — the same
             // rule as an unrecognised type. Only this build's own writer produces it.
             BodyArgs.DAY_COUNT -> data[PushPayload.DAY_COUNT]?.toIntOrNull()?.let { count ->

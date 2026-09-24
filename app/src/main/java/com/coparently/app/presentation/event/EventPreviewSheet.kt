@@ -50,6 +50,7 @@ import com.coparently.app.presentation.common.FamilyMember
 import com.coparently.app.presentation.common.FullScreenImageDialog
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.theme.ParentColors
+import com.coparently.app.utils.localizedDate
 import java.time.format.DateTimeFormatter
 
 /**
@@ -144,7 +145,7 @@ internal fun EventPreviewContent(
         }
 
         PreviewRow(icon = Icons.Default.Schedule) {
-            val dateFormat = DateTimeFormatter.ofPattern("EEE, d MMM yyyy")
+            val dateFormat = localizedDate("yMMMEEEd")
             val timeFormat = DateTimeFormatter.ofPattern("HH:mm")
             val dateText = event.startDateTime.format(dateFormat)
             val timeText = buildString {

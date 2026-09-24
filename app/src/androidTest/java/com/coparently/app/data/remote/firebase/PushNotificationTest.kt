@@ -15,6 +15,8 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.coparently.app.R
 import com.coparently.app.domain.chat.ChatUri
+import com.coparently.app.utils.DAY_IN_SENTENCE
+import com.coparently.app.utils.isoDateText
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -286,7 +288,10 @@ class PushNotificationTest {
     private fun expectedBody(context: Context, spec: PushNotifier.PushTextSpec): String = when (spec.args) {
         PushNotifier.BodyArgs.ACTOR_AND_SUBJECT -> context.getString(spec.body, ACTOR_NAME, SUBJECT)
         PushNotifier.BodyArgs.ACTOR -> context.getString(spec.body, ACTOR_NAME)
-        PushNotifier.BodyArgs.DATE -> context.getString(spec.body, DATE)
+        PushNotifier.BodyArgs.DATE -> context.getString(
+            spec.body,
+            isoDateText(DATE, DAY_IN_SENTENCE, context.resources.configuration.locales[0])
+        )
         PushNotifier.BodyArgs.DAY_COUNT -> context.resources.getQuantityString(spec.body, DAY_COUNT, DAY_COUNT)
         PushNotifier.BodyArgs.NONE -> context.getString(spec.body)
     }
@@ -297,7 +302,8 @@ class PushNotificationTest {
         val names = when (spec.args) {
             PushNotifier.BodyArgs.ACTOR_AND_SUBJECT -> listOf(ACTOR_NAME, SUBJECT)
             PushNotifier.BodyArgs.ACTOR -> listOf(ACTOR_NAME)
-            PushNotifier.BodyArgs.DATE -> listOf(DATE)
+            // The date is said in the reader's language (D-18), so its day is what every one shows.
+            PushNotifier.BodyArgs.DATE -> listOf(DATE_DAY)
             PushNotifier.BodyArgs.DAY_COUNT -> listOf(DAY_COUNT.toString())
             PushNotifier.BodyArgs.NONE -> emptyList()
         }
@@ -391,6 +397,7 @@ class PushNotificationTest {
         const val ACTOR_NAME = "Jana"
         const val SUBJECT = "Dentist"
         const val DATE = "2026-05-14"
+        const val DATE_DAY = "14"
         const val DAY_COUNT = 3
         const val PREVIEW = "See you at five"
         const val CONVERSATION = "conversation-1"

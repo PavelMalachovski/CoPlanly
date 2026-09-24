@@ -84,7 +84,7 @@
     <string name="calendar_operation_failed">Не вдалося зберегти зміну. Можливо, вона не дійшла до другого з батьків.</string>
     <string name="calendar_retry">Повторити</string>
     <!-- UX-8. -->
-    <string name="calendar_agenda_custody_day">день, коли дитина з %1$s</string>
+    <string name="calendar_agenda_custody_day">День, коли дитина з %1$s</string>
     <string name="calendar_filter_members">Показати для</string>
 
     <!-- MON-6b: a contact window on the grid. -->

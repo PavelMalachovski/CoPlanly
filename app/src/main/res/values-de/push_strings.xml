@@ -24,7 +24,7 @@
     <string name="push_custody_proposal_declined_title">Betreuungsvorschlag abgelehnt</string>
     <string name="push_custody_proposal_declined_body">Der andere Elternteil hat den Plan abgelehnt</string>
     <string name="push_day_swap_offered_title">Tagestausch vorgeschlagen</string>
-    <string name="push_day_swap_offered_body">Der andere Elternteil schlägt vor, %1$s zu tauschen</string>
+    <string name="push_day_swap_offered_body">Der andere Elternteil schlägt einen Tausch am %1$s vor</string>
     <string name="push_day_swap_accepted_title">Tagestausch vereinbart</string>
     <string name="push_day_swap_accepted_body">Der andere Elternteil stimmt dem Tausch am %1$s zu</string>
     <string name="push_day_swap_declined_title">Tagestausch abgelehnt</string>

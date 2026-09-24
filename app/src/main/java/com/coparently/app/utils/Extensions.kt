@@ -6,8 +6,6 @@ import android.content.ContextWrapper
 import androidx.compose.ui.graphics.Color
 import java.time.LocalDate
 import java.time.LocalDateTime
-import java.time.LocalTime
-import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 /**
@@ -47,96 +45,13 @@ fun LocalDate.isInPast(): Boolean = this.isBefore(LocalDate.now())
  */
 fun LocalDate.isInFuture(): Boolean = this.isAfter(LocalDate.now())
 
-/**
- * Format date in short format (e.g., "Jan 15").
- * @return Formatted date string
- */
-fun LocalDate.formatShort(): String =
-    format(DateTimeFormatter.ofPattern("MMM d", Locale.getDefault()))
-
-/**
- * Format date in long format (e.g., "Monday, January 15, 2024").
- * @return Formatted date string
- */
-fun LocalDate.formatLong(): String =
-    format(DateTimeFormatter.ofPattern("EEEE, MMMM d, yyyy", Locale.getDefault()))
-
-/**
- * Format date in medium format (e.g., "Jan 15, 2024").
- * @return Formatted date string
- */
-fun LocalDate.formatMedium(): String =
-    format(DateTimeFormatter.ofPattern("MMM d, yyyy", Locale.getDefault()))
-
-/**
- * Format date with day of week (e.g., "Mon, Jan 15").
- * @return Formatted date string
- */
-fun LocalDate.formatWithDayOfWeek(): String =
-    format(DateTimeFormatter.ofPattern("EEE, MMM d", Locale.getDefault()))
-
-/**
- * Get display name for relative dates (Today, Tomorrow, Yesterday, or formatted date).
- * @return User-friendly date string
- */
-fun LocalDate.toDisplayString(): String = when {
-    isToday() -> "Today"
-    isTomorrow() -> "Tomorrow"
-    isYesterday() -> "Yesterday"
-    else -> formatMedium()
-}
-
 // ==================== LocalDateTime Extensions ====================
-
-/**
- * Format time in 24-hour format (e.g., "14:30").
- * @return Formatted time string
- */
-fun LocalDateTime.formatTime24(): String =
-    format(DateTimeFormatter.ofPattern("HH:mm"))
-
-/**
- * Format time in 12-hour format (e.g., "2:30 PM").
- * @return Formatted time string
- */
-fun LocalDateTime.formatTime12(): String =
-    format(DateTimeFormatter.ofPattern("h:mm a", Locale.getDefault()))
-
-/**
- * Format date and time (e.g., "Jan 15, 2024 at 2:30 PM").
- * @return Formatted date-time string
- */
-fun LocalDateTime.formatDateTime(): String =
-    format(DateTimeFormatter.ofPattern("MMM d, yyyy 'at' h:mm a", Locale.getDefault()))
-
-/**
- * Format date and time in 24-hour format (e.g., "Jan 15, 2024 at 14:30").
- * @return Formatted date-time string
- */
-fun LocalDateTime.formatDateTime24(): String =
-    format(DateTimeFormatter.ofPattern("MMM d, yyyy 'at' HH:mm", Locale.getDefault()))
 
 /**
  * Check if this date-time is today.
  * @return true if date component is current date
  */
 fun LocalDateTime.isToday(): Boolean = toLocalDate().isToday()
-
-// ==================== LocalTime Extensions ====================
-
-/**
- * Format time in 24-hour format (e.g., "14:30").
- * @return Formatted time string
- */
-fun LocalTime.format24(): String =
-    format(DateTimeFormatter.ofPattern("HH:mm"))
-
-/**
- * Format time in 12-hour format (e.g., "2:30 PM").
- * @return Formatted time string
- */
-fun LocalTime.format12(): String =
-    format(DateTimeFormatter.ofPattern("h:mm a", Locale.getDefault()))
 
 // ==================== Color Extensions ====================
 

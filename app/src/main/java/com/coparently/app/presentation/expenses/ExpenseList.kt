@@ -57,7 +57,7 @@ import com.coparently.app.domain.model.Expense
 import com.coparently.app.presentation.common.FullScreenImageDialog
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.theme.ParentColors
-import java.time.format.DateTimeFormatter
+import com.coparently.app.utils.localizedDate
 import java.util.Locale
 
 /** Alpha of the payer-tinted circle behind a row's leading icon. */
@@ -207,7 +207,7 @@ fun ExpenseItem(
     onClick: (() -> Unit)? = null,
     onReceiptClick: (String) -> Unit = {}
 ) {
-    val dateFormatter = remember { DateTimeFormatter.ofPattern("MMM d", Locale.getDefault()) }
+    val dateFormatter = remember(Locale.getDefault()) { localizedDate("MMMd") }
     val format = remember(expense.currency) { currencyFormat(expense.currency) }
 
     val payerColor = if (payerRole != null) {

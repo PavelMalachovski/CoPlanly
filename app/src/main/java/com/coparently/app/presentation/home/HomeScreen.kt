@@ -4,7 +4,6 @@
 
 package com.coparently.app.presentation.home
 
-import android.text.format.DateFormat
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -81,6 +80,7 @@ import com.coparently.app.R
 import com.coparently.app.domain.custody.HandoverInfo
 import com.coparently.app.domain.expenses.CurrencyBalance
 import com.coparently.app.domain.home.WeekEntry
+import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.model.FamilyKind
 import com.coparently.app.presentation.calendar.components.DayAgendaCard
 import com.coparently.app.presentation.changerequests.ChangeRequestViewModel
@@ -97,40 +97,29 @@ import com.coparently.app.presentation.components.SkeletonBox
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.utils.LightDarkPreviews
 import com.coparently.app.utils.PreviewWrapper
+import com.coparently.app.utils.localizedDate
 import com.coparently.app.utils.previewParentNames
+import com.coparently.app.utils.shortTime
 import java.text.NumberFormat
 import java.time.LocalDate
 import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
+import java.time.LocalTime
 import java.util.Currency
 import java.util.Locale
 import kotlin.math.abs
 
-/**
- * A date formatter in the current locale's own field order for [skeleton] (e.g. "EEEMMMd" is
- * "Wed, Sep 23" in English and "St 23. 9." in Czech).
- *
- * Built per call, not held in a top-level `val`: those captured the locale once per process, so
- * after Settings → Language the dashboard kept the previous language's day and month names. The
- * fixed English patterns they used also put the month before the day in every language.
- * Time is kept out of the skeleton on purpose — the platform's preferred-hour pattern can
- * contain letters `java.time` on older Android cannot parse — and is appended from
- * [shortTime]. Falls back to the medium date style if the platform pattern is refused anyway.
- */
-private fun localizedDate(skeleton: String): DateTimeFormatter {
-    val locale = Locale.getDefault()
-    return runCatching {
-        DateTimeFormatter.ofPattern(DateFormat.getBestDateTimePattern(locale, skeleton), locale)
-    }.getOrElse { DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale) }
-}
-
-/** The locale's short time style: 24-hour or 12-hour as the language expects. */
-private val shortTime: DateTimeFormatter
-    get() = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withLocale(Locale.getDefault())
-
+/** A date in the locale's order for [skeleton], then the locale's short time (D-18). */
 private fun LocalDateTime.dateAndTime(skeleton: String): String =
-    "${format(localizedDate(skeleton))} · ${format(shortTime)}"
+    "${format(localizedDate(skeleton))} · ${format(shortTime())}"
+
+/**
+ * Whether [event] reads as an all-day one: it starts at midnight and ends at a midnight, or has
+ * no end. The model has no all-day flag, and a Google import of a birthday or a school holiday
+ * arrives as exactly this shape, which Home used to print as "12:00 AM" (D-18).
+ */
+private fun looksAllDay(event: Event): Boolean =
+    event.startDateTime.toLocalTime() == LocalTime.MIDNIGHT &&
+        (event.endDateTime?.toLocalTime() ?: LocalTime.MIDNIGHT) == LocalTime.MIDNIGHT
 
 /** Strength of the parent-hue wash behind the handover hero. */
 private const val HERO_TINT_ALPHA = 0.16f
@@ -960,7 +949,11 @@ internal fun TimelineRow(
                     overflow = TextOverflow.Ellipsis
                 )
             }
-            val timeLabel = event.startDateTime.dateAndTime("EEEd")
+            val timeLabel = if (looksAllDay(event)) {
+                event.startDateTime.format(localizedDate("EEEd"))
+            } else {
+                event.startDateTime.dateAndTime("EEEd")
+            }
             Text(
                 text = entry.dayParent
                     ?.let { stringResource(R.string.home_timeline_meta, timeLabel, parentNames.labelFor(it)) }

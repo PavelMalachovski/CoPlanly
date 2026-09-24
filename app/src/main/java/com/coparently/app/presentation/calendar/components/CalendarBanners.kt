@@ -43,6 +43,7 @@ import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.utils.LightDarkPreviews
 import com.coparently.app.utils.PreviewWrapper
 import com.coparently.app.utils.createSampleEvent
+import com.coparently.app.utils.localizedDate
 import com.coparently.app.utils.previewParentNames
 import java.time.LocalDate
 import java.time.LocalTime
@@ -270,9 +271,7 @@ fun DayAgendaCard(
     modifier: Modifier = Modifier,
     contactWindows: List<ContactWindow> = emptyList()
 ) {
-    val dateFormatter = remember(Locale.getDefault()) {
-        DateTimeFormatter.ofPattern("EEE, MMM d", Locale.getDefault())
-    }
+    val dateFormatter = remember(Locale.getDefault()) { localizedDate("MMMEEEd") }
     val timeFormatter = remember { DateTimeFormatter.ofPattern("HH:mm") }
 
     Column(

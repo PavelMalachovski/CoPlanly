@@ -98,6 +98,7 @@ import com.coparently.app.presentation.theme.Dimensions
 import com.coparently.app.presentation.theme.Motion
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.dimensions
+import com.coparently.app.utils.localizedDate
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -580,7 +581,7 @@ private fun DayWeekPage(
                                     val slotDescription = stringResource(
                                         R.string.calendar_time_slot_description,
                                         String.format(Locale.getDefault(), "%02d:00", hour),
-                                        date.format(DateTimeFormatter.ofPattern("MMM dd"))
+                                        date.format(localizedDate("MMMd"))
                                     )
 
                                     Box(

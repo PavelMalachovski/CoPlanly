@@ -63,8 +63,8 @@ import com.coparently.app.presentation.common.PhotoStripStrings
 import com.coparently.app.presentation.common.VaccinationListEditor
 import com.coparently.app.presentation.common.labelRes
 import com.coparently.app.presentation.common.rememberDiscardGuard
+import com.coparently.app.utils.localizedDate
 import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 import java.util.UUID
 
 /**
@@ -477,7 +477,7 @@ private fun BasicSection(
                 text = dateOfBirth?.let {
                     stringResource(
                         R.string.pet_dob_value,
-                        it.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+                        it.format(localizedDate("yMMMd"))
                     )
                 } ?: stringResource(R.string.pet_select_dob)
             )

@@ -74,6 +74,7 @@ import com.coparently.app.presentation.common.rememberToday
 import com.coparently.app.presentation.theme.CoPlanlyColors
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.dimensions
+import com.coparently.app.utils.localizedDate
 import com.kizitonwose.calendar.compose.CalendarState
 import com.kizitonwose.calendar.compose.HorizontalCalendar
 import com.kizitonwose.calendar.compose.rememberCalendarState
@@ -536,7 +537,7 @@ private fun DayCell(
         null
     }
     val semanticDescription = buildString {
-        append(date.format(DateTimeFormatter.ofPattern("EEEE, MMMM d", Locale.getDefault())))
+        append(date.format(localizedDate("MMMMEEEEd")))
         if (isToday) {
             append(", ")
             append(todayLabel)
@@ -586,7 +587,7 @@ private fun DayCell(
     val swapClickLabel = stringResource(R.string.calendar_day_long_click_label)
     val clickLabel = stringResource(
         R.string.calendar_day_click_label,
-        date.format(DateTimeFormatter.ofPattern("MMMM d", Locale.getDefault()))
+        date.format(localizedDate("MMMMd"))
     )
 
     Box(
