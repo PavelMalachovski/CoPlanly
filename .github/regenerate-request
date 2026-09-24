@@ -44,3 +44,7 @@ requested: 2026-09-24 — again for week 3: the first run stopped at a compile e
            ExpenseScreen (fixed in the commit before this one), so no screenshot was recorded
 requested: 2026-09-24 — again for week 3: the change-request banner stacks its action from 1.3x,
            the custody and vacation banners and the month line wrap instead of cutting
+requested: 2026-09-24 — screenshot baselines for the October 2026 audit's week 4: icon sizes on
+           five steps, HeroIcon, sentence case, localised dates, the emerald tertiary container,
+           and the first high-contrast images (ContrastScreenshots); no schema change and no new
+           detekt finding is expected, so the baseline half should only lose entries
