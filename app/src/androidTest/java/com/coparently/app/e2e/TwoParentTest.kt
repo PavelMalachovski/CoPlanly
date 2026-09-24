@@ -6,6 +6,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
+import org.junit.rules.TestWatcher
 import org.junit.rules.Timeout
 import java.util.TimeZone
 
@@ -21,8 +22,12 @@ import java.util.TimeZone
  */
 abstract class TwoParentTest {
 
+    /** Every thread's stack in logcat when a test fails; outside [timeout], so it sees the hang. */
+    @get:Rule(order = 0)
+    val threadDump: TestWatcher = EmulatorEnvironment.threadDumpOnFailure()
+
     /** Fails a stuck test with the stuck thread's stack rather than hanging the job. */
-    @get:Rule
+    @get:Rule(order = 1)
     val timeout: Timeout = EmulatorEnvironment.testTimeout()
 
     protected val context: Context = InstrumentationRegistry.getInstrumentation().targetContext

@@ -847,7 +847,7 @@ jobs:
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           # Stops the emulator itself once the tests are done (tools/stop-emulator.sh), since a
           # snapshot boot is what the `instrumented` job's shutdown hang was seen on.
-          script: bash tools/ci-background-build.sh wait && bash tools/e2e/run-two-parent-tests.sh; status=$?; echo "$status" > "$STATUS_FILE"; if [ "$status" != "0" ]; then mkdir -p app/build/outputs && adb logcat -d -v time > app/build/outputs/e2e-logcat.txt 2>&1; fi; bash tools/stop-emulator.sh; exit $status
+          script: bash tools/ci-background-build.sh wait && bash tools/e2e/run-two-parent-tests.sh; status=$?; echo "$status" > "$STATUS_FILE"; if [ "$status" != "0" ]; then mkdir -p app/build/outputs && adb logcat -d -v time > app/build/outputs/e2e-logcat.txt 2>&1; echo "::group::logcat — E2E steps, thread dumps, crashes"; grep -E "/E2E|AndroidRuntime" app/build/outputs/e2e-logcat.txt | tail -n 800; echo "::endgroup::"; fi; bash tools/stop-emulator.sh; exit $status
 
       - name: The two-parent tests finished and passed
         if: always()

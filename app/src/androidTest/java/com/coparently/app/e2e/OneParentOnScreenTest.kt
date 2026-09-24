@@ -30,6 +30,7 @@ import com.coparently.app.domain.repository.PairingRepository
 import com.coparently.app.domain.repository.PreferencesRepository
 import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.domain.telemetry.TelemetryConsent
+import com.coparently.app.e2e.EmulatorEnvironment.step
 import com.coparently.app.presentation.MainActivity
 import com.coparently.app.presentation.navigation.BOTTOM_BAR_TEST_TAG
 import com.coparently.app.presentation.navigation.BottomNavDestination
@@ -49,6 +50,7 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TestWatcher
 import org.junit.rules.Timeout
 import org.junit.runner.RunWith
 import java.time.LocalDate
@@ -87,8 +89,12 @@ class OneParentOnScreenTest {
     @get:Rule(order = 1)
     val composeTestRule = createEmptyComposeRule()
 
-    /** Innermost, so it bounds `@Before` and `@After` as well as the test body. */
+    /** Every thread's stack in logcat when the test fails; outside [timeout], so it sees a hang. */
     @get:Rule(order = 2)
+    val threadDump: TestWatcher = EmulatorEnvironment.threadDumpOnFailure()
+
+    /** Innermost, so it bounds `@Before` and `@After` as well as the test body. */
+    @get:Rule(order = 3)
     val timeout: Timeout = EmulatorEnvironment.testTimeout()
 
     @Inject
@@ -132,10 +138,12 @@ class OneParentOnScreenTest {
         initializeWorkManager()
         hiltRule.inject()
         savedConsent = encryptedPreferences.getString(PreferenceKeys.TELEMETRY_CONSENT, null)
+        step("before: sign up Alice")
         runBlocking {
             aliceUid = signUpAlice()
             val coParent = EmulatorParent.create(context, "Bob")
             bob = coParent
+            step("before: pair")
             val invite = pairingRepository.createOrReuseInviteCode().getOrThrow()
             coParent.pairingRepository.redeem(invite.code).getOrThrow()
             coParent.awaitPairedWith(aliceUid)
@@ -150,23 +158,27 @@ class OneParentOnScreenTest {
             preferencesRepository.setTelemetryConsent(TelemetryConsent.DENIED)
         }
         chatMirror.start()
+        step("before: launch MainActivity")
 
         composeTestRule.mainClock.autoAdvance = false
         scenario = ActivityScenario.launch(MainActivity::class.java)
         composeTestRule.pumpUntil("Home with the bottom bar", HOME_TIMEOUT_MS) { exists(bottomBar) }
         composeTestRule.settle()
+        step("before: Home is up")
     }
 
     @After
     fun tearDown() {
         // Skipped (no emulator host): nothing was injected, so there is nothing to undo.
         if (!::encryptedPreferences.isInitialized) return
+        step("after: close")
         scenario?.close()
         bob?.close()
         runCatching { firebaseAuth.signOut() }
         // The database is a file on the emulator; nothing Alice's account wrote may outlive the test.
         runCatching { database.clearAllTables() }
         encryptedPreferences.putString(PreferenceKeys.TELEMETRY_CONSENT, savedConsent.orEmpty())
+        step("after: done")
     }
 
     @Test
@@ -178,8 +190,10 @@ class OneParentOnScreenTest {
         val eventTitle = "Dentist ${shortId()}"
         runBlocking {
             bob.eventRepository.insertEvent(eventForToday(bob, eventTitle))
+            step("event: sync")
             syncService.performFullSync().getOrThrow()
         }
+        step("event: wait for it on Home")
         composeTestRule.pumpUntil("Bob's event on Alice's Home", CROSS_DEVICE_TIMEOUT_MS) {
             exists(hasText(eventTitle, substring = true))
         }
@@ -197,19 +211,24 @@ class OneParentOnScreenTest {
                 )
             )
         }
+        step("chat: open the tab")
         openTab(BottomNavDestination.CHAT)
+        step("chat: wait for Bob's message")
         composeTestRule.pumpUntil("Bob's message in Alice's thread", CROSS_DEVICE_TIMEOUT_MS) {
             exists(hasText(fromBob))
         }
 
         // What Alice types into the real composer arrives on Bob's phone.
         val fromAlice = "See you there ${shortId()}"
+        step("chat: type")
         composeTestRule.onAllNodes(hasSetTextAction()).onFirst().performTextInput(fromAlice)
         composeTestRule.settle()
+        step("chat: send")
         composeTestRule.onAllNodes(hasContentDescription(string(R.string.chat_send)) and hasClickAction())
             .onFirst()
             .performClick()
         composeTestRule.settle()
+        step("chat: wait for the reply on Bob's phone")
         runBlocking {
             withTimeout(EmulatorParent.WAIT_MS) {
                 bob.messageRepository.observeMessages(conversationId).first { list ->

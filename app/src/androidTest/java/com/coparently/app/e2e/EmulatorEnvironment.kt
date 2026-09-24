@@ -1,6 +1,7 @@
 package com.coparently.app.e2e
 
 import android.content.Context
+import android.util.Log
 import androidx.test.platform.app.InstrumentationRegistry
 import com.google.firebase.FirebaseApp
 import com.google.firebase.FirebaseOptions
@@ -11,7 +12,9 @@ import com.google.firebase.firestore.MemoryCacheSettings
 import com.google.firebase.functions.FirebaseFunctions
 import com.google.firebase.storage.FirebaseStorage
 import org.junit.Assume.assumeTrue
+import org.junit.rules.TestWatcher
 import org.junit.rules.Timeout
+import org.junit.runner.Description
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.concurrent.TimeUnit
@@ -122,6 +125,36 @@ object EmulatorEnvironment {
         .build()
 
     private const val TEST_TIMEOUT_MINUTES = 3L
+
+    /** The logcat tag of [step] and of the thread dump; the e2e job prints both on a failure. */
+    const val LOG_TAG = "E2E"
+
+    /**
+     * Marks where a two-parent test is, in logcat. When a test times out the stuck-thread
+     * detector names whichever thread it guesses — on PR #103 a Firebase `TokenRefresher` that
+     * was merely idle — so the last step logged is what says where the test itself was waiting.
+     */
+    fun step(name: String) {
+        Log.i(LOG_TAG, "step: $name")
+    }
+
+    /**
+     * On a failure, writes every thread's stack to logcat under [LOG_TAG], one entry per thread
+     * (a logcat entry is capped near 4 KB). Must sit *outside* the timeout rule so it runs while
+     * the abandoned test thread is still stuck where it was.
+     */
+    fun threadDumpOnFailure(): TestWatcher = object : TestWatcher() {
+        override fun failed(e: Throwable, description: Description) {
+            Log.e(LOG_TAG, "FAILED ${description.displayName}: $e")
+            for ((thread, frames) in Thread.getAllStackTraces()) {
+                if (frames.isEmpty()) continue
+                val stack = frames.take(MAX_FRAMES).joinToString("\n") { "    at $it" }
+                Log.e(LOG_TAG, "thread \"${thread.name}\" ${thread.state}\n$stack")
+            }
+        }
+    }
+
+    private const val MAX_FRAMES = 40
 
     /** Skips the calling test unless this run was started against the emulators. */
     fun assumeEmulators() {
