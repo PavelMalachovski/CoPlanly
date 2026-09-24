@@ -23,11 +23,10 @@ import java.util.UUID
  * to that family — its audience, its `familyId` and the thread its announcement lands in — and
  * none of it reaches Bob.
  *
- * **What this does not assert, on purpose.** `ChatViewModel`'s own link still follows the
- * *server's* first co-parent, not the selection (CLAUDE.md, known issue "Chat follows the first
- * co-parent"). The conversation id checked here is the one every writer derives from the Room
- * projection — `ActivityAnnouncer`, and the chat thread the conversation list opens — which is the
- * behaviour M-8 is building towards. Asserting the ViewModel's current answer would pin the bug.
+ * **What this does not assert.** The Chat tab following the selection (`ChatPartnerSource`, the
+ * fix for the old "Chat follows the first co-parent") is a screen, so `OnScreenFamiliesTest`
+ * drives it on Alice's real app. The conversation id checked here is the one every writer derives
+ * from the Room projection — `ActivityAnnouncer`, and the chat thread the Chat tab opens.
  */
 @RunWith(AndroidJUnit4::class)
 class MultiFamilyTest : TwoParentTest() {

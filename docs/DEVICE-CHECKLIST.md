@@ -90,13 +90,15 @@ so.
 | Test (`app/src/androidTest/.../e2e/`) | Covers between the two parents | What only phones still add |
 | --- | --- | --- |
 | `TwoParentPairingTest` | Pairing on both phones, both slots, one conversation, `pairing_accepted` queued | The QR scan, the pairing screens |
-| `TwoParentEventsTest`, `MultiFamilyTest` | Events through the sync's own query, a private event never on the server, tombstones; a second family's audience (§5.2) | The grid as drawn, the switcher UI |
+| `TwoParentEventsTest`, `MultiFamilyTest` | Events through the sync's own query, a private event never on the server, tombstones; a second family's audience (§5.2) | The grid as drawn |
 | `TwoParentChatTest`, `OneParentOnScreenTest` | Chat across the date line to unread, DELIVERED, READ; one parent's real screens (§5.1) | Two screens at once, displayed times, the push |
 | `TwoParentAttachmentsTest` | Chat attachments and the vault, bytes and digests, a stranger refused (§5.5) | A viewer app opening the file |
 | `TwoParentExpensesTest`, `TwoParentAgreementsTest` | A shared expense on the other parent's balance; the split ratio agreed, proposed, accepted, declined, withdrawn; the parenting plan's agreement lapsing on a reword, the other half unwritable | The Expenses and plan screens, the banners |
 | `TwoParentFamilyRecordsTest` | Children, pets and budgets both ways with tombstones; records made before pairing shared and announced once; pet and medical photos (§3.10) | The forms, and the photo in the live bucket before `firebase deploy --only storage` |
 | `TwoParentRequestsAndEventPushesTest` | Change requests accepted, declined, cancelled; `event_created`; event revisions immutable, none for a private event; event photos | The request screens |
 | `TwoParentCustodyTest` | A pattern proposed, accepted, declined in two zones; single-day and group swaps; a self-accepted swap refused | The grid's band, markers and banners |
+| `OnScreenAgreementsTest` | A's **real app** answering B on screen: B's change request raises the calendar's inline banner, A opens the inbox from it and accepts, B holds it accepted and the event moved; B's custody proposal pops up on A's Home naming B, accepted then (a second one) declined; B's day swaps pop up on Home, one accepted, one declined; a seasonal layer A accepts makes today's month cell say "With B" (§3.11) | Two screens at once, the push that makes A look, the band's colours and motion, the plan citation line (§3.12), a child's own band (§3.13) |
+| `OnScreenFamiliesTest` | A paired with B and C, B's family on screen: C's message puts the dot on Home's switcher chip, named "New messages in another family"; C's row in the dialog says so; switching there brings C's thread onto the Chat tab, and A's reply reaches C (§5.2) | The push from the other family switching on tap, the chip on Expenses, TalkBack, change-request and schedule dots |
 | `TwoParentAccessTest` | A calendar friend, a guest and a professional (two consents, never the chat, §5.4) redeemed and revoked; unpair on both phones with `pairing_removed`; a calendar feed serving shared events only until revoked; an export hash registered once and verified without an account; receipt photos; account deletion unpairing the co-parent (§7) | The invitation screens, a calendar app subscribing to the feed, the verification page |
 
 ---
@@ -587,6 +589,8 @@ the field gone, the OS permission turning the switch off, and a real push arrivi
 
 ### 3.11 Seasonal schedules and holiday fairness (MON-14, MON-20) · 1P, proposal check 2P
 
+> **[CI e2e]** `OnScreenAgreementsTest` runs the **2P proposal check's** mechanism on one real screen: B proposes a one-day layer, the proposal pops up on A's Home naming B, A accepts, and today's month cell then says "With B" on A's grid while B's phone holds the decision. The phone still adds the editor itself, the band's colour, B's grid, and everything above the 2P line.
+
 Custody setup, below the preview: **Seasonal schedules**, then **Holiday fairness**. Needs a saved
 base pattern; schema 38 (the Regenerate workflow must have exported `38.json` for CI to be green).
 
@@ -815,7 +819,7 @@ Preconditions: A and B are paired, and each phone has its own account signed in.
 
 ### 5.2 Family switcher and chat following the selected family (M-8) · 3A, 2P or 1P fallback
 
-> **[CI e2e]** `MultiFamilyTest` proves the data side: with a second co-parent selected, a new event gets that family's audience and `familyId` and its announcement goes to that thread, and none of it reaches the first co-parent. The switcher UI, the chat tab re-keying and pushes stay manual.
+> **[CI e2e]** `MultiFamilyTest` proves the data side: with a second co-parent selected, a new event gets that family's audience and `familyId` and its announcement goes to that thread, and none of it reaches the first co-parent. `OnScreenFamiliesTest` drives the switcher on A's real screens: with B's family on screen, C's chat message puts the dot on Home's chip (its description names "New messages"), C's row in the dialog says the same, choosing it brings C's thread onto the Chat tab, and A's reply reaches C. Still manual: the push from the other family, the chip on Expenses, the change-request and schedule kinds of the dot, TalkBack, and live arrival on several screens at once.
 
 Preconditions: A is paired with **both** B and C (two families). Invite C from Settings → Family.
 
@@ -861,6 +865,8 @@ Preconditions: A is paired with **both** B and C (two families). Invite C from S
 ### 5.3 Also worth doing while two phones are paired · 2P
 
 > Real FCM delivery cannot be emulated: the e2e job sees the `notification_queue` document written, never the push arrive.
+>
+> **[CI e2e]** `OnScreenAgreementsTest` answers the co-parent on one real screen: a change request's calendar banner and the inbox's Accept, Home's pop-ups for a custody proposal (accept and decline) and for day swaps (accept and decline), each confirmed on the other phone's data. What two phones add here is both screens at once and the push that brings the second parent to the screen.
 
 - [ ] UX-15 with both parents on non-default colours (§3.3).
 - [ ] MON-6b with mixed versions (§3.5).

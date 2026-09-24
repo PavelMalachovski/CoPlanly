@@ -360,7 +360,14 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   with Bob through the callable — Bob's event is drawn on her Home after one
   `SyncService.performFullSync()` (the call `SyncWorker` makes), his message in her thread, and
   what she types into the real composer reaches his phone. It starts `ChatMirror` itself, because
-  `HiltTestApplication` never runs `CoPlanlyApplication.onCreate`. Five things not to undo.
+  `HiltTestApplication` never runs `CoPlanlyApplication.onCreate`. Its setup is the abstract
+  `AliceOnScreenTest`, which two more classes share: `OnScreenAgreementsTest` (Bob's change request
+  raising the calendar banner and accepted from the inbox; his custody proposal, day swaps and a
+  seasonal layer popping up on Home and answered there, the layer then naming him in today's
+  month-cell description) and `OnScreenFamiliesTest` (a third parent's message dotting the family
+  switcher, the switch bringing her thread onto the Chat tab). They find everything through the
+  app's own string resources and content descriptions — no test tag was added for them — with
+  the Compose clock paused and every wait bounded. Five things not to undo.
   **No `google-services.json`** here either, for the reason given above. **The tests skip
   themselves without the host argument**, so the `instrumented` job runs them as skipped and
   keeps `FakeFirebaseModule` for everything else — and the `e2e` job fails on any skip, so the
@@ -378,7 +385,7 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   co-parent's sync skipped every event without one. **What it cannot do** stays on the device
   checklist: real FCM delivery (no emulator exists for it — the queue document is written, the
   push is not sent), two screens at once (Bob's side is the data layer), a file opened in a viewer
-  app, and the chat UI's family switch (`ChatPartnerSource`, M-8), which the e2e job does not drive.
+  app, and the push from another family switching families on tap (M-8).
 
   **A feature that works between two phones ships with its two-parent test** (September 2026).
   `tools/check-e2e-coverage.js` (run in `invariants`) discovers every shared surface from the
