@@ -909,6 +909,60 @@ class CoPlanlyDatabaseMigrationTest {
         }
     }
 
+    /**
+     * 39-to-40 dates every child and pet record by an instant (the MON-4 finding), exactly as
+     * 38-to-39 dated events: `updatedAtMillis` is the stored wall clock read in this device's
+     * zone — the forced UTC+05:30 above — the wall clock itself is kept for display, and an
+     * unreadable value lands on the epoch. Needs `40.json`, which the Regenerate workflow exports.
+     */
+    @Test
+    fun migration39To40_datesEveryChildAndPetByItsInstant() {
+        val db = helper.createDatabase(TEST_DB, VERSION_39)
+        listOf("c1" to "2026-08-01T12:00:00", "c2" to "not a date").forEach { (id, updatedAt) ->
+            db.execSQL(
+                """
+                INSERT INTO child_info (id, childName, medicationsJson, activitiesJson, allergiesJson,
+                                        emergencyContactsJson, medicalProfileJson, medicalPhotosJson,
+                                        guestsJson, createdAt, updatedAt, syncedToFirestore)
+                VALUES (?, 'Ema', '[]', '[]', '[]', '[]', '{}', '[]', '{}',
+                        '2026-08-01T09:00:00', ?, 0)
+                """.trimIndent(),
+                arrayOf<Any>(id, updatedAt)
+            )
+        }
+        db.execSQL(
+            """
+            INSERT INTO pets (id, name, species, medicationsJson, vaccinationsJson, photosJson,
+                              createdAt, updatedAt, syncedToFirestore)
+            VALUES ('p1', 'Rex', 'DOG', '[]', '[]', '[]', '2026-08-01T09:00:00',
+                    '2026-08-01T12:00:00', 0)
+            """.trimIndent()
+        )
+        db.close()
+
+        val migrated = helper.runMigrationsAndValidate(
+            TEST_DB,
+            VERSION_40,
+            true,
+            DatabaseMigrations.MIGRATION_39_40
+        )
+
+        migrated.query("SELECT id, updatedAt, updatedAtMillis FROM child_info ORDER BY id").use {
+            assertTrue(it.moveToFirst())
+            assertEquals("c1", it.getString(0))
+            assertEquals("the displayed wall clock is kept", "2026-08-01T12:00:00", it.getString(1))
+            assertEquals(NOON_AT_PLUS_FIVE_THIRTY_MILLIS, it.getLong(2))
+            assertTrue(it.moveToNext())
+            assertEquals("c2", it.getString(0))
+            assertEquals("an unreadable value lands on the epoch", 0L, it.getLong(2))
+        }
+        migrated.query("SELECT updatedAt, updatedAtMillis FROM pets").use {
+            assertTrue(it.moveToFirst())
+            assertEquals("2026-08-01T12:00:00", it.getString(0))
+            assertEquals(NOON_AT_PLUS_FIVE_THIRTY_MILLIS, it.getLong(1))
+        }
+    }
+
     private companion object {
         const val TEST_DB = "coplanly-migration-test.db"
         const val VERSION_11 = 11
@@ -930,6 +984,7 @@ class CoPlanlyDatabaseMigrationTest {
         const val VERSION_37 = 37
         const val VERSION_38 = 38
         const val VERSION_39 = 39
+        const val VERSION_40 = 40
 
         /** 2026-08-01T12:00:00 at UTC+05:30, i.e. 06:30:00Z. */
         const val NOON_AT_PLUS_FIVE_THIRTY_MILLIS = 1_785_565_800_000L

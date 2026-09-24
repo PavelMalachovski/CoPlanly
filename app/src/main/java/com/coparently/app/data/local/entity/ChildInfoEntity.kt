@@ -21,7 +21,7 @@ import java.time.LocalDateTime
  * @property medicalPhotosJson JSON array of photograph download URLs; `[]` when none
  * @property guestsJson JSON object of guest grants keyed by uid; `{}` when none
  * @property createdAt Timestamp when the info was created
- * @property updatedAt Timestamp when the info was last updated
+ * @property updatedAt Wall-clock time, for display, when the info was last updated
  * @property createdByFirebaseUid Firebase UID of the user who created this info
  * @property lastModifiedBy Firebase UID of the user who last modified this info
  * @property syncedToFirestore Whether the info has been synced to Firestore
@@ -55,6 +55,14 @@ data class ChildInfoEntity(
     val guestsJson: String = "{}",
     val createdAt: LocalDateTime,
     val updatedAt: LocalDateTime,
+    /**
+     * When the child record was last saved, epoch millis — the instant two phones compare (schema 40).
+     *
+     * [updatedAt] stays as the wall clock the app displays. No default, for the reason
+     * [EventEntity.updatedAtMillis] gives: a forgotten value would upload as 1970 and lose every
+     * conflict. See [com.coparently.app.domain.events.EventTimestamp].
+     */
+    val updatedAtMillis: Long,
     val createdByFirebaseUid: String?,
     val lastModifiedBy: String?,
     val syncedToFirestore: Boolean,

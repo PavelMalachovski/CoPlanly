@@ -576,7 +576,8 @@ class SyncService @Inject constructor(
                 ),
                 "guests" to ChildInfoGuests.encode(guestsOf(entity)),
                 "createdAt" to entity.createdAt.format(formatter),
-                "updatedAt" to entity.updatedAt.format(formatter),
+                // UTC, offset-free, from the instant (schema 40) — see `EventTimestamp`.
+                "updatedAt" to EventTimestamp.toWire(entity.updatedAtMillis),
                 "createdByFirebaseUid" to entity.createdByFirebaseUid,
                 "lastModifiedBy" to entity.lastModifiedBy,
                 "familyId" to (entity.familyId ?: ""),
@@ -607,8 +608,8 @@ class SyncService @Inject constructor(
             for (firestoreData in firestoreList) {
                 // The co-parent deleted the child record. Answered from the raw document, and
                 // ahead of the conflict resolver: a deletion is decided by rule rather than by
-                // comparing `updatedAt`, which is a naive `LocalDateTime` with SEC-4's ordering
-                // defect.
+                // comparing `updatedAtMillis` — an older build still writes its own wall clock
+                // into `updatedAt`, so the instant is only as good as its writer (schema 40).
                 if (Tombstone.isDeleted(firestoreData)) {
                     childInfoDao.deleteChildInfoById(firestoreData["id"] as? String ?: continue)
                     continue
@@ -659,7 +660,7 @@ class SyncService @Inject constructor(
                                 ),
                                 "guests" to ChildInfoGuests.encode(guestsOf(localEntity)),
                                 "createdAt" to localEntity.createdAt.format(formatter),
-                                "updatedAt" to LocalDateTime.now().format(formatter),
+                                "updatedAt" to EventTimestamp.toWire(System.currentTimeMillis()),
                                 "createdByFirebaseUid" to localEntity.createdByFirebaseUid,
                                 "lastModifiedBy" to userId,
                                 "familyId" to (localEntity.familyId ?: "")
@@ -864,6 +865,7 @@ class SyncService @Inject constructor(
     }
 
     private fun Map<String, Any?>.toChildInfoEntity(): com.coparently.app.data.local.entity.ChildInfoEntity {
+        val updatedAtMillis = EventTimestamp.fromWire(this["updatedAt"] as String)
         return com.coparently.app.data.local.entity.ChildInfoEntity(
             id = this["id"] as String,
             childName = this["childName"] as String,
@@ -878,7 +880,10 @@ class SyncService @Inject constructor(
             medicalPhotosJson = gson.toJson(ChildInfoPhotos.decode(this["medicalPhotos"])),
             guestsJson = gson.toJson(ChildInfoGuests.encode(ChildInfoGuests.decode(this["guests"]))),
             createdAt = LocalDateTime.parse(this["createdAt"] as String, formatter),
-            updatedAt = LocalDateTime.parse(this["updatedAt"] as String, formatter),
+            // Read as UTC — what an upgraded build writes — and a legacy naive value the same way,
+            // wrong by its writer's offset and irreducibly so (schema 40, see `EventTimestamp`).
+            updatedAt = EventTimestamp.toWallClock(updatedAtMillis),
+            updatedAtMillis = updatedAtMillis,
             createdByFirebaseUid = this["createdByFirebaseUid"] as? String,
             lastModifiedBy = this["lastModifiedBy"] as? String,
             syncedToFirestore = true,

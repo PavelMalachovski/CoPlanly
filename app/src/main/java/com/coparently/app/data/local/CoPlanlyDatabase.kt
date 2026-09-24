@@ -51,7 +51,7 @@ import com.coparently.app.data.local.entity.UserEntity
         ParentingPlanEntryEntity::class,
         EventVersionOutboxEntity::class
     ],
-    version = 39,
+    version = 40,
     exportSchema = true
 )
 @TypeConverters(Converters::class)

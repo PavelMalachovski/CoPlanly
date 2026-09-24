@@ -6,6 +6,7 @@ import com.coparently.app.data.local.entity.ChildInfoEntity
 import com.coparently.app.data.local.entity.UserEntity
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestoreChildInfoDataSource
+import com.coparently.app.domain.events.EventTimestamp
 import com.coparently.app.domain.model.ChildInfo
 import com.google.firebase.auth.FirebaseUser
 import io.mockk.coEvery
@@ -158,6 +159,7 @@ class ChildInfoPhotosMappingTest {
         medicalPhotosJson = photosJson,
         createdAt = NOW,
         updatedAt = NOW,
+        updatedAtMillis = EventTimestamp.ofWallClock(NOW),
         createdByFirebaseUid = ALICE,
         lastModifiedBy = ALICE,
         syncedToFirestore = true

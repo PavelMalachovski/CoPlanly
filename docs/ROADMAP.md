@@ -1451,9 +1451,16 @@ is the one definition and says why, and four decisions are worth knowing before 
   rows ever compared are this device's unsynced edits, written here. Downloaded rows are read in
   the wrong zone, are never compared while synced, and are replaced on the next download.
 
-Not changed, and the same defect: `ChildInfoEntity.updatedAt` is still naive and still compared by
-`resolveChildInfoConflict`; pets carry the same field. Neither is in answer 3's scope, which named
-events.
+**Children and pets followed (schema 40).** The finding this entry used to end on —
+`ChildInfoEntity.updatedAt` naive and still compared by `resolveChildInfoConflict`, pets carrying
+the same field — is closed the same way: `ChildInfoEntity`/`PetEntity.updatedAtMillis` (no default),
+derived in `ChildInfoRepositoryImpl`/`PetRepositoryImpl.toEntity` from the wall clock each save
+stamps, compared by `resolveChildInfoConflict`, and written as the same offset-free UTC text
+through `EventTimestamp` by both repositories and by `SyncService`'s two child maps.
+`MIGRATION_39_40` backfills both tables from the stored wall clock in the device's zone, as 38→39
+did. Pets have no conflict comparison at all today (the pull overwrites after the upload); their
+column exists so the two collections keep one wire form and any future comparison starts from the
+instant. Needs `40.json` from the Regenerate workflow before its migration test can run.
 
 **Left as a limit, not a task:** the events rule does not *require* a revision beside each write,
 so an older build or a modified client can still edit without recording one. Demanding it
