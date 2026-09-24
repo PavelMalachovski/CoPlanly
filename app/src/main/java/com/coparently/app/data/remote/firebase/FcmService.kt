@@ -5,7 +5,6 @@ import com.coparently.app.data.local.preferences.PreferenceKeys
 import com.coparently.app.domain.family.FamilyKey
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.messaging.FirebaseMessaging
-import com.google.gson.Gson
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -21,8 +20,6 @@ class FcmService @Inject constructor(
     private val firebaseAuthService: FirebaseAuthService,
     private val encryptedPreferences: EncryptedPreferences
 ) {
-    private val gson = Gson()
-
     /** Whether this person has left push notifications on. On unless they switched it off. */
     fun isPushEnabled(): Boolean =
         encryptedPreferences.getString(PreferenceKeys.PUSH_ENABLED, null) != false.toString()

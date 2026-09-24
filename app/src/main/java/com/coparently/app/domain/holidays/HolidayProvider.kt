@@ -164,7 +164,12 @@ interface HolidayProvider {
  * Orthodox Easter is a *different* computation (Julian reckoning) and does not belong in this
  * function. A provider that needs it should say so in its own file rather than adding a flag
  * here.
+ *
+ * `MagicNumber` is suppressed because the literals *are* the published algorithm (Meeus,
+ * *Astronomical Algorithms*, ch. 8): naming them would only make it harder to check against the
+ * source. `HolidayReferenceTest` pins every Easter from 2020 to 2035.
  */
+@Suppress("MagicNumber")
 fun gregorianEasterSunday(year: Int): LocalDate {
     val a = year % 19
     val b = year / 100

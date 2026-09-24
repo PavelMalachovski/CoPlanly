@@ -5,7 +5,6 @@ import com.google.api.client.http.javanet.NetHttpTransport
 import com.google.api.client.json.gson.GsonFactory
 import com.google.api.client.util.DateTime
 import com.google.api.services.calendar.Calendar
-import com.google.api.services.calendar.CalendarScopes
 import com.google.api.services.calendar.model.EventDateTime
 import com.google.api.services.calendar.model.Events
 import java.io.IOException
@@ -22,8 +21,7 @@ import com.google.api.services.calendar.model.Event as GoogleCalendarEvent
 @Singleton
 class GoogleCalendarApi @Inject constructor() {
     companion object {
-        private val SCOPES = listOf(CalendarScopes.CALENDAR)
-        private val APPLICATION_NAME = "CoPlanly"
+        private const val APPLICATION_NAME = "CoPlanly"
         private val JSON_FACTORY = GsonFactory.getDefaultInstance()
         private val HTTP_TRANSPORT = NetHttpTransport()
 

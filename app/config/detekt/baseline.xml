@@ -114,40 +114,6 @@
     <ID>MagicNumber:CalendarScreen.kt$500</ID>
     <ID>MagicNumber:CalendarScreen.kt$59</ID>
     <ID>MagicNumber:CalendarScreen.kt$6</ID>
-    <ID>MagicNumber:CategoryPalette.kt$CategoryPalette$0.0031308</ID>
-    <ID>MagicNumber:CategoryPalette.kt$CategoryPalette$0.0259040371</ID>
-    <ID>MagicNumber:CategoryPalette.kt$CategoryPalette$0.04045</ID>
-    <ID>MagicNumber:CategoryPalette.kt$CategoryPalette$0.0514459929</ID>
-    <ID>MagicNumber:CategoryPalette.kt$CategoryPalette$0.055</ID>
-    <ID>MagicNumber:CategoryPalette.kt$CategoryPalette$0.0638541728</ID>
-    <ID>MagicNumber:CategoryPalette.kt$CategoryPalette$0.0883024619</ID>
-    <ID>MagicNumber:CategoryPalette.kt$CategoryPalette$0.0894841775</ID>
-    <ID>MagicNumber:CategoryPalette.kt$CategoryPalette$0.1055613458</ID>
-    <ID>MagicNumber:CategoryPalette.kt$CategoryPalette$0.1073969566</ID>
-    <ID>MagicNumber:CategoryPalette.kt$CategoryPalette$0.2119034982</ID>
-    <ID>MagicNumber:CategoryPalette.kt$CategoryPalette$0.2158037573</ID>
-    <ID>MagicNumber:CategoryPalette.kt$CategoryPalette$0.2817188376</ID>
-    <ID>MagicNumber:CategoryPalette.kt$CategoryPalette$0.3963377774</ID>
-    <ID>MagicNumber:CategoryPalette.kt$CategoryPalette$0.4122214708</ID>
-    <ID>MagicNumber:CategoryPalette.kt$CategoryPalette$0.4505937099</ID>
-    <ID>MagicNumber:CategoryPalette.kt$CategoryPalette$0.5363325363</ID>
-    <ID>MagicNumber:CategoryPalette.kt$CategoryPalette$0.6299787005</ID>
-    <ID>MagicNumber:CategoryPalette.kt$CategoryPalette$0.6806995451</ID>
-    <ID>MagicNumber:CategoryPalette.kt$CategoryPalette$0.7827717662</ID>
-    <ID>MagicNumber:CategoryPalette.kt$CategoryPalette$0.8086757660</ID>
-    <ID>MagicNumber:CategoryPalette.kt$CategoryPalette$0xFF</ID>
-    <ID>MagicNumber:CategoryPalette.kt$CategoryPalette$1.055</ID>
-    <ID>MagicNumber:CategoryPalette.kt$CategoryPalette$1.2914855480</ID>
-    <ID>MagicNumber:CategoryPalette.kt$CategoryPalette$1.9779984951</ID>
-    <ID>MagicNumber:CategoryPalette.kt$CategoryPalette$12.92</ID>
-    <ID>MagicNumber:CategoryPalette.kt$CategoryPalette$16</ID>
-    <ID>MagicNumber:CategoryPalette.kt$CategoryPalette$2.4</ID>
-    <ID>MagicNumber:CategoryPalette.kt$CategoryPalette$2.4285922050</ID>
-    <ID>MagicNumber:CategoryPalette.kt$CategoryPalette$24</ID>
-    <ID>MagicNumber:CategoryPalette.kt$CategoryPalette$255</ID>
-    <ID>MagicNumber:CategoryPalette.kt$CategoryPalette$255.0</ID>
-    <ID>MagicNumber:CategoryPalette.kt$CategoryPalette$3</ID>
-    <ID>MagicNumber:CategoryPalette.kt$CategoryPalette$8</ID>
     <ID>MagicNumber:CategoryPieChart.kt$100.0</ID>
     <ID>MagicNumber:CategoryPieChart.kt$1200.0</ID>
     <ID>MagicNumber:CoPlanlyApplication.kt$CoPlanlyApplication$10</ID>
@@ -171,24 +137,6 @@
     <ID>MagicNumber:CustodySetupScreen.kt$7</ID>
     <ID>MagicNumber:CustodySetupViewModel.kt$CustodySetupViewModel$28</ID>
     <ID>MagicNumber:CustodySetupViewModel.kt$CustodySetupViewModel$7</ID>
-    <ID>MagicNumber:CzechHolidays.kt$CzechHolidays$10</ID>
-    <ID>MagicNumber:CzechHolidays.kt$CzechHolidays$11</ID>
-    <ID>MagicNumber:CzechHolidays.kt$CzechHolidays$12</ID>
-    <ID>MagicNumber:CzechHolidays.kt$CzechHolidays$17</ID>
-    <ID>MagicNumber:CzechHolidays.kt$CzechHolidays$23</ID>
-    <ID>MagicNumber:CzechHolidays.kt$CzechHolidays$24</ID>
-    <ID>MagicNumber:CzechHolidays.kt$CzechHolidays$25</ID>
-    <ID>MagicNumber:CzechHolidays.kt$CzechHolidays$26</ID>
-    <ID>MagicNumber:CzechHolidays.kt$CzechHolidays$28</ID>
-    <ID>MagicNumber:CzechHolidays.kt$CzechHolidays$29</ID>
-    <ID>MagicNumber:CzechHolidays.kt$CzechHolidays$3</ID>
-    <ID>MagicNumber:CzechHolidays.kt$CzechHolidays$30</ID>
-    <ID>MagicNumber:CzechHolidays.kt$CzechHolidays$31</ID>
-    <ID>MagicNumber:CzechHolidays.kt$CzechHolidays$5</ID>
-    <ID>MagicNumber:CzechHolidays.kt$CzechHolidays$6</ID>
-    <ID>MagicNumber:CzechHolidays.kt$CzechHolidays$7</ID>
-    <ID>MagicNumber:CzechHolidays.kt$CzechHolidays$8</ID>
-    <ID>MagicNumber:CzechHolidays.kt$CzechHolidays$9</ID>
     <ID>MagicNumber:DateRangeHelper.kt$DateRangeHelper$7</ID>
     <ID>MagicNumber:DayWeekView.kt$0.25f</ID>
     <ID>MagicNumber:DayWeekView.kt$0.5f</ID>
@@ -215,31 +163,10 @@
     <ID>MagicNumber:FirebaseAuthService.kt$FirebaseAuthService$100</ID>
     <ID>MagicNumber:GuestAccessDuration.kt$GuestAccessDuration.QUARTER$90</ID>
     <ID>MagicNumber:GuestAccessDuration.kt$GuestAccessDuration.WEEK$7</ID>
-    <ID>MagicNumber:HolidayProvider.kt$100</ID>
-    <ID>MagicNumber:HolidayProvider.kt$11</ID>
-    <ID>MagicNumber:HolidayProvider.kt$114</ID>
-    <ID>MagicNumber:HolidayProvider.kt$15</ID>
-    <ID>MagicNumber:HolidayProvider.kt$19</ID>
-    <ID>MagicNumber:HolidayProvider.kt$22</ID>
-    <ID>MagicNumber:HolidayProvider.kt$25</ID>
-    <ID>MagicNumber:HolidayProvider.kt$3</ID>
-    <ID>MagicNumber:HolidayProvider.kt$30</ID>
-    <ID>MagicNumber:HolidayProvider.kt$31</ID>
-    <ID>MagicNumber:HolidayProvider.kt$32</ID>
-    <ID>MagicNumber:HolidayProvider.kt$4</ID>
-    <ID>MagicNumber:HolidayProvider.kt$451</ID>
-    <ID>MagicNumber:HolidayProvider.kt$7</ID>
-    <ID>MagicNumber:HolidayProvider.kt$8</ID>
     <ID>MagicNumber:HomeScreen.kt$4</ID>
     <ID>MagicNumber:MonthView.kt$0.8f</ID>
     <ID>MagicNumber:MonthView.kt$6</ID>
     <ID>MagicNumber:MonthView.kt$8</ID>
-    <ID>MagicNumber:ParentPalette.kt$ParentColorChoice.ORANGE$0xFFBF360C</ID>
-    <ID>MagicNumber:ParentPalette.kt$ParentColorChoice.ORANGE$0xFFD84315</ID>
-    <ID>MagicNumber:ParentPalette.kt$ParentColorChoice.ORANGE$0xFFFFAB91</ID>
-    <ID>MagicNumber:ParentPalette.kt$ParentColorChoice.PURPLE$0xFF4A148C</ID>
-    <ID>MagicNumber:ParentPalette.kt$ParentColorChoice.PURPLE$0xFF7B1FA2</ID>
-    <ID>MagicNumber:ParentPalette.kt$ParentColorChoice.PURPLE$0xFFCE93D8</ID>
     <ID>MagicNumber:PreviewHelpers.kt$10</ID>
     <ID>MagicNumber:PreviewHelpers.kt$12</ID>
     <ID>MagicNumber:PreviewHelpers.kt$9</ID>
@@ -278,7 +205,6 @@
     <ID>MaximumLineLength:DatabaseMigrations.kt$DatabaseMigrations.&lt;no name provided&gt;$ </ID>
     <ID>MaximumLineLength:NavGraph.kt$ </ID>
     <ID>MaximumLineLength:SyncService.kt$SyncService$ </ID>
-    <ID>MayBeConst:GoogleCalendarApi.kt$GoogleCalendarApi.Companion$private val APPLICATION_NAME = "CoPlanly"</ID>
     <ID>MemberNameEqualsClassName:EncryptedPreferences.kt$EncryptedPreferences$private val encryptedPreferences: SharedPreferences = createEncryptedStore(context)</ID>
     <ID>NestedBlockDepth:SyncService.kt$SyncService$private suspend fun syncEvents(userId: String): Int</ID>
     <ID>NoWildcardImports:ActivityEditor.kt$import androidx.compose.foundation.layout.*</ID>
@@ -374,10 +300,7 @@
     <ID>UnusedParameter:DayWeekView.kt$baseDate: LocalDate</ID>
     <ID>UnusedParameter:DayWeekView.kt$baseHour: Int</ID>
     <ID>UnusedPrivateProperty:CredentialManagerService.kt$CredentialManagerService$private val credentialManager: CredentialManager? = try { CredentialManager.create(context) } catch (e: Exception) { Log.e(TAG, "Failed to create CredentialManager", e) null }</ID>
-    <ID>UnusedPrivateProperty:DayWeekView.kt$val headerHeight = dims.buttonHeight * 1.6f // Match header height</ID>
     <ID>UnusedPrivateProperty:EncryptionManager.kt$EncryptionManager$@ApplicationContext private val context: Context</ID>
-    <ID>UnusedPrivateProperty:FcmService.kt$FcmService$private val gson = Gson()</ID>
-    <ID>UnusedPrivateProperty:GoogleCalendarApi.kt$GoogleCalendarApi.Companion$private val SCOPES = listOf(CalendarScopes.CALENDAR)</ID>
     <ID>UnusedPrivateProperty:HomeViewModel.kt$HomeViewModel$/** * Whether a co-parent is linked. Driven by the pairing repository's realtime state, so * the CTA disappears the moment the other parent accepts — without the user reopening * the screen. It now gates the whole page rather than one card; see [uiState]. * * [PairingState.Loading] (the initial state, and what the repository falls back to if its * Firestore listener fails permanently) is treated as "not paired" here, i.e. this card * shows. Note this is not the user's only route to pairing — Settings has its own * unconditional "Co-Parent Pairing" entry (`SettingsScreen`, wired in `NavGraph`) that * works regardless of this flow, so a stuck `Loading` state never makes pairing * unreachable app-wide. The choice below is scoped to *this card* only: showing it to an * already-paired user is a one-frame cosmetic glitch that self-corrects on the next * snapshot, while hiding it from an unpaired user silently drops Home's primary, most * visible invitation to pair — with nothing on this screen hinting that anything is * wrong or that they should look in Settings instead. Between an occasional redundant * card and a silently missing primary CTA, the former is the smaller cost, so "not * paired" is what this flow defaults to while the real answer is unknown. * * That reasoning got *stronger* when this began gating the page — and then stopped applying * at all, because [uiState] no longer has to choose. While the answer is unknown the page * draws [HomeUiState.Loading] and asserts neither thing. This flow is kept for the one case * that still needs a decision: a `Loading` that never resolves. */ private val paired: StateFlow&lt;Boolean&gt; = pairingState .map { it is PairingState.Paired } .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), false)</ID>
     <ID>UnusedPrivateProperty:MainActivity.kt$MainActivity$private val pendingGuestCode: StateFlow&lt;String?&gt; = _pendingGuestCode</ID>
     <ID>UnusedPrivateProperty:MainActivity.kt$MainActivity$private val pendingPairingCode: StateFlow&lt;String?&gt; = _pendingPairingCode</ID>

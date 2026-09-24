@@ -598,7 +598,6 @@ private fun DayWeekPage(
             val hourLabelWidth = dims.hourGutterWidth
             val horizontalPadding = 8.dp
             val daySpacing = 4.dp
-            val headerHeight = dims.buttonHeight * 1.6f // Match header height
 
             Box(
                 modifier = Modifier
@@ -606,7 +605,7 @@ private fun DayWeekPage(
                     .padding(
                         start = horizontalPadding + hourLabelWidth,
                         end = horizontalPadding
-                        // top = headerHeight  <- REMOVED: This was causing the time offset issue!
+                        // No top padding: offsetting by the header height shifted every event.
                     )
                     .clipToBounds() // Prevent events from drawing over the header
             ) {
