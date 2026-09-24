@@ -2,14 +2,10 @@
 <SmellBaseline>
   <ManuallySuppressedIssues></ManuallySuppressedIssues>
   <CurrentIssues>
-    <ID>ArgumentListWrapping:CalendarScreen.kt$( custodyModel, pendingProposal, activeMemberFilter, getCustody, getProposedCustody, getContactWindows )</ID>
     <ID>ArgumentListWrapping:ChildInfoRepositoryImpl.kt$ChildInfoRepositoryImpl$(activitiesJson, Array&lt;com.coparently.app.domain.model.Activity&gt;::class.java)</ID>
     <ID>ArgumentListWrapping:ChildInfoRepositoryImpl.kt$ChildInfoRepositoryImpl$(emergencyContactsJson, Array&lt;com.coparently.app.domain.model.EmergencyContact&gt;::class.java)</ID>
     <ID>ArgumentListWrapping:ChildInfoRepositoryImpl.kt$ChildInfoRepositoryImpl$(it, com.coparently.app.domain.model.SchoolInfo::class.java)</ID>
     <ID>ArgumentListWrapping:ChildInfoRepositoryImpl.kt$ChildInfoRepositoryImpl$(medicationsJson, Array&lt;com.coparently.app.domain.model.Medication&gt;::class.java)</ID>
-    <ID>ArgumentListWrapping:ChildrenTodayTest.kt$ChildrenTodayTest$(ChildrenToday.of(slotTwoWeek, family.copy(childOverrides = emptyList()), emptyMap(), members).isEmpty())</ID>
-    <ID>ArgumentListWrapping:ChildrenTodayTest.kt$ChildrenTodayTest$(childOverrides = emptyList())</ID>
-    <ID>ArgumentListWrapping:ChildrenTodayTest.kt$ChildrenTodayTest$(slotTwoWeek, family.copy(childOverrides = emptyList()), emptyMap(), members)</ID>
     <ID>ArgumentListWrapping:ContactDirectoryTest.kt$ContactDirectoryTest$( "c1", "Mia", contact("Nina", "Grandmother", "+420111"), contact("Nina", "Neighbour", "+420222") )</ID>
     <ID>ArgumentListWrapping:ContactDirectoryTest.kt$ContactDirectoryTest$( "c1", "Mia", contact("Nina", "Grandmother", phone = "+420111", alternate = "+420999") )</ID>
     <ID>ArgumentListWrapping:CredentialManagerService.kt$CredentialManagerService$("Google OAuth not configured. Please:\n1. Go to Google Cloud Console\n2. Create OAuth 2.0 Client ID for Web application\n3. Add the Client ID to default_web_client_id in strings.xml\n4. Enable Google Calendar API")</ID>
@@ -309,7 +305,6 @@
     <ID>MagicNumber:ValidationUtils.kt$ValidationUtils$15</ID>
     <ID>MagicNumber:ValidationUtils.kt$ValidationUtils$254</ID>
     <ID>MagicNumber:ValidationUtils.kt$ValidationUtils$50</ID>
-    <ID>MatchingDeclarationName:ChildScheduleForm.kt$ChildScope</ID>
     <ID>MatchingDeclarationName:Color.kt$CoPlanlyColors</ID>
     <ID>MatchingDeclarationName:WindowSize.kt$Dimensions</ID>
     <ID>MaxLineLength:CalendarScreen.kt$onEventResize</ID>
@@ -317,7 +312,6 @@
     <ID>MaxLineLength:ChildInfoRepositoryImpl.kt$ChildInfoRepositoryImpl$emergencyContacts = gson.fromJson(emergencyContactsJson, Array&lt;com.coparently.app.domain.model.EmergencyContact&gt;::class.java).toList()</ID>
     <ID>MaxLineLength:ChildInfoRepositoryImpl.kt$ChildInfoRepositoryImpl$medications = gson.fromJson(medicationsJson, Array&lt;com.coparently.app.domain.model.Medication&gt;::class.java).toList()</ID>
     <ID>MaxLineLength:ChildInfoRepositoryImpl.kt$ChildInfoRepositoryImpl$schoolInfo = schoolInfoJson?.let { gson.fromJson(it, com.coparently.app.domain.model.SchoolInfo::class.java) }</ID>
-    <ID>MaxLineLength:ChildrenTodayTest.kt$ChildrenTodayTest$assertTrue(ChildrenToday.of(slotTwoWeek, family.copy(childOverrides = emptyList()), emptyMap(), members).isEmpty())</ID>
     <ID>MaxLineLength:CredentialManagerService.kt$CredentialManagerService$throw IllegalStateException("Google OAuth not configured. Please:\n1. Go to Google Cloud Console\n2. Create OAuth 2.0 Client ID for Web application\n3. Add the Client ID to default_web_client_id in strings.xml\n4. Enable Google Calendar API")</ID>
     <ID>MaxLineLength:CredentialManagerService.kt$CredentialManagerService$throw IllegalStateException("Web Client ID not configured. Please set up OAuth 2.0 Client ID in Google Cloud Console and update default_web_client_id in strings.xml")</ID>
     <ID>MaxLineLength:CzechHolidays.kt$CzechHolidays$cs(LocalDate.of(year, 10, 28), "Independent Czechoslovak State Day", "Den vzniku samostatného československého státu")</ID>
@@ -333,7 +327,6 @@
     <ID>MaxLineLength:SyncViewModel.kt$SyncViewModel$suspend</ID>
     <ID>MaximumLineLength:CalendarScreen.kt$ </ID>
     <ID>MaximumLineLength:ChildInfoRepositoryImpl.kt$ChildInfoRepositoryImpl$ </ID>
-    <ID>MaximumLineLength:ChildrenTodayTest.kt$ChildrenTodayTest$ </ID>
     <ID>MaximumLineLength:CredentialManagerService.kt$CredentialManagerService$ </ID>
     <ID>MaximumLineLength:CzechHolidays.kt$CzechHolidays$ </ID>
     <ID>MaximumLineLength:DatabaseMigrations.kt$DatabaseMigrations.&lt;no name provided&gt;$ </ID>

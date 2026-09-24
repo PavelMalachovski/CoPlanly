@@ -59,7 +59,8 @@ class ChildrenTodayTest {
     @Test
     fun `one child, or no override, or no schedule, never grows the hero`() {
         assertTrue(ChildrenToday.of(slotTwoWeek, family, emptyMap(), members.take(1)).isEmpty())
-        assertTrue(ChildrenToday.of(slotTwoWeek, family.copy(childOverrides = emptyList()), emptyMap(), members).isEmpty())
+        val noOverrides = family.copy(childOverrides = emptyList())
+        assertTrue(ChildrenToday.of(slotTwoWeek, noOverrides, emptyMap(), members).isEmpty())
         assertTrue(ChildrenToday.of(slotTwoWeek, null, emptyMap(), members).isEmpty())
     }
 }

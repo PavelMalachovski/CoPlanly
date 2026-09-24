@@ -297,7 +297,7 @@ class CustodySetupViewModel @Inject constructor(
      * Scoped to a child (FAM-4), it saves that child's own schedule instead — or, with
      * [followFamily], sends the child back to the family schedule, which needs no valid form.
      */
-    fun save(onSuccess: () -> Unit = {}, followFamily: Boolean = false) {
+    fun save(followFamily: Boolean = false, onSuccess: () -> Unit = {}) {
         val state = _uiState.value
         if (!state.isValid && !followFamily) return
 

@@ -376,7 +376,12 @@ fun CalendarScreen(
     // swap sheet, `DaySwapInbox`) keeps reading the family's `getCustody` above, because a swap is
     // offered against the family schedule; the grid only draws from `grid`.
     val grid: GridCustody = remember(
-        custodyModel, pendingProposal, activeMemberFilter, getCustody, getProposedCustody, getContactWindows
+        custodyModel,
+        pendingProposal,
+        activeMemberFilter,
+        getCustody,
+        getProposedCustody,
+        getContactWindows
     ) {
         ChildCustodyBand.of(
             model = custodyModel,
