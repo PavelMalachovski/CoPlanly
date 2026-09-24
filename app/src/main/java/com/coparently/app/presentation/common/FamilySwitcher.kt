@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -36,6 +37,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.data.family.FamilyOption
 import com.coparently.app.data.family.FamilySignal
+import com.coparently.app.presentation.theme.LayoutConstants
 
 /** Wide enough for a first name and a surname; a longer one ellipsises. */
 private val CHIP_MAX_WIDTH = 160.dp
@@ -182,10 +184,14 @@ private fun FamilySwitcherRow(
         modifier = Modifier
             .fillMaxWidth()
             .selectable(selected = selected, role = Role.RadioButton, onClick = onSelect)
+            .defaultMinSize(minHeight = LayoutConstants.MIN_TOUCH_TARGET)
             .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        // A radio button with no click of its own has no padding of its own either, so the name
+        // sat against it (docs/AUDIT-2026-10-design.md D-23). The row is the target.
         RadioButton(selected = selected, onClick = null)
+        Spacer(Modifier.width(ROW_LABEL_GAP))
         Column(Modifier.weight(1f)) {
             Text(familyLabel(family))
             if (signals.isNotEmpty()) {
@@ -202,6 +208,9 @@ private fun FamilySwitcherRow(
         }
     }
 }
+
+/** Between a row's radio button and the family's name. */
+private val ROW_LABEL_GAP = 16.dp
 
 /** Joins the chip's per-kind sentences into one content description. */
 private const val SENTENCE_JOIN = ". "
