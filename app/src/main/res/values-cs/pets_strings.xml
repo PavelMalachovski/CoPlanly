@@ -8,7 +8,6 @@
     <string name="pets_add">Přidat mazlíčka</string>
     <string name="pets_group_label">Mazlíčci</string>
     <string name="pets_empty_state">Zatím žádní mazlíčci</string>
-    <string name="pets_retry">Zkusit znovu</string>
 
     <!-- Editor -->
     <string name="pet_title_add">Přidat mazlíčka</string>

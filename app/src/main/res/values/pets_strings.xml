@@ -8,7 +8,6 @@
     <string name="pets_add">Add pet</string>
     <string name="pets_group_label">Pets</string>
     <string name="pets_empty_state">No pets yet</string>
-    <string name="pets_retry">Retry</string>
 
     <!-- Editor -->
     <string name="pet_title_add">Add pet</string>

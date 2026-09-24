@@ -48,6 +48,7 @@ import com.coparently.app.R
 import com.coparently.app.domain.events.CalendarVisibility
 import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.common.EmptyState
+import com.coparently.app.presentation.common.ErrorState
 import com.coparently.app.presentation.common.InlineBanner
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.asString
@@ -144,18 +145,13 @@ fun EventListScreen(
             }
 
             is EventUiState.Error -> {
-                Box(
+                ErrorState(
+                    message = stringResource(R.string.event_list_error, state.message.asString()),
+                    onRetry = viewModel::refresh,
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(paddingValues)
-                ) {
-                    Text(
-                        text = stringResource(R.string.event_list_error, state.message.asString()),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.padding(16.dp)
-                    )
-                }
+                )
             }
 
             // Both the settled list (Success) and the transient post-op state show

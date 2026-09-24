@@ -9,7 +9,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -30,6 +29,7 @@ import com.coparently.app.domain.model.Vaccination
 import com.coparently.app.presentation.childinfo.components.MedicalPhotoStrip
 import com.coparently.app.presentation.common.ConfirmationDialog
 import com.coparently.app.presentation.common.EmptyState
+import com.coparently.app.presentation.common.ErrorState
 import com.coparently.app.presentation.common.GroupLabel
 import com.coparently.app.presentation.common.ListSkeleton
 import com.coparently.app.presentation.common.SectionGroup
@@ -130,25 +130,14 @@ fun ChildInfoScreen(
                     ListSkeleton(rows = 3)
                 }
                 is ChildInfoUiState.Error -> {
-                    Column(
-                        modifier = Modifier
-                            .align(Alignment.Center)
-                            .padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = state.message.asString(),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.error
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Button(onClick = {
+                    ErrorState(
+                        message = state.message.asString(),
+                        onRetry = {
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             viewModel.loadChildInfo()
-                        }) {
-                            Text(stringResource(R.string.childinfo_retry))
-                        }
-                    }
+                        },
+                        modifier = Modifier.fillMaxSize()
+                    )
                 }
                 is ChildInfoUiState.Success -> {
                     if (state.childInfoList.isEmpty()) {

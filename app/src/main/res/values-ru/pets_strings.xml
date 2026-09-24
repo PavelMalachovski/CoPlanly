@@ -8,7 +8,6 @@
     <string name="pets_add">Добавить питомца</string>
     <string name="pets_group_label">Питомцы</string>
     <string name="pets_empty_state">Питомцев пока нет</string>
-    <string name="pets_retry">Повторить</string>
 
     <!-- Editor -->
     <string name="pet_title_add">Добавить питомца</string>

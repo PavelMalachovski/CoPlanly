@@ -50,6 +50,7 @@ import com.coparently.app.domain.model.MedicalProfile
 import com.coparently.app.domain.model.User
 import com.coparently.app.presentation.childinfo.components.AllergyEditor
 import com.coparently.app.presentation.childinfo.components.DatePickerDialog
+import com.coparently.app.presentation.common.ErrorState
 import com.coparently.app.presentation.common.MedicalProfileEditor
 import com.coparently.app.presentation.common.PillChip
 import com.coparently.app.presentation.common.SectionGroup
@@ -219,24 +220,11 @@ private fun ProfileLoadingIndicator(modifier: Modifier = Modifier) {
  */
 @Composable
 private fun ProfileLoadFailed(onRetry: () -> Unit, modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(vertical = 48.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        Text(
-            text = stringResource(R.string.profile_load_failed),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth()
-        )
-        OutlinedButton(onClick = onRetry) {
-            Text(stringResource(R.string.common_action_retry))
-        }
-    }
+    ErrorState(
+        message = stringResource(R.string.profile_load_failed),
+        onRetry = onRetry,
+        modifier = modifier.fillMaxWidth()
+    )
 }
 
 /** The signed-in user's own record: editable fields, allergies and the medical profile. */
