@@ -38,6 +38,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -230,46 +231,70 @@ internal fun EventPreviewContent(
 
         Spacer(modifier = Modifier.height(4.dp))
 
+        PreviewActions(onEdit = onEdit, onDelete = onDelete)
+    }
+}
+
+/**
+ * Delete and Edit, side by side — or, from [STACK_ACTIONS_FONT_SCALE], one above the other with
+ * Edit first. Side by side at 150 % each half was too narrow for its word, and German broke
+ * "Löschen" and "Bearbeiten" in the middle (docs/AUDIT-2026-10-design.md, visual note V2).
+ */
+@Composable
+private fun PreviewActions(onEdit: () -> Unit, onDelete: (() -> Unit)?) {
+    val deleteButton: @Composable (Modifier, () -> Unit) -> Unit = { modifier, delete ->
+        OutlinedButton(
+            onClick = delete,
+            modifier = modifier,
+            colors = ButtonDefaults.outlinedButtonColors(
+                contentColor = MaterialTheme.colorScheme.error
+            )
+        ) {
+            Icon(
+                imageVector = Icons.Default.Delete,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp)
+            )
+            Text(
+                text = stringResource(R.string.event_preview_delete),
+                modifier = Modifier.padding(start = 6.dp)
+            )
+        }
+    }
+    val editButton: @Composable (Modifier) -> Unit = { modifier ->
+        Button(onClick = onEdit, modifier = modifier) {
+            Icon(
+                imageVector = Icons.Default.Edit,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp)
+            )
+            Text(
+                text = stringResource(R.string.event_preview_edit),
+                modifier = Modifier.padding(start = 6.dp)
+            )
+        }
+    }
+    if (LocalDensity.current.fontScale >= STACK_ACTIONS_FONT_SCALE) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            editButton(Modifier.fillMaxWidth())
+            if (onDelete != null) deleteButton(Modifier.fillMaxWidth(), onDelete)
+        }
+    } else {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            if (onDelete != null) {
-                OutlinedButton(
-                    onClick = onDelete,
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error
-                    )
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Text(
-                        text = stringResource(R.string.event_preview_delete),
-                        modifier = Modifier.padding(start = 6.dp)
-                    )
-                }
-            }
-            Button(
-                onClick = onEdit,
-                modifier = Modifier.weight(1f)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Edit,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp)
-                )
-                Text(
-                    text = stringResource(R.string.event_preview_edit),
-                    modifier = Modifier.padding(start = 6.dp)
-                )
-            }
+            if (onDelete != null) deleteButton(Modifier.weight(1f), onDelete)
+            editButton(Modifier.weight(1f))
         }
     }
 }
+
+/** From this font scale the preview's two actions stack instead of sharing a row. */
+private const val STACK_ACTIONS_FONT_SCALE = 1.3f
 
 @Composable
 private fun PreviewRow(

@@ -60,6 +60,9 @@ private const val SETTLED_EPSILON = 0.01
 /** Tint strength of the strip behind the settle-up row. */
 private const val BALANCE_STRIP_ALPHA = 0.12f
 
+/** From this font scale the month's total and its label stack instead of sharing a line. */
+private const val STACK_TOTAL_FONT_SCALE = 1.3f
+
 /**
  * Month header for the Expenses screen: which month, total spend, who paid what, and who owes
  * whom — in one card.
@@ -120,19 +123,7 @@ fun ExpenseSummaryHeader(
                 )
             }
 
-            Row(verticalAlignment = Alignment.Bottom) {
-                Text(
-                    text = format.format(balance.total),
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = stringResource(R.string.expenses_shared_spend),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(start = 10.dp, bottom = 4.dp)
-                )
-            }
+            TotalWithLabel(total = format.format(balance.total))
 
             if (balance.splitKnown) {
                 SplitBar(
@@ -145,9 +136,10 @@ fun ExpenseSummaryHeader(
                         .padding(top = 6.dp),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    // Each half gets an equal share of the row and ellipsises inside it. The
-                    // name is arbitrary length now, and without this a long one on the start
-                    // side would push the other parent's figure off the end entirely.
+                    // Each half gets an equal share of the row and wraps inside it. The name is
+                    // arbitrary length, and without the equal shares a long one on the start side
+                    // would push the other parent's figure off the end entirely. It used to
+                    // ellipsise, which at 150 % cut the amount itself ("Olya: 3.120,00 C…").
                     Text(
                         text = stringResource(
                             R.string.expenses_paid_by,
@@ -156,8 +148,6 @@ fun ExpenseSummaryHeader(
                         ),
                         style = MaterialTheme.typography.labelMedium,
                         color = ParentColors.text("mom"),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f)
                     )
                     Text(
@@ -168,8 +158,6 @@ fun ExpenseSummaryHeader(
                         ),
                         style = MaterialTheme.typography.labelMedium,
                         color = ParentColors.text("dad"),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
                         textAlign = TextAlign.End,
                         modifier = Modifier.weight(1f)
                     )
@@ -285,6 +273,43 @@ internal fun Modifier.monthSwipe(navigation: MonthNavigation): Modifier {
     }
 }
 
+/**
+ * The month's total with its "shared spend" label: beside it, or under it from
+ * [STACK_TOTAL_FONT_SCALE]. At 150 % the label beside a German total was squeezed into a sliver
+ * that broke "gemeinsame" in the middle of the word.
+ */
+@Composable
+private fun TotalWithLabel(total: String) {
+    val totalText: @Composable () -> Unit = {
+        Text(
+            text = total,
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold
+        )
+    }
+    val label = stringResource(R.string.expenses_shared_spend)
+    if (LocalDensity.current.fontScale >= STACK_TOTAL_FONT_SCALE) {
+        Column {
+            totalText()
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    } else {
+        Row(verticalAlignment = Alignment.Bottom) {
+            totalText()
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 10.dp, bottom = 4.dp)
+            )
+        }
+    }
+}
+
 /** Proportional bar, in each parent's own colour, showing what share of the month each fronted. */
 @Composable
 private fun SplitBar(momShare: Float, modifier: Modifier = Modifier) {
@@ -374,12 +399,13 @@ private fun BalanceRow(
             tint = accent,
             modifier = Modifier.size(18.dp)
         )
+        // Wraps instead of ellipsising: the amount comes last in every language, so a one-line
+        // cap cut exactly the figure this row exists to show — "Your co-parent owes yo…" in
+        // English at the default size (docs/AUDIT-2026-10-design.md D-1).
         Text(
             text = label,
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f)
         )
         if (!settled) {

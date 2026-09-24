@@ -66,6 +66,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -134,6 +135,13 @@ private const val HERO_TINT_ALPHA = 0.16f
 
 /** Below this a balance is settled — matches the Expenses screen, so the two never disagree. */
 private const val SETTLED_EPSILON = 0.01
+
+/**
+ * From this font scale the two stat tiles stack instead of sharing a row. Side by side each has
+ * about 128 dp for its text on a 411 dp phone, which "CZK3,540.00" in the tile's bold title
+ * style fills at 130 %.
+ */
+private const val STACK_TILES_FONT_SCALE = 1.3f
 
 /**
  * Home dashboard — the first screen. At-a-glance co-parenting state: the next
@@ -729,6 +737,11 @@ internal fun HandoverHero(
  * The unread tile disappears at zero rather than sitting there saying "0", which is what it
  * says most of the time; the spend tile then takes the full width.
  *
+ * Money is never ellipsised (docs/AUDIT-2026-10-design.md D-1): each currency's total gets a
+ * line of its own, a caption that does not fit wraps, and from [STACK_TILES_FONT_SCALE] the
+ * tiles stack so each has the full width. They used to share one line per text, which cut
+ * "CZK3,540.00 · €145.00" and "You are owed CZK1,770.00" off in English at the default size.
+ *
  * Internal rather than private so the JVM screenshot tests (`ScreenshotMatrix` and its
  * subclasses under `app/src/test`) can render it on its own.
  *
@@ -746,23 +759,34 @@ internal fun StatTiles(
     onOpenExpenses: () -> Unit,
     onOpenChat: () -> Unit
 ) {
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    val spendTile: @Composable (Modifier) -> Unit = { modifier ->
         StatTile(
-            modifier = Modifier.weight(1f),
+            modifier = modifier,
             icon = Icons.Default.Payments,
-            value = spend.byCurrency.joinToString(" · ") { formatMoney(it.amount, it.currency) },
+            value = spend.byCurrency.joinToString("\n") { formatMoney(it.amount, it.currency) },
             caption = balanceCaption(balances),
             onClick = onOpenExpenses
         )
-        if (unreadCount > 0) {
-            StatTile(
-                modifier = Modifier.weight(1f),
-                icon = Icons.AutoMirrored.Filled.Chat,
-                badge = unreadCount,
-                value = pluralStringResource(R.plurals.home_stat_unread_count, unreadCount, unreadCount),
-                caption = stringResource(R.string.home_stat_open_chat),
-                onClick = onOpenChat
-            )
+    }
+    val chatTile: @Composable (Modifier) -> Unit = { modifier ->
+        StatTile(
+            modifier = modifier,
+            icon = Icons.AutoMirrored.Filled.Chat,
+            badge = unreadCount,
+            value = pluralStringResource(R.plurals.home_stat_unread_count, unreadCount, unreadCount),
+            caption = stringResource(R.string.home_stat_open_chat),
+            onClick = onOpenChat
+        )
+    }
+    if (LocalDensity.current.fontScale >= STACK_TILES_FONT_SCALE) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            spendTile(Modifier.fillMaxWidth())
+            if (unreadCount > 0) chatTile(Modifier.fillMaxWidth())
+        }
+    } else {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            spendTile(Modifier.weight(1f))
+            if (unreadCount > 0) chatTile(Modifier.weight(1f))
         }
     }
 }
@@ -835,20 +859,18 @@ private fun StatTile(
                     modifier = Modifier.size(20.dp)
                 )
             }
+            // Neither line is capped: the value is money or a count and the caption says who
+            // owes whom, and a cut-off figure is a wrong figure.
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = value,
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    fontWeight = FontWeight.Bold
                 )
                 Text(
                     text = caption,
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
