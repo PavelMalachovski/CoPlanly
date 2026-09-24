@@ -14,11 +14,18 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.SolidColor
+import com.coparently.app.presentation.theme.rememberReducedMotion
 
 /**
  * Builds the animated gradient behind the shimmer effect.
  *
- * @return A brush carrying an animated horizontal gradient
+ * With animations switched off the placeholder is a flat tint instead: a shimmer is decoration
+ * that loops for as long as a screen waits, which is exactly what `rememberReducedMotion` exists
+ * to stop (docs/AUDIT-2026-10-design.md D-25). It kept sweeping for anyone who had turned
+ * animations off, while the splash and the sign-in logo already stood still.
+ *
+ * @return A brush carrying an animated horizontal gradient, or a still tint
  */
 @Composable
 private fun shimmerBrush(): Brush {
@@ -27,6 +34,9 @@ private fun shimmerBrush(): Brush {
         MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f),
         MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
     )
+    if (rememberReducedMotion()) {
+        return SolidColor(shimmerColors.first())
+    }
 
     val transition = rememberInfiniteTransition(label = "shimmer")
     val translateAnimation by transition.animateFloat(

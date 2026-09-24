@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="common_splash_tagline">Sdílený kalendář pro rodiče</string>
     <string name="common_checking_authentication">Ověřování přihlášení…</string>
     <string name="common_confirm">Potvrdit</string>
     <string name="common_dialog_cancel">Zrušit</string>

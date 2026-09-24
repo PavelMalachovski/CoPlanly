@@ -4,9 +4,8 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -108,6 +107,7 @@ import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.common.toggling
 import com.coparently.app.presentation.components.TimePickerDialog
 import com.coparently.app.presentation.theme.IconSizes
+import com.coparently.app.presentation.theme.Motion
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.dimensions
 import com.coparently.app.utils.ValidationResult
@@ -831,11 +831,11 @@ fun AddEditEventScreen(
                             ordinalLabel
                         }
                         val isSelected = parentOwner == value
+                        // A short tween, like every other selection in the app: this was the
+                        // one bouncy spring, an overshoot no other control makes (D-25).
                         val scale by animateFloatAsState(
                             targetValue = if (isSelected) 1.05f else 1f,
-                            animationSpec = spring(
-                                dampingRatio = Spring.DampingRatioMediumBouncy
-                            ),
+                            animationSpec = tween(Motion.SHORT_MS),
                             label = "parentOwnerScale"
                         )
 

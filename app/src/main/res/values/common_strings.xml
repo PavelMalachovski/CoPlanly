@@ -3,7 +3,6 @@
      Key names are deliberately distinct from the common_* keys already present
      in strings.xml to avoid duplicate resources. -->
 <resources>
-    <string name="common_splash_tagline">Shared calendar for co-parents</string>
     <string name="common_checking_authentication">Checking authentication…</string>
     <string name="common_confirm">Confirm</string>
     <string name="common_dialog_cancel">Cancel</string>

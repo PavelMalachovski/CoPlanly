@@ -371,11 +371,7 @@ fun NavGraph(
                         type = NavType.IntType
                         defaultValue = -1
                     }
-                ),
-                enterTransition = { fadeInScaleUp() },
-                exitTransition = { fadeOutScaleDown() },
-                popEnterTransition = { fadeInScaleUp() },
-                popExitTransition = { fadeOutScaleDown() }
+                )
             ) { backStackEntry ->
                 val dateString = backStackEntry.arguments?.getString(Screen.AddEvent.ARG_DATE)
                 val hourValue = backStackEntry.arguments?.getInt(Screen.AddEvent.ARG_HOUR) ?: -1
@@ -401,11 +397,7 @@ fun NavGraph(
                     navArgument(Screen.EditEvent.ARG_EVENT_ID) {
                         type = NavType.StringType
                     }
-                ),
-                enterTransition = { fadeInScaleUp() },
-                exitTransition = { fadeOutScaleDown() },
-                popEnterTransition = { fadeInScaleUp() },
-                popExitTransition = { fadeOutScaleDown() }
+                )
             ) { backStackEntry ->
                 val eventId = backStackEntry.arguments?.getString(Screen.EditEvent.ARG_EVENT_ID) ?: return@composable
                 AddEditEventScreen(
@@ -473,11 +465,7 @@ fun NavGraph(
                     navArgument(Screen.RequestChange.ARG_EVENT_ID) {
                         type = NavType.StringType
                     }
-                ),
-                enterTransition = { fadeInScaleUp() },
-                exitTransition = { fadeOutScaleDown() },
-                popEnterTransition = { fadeInScaleUp() },
-                popExitTransition = { fadeOutScaleDown() }
+                )
             ) { backStackEntry ->
                 val eventId = backStackEntry.arguments?.getString(Screen.RequestChange.ARG_EVENT_ID) ?: return@composable
                 com.coparently.app.presentation.changerequests.RequestChangeScreen(
@@ -677,11 +665,7 @@ fun NavGraph(
                     navArgument(Screen.EditChildInfo.ARG_CHILD_INFO_ID) {
                         type = NavType.StringType
                     }
-                ),
-                enterTransition = { fadeInScaleUp() },
-                exitTransition = { fadeOutScaleDown() },
-                popEnterTransition = { fadeInScaleUp() },
-                popExitTransition = { fadeOutScaleDown() }
+                )
             ) { backStackEntry ->
                 val childInfoId = backStackEntry.arguments?.getString(Screen.EditChildInfo.ARG_CHILD_INFO_ID) ?: "new"
                 com.coparently.app.presentation.childinfo.AddEditChildInfoScreen(
@@ -715,11 +699,7 @@ fun NavGraph(
                     navArgument(Screen.EditPet.ARG_PET_ID) {
                         type = NavType.StringType
                     }
-                ),
-                enterTransition = { fadeInScaleUp() },
-                exitTransition = { fadeOutScaleDown() },
-                popEnterTransition = { fadeInScaleUp() },
-                popExitTransition = { fadeOutScaleDown() }
+                )
             ) { backStackEntry ->
                 val petId = backStackEntry.arguments?.getString(Screen.EditPet.ARG_PET_ID) ?: "new"
                 AddEditPetScreen(
@@ -1056,11 +1036,7 @@ fun NavGraph(
             }
 
             composable(
-                route = Screen.AddExpense.route,
-                enterTransition = { fadeInScaleUp() },
-                exitTransition = { fadeOutScaleDown() },
-                popEnterTransition = { fadeInScaleUp() },
-                popExitTransition = { fadeOutScaleDown() }
+                route = Screen.AddExpense.route
             ) {
                 com.coparently.app.presentation.expenses.AddExpenseScreen(
                     onBack = {
@@ -1075,11 +1051,7 @@ fun NavGraph(
                     navArgument(Screen.EditExpense.ARG_EXPENSE_ID) {
                         type = NavType.StringType
                     }
-                ),
-                enterTransition = { fadeInScaleUp() },
-                exitTransition = { fadeOutScaleDown() },
-                popEnterTransition = { fadeInScaleUp() },
-                popExitTransition = { fadeOutScaleDown() }
+                )
             ) { backStackEntry ->
                 val expenseId = backStackEntry.arguments
                     ?.getString(Screen.EditExpense.ARG_EXPENSE_ID) ?: return@composable

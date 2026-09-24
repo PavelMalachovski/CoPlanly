@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="common_splash_tagline">Gemeinsamer Kalender für Co-Eltern</string>
     <string name="common_checking_authentication">Anmeldung wird geprüft…</string>
     <string name="common_confirm">Bestätigen</string>
     <string name="common_dialog_cancel">Abbrechen</string>

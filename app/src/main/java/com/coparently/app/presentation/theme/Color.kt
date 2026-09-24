@@ -113,7 +113,7 @@ object CoPlanlyColors {
 
     // Brand colors for app theme.
     // BrandPrimary is THE brand colour (UX-14) and the source of truth for it: the light theme's
-    // `primary`, the Compose splash background, and — as `@color/brand_primary` in
+    // `primary`, and — as `@color/brand_primary` in
     // res/values/colors.xml, which must hold the same value — the system splash and the launcher
     // icon background. XML cannot read a Kotlin constant, so the two copies are kept equal by
     // hand; change both or neither. The dark theme's primary (#C2C1FF) is the same hue at a light

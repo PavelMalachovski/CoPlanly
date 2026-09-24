@@ -3,24 +3,20 @@ package com.coparently.app.presentation
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
+import android.os.SystemClock
 import android.util.Log
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -41,12 +37,15 @@ import com.coparently.app.presentation.common.LocalAppMessages
 import com.coparently.app.presentation.common.ParentPaletteViewModel
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.rememberAppMessages
+import com.coparently.app.presentation.consent.TelemetryConsentViewModel
 import com.coparently.app.presentation.navigation.NavGraph
 import com.coparently.app.presentation.navigation.PendingChatLink
 import com.coparently.app.presentation.navigation.PendingChatOpen
 import com.coparently.app.presentation.navigation.PendingDestinationOpen
 import com.coparently.app.presentation.navigation.PendingInviteCodes
-import com.coparently.app.presentation.splash.SplashScreen
+import com.coparently.app.presentation.navigation.Screen
+import com.coparently.app.presentation.navigation.startDestinationFor
+import com.coparently.app.presentation.sync.AuthStateViewModel
 import com.coparently.app.presentation.sync.SyncViewModel
 import com.coparently.app.presentation.theme.CoPlanlyTheme
 import com.coparently.app.presentation.theme.LocalParentPalette
@@ -64,9 +63,15 @@ val LocalGoogleSignInCallback = staticCompositionLocalOf<((android.content.Inten
 }
 
 /**
+ * The longest the system splash is held for the first screen to be known. As long as the Compose
+ * splash it replaced took to play; a start slower than that shows the loading screen.
+ */
+private const val SPLASH_HOLD_MAX_MS = 1_500L
+
+/**
  * Main Activity for CoPlanly app.
  * Entry point of the application.
- * Handles Google Sign-In result, Push Notifications, and Splash Screen (Android 12+).
+ * Handles Google Sign-In result, Push Notifications, and the system splash screen.
  *
  * Extends [AppCompatActivity] (not ComponentActivity) so that per-app language
  * preferences set via AppCompatDelegate.setApplicationLocales are applied to this
@@ -141,6 +146,14 @@ class MainActivity : AppCompatActivity() {
 
     private val syncViewModel: SyncViewModel by viewModels()
 
+    /**
+     * What the navigation graph decides its first screen from, read here to hold the splash until
+     * that is known. The same instances `NavGraph` gets from `hiltViewModel()`: both are scoped to
+     * this activity.
+     */
+    private val authStateViewModel: AuthStateViewModel by viewModels()
+    private val telemetryConsentViewModel: TelemetryConsentViewModel by viewModels()
+
     /** Source of [LocalParentPalette] for the whole tree (UX-15). */
     private val parentPaletteViewModel: ParentPaletteViewModel by viewModels()
 
@@ -180,11 +193,20 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Install splash screen before calling super.onCreate()
-        // This ensures the splash screen is displayed on Android 12+
-        installSplashScreen()
+        // One splash: the system's, installed before super.onCreate and held until the
+        // navigation graph knows its first screen, so a launch goes from the icon to the app and
+        // never through the loading screen. A branded Compose splash used to follow it with an
+        // entrance and a hold of its own — two splashes and about 1.2 s on every cold start
+        // (docs/AUDIT-2026-10-design.md D-25). The hold is bounded: a start that has not resolved
+        // by then shows the loading screen rather than an icon that seems stuck.
+        val splashScreen = installSplashScreen()
 
         super.onCreate(savedInstanceState)
+
+        val splashDeadline = SystemClock.uptimeMillis() + SPLASH_HOLD_MAX_MS
+        splashScreen.setKeepOnScreenCondition {
+            firstScreenUnknown() && SystemClock.uptimeMillis() < splashDeadline
+        }
 
         // Enable edge-to-edge display for modern Android UI
         // This makes the app draw behind the system bars
@@ -254,41 +276,36 @@ class MainActivity : AppCompatActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    // Branded splash overlays the app on launch, then fades out to
-                    // reveal it (auth state resolves underneath while it plays).
-                    var showSplash by remember { mutableStateOf(true) }
                     val navController = rememberNavController()
                     // Snackbars that outlive the screen that raised them (D-25), shown by the
                     // navigation graph's root Scaffold.
                     val appMessages = rememberAppMessages()
 
-                    Box(modifier = Modifier.fillMaxSize()) {
-                        CompositionLocalProvider(
-                            LocalGoogleSignInCallback provides googleSignInCallback,
-                            LocalParentPalette provides parentPalette,
-                            LocalAppMessages provides appMessages
-                        ) {
-                            NavGraph(
-                                navController = navController,
-                                syncViewModel = syncViewModel,
-                                pendingInviteCodes = pendingInviteCodes,
-                                pendingChatOpen = pendingChatOpen,
-                                pendingDestinationOpen = pendingDestinationOpen
-                            )
-                        }
-
-                        AnimatedVisibility(
-                            visible = showSplash,
-                            enter = androidx.compose.animation.EnterTransition.None,
-                            exit = fadeOut(animationSpec = tween(com.coparently.app.presentation.theme.Motion.LONG_MS))
-                        ) {
-                            SplashScreen(onFinished = { showSplash = false })
-                        }
+                    CompositionLocalProvider(
+                        LocalGoogleSignInCallback provides googleSignInCallback,
+                        LocalParentPalette provides parentPalette,
+                        LocalAppMessages provides appMessages
+                    ) {
+                        NavGraph(
+                            navController = navController,
+                            syncViewModel = syncViewModel,
+                            pendingInviteCodes = pendingInviteCodes,
+                            pendingChatOpen = pendingChatOpen,
+                            pendingDestinationOpen = pendingDestinationOpen
+                        )
                     }
                 }
             }
         }
     }
+
+    /** Whether the navigation graph would still start on its loading screen. */
+    private fun firstScreenUnknown(): Boolean = startDestinationFor(
+        telemetryConsent = telemetryConsentViewModel.consent.value,
+        isLoading = authStateViewModel.isLoading.value,
+        isAuthenticated = authStateViewModel.isAuthenticated.value,
+        needsOnboarding = authStateViewModel.needsOnboarding.value
+    ) == Screen.Loading.route
 
     /**
      * Reads every deep link [intent] may carry, after switching to the family it names.

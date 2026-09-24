@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Launcher-icon background: the one brand colour (UX-14), the same value the system splash and
-     the Compose splash draw, so the icon and the startup screen are one colour. It used to be a
+<!-- Launcher-icon background: the one brand colour (UX-14), the same value the system splash
+     draws, so the icon and the startup screen are one colour. It used to be a
      #6750A4 -> #4F46E5 gradient, and the first stop was not the app's colour at all. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"

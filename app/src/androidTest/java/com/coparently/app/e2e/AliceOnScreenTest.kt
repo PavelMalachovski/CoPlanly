@@ -68,8 +68,8 @@ import javax.inject.Inject
  * place of the fifteen-minute `SyncWorker` tick — `SyncService.performFullSync()`, the call that
  * worker makes.
  *
- * **The Compose clock is paused** (`testing/PausedClock.kt`): the splash and the skeletons animate
- * for as long as a screen waits, so every wait here moves Compose time itself and is bounded in
+ * **The Compose clock is paused** (`testing/PausedClock.kt`): the skeletons animate for as long
+ * as a screen waits, so every wait here moves Compose time itself and is bounded in
  * real time. Every text a test looks for is read from the app's own string resources, so a test
  * does not depend on the emulator's language.
  *
