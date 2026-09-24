@@ -370,6 +370,11 @@ This is ordered for the closed test first. Each step leaves the app shippable.
    - D-7 currency default and Date field style.
    - A 2.0× variant in `ScreenshotVariants`.
    - Re-run the UI tour.
+
+   Done in PR #107 and checked in the tour at `d4c89b6`. Every screen's content starts 24 dp
+   higher: Home 171 → 147 dp, Settings 143 → 119, Calendar 68 → 44, Expenses 120 → 96. The event
+   form's Save sits directly above the keyboard. The chat keeps its header and newest message in
+   view with the keyboard open. Russian at 130 % shows every amount whole.
 2. **Week 2, the system** (≈4 days):
    - D-15 `InlineBanner`/`StickyActionBar`/`InviteCode`/`ErrorState`, and move the screens onto
      them.
@@ -378,6 +383,9 @@ This is ordered for the closed test first. Each step leaves the app shippable.
    - D-8 font swap, then regenerate the baselines.
 3. **Week 3, the layout** (≈4 days):
    - D-3 calendar header budget, D-4 Home order, D-6 expense summary collapse.
+   - The expense row's meta line (found by week 1's tour). In Russian at 130 % it ends at
+     "заплатил(а)…", so the payer and the split are cut while the amount beside it is whole. Let
+     it wrap to a second line.
    - D-10 gestures, D-11 back and discard guard.
 4. **Before public release:**
    - D-12 Family hub, D-13 push deep links and channels.
