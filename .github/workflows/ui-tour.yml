@@ -144,10 +144,10 @@ jobs:
         run: |
           set -euo pipefail
           site=build/ui-tour-site
-          if [ -z "$(find "$site/ui-tour" -name '*.png' 2>/dev/null | head -n 1)" ]; then
-            echo "::error::The tour produced no screenshot; nothing to publish."
-            exit 1
-          fi
+          mkdir -p "$site/ui-tour"
+          # Published even when the tour took nothing: the logs are what says why, and a reviewer
+          # who can only `git fetch` cannot download the artifact that also carries them.
+          shots="$(find "$site/ui-tour" -name '*.png' 2>/dev/null | wc -l | tr -d ' ')"
           branch="ui-tour/${SOURCE_REF//\//-}"
           short="${SOURCE_SHA:0:7}"
           export UI_TOUR_SOURCE="$SOURCE_REF @ $short"
@@ -156,6 +156,7 @@ jobs:
           rm -rf "$publish"
           mkdir -p "$publish"
           cp -R "$site/ui-tour" "$site/index.html" "$publish/"
+          if [ -d "$site/logs" ]; then cp -R "$site/logs" "$publish/"; fi
           cd "$publish"
           git init -q
           git checkout -q -b "$branch"
@@ -171,6 +172,10 @@ jobs:
             echo ""
             echo "$(find ui-tour -name '*.png' | wc -l | tr -d ' ') screenshots from \`$SOURCE_REF\` at \`$short\`."
           } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$shots" = "0" ]; then
+            echo "::error::The tour produced no screenshot; the logs are published on $branch."
+            exit 1
+          fi
 
       - name: The tour finished
         if: always()
