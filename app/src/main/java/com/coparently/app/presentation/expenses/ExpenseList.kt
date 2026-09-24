@@ -320,11 +320,15 @@ fun ExpenseItem(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
+                // Two lines, not one: the meta line says who paid and how the expense divides,
+                // and in Russian at 130 % one line ended at "заплатил(а)…", before the name
+                // (docs/AUDIT-2026-10-design.md, week 3). The title above may still end in an
+                // ellipsis; the amount beside both never does (design refresh item 15).
                 Text(
                     text = meta,
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
             }
