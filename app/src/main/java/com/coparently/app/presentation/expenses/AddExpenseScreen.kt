@@ -32,7 +32,6 @@ import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -85,9 +84,12 @@ import com.coparently.app.domain.model.ExpenseCategory
 import com.coparently.app.domain.money.SupportedCurrency
 import com.coparently.app.domain.receipts.ReceiptScan
 import com.coparently.app.presentation.common.FamilyMemberChips
+import com.coparently.app.presentation.common.FamilyMemberRefListSaver
 import com.coparently.app.presentation.common.FullScreenImageDialog
 import com.coparently.app.presentation.common.LocalDatePickerDialog
+import com.coparently.app.presentation.common.StickyActionBar
 import com.coparently.app.presentation.common.asString
+import com.coparently.app.presentation.common.rememberDiscardGuard
 import com.coparently.app.presentation.common.toggling
 import com.coparently.app.presentation.theme.CoPlanlyShapes
 import java.io.File
@@ -104,45 +106,55 @@ fun AddExpenseScreen(
     expenseId: String? = null,
     viewModel: ExpenseViewModel = hiltViewModel()
 ) {
-    var title by remember { mutableStateOf("") }
-    var amount by remember { mutableStateOf("") }
-    var category by remember { mutableStateOf(ExpenseCategory.OTHER) }
-    var notes by remember { mutableStateOf("") }
+    // Saveable, like every field below: the form used to be `remember`ed, so turning the phone,
+    // or the camera app pushing this one out of memory, lost everything typed
+    // (docs/AUDIT-2026-10-design.md D-11).
+    var title by rememberSaveable { mutableStateOf("") }
+    var amount by rememberSaveable { mutableStateOf("") }
+    var category by rememberSaveable { mutableStateOf(ExpenseCategory.OTHER) }
+    var notes by rememberSaveable { mutableStateOf("") }
     var expanded by remember { mutableStateOf(false) }
-    var receiptUri by remember { mutableStateOf<Uri?>(null) }
+    var receiptUri by rememberSaveable { mutableStateOf<Uri?>(null) }
 
     // The expense being edited (null in add mode). Kept whole so save can copy() it and preserve
     // fields the form does not touch — id, payer, createdAt, split — instead of rebuilding it.
     var editedExpense by remember { mutableStateOf<Expense?>(null) }
 
     val defaultCurrency by viewModel.defaultCurrency.collectAsState()
-    var currency by remember { mutableStateOf<SupportedCurrency?>(null) }
+    var currency by rememberSaveable { mutableStateOf<SupportedCurrency?>(null) }
     val effectiveCurrency = currency ?: defaultCurrency
 
     val familyMembers by viewModel.familyMembers.collectAsState()
     // Who the money was for. Empty is "the family", which is what every expense recorded before
     // this picker existed is, and what a family with fewer than two members keeps being: the
     // chips do not render at all below two, so nothing can be picked and nothing is claimed.
-    var forMembers by remember { mutableStateOf(emptyList<FamilyMemberRef>()) }
+    var forMembers by rememberSaveable(stateSaver = FamilyMemberRefListSaver) {
+        mutableStateOf(emptyList<FamilyMemberRef>())
+    }
 
-    var date by remember { mutableStateOf(LocalDate.now()) }
+    var date by rememberSaveable { mutableStateOf(LocalDate.now()) }
     var showDatePicker by remember { mutableStateOf(false) }
     var showOtherMonthWarning by remember { mutableStateOf(false) }
     val dateFormatter = remember { DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM) }
 
-    // In edit mode, load the expense once and prefill every field from it.
+    // In edit mode, load the expense and prefill every field from it — once. After a rotation the
+    // saved fields hold the parent's edits, and prefilling again would put the stored ones back.
+    var prefilled by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(expenseId) {
         if (expenseId != null) {
             viewModel.getExpense(expenseId)?.let { expense ->
                 editedExpense = expense
-                title = expense.title
-                amount = expense.amount.toString()
-                category = expense.category
-                notes = expense.notes.orEmpty()
-                date = expense.date
-                currency = SupportedCurrency.fromCode(expense.currency)
-                forMembers = expense.forMembers
-                expense.receiptUrl?.let { receiptUri = Uri.parse(it) }
+                if (!prefilled) {
+                    title = expense.title
+                    amount = expense.amount.toString()
+                    category = expense.category
+                    notes = expense.notes.orEmpty()
+                    date = expense.date
+                    currency = SupportedCurrency.fromCode(expense.currency)
+                    forMembers = expense.forMembers
+                    expense.receiptUrl?.let { receiptUri = Uri.parse(it) }
+                    prefilled = true
+                }
             }
         }
     }
@@ -169,7 +181,9 @@ fun AddExpenseScreen(
         context.packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY)
     }
 
-    var pendingCaptureUri by remember { mutableStateOf<Uri?>(null) }
+    // Saveable: the camera app often takes this activity down while it runs, and the photo's
+    // address has to be here when it comes back, or the receipt is lost.
+    var pendingCaptureUri by rememberSaveable { mutableStateOf<Uri?>(null) }
 
     val cameraLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.TakePicture()
@@ -225,6 +239,54 @@ fun AddExpenseScreen(
         snackbarHostState = snackbarHostState
     )
 
+    val performSave = {
+        val original = editedExpense
+        if (original == null) {
+            viewModel.addExpense(
+                title = title,
+                amount = requireNotNull(amountValue),
+                category = category,
+                currency = effectiveCurrency.code,
+                forMembers = forMembers,
+                date = date,
+                notes = notes.takeIf { it.isNotBlank() },
+                receiptImageUri = receiptUri?.toString(),
+                shared = shared,
+                splitOverride = overrideMomPercent?.let { SplitRatio.ofMomPercent(it) }
+            )
+        } else {
+            viewModel.updateExpense(
+                original = original,
+                title = title,
+                amount = requireNotNull(amountValue),
+                category = category,
+                currency = effectiveCurrency.code,
+                date = date,
+                notes = notes.takeIf { it.isNotBlank() },
+                receiptImageUri = receiptUri?.toString(),
+                forMembers = forMembers
+            )
+        }
+    }
+
+    // Saving an expense dated in another month files it there — and the list only shows one month
+    // at a time — so confirm first instead of it silently vanishing from the current month (a real
+    // receipt-scan bug).
+    val onSaveClick = {
+        if (isFormValid) {
+            if (YearMonth.from(date) == YearMonth.now()) performSave() else showOtherMonthWarning = true
+        }
+    }
+
+    // What leaving now would lose (D-11): in edit mode, any field that no longer matches the expense
+    // as stored; in add mode, anything typed or attached at all.
+    val fields = ExpenseFields(title, amount, category, notes, date, currency, forMembers, receiptUri?.toString())
+    val dirty = when (val original = editedExpense) {
+        null -> expenseId == null && fields.hasContent()
+        else -> fields != ExpenseFields.of(original)
+    }
+    val leave = rememberDiscardGuard(dirty = dirty && !isSaving, onLeave = onBack)
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -236,13 +298,23 @@ fun AddExpenseScreen(
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = onBack, enabled = !isSaving) {
+                    IconButton(onClick = leave, enabled = !isSaving) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.budgets_back))
                     }
                 }
             )
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        // Pinned like every other form's Save (D-7, D-15): at the end of the scroll it sat below
+        // the fold on a long expense, where the thumb is not.
+        bottomBar = {
+            StickyActionBar(
+                label = stringResource(R.string.expense_save),
+                onClick = onSaveClick,
+                enabled = !isSaving && isFormValid,
+                busy = isSaving
+            )
+        }
     ) { padding ->
         Column(
             modifier = Modifier
@@ -358,60 +430,6 @@ fun AddExpenseScreen(
                     onOverrideChange = { overrideMomPercent = it },
                     enabled = !isSaving
                 )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            val performSave = {
-                val original = editedExpense
-                if (original == null) {
-                    viewModel.addExpense(
-                        title = title,
-                        amount = requireNotNull(amountValue),
-                        category = category,
-                        currency = effectiveCurrency.code,
-                        forMembers = forMembers,
-                        date = date,
-                        notes = notes.takeIf { it.isNotBlank() },
-                        receiptImageUri = receiptUri?.toString(),
-                        shared = shared,
-                        splitOverride = overrideMomPercent?.let { SplitRatio.ofMomPercent(it) }
-                    )
-                } else {
-                    viewModel.updateExpense(
-                        original = original,
-                        title = title,
-                        amount = requireNotNull(amountValue),
-                        category = category,
-                        currency = effectiveCurrency.code,
-                        date = date,
-                        notes = notes.takeIf { it.isNotBlank() },
-                        receiptImageUri = receiptUri?.toString(),
-                        forMembers = forMembers
-                    )
-                }
-            }
-
-            Button(
-                onClick = {
-                    if (isFormValid) {
-                        // Saving an expense dated in another month files it there — and the list
-                        // only shows one month at a time — so confirm first instead of it
-                        // silently vanishing from the current month (a real receipt-scan bug).
-                        if (YearMonth.from(date) == YearMonth.now()) performSave() else showOtherMonthWarning = true
-                    }
-                },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !isSaving && isFormValid
-            ) {
-                if (isSaving) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        strokeWidth = 2.dp
-                    )
-                } else {
-                    Text(stringResource(R.string.expense_save))
-                }
             }
 
             ExpenseDatePickerDialog(
@@ -973,3 +991,36 @@ private fun SplitSection(
 
 /** Stops on the slider: every 5 %, which is nineteen stops between the two ends. */
 private const val SPLIT_SLIDER_STEPS = 19
+
+/**
+ * The values the expense form edits, compared to tell whether leaving would lose anything (D-11).
+ * The amount is kept as typed, and an unedited one reads back exactly as the form prefilled it.
+ */
+private data class ExpenseFields(
+    val title: String,
+    val amount: String,
+    val category: ExpenseCategory,
+    val notes: String,
+    val date: LocalDate,
+    val currency: SupportedCurrency?,
+    val forMembers: List<FamilyMemberRef>,
+    val receipt: String?
+) {
+    /** Whether a new expense has anything in it worth asking about. */
+    fun hasContent(): Boolean =
+        title.isNotBlank() || amount.isNotBlank() || notes.isNotBlank() || receipt != null
+
+    /** The form's values for [expense], as the edit mode prefills them. */
+    companion object {
+        fun of(expense: Expense) = ExpenseFields(
+            title = expense.title,
+            amount = expense.amount.toString(),
+            category = expense.category,
+            notes = expense.notes.orEmpty(),
+            date = expense.date,
+            currency = SupportedCurrency.fromCode(expense.currency),
+            forMembers = expense.forMembers,
+            receipt = expense.receiptUrl
+        )
+    }
+}
