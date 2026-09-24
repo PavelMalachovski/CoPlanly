@@ -957,7 +957,7 @@ scheme rather than a verified App Link. Both need the domain **REL-4** needs for
 
 **Where:** ☁️ cloud for the bumps; 👁 the sign-in ones want a device.
 
-**September 2026 (release-tails pass): one moved, four stay, each for a stated reason.** The
+**September 2026 (release-tails pass): one moved, four stay, each for a stated reason.** *(PR #101 moved a second: the Calendar client pair.)* The
 session had no Android SDK and could not reach Maven Central, so "safe to make blind" meant a
 version whose existence could be confirmed and whose API the code demonstrably does not depend on
 changing.
@@ -967,7 +967,7 @@ changing.
 | `androidx.work` | **2.10.5** (was 2.9.0) | **Done.** 2.10.x fixes the Doze/foreground bugs that hit a 15-minute sync; same API, `hilt-work` 1.2.0 unchanged. 2.11 raises minSdk and changes more — a separate step. |
 | `androidx.security:security-crypto` | 1.1.0-alpha06 | **Left.** See **SEC-5** — whether stored OAuth tokens survive is a sign-in on a real device. |
 | `play-services-auth` | 21.2.0, deprecated | **Left.** Not a version bump: `CredentialManagerService` still calls `GoogleSignIn`/`GoogleSignInClient` for the Calendar scope, so dropping it means moving that flow to `AuthorizationClient` — a sign-in change only a device can judge. Both it and Credential Manager stay in the graph until then. |
-| `google-api-services-calendar` | `v3-rev20220715` | **Left.** The current revision (`v3-rev20260708-2.0.0` per the client-library repository) pulls a newer `google-api-client` than the pinned `google-api-client-android:2.2.0`, so the bump is really a pair, and Maven Central could not be reached to check what the two resolve to. The surface the app uses (`events().list/get/insert/update/delete`) is stable across revisions; what wants checking is resolution and R8, then one import and one export on a device. |
+| `google-api-services-calendar` | **v3-rev20260708-2.0.0** (was `v3-rev20220715`) | **Moved, as a pair** (September 2026, PR #101). Maven Central was reachable this time: the new revision's POM depends on `google-api-client` **2.7.2**, so `google-api-client-android` moved from 2.2.0 to 2.7.2 with it and the two resolve to one release. The app's surface (`events().list/get/insert/update/delete`, `GsonFactory`, `NetHttpTransport`, the OAuth `Credential`) is unchanged across them; CI's `release` job proves R8, and one import plus one export on a release build (DEVICE-CHECKLIST §4) proves the rest. |
 | `firebase-functions` (Node) | ^4.5.0 (lockfile 4.9.0, the last 4.x), gen-1 API | **Left.** Already at the top of its major. 5.x/6.x move the gen-1 triggers behind `firebase-functions/v1` and v6 changes the default export; every function then needs a `firebase deploy` to prove it, which is yours. ESLint 8 → 9 needs a flat config and goes with it. |
 
 *(`retrofit` left the graph with the AI subsystem — MON-7.)*

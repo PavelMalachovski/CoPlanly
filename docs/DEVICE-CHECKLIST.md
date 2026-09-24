@@ -640,6 +640,9 @@ the same on B's phone if you have one.
       sync. The medical profile comes back from Firestore complete. That covers both directions
       of the Gson mapping on a release build.
 - [ ] A Google Calendar import on the release build works. It uses the `@Key` models.
+      Since CQ-17 it runs on `google-api-services-calendar` v3-rev20260708 with
+      `google-api-client-android` 2.7.2: do one import **and** one export (an event created in
+      the app appears in Google Calendar).
 - [ ] **Telemetry end to end** (a release build has `ENABLE_ANALYTICS=true`):
   - Run `adb shell setprop debug.firebase.analytics.app app.coplanly` and open Firebase
     console → Analytics → DebugView.
