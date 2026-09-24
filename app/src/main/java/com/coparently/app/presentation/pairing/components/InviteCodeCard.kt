@@ -86,9 +86,9 @@ fun InviteCodeCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = Spacing.XL),
+                .padding(horizontal = Spacing.XL, vertical = Spacing.XL),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+            verticalArrangement = Arrangement.spacedBy(Spacing.M)
         ) {
             Text(
                 text = stringResource(R.string.pairing_your_code_title),
@@ -105,7 +105,7 @@ fun InviteCodeCard(
                         cornerRadius = 16.dp
                     )
                     .clickable(onClick = onCopy)
-                    .padding(horizontal = 20.dp, vertical = Spacing.M),
+                    .padding(horizontal = Spacing.XL, vertical = Spacing.M),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(Spacing.M)
             ) {

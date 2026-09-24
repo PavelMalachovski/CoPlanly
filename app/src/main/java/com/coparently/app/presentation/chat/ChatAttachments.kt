@@ -227,7 +227,7 @@ private fun FileAttachment(attachment: ChatAttachment, onOpen: () -> Unit) {
             .clip(MaterialTheme.shapes.medium)
             .background(MaterialTheme.colorScheme.surfaceContainerHigh)
             .clickable(onClickLabel = label, role = Role.Button, onClick = onOpen)
-            .padding(horizontal = Spacing.M, vertical = 10.dp),
+            .padding(horizontal = Spacing.M, vertical = Spacing.M),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.S)
     ) {

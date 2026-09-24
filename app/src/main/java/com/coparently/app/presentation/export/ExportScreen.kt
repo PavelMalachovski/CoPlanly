@@ -171,7 +171,7 @@ private fun ExportContent(
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = Spacing.L, vertical = Spacing.S),
-        verticalArrangement = Arrangement.spacedBy(18.dp)
+        verticalArrangement = Arrangement.spacedBy(Spacing.L)
     ) {
         Text(
             text = stringResource(R.string.export_intro),

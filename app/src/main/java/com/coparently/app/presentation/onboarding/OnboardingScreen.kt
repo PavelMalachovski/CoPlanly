@@ -74,6 +74,7 @@ import com.coparently.app.presentation.childinfo.components.DatePickerDialog
 import com.coparently.app.presentation.childinfo.components.EmergencyContactEditor
 import com.coparently.app.presentation.common.ConfirmationDialog
 import com.coparently.app.presentation.common.CountryPicker
+import com.coparently.app.presentation.common.DatePickerField
 import com.coparently.app.presentation.common.MedicalProfileEditor
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
@@ -210,7 +211,7 @@ private fun OnboardingBody(
             .padding(padding)
             .verticalScroll(rememberScrollState())
             .padding(Spacing.L),
-        verticalArrangement = Arrangement.spacedBy(20.dp)
+        verticalArrangement = Arrangement.spacedBy(Spacing.XL)
     ) {
         when (state.step) {
             OnboardingStep.CoParent -> CoParentStep(state, onOpenPairing)
@@ -850,7 +851,9 @@ private fun SplitStep(state: OnboardingUiState, viewModel: OnboardingViewModel) 
         steps = SPLIT_SLIDER_STEPS
     )
 
-    Footnote()
+    // Its own line: the other steps' footnote says what is kept "in case of an emergency", which
+    // a split is not (release audit R-3).
+    Footnote(R.string.onboarding_split_footnote)
 }
 
 /** A whole share, as a percent. */
@@ -988,36 +991,33 @@ private fun SectionHeading(text: String) {
  * Item 4 of the brief, in one line, under every step that collects something.
  *
  * It must not say the data is encrypted (it is not) and must not say only the user can see it
- * (the co-parent can, by design). Either claim would be a promise the app does not keep.
+ * (the co-parent can, by design). Either claim would be a promise the app does not keep. A step
+ * whose answer is not kept for an emergency — the split — passes a line of its own.
+ *
+ * @param text The line, by default the one every questionnaire step shares
  */
 @Composable
-private fun Footnote() {
+private fun Footnote(@StringRes text: Int = R.string.onboarding_footnote) {
     Text(
-        text = stringResource(R.string.onboarding_footnote),
+        text = stringResource(text),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
 }
 
-/** A date-of-birth button and its picker, shared by the parent step and the child step. */
+/** A date-of-birth field and its picker, shared by the parent step and the child step. */
 @Composable
 private fun DateOfBirthField(date: LocalDate?, onDateChange: (LocalDate?) -> Unit) {
     var showPicker by remember { mutableStateOf(false) }
     val formatter = remember { DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM) }
 
-    // The label stays once a date is chosen: a bare "12 Mar 2015" on a button says nothing about
+    // The field's label stays once a date is chosen: a bare "12 Mar 2015" says nothing about
     // what it is, and TalkBack would read exactly that.
-    OutlinedButton(onClick = { showPicker = true }, modifier = Modifier.fillMaxWidth()) {
-        val label = stringResource(R.string.profile_dob_label)
-        if (date == null) {
-            Text(label)
-        } else {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(text = label, style = MaterialTheme.typography.labelSmall)
-                Text(text = date.format(formatter))
-            }
-        }
-    }
+    DatePickerField(
+        label = stringResource(R.string.profile_dob_label),
+        value = date?.format(formatter),
+        onClick = { showPicker = true }
+    )
     if (showPicker) {
         DatePickerDialog(
             onDateSelected = {

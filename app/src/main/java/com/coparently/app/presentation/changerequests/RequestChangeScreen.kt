@@ -45,8 +45,8 @@ import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.components.TimePickerDialog
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.utils.localizedDate
+import com.coparently.app.utils.shortTime
 import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 
 /**
  * Form for proposing a new date/time for [eventId] to the co-parent.
@@ -148,7 +148,7 @@ private fun RequestChangeForm(
     modifier: Modifier = Modifier
 ) {
     val dateFormatter = localizedDate("yMMMEEEd")
-    val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+    val timeFormatter = shortTime()
 
     var proposedDate by remember { mutableStateOf(event.startDateTime.toLocalDate()) }
     var proposedStartTime by remember { mutableStateOf(event.startDateTime.toLocalTime()) }

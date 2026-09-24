@@ -59,9 +59,9 @@ fun FriendInviteSheet(
             modifier = Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
-                .padding(horizontal = 20.dp)
+                .padding(horizontal = Spacing.XL)
                 .padding(bottom = Spacing.XL),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+            verticalArrangement = Arrangement.spacedBy(Spacing.M)
         ) {
             Text(
                 text = stringResource(R.string.friend_invite_action),

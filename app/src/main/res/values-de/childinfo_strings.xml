@@ -29,7 +29,6 @@
     <!-- Child info: basic form -->
     <string name="childinfo_child_name_label">Name des Kindes *</string>
     <string name="childinfo_dob_value">Geburtsdatum: %1$s</string>
-    <string name="childinfo_select_dob">Geburtsdatum auswählen</string>
     <string name="childinfo_add_child_button">Kind hinzufügen</string>
     <string name="childinfo_save_changes">Änderungen speichern</string>
     <string name="childinfo_medical_notes_label">Weitere medizinische Angaben</string>

@@ -54,7 +54,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.domain.model.PairingInvite
@@ -154,7 +153,7 @@ fun PairingScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
-            contentPadding = PaddingValues(horizontal = Spacing.XL, vertical = 20.dp),
+            contentPadding = PaddingValues(horizontal = Spacing.XL, vertical = Spacing.XL),
             verticalArrangement = Arrangement.spacedBy(Spacing.L)
         ) {
             // First, above every state: which of the two phones is this? The invite code

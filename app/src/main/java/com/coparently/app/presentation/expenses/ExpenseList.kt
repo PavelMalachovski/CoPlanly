@@ -126,8 +126,8 @@ fun ExpenseList(
         modifier = modifier.fillMaxSize(),
         state = state,
         contentPadding = PaddingValues(
-            start = 14.dp,
-            end = 14.dp,
+            start = Spacing.L,
+            end = Spacing.L,
             top = Spacing.XS,
             bottom = Spacing.XS + bottomClearance
         ),
@@ -380,7 +380,7 @@ private fun SwipeToDeleteRow(
                         color = MaterialTheme.colorScheme.error,
                         shape = MaterialTheme.shapes.small
                     )
-                    .padding(horizontal = 20.dp),
+                    .padding(horizontal = Spacing.XL),
                 contentAlignment = Alignment.CenterEnd
             ) {
                 Icon(

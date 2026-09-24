@@ -65,4 +65,5 @@
     <!-- Asked when Skip would leave something typed on this step unsaved. -->
     <string name="onboarding_skip_unsaved_title">Ohne Speichern überspringen?</string>
     <string name="onboarding_skip_unsaved_message">Was du in diesem Schritt eingegeben hast, ist noch nicht gespeichert. Überspringen geht ohne diese Angaben weiter, Weiter speichert sie.</string>
+    <string name="onboarding_split_footnote">Gilt für euch beide und für jede Ausgabe, die du ab jetzt einträgst.</string>
 </resources>

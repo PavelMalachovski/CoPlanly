@@ -66,8 +66,8 @@ import com.coparently.app.presentation.theme.Motion
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.utils.LightDarkPreviews
 import com.coparently.app.utils.PreviewWrapper
+import com.coparently.app.utils.dateWithTime
 import kotlinx.coroutines.delay
-import java.time.format.DateTimeFormatter
 
 /**
  * A single conversation thread.
@@ -427,7 +427,7 @@ private fun ChangeRequestEventPicker(
     onEventSelected: (Event) -> Unit,
     onDismiss: () -> Unit
 ) {
-    val dateFormatter = DateTimeFormatter.ofPattern("EEE, MMM d · HH:mm")
+    val dateFormatter = dateWithTime("MMMEd")
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)

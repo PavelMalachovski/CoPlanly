@@ -65,4 +65,5 @@
     <!-- Asked when Skip would leave something typed on this step unsaved. -->
     <string name="onboarding_skip_unsaved_title">Пропустить без сохранения?</string>
     <string name="onboarding_skip_unsaved_message">Введённое на этом шаге ещё не сохранено. «Пропустить» перейдёт дальше без него, «Далее» сохранит.</string>
+    <string name="onboarding_split_footnote">Видно второму родителю и применяется к каждой трате, которую вы запишете с этого момента.</string>
 </resources>

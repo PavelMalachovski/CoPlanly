@@ -21,7 +21,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import com.coparently.app.R
 import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.holidays.VacationSuggestion
@@ -185,14 +184,14 @@ private fun LayerRange(draft: SeasonalLayerDraft, onPick: (RangeEnd) -> Unit) {
 @Composable
 private fun LayerSuggestions(suggestions: List<VacationSuggestion>, onPick: (VacationSuggestion) -> Unit) {
     val format = DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT)
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.S)) {
         Text(
             text = stringResource(R.string.seasonal_fill_from_school),
             style = MaterialTheme.typography.labelLarge
         )
         FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+            horizontalArrangement = Arrangement.spacedBy(Spacing.S),
+            verticalArrangement = Arrangement.spacedBy(Spacing.S)
         ) {
             suggestions.forEach { suggestion ->
                 PillChip(
@@ -215,9 +214,9 @@ private fun LayerShapePicker(
     onChange: (SeasonalLayerDraft) -> Unit
 ) {
     val shapes = LayerShape.entries.filter { isEditing || it != LayerShape.KEEP }
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.S)) {
         Text(text = stringResource(R.string.seasonal_shape_label), style = MaterialTheme.typography.labelLarge)
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
             shapes.forEach { shape ->
                 FilterChip(
                     selected = draft.shape == shape,
@@ -233,7 +232,7 @@ private fun LayerShapePicker(
                 ),
                 style = MaterialTheme.typography.labelLarge
             )
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
                 listOf(ContactWindow.SLOT_ONE, ContactWindow.SLOT_TWO).forEach { slot ->
                     FilterChip(
                         selected = draft.firstSlot == slot,

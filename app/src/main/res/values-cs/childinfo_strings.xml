@@ -29,7 +29,6 @@
     <!-- Child info: basic form -->
     <string name="childinfo_child_name_label">Jméno dítěte *</string>
     <string name="childinfo_dob_value">Datum narození: %1$s</string>
-    <string name="childinfo_select_dob">Vybrat datum narození</string>
     <string name="childinfo_add_child_button">Přidat dítě</string>
     <string name="childinfo_save_changes">Uložit změny</string>
     <string name="childinfo_medical_notes_label">Další zdravotní informace</string>

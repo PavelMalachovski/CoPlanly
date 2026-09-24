@@ -13,7 +13,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import com.coparently.app.R
 import com.coparently.app.domain.model.Budget
 import com.coparently.app.domain.model.Expense
@@ -83,7 +82,7 @@ fun BudgetChips(
         modifier = modifier
             .fillMaxWidth()
             .horizontalScroll(rememberScrollState())
-            .padding(horizontal = 14.dp, vertical = 6.dp),
+            .padding(horizontal = Spacing.L, vertical = Spacing.S),
         horizontalArrangement = Arrangement.spacedBy(Spacing.S)
     ) {
         progress.forEach { entry ->

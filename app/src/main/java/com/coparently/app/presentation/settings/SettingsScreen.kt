@@ -138,10 +138,8 @@ import com.coparently.app.presentation.theme.Motion
 import com.coparently.app.presentation.theme.ParentColorChoice
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.utils.shortTime
 import kotlinx.coroutines.launch
-import java.time.format.DateTimeFormatter
-
-private val syncTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
 /**
  * Settings screen.
@@ -415,7 +413,7 @@ fun SettingsScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(paddingValues)
                 .padding(horizontal = Spacing.L, vertical = Spacing.S),
-            verticalArrangement = Arrangement.spacedBy(18.dp)
+            verticalArrangement = Arrangement.spacedBy(Spacing.L)
         ) {
             // ── FAMILY ─────────────────────────────────────────────────────────
             // First, because it is what the product is. It used to sit below the sync
@@ -810,35 +808,40 @@ fun SettingsScreen(
                                 trailing = { Chevron() }
                             )
                         }
-                    Divider()
-                    // Inert on purpose, and present on purpose.
-                    //
-                    // Design rule 8 forbids an affordance that *promises* a feature that does
-                    // not exist — one that looks tappable and then does nothing, or does
-                    // something else, the way the chat composer's "attach" button opened
-                    // message templates. This row does not pretend: it cannot be tapped, it is
-                    // drawn in the muted role, and it says in words that the feature is not
-                    // built. What it buys is that a Czech parent opening Settings learns the
-                    // app means to read their school's system, which is the first question
-                    // this product will be asked.
-                    //
-                    // **It must not outlive the feature.** When MON-8 lands this row becomes
-                    // the real import, and if MON-8 is abandoned the row comes out with it. A
-                    // "planned" badge still sitting here in a year is exactly the lie rule 8
-                    // is about, arriving slowly instead of at once.
-                    SectionRow(
-                        icon = Icons.Default.School,
-                        iconTint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        title = stringResource(R.string.settings_school_import_title),
-                        titleColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        supporting = stringResource(R.string.settings_school_import_description),
-                        trailing = {
-                            PillChip(
-                                label = stringResource(R.string.settings_school_import_planned),
-                                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    )
+                    // Debug builds only (release audit R-4, owner decision): a store reviewer
+                    // reads a "Planned" row as an unfinished app, while the team still wants to
+                    // see where the import will sit.
+                    if (com.coparently.app.BuildConfig.DEBUG) {
+                        Divider()
+                        // Inert on purpose, and present on purpose.
+                        //
+                        // Design rule 8 forbids an affordance that *promises* a feature that does
+                        // not exist — one that looks tappable and then does nothing, or does
+                        // something else, the way the chat composer's "attach" button opened
+                        // message templates. This row does not pretend: it cannot be tapped, it is
+                        // drawn in the muted role, and it says in words that the feature is not
+                        // built. What it buys is that a Czech parent opening Settings learns the
+                        // app means to read their school's system, which is the first question
+                        // this product will be asked.
+                        //
+                        // **It must not outlive the feature.** When MON-8 lands this row becomes
+                        // the real import, and if MON-8 is abandoned the row comes out with it. A
+                        // "planned" badge still sitting here in a year is exactly the lie rule 8
+                        // is about, arriving slowly instead of at once.
+                        SectionRow(
+                            icon = Icons.Default.School,
+                            iconTint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            title = stringResource(R.string.settings_school_import_title),
+                            titleColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            supporting = stringResource(R.string.settings_school_import_description),
+                            trailing = {
+                                PillChip(
+                                    label = stringResource(R.string.settings_school_import_planned),
+                                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        )
+                    }
                 }
             }
 
@@ -969,7 +972,7 @@ fun SettingsScreen(
                     account?.let { signedIn ->
                         SignedInAsRow(
                             account = signedIn,
-                            modifier = Modifier.padding(horizontal = Spacing.L, vertical = 14.dp)
+                            modifier = Modifier.padding(horizontal = Spacing.L, vertical = Spacing.L)
                         )
                         Divider()
                     }
@@ -1439,7 +1442,7 @@ private fun SyncStatus.summary(): String = when (this) {
     is SyncStatus.Idle -> stringResource(R.string.settings_sync_idle)
     is SyncStatus.Syncing -> stringResource(R.string.settings_syncing)
     is SyncStatus.Success ->
-        stringResource(R.string.settings_sync_last, lastSyncTime.format(syncTimeFormatter))
+        stringResource(R.string.settings_sync_last, lastSyncTime.format(shortTime()))
     // Not `message`: that is the exception's own English text, kept for the log (CQ-14).
     is SyncStatus.Error -> stringResource(R.string.settings_sync_failed)
 }

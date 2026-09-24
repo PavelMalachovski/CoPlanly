@@ -53,7 +53,7 @@ import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.titleLargeEmphasized
 import com.coparently.app.utils.localizedDate
-import java.time.format.DateTimeFormatter
+import com.coparently.app.utils.shortTime
 
 /**
  * Read-only preview of an event shown before the editor: tapping an event in
@@ -141,13 +141,13 @@ internal fun EventPreviewContent(
                 // Long titles used to wrap mid-word and push the sheet's actions down.
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(start = 10.dp)
+                modifier = Modifier.padding(start = Spacing.M)
             )
         }
 
         PreviewRow(icon = Icons.Default.Schedule) {
             val dateFormat = localizedDate("yMMMEEEd")
-            val timeFormat = DateTimeFormatter.ofPattern("HH:mm")
+            val timeFormat = shortTime()
             val dateText = event.startDateTime.format(dateFormat)
             val timeText = buildString {
                 append(event.startDateTime.format(timeFormat))
@@ -259,7 +259,7 @@ private fun PreviewActions(onEdit: () -> Unit, onDelete: (() -> Unit)?) {
             )
             Text(
                 text = stringResource(R.string.event_preview_delete),
-                modifier = Modifier.padding(start = 6.dp)
+                modifier = Modifier.padding(start = Spacing.S)
             )
         }
     }
@@ -272,7 +272,7 @@ private fun PreviewActions(onEdit: () -> Unit, onDelete: (() -> Unit)?) {
             )
             Text(
                 text = stringResource(R.string.event_preview_edit),
-                modifier = Modifier.padding(start = 6.dp)
+                modifier = Modifier.padding(start = Spacing.S)
             )
         }
     }
@@ -310,7 +310,7 @@ private fun PreviewRow(
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.size(IconSizes.Small)
         )
-        Box(modifier = Modifier.padding(start = 10.dp)) {
+        Box(modifier = Modifier.padding(start = Spacing.M)) {
             content()
         }
     }

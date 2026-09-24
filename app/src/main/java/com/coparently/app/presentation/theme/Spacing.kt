@@ -9,8 +9,10 @@ import androidx.compose.ui.unit.dp
  * A 4 dp grid, as Material lays out, plus a 2 dp hairline for the gap inside a dense element.
  * The audit counted 873 literal dp in `presentation/`; every padding, gap and spacer on these
  * steps now names one, so a screen reads as "a large gap", and a change of rhythm is one edit.
- * What is still a literal is either not spacing (a size, a height, an offset) or a deliberate
- * value off the grid — the calendar banners' 9 dp, the Home cards' 14 dp — that says why beside it.
+ * What is still a literal is either not spacing (a size, a height, an offset), a dense calendar
+ * mark's own interior, or the one deliberate value off the grid — the calendar banners' 9 dp —
+ * which says why beside it. The 6, 10, 14, 18 and 20 dp that week 5 left as literals were snapped
+ * to these steps in week 7 (docs/AUDIT-2026-10-release.md §4).
  */
 object Spacing {
     /** Inside a dense element: between a dot and its label, the lines of a two-line chip. */

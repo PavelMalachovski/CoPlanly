@@ -65,4 +65,5 @@
     <!-- Asked when Skip would leave something typed on this step unsaved. -->
     <string name="onboarding_skip_unsaved_title">Пропустити без збереження?</string>
     <string name="onboarding_skip_unsaved_message">Введене на цьому кроці ще не збережено. «Пропустити» перейде далі без нього, «Далі» збереже.</string>
+    <string name="onboarding_split_footnote">Видно другому з батьків і застосовується до кожної витрати, яку ви запишете відтепер.</string>
 </resources>

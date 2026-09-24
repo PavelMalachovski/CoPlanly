@@ -42,12 +42,11 @@ import com.coparently.app.domain.chat.SearchSnippet
 import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.utils.dateWithTime
 import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
 
 /** Date and time on a search result: the result may be from any day, unlike a bubble's. */
-private val resultTimeFormatter: DateTimeFormatter =
-    DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
+private fun resultTimeFormatter(): DateTimeFormatter = dateWithTime("yMMMd", separator = ", ")
 
 /** Most lines a result's snippet takes. */
 private const val SNIPPET_MAX_LINES = 2
@@ -151,7 +150,7 @@ private fun ResultList(
                         text = stringResource(
                             R.string.chat_search_result_meta,
                             senderName(hit, names),
-                            formatSentAt(hit.message.sentAtMillis, resultTimeFormatter)
+                            formatSentAt(hit.message.sentAtMillis, resultTimeFormatter())
                         ),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis

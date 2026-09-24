@@ -362,8 +362,12 @@ private fun BasicInfoGroup(childInfo: ChildInfo, onClick: () -> Unit) {
             SectionRow(
                 icon = Icons.Default.ChildCare,
                 title = childInfo.childName,
+                // The reader's date, as the list above prints it — not ISO (release audit R-6).
                 supporting = childInfo.dateOfBirth?.let { dob ->
-                    stringResource(R.string.childinfo_dob_value, dob.toLocalDate().toString())
+                    stringResource(
+                        R.string.childinfo_dob_value,
+                        dob.toLocalDate().format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM))
+                    )
                 },
                 onClick = onClick
             )

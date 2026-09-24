@@ -425,7 +425,7 @@ private fun Dashboard(
             .fillMaxSize()
             .padding(contentPadding),
         contentPadding = PaddingValues(Spacing.L),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+        verticalArrangement = Arrangement.spacedBy(Spacing.M)
     ) {
         item {
             // First, by owner decision (Aug 2026 walkthrough): the emergency surface — who to
@@ -678,8 +678,8 @@ internal fun HandoverHero(
                         )
                     )
                 )
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+                .padding(Spacing.XL),
+            verticalArrangement = Arrangement.spacedBy(Spacing.S)
         ) {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(Spacing.S),
@@ -831,8 +831,8 @@ private fun StatTile(
         )
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = Spacing.M),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            modifier = Modifier.padding(horizontal = Spacing.L, vertical = Spacing.M),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.S),
             verticalAlignment = Alignment.CenterVertically
         ) {
             if (badge != null) {
@@ -924,9 +924,9 @@ internal fun TimelineRow(
                 )
             }
         }
-        Column(modifier = Modifier.padding(bottom = 6.dp)) {
+        Column(modifier = Modifier.padding(bottom = Spacing.S)) {
             Row(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.S),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // The mark carries its own description rather than none: an unexplained glyph
@@ -985,7 +985,7 @@ private fun ActivityGroup(
                     .clickable {
                         if (item.isChangeRequest) onOpenChangeRequests() else onOpenEvent(item.eventId)
                     }
-                    .padding(horizontal = 14.dp, vertical = Spacing.M),
+                    .padding(horizontal = Spacing.L, vertical = Spacing.M),
                 horizontalArrangement = Arrangement.spacedBy(Spacing.M),
                 verticalAlignment = Alignment.CenterVertically
             ) {

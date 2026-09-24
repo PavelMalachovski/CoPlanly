@@ -1,6 +1,7 @@
 package com.coparently.app.presentation.widget
 
 import android.content.Context
+import android.text.format.DateFormat
 import com.coparently.app.R
 import com.coparently.app.domain.custody.HandoverInfo
 import com.coparently.app.domain.model.Event
@@ -8,6 +9,7 @@ import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.theme.ParentColorChoice
 import com.coparently.app.utils.localizedDate
+import com.coparently.app.utils.shortTime
 import java.time.format.DateTimeFormatter
 
 /**
@@ -80,8 +82,6 @@ data class TodayWidgetContentState(val compact: TodayWidgetLines, val tall: Toda
  */
 object TodayWidgetText {
 
-    private val timeFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
-
     /**
      * Both sizes of the widget.
      *
@@ -101,6 +101,7 @@ object TodayWidgetText {
      */
     fun lines(context: Context, model: TodayWidgetModel, parents: Parents?, maxEvents: Int): TodayWidgetLines {
         val locale = context.resources.configuration.locales[0]
+        val timeFormatter = timeFormatter(context)
         val title = context.getString(
             R.string.widget_today_title,
             model.today.format(localizedDate("MMMEEEd", locale))
@@ -144,7 +145,7 @@ object TodayWidgetText {
             },
             events = shown.map { event ->
                 WidgetEventLine(
-                    time = timeOf(context, event),
+                    time = timeOf(context, event, timeFormatter),
                     title = event.title,
                     parent = palette.of(event.parentOwner)
                 )
@@ -163,8 +164,15 @@ object TodayWidgetText {
         }
     }
 
+    /**
+     * The reader's clock, read from the device here: a widget is drawn without `MainActivity`
+     * having run, so [com.coparently.app.utils.ClockFormat] may not have followed the setting.
+     */
+    private fun timeFormatter(context: Context): DateTimeFormatter =
+        shortTime(context.resources.configuration.locales[0], DateFormat.is24HourFormat(context))
+
     /** "14:00–15:30", or just the start when the event has no end — the today card's format. */
-    private fun timeOf(context: Context, event: Event): String {
+    private fun timeOf(context: Context, event: Event, timeFormatter: DateTimeFormatter): String {
         val start = event.startDateTime.format(timeFormatter)
         val end = event.endDateTime?.format(timeFormatter) ?: return start
         return context.getString(R.string.calendar_agenda_time_range, start, end)

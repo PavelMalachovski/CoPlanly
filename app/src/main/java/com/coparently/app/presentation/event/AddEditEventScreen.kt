@@ -87,7 +87,6 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
@@ -111,16 +110,17 @@ import com.coparently.app.presentation.theme.Motion
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.dimensions
+import com.coparently.app.presentation.theme.labelLargeEmphasized
 import com.coparently.app.utils.ValidationResult
 import com.coparently.app.utils.ValidationUtils
 import com.coparently.app.utils.localizedDate
+import com.coparently.app.utils.shortTime
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
-import java.time.format.DateTimeFormatter
 import java.util.UUID
 
 /**
@@ -924,8 +924,11 @@ fun AddEditEventScreen(
                                 Spacer(modifier = Modifier.height(dims.paddingSmall / 2))
                                 Text(
                                     text = label,
-                                    style = MaterialTheme.typography.labelLarge,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                    style = if (isSelected) {
+                                        MaterialTheme.typography.labelLargeEmphasized
+                                    } else {
+                                        MaterialTheme.typography.labelLarge
+                                    }
                                 )
                             }
                         }
@@ -1089,7 +1092,7 @@ fun AddEditEventScreen(
                             role = Role.Button
                             contentDescription = context.getString(
                                 R.string.event_form_cd_select_start_time,
-                                startTime.format(DateTimeFormatter.ofPattern("HH:mm"))
+                                startTime.format(shortTime())
                             )
                         },
                     onClick = {
@@ -1116,7 +1119,7 @@ fun AddEditEventScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            text = startTime.format(DateTimeFormatter.ofPattern("HH:mm")),
+                            text = startTime.format(shortTime()),
                             style = MaterialTheme.typography.titleLarge
                         )
                     }
@@ -1131,7 +1134,7 @@ fun AddEditEventScreen(
                             role = Role.Button
                             contentDescription = context.getString(
                                 R.string.event_form_cd_select_end_time,
-                                endTime.format(DateTimeFormatter.ofPattern("HH:mm"))
+                                endTime.format(shortTime())
                             )
                         },
                     onClick = {
@@ -1158,7 +1161,7 @@ fun AddEditEventScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            text = endTime.format(DateTimeFormatter.ofPattern("HH:mm")),
+                            text = endTime.format(shortTime()),
                             style = MaterialTheme.typography.titleLarge
                         )
                     }

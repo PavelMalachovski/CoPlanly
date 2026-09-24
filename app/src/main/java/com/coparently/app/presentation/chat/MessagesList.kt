@@ -64,6 +64,7 @@ import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.chatBubbleShape
 import com.coparently.app.utils.DAY_WITH_WEEKDAY
 import com.coparently.app.utils.isoDateText
+import com.coparently.app.utils.shortTime
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.Instant
@@ -72,7 +73,6 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
-private val timeFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 private val daySeparatorFormatter: DateTimeFormatter =
     DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
 
@@ -415,10 +415,10 @@ private fun DaySeparator(date: LocalDate) {
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier
-                .padding(vertical = 10.dp)
+                .padding(vertical = Spacing.M)
                 .clip(MaterialTheme.shapes.small)
                 .background(MaterialTheme.colorScheme.surfaceContainer)
-                .padding(horizontal = 10.dp, vertical = 3.dp)
+                .padding(horizontal = Spacing.M, vertical = Spacing.XS)
         )
     }
 }
@@ -589,7 +589,7 @@ fun MessageItem(
                         }
                     ),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(3.dp)
+                horizontalArrangement = Arrangement.spacedBy(Spacing.XS)
             ) {
                 Icon(
                     imageVector = Icons.Default.Error,
@@ -633,10 +633,10 @@ private fun BubbleMeta(
     Row(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(3.dp)
+        horizontalArrangement = Arrangement.spacedBy(Spacing.XS)
     ) {
         Text(
-            text = formatSentAt(message.sentAtMillis, timeFormatter),
+            text = formatSentAt(message.sentAtMillis, shortTime()),
             style = MaterialTheme.typography.labelSmall,
             color = metaColor
         )

@@ -108,11 +108,11 @@ fun FriendDetailScreen(
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
                 .padding(Spacing.L),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+            verticalArrangement = Arrangement.spacedBy(Spacing.M)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(14.dp),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.M),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 AccountAvatar(name = name, photoUrl = photoUrl, size = 64.dp)

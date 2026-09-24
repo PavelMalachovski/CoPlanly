@@ -103,6 +103,7 @@ import com.coparently.app.presentation.theme.dimensions
 import com.coparently.app.presentation.theme.labelMediumEmphasized
 import com.coparently.app.presentation.theme.labelSmallEmphasized
 import com.coparently.app.utils.localizedDate
+import com.coparently.app.utils.shortTime
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -132,7 +133,6 @@ private const val TODAY_TINT_ALPHA = 0.05f
 private val CONTACT_WINDOW_EDGE_WIDTH = 3.dp
 
 /** Timestamp format of a contact window's label in Day view. */
-private val CONTACT_WINDOW_TIME: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
 /**
  * Hourly view for day/week calendar views.
@@ -781,8 +781,8 @@ private fun ContactWindowBand(
 ) {
     val density = LocalDensity.current
     val shape = CoPlanlyCorners.Tag
-    val from = window.start.format(CONTACT_WINDOW_TIME)
-    val to = window.end.format(CONTACT_WINDOW_TIME)
+    val from = window.start.format(shortTime())
+    val to = window.end.format(shortTime())
     val description = stringResource(R.string.calendar_contact_window_desc, parentName, from, to)
     Box(
         modifier = Modifier
@@ -939,7 +939,7 @@ private fun EventChip(
 
     // Accessibility strings resolved in composable scope: the semantics lambdas below are
     // not composable contexts, so stringResource cannot be called inside them.
-    val a11yTimeFormatter = java.time.format.DateTimeFormatter.ofPattern("HH:mm")
+    val a11yTimeFormatter = shortTime()
     val chipStateDescription = when {
         isDraggingEvent -> stringResource(R.string.calendar_event_dragging)
         isResizingStart -> stringResource(
@@ -1252,8 +1252,8 @@ private fun EventChip(
             if (showTime && totalMinutes >= 45 || isResizingStart || isResizingEnd) {
                 Text(
                     text = "${tempStartTime.format(
-                        java.time.format.DateTimeFormatter.ofPattern("HH:mm")
-                    )} - ${tempEndTime.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))}",
+                        shortTime()
+                    )} - ${tempEndTime.format(shortTime())}",
                     style = MaterialTheme.typography.labelSmall,
                     maxLines = 1,
                     softWrap = false,
@@ -1276,8 +1276,8 @@ private fun EventChip(
             ) {
                 Text(
                     text = "${tempStartTime.format(
-                        java.time.format.DateTimeFormatter.ofPattern("HH:mm")
-                    )} - ${tempEndTime.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))}",
+                        shortTime()
+                    )} - ${tempEndTime.format(shortTime())}",
                     color = MaterialTheme.colorScheme.inverseOnSurface,
                     style = MaterialTheme.typography.labelMediumEmphasized,
                     modifier = Modifier.padding(horizontal = Spacing.S, vertical = Spacing.XS)
@@ -1385,7 +1385,7 @@ private fun OfferDayButton(onClick: () -> Unit) {
             contentDescription = null,
             modifier = Modifier.size(IconSizes.Small)
         )
-        Spacer(modifier = Modifier.width(6.dp))
+        Spacer(modifier = Modifier.width(Spacing.S))
         Text(
             text = stringResource(R.string.day_swap_sheet_title),
             style = MaterialTheme.typography.labelLarge

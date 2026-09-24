@@ -110,7 +110,7 @@ fun ExpenseAnalytics(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 14.dp),
+            .padding(horizontal = Spacing.L),
         verticalArrangement = Arrangement.spacedBy(Spacing.M)
     ) {
         if (payers.isNotEmpty()) {
@@ -271,7 +271,7 @@ private fun BreakdownTable(breakdown: CurrencyBreakdown) {
     val total = remember(breakdown) { currencyFormat(breakdown.currency).format(breakdown.total) }
     val amountWidth = amountColumnWidth(breakdown)
 
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.S)) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -299,7 +299,7 @@ private fun BreakdownTable(breakdown: CurrencyBreakdown) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = Spacing.L, vertical = 10.dp),
+                .padding(horizontal = Spacing.L, vertical = Spacing.M),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
@@ -483,11 +483,11 @@ private fun LedgerColumn(
     modifier: Modifier = Modifier,
     photoUrl: String? = null
 ) {
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(Spacing.S)) {
         // The parent's own Google picture beside their name, so a glance at the two columns
         // reads as two people rather than two labels. Falls back to their initial.
         Row(
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.S),
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(start = Spacing.XS)
         ) {
@@ -526,7 +526,7 @@ private fun LedgerRow(expense: Expense, currency: String) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 10.dp, vertical = Spacing.S)
+            .padding(horizontal = Spacing.M, vertical = Spacing.S)
             .semantics(mergeDescendants = true) {
                 contentDescription = "${expense.title}, $name, $amount"
             },

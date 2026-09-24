@@ -103,7 +103,7 @@ fun FriendProfileScreen(
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
                 .padding(Spacing.L),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+            verticalArrangement = Arrangement.spacedBy(Spacing.M)
         ) {
             // The Google account's own picture, taken at the first save. There is no upload
             // control: the friend changes this where they already manage it, in their Google
@@ -111,7 +111,7 @@ fun FriendProfileScreen(
             // promise an edit this screen cannot make.
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(14.dp),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.M),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 AccountAvatar(name = name, photoUrl = stored?.photoUrl, size = 56.dp)
