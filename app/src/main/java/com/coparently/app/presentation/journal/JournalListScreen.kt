@@ -46,6 +46,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.domain.journal.JournalEntry
 import com.coparently.app.presentation.common.EmptyState
+import com.coparently.app.presentation.common.InlineBanner
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.asString
@@ -168,10 +169,9 @@ private fun JournalList(
 /** What the journal is and is not, in plain words, above everything else on the screen. */
 @Composable
 private fun PrivacyNotice() {
-    Text(
+    InlineBanner(
         text = stringResource(R.string.journal_private_notice),
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        icon = Icons.Default.Lock,
         modifier = Modifier.padding(bottom = 8.dp)
     )
 }

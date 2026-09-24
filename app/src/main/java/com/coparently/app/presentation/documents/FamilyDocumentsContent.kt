@@ -42,6 +42,7 @@ import com.coparently.app.domain.documents.FamilyDocument
 import com.coparently.app.domain.files.SharedFilePolicy
 import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.GroupLabel
+import com.coparently.app.presentation.common.InlineBanner
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import java.time.Instant
@@ -126,14 +127,7 @@ internal fun DocumentsBody(
 /** "Everything here is shared" — first on the screen, never collapsible. */
 @Composable
 private fun SharedNotice() {
-    Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        Icon(Icons.Default.Info, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-        Text(
-            text = stringResource(R.string.documents_shared_notice),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
+    InlineBanner(text = stringResource(R.string.documents_shared_notice), icon = Icons.Default.Info)
 }
 
 /**
@@ -142,14 +136,7 @@ private fun SharedNotice() {
  */
 @Composable
 private fun OutdatedNotice() {
-    Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        Icon(Icons.Default.CloudOff, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(
-            text = stringResource(R.string.documents_possibly_outdated),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
+    InlineBanner(text = stringResource(R.string.documents_possibly_outdated), icon = Icons.Default.CloudOff)
 }
 
 /** An upload in flight; the list gains the row only once the server holds it. */
