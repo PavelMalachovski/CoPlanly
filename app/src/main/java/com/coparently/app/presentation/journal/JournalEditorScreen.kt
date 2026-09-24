@@ -43,6 +43,7 @@ import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.StickyActionBar
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.asString
+import com.coparently.app.presentation.common.rememberDiscardGuard
 
 /**
  * Writing or editing one private journal entry (MON-22): the day it is about, the text, and a
@@ -94,8 +95,11 @@ fun JournalEditorScreen(
         )
     }
 
+    // Asked before what was written is dropped (D-11), on Back and on the arrow alike.
+    val leave = rememberDiscardGuard(dirty = state.hasUnsavedEdits && !state.saving, onLeave = onNavigateUp)
+
     Scaffold(
-        topBar = { EditorTopBar(isNew = state.isNew, onNavigateUp = onNavigateUp) },
+        topBar = { EditorTopBar(isNew = state.isNew, onNavigateUp = leave) },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
             StickyActionBar(

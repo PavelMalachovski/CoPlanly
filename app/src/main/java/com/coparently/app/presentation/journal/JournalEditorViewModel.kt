@@ -31,6 +31,8 @@ import javax.inject.Inject
  * @property saved Set once the entry is in Room — the screen goes back when it sees it.
  * @property deleted Set once the entry is gone from Room — the screen goes back when it sees it.
  * @property error What went wrong with the last save or delete, for a snackbar; cleared once shown.
+ * @property seededDate The day the form opened on: the entry's, or today for a new one.
+ * @property seededText The text the form opened with: the entry's, or nothing for a new one.
  */
 data class JournalEditorState(
     val loading: Boolean,
@@ -40,8 +42,14 @@ data class JournalEditorState(
     val saving: Boolean = false,
     val saved: Boolean = false,
     val deleted: Boolean = false,
-    val error: UiText? = null
+    val error: UiText? = null,
+    val seededDate: LocalDate = entryDate,
+    val seededText: String = ""
 ) {
+    /** Whether leaving now would drop something the parent wrote (D-11). */
+    val hasUnsavedEdits: Boolean
+        get() = !saved && !deleted && (text != seededText || entryDate != seededDate)
+
     /** Whether Save does anything: there is text, and nothing is loading or saving. */
     val canSave: Boolean get() = !loading && !saving && text.isNotBlank()
 
@@ -91,7 +99,14 @@ class JournalEditorViewModel @Inject constructor(
                 // and saving writes a new entry rather than resurrecting that one.
                 current.copy(loading = false, isNew = true)
             } else {
-                current.copy(loading = false, isNew = false, entryDate = entry.entryDate, text = entry.text)
+                current.copy(
+                    loading = false,
+                    isNew = false,
+                    entryDate = entry.entryDate,
+                    text = entry.text,
+                    seededDate = entry.entryDate,
+                    seededText = entry.text
+                )
             }
         }
     }

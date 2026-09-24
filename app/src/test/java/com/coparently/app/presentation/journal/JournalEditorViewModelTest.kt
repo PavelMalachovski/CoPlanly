@@ -228,6 +228,35 @@ class JournalEditorViewModelTest {
         assertFalse(model.state.value.saving)
     }
 
+    @Test
+    fun `an untouched entry has nothing to lose, and an edit or a new day does`() = runTest(dispatcher) {
+        val model = editor("j1")
+        advanceUntilIdle()
+        assertFalse(model.state.value.hasUnsavedEdits)
+
+        model.setText("Late pickup, again")
+        assertTrue(model.state.value.hasUnsavedEdits)
+        model.setText("Late pickup")
+        assertFalse(model.state.value.hasUnsavedEdits)
+
+        model.setDate(LocalDate.of(2026, 9, 2))
+        assertTrue(model.state.value.hasUnsavedEdits)
+    }
+
+    @Test
+    fun `a new entry has unsaved edits once something is written, and none once saved`() = runTest(dispatcher) {
+        val model = editor(JournalEditorViewModel.NEW_ENTRY)
+        advanceUntilIdle()
+        assertFalse(model.state.value.hasUnsavedEdits)
+
+        model.setText("Something happened")
+        assertTrue(model.state.value.hasUnsavedEdits)
+
+        model.save()
+        advanceUntilIdle()
+        assertFalse(model.state.value.hasUnsavedEdits)
+    }
+
     private companion object {
         const val ALICE = "alice"
         const val BOB = "bob"
