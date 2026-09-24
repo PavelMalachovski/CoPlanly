@@ -1,6 +1,7 @@
 package com.coparently.app.e2e
 
 import android.content.Context
+import android.util.Log
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasClickAction
@@ -72,17 +73,41 @@ class UiTourTest : AliceOnScreenTest() {
             runCatching { syncService.performFullSync() }
             seed.seedPending(aliceUid, bob)
         }
-        homeSection()
-        widgetSection()
-        calendarSection()
-        eventFormSection()
-        chatSection()
-        expensesSection()
-        settingsSection()
-        familyScreens()
-        recordScreens()
-        switcherSection()
-        signOutSection()
+        section("home") { homeSection() }
+        section("widget") { widgetSection() }
+        section("calendar") { calendarSection() }
+        section("event_form") { eventFormSection() }
+        section("chat") { chatSection() }
+        section("expenses") { expensesSection() }
+        section("settings") { settingsSection() }
+        section("family") { familyScreens() }
+        section("records") { recordScreens() }
+        section("switcher") { switcherSection() }
+        section("sign_out") { signOutSection() }
+    }
+
+    /**
+     * Walks one part of the tour. A step *between* two screens that throws — a Back that found no
+     * focused window, a pop-up that did not close — used to end the whole tour, and the screens after
+     * it were simply missing from the manifest, which read like a short tour rather than a broken
+     * one. Now it is the section's skip, with the reason, the app goes back to the tabs, and the tour
+     * goes on with the next section.
+     */
+    @Suppress("TooGenericExceptionCaught") // the tour goes on past any one section, whatever broke it
+    private fun section(name: String, walk: () -> Unit) {
+        try {
+            walk()
+        } catch (e: Exception) {
+            abandon(name, e)
+        } catch (e: AssertionError) {
+            abandon(name, e)
+        }
+    }
+
+    private fun abandon(name: String, cause: Throwable) {
+        Log.w(TAG, "section $name ended early", cause)
+        camera.skip("section_$name", "ended early: ${cause.toString().take(REASON_CHARS)}")
+        runCatching { driver.backToTabs() }
     }
 
     // ---- Home -----------------------------------------------------------------------------------
@@ -368,6 +393,8 @@ class UiTourTest : AliceOnScreenTest() {
 
     companion object {
         private const val SECTION = "main"
+        private const val TAG = "UiTour"
+        private const val REASON_CHARS = 400
         private const val FIRST_NUMBER = 1
         private const val MAX_DIALOGS = 4
         private const val SETTINGS_SCREENFULS = 4

@@ -636,7 +636,12 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   `tools/ui-tour/` alone runs no CI job (`tools/ci-changes.js`). Two things to keep: the tour
   needs `-e coplanlyUiTour true` on top of the emulator host (`EmulatorEnvironment.assumeUiTour`),
   and `tools/e2e/run-two-parent-tests.sh` excludes its classes by name — skipped, they would fail
-  the `e2e` job's no-skip check. A new screen gets a `camera.shot` in the tour.
+  the `e2e` job's no-skip check. A new screen gets a `camera.shot` in the tour. It never fails on a
+  screen: a step that throws inside a shot skips that shot, and one that throws *between* shots
+  skips the rest of its section as `section_<name>`, with the reason, and the tour goes on. The
+  script hides system error dialogs and stops the launcher before each variant, because a launcher
+  that stopped answering while the emulator booted once held the window focus for a whole run, and
+  every Back the tour pressed waited on it (week 5's tour stopped at its third screen).
 
   Still run the build locally before pushing — CI is a backstop, not a substitute.
   After switching branches, prefer `clean` — stale Hilt/KSP generated sources from another branch cause

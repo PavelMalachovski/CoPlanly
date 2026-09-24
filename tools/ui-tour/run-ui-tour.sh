@@ -58,6 +58,25 @@ fail() {
   exit 1
 }
 
+# A system dialog takes the window focus from the app, and every Back the tour presses then waits
+# for a focus that never returns. The week-5 tour stopped at its third screen in every variant
+# behind "Pixel Launcher isn't responding", raised while the emulator booted and never answered.
+# The tour reviews the app, not the runner's load, so error dialogs are hidden for the session
+# (`hide_error_dialogs`, which the system reads as it changes) and an open one is closed: stopping
+# the launcher dismisses its dialog with it, and the app on top never needs the launcher; the
+# close-dialogs broadcast answers the rest.
+clear_system_dialogs() {
+  adb shell settings put global hide_error_dialogs 1 >/dev/null 2>&1 || true
+  local home
+  home="$(adb shell cmd package resolve-activity --brief \
+    -a android.intent.action.MAIN -c android.intent.category.HOME 2>/dev/null | tr -d '\r' | tail -n 1)"
+  case "$home" in
+    android/* | '') ;;
+    */*) adb shell am force-stop "${home%%/*}" >/dev/null 2>&1 || true ;;
+  esac
+  adb shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS >/dev/null 2>&1 || true
+}
+
 if [ "${1:-}" != "--inside-emulators" ]; then
   firebase="firestore-tests/node_modules/.bin/firebase"
   [ -x "$firebase" ] || fail "Firebase CLI not found at $firebase — run 'npm ci' in firestore-tests/ first."
@@ -81,6 +100,7 @@ adb logcat -G 16M >/dev/null 2>&1 || true
 echo "::group::Install the app and the test APK"
 adb install -r -t "$APP_APK"
 adb install -r -t "$TEST_APK"
+clear_system_dialogs
 echo "::endgroup::"
 
 # "instrumentation:app.coplanly.test/com.coparently.app.HiltTestRunner (target=app.coplanly)"
@@ -118,6 +138,7 @@ for variant in $VARIANTS; do
     adb shell wm size reset || true
     adb shell wm density reset || true
   fi
+  clear_system_dialogs
   adb logcat -c || true
   # `|| true`: a crashed run still leaves whatever it captured, and the manifest says how far it got.
   adb shell am instrument -w -r \
