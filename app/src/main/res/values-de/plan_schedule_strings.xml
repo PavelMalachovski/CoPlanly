@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  From the parenting plan to the schedule (MON-21).
+
+  An agreed answer about the schedule offers to open the custody editor; the parent builds the
+  pattern there, and the proposal cites the answer it came from. Nothing reads the answer's words.
+-->
+<resources>
+    <string name="parenting_plan_propose_schedule">Als Betreuungsplan vorschlagen</string>
+    <string name="parenting_plan_propose_hint">Öffnet den Plan-Editor mit dieser Antwort als Zitat. Was Sie dort einstellen, geht als Vorschlag hinaus.</string>
+    <string name="parenting_plan_propose_blocked">Ein Vorschlag von %1$s wartet auf Ihre Antwort. Beantworten Sie ihn zuerst, dann schlagen Sie diesen vor.</string>
+    <string name="plan_reference_title">Aus Ihrem Elternplan</string>
+    <string name="plan_reference_both_agreed">Sie haben sich beide geeinigt</string>
+    <string name="plan_reference_note">Die App liest diesen Text nicht für Sie: Stellen Sie den beschriebenen Plan unten ein. Beim Speichern erhält %1$s ihn als Vorschlag, der diese Antwort nennt.</string>
+    <string name="plan_citation_current">Aus dem Elternplan: %1$s</string>
+    <string name="plan_citation_changed">Beruht auf der Antwort im Elternplan zu „%1$s“, die sich seit dem Vorschlag geändert hat.</string>
+</resources>

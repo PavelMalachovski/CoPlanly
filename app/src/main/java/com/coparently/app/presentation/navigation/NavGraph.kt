@@ -197,7 +197,7 @@ fun NavGraph(
                             popUpTo(Screen.Onboarding.route) { inclusive = true }
                         }
                     },
-                    onOpenCustodySetup = { navController.navigate(Screen.CustodySetup.route) },
+                    onOpenCustodySetup = { navController.navigate(Screen.CustodySetup.routeFor()) },
                     // The wizard's first step offers both halves of pairing as two buttons —
                     // "I have their code" opens on code entry, "Invite" on this account's own
                     // code — because the second parent to install the app is holding a code and
@@ -493,7 +493,7 @@ fun NavGraph(
                         navController.navigate(Screen.Pairing.routeWithCode(null))
                     },
                     onNavigateToCustodySetup = {
-                        navController.navigate(Screen.CustodySetup.route)
+                        navController.navigate(Screen.CustodySetup.routeFor())
                     },
                     onNavigateToParentingPlan = {
                         navController.navigate(Screen.ParentingPlan.route)
@@ -529,7 +529,12 @@ fun NavGraph(
                 popEnterTransition = { slideInFromLeft() },
                 popExitTransition = { slideOutToRight() }
             ) {
-                ParentingPlanScreen(onNavigateBack = { navController.popBackStack() })
+                ParentingPlanScreen(
+                    onNavigateBack = { navController.popBackStack() },
+                    onProposeSchedule = { questionId ->
+                        navController.navigate(Screen.CustodySetup.routeFor(questionId))
+                    }
+                )
             }
 
             // The communication record (MON-3), off Settings beside the parenting plan: both are
@@ -813,6 +818,14 @@ fun NavGraph(
 
             composable(
                 route = Screen.CustodySetup.route,
+                // Read by `CustodySetupViewModel` and `SeasonalScheduleViewModel` through their
+                // SavedStateHandle; blank opens the editor exactly as it always opened.
+                arguments = listOf(
+                    navArgument(Screen.CustodySetup.ARG_PLAN_QUESTION) {
+                        type = NavType.StringType
+                        defaultValue = ""
+                    }
+                ),
                 enterTransition = { slideInFromRight() },
                 exitTransition = { slideOutToLeft() },
                 popEnterTransition = { slideInFromLeft() },
@@ -1378,7 +1391,19 @@ sealed class Screen(val route: String) {
         fun createRoute(grantId: String): String = "professional_plan/$grantId"
     }
 
-    data object CustodySetup : Screen("custody_setup")
+    /**
+     * The custody schedule editor. Opened plainly from Settings and onboarding, or — MON-21 —
+     * from an agreed parenting-plan answer, whose question id it carries so the editor can quote
+     * the answer and the proposal can cite it.
+     */
+    data object CustodySetup : Screen("custody_setup?planQuestion={planQuestion}") {
+        /** The parenting-plan question the editor was opened from; blank when none. */
+        const val ARG_PLAN_QUESTION = "planQuestion"
+
+        /** Builds the route, carrying [planQuestion] when the editor is opened from the plan. */
+        fun routeFor(planQuestion: String? = null): String =
+            if (planQuestion.isNullOrBlank()) "custody_setup" else "custody_setup?planQuestion=$planQuestion"
+    }
 
     /** The signed-in user's own profile — editable. */
     data object MyProfile : Screen("my_profile")

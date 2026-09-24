@@ -14,10 +14,12 @@ import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -31,14 +33,23 @@ import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.rememberParentNames
+import com.coparently.app.presentation.parentingplan.PlanReferenceCard
+import com.coparently.app.presentation.parentingplan.coParentLabel
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.dimensions
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
-/** Which layer the editor is open on: [layerId] null for a new one, opened on [draft]. */
-private data class EditorTarget(val layerId: String?, val draft: SeasonalLayerDraft)
+/**
+ * Which layer the editor is open on: [layerId] null for a new one, opened on [draft]. [fromPlan]
+ * when it was opened for an agreed parenting-plan answer (MON-21), which it then quotes and cites.
+ */
+private data class EditorTarget(
+    val layerId: String?,
+    val draft: SeasonalLayerDraft,
+    val fromPlan: Boolean = false
+)
 
 /**
  * The seasonal schedules (MON-14) and the holiday-fairness summary (MON-20), under the custody
@@ -56,10 +67,8 @@ fun SeasonalScheduleSection(viewModel: SeasonalScheduleViewModel = hiltViewModel
     val fairness by viewModel.fairnessState.collectAsState()
     val parentNames = rememberParentNames(viewModel.parents.collectAsState().value)
     var editor by remember { mutableStateOf<EditorTarget?>(null) }
-    val openNew = {
-        val start = LocalDate.now()
-        editor = EditorTarget(null, SeasonalLayerDraft(from = start, to = start.plusDays(DEFAULT_LAYER_DAYS)))
-    }
+    val openNew = { editor = newLayerTarget() }
+    OpenOnceForPlan(layers) { editor = newLayerTarget(fromPlan = true) }
 
     Column(modifier = Modifier.padding(vertical = dims.paddingMedium)) {
         GroupLabel(text = stringResource(R.string.seasonal_title))
@@ -70,6 +79,9 @@ fun SeasonalScheduleSection(viewModel: SeasonalScheduleViewModel = hiltViewModel
             modifier = Modifier.padding(horizontal = 4.dp)
         )
         Spacer(modifier = Modifier.height(dims.paddingSmall))
+        layers.planReference?.let {
+            PlanReferenceCard(it, parentNames.coParentLabel(), Modifier.padding(bottom = dims.paddingSmall))
+        }
         SeasonalLayersGroup(
             state = layers,
             parentNames = parentNames,
@@ -104,6 +116,28 @@ fun SeasonalScheduleSection(viewModel: SeasonalScheduleViewModel = hiltViewModel
     }
 }
 
+/** A new layer's editor, opening on the next fortnight; [fromPlan] for one opened from the plan. */
+private fun newLayerTarget(fromPlan: Boolean = false): EditorTarget {
+    val start = LocalDate.now()
+    return EditorTarget(null, SeasonalLayerDraft(from = start, to = start.plusDays(DEFAULT_LAYER_DAYS)), fromPlan)
+}
+
+/**
+ * Opened from an agreed holiday answer in the parenting plan (MON-21): opens a new layer's editor
+ * once, quoting the answer, as soon as there is a base pattern to layer on. Saveable, so a
+ * rotation or a return from the date picker does not open it a second time.
+ */
+@Composable
+private fun OpenOnceForPlan(state: SeasonalLayersUiState, onOpen: () -> Unit) {
+    var opened by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(state.planReference, state.hasBasePattern) {
+        if (state.planReference != null && state.hasBasePattern && !opened) {
+            opened = true
+            onOpen()
+        }
+    }
+}
+
 /** The editor for one layer, new or existing; [onClose] runs after a save, a delete or a dismiss. */
 @Composable
 private fun LayerEditor(
@@ -118,8 +152,9 @@ private fun LayerEditor(
         isEditing = target.layerId != null,
         suggestions = state.suggestions,
         parentNames = parentNames,
+        reference = state.planReference.takeIf { target.fromPlan },
         onConfirm = { draft ->
-            viewModel.saveLayer(draft, target.layerId)
+            viewModel.saveLayer(draft, target.layerId, citePlan = target.fromPlan)
             onClose()
         },
         onDelete = target.layerId?.let { id ->

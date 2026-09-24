@@ -1,11 +1,13 @@
 package com.coparently.app.presentation.custody
 
 import android.util.Log
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.coparently.app.R
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.PatternSubmission
+import com.coparently.app.domain.custody.CustodyProposalTransition
 import com.coparently.app.domain.custody.CustodyResolver
 import com.coparently.app.domain.custody.HolidayFairness
 import com.coparently.app.domain.custody.HolidayFairnessCalculator
@@ -15,11 +17,14 @@ import com.coparently.app.domain.custody.SharedCustodyRead
 import com.coparently.app.domain.holidays.HolidayLocation
 import com.coparently.app.domain.holidays.SchoolVacationSuggestions
 import com.coparently.app.domain.holidays.VacationSuggestion
+import com.coparently.app.domain.parentingplan.PlanReference
+import com.coparently.app.domain.parentingplan.PlanScheduleTarget
 import com.coparently.app.domain.repository.ChildInfoRepository
 import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.presentation.common.UiText
+import com.coparently.app.presentation.parentingplan.PlanReferenceSource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -57,6 +62,8 @@ private const val STOP_TIMEOUT_MS = 5_000L
  * @property suggestions Upcoming school vacations to fill a layer's dates from.
  * @property isSaving A change is being sent.
  * @property message The outcome of the last change, resolved by the screen; null when none.
+ * @property planReference The agreed holiday answer from the parenting plan the screen was opened
+ *   from (MON-21), quoted above the layer editor and cited on the proposal; null otherwise.
  */
 data class SeasonalLayersUiState(
     val hasBasePattern: Boolean = false,
@@ -65,7 +72,8 @@ data class SeasonalLayersUiState(
     val ownProposalPending: Boolean = false,
     val suggestions: List<VacationSuggestion> = emptyList(),
     val isSaving: Boolean = false,
-    val message: UiText? = null
+    val message: UiText? = null,
+    val planReference: PlanReference? = null
 )
 
 /**
@@ -94,7 +102,9 @@ class SeasonalScheduleViewModel @Inject constructor(
     private val custodyModelRepository: CustodyModelRepository,
     private val userRepository: UserRepository,
     childInfoRepository: ChildInfoRepository,
-    parentsSource: ParentsSource
+    parentsSource: ParentsSource,
+    savedStateHandle: SavedStateHandle,
+    private val planReferenceSource: PlanReferenceSource
 ) : ViewModel() {
 
     /** Both parents, for naming slots in the section and the card. */
@@ -126,7 +136,7 @@ class SeasonalScheduleViewModel @Inject constructor(
         local.copy(
             hasBasePattern = model != null,
             layers = model?.seasonalLayers.orEmpty(),
-            coParentProposalPending = proposer != null && proposer != uid,
+            coParentProposalPending = CustodyProposalTransition.pendingFromCoParent(remote, uid),
             ownProposalPending = proposer != null && proposer == uid,
             suggestions = SchoolVacationSuggestions.upcoming(location.provider, today)
         )
@@ -161,6 +171,32 @@ class SeasonalScheduleViewModel @Inject constructor(
             FairnessUiState(today.year, years())
         )
 
+    init {
+        savedStateHandle.get<String>(ARG_PLAN_QUESTION)?.takeIf { it.isNotBlank() }?.let { loadPlanReference(it) }
+    }
+
+    /**
+     * Loads the agreed parenting-plan answer the screen was opened from (MON-21), when it is a
+     * holiday answer — the base-pattern answer belongs to the form above this section.
+     */
+    private fun loadPlanReference(questionId: String) {
+        viewModelScope.launch {
+            val reference = try {
+                planReferenceSource.referenceFor(questionId)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (
+                @Suppress("TooGenericExceptionCaught") e: Exception
+            ) {
+                Log.w(TAG, "Could not read the parenting plan answer", e)
+                null
+            }
+            transient.update { state ->
+                state.copy(planReference = reference?.takeIf { it.target == PlanScheduleTarget.SEASONAL_LAYER })
+            }
+        }
+    }
+
     private fun years(): List<Int> = listOf(today.year, today.year + 1)
 
     /** Shows [year], one of [FairnessUiState.years]. */
@@ -171,16 +207,23 @@ class SeasonalScheduleViewModel @Inject constructor(
     /**
      * Adds a layer, or replaces the one with [editingId], and submits the result. An invalid
      * draft changes nothing; the editor refuses to confirm one.
+     *
+     * @param citePlan True when the editor was opened from an agreed parenting-plan answer
+     *   (MON-21): the proposal then cites it. The layer is still exactly the parent's draft.
      */
-    fun saveLayer(draft: SeasonalLayerDraft, editingId: String?) = change { current ->
-        val existing = current.firstOrNull { it.id == editingId }
-        draft.toLayer(editingId ?: newId(), existing)?.let { layer ->
-            current.filterNot { it.id == layer.id } + layer
+    fun saveLayer(draft: SeasonalLayerDraft, editingId: String?, citePlan: Boolean = false) {
+        // The ViewModel's own state, not a WhileSubscribed stream (CLAUDE.md item 17).
+        val citation = transient.value.planReference?.citationWire?.takeIf { citePlan }
+        change(citation) { current ->
+            val existing = current.firstOrNull { it.id == editingId }
+            draft.toLayer(editingId ?: newId(), existing)?.let { layer ->
+                current.filterNot { it.id == layer.id } + layer
+            }
         }
     }
 
     /** Removes the layer with [id] and submits the result. */
-    fun deleteLayer(id: String) = change { current ->
+    fun deleteLayer(id: String) = change(planCitation = null) { current ->
         current.filterNot { it.id == id }.takeIf { it.size != current.size }
     }
 
@@ -195,11 +238,11 @@ class SeasonalScheduleViewModel @Inject constructor(
      * Read fresh rather than from [layersState]: a save path never trusts a `WhileSubscribed`
      * flow's `.value` (CLAUDE.md item 17). [edit] returning null means nothing changed.
      */
-    private fun change(edit: (List<SeasonalLayer>) -> List<SeasonalLayer>?) {
+    private fun change(planCitation: String?, edit: (List<SeasonalLayer>) -> List<SeasonalLayer>?) {
         transient.update { it.copy(isSaving = true) }
         viewModelScope.launch {
             val message = try {
-                submit(edit)
+                submit(planCitation, edit)
             } catch (e: CancellationException) {
                 throw e
             } catch (
@@ -212,14 +255,17 @@ class SeasonalScheduleViewModel @Inject constructor(
         }
     }
 
-    private suspend fun submit(edit: (List<SeasonalLayer>) -> List<SeasonalLayer>?): UiText? {
+    private suspend fun submit(
+        planCitation: String?,
+        edit: (List<SeasonalLayer>) -> List<SeasonalLayer>?
+    ): UiText? {
         val active = custodyModelRepository.getActiveModelSync()
             ?: return UiText.Res(R.string.seasonal_needs_base_pattern)
         val next = edit(active.seasonalLayers)
         return when {
             next == null -> null
             coParentProposalWaiting() -> UiText.Res(R.string.seasonal_answer_pending_first)
-            else -> when (custodyModelRepository.submitSeasonalLayers(next)) {
+            else -> when (custodyModelRepository.submitSeasonalLayers(next, planCitation)) {
                 PatternSubmission.PROPOSED -> UiText.Res(R.string.seasonal_sent_for_approval)
                 PatternSubmission.ACTIVATED -> UiText.Res(R.string.seasonal_saved)
                 null -> UiText.Res(R.string.seasonal_needs_base_pattern)
@@ -233,13 +279,15 @@ class SeasonalScheduleViewModel @Inject constructor(
      */
     private suspend fun coParentProposalWaiting(): Boolean {
         val read = custodyModelRepository.readShared() as? SharedCustodyRead.Found ?: return false
-        val proposer = read.custody.proposal?.proposedBy ?: return false
-        return proposer != userRepository.getCurrentUserId()
+        return CustodyProposalTransition.pendingFromCoParent(read.custody, userRepository.getCurrentUserId())
     }
 
     private fun newId(): String = UUID.randomUUID().toString()
 
     private companion object {
         const val TAG = "SeasonalScheduleVM"
+
+        /** The navigation argument naming the plan question the screen was opened from (MON-21). */
+        const val ARG_PLAN_QUESTION = "planQuestion"
     }
 }

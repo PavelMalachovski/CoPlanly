@@ -6,6 +6,7 @@ import org.junit.Test
 import java.time.LocalDate
 import java.time.LocalTime
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -176,6 +177,48 @@ class CustodyProposalTransitionTest {
     }
 
     @Test
+    fun `a proposal carries the plan citation it was given, and none by default`() {
+        val cited = CustodyProposalTransition
+            .propose(current, wanted, true, DAD, NOW, planCitation = CITATION).getOrThrow()
+        val plain = CustodyProposalTransition.propose(current, wanted, true, DAD, NOW).getOrThrow()
+
+        assertEquals(CITATION, cited.proposal?.planCitationWire)
+        assertNull(plain.proposal?.planCitationWire)
+        // A citation is never an input: the proposed pattern is exactly what was built.
+        assertEquals(wanted, cited.proposal?.model)
+    }
+
+    @Test
+    fun `replacing one's own cited proposal without a citation drops it`() {
+        val cited = CustodyProposalTransition
+            .propose(current, wanted, true, DAD, NOW, planCitation = CITATION).getOrThrow()
+
+        val corrected = CustodyProposalTransition.propose(cited, agreed, true, DAD, LATER).getOrThrow()
+
+        assertNull(corrected.proposal?.planCitationWire)
+    }
+
+    @Test
+    fun `every answer to a cited proposal clears the citation with it`() {
+        val cited = CustodyProposalTransition
+            .propose(current, wanted, true, DAD, NOW, planCitation = CITATION).getOrThrow()
+
+        assertNull(CustodyProposalTransition.accept(cited, MOM, LATER, LATER_MILLIS).getOrThrow().proposal)
+        assertNull(CustodyProposalTransition.decline(cited, MOM, LATER, null).getOrThrow().proposal)
+        assertNull(CustodyProposalTransition.withdraw(cited, DAD).getOrThrow().proposal)
+    }
+
+    @Test
+    fun `only the other parent's proposal counts as waiting for an answer`() {
+        val pending = CustodyProposalTransition.propose(current, wanted, true, DAD, NOW).getOrThrow()
+
+        assertTrue(CustodyProposalTransition.pendingFromCoParent(pending, MOM))
+        assertFalse(CustodyProposalTransition.pendingFromCoParent(pending, DAD))
+        assertFalse(CustodyProposalTransition.pendingFromCoParent(current, MOM))
+        assertFalse(CustodyProposalTransition.pendingFromCoParent(null, MOM))
+    }
+
+    @Test
     fun `deciding when nothing is pending is a failure, not a no-op`() {
         assertTrue(CustodyProposalTransition.accept(current, MOM, NOW, NOW_MILLIS).isFailure)
         assertTrue(CustodyProposalTransition.decline(current, MOM, NOW, null).isFailure)
@@ -190,6 +233,7 @@ class CustodyProposalTransitionTest {
         const val DAD_SLOT = "dad"
         const val NOW = "2026-08-09T08:00:00"
         const val LATER = "2026-08-09T09:00:00"
+        const val CITATION = "p1|care_weekday|0123456789abcdef"
 
         /**
          * The document's own dates as instants.

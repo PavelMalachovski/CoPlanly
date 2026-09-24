@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  From the parenting plan to the schedule (MON-21).
+
+  An agreed answer about the schedule offers to open the custody editor; the parent builds the
+  pattern there, and the proposal cites the answer it came from. Nothing reads the answer's words.
+-->
+<resources>
+    <string name="parenting_plan_propose_schedule">Propose as the schedule</string>
+    <string name="parenting_plan_propose_hint">Opens the schedule editor with this answer quoted. What you build goes as a proposal.</string>
+    <string name="parenting_plan_propose_blocked">%1$s has a schedule proposal waiting for your answer. Answer it first, then propose this one.</string>
+    <string name="plan_reference_title">From your parenting plan</string>
+    <string name="plan_reference_both_agreed">You both agreed</string>
+    <string name="plan_reference_note">The app does not read this for you: set up the schedule it describes below. When you save, %1$s receives it as a proposal that names this answer.</string>
+    <string name="plan_citation_current">From the parenting plan: %1$s</string>
+    <string name="plan_citation_changed">Built from the parenting plan answer to “%1$s”, which has changed since this was proposed.</string>
+</resources>

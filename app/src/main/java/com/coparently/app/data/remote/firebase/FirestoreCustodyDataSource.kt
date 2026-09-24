@@ -136,6 +136,11 @@ class FirestoreCustodyDataSource @Inject constructor(
             // proposal, and a stored null would read back as a field that exists but says
             // nothing.
             proposal?.let { put("proposal", it.toMap()) }
+            // The proposal's parenting-plan citation (MON-21) sits beside the sub-map rather than
+            // in it, so `firestore.rules` can bound it by name in the `hasOnly` lists. It goes
+            // wherever the proposal goes: a write that clears the proposal clears this too, and
+            // a swap write re-sends it verbatim. Omitted when absent — an older build's proposal.
+            proposal?.planCitationWire?.let { put(PLAN_CITATION, it) }
             lastDecision?.let { put("lastDecision", it.toMap()) }
             // Same omit-rather-than-null rule as the two above, and for the same reason: this is
             // a whole-document `set()`, so leaving the key out is what clears the last swap.
@@ -244,7 +249,8 @@ class FirestoreCustodyDataSource @Inject constructor(
             lastModifiedAtMillis = CustodyTimestamp.fromWire(this["lastModifiedAt"] as? String),
             createdAt = (this["createdAt"] as? String).orEmpty(),
             repeatYearly = this["repeatYearly"] as? Boolean ?: true,
-            proposal = (this["proposal"] as? Map<*, *>)?.toProposal(documentId, windows, layers),
+            proposal = (this["proposal"] as? Map<*, *>)?.toProposal(documentId, windows, layers)
+                ?.copy(planCitationWire = (this[PLAN_CITATION] as? String)?.takeIf { it.isNotBlank() }),
             lastDecision = (this["lastDecision"] as? Map<*, *>)?.toDecision(),
             dayOverrides = (this["dayOverrides"] as? Map<*, *>).toDayOverrides(),
             lastSwapDate = (this["lastSwapDate"] as? String)?.takeIf { it.isNotBlank() },
@@ -380,5 +386,8 @@ class FirestoreCustodyDataSource @Inject constructor(
 
     private companion object {
         const val COLLECTION = "custody_models"
+
+        /** The top-level key a proposal's plan citation is stored under (MON-21). */
+        const val PLAN_CITATION = "proposalPlanCitation"
     }
 }

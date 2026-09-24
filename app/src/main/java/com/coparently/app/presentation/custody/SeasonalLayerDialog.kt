@@ -25,9 +25,12 @@ import androidx.compose.ui.unit.dp
 import com.coparently.app.R
 import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.holidays.VacationSuggestion
+import com.coparently.app.domain.parentingplan.PlanReference
 import com.coparently.app.presentation.common.LocalDatePickerDialog
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.PillChip
+import com.coparently.app.presentation.parentingplan.PlanReferenceCard
+import com.coparently.app.presentation.parentingplan.coParentLabel
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.util.Locale
@@ -46,6 +49,8 @@ private enum class RangeEnd { FROM, TO }
  * @param isEditing True for an existing layer, which may keep its current pattern.
  * @param suggestions School vacations to fill the range from; the row is absent when empty.
  * @param parentNames Resolves a slot to that parent's name.
+ * @param reference The agreed parenting-plan answer the editor was opened for (MON-21), quoted
+ *   read-only above the fields; null for an editor opened any other way.
  * @param onConfirm Receives the draft to save.
  * @param onDelete Deletes the layer; null for a new one.
  * @param onDismiss Closes the dialog.
@@ -57,6 +62,7 @@ fun SeasonalLayerDialog(
     isEditing: Boolean,
     suggestions: List<VacationSuggestion>,
     parentNames: ParentNames,
+    reference: PlanReference? = null,
     onConfirm: (SeasonalLayerDraft) -> Unit,
     onDelete: (() -> Unit)?,
     onDismiss: () -> Unit
@@ -76,6 +82,7 @@ fun SeasonalLayerDialog(
                 isEditing = isEditing,
                 suggestions = suggestions,
                 parentNames = parentNames,
+                reference = reference,
                 onChange = { draft = it },
                 onPick = { picking = it }
             )
@@ -118,6 +125,7 @@ private fun LayerEditorBody(
     isEditing: Boolean,
     suggestions: List<VacationSuggestion>,
     parentNames: ParentNames,
+    reference: PlanReference?,
     onChange: (SeasonalLayerDraft) -> Unit,
     onPick: (RangeEnd) -> Unit
 ) {
@@ -125,6 +133,8 @@ private fun LayerEditorBody(
         modifier = Modifier.verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
+        // MON-21: the agreed answer, above the fields the parent fills in from it by hand.
+        reference?.let { PlanReferenceCard(reference = it, coParentName = parentNames.coParentLabel()) }
         OutlinedTextField(
             value = draft.name,
             onValueChange = { onChange(draft.copy(name = it.take(MAX_NAME_INPUT))) },

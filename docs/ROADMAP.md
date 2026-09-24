@@ -93,7 +93,7 @@ invocation is yours.
 | **MON-17** | **Built** (functions, rules, Settings screen); left: the deploy and a subscription from a real iPhone — see the 👁 table | P1 | — |
 | **MON-18** | **Built** (fourth callable, two-consent rules, screens); left: the functions and rules deploys and a three-account run — see the 👁 table | P1 | — |
 | **MON-20** | **Built** (read-only card in custody settings, pure calculator); left: a look on a phone | P2 | — |
-| **MON-21** | From the agreed parenting plan to a proposed schedule | P2 | M |
+| **MON-21** | **Built** (a proposal from an agreed plan answer, citing it; rules and rules tests); left: the rules deploy and a look on two phones — see the 👁 table | P2 | — |
 | **MON-22** | A private, local-only journal that can be attached to an export | P2 | M |
 | **REL-4 (drafting)** | Done as far as the code can answer: every placeholder left is a fact only the owner has, listed at the top of each document. The deletion page and the privacy link in the app are written | P0 | S |
 
@@ -122,6 +122,7 @@ invocation is yours.
 | **MON-17 (built, unseen)** | The iCalendar feed: `calendarFeed` + three callables, the Settings → Sync row | The RFC 5545 text and the custody port are pinned by `functions/test/calendar-feed.test.js`; only Apple Calendar shows whether it *subscribes* (`webcal://` from the share sheet), draws the all-day custody bars and the contact windows at the right local times, refreshes within the hour, and stops updating after a revoke. Checklist in MON-17. |
 | **MON-14 (built, unseen)** | Seasonal layers over the base pattern, "Fill from school holidays", layer changes through the proposal flow | `DEVICE-CHECKLIST.md` §3.11: the grid on a layer's dates (no new colour), the proposal reaching the co-parent with "the seasonal schedules change too", and the mixed-version path. Needs `38.json` from the Regenerate workflow before CI's schema guard is green, and `firebase deploy --only firestore:rules` for the `seasonalLayersKeptOrDropped` guard (without it the live rules refuse every proposal and swap write that carries the new key). |
 | **MON-20 (built, unseen)** | The holiday-fairness card | §3.11: nights add up to the year, names and colours are the parents' own, the year switch. |
+| **MON-21 (built, unseen)** | "Propose as the schedule" under an agreed custody or holiday answer, the quoted answer in the editor, and "From the parenting plan" / "changed since" on the co-parent's proposal card | `DEVICE-CHECKLIST.md` §3.12, two paired phones. The logic is unit-tested (`PlanScheduleLinkTest`, the ViewModel tests) and the rules offline (`custody-models.test.js`); only phones show the row, the quote, the auto-opened layer editor and the live "changed since". **Needs `firebase deploy --only firestore:rules` first** — until then the live rules' `hasOnly` lists refuse a proposal carrying `proposalPlanCitation`, and the repository falls back to a local save. |
 | **MON-23 (shipped, unseen)** | The document vault (Settings → Family → Documents) and chat attachments (the paperclip beside the composer) | Rules proved offline (`family-documents.test.js`, `storage-shared-files.test.js`), deletion and sweep in mocha, the Kotlin compiled by CI and seen by nobody. Two paired phones: A files a PDF and a camera photo, B sees both and opens them, B cannot delete A's; A sends an image and a PDF in chat, B sees the thumbnail and the chip and opens both; with A in flight mode the bubble says "Not uploaded yet" and never ticks, and delivers when the network returns. `docs/DEVICE-CHECKLIST.md` §5.5. **Needs `firebase deploy --only storage` first** — until then every upload is refused. |
 | **MON-18 (shipped, unseen)** | Professional access: invite, the co-parent's consent, the professional's read-only calendar and plan, revoke | The rules and the callable are proved offline (emulator suite, mocha); the Kotlin is compiled by CI and seen by nobody. Three accounts (A, B, a professional P): A invites, P redeems, P sees "waiting"; B consents from Settings → Family → Professionals; P reads the calendar and plan and nothing else; either parent revokes and P's views empty at once. `docs/DEVICE-CHECKLIST.md` §5.4. Needs the functions **and** rules deploy first. |
 
@@ -132,6 +133,7 @@ invocation is yours.
 | **REL-3 ops** | `firebase deploy --only functions` → invoke `backfillFamilyDocuments` → invoke `backfillRecordFamilyIds` → `firebase deploy --only firestore:rules` | **The order matters.** PR #76's isolation is inert until this runs, and running the rules deploy before the record backfill leaves each co-parent's expenses looking empty on the other phone. The functions deploy also ships the `onFamilyCreated` re-stamp trigger and the `sweepLapsedCalendarFriends` schedule. `functions/README.md` has the runbook. |
 | **MON-4 deploy** | `firebase deploy --only firestore:rules` (the `event_versions` block) and `firebase deploy --only functions` (account deletion reaches revisions); trigger the Regenerate workflow for `37.json`, and again for `39.json` (`events.updatedAtMillis`) | Until the rules are deployed every revision upload is refused and stays queued on the phone — nothing is lost, but nothing is recorded server-side either. The schema export is the one artefact only a machine with an Android SDK can produce; CI's schema guard fails until it is committed. Fold the rules deploy into REL-3's order: after the record backfill, like every rules deploy. |
 | **MON-16 deploy** | `firebase deploy --only functions` (`reserveExportRecordId`, `registerExportReceipt`, `verifyExport`, and account deletion scrubbing receipts), `firebase deploy --only firestore:rules` (the closed `export_receipts` block), `firebase deploy --only hosting` (`web/verify/`); then set `publishedExportVerifyUrl` in `app/build.gradle.kts` | Until the functions are deployed every export says "not registered" — honestly, and nothing is lost. Until the page is hosted and the URL set, a registered file prints its record ID without an address. `verifyExport` must be publicly invokable (a callable is by default); check `allUsers` has the Cloud Functions Invoker role after the first deploy. Rules order as for MON-4: after REL-3's record backfill. |
+| **MON-21 deploy** | `firebase deploy --only firestore:rules` (`planCitationValid`, `planCitationKeptOrDropped`, the key in both `hasOnly` lists) | Without it a cited proposal is refused outright and saved locally instead — the one failure in this item that changes what a parent sees. Rules order as for MON-4: after REL-3's record backfill. |
 | **REL-3 storage** | `firebase deploy --only storage` | One command that fixes a live bug: every pet and medical photo upload is refused today because the bucket still runs the July rules. **MON-23 needs the same deploy**: the vault and chat attachments live under `family_documents/` and `chat_attachments/`, which the live bucket refuses outright until it runs. |
 | **MON-23 deploy** | `firebase deploy --only storage`, `firebase deploy --only firestore:rules,firestore:indexes` (the `family_documents` block and its index, the `messages` attachment cap), `firebase deploy --only functions` (the vault in account deletion and the tombstone sweep, chat files erased with the chat) | Rules order as for MON-4: after REL-3's record backfill. Without the storage deploy nothing can be uploaded; without the rules the vault list and every filing are refused; without the functions an erased account leaves its vault files and chat files in the bucket. |
 | **REL-1** | Firebase console, Google Cloud console, a fresh `google-services.json`, the debug and release SHA-1 | A local build fails until this is done — deliberately, since `applicationId` changed to `app.coplanly`. |
@@ -149,8 +151,8 @@ invocation is yours.
 
 In this order, and each is genuinely finishable in the cloud:
 
-1. **MON-21** — from the agreed parenting plan to a proposed schedule, through the proposal flow
-   the custody screen already has.
+1. ~~**MON-21**~~ — **built** (September 2026): an agreed custody or holiday answer opens the
+   editor and the proposal cites it; left is the rules deploy and a two-phone look (§3.12).
 2. ~~**MON-4's last item**~~ — **done** (September 2026): event edits compare by instant (schema 39).
 3. ~~**MON-3's next slice**~~ — **done** (September 2026): the parenting plan is in the record, an
    optional section on by default; see MON-3.
@@ -2138,15 +2140,60 @@ Not done: Orthodox Christmas is not one of the fixed rows (Russia's table carrie
 public holiday, which the card lists), and the card reads this viewer's country — the same
 per-viewer rule as the school-vacation strips (MON-13).
 
-### MON-21 · P2 · M · From the parenting plan to the schedule
+### MON-21 · **BUILT, UNSEEN; LIVE ONLY AFTER THE RULES DEPLOY** · P2 · M · From the parenting plan to the schedule
 
-**Where:** ☁️ cloud.
+**Where:** ☁️ cloud (done) → 👁 two phones → 💻 `firebase deploy --only firestore:rules`.
 
 **Answers:** the Czech parenting plan (MON-5) is a document today. When both parents have agreed
 the plan's custody and holiday sections, offer to **propose** the matching schedule: a base
 pattern and MON-14 layers, through the normal proposal and accept flow. The agreement already
 records the exact wording (item 21), so the proposal can cite the answer it came from. Unique in
 CZ, and a reason for a mediator to recommend the app.
+
+**What shipped** (owner-approved design, September 2026; CLAUDE.md item 32 holds the invariants):
+
+- **Which questions.** `PlanScheduleLink.SCHEDULE_QUESTIONS`: `care_weekday` opens the base-pattern
+  editor; `holidays_school` and `holidays_special` open the seasonal-layer editor (MON-14).
+  Not `care_handover` (a place and a driver, not whose day it is) nor `residence_*` (an address) —
+  a schedule editor for an answer no schedule expresses would be design rule 8's empty promise.
+- **When.** A **Propose as the schedule** row under the question, only when
+  `ParentingPlanComparison.statusOf` says `AGREED`, only when paired, and not while the
+  co-parent's own custody proposal waits for this parent — then the row stays, untappable, and
+  says why (`CustodyProposalTransition.pendingFromCoParent`, the rule the seasonal section already
+  applied, now shared).
+- **The editor quotes, the parent builds.** The row navigates to Custody setup with the question
+  id (`custody_setup?planQuestion=…`). A read-only **From your parenting plan** card quotes the
+  question and the agreed wording (both wordings, labelled, when the two parents' texts differ);
+  a holiday answer opens the seasonal-layer dialog by itself with the same card on top. **No free
+  text is parsed into a pattern** — the answer is two people's words, not a format.
+- **The proposal cites, and nothing else changes.** Saving goes through `submitPattern` /
+  `submitSeasonalLayers` unchanged, so a paired family gets a proposal, never an overwrite. The
+  only addition is the top-level `proposalPlanCitation` beside `proposal`:
+  `"p1|<questionId>|<first 16 hex of SHA-256 of the agreed text>"` (`PlanCitationCodec`). The
+  agreed text is both answers, sorted and joined — so either phone derives the same hash — and
+  a single text when the two are identical.
+- **The co-parent sees the source.** The proposal card in the inbox reads **From the parenting
+  plan: <question>** while the plan still hashes to the citation, and **… which has changed since
+  this was proposed** once either parent edits the answer (or the agreement lapses) — live. A
+  missing key (an older build's proposal), an unreadable one, or an unknown question id shows
+  nothing, never an error.
+- **Rules** (`custody_models`): the key is in the proposal-only and swap `hasOnly` lists;
+  `planCitationValid` bounds it (a string of at most 128 characters, only beside a `proposal`,
+  put or changed only by that proposal's author) and `planCitationKeptOrDropped` keeps a swap from
+  changing it while letting an older build drop it. Accept, decline and withdraw clear it with the
+  proposal. 14 new cases in `firestore-tests/rules/custody-models.test.js`, all green.
+- **Not affected:** the calendar feed (MON-17). `functions/calendar-feed.js` ports only the agreed
+  pattern, layers and swaps — it never reads `proposal`, so it never reads the citation either.
+
+**Not done, recorded rather than hidden:**
+
+- **Only the inbox card shows the citation.** Home's proposal dialog and the calendar's banner
+  do not (the dialog's signature is pinned by the detekt baseline; widen it with the next
+  Regenerate run).
+- **The citation is not in the export (MON-3).** The record prints the plan and the schedule
+  changes separately; tying a revision of the schedule to the plan answer it cited is a later
+  export slice.
+- **Not on a device yet** — `docs/DEVICE-CHECKLIST.md` §3.12, and the rules deploy in §1's 💻 table.
 
 ### MON-23 · **SHIPPED, UNSEEN; LIVE ONLY AFTER `firebase deploy --only storage`** · P1 · M · A document vault and files in chat
 

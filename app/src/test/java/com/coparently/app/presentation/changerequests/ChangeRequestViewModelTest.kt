@@ -2,10 +2,14 @@ package com.coparently.app.presentation.changerequests
 
 import com.coparently.app.R
 import com.coparently.app.data.repository.CustodyModelRepository
+import com.coparently.app.domain.custody.CustodyProposal
+import com.coparently.app.domain.custody.SharedCustody
 import com.coparently.app.domain.model.ChangeRequest
 import com.coparently.app.domain.model.ChangeRequestStatus
+import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.model.User
+import com.coparently.app.domain.parentingplan.CitationStatus
 import com.coparently.app.domain.repository.ChangeRequestRepository
 import com.coparently.app.domain.repository.EventRepository
 import com.coparently.app.domain.repository.UserRepository
@@ -13,14 +17,17 @@ import com.coparently.app.domain.usecase.EventUseCases
 import com.coparently.app.domain.usecase.UpdateEventUseCase
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.testParentsSource
+import com.coparently.app.presentation.parentingplan.PlanReferenceSource
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
+import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -31,6 +38,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import java.time.LocalDate
 import java.time.LocalDateTime
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -57,6 +65,7 @@ class ChangeRequestViewModelTest {
         every { observeDayOverrides() } returns flowOf(emptyMap())
         every { observeShared() } returns flowOf(null)
     }
+    private val planReferences = mockk<PlanReferenceSource>()
     private val userRepository = mockk<UserRepository>(relaxed = true) {
         coEvery { getCurrentUser() } returns User(
             id = "u1",
@@ -103,7 +112,8 @@ class ChangeRequestViewModelTest {
         ),
         userRepository = userRepository,
         custodyModelRepository = custodyModelRepository,
-        parentsSource = testParentsSource()
+        parentsSource = testParentsSource(),
+        planReferenceSource = planReferences
     )
 
     @Before
@@ -195,5 +205,62 @@ class ChangeRequestViewModelTest {
 
         assertTrue(vm.hasLoaded.value)
         assertEquals(emptyList<ChangeRequest>(), vm.changeRequests.value)
+    }
+
+    private fun sharedWithProposal(by: String, citation: String?): SharedCustody {
+        val model = CustodyModel.weekOnWeekOff(id = "m1", startDate = LocalDate.of(2026, 9, 7))
+        return SharedCustody(
+            model = model,
+            lastModifiedBy = by,
+            lastModifiedAtMillis = 1L,
+            createdAt = "",
+            proposal = CustodyProposal(
+                model = model,
+                repeatYearly = true,
+                proposedBy = by,
+                proposedAt = "",
+                planCitationWire = citation
+            )
+        )
+    }
+
+    @Test
+    fun `a cited proposal from the co-parent reports what the plan says about its source`() =
+        runTest(dispatcher) {
+            val wire = "p1|care_weekday|0123456789abcdef"
+            every { custodyModelRepository.observeShared() } returns flowOf(sharedWithProposal("u2", wire))
+            every { planReferences.observeCitation(wire, "u1", "u2") } returns
+                flowOf(CitationStatus.Changed("care_weekday"))
+            val vm = viewModel()
+            backgroundScope.launch { vm.pendingProposalCitation.collect {} }
+            advanceUntilIdle()
+
+            assertEquals(CitationStatus.Changed("care_weekday"), vm.pendingProposalCitation.value)
+        }
+
+    @Test
+    fun `this parent's own proposal is not theirs to answer, so its citation is not shown here`() =
+        runTest(dispatcher) {
+            every { custodyModelRepository.observeShared() } returns
+                flowOf(sharedWithProposal("u1", "p1|care_weekday|0123456789abcdef"))
+            val vm = viewModel()
+            backgroundScope.launch { vm.pendingProposalCitation.collect {} }
+            advanceUntilIdle()
+
+            assertEquals(CitationStatus.None, vm.pendingProposalCitation.value)
+            verify(exactly = 0) { planReferences.observeCitation(any(), any(), any()) }
+        }
+
+    @Test
+    fun `a plan that cannot be read leaves the card as it always was`() = runTest(dispatcher) {
+        val wire = "p1|care_weekday|0123456789abcdef"
+        every { custodyModelRepository.observeShared() } returns flowOf(sharedWithProposal("u2", wire))
+        every { planReferences.observeCitation(wire, "u1", "u2") } returns
+            flow { throw IllegalStateException("denied") }
+        val vm = viewModel()
+        backgroundScope.launch { vm.pendingProposalCitation.collect {} }
+        advanceUntilIdle()
+
+        assertEquals(CitationStatus.None, vm.pendingProposalCitation.value)
     }
 }

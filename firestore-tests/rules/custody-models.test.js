@@ -778,4 +778,149 @@ describe('custody_models', () => {
           }));
         });
   });
+
+  describe('parenting-plan citation (MON-21)', () => {
+    // A proposal built from an agreed parenting-plan answer names it in a top-level key beside
+    // the `proposal` sub-map: "p1|<questionId>|<16 hex chars of SHA-256>". A citation, never a
+    // parse — the reader's phone re-hashes the plan to say whether it still says the same thing.
+    const CITATION = 'p1|care_weekday|0123456789abcdef';
+    const DATE = '2026-09-05';
+    const proposal = (by) => ({
+      modelType: 'WEEK_ON_WEEK_OFF',
+      patternDays: 14,
+      momDayIndices: [7, 8, 9, 10, 11, 12, 13],
+      startDate: '2026-08-03',
+      repeatYearly: true,
+      proposedBy: by,
+      proposedAt: '2026-08-24T10:00:00',
+    });
+    const cited = (by) => ({proposal: proposal(by), proposalPlanCitation: CITATION});
+    const swap = {
+      dayOverrides: {[DATE]: pendingSwap(MOM, 'dad')},
+      lastModifiedBy: MOM,
+      lastModifiedKind: 'SWAP',
+      lastSwapDate: DATE,
+    };
+
+    it('lets a proposer attach a citation to their proposal, by update and by set()', async () => {
+      await seed(env, {[PATH]: custodyDoc({})});
+      const db = env.authenticatedContext(DAD).firestore();
+      await assertSucceeds(db.doc(PATH).update(cited(DAD)));
+
+      await seed(env, {[PATH]: custodyDoc({})});
+      // What `FirestoreCustodyDataSource.setCustody` actually sends: the whole document.
+      await assertSucceeds(db.doc(PATH).set(custodyDoc(cited(DAD))));
+    });
+
+    it('still lets an older build propose with no citation at all', async () => {
+      await seed(env, {[PATH]: custodyDoc({})});
+      const db = env.authenticatedContext(DAD).firestore();
+      await assertSucceeds(db.doc(PATH).set(custodyDoc({proposal: proposal(DAD)})));
+    });
+
+    it('refuses a citation longer than 128 characters', async () => {
+      await seed(env, {[PATH]: custodyDoc({})});
+      const db = env.authenticatedContext(DAD).firestore();
+      await assertFails(db.doc(PATH).update({
+        proposal: proposal(DAD),
+        proposalPlanCitation: 'p1|care_weekday|' + 'a'.repeat(120),
+      }));
+    });
+
+    it('refuses a citation that is not a string', async () => {
+      await seed(env, {[PATH]: custodyDoc({})});
+      const db = env.authenticatedContext(DAD).firestore();
+      await assertFails(db.doc(PATH).update({proposal: proposal(DAD), proposalPlanCitation: 42}));
+      await assertFails(db.doc(PATH).update({
+        proposal: proposal(DAD),
+        proposalPlanCitation: {questionId: 'care_weekday'},
+      }));
+    });
+
+    it('refuses a citation with no proposal beside it', async () => {
+      await seed(env, {[PATH]: custodyDoc({})});
+      const db = env.authenticatedContext(DAD).firestore();
+      await assertFails(db.doc(PATH).update({proposalPlanCitation: CITATION}));
+    });
+
+    it('refuses the co-parent re-attributing somebody else\'s proposal to the plan', async () => {
+      await seed(env, {[PATH]: custodyDoc({proposal: proposal(DAD)})});
+      const db = env.authenticatedContext(MOM).firestore();
+      await assertFails(db.doc(PATH).update({proposalPlanCitation: CITATION}));
+    });
+
+    it('refuses a cited proposal written in the co-parent\'s name', async () => {
+      // The citation is only ever the proposer's to set: a write that names somebody else as the
+      // proposer cannot carry one, new or changed.
+      await seed(env, {[PATH]: custodyDoc({})});
+      const db = env.authenticatedContext(MOM).firestore();
+      await assertFails(db.doc(PATH).update(cited(DAD)));
+    });
+
+    it('lets the co-parent decline, clearing the citation with the proposal', async () => {
+      await seed(env, {[PATH]: custodyDoc(cited(DAD))});
+      const db = env.authenticatedContext(MOM).firestore();
+      await assertSucceeds(db.doc(PATH).set(custodyDoc({
+        lastDecision: {outcome: 'DECLINED', by: MOM, at: '2026-08-24T11:00:00',
+          proposalAt: '2026-08-24T10:00:00'},
+      })));
+    });
+
+    it('refuses a decline that leaves the citation behind with no proposal', async () => {
+      await seed(env, {[PATH]: custodyDoc(cited(DAD))});
+      const db = env.authenticatedContext(MOM).firestore();
+      await assertFails(db.doc(PATH).set(custodyDoc({
+        proposalPlanCitation: CITATION,
+        lastDecision: {outcome: 'DECLINED', by: MOM, at: '2026-08-24T11:00:00',
+          proposalAt: '2026-08-24T10:00:00'},
+      })));
+    });
+
+    it('lets the proposer withdraw, clearing both', async () => {
+      await seed(env, {[PATH]: custodyDoc(cited(DAD))});
+      const db = env.authenticatedContext(DAD).firestore();
+      await assertSucceeds(db.doc(PATH).set(custodyDoc({})));
+    });
+
+    it('lets the co-parent accept: the pattern write clears the citation', async () => {
+      await seed(env, {[PATH]: custodyDoc(cited(DAD))});
+      const db = env.authenticatedContext(MOM).firestore();
+      await assertSucceeds(db.doc(PATH).set(custodyDoc({
+        momDayIndices: [7, 8, 9, 10, 11, 12, 13],
+        lastModifiedBy: MOM,
+        lastModifiedAt: '2026-08-24T11:00:00',
+        lastDecision: {outcome: 'ACCEPTED', by: MOM, at: '2026-08-24T11:00:00',
+          proposalAt: '2026-08-24T10:00:00'},
+      })));
+    });
+
+    it('lets a swap carry the citation unchanged, and an older build\'s swap drop it', async () => {
+      await seed(env, {[PATH]: custodyDoc(cited(DAD))});
+      const db = env.authenticatedContext(MOM).firestore();
+      await assertSucceeds(db.doc(PATH).set(custodyDoc(Object.assign({}, cited(DAD), swap))));
+
+      await seed(env, {[PATH]: custodyDoc(cited(DAD))});
+      await assertSucceeds(db.doc(PATH).set(custodyDoc(Object.assign({proposal: proposal(DAD)}, swap))));
+    });
+
+    it('refuses a swap write that changes the citation', async () => {
+      await seed(env, {[PATH]: custodyDoc(cited(DAD))});
+      const db = env.authenticatedContext(DAD).firestore();
+      const dadSwap = Object.assign({}, swap, {
+        dayOverrides: {[DATE]: pendingSwap(DAD, 'mom')},
+        lastModifiedBy: DAD,
+      });
+      await assertFails(db.doc(PATH).set(custodyDoc(Object.assign(
+          {proposal: proposal(DAD), proposalPlanCitation: 'p1|holidays_school|fedcba9876543210'},
+          dadSwap))));
+    });
+
+    it('refuses a create that plants an oversized citation', async () => {
+      const db = env.authenticatedContext(MOM).firestore();
+      await assertFails(db.doc(PATH).set(custodyDoc({
+        proposal: proposal(MOM),
+        proposalPlanCitation: 'x'.repeat(200),
+      })));
+    });
+  });
 });

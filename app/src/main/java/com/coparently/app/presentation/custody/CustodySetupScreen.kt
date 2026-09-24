@@ -76,6 +76,8 @@ import com.coparently.app.presentation.common.animations.sectionEnter
 import com.coparently.app.presentation.common.animations.sectionExit
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.rememberParentNames
+import com.coparently.app.presentation.parentingplan.PlanReferenceCard
+import com.coparently.app.presentation.parentingplan.coParentLabel
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.dimensions
 import java.time.DayOfWeek
@@ -179,6 +181,16 @@ fun CustodySetupScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = dims.paddingMedium)
         ) {
+            // Opened from an agreed parenting-plan answer (MON-21): quote it above the form the
+            // parent fills in. Read-only — nothing below is filled from its words.
+            uiState.planReference?.let { reference ->
+                PlanReferenceCard(
+                    reference = reference,
+                    coParentName = parentNames.coParentLabel(),
+                    modifier = Modifier.padding(vertical = dims.paddingSmall)
+                )
+            }
+
             // Model type selection
             Text(
                 text = stringResource(R.string.custody_select_schedule_type),

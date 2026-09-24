@@ -600,6 +600,38 @@ class CustodyModelRepositoryTest {
         assertEquals("""["$SUMMER_WIRE"]""", entity.captured.seasonalLayersJson)
     }
 
+    // ---- parenting-plan citation (MON-21) -----------------------------------
+
+    @Test
+    fun `a pattern built from the plan goes as a proposal that cites it, pattern untouched`() =
+        runTest(dispatcher) {
+            coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID) } returns remoteCustody()
+            val custody = slot<SharedCustody>()
+            coEvery { firestoreCustodyDataSource.setCustody(any(), any(), capture(custody)) } returns Unit
+
+            val result = repository.createWeekOnWeekOff(START_DATE, planCitation = PLAN_CITATION)
+
+            assertEquals(PatternSubmission.PROPOSED, result)
+            assertEquals(PLAN_CITATION, custody.captured.proposal?.planCitationWire)
+            // A proposal, never an overwrite: the agreed pattern on the document is unchanged.
+            assertEquals(remoteCustody().model, custody.captured.model)
+        }
+
+    @Test
+    fun `seasonal layers from the plan cite it too, and a plain save cites nothing`() =
+        runTest(dispatcher) {
+            coEvery { custodyModelDao.getActiveModelSync() } returns mirroredEntity()
+            coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID) } returns remoteCustody()
+            val custody = slot<SharedCustody>()
+            coEvery { firestoreCustodyDataSource.setCustody(any(), any(), capture(custody)) } returns Unit
+
+            repository.submitSeasonalLayers(listOf(SUMMER), PLAN_CITATION)
+            assertEquals(PLAN_CITATION, custody.captured.proposal?.planCitationWire)
+
+            repository.submitSeasonalLayers(listOf(SUMMER))
+            assertNull(custody.captured.proposal?.planCitationWire)
+        }
+
     // ---- fixtures ---------------------------------------------------------
 
     /** Points both the one-shot and the streaming uid lookups at [partnerUid]. */
@@ -657,6 +689,9 @@ class CustodyModelRepositoryTest {
     )
 
     private companion object {
+        /** A parenting-plan citation as `PlanCitationCodec` writes it (MON-21). */
+        const val PLAN_CITATION = "p1|care_weekday|0123456789abcdef"
+
         /** July with slot 1 (MON-14). */
         val SUMMER = SeasonalLayer.allWith(
             "summer-26",

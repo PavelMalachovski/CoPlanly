@@ -1198,6 +1198,29 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     every conversation's `chat_attachments/{id}/` with the thread.
     None of it works live until `firebase deploy --only storage` — the known issue below.
 
+32. **The parenting plan never becomes a schedule by itself; a proposal cites it and never parses
+    it** (MON-21, September 2026, owner decision). `domain/parentingplan/PlanScheduleLink.kt`
+    names the schedule questions (`SCHEDULE_QUESTIONS`: `care_weekday` → base pattern,
+    `holidays_school`/`holidays_special` → a seasonal layer) and offers **Propose as the schedule**
+    only when `ParentingPlanComparison.statusOf` is `AGREED`, the account is paired, and no
+    co-parent proposal waits (`CustodyProposalTransition.pendingFromCoParent`, shared with the
+    seasonal section). Four things not to undo. **The parent builds the pattern** in the ordinary
+    editor under a read-only quote of the answer; nothing turns the free text into a pattern, and
+    saving goes through `submitPattern`/`submitSeasonalLayers` unchanged — a paired family gets a
+    proposal, never an overwrite. **The citation is one top-level key, `proposalPlanCitation`,
+    beside `proposal`**, as a `PlanCitationCodec` string (`"p1|<questionId>|<16 hex of SHA-256>"`),
+    never Gson; `CustodyProposal.planCitationWire` carries it **verbatim**, unreadable ones
+    included, so a swap write re-sends what was there. The hashed text is both agreed answers,
+    sorted and joined (one text when identical), so either phone derives the same hash. **The
+    rules bound it and tie it to the proposal**: it is in the proposal-only and swap `hasOnly`
+    lists, `planCitationValid` requires a string of at most 128 characters beside a `proposal` and
+    lets only that proposal's author put or change it, and `planCitationKeptOrDropped` keeps a swap
+    from changing it while an older build may drop it; accept, decline and withdraw clear it with
+    the proposal. And **the reader re-derives, never trusts**: the proposal card says "From the
+    parenting plan" only while the plan still hashes to the citation, "changed since" once it does
+    not, and nothing for a missing key (an older build), an unreadable one or an unknown question
+    — never an error. The calendar feed never reads `proposal`, so it never reads this.
+
 ## Known issues / do not "fix" silently
 
 **Check an entry against the code before acting on it.** Two entries in this section, and one

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  From the parenting plan to the schedule (MON-21).
+
+  An agreed answer about the schedule offers to open the custody editor; the parent builds the
+  pattern there, and the proposal cites the answer it came from. Nothing reads the answer's words.
+-->
+<resources>
+    <string name="parenting_plan_propose_schedule">Navrhnout jako rozvrh</string>
+    <string name="parenting_plan_propose_hint">Otevře editor rozvrhu s citací této odpovědi. Co v něm nastavíte, odejde jako návrh.</string>
+    <string name="parenting_plan_propose_blocked">Na vaši odpověď čeká návrh rozvrhu (%1$s). Nejdřív na něj odpovězte, pak navrhněte tento.</string>
+    <string name="plan_reference_title">Z vašeho rodičovského plánu</string>
+    <string name="plan_reference_both_agreed">Oba jste se shodli</string>
+    <string name="plan_reference_note">Aplikace text za vás nečte: rozvrh, který popisuje, nastavte níže. Po uložení ho obdrží %1$s jako návrh s odkazem na tuto odpověď.</string>
+    <string name="plan_citation_current">Z rodičovského plánu: %1$s</string>
+    <string name="plan_citation_changed">Vychází z odpovědi v rodičovském plánu na otázku „%1$s“, která se od podání návrhu změnila.</string>
+</resources>

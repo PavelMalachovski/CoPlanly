@@ -33,13 +33,18 @@ object CustodyProposalTransition {
      * @param repeatYearly Travels with the pattern; see [CustodyProposal.repeatYearly].
      * @param byUid The proposer — this device's own uid.
      * @param atIso ISO date-time of the proposal.
+     * @param planCitation The parenting-plan answer the parent built [model] from (MON-21), as a
+     *   `PlanCitationCodec` string, or null. Replacing one's own proposal replaces its citation
+     *   too — a corrected proposal cites what it was corrected from, or nothing.
      */
+    @Suppress("LongParameterList") // the document, the proposal's five facts
     fun propose(
         current: SharedCustody,
         model: CustodyModel,
         repeatYearly: Boolean,
         byUid: String,
-        atIso: String
+        atIso: String,
+        planCitation: String? = null
     ): Result<SharedCustody> {
         val pending = current.proposal
         if (pending != null && pending.proposedBy != byUid) {
@@ -58,7 +63,8 @@ object CustodyProposalTransition {
                     // become, and "none" is an answer (see CustodyProposal.contactWindowsWire).
                     contactWindowsWire = ContactWindowCodec.encodeAll(model.contactWindows),
                     // The same rule for the seasonal layers (MON-14): the proposal states them.
-                    seasonalLayersWire = model.seasonalLayersWire()
+                    seasonalLayersWire = model.seasonalLayersWire(),
+                    planCitationWire = planCitation?.takeIf { it.isNotBlank() }
                 )
             )
         )
@@ -136,6 +142,18 @@ object CustodyProposalTransition {
             )
         )
     }
+
+    /**
+     * Whether [current] holds a proposal from somebody other than [uid] — the co-parent's, waiting
+     * for this parent's answer.
+     *
+     * The one rule for "a new schedule change cannot be sent now": [propose] refuses to put a
+     * second proposal over the co-parent's, and the repository's fallback on that refusal is a
+     * local save. The seasonal-schedule section and the parenting plan's "Propose as the
+     * schedule" (MON-21) both read it, so the two cannot come to disagree about when to say so.
+     */
+    fun pendingFromCoParent(current: SharedCustody?, uid: String?): Boolean =
+        current?.proposal?.let { it.proposedBy != uid } ?: false
 
     /** The pending proposal, if [uid] is the one who made it. */
     private fun SharedCustody.pendingFrom(uid: String): Result<CustodyProposal> {

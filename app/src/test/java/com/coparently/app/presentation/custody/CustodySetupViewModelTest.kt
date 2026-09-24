@@ -1,13 +1,18 @@
 package com.coparently.app.presentation.custody
 
+import androidx.lifecycle.SavedStateHandle
 import com.coparently.app.R
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.PatternSubmission
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.CustodyModelType
 import com.coparently.app.domain.model.MidweekContact
+import com.coparently.app.domain.parentingplan.PlanCitation
+import com.coparently.app.domain.parentingplan.PlanReference
+import com.coparently.app.domain.parentingplan.PlanScheduleTarget
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.testParentsSource
+import com.coparently.app.presentation.parentingplan.PlanReferenceSource
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -41,9 +46,19 @@ class CustodySetupViewModelTest {
     private val start = LocalDate.of(2026, 9, 7)
     private val repository = mockk<CustodyModelRepository>()
 
-    private fun viewModel(active: CustodyModel? = null): CustodySetupViewModel {
+    private val planReferences = mockk<PlanReferenceSource>()
+    private val custodyReference = PlanReference(
+        questionId = "care_weekday",
+        target = PlanScheduleTarget.BASE_PATTERN,
+        yourAnswer = "Week on, week off, changing on Mondays",
+        theirAnswer = "Week on, week off, changing on Mondays",
+        citation = PlanCitation("care_weekday", "0123456789abcdef")
+    )
+
+    private fun viewModel(active: CustodyModel? = null, planQuestion: String? = null): CustodySetupViewModel {
         every { repository.getActiveModel() } returns flowOf(active)
-        return CustodySetupViewModel(repository, testParentsSource())
+        val args = planQuestion?.let { mapOf("planQuestion" to it) }.orEmpty()
+        return CustodySetupViewModel(repository, testParentsSource(), SavedStateHandle(args), planReferences)
     }
 
     @Before
@@ -157,5 +172,67 @@ class CustodySetupViewModelTest {
         assertFalse(state.isLoading)
         assertFalse(state.isSaved)
         assertFalse(succeeded)
+    }
+
+    @Test
+    fun `opened from the agreed custody answer, the form quotes it and the save cites it`() =
+        runTest(dispatcher) {
+            coEvery { planReferences.referenceFor("care_weekday") } returns custodyReference
+            coEvery { repository.createWeekOnWeekOff(any(), any(), any(), any()) } returns PatternSubmission.PROPOSED
+            val vm = viewModel(planQuestion = "care_weekday")
+            advanceUntilIdle()
+
+            assertEquals(custodyReference, vm.uiState.value.planReference)
+            vm.selectModelType(CustodyModelType.WEEK_ON_WEEK_OFF)
+            vm.setStartDate(start)
+            vm.save()
+            advanceUntilIdle()
+
+            // The pattern is the one the parent built; the answer only rides along as a citation.
+            coVerify(exactly = 1) {
+                repository.createWeekOnWeekOff(start, true, emptyList(), "p1|care_weekday|0123456789abcdef")
+            }
+            assertTrue(vm.uiState.value.proposedForApproval)
+        }
+
+    @Test
+    fun `opened any other way, the save cites nothing and no plan is read`() = runTest(dispatcher) {
+        coEvery { repository.createWeekOnWeekOff(any(), any(), any(), any()) } returns PatternSubmission.ACTIVATED
+        val vm = viewModel()
+        advanceUntilIdle()
+
+        vm.save()
+        advanceUntilIdle()
+
+        assertNull(vm.uiState.value.planReference)
+        coVerify(exactly = 1) { repository.createWeekOnWeekOff(any(), any(), any(), null) }
+        coVerify(exactly = 0) { planReferences.referenceFor(any()) }
+    }
+
+    @Test
+    fun `a holiday answer is left to the seasonal editor, so the base form neither quotes nor cites it`() =
+        runTest(dispatcher) {
+            coEvery { planReferences.referenceFor("holidays_school") } returns custodyReference.copy(
+                questionId = "holidays_school",
+                target = PlanScheduleTarget.SEASONAL_LAYER
+            )
+            coEvery { repository.createWeekOnWeekOff(any(), any(), any(), any()) } returns PatternSubmission.PROPOSED
+            val vm = viewModel(planQuestion = "holidays_school")
+            advanceUntilIdle()
+
+            vm.save()
+            advanceUntilIdle()
+
+            assertNull(vm.uiState.value.planReference)
+            coVerify(exactly = 1) { repository.createWeekOnWeekOff(any(), any(), any(), null) }
+        }
+
+    @Test
+    fun `an answer that is no longer agreed opens the plain form`() = runTest(dispatcher) {
+        coEvery { planReferences.referenceFor("care_weekday") } returns null
+        val vm = viewModel(planQuestion = "care_weekday")
+        advanceUntilIdle()
+
+        assertNull(vm.uiState.value.planReference)
     }
 }

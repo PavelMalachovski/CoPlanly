@@ -550,6 +550,45 @@ base pattern; schema 38 (the Regenerate workflow must have exported `38.json` fo
   `HolidayFairnessCard.kt`, `domain/custody/SeasonalLayer.kt`, `HolidayFairness.kt`,
   `firestore.rules` `seasonalLayersKeptOrDropped`.
 
+### 3.12 From the parenting plan to the schedule (MON-21) · 2P, 1P fallback [branch]
+
+Settings → Family → **Parenting plan**, then Custody setup. Needs two paired accounts that already
+share a custody schedule, and **`firebase deploy --only firestore:rules`** with the
+`proposalPlanCitation` clauses — until then the live rules refuse every proposal that cites the
+plan (their `hasOnly` lists do not name the key), and the repository falls back to a local save.
+
+- [ ] A and B each answer **"How will you divide weekdays, weekends and school holidays"** with the
+      same words (e.g. "Week on, week off, changing on Monday") and each ticks the other's. The
+      question reads **Agreed**, and a row **Propose as the schedule** appears under it. It does
+      not appear under an agreed question that is not about the schedule (the doctor, the
+      handover place), nor under one only one parent has ticked.
+- [ ] A taps it: Custody setup opens with **From your parenting plan** at the top quoting the
+      question and the agreed wording ("You both agreed"), and the form below is **not** filled in
+      from it. A builds week-on-week-off and saves → "sent for approval"; A's grid is unchanged.
+- [ ] B: the proposal card in the inbox (change requests) reads **"From the parenting plan: How
+      will you divide weekdays, …"** under the description of what changes.
+- [ ] **Changed since:** before B answers, A edits the answer (the agreement lapses). B's card now
+      says the answer **has changed since this was proposed**, live, without reopening. B accepts
+      or declines; the card disappears, and a later proposal A makes without the plan shows no
+      plan line at all.
+- [ ] A holiday answer ("How will you divide the school holidays") agreed the same way:
+      **Propose as the schedule** opens Custody setup with the **seasonal-layer editor already
+      open**, the answer quoted at the top of the dialog; saving the layer sends a proposal whose
+      card on B cites the holiday question. Dismissing the dialog leaves the quote above the
+      seasonal list; adding a layer from there does **not** cite the plan.
+- [ ] While **B's own** schedule proposal waits for A, A's plan screen shows the row with
+      "<B's name> has a schedule proposal waiting for your answer…" and it does nothing on tap.
+- [ ] **Mixed versions:** B on a build without MON-21 accepts or declines a cited proposal
+      normally (the key is simply dropped); a swap offered by B while A's cited proposal is
+      pending keeps A's proposal.
+- **1P fallback:** none that shows the citation — it is read on the other phone. On one phone
+  check only that the row appears under an agreed schedule question and that the editor quotes it;
+  `custody-models.test.js` "parenting-plan citation (MON-21)" and `PlanScheduleLinkTest` cover the
+  rest.
+- **If it fails:** tag `CustodySetupViewModel` / `SeasonalScheduleVM` / `ChangeRequestViewModel`;
+  `domain/parentingplan/PlanScheduleLink.kt`, `PlanCitation.kt`,
+  `presentation/parentingplan/PlanReferenceSource.kt`, `firestore.rules` `planCitationValid`.
+
 ---
 
 ## 4. Release-build checks

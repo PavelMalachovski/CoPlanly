@@ -1,6 +1,7 @@
 package com.coparently.app.presentation.custody
 
 import android.util.Log
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.coparently.app.R
@@ -11,15 +12,20 @@ import com.coparently.app.domain.custody.ContactWindowCodec
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.CustodyModelType
 import com.coparently.app.domain.model.MidweekContact
+import com.coparently.app.domain.parentingplan.PlanReference
+import com.coparently.app.domain.parentingplan.PlanScheduleTarget
 import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.presentation.common.UiText
+import com.coparently.app.presentation.parentingplan.PlanReferenceSource
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -34,11 +40,17 @@ private const val DAYS_PER_WEEK = 7
 /**
  * ViewModel for custody setup screen.
  * Handles custody model selection and configuration.
+ *
+ * Opened from an agreed parenting-plan answer (MON-21), it also holds that answer as
+ * [CustodySetupUiState.planReference]: the screen quotes it above the form, and a save cites it on
+ * the proposal. The form itself is filled by the parent, as always — the answer is never parsed.
  */
 @HiltViewModel
 class CustodySetupViewModel @Inject constructor(
     private val custodyModelRepository: CustodyModelRepository,
-    parentsSource: ParentsSource
+    parentsSource: ParentsSource,
+    savedStateHandle: SavedStateHandle,
+    private val planReferenceSource: PlanReferenceSource
 ) : ViewModel() {
 
     /**
@@ -56,6 +68,32 @@ class CustodySetupViewModel @Inject constructor(
 
     init {
         loadCurrentModel()
+        savedStateHandle.get<String>(ARG_PLAN_QUESTION)?.takeIf { it.isNotBlank() }?.let { loadPlanReference(it) }
+    }
+
+    /**
+     * Loads the agreed answer the editor was opened from, when it is about the base pattern.
+     *
+     * A holiday answer opens the same screen but belongs to the seasonal-layer editor, which
+     * loads it itself; quoting it above the base form would suggest the base Save cites it.
+     */
+    private fun loadPlanReference(questionId: String) {
+        viewModelScope.launch {
+            val reference = try {
+                planReferenceSource.referenceFor(questionId)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (
+                @Suppress("TooGenericExceptionCaught") e: Exception
+            ) {
+                // The editor still works without the quote; the proposal simply cites nothing.
+                Log.w(TAG, "Could not read the parenting plan answer", e)
+                null
+            }
+            _uiState.update { state ->
+                state.copy(planReference = reference?.takeIf { it.target == PlanScheduleTarget.BASE_PATTERN })
+            }
+        }
     }
 
     /**
@@ -270,35 +308,42 @@ class CustodySetupViewModel @Inject constructor(
 
         _uiState.value = state.copy(isLoading = true)
 
+        // Only a pattern opened from the plan cites it; everything else saves as it always did.
+        val citation = state.planReference?.citationWire
         viewModelScope.launch {
             try {
                 val submission = when (state.selectedModelType) {
                     CustodyModelType.WEEK_ON_WEEK_OFF -> custodyModelRepository.createWeekOnWeekOff(
                         startDate = state.startDate,
                         momFirst = state.momFirst,
-                        contactWindows = state.contactWindows
+                        contactWindows = state.contactWindows,
+                        planCitation = citation
                     )
                     CustodyModelType.EVERY_OTHER_WEEKEND -> custodyModelRepository.createEveryOtherWeekend(
                         startDate = state.startDate,
                         momIsResident = state.momFirst,
                         midweek = state.midweek,
-                        contactWindows = state.contactWindows
+                        contactWindows = state.contactWindows,
+                        planCitation = citation
                     )
                     CustodyModelType.TWO_TWO_THREE -> custodyModelRepository.createTwoTwoThree(
                         startDate = state.startDate,
                         momStartsFirst = state.momFirst,
-                        contactWindows = state.contactWindows
+                        contactWindows = state.contactWindows,
+                        planCitation = citation
                     )
                     CustodyModelType.THREE_FOUR_FOUR_THREE -> custodyModelRepository.createThreeFourFourThree(
                         startDate = state.startDate,
                         momStartsFirst = state.momFirst,
-                        contactWindows = state.contactWindows
+                        contactWindows = state.contactWindows,
+                        planCitation = citation
                     )
                     CustodyModelType.CUSTOM -> custodyModelRepository.createCustom(
                         startDate = state.startDate,
                         patternDays = state.customPatternDays,
                         momDayIndices = state.customMomDays,
-                        contactWindows = state.contactWindows
+                        contactWindows = state.contactWindows,
+                        planCitation = citation
                     )
                 }
                 _uiState.value = state.copy(
@@ -311,7 +356,7 @@ class CustodySetupViewModel @Inject constructor(
                 onSuccess()
             } catch (e: Exception) {
                 // The exception's own text is English and technical: it goes to the log.
-                Log.w("CustodySetupViewModel", "Saving the custody model failed", e)
+                Log.w(TAG, "Saving the custody model failed", e)
                 _uiState.value = state.copy(
                     isLoading = false,
                     error = UiText.Res(R.string.custody_setup_save_failed)
@@ -328,6 +373,11 @@ class CustodySetupViewModel @Inject constructor(
     }
 
     private companion object {
+        const val TAG = "CustodySetupViewModel"
+
+        /** The navigation argument naming the plan question the editor was opened from (MON-21). */
+        const val ARG_PLAN_QUESTION = "planQuestion"
+
         /** Index of the contact Saturday in the fortnight: day 0 is Monday. */
         const val CONTACT_SATURDAY = 5
 
@@ -366,6 +416,11 @@ data class CustodySetupUiState(
      * with the overnight, and a saved schedule that has one keeps it exactly as it was.
      */
     val contactWindows: List<ContactWindow> = emptyList(),
+    /**
+     * The agreed parenting-plan answer this editor was opened from (MON-21), quoted above the
+     * form and cited on the proposal a save makes; null when opened any other way.
+     */
+    val planReference: PlanReference? = null,
     val isLoading: Boolean = false,
     val isSaved: Boolean = false,
     /** True when the save was sent to the co-parent as a proposal rather than applied. */

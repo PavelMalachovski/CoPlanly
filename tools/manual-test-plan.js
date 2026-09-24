@@ -101,6 +101,12 @@ const RULES = [
       'K/presentation/custody/HolidayFairness*', 'K/data/repository/SeasonalLayerJson.kt'],
   },
   {
+    sections: ['3.12'],
+    why: 'the parenting plan proposing a schedule, or a proposal\'s plan citation',
+    paths: ['K/domain/parentingplan/PlanScheduleLink.kt', 'K/domain/parentingplan/PlanCitation.kt',
+      'K/presentation/parentingplan/**', 'K/domain/custody/CustodyProposal*'],
+  },
+  {
     sections: ['3.6', '4.2'],
     why: 'strings, locales or the language picker',
     paths: ['app/src/main/res/values*/**', 'app/src/main/res/xml/locales_config.xml',

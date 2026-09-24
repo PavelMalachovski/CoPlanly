@@ -298,9 +298,17 @@ class CustodyModelRepository(
      *   one that simply applies. The very first schedule of a pair also lands this way: there is
      *   no agreed pattern to protect yet.
      *
+     * @param planCitation The parenting-plan answer the parent built [model] from (MON-21), as a
+     *   `PlanCitationCodec` string, or null. It rides on a proposal only — a pattern that is
+     *   simply activated has nobody to show its source to — and it is a citation, never an input:
+     *   [model] is what the parent built, whatever the plan says.
      * @return whether the pattern was activated or merely proposed, so the UI can say which.
      */
-    suspend fun submitPattern(model: CustodyModel): PatternSubmission {
+    suspend fun submitPattern(model: CustodyModel, planCitation: String? = null): PatternSubmission =
+        submit(model, planCitation)
+
+    @Suppress("ReturnCount") // three fall-backs to a local save, each a different failure
+    private suspend fun submit(model: CustodyModel, planCitation: String?): PatternSubmission {
         val pair = currentPair()
         val existing = pair?.let { firestoreCustodyDataSource.getCustody(it.documentId) }
         if (pair == null || existing == null) {
@@ -312,7 +320,8 @@ class CustodyModelRepository(
             model = model,
             repeatYearly = model.toEntity().repeatYearly,
             byUid = pair.myUid,
-            atIso = nowIso()
+            atIso = nowIso(),
+            planCitation = planCitation
         ).getOrElse { return PatternSubmission.ACTIVATED.also { saveAndActivate(model) } }
 
         val written = guarded("propose") {
@@ -469,18 +478,20 @@ class CustodyModelRepository(
      *
      * @param startDate The anchor date for the pattern
      * @param momFirst If true, mom has the first week; if false, dad has the first week
+     * @param planCitation The parenting-plan answer this was built from (MON-21); see [submitPattern]
      */
     suspend fun createWeekOnWeekOff(
         startDate: LocalDate,
         momFirst: Boolean = true,
-        contactWindows: List<ContactWindow> = emptyList()
+        contactWindows: List<ContactWindow> = emptyList(),
+        planCitation: String? = null
     ): PatternSubmission {
         val model = CustodyModel.weekOnWeekOff(
             id = UUID.randomUUID().toString(),
             startDate = startDate,
             momFirst = momFirst
         )
-        return submitPattern(withActiveLayers(model.withWindows(contactWindows)))
+        return submitPattern(withActiveLayers(model.withWindows(contactWindows)), planCitation)
     }
 
     /**
@@ -490,12 +501,14 @@ class CustodyModelRepository(
      * @param momIsResident True when slot 1 is the parent the child lives with
      * @param midweek The midweek contact day, or null for alternate weekends only
      * @param contactWindows Contact afternoons on top of the days (MON-6b)
+     * @param planCitation The parenting-plan answer this was built from (MON-21); see [submitPattern]
      */
     suspend fun createEveryOtherWeekend(
         startDate: LocalDate,
         momIsResident: Boolean = true,
         midweek: MidweekContact? = null,
-        contactWindows: List<ContactWindow> = emptyList()
+        contactWindows: List<ContactWindow> = emptyList(),
+        planCitation: String? = null
     ): PatternSubmission {
         val model = CustodyModel.everyOtherWeekend(
             id = UUID.randomUUID().toString(),
@@ -503,7 +516,7 @@ class CustodyModelRepository(
             momIsResident = momIsResident,
             midweek = midweek
         )
-        return submitPattern(withActiveLayers(model.withWindows(contactWindows)))
+        return submitPattern(withActiveLayers(model.withWindows(contactWindows)), planCitation)
     }
 
     /**
@@ -512,14 +525,15 @@ class CustodyModelRepository(
     suspend fun createTwoTwoThree(
         startDate: LocalDate,
         momStartsFirst: Boolean = true,
-        contactWindows: List<ContactWindow> = emptyList()
+        contactWindows: List<ContactWindow> = emptyList(),
+        planCitation: String? = null
     ): PatternSubmission {
         val model = CustodyModel.twoTwoThree(
             id = UUID.randomUUID().toString(),
             startDate = startDate,
             momStartsFirst = momStartsFirst
         )
-        return submitPattern(withActiveLayers(model.withWindows(contactWindows)))
+        return submitPattern(withActiveLayers(model.withWindows(contactWindows)), planCitation)
     }
 
     /**
@@ -528,14 +542,15 @@ class CustodyModelRepository(
     suspend fun createThreeFourFourThree(
         startDate: LocalDate,
         momStartsFirst: Boolean = true,
-        contactWindows: List<ContactWindow> = emptyList()
+        contactWindows: List<ContactWindow> = emptyList(),
+        planCitation: String? = null
     ): PatternSubmission {
         val model = CustodyModel.threeFourFourThree(
             id = UUID.randomUUID().toString(),
             startDate = startDate,
             momStartsFirst = momStartsFirst
         )
-        return submitPattern(withActiveLayers(model.withWindows(contactWindows)))
+        return submitPattern(withActiveLayers(model.withWindows(contactWindows)), planCitation)
     }
 
     /**
@@ -545,7 +560,8 @@ class CustodyModelRepository(
         startDate: LocalDate,
         patternDays: Int,
         momDayIndices: Set<Int>,
-        contactWindows: List<ContactWindow> = emptyList()
+        contactWindows: List<ContactWindow> = emptyList(),
+        planCitation: String? = null
     ): PatternSubmission {
         val model = CustodyModel.custom(
             id = UUID.randomUUID().toString(),
@@ -553,7 +569,7 @@ class CustodyModelRepository(
             patternDays = patternDays,
             momDayIndices = momDayIndices
         )
-        return submitPattern(withActiveLayers(model.withWindows(contactWindows)))
+        return submitPattern(withActiveLayers(model.withWindows(contactWindows)), planCitation)
     }
 
     /**
@@ -584,11 +600,13 @@ class CustodyModelRepository(
      * **proposal** the co-parent accepts or declines — never written onto their calendar unasked.
      * The base pattern and any layer entries this build cannot read are carried unchanged.
      *
+     * @param planCitation The parenting-plan answer the layer was built from (MON-21), or null;
+     *   see [submitPattern].
      * @return How the change landed, or null when there is no base pattern to layer on.
      */
-    suspend fun submitSeasonalLayers(layers: List<SeasonalLayer>): PatternSubmission? {
+    suspend fun submitSeasonalLayers(layers: List<SeasonalLayer>, planCitation: String? = null): PatternSubmission? {
         val active = getActiveModelSync() ?: return null
-        return submitPattern(active.copy(seasonalLayers = layers))
+        return submitPattern(active.copy(seasonalLayers = layers), planCitation)
     }
 
     /**

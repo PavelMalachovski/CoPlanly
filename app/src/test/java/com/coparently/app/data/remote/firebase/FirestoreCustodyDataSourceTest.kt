@@ -160,6 +160,34 @@ class FirestoreCustodyDataSourceTest {
     }
 
     @Test
+    fun `a proposal's plan citation sits beside the sub-map and round-trips verbatim`() = runTest {
+        // MON-21: a top-level key, so the rules can bound it by name; carried as stored, including
+        // a format this build cannot read, so a swap write re-sends exactly what was there.
+        val cited = proposal().copy(planCitationWire = "p9|a-later-format")
+        val written = writeAndCapture(custody().copy(proposal = cited))
+
+        assertEquals("p9|a-later-format", written["proposalPlanCitation"])
+        assertFalse((written["proposal"] as Map<*, *>).containsKey("proposalPlanCitation"))
+        every { documentRef.get() } returns Tasks.forResult(snapshotOf(written))
+        assertEquals(cited, dataSource.getCustody(DOCUMENT_ID)?.proposal)
+    }
+
+    @Test
+    fun `a proposal from an older build, with no citation key, reads as citing nothing`() = runTest {
+        every { documentRef.get() } returns
+            Tasks.forResult(snapshotOf(document("proposal" to proposalMap())))
+
+        assertNull(dataSource.getCustody(DOCUMENT_ID)?.proposal?.planCitationWire)
+    }
+
+    @Test
+    fun `clearing the proposal clears its citation with it`() = runTest {
+        val written = writeAndCapture(custody())
+
+        assertFalse(written.containsKey("proposalPlanCitation"))
+    }
+
+    @Test
     fun `a proposal's numbers arriving as Long are narrowed, not cast`() = runTest {
         every { documentRef.get() } returns Tasks.forResult(
             snapshotOf(

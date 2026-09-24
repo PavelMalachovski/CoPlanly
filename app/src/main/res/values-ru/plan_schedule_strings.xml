@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  From the parenting plan to the schedule (MON-21).
+
+  An agreed answer about the schedule offers to open the custody editor; the parent builds the
+  pattern there, and the proposal cites the answer it came from. Nothing reads the answer's words.
+-->
+<resources>
+    <string name="parenting_plan_propose_schedule">Предложить как расписание</string>
+    <string name="parenting_plan_propose_hint">Откроет редактор расписания с этим ответом в виде цитаты. То, что вы настроите, уйдёт как предложение.</string>
+    <string name="parenting_plan_propose_blocked">Вашего ответа ждёт предложение расписания (%1$s). Сначала ответьте на него, затем предложите это.</string>
+    <string name="plan_reference_title">Из вашего родительского плана</string>
+    <string name="plan_reference_both_agreed">Вы оба согласились</string>
+    <string name="plan_reference_note">Приложение не читает этот текст за вас: настройте описанное расписание ниже. После сохранения %1$s получит его как предложение со ссылкой на этот ответ.</string>
+    <string name="plan_citation_current">Из родительского плана: %1$s</string>
+    <string name="plan_citation_changed">Составлено по ответу в родительском плане на вопрос «%1$s», который изменился после отправки предложения.</string>
+</resources>
