@@ -54,7 +54,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
@@ -72,6 +71,7 @@ import com.coparently.app.presentation.pairing.components.InviteCodeCard
 import com.coparently.app.presentation.pairing.components.PairedPartnerCard
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.presentation.theme.labelLargeEmphasized
 import kotlinx.coroutines.launch
 
 /**
@@ -623,8 +623,7 @@ private fun TrustPanel() {
                 )
                 Text(
                     text = stringResource(R.string.pairing_trust_title),
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold,
+                    style = MaterialTheme.typography.labelLargeEmphasized,
                     color = MaterialTheme.colorScheme.tertiary
                 )
             }

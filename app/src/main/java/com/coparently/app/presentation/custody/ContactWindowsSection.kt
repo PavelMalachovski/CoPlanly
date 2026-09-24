@@ -34,7 +34,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.coparently.app.R
 import com.coparently.app.domain.custody.ContactWindow
@@ -44,6 +43,7 @@ import com.coparently.app.presentation.components.TimePickerDialog
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.dimensions
+import com.coparently.app.presentation.theme.titleMediumEmphasized
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalTime
@@ -93,8 +93,7 @@ fun ContactWindowsSection(
     Column {
         Text(
             text = stringResource(R.string.custody_windows_title),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.titleMediumEmphasized,
             modifier = Modifier.padding(vertical = dims.paddingSmall)
         )
         Text(

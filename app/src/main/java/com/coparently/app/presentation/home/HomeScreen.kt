@@ -69,7 +69,6 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -96,6 +95,10 @@ import com.coparently.app.presentation.components.SkeletonBox
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.presentation.theme.bodyMediumEmphasized
+import com.coparently.app.presentation.theme.headlineSmallEmphasized
+import com.coparently.app.presentation.theme.titleMediumEmphasized
+import com.coparently.app.presentation.theme.titleSmallEmphasized
 import com.coparently.app.utils.LightDarkPreviews
 import com.coparently.app.utils.PreviewWrapper
 import com.coparently.app.utils.localizedDate
@@ -368,8 +371,7 @@ private fun PairingInvitation(
     ) {
         Text(
             text = stringResource(R.string.home_pairing_title),
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.headlineSmallEmphasized,
             textAlign = TextAlign.Center
         )
         Text(
@@ -479,8 +481,7 @@ private fun Dashboard(
                         trailing = {
                             Text(
                                 text = awaitingCount.toString(),
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.SemiBold,
+                                style = MaterialTheme.typography.titleSmallEmphasized,
                                 color = MaterialTheme.colorScheme.primary
                             )
                         }
@@ -615,8 +616,7 @@ private fun HomeChevron() {
 private fun SectionHeader(text: String) {
     Text(
         text = text,
-        style = MaterialTheme.typography.titleSmall,
-        fontWeight = FontWeight.SemiBold,
+        style = MaterialTheme.typography.titleSmallEmphasized,
         // A heading, so TalkBack can jump between Home's sections (D-17).
         modifier = Modifier.semantics { heading() }
     )
@@ -702,11 +702,10 @@ internal fun HandoverHero(
             }
             Text(
                 text = headline,
-                style = MaterialTheme.typography.headlineSmall.copy(
+                style = MaterialTheme.typography.headlineSmallEmphasized.copy(
                     fontSize = 26.sp,
                     lineHeight = 32.sp
-                ),
-                fontWeight = FontWeight.Bold
+                )
             )
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
                 PillChip(
@@ -858,8 +857,7 @@ private fun StatTile(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = value,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+                    style = MaterialTheme.typography.titleMediumEmphasized
                 )
                 Text(
                     text = caption,
@@ -944,8 +942,7 @@ internal fun TimelineRow(
                 }
                 Text(
                     text = event.title,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium,
+                    style = MaterialTheme.typography.bodyMediumEmphasized,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )

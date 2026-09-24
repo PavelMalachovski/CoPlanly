@@ -34,7 +34,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.coparently.app.R
@@ -47,6 +46,8 @@ import com.coparently.app.presentation.theme.CoPlanlyCorners
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.presentation.theme.labelLargeEmphasized
+import com.coparently.app.presentation.theme.titleSmallEmphasized
 import com.coparently.app.utils.LightDarkPreviews
 import com.coparently.app.utils.PreviewWrapper
 import java.text.NumberFormat
@@ -259,8 +260,7 @@ internal fun MonthSwitcherBar(navigation: MonthNavigation, modifier: Modifier = 
                     navigation.expenseCount
                 )
             ),
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.SemiBold,
+            style = MaterialTheme.typography.labelLargeEmphasized,
             textAlign = TextAlign.Center,
             // Wraps rather than cutting the count ("Mai 2026 · 5 Ausgab…" in German at 2.0x).
             modifier = Modifier.weight(1f)
@@ -362,8 +362,7 @@ private fun TotalWithLabel(total: String) {
     val totalText: @Composable () -> Unit = {
         Text(
             text = total,
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold
+            style = MaterialTheme.typography.headlineMedium
         )
     }
     val label = stringResource(R.string.expenses_shared_spend)
@@ -501,8 +500,7 @@ private fun BalanceStrip(
         // English at the default size (docs/AUDIT-2026-10-design.md D-1).
         Text(
             text = label,
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.SemiBold,
+            style = MaterialTheme.typography.titleSmallEmphasized,
             modifier = Modifier.weight(1f)
         )
     }

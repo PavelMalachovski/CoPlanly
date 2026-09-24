@@ -41,7 +41,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.domain.changerequests.ChangeRequestHighlight
@@ -59,6 +58,8 @@ import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.custody.custodyDiffDescription
 import com.coparently.app.presentation.parentingplan.planCitationLine
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.presentation.theme.bodyMediumEmphasized
+import com.coparently.app.presentation.theme.titleSmallEmphasized
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
@@ -492,9 +493,8 @@ private fun CustodyProposalCard(
 private fun SectionHeader(title: String) {
     Text(
         text = title,
-        style = MaterialTheme.typography.titleSmall,
+        style = MaterialTheme.typography.titleSmallEmphasized,
         color = MaterialTheme.colorScheme.primary,
-        fontWeight = FontWeight.Bold,
         // A heading, so TalkBack can jump between the inbox's sections (D-17).
         modifier = Modifier.semantics { heading() }
     )
@@ -610,8 +610,7 @@ fun ChangeRequestCard(
                     )
                     Text(
                         text = request.proposedStartDateTime.format(requestDateFormatter),
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold
+                        style = MaterialTheme.typography.bodyMediumEmphasized
                     )
                 }
             }

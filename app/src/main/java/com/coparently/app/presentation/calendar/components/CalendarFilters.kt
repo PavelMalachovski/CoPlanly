@@ -95,8 +95,7 @@ fun EventTypeFilterSheet(
         ) {
             Text(
                 text = stringResource(R.string.calendar_filter_show),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
+                style = MaterialTheme.typography.titleMedium
             )
             ParentFilterSegments(
                 parentNames = parentNames,
@@ -130,8 +129,7 @@ fun EventTypeFilterSheet(
 
             Text(
                 text = stringResource(R.string.calendar_filter_event_types),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
+                style = MaterialTheme.typography.titleMedium
             )
             Text(
                 text = stringResource(R.string.calendar_filter_hidden_types_hint),

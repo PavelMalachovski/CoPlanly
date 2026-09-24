@@ -33,7 +33,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -43,6 +42,8 @@ import com.coparently.app.presentation.common.rememberToday
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.LayoutConstants
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.presentation.theme.labelMediumEmphasized
+import com.coparently.app.presentation.theme.titleLargeEmphasized
 import com.coparently.app.utils.LightDarkPreviews
 import com.coparently.app.utils.PreviewWrapper
 import java.time.LocalDate
@@ -149,8 +150,7 @@ private fun MonthTitle(
         ) {
             Text(
                 text = monthLabel,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleLargeEmphasized,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -231,8 +231,7 @@ private fun TodayButton(onClick: () -> Unit) {
     ) {
         Text(
             text = stringResource(R.string.calendar_today_button),
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.SemiBold
+            style = MaterialTheme.typography.labelMediumEmphasized
         )
     }
 }

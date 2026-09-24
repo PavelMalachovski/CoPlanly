@@ -23,7 +23,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -39,6 +38,9 @@ import com.coparently.app.presentation.common.PillChip
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.presentation.theme.bodyMediumEmphasized
+import com.coparently.app.presentation.theme.bodySmallEmphasized
+import com.coparently.app.presentation.theme.titleSmallEmphasized
 import java.text.NumberFormat
 import java.util.Locale
 
@@ -307,8 +309,7 @@ private fun BreakdownTable(breakdown: CurrencyBreakdown) {
             )
             Text(
                 text = total,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold
+                style = MaterialTheme.typography.bodyMediumEmphasized
             )
         }
     }
@@ -493,8 +494,7 @@ private fun LedgerColumn(
             AccountAvatar(name = title, photoUrl = photoUrl, size = 20.dp)
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.titleSmallEmphasized,
                 color = titleColor,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -548,8 +548,7 @@ private fun LedgerRow(expense: Expense, currency: String) {
             )
             Text(
                 text = amount,
-                style = MaterialTheme.typography.bodySmall,
-                fontWeight = FontWeight.SemiBold
+                style = MaterialTheme.typography.bodySmallEmphasized
             )
         }
     }

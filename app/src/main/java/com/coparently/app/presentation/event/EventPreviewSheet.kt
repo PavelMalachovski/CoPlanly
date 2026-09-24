@@ -40,7 +40,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
@@ -52,6 +51,7 @@ import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.presentation.theme.titleLargeEmphasized
 import com.coparently.app.utils.localizedDate
 import java.time.format.DateTimeFormatter
 
@@ -137,8 +137,7 @@ internal fun EventPreviewContent(
             )
             Text(
                 text = event.title,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleLargeEmphasized,
                 // Long titles used to wrap mid-word and push the sheet's actions down.
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,

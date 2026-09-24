@@ -98,7 +98,10 @@ import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Motion
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.presentation.theme.bodyMediumEmphasized
 import com.coparently.app.presentation.theme.dimensions
+import com.coparently.app.presentation.theme.labelMediumEmphasized
+import com.coparently.app.presentation.theme.labelSmallEmphasized
 import com.coparently.app.utils.localizedDate
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -399,8 +402,7 @@ private fun DayWeekPage(
                                     )
                                     Text(
                                         text = date.dayOfMonth.toString(),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.Bold,
+                                        style = MaterialTheme.typography.bodyMediumEmphasized,
                                         color = when {
                                             isToday -> MaterialTheme.colorScheme.primary
                                             isPublicHoliday -> if (isDarkTheme) {
@@ -483,7 +485,6 @@ private fun DayWeekPage(
                                 // with the user's font-size setting.
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontWeight = FontWeight.Medium,
                                 maxLines = 1
                             )
                         }
@@ -1240,7 +1241,6 @@ private fun EventChip(
                     // Medium rather than SemiBold: at this size the heavier weight is no more
                     // legible on a tinted fill, and it costs about half a character per line —
                     // which in a ~54dp column is the difference between fitting a word and not.
-                    fontWeight = FontWeight.Medium,
                     textAlign = TextAlign.Start,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -1279,8 +1279,7 @@ private fun EventChip(
                         java.time.format.DateTimeFormatter.ofPattern("HH:mm")
                     )} - ${tempEndTime.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))}",
                     color = MaterialTheme.colorScheme.inverseOnSurface,
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.labelMediumEmphasized,
                     modifier = Modifier.padding(horizontal = Spacing.S, vertical = Spacing.XS)
                 )
             }
@@ -1667,8 +1666,7 @@ private fun CustodyWeekBand(
                 if (custody != null && days >= 2) {
                     Text(
                         text = parentNames.labelFor(custody),
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.SemiBold,
+                        style = MaterialTheme.typography.labelSmallEmphasized,
                         color = ParentColors.onFill(color),
                         maxLines = 1,
                         softWrap = false,

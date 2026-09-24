@@ -44,7 +44,9 @@ import com.coparently.app.presentation.theme.CoPlanlyColors
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.dimensions
+import com.coparently.app.presentation.theme.headlineSmallEmphasized
 import com.coparently.app.presentation.theme.rememberReducedMotion
+import com.coparently.app.presentation.theme.titleMediumEmphasized
 import com.coparently.app.utils.findActivity
 import kotlinx.coroutines.launch
 
@@ -127,7 +129,6 @@ fun AuthScreen(
                 Text(
                     text = stringResource(R.string.app_name),
                     style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground
                 )
 
@@ -158,8 +159,7 @@ fun AuthScreen(
                         } else {
                             stringResource(R.string.auth_create_your_account)
                         },
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold
+                        style = MaterialTheme.typography.headlineSmallEmphasized
                     )
 
                     Text(
@@ -430,8 +430,7 @@ fun AuthScreen(
                                 } else {
                                     stringResource(R.string.auth_action_create_account)
                                 },
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
+                                style = MaterialTheme.typography.titleMediumEmphasized
                             )
                         }
                     }

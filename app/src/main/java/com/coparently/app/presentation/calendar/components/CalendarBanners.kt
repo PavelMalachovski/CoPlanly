@@ -29,7 +29,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.coparently.app.R
@@ -42,6 +41,8 @@ import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.LayoutConstants
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.presentation.theme.bodyMediumEmphasized
+import com.coparently.app.presentation.theme.labelMediumEmphasized
 import com.coparently.app.utils.LightDarkPreviews
 import com.coparently.app.utils.PreviewWrapper
 import com.coparently.app.utils.createSampleEvent
@@ -87,8 +88,7 @@ fun ChangeRequestBanner(
     val review: @Composable (Modifier) -> Unit = { reviewModifier ->
         Text(
             text = stringResource(R.string.calendar_change_requests_review),
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.SemiBold,
+            style = MaterialTheme.typography.labelMediumEmphasized,
             color = MaterialTheme.colorScheme.primary,
             modifier = reviewModifier
         )
@@ -296,8 +296,7 @@ fun DayAgendaCard(
         Column(verticalArrangement = Arrangement.spacedBy(Spacing.XXS)) {
             Text(
                 text = date.format(dateFormatter),
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.labelMediumEmphasized,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             if (custody != null) {
@@ -307,7 +306,6 @@ fun DayAgendaCard(
                         parentNames.labelFor(custody)
                     ),
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
                     color = ParentColors.text(custody)
                 )
             }
@@ -361,8 +359,7 @@ fun DayAgendaCard(
                             }
                             Text(
                                 text = event.title,
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Medium,
+                                style = MaterialTheme.typography.bodyMediumEmphasized,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -412,8 +409,7 @@ private fun ContactWindowLine(
                 window.end.format(formatter),
                 parentNames.labelFor(window.parent)
             ),
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Medium,
+            style = MaterialTheme.typography.bodyMediumEmphasized,
             color = ParentColors.text(window.parent),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis

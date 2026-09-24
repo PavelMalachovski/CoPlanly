@@ -24,7 +24,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.coparently.app.R
 import com.coparently.app.domain.professionals.ProfessionalAccessDuration
@@ -71,8 +70,7 @@ fun ProfessionalInviteSheet(
         ) {
             Text(
                 text = stringResource(R.string.professional_invite_action),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold
+                style = MaterialTheme.typography.titleLarge
             )
             Text(
                 text = stringResource(R.string.professional_invite_explainer),

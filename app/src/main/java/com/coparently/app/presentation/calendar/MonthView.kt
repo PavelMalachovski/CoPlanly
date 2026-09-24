@@ -74,6 +74,7 @@ import com.coparently.app.presentation.theme.CoPlanlyColors
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.dimensions
+import com.coparently.app.presentation.theme.labelSmallEmphasized
 import com.coparently.app.utils.localizedDate
 import com.kizitonwose.calendar.compose.CalendarState
 import com.kizitonwose.calendar.compose.HorizontalCalendar
@@ -845,9 +846,8 @@ private fun DayCell(
                     if (events.size > MAX_EVENT_DOTS) {
                         Text(
                             text = "+",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontWeight = FontWeight.Bold
+                            style = MaterialTheme.typography.labelSmallEmphasized,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }

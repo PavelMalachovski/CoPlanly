@@ -79,6 +79,9 @@ import com.coparently.app.presentation.theme.CoPlanlyCorners
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.dimensions
+import com.coparently.app.presentation.theme.labelMediumEmphasized
+import com.coparently.app.presentation.theme.titleMediumEmphasized
+import com.coparently.app.presentation.theme.titleSmallEmphasized
 import java.time.DayOfWeek
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
@@ -184,8 +187,7 @@ fun CustodySetupScreen(
             // Model type selection
             Text(
                 text = stringResource(R.string.custody_select_schedule_type),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleMediumEmphasized,
                 modifier = Modifier.padding(vertical = dims.paddingSmall)
             )
 
@@ -207,8 +209,7 @@ fun CustodySetupScreen(
             // Start date picker
             Text(
                 text = stringResource(R.string.custody_pattern_start_date),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleMediumEmphasized,
                 modifier = Modifier.padding(vertical = dims.paddingSmall)
             )
             Text(
@@ -252,8 +253,7 @@ fun CustodySetupScreen(
             if (uiState.selectedModelType != CustodyModelType.CUSTOM) {
                 Text(
                     text = stringResource(rolesQuestionFor(uiState.selectedModelType)),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleMediumEmphasized,
                     modifier = Modifier.padding(vertical = dims.paddingSmall)
                 )
 
@@ -314,8 +314,7 @@ fun CustodySetupScreen(
                 Column {
                     Text(
                         text = stringResource(R.string.custody_custom_pattern),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.titleMediumEmphasized,
                         modifier = Modifier.padding(vertical = dims.paddingSmall)
                     )
                     Text(
@@ -376,8 +375,7 @@ fun CustodySetupScreen(
                                     )
                                     Text(
                                         text = stringResource(R.string.custody_day_abbrev, dayInWeek),
-                                        style = MaterialTheme.typography.labelMedium,
-                                        fontWeight = FontWeight.Bold,
+                                        style = MaterialTheme.typography.labelMediumEmphasized,
                                         color = ParentColors.text(if (isMomDay) "mom" else "dad")
                                     )
                                 }
@@ -447,8 +445,7 @@ fun CustodySetupScreen(
                 ) {
                     Text(
                         text = stringResource(R.string.custody_preview),
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.titleSmallEmphasized,
                         color = MaterialTheme.colorScheme.primary
                     )
                     Spacer(modifier = Modifier.height(dims.paddingSmall))
@@ -673,8 +670,7 @@ private fun MidweekContactSection(
     Column {
         Text(
             text = stringResource(R.string.custody_midweek_title),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.titleMediumEmphasized,
             modifier = Modifier.padding(vertical = dims.paddingSmall)
         )
 

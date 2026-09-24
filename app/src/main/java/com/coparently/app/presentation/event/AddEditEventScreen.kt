@@ -809,8 +809,7 @@ fun AddEditEventScreen(
             if (showParentOwnerSelector(parentsLoaded, isPaired, parentOwner, currentUser?.slot)) {
                 Text(
                     text = stringResource(R.string.event_form_assigned_to),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
+                    style = MaterialTheme.typography.titleMedium
                 )
 
                 Row(
@@ -937,8 +936,7 @@ fun AddEditEventScreen(
             // Event Type Selection
             Text(
                 text = stringResource(R.string.event_form_event_type),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
+                style = MaterialTheme.typography.titleMedium
             )
 
             // Default types plus user-defined types created in the calendar filter sheet
@@ -991,8 +989,7 @@ fun AddEditEventScreen(
             // Date & Time Section
             Text(
                 text = stringResource(R.string.event_form_date_time),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
+                style = MaterialTheme.typography.titleMedium
             )
 
             // Date Picker Button
@@ -1171,8 +1168,7 @@ fun AddEditEventScreen(
             // Repeat Section
             Text(
                 text = stringResource(R.string.event_form_repeat),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
+                style = MaterialTheme.typography.titleMedium
             )
 
             androidx.compose.foundation.layout.FlowRow(
@@ -1249,8 +1245,7 @@ fun AddEditEventScreen(
             // Reminder Section
             Text(
                 text = stringResource(R.string.event_form_reminder),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
+                style = MaterialTheme.typography.titleMedium
             )
 
             // Picking a reminder is the moment notifications become relevant —

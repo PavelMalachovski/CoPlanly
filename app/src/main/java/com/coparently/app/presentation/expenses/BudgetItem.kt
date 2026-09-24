@@ -16,11 +16,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import com.coparently.app.R
 import com.coparently.app.domain.model.Budget
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.presentation.theme.bodySmallEmphasized
 import kotlin.math.roundToInt
 
 /**
@@ -109,8 +109,7 @@ fun BudgetItem(
                         }
                         Text(
                             text = statusLabel,
-                            style = MaterialTheme.typography.bodySmall,
-                            fontWeight = FontWeight.Medium
+                            style = MaterialTheme.typography.bodySmallEmphasized
                         )
                     }
                 }

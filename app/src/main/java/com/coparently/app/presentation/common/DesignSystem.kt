@@ -39,7 +39,6 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -47,6 +46,7 @@ import com.coparently.app.presentation.theme.CoPlanlyCorners
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.LayoutConstants
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.presentation.theme.labelMediumEmphasized
 import com.coparently.app.utils.LightDarkPreviews
 import com.coparently.app.utils.PreviewWrapper
 import java.util.Locale
@@ -83,8 +83,7 @@ fun GroupLabel(
 ) {
     Text(
         text = text.uppercase(Locale.getDefault()),
-        style = MaterialTheme.typography.labelMedium,
-        fontWeight = FontWeight.SemiBold,
+        style = MaterialTheme.typography.labelMediumEmphasized,
         color = MaterialTheme.colorScheme.primary,
         modifier = modifier
             .padding(start = Spacing.XS, end = Spacing.XS, bottom = 6.dp)
@@ -328,7 +327,6 @@ fun PillChip(
         Text(
             text = label,
             style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Medium,
             color = contentColor,
             maxLines = 1,
             // Ellipsised rather than clipped when a caller bounds the chip's width — a person's
