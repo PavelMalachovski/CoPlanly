@@ -132,7 +132,7 @@ private fun ScreenshotFrame(
         LocalDensity provides Density(density.density, variant.fontScale),
         LocalParentPalette provides variant.palette.palette
     ) {
-        CoPlanlyTheme(darkTheme = variant.dark) {
+        CoPlanlyTheme(darkTheme = variant.dark, contrastLevel = variant.contrast) {
             Surface(color = MaterialTheme.colorScheme.background) {
                 val size = if (fullScreen) Modifier.fillMaxSize() else Modifier.fillMaxWidth()
                 Box(

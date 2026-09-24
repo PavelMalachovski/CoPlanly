@@ -52,52 +52,7 @@ import org.robolectric.annotation.GraphicsMode
 class DesignSystemScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant) {
 
     @Test
-    fun settingsFamilyGroup() = snap("settings_family_group") {
-        Column {
-            GroupLabel(stringResource(R.string.settings_group_family))
-            SectionGroup {
-                SectionRow(
-                    icon = Icons.Default.Group,
-                    title = stringResource(R.string.settings_pairing_title),
-                    supporting = stringResource(R.string.settings_pairing_description),
-                    onClick = {},
-                    trailing = { Chevron() }
-                )
-                Divider()
-                SectionRow(
-                    icon = Icons.Default.Diversity3,
-                    title = stringResource(R.string.friend_section_title),
-                    supporting = stringResource(R.string.friend_section_supporting),
-                    onClick = {},
-                    trailing = { Chevron() }
-                )
-                Divider()
-                SectionRow(
-                    icon = Icons.Default.FamilyRestroom,
-                    title = stringResource(R.string.settings_family_kind_title),
-                    onClick = {},
-                    trailing = { Chevron() }
-                )
-                Divider()
-                SectionRow(
-                    icon = Icons.Default.SwapHoriz,
-                    title = stringResource(R.string.settings_family_shown),
-                    onClick = {},
-                    // A parent-coloured dot: the one place in this group the palette reaches.
-                    trailing = {
-                        PillChip(label = "Pavel", leadingDot = ParentColors.fill("dad"))
-                    }
-                )
-                Divider()
-                SectionRow(
-                    icon = Icons.Default.Notifications,
-                    title = stringResource(R.string.settings_push_notifications),
-                    supporting = stringResource(R.string.settings_push_notifications_description),
-                    trailing = { Switch(checked = true, onCheckedChange = {}) }
-                )
-            }
-        }
-    }
+    fun settingsFamilyGroup() = snap("settings_family_group") { SettingsFamilyGroupFixture() }
 
     @Test
     fun emptyState() = snap("common_empty_state") {
@@ -129,20 +84,7 @@ class DesignSystemScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(var
     }
 
     @Test
-    fun inlineBanner() = snap("common_inline_banner") {
-        // The expense split's ask: a title, the figures and three answers, which wrap onto a
-        // second line at large text instead of squeezing their labels.
-        InlineBanner(
-            title = stringResource(R.string.expenses_split_proposal_title),
-            text = stringResource(R.string.expenses_split_proposal_body, 70, 30),
-            tone = BannerTone.ATTENTION,
-            actions = {
-                Button(onClick = {}) { Text(stringResource(R.string.expenses_split_proposal_confirm)) }
-                TextButton(onClick = {}) { Text(stringResource(R.string.expenses_split_proposal_decline)) }
-                TextButton(onClick = {}) { Text(stringResource(R.string.expenses_split_proposal_later)) }
-            }
-        )
-    }
+    fun inlineBanner() = snap("common_inline_banner") { InlineBannerFixture() }
 
     @Test
     fun errorState() = snap("common_error_state") {
@@ -169,5 +111,71 @@ private fun Chevron() {
         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
         contentDescription = null,
         tint = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+}
+
+/** Settings' Family group as the screen draws it; shared with [ContrastScreenshots]. */
+@Composable
+internal fun SettingsFamilyGroupFixture() {
+    Column {
+        GroupLabel(stringResource(R.string.settings_group_family))
+        SectionGroup {
+            SectionRow(
+                icon = Icons.Default.Group,
+                title = stringResource(R.string.settings_pairing_title),
+                supporting = stringResource(R.string.settings_pairing_description),
+                onClick = {},
+                trailing = { Chevron() }
+            )
+            Divider()
+            SectionRow(
+                icon = Icons.Default.Diversity3,
+                title = stringResource(R.string.friend_section_title),
+                supporting = stringResource(R.string.friend_section_supporting),
+                onClick = {},
+                trailing = { Chevron() }
+            )
+            Divider()
+            SectionRow(
+                icon = Icons.Default.FamilyRestroom,
+                title = stringResource(R.string.settings_family_kind_title),
+                onClick = {},
+                trailing = { Chevron() }
+            )
+            Divider()
+            SectionRow(
+                icon = Icons.Default.SwapHoriz,
+                title = stringResource(R.string.settings_family_shown),
+                onClick = {},
+                // A parent-coloured dot: the one place in this group the palette reaches.
+                trailing = {
+                    PillChip(label = "Pavel", leadingDot = ParentColors.fill("dad"))
+                }
+            )
+            Divider()
+            SectionRow(
+                icon = Icons.Default.Notifications,
+                title = stringResource(R.string.settings_push_notifications),
+                supporting = stringResource(R.string.settings_push_notifications_description),
+                trailing = { Switch(checked = true, onCheckedChange = {}) }
+            )
+        }
+    }
+}
+
+/** The expense split's ask as an [InlineBanner]; shared with [ContrastScreenshots]. */
+@Composable
+internal fun InlineBannerFixture() {
+    // The expense split's ask: a title, the figures and three answers, which wrap onto a
+    // second line at large text instead of squeezing their labels.
+    InlineBanner(
+        title = stringResource(R.string.expenses_split_proposal_title),
+        text = stringResource(R.string.expenses_split_proposal_body, 70, 30),
+        tone = BannerTone.ATTENTION,
+        actions = {
+            Button(onClick = {}) { Text(stringResource(R.string.expenses_split_proposal_confirm)) }
+            TextButton(onClick = {}) { Text(stringResource(R.string.expenses_split_proposal_decline)) }
+            TextButton(onClick = {}) { Text(stringResource(R.string.expenses_split_proposal_later)) }
+        }
     )
 }

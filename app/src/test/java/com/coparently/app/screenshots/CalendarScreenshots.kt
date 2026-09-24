@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.height
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.coparently.app.presentation.calendar.MonthView
@@ -34,22 +35,7 @@ import org.robolectric.annotation.GraphicsMode
 class CalendarScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant) {
 
     @Test
-    fun monthGrid() = snap("calendar_month_grid") {
-        Box(modifier = Modifier.height(MONTH_GRID_HEIGHT)) {
-            MonthView(
-                selectedMonth = ScreenshotFixtures.MONTH,
-                eventsByDay = ScreenshotFixtures.monthEvents,
-                getCustody = ScreenshotFixtures::custodyFor,
-                getContactWindows = ScreenshotFixtures::contactWindowsFor,
-                parentNames = ScreenshotFixtures.parentNames,
-                onDayClick = {},
-                onMonthChange = {},
-                holidays = ScreenshotFixtures.holidays,
-                schoolVacationDays = ScreenshotFixtures.schoolVacationDays,
-                pendingSwapDates = setOf(ScreenshotFixtures.MONTH.atDay(PENDING_SWAP_DAY))
-            )
-        }
-    }
+    fun monthGrid() = snap("calendar_month_grid") { MonthGridFixture() }
 
     @Test
     fun banners() = snap("calendar_banners") {
@@ -61,14 +47,37 @@ class CalendarScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant
     }
 
     companion object {
-        private val MONTH_GRID_HEIGHT = 560.dp
         private val BANNER_GAP = 8.dp
-        private const val PENDING_SWAP_DAY = 27
         private const val PENDING_REQUESTS = 2
 
         /** The variants this class runs over. */
         @JvmStatic
         @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")
         fun variants(): List<Array<Any>> = ScreenshotVariants.parameters(ScreenshotVariants.TEXT_HEAVY)
+    }
+}
+
+private val MONTH_GRID_HEIGHT = 560.dp
+private const val PENDING_SWAP_DAY = 27
+
+/**
+ * May 2026's grid with every `DayCellFills` layer: custody with contact windows, a holiday,
+ * school vacation, a pending swap and events. Shared with [ContrastScreenshots].
+ */
+@Composable
+internal fun MonthGridFixture() {
+    Box(modifier = Modifier.height(MONTH_GRID_HEIGHT)) {
+        MonthView(
+            selectedMonth = ScreenshotFixtures.MONTH,
+            eventsByDay = ScreenshotFixtures.monthEvents,
+            getCustody = ScreenshotFixtures::custodyFor,
+            getContactWindows = ScreenshotFixtures::contactWindowsFor,
+            parentNames = ScreenshotFixtures.parentNames,
+            onDayClick = {},
+            onMonthChange = {},
+            holidays = ScreenshotFixtures.holidays,
+            schoolVacationDays = ScreenshotFixtures.schoolVacationDays,
+            pendingSwapDates = setOf(ScreenshotFixtures.MONTH.atDay(PENDING_SWAP_DAY))
+        )
     }
 }

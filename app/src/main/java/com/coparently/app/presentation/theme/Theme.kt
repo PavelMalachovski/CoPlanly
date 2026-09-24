@@ -18,7 +18,7 @@ import androidx.core.view.WindowCompat
  * Light color scheme for CoPlanly app.
  * Enhanced with better contrast and brand colors.
  */
-private val LightColorScheme = lightColorScheme(
+internal val LightColorScheme = lightColorScheme(
     primary = CoPlanlyColors.BrandPrimary,
     onPrimary = Color.White,
     primaryContainer = CoPlanlyColors.BrandPrimaryContainer,
@@ -31,6 +31,11 @@ private val LightColorScheme = lightColorScheme(
     onSecondaryContainer = CoPlanlyColors.NeutralOnSecondaryContainer,
     tertiary = CoPlanlyColors.BrandAccent,
     onTertiary = Color.White,
+    // Emerald like `tertiary`, which tints an event that belongs to neither parent. Left unset it
+    // was Material's baseline pink (#FFD8E4): a parent's hue on the one kind of event that is
+    // neither parent's (docs/AUDIT-2026-10-design.md D-25).
+    tertiaryContainer = Color(0xFFC1ECD6),
+    onTertiaryContainer = Color(0xFF002115),
     background = CoPlanlyColors.LightBackground,
     onBackground = CoPlanlyColors.LightOnBackground,
     surface = CoPlanlyColors.LightSurface,
@@ -60,7 +65,7 @@ private val LightColorScheme = lightColorScheme(
  * Dark color scheme for CoPlanly app.
  * Enhanced with better contrast and brand colors.
  */
-private val DarkColorScheme = darkColorScheme(
+internal val DarkColorScheme = darkColorScheme(
     primary = Color(0xFFC2C1FF),
     onPrimary = Color(0xFF201F60),
     primaryContainer = Color(0xFF373678),
@@ -72,6 +77,9 @@ private val DarkColorScheme = darkColorScheme(
     onSecondaryContainer = CoPlanlyColors.NeutralSecondaryContainer,
     tertiary = Color(0xFF6EE7B7),
     onTertiary = Color(0xFF003824),
+    // See the light scheme: Material's baseline here was a maroon (#633B48).
+    tertiaryContainer = Color(0xFF274E3E),
+    onTertiaryContainer = Color(0xFFC1ECD6),
     background = CoPlanlyColors.DarkBackground,
     onBackground = CoPlanlyColors.DarkOnBackground,
     surface = CoPlanlyColors.DarkSurface,
@@ -107,17 +115,23 @@ private val DarkColorScheme = darkColorScheme(
  * palette it was never checked against. The branch that offered it had no caller and was removed
  * in the October 2026 audit (D-25).
  *
+ * The scheme follows the contrast the person asked the system for on Android 14 and later
+ * (medium or high, see [ContrastLevel]); before that, and when nobody asked, it is the one below.
+ *
  * @param darkTheme Whether to use dark theme (defaults to system setting)
  * @param windowSizeClass Window size class for responsive dimensions (optional)
+ * @param contrastLevel A contrast level to use instead of the system's — for previews and the
+ *   screenshot tests; null follows the system
  * @param content The composable content to display with this theme
  */
 @Composable
 fun CoPlanlyTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     windowSizeClass: WindowSizeClass? = null,
+    contrastLevel: ContrastLevel? = null,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
+    val colorScheme = colorSchemeFor(darkTheme, contrastLevel ?: rememberSystemContrastLevel())
 
     // Dimensions come from the caller's window size class when one is given — previews and
     // tests do that — and otherwise from `adaptiveDimensions()`, which works the size class out

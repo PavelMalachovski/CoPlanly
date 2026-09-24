@@ -1,5 +1,6 @@
 package com.coparently.app.screenshots
 
+import com.coparently.app.presentation.theme.ContrastLevel
 import com.coparently.app.presentation.theme.ParentColorChoice
 import com.coparently.app.presentation.theme.ParentPalette
 import kotlin.math.roundToInt
@@ -37,20 +38,23 @@ enum class ScreenshotPalette(val palette: ParentPalette, val label: String) {
  * @param fontScale The system font scale; 1.5 is where clipping and ellipsis show up, 2.0 is the
  *   largest Android 14 offers
  * @param palette The family's two parent colours
+ * @param contrast The contrast level the theme draws with; only a raised one shows in [fileName]
  */
 data class ScreenshotVariant(
     val locale: ScreenshotLocale,
     val dark: Boolean,
     val fontScale: Float,
-    val palette: ScreenshotPalette
+    val palette: ScreenshotPalette,
+    val contrast: ContrastLevel = ContrastLevel.STANDARD
 ) {
-    /** E.g. `de_light_fs150_pinkblue`. */
+    /** E.g. `de_light_fs150_pinkblue`, or `en_dark_fs100_pinkblue_high` at high contrast. */
     val fileName: String
-        get() = listOf(
+        get() = listOfNotNull(
             locale.tag,
             if (dark) "dark" else "light",
             "fs${(fontScale * PERCENT).roundToInt()}",
-            palette.label
+            palette.label,
+            contrast.takeIf { it != ContrastLevel.STANDARD }?.name?.lowercase()
         ).joinToString("_")
 
     /**
@@ -71,7 +75,7 @@ data class ScreenshotVariant(
 }
 
 /**
- * The two variant sets. The full cross product — 5 languages × 2 themes × 3 font scales × 2
+ * The three variant sets. The full cross product — 5 languages × 2 themes × 3 font scales × 2
  * palettes — is 60 images per component and ~700 in all, which nobody would page through, so
  * each set is a deliberate sample instead:
  *
@@ -81,6 +85,7 @@ data class ScreenshotVariant(
  *   words meet the largest text; both themes; and the chosen palette in both themes.
  * - [COLOUR_ONLY] (4): components whose text is a name or a number — the question there is
  *   theme × palette, not translation.
+ * - [CONTRAST] (2): high contrast in both themes, for three components only.
  */
 object ScreenshotVariants {
 
@@ -113,6 +118,17 @@ object ScreenshotVariants {
         variant(ScreenshotLocale.UK, dark = true, fontScale = LARGE_TEXT),
         variant(ScreenshotLocale.EN, dark = false, palette = ScreenshotPalette.CHOSEN),
         variant(ScreenshotLocale.CS, dark = true, palette = ScreenshotPalette.CHOSEN)
+    )
+
+    /**
+     * High contrast in both themes, for the components [ContrastScreenshots] renders: the
+     * foregrounds move and the backgrounds do not, so these show whether anything drawn on a
+     * background of its own — a custody band, a banner — still reads (docs/AUDIT-2026-10-design.md
+     * D-25). Medium sits between standard and high and is not rendered.
+     */
+    val CONTRAST: List<ScreenshotVariant> = listOf(
+        ScreenshotVariant(ScreenshotLocale.EN, false, NORMAL_TEXT, ScreenshotPalette.DEFAULT, ContrastLevel.HIGH),
+        ScreenshotVariant(ScreenshotLocale.EN, true, NORMAL_TEXT, ScreenshotPalette.DEFAULT, ContrastLevel.HIGH)
     )
 
     /** Four variants for components whose words are names and numbers. */
