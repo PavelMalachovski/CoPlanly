@@ -4,11 +4,8 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
@@ -168,11 +165,11 @@ private fun VaccinationAddRow(
         }
 
         if (!isAdding) {
-            OutlinedButton(onClick = { isAdding = true }, modifier = Modifier.fillMaxWidth()) {
-                Icon(imageVector = Icons.Default.Add, contentDescription = null)
-                Spacer(modifier = Modifier.width(Spacing.S))
-                Text(stringResource(R.string.medical_vaccination_add))
-            }
+            AddItemButton(
+                label = stringResource(R.string.medical_vaccination_add),
+                onClick = { isAdding = true },
+                modifier = Modifier.fillMaxWidth()
+            )
         }
     }
 }

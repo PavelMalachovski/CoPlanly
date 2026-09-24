@@ -2,8 +2,8 @@ package com.coparently.app.presentation.childinfo.components
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -13,6 +13,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import com.coparently.app.R
+import com.coparently.app.presentation.common.AddItemButton
 import com.coparently.app.presentation.common.animations.sectionEnter
 import com.coparently.app.presentation.common.animations.sectionExit
 import com.coparently.app.presentation.theme.IconSizes
@@ -106,14 +107,11 @@ fun AllergyEditor(
 
         // Add button
         if (!isAddingNew) {
-            OutlinedButton(
+            AddItemButton(
+                label = stringResource(R.string.childinfo_add_allergy),
                 onClick = { isAddingNew = true },
                 modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.childinfo_add))
-                Spacer(modifier = Modifier.width(Spacing.S))
-                Text(stringResource(R.string.childinfo_add_allergy))
-            }
+            )
         }
     }
 }

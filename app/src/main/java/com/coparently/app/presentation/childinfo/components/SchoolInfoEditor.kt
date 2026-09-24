@@ -9,6 +9,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import com.coparently.app.R
 import com.coparently.app.domain.model.SchoolInfo
+import com.coparently.app.presentation.common.AddItemButton
 import com.coparently.app.presentation.common.ConfirmationDialog
 import com.coparently.app.presentation.theme.Spacing
 
@@ -178,12 +179,11 @@ fun SchoolInfoEditor(
                 }
             }
         } else {
-            OutlinedButton(
+            AddItemButton(
+                label = stringResource(R.string.childinfo_add_school_info),
                 onClick = { isEditing = true },
                 modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(stringResource(R.string.childinfo_add_school_info))
-            }
+            )
         }
     }
 }

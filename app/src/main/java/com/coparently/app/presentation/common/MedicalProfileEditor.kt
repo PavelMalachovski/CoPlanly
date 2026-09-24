@@ -6,12 +6,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
@@ -22,7 +19,6 @@ import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -303,11 +299,11 @@ private fun MedicalStringAddRow(hint: String, onAdd: (String) -> Unit, modifier:
         }
 
         if (!isAdding) {
-            OutlinedButton(onClick = { isAdding = true }, modifier = Modifier.fillMaxWidth()) {
-                Icon(imageVector = Icons.Default.Add, contentDescription = null)
-                Spacer(modifier = Modifier.width(Spacing.S))
-                Text(stringResource(R.string.medical_item_add))
-            }
+            AddItemButton(
+                label = stringResource(R.string.medical_item_add),
+                onClick = { isAdding = true },
+                modifier = Modifier.fillMaxWidth()
+            )
         }
     }
 }

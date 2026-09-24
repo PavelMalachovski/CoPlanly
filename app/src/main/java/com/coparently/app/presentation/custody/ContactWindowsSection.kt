@@ -16,7 +16,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilterChip
@@ -39,9 +38,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.coparently.app.R
 import com.coparently.app.domain.custody.ContactWindow
+import com.coparently.app.presentation.common.AddItemButton
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.components.TimePickerDialog
-import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.dimensions
@@ -121,14 +120,11 @@ fun ContactWindowsSection(
             )
         }
 
-        OutlinedButton(
+        AddItemButton(
+            label = stringResource(R.string.custody_windows_add),
             onClick = { showEditor = true },
             modifier = Modifier.padding(vertical = dims.paddingSmall)
-        ) {
-            Icon(imageVector = Icons.Default.Add, contentDescription = null, modifier = Modifier.size(IconSizes.Small))
-            Spacer(modifier = Modifier.width(Spacing.S))
-            Text(stringResource(R.string.custody_windows_add))
-        }
+        )
         Spacer(modifier = Modifier.height(dims.paddingMedium))
     }
 

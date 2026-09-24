@@ -3,7 +3,6 @@ package com.coparently.app.presentation.childinfo.components
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
@@ -13,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.coparently.app.R
 import com.coparently.app.domain.model.Medication
+import com.coparently.app.presentation.common.AddItemButton
 import com.coparently.app.presentation.common.animations.sectionEnter
 import com.coparently.app.presentation.common.animations.sectionExit
 import com.coparently.app.presentation.theme.Spacing
@@ -85,14 +85,11 @@ fun MedicationEditor(
 
         // Add button
         if (!isAddingNew && editingIndex == null) {
-            OutlinedButton(
+            AddItemButton(
+                label = stringResource(R.string.childinfo_add_medication),
                 onClick = { isAddingNew = true },
                 modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.childinfo_add))
-                Spacer(modifier = Modifier.width(Spacing.S))
-                Text(stringResource(R.string.childinfo_add_medication))
-            }
+            )
         }
     }
 }

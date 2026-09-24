@@ -19,8 +19,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
-import androidx.compose.material3.DatePickerDefaults
-import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -35,7 +33,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
-import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -75,7 +72,7 @@ import com.coparently.app.presentation.calendar.components.CustodyChangedBanner
 import com.coparently.app.presentation.calendar.components.DaySwapSheet
 import com.coparently.app.presentation.calendar.components.EventTypeFilterSheet
 import com.coparently.app.presentation.common.FamilyMemberFilterStrip
-import com.coparently.app.presentation.common.PickerDates
+import com.coparently.app.presentation.common.LocalDatePickerDialog
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.common.rememberToday
 import com.coparently.app.presentation.common.toggling
@@ -263,18 +260,9 @@ fun CalendarScreen(
     val parents by calendarViewModel.parents.collectAsState()
     val parentNames = rememberParentNames(parents)
 
-    val now = remember { YearMonth.now() }
-
     var showDatePicker by remember { mutableStateOf(false) }
     // Whether the Day view on screen was opened by tapping a month cell, which Back undoes.
     var dayOpenedFromMonth by rememberSaveable { mutableStateOf(false) }
-    val datePickerState = rememberDatePickerState(
-        // DatePickerState speaks UTC-midnight millis; PickerDates is the one conversion. Opens
-        // on the selected day (or today), never on the 1st: "jump to a date" should start from
-        // where the user is, and proposing the 1st is what read as "schedule from the 1st".
-        initialSelectedDateMillis = PickerDates.toPickerMillis(selectedDate ?: today),
-        yearRange = IntRange(now.year - 5, now.year + 5)
-    )
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
@@ -960,42 +948,24 @@ fun CalendarScreen(
         }
     }
 
-    // Date picker dialog for selecting month and year
+    // "Jump to a date" through the shared picker, like every LocalDate in the app (PickerDates.kt),
+    // with the dialog's text buttons (D-20; this one confirmed and cancelled with two filled
+    // buttons). It opens on the selected day, or today — never on the 1st, which read as
+    // "schedule from the 1st".
     if (showDatePicker) {
-        DatePickerDialog(
-            onDismissRequest = { showDatePicker = false },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        datePickerState.selectedDateMillis?.let { millis ->
-                            val pickedDate = PickerDates.fromPickerMillis(millis)
-
-                            calendarViewModel.setSelectedDate(pickedDate)
-                            if (viewMode != CalendarViewMode.MONTH) {
-                                calendarViewModel.setViewMode(CalendarViewMode.MONTH)
-                            }
-                            // MonthView follows selectedMonth on its own
-                        }
-                        showDatePicker = false
-                    }
-                ) {
-                    Text(stringResource(R.string.calendar_dialog_ok))
+        LocalDatePickerDialog(
+            initialDate = selectedDate ?: today,
+            confirmLabel = stringResource(R.string.calendar_dialog_ok),
+            dismissLabel = stringResource(R.string.calendar_dialog_cancel),
+            onConfirm = { pickedDate ->
+                calendarViewModel.setSelectedDate(pickedDate)
+                if (viewMode != CalendarViewMode.MONTH) {
+                    calendarViewModel.setViewMode(CalendarViewMode.MONTH)
                 }
+                // MonthView follows selectedMonth on its own
             },
-            dismissButton = {
-                Button(onClick = { showDatePicker = false }) {
-                    Text(stringResource(R.string.calendar_dialog_cancel))
-                }
-            },
-            colors = DatePickerDefaults.colors()
-        ) {
-            androidx.compose.material3.DatePicker(
-                state = datePickerState,
-                title = null,
-                headline = null,
-                showModeToggle = true
-            )
-        }
+            onDismiss = { showDatePicker = false }
+        )
     }
 
     // Event preview bottom sheet

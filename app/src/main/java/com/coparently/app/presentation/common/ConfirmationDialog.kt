@@ -1,14 +1,13 @@
 package com.coparently.app.presentation.common
 
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import com.coparently.app.R
 
 /**
@@ -42,8 +41,7 @@ fun ConfirmationDialog(
         title = {
             Text(
                 text = title,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold
+                style = MaterialTheme.typography.headlineSmall
             )
         },
         text = {
@@ -52,16 +50,16 @@ fun ConfirmationDialog(
                 style = MaterialTheme.typography.bodyLarge
             )
         },
+        // Both answers are text buttons, as Material's dialogs have them: this one confirmed with
+        // a filled button while every other dialog in the app used text (D-20). A destructive
+        // confirm says so in the error colour rather than with a red slab.
         confirmButton = {
-            Button(
+            TextButton(
                 onClick = onConfirm,
                 colors = if (isDestructive) {
-                    androidx.compose.material3.ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error,
-                        contentColor = MaterialTheme.colorScheme.onError
-                    )
+                    ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
                 } else {
-                    androidx.compose.material3.ButtonDefaults.buttonColors()
+                    ButtonDefaults.textButtonColors()
                 }
             ) {
                 Text(confirmText)
