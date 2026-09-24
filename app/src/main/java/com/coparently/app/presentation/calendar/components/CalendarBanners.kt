@@ -26,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -51,6 +52,9 @@ import java.util.Locale
 /** Tint strength of the inline banners above the grid. */
 private const val BANNER_TINT_ALPHA = 0.14f
 
+/** Font scale from which [ChangeRequestBanner]'s action sits under its text (design item 15). */
+private const val STACK_BANNER_ACTION_FONT_SCALE = 1.3f
+
 /**
  * Pending change requests, as a labelled row above the grid.
  *
@@ -74,6 +78,18 @@ fun ChangeRequestBanner(
     message: String? = null,
     detail: String? = null
 ) {
+    // From 1.3x the action goes under the text rather than beside it: beside it, a German
+    // "2 Änderungsanfragen" at 2.0x had a third of the row and broke inside the word.
+    val stacked = LocalDensity.current.fontScale >= STACK_BANNER_ACTION_FONT_SCALE
+    val review: @Composable (Modifier) -> Unit = { reviewModifier ->
+        Text(
+            text = stringResource(R.string.calendar_change_requests_review),
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = reviewModifier
+        )
+    }
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -114,13 +130,13 @@ fun ChangeRequestBanner(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+            if (stacked) {
+                review(Modifier.align(Alignment.End).padding(top = 2.dp))
+            }
         }
-        Text(
-            text = stringResource(R.string.calendar_change_requests_review),
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.primary
-        )
+        if (!stacked) {
+            review(Modifier)
+        }
     }
 }
 
@@ -161,9 +177,7 @@ fun VacationBanner(label: String, modifier: Modifier = Modifier) {
         Text(
             text = label,
             style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }
@@ -212,8 +226,6 @@ fun CustodyChangedBanner(byName: String, onDismiss: () -> Unit, modifier: Modifi
             text = stringResource(R.string.calendar_custody_changed_by, byName),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f)
         )
         IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp)) {

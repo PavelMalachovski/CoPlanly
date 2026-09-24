@@ -36,7 +36,6 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.coparently.app.R
 import com.coparently.app.domain.expenses.ExpenseBalance
@@ -260,8 +259,7 @@ internal fun MonthSwitcherBar(navigation: MonthNavigation, modifier: Modifier = 
             style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.SemiBold,
             textAlign = TextAlign.Center,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
+            // Wraps rather than cutting the count ("Mai 2026 · 5 Ausgab…" in German at 2.0x).
             modifier = Modifier.weight(1f)
         )
         IconButton(onClick = navigation.onNext, modifier = Modifier.size(32.dp)) {
@@ -304,7 +302,9 @@ internal fun CollapsedMonthSummary(
             Text(
                 text = stringResource(
                     R.string.expenses_collapsed_totals,
-                    totals.joinToString(separator = " · ")
+                    // A no-break space before the dot keeps it with the amount it follows, so
+                    // a wrapped second line starts with an amount, never with "·".
+                    totals.joinToString(separator = "\u00A0· ")
                 ),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
