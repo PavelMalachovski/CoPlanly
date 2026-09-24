@@ -51,7 +51,8 @@ jobs:
   #
   #  * docs, Cloud Functions, the rules and their tests → no Android job at all;
   #  * a screen-only change (`presentation/` outside `common/`, `res/`, `app/src/test/`) → no e2e;
-  #  * nothing the screenshots render (`presentation/`, `domain/`, `res/`, the tests) → no screenshots;
+  #  * nothing the screenshots render or compare against (`presentation/`, `domain/`, `res/`, the
+  #    tests, the baselines in `app/src/test/screenshots/`) → no screenshots;
   #  * the emulator matrix is API 30 alone unless the change touches what API 26 and 16 KB exist for
   #    — `data/local/` (SQLCipher, Room), the manifest, `androidTest/`, `src/debug/` — or the build.
   #
@@ -350,21 +351,23 @@ jobs:
   # the way to review light theme, the four translations at 1.5x text and the chosen parent
   # palette without a phone — download the `screenshots` artefact and open `index.html`.
   #
-  # **Record mode only, deliberately.** Nothing is compared yet, so this job goes red only when a
-  # screenshot test cannot render at all. Verifying needs committed baselines, and baselines need
-  # recording on one fixed machine — Robolectric's native renderer is deterministic per platform
-  # and font set, not across them, so a baseline recorded on a laptop would fail here on pixels
-  # nobody changed. To switch, once the baselines exist:
+  # **Verify against committed baselines.** The baselines live in `app/src/test/screenshots/` and
+  # are recorded only by the Regenerate workflow (regenerate.yml), on this same runner image:
+  # Robolectric's native renderer is deterministic per platform and font set, not across them, so
+  # a baseline recorded on a laptop would fail here on pixels nobody changed. This job runs
+  # `verifyRoborazziDebug` whenever that directory holds an image, and goes red when a screenshot
+  # differs from its baseline or has none (a test added without re-running Regenerate). An
+  # intended UI change is accepted by running Regenerate on the branch — the new baselines then
+  # arrive as a commit, which is the visible "yes, it is meant to look like this".
   #
-  #   TODO(screenshots): (1) set `roborazzi { outputDir.set(file("src/test/screenshots")) }` in
-  #   app/build.gradle.kts; (2) add `./gradlew recordRoborazziDebug` to the Regenerate workflow
-  #   and `app/src/test/screenshots` to the paths its commit step adds, so the baselines are
-  #   recorded on this same runner image and committed as a visible change; (3) replace
-  #   `recordRoborazziDebug` below with `verifyRoborazziDebug`, uploading Roborazzi's compare
-  #   directory (`roborazzi { compare { outputDir } }`) instead: the `_compare` diffs there are
-  #   what a failure is diagnosed from. Not done in the change that added this job because editing
-  #   regenerate.yml triggers it (its own path is on its push trigger), which would also have
-  #   regenerated the detekt baseline unasked.
+  # Until the first Regenerate run has committed any baseline it falls back to recording, with a
+  # notice, so it still proves every screenshot renders rather than failing on nothing to compare.
+  #
+  # On a mismatch Roborazzi writes `<variant>_compare.png` (baseline | diff | new) and
+  # `<variant>_actual.png` under `app/build/outputs/roborazzi/<component>/` (the per-component
+  # folder is `ScreenshotMatrix.optionsFor`'s). They go up as `screenshot-diffs`, the gallery marks
+  # those cards "changed", and `screenshot-summary` lets tools/ci-report.js list them in the PR
+  # comment.
   #
   # A Roborazzi task runs only the `com.coparently.app.screenshots` tests and `testDebugUnitTest`
   # excludes them (see `roborazziRequested` in app/build.gradle.kts), so this job and
@@ -372,7 +375,7 @@ jobs:
   # turn the unit-test job red. The first run downloads Robolectric's SDK 34 jar (~100 MB); later
   # runs take it from the Gradle cache `setup-gradle` restores.
   screenshots:
-    name: Android — screenshots (Roborazzi, record)
+    name: Android — screenshots (Roborazzi)
     needs: changes
     if: needs.changes.outputs.screenshots == 'true'
     runs-on: ubuntu-latest
@@ -396,7 +399,23 @@ jobs:
           # the cache still works within one job, just not across runs.
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
-      - name: Record screenshots
+      - name: Verify or record
+        id: mode
+        run: |
+          if [ -n "$(find app/src/test/screenshots -name '*.png' -print -quit 2>/dev/null)" ]; then
+            echo "mode=verify" >> "$GITHUB_OUTPUT"
+            echo "Baselines found in app/src/test/screenshots: verifying against them."
+          else
+            echo "mode=record" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Screenshots recorded, not compared::No committed baselines in app/src/test/screenshots yet. Run the Regenerate workflow on this branch to record and commit them; until then this job only proves every screenshot renders."
+          fi
+
+      - name: Verify screenshots against the committed baselines
+        if: steps.mode.outputs.mode == 'verify'
+        run: ./gradlew verifyRoborazziDebug
+
+      - name: Record screenshots (no baselines yet)
+        if: steps.mode.outputs.mode == 'record'
         run: ./gradlew recordRoborazziDebug
 
       - uses: actions/setup-node@v4
@@ -404,20 +423,61 @@ jobs:
         with:
           node-version: '20'
 
-      # One page, filterable by component, language, theme, font scale and palette. It is written
-      # into the directory it indexes, so the artefact is self-contained: unzip, open index.html.
-      # `always()` so a run where some tests failed still publishes the images the rest recorded.
+      # One page, filterable by component, status, language, theme, font scale and palette, over
+      # the baselines (or, in record mode, what was just recorded) plus any diffs. Staged in its own
+      # directory so the committed one never gets an index.html; the artefact is self-contained:
+      # unzip, open index.html. `always()` so a failed verify still publishes what it found.
       - name: Build the gallery index
-        if: always()
-        run: node tools/screenshot-gallery.js app/build/outputs/roborazzi
+        if: always() && steps.mode.outputs.mode != ''
+        env:
+          MODE: ${{ steps.mode.outputs.mode }}
+        run: |
+          set -euo pipefail
+          rm -rf app/build/screenshot-gallery app/build/screenshot-summary
+          mkdir -p app/build/screenshot-gallery app/build/screenshot-summary
+          if [ -d app/src/test/screenshots ]; then cp -R app/src/test/screenshots/. app/build/screenshot-gallery/; fi
+          if [ -d app/build/outputs/roborazzi ]; then cp -R app/build/outputs/roborazzi/. app/build/screenshot-gallery/; fi
+          node tools/screenshot-gallery.js app/build/screenshot-gallery --mode "$MODE" \
+            --summary app/build/screenshot-summary/screenshot-summary.json
 
       - name: Upload screenshots
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: screenshots
-          path: app/build/outputs/roborazzi/
+          path: app/build/screenshot-gallery/
           if-no-files-found: warn
+          retention-days: 14
+
+      # Only what did not match: small, and what a failure is diagnosed from.
+      - name: Upload screenshot diffs
+        if: failure() && steps.mode.outputs.mode == 'verify'
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshot-diffs
+          path: |
+            app/build/outputs/roborazzi/**/*_compare.png
+            app/build/outputs/roborazzi/**/*_actual.png
+          if-no-files-found: ignore
+          retention-days: 14
+
+      # Read by the `report` job; not for people.
+      - name: Upload the screenshot summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshot-summary
+          path: app/build/screenshot-summary/
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Upload screenshot-test results (JUnit XML)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-screenshots
+          path: app/build/test-results/testDebugUnitTest/*.xml
+          if-no-files-found: ignore
           retention-days: 14
 
       - name: Upload test reports
@@ -427,6 +487,7 @@ jobs:
           name: android-reports-screenshots
           path: |
             app/build/reports/tests/
+            app/build/reports/roborazzi/
             app/build/test-results/
           if-no-files-found: ignore
           retention-days: 14
@@ -922,6 +983,15 @@ jobs:
         with:
           name: coverage-report
           path: ci-artifacts/coverage-report
+
+      # Verify or record, and which images no longer match their baselines. Absent when the
+      # screenshots job was skipped, which the report treats as "not reported".
+      - name: Download the screenshot summary
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: screenshot-summary
+          path: ci-artifacts/screenshot-summary
 
       - name: Manual test plan from the changed paths
         if: github.event_name == 'pull_request'

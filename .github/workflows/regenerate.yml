@@ -1,15 +1,23 @@
-# Regenerates the two build artefacts that need an Android SDK, and commits them back.
+# Regenerates the build artefacts that need an Android SDK, and commits them back.
 #
 # **Why this exists.** Most of this repository's work is done by sessions running without an
-# Android SDK — Gradle cannot be invoked there at all — so two files that only a Gradle build can
-# produce had no way of being updated: detekt's baseline (CQ-12) and Room's exported schema
-# (CQ-1). Both were stuck, and each one being stuck cost something real: detekt ran as a report
-# rather than a gate, and every migration since v14 shipped with no fixture to test it against.
+# Android SDK — Gradle cannot be invoked there at all — so files that only a Gradle build can
+# produce had no way of being updated: detekt's baseline (CQ-12), Room's exported schema (CQ-1),
+# and the screenshot baselines the `screenshots` CI job verifies against. Each one being stuck
+# cost something real: detekt ran as a report rather than a gate, every migration since v14
+# shipped with no fixture to test it against, and the screenshots were recorded but never compared.
 #
 # **This is deliberately manual.** Regenerating a detekt baseline accepts whatever violations
-# exist at that moment, so a job that did it automatically would silently absolve every new one —
-# the exact opposite of what a gate is for. It runs when somebody asks for it, and the asking is
-# visible in the history.
+# exist at that moment, and recording the screenshot baselines accepts whatever renders at that
+# moment — a job that did either automatically would silently absolve every new violation and
+# bless every visual regression, the exact opposite of what a gate is for. It runs when somebody
+# asks for it, and the asking is visible in the history: the baselines arrive as a commit whose
+# PNG diff a reviewer can open. **Changing the UI on purpose means running this on the branch**,
+# after which the `screenshots` job verifies against the new images.
+#
+# The screenshots are recorded here, on the same `ubuntu-latest` image and JDK the `screenshots`
+# job verifies on, because Robolectric's native renderer is pixel-stable per platform and font set,
+# not across them — a baseline recorded on a laptop fails CI on pixels nobody changed.
 #
 # Two ways to ask, because the first one only works from the default branch:
 #
@@ -19,8 +27,9 @@
 #     this is the only way to run it. Commit any change to that file and the job runs on your
 #     branch.
 #
-# The job's own commit touches `app/schemas/` and `app/config/detekt/baseline.xml`, neither of
-# which is on the trigger path, so it cannot loop.
+# The job's own commit touches `app/schemas/`, `app/config/detekt/baseline.xml` and
+# `app/src/test/screenshots/`, none of which is on the trigger path, so it cannot loop (and a push
+# made with the workflow's own token starts no workflow anyway).
 name: Regenerate
 
 on:
@@ -40,9 +49,9 @@ concurrency:
 
 jobs:
   regenerate:
-    name: Regenerate baseline and schema
+    name: Regenerate baselines and schema
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
         with:
@@ -50,6 +59,7 @@ jobs:
           # has nowhere to push to.
           ref: ${{ github.ref_name }}
 
+      # Same JDK as the `screenshots` CI job — the screenshot baselines depend on it.
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
@@ -76,17 +86,45 @@ jobs:
       - name: Export the current Room schema
         run: ./gradlew kspDebugKotlin --rerun
 
+      # `roborazzi { outputDir }` in app/build.gradle.kts is `src/test/screenshots`, the directory
+      # `verifyRoborazziDebug` reads, so this writes the baselines in place. The directory is
+      # emptied first so a screenshot whose test was deleted or renamed does not linger as a
+      # baseline nothing produces. `testDebugUnitTest --rerun` makes the screenshot tests run
+      # rather than come from the build cache: the plugin would restore the images from its own
+      # intermediate copy on a cache hit, but a baseline is what this run rendered, not a copy of
+      # what an earlier one did.
+      #
+      # `continue-on-error` so a screenshot test that cannot render does not throw away the
+      # detekt baseline and the schema above; the commit step then leaves the screenshot
+      # directory exactly as it was on the branch, and the last step fails the job.
+      - name: Record the screenshot baselines
+        id: screenshots
+        continue-on-error: true
+        run: |
+          rm -rf app/src/test/screenshots
+          ./gradlew recordRoborazziDebug testDebugUnitTest --rerun
+
       - name: Commit whatever changed
+        env:
+          SCREENSHOTS_OUTCOME: ${{ steps.screenshots.outcome }}
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add app/config/detekt/baseline.xml app/schemas
+          if [ "$SCREENSHOTS_OUTCOME" = "success" ]; then
+            # `-A` so a baseline whose test no longer exists is deleted in the same commit.
+            git add -A app/src/test/screenshots
+          else
+            echo "::warning::Recording the screenshots failed; their baselines are left as they were."
+            git checkout -- app/src/test/screenshots 2>/dev/null || true
+            git clean -fdq -- app/src/test/screenshots || true
+          fi
           if git diff --cached --quiet; then
-            echo "Nothing changed — the baseline and the schema are already current."
+            echo "Nothing changed — the baselines and the schema are already current."
             exit 0
           fi
-          git commit -m "chore(ci): regenerate the detekt baseline and export the Room schema
+          git commit -m "chore(ci): regenerate the detekt and screenshot baselines and export the Room schema
 
           Produced by .github/workflows/regenerate.yml, which exists because the sessions that
           write most of this repository have no Android SDK and cannot run Gradle at all."
@@ -97,6 +135,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: regenerate-reports
-          path: app/build/reports/
+          path: |
+            app/build/reports/
+            app/build/test-results/
           if-no-files-found: ignore
           retention-days: 14
+
+      - name: Fail if the screenshots could not be recorded
+        if: steps.screenshots.outcome == 'failure'
+        run: |
+          echo "::error::recordRoborazziDebug failed — see the test results in regenerate-reports. The detekt baseline and the schema were still committed."
+          exit 1

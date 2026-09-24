@@ -56,6 +56,18 @@ test('a domain change runs screenshots: the components render domain models', ()
   assert.equal(decide(['app/src/main/java/com/coparently/app/domain/custody/CustodyModel.kt']).screenshots, true);
 });
 
+test('a baseline-only change runs screenshots, not e2e, on API 30 alone', () => {
+  const d = decide(['app/src/test/screenshots/home_stat_tiles/en_light_fs100_default.png']);
+  assert.equal(d.android, true);
+  assert.equal(d.screenshots, true);
+  assert.equal(d.e2e, false);
+  assert.deepEqual(legs(d), [30]);
+});
+
+test('a non-screenshot unit test does not run screenshots', () => {
+  assert.equal(decide(['app/src/test/java/com/coparently/app/domain/FooTest.kt']).screenshots, false);
+});
+
 test('the database, the manifest and the instrumented tests run all three emulators', () => {
   for (const path of [
     'app/src/main/java/com/coparently/app/data/local/security/EncryptedDatabase.kt',

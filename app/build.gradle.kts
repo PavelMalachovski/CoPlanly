@@ -461,12 +461,20 @@ dependencies {
     detektPlugins("io.gitlab.arturbosch.detekt:detekt-formatting:1.23.7")
 }
 
-// Screenshots are recorded into the plugin's default `build/outputs/roborazzi`, which is what CI
-// uploads. Test code names each file relative to this directory (see
-// `roborazzi.record.filePathStrategy` in gradle.properties), so switching to committed baselines
-// later is this one line — `outputDir.set(file("src/test/screenshots"))` — and no test changes.
+// Screenshots are recorded into, and verified against, the committed baselines in
+// `src/test/screenshots` — one directory for both, so `recordRoborazziDebug` writes exactly what
+// `verifyRoborazziDebug` reads. Test code names each file relative to it (see
+// `roborazzi.record.filePathStrategy` in gradle.properties). The baselines are recorded only by
+// the Regenerate workflow, on the same runner image CI verifies on: Robolectric's native renderer
+// is deterministic per platform and font set, not across them, so a baseline recorded on a laptop
+// fails in CI on pixels nobody changed. A verify run writes `<variant>_compare.png` (baseline,
+// diff, new image) and `<variant>_actual.png` into the compare directory, under a folder per
+// component that `ScreenshotMatrix` adds — Roborazzi itself keeps only the file name there.
 roborazzi {
-    outputDir.set(layout.buildDirectory.dir("outputs/roborazzi"))
+    outputDir.set(file("src/test/screenshots"))
+    compare {
+        outputDir.set(layout.buildDirectory.dir("outputs/roborazzi"))
+    }
 }
 
 /**

@@ -33,8 +33,12 @@ const UI_ONLY = /^(app\/src\/main\/java\/com\/coparently\/app\/presentation\/(?!
 /** The build itself: a change here can change anything, so it runs everything. */
 const BUILD = /^(build\.gradle\.kts$|settings\.gradle\.kts$|gradle\.properties$|gradle\/|app\/build\.gradle\.kts$|app\/proguard|\.github\/workflows\/)/;
 
-/** What the screenshot job renders, and what renders it. */
-const SCREENSHOT_INPUTS = /^(app\/src\/main\/java\/com\/coparently\/app\/(presentation|domain)\/|app\/src\/main\/res\/|app\/src\/test\/java\/com\/coparently\/app\/screenshots\/|tools\/screenshot-gallery\.js$)/;
+/**
+ * What the screenshot job renders, what renders it, and what it compares against: the committed
+ * baselines under `app/src/test/screenshots/` (written by the Regenerate workflow), so a commit
+ * that changes only a baseline is verified against the code it was recorded from.
+ */
+const SCREENSHOT_INPUTS = /^(app\/src\/main\/java\/com\/coparently\/app\/(presentation|domain)\/|app\/src\/main\/res\/|app\/src\/test\/java\/com\/coparently\/app\/screenshots\/|app\/src\/test\/screenshots\/|tools\/screenshot-gallery\.js$)/;
 
 /**
  * What the API 26 and 16 KB emulator legs exist to catch beyond API 30: native libraries and the

@@ -9,3 +9,6 @@ firestore-tests/**/*.json text eol=lf
 *.gradle.kts text eol=lf
 # Shell scripts run on the CI runner and under Git Bash alike; a CRLF shebang line does not run.
 tools/**/*.sh text eol=lf
+# Images are binary: no line-ending conversion and no text diff. The screenshot baselines in
+# app/src/test/screenshots/ are compared pixel for pixel, so a CRLF rewrite would corrupt them.
+*.png binary

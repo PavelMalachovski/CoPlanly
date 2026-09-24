@@ -1119,9 +1119,15 @@ in the default and a purple/orange palette (112 images; `ScreenshotVariants` doc
 combinations). The artefact carries an `index.html` gallery. So "does the light theme render
 right" is answered on every Android pull request without a phone, and so are two neighbours:
 translations that clip at large text, and a surface the chosen palette does not reach (UX-15).
-The job records only; it does not compare yet, because baselines have to be recorded on the CI
-runner itself to be stable — the `TODO(screenshots)` in `ci.yml` has the three steps. What stays
-on the device is the window before Compose's first frame.
+**It verifies (September 2026).** Baselines are committed in `app/src/test/screenshots/` and are
+recorded only by the Regenerate workflow (`recordRoborazziDebug`, same runner image as CI, because
+Robolectric's native renderer is pixel-stable per platform and font set, not across them). The
+job runs `verifyRoborazziDebug` whenever that directory holds images — falling back to record,
+with a notice, until the first Regenerate run has committed them — and on a mismatch uploads
+`screenshot-diffs` (Roborazzi's `_compare.png` per image), marks those cards "changed" in the
+gallery, and lists them in the PR comment. An intended UI change is accepted by re-running
+Regenerate on the branch, which commits the new baselines as a visible diff. What stays on the
+device is the window before Compose's first frame.
 
 **Cloud half done (September 2026).** `Theme.CoPlanly` is now `Theme.AppCompat.DayNight.NoActionBar`
 (still AppCompat, as per-app locales require) with `android:windowBackground` =

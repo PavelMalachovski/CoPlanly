@@ -17,11 +17,13 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import com.coparently.app.presentation.theme.CoPlanlyTheme
 import com.coparently.app.presentation.theme.LocalParentPalette
+import com.github.takahirom.roborazzi.RoborazziOptions
 import com.github.takahirom.roborazzi.captureRoboImage
 import org.junit.Rule
 import org.junit.rules.ExternalResource
 import org.junit.rules.RuleChain
 import org.robolectric.RuntimeEnvironment
+import java.io.File
 import java.util.Locale
 import java.util.TimeZone
 
@@ -47,10 +49,11 @@ private val FRAME_PADDING = 16.dp
  *
  * A subclass is a parameterised Robolectric test over a [ScreenshotVariants] set; each `@Test`
  * calls [snap] once. The image lands at `<component>/<variant>.png` under Roborazzi's output
- * directory — `app/build/outputs/roborazzi` — which is the layout `tools/screenshot-gallery.js`
- * builds its index from.
+ * directory — the committed baselines in `app/src/test/screenshots` — which is the layout
+ * `tools/screenshot-gallery.js` builds its index from.
  *
- * These tests run only under a Roborazzi task (`./gradlew recordRoborazziDebug`); an ordinary
+ * These tests run only under a Roborazzi task (`recordRoborazziDebug` in the Regenerate workflow,
+ * `verifyRoborazziDebug` in CI); an ordinary
  * `testDebugUnitTest` excludes the package, see `roborazziRequested` in `app/build.gradle.kts`.
  *
  * Subclasses carry their own `@RunWith(ParameterizedRobolectricTestRunner::class)`,
@@ -84,8 +87,29 @@ abstract class ScreenshotMatrix(private val variant: ScreenshotVariant) {
         composeRule.setContent {
             ScreenshotFrame(variant = variant, fullScreen = fullScreen, content = content)
         }
-        composeRule.onNodeWithTag(SCREENSHOT_TAG).captureRoboImage("$component/${variant.fileName}.png")
+        composeRule.onNodeWithTag(SCREENSHOT_TAG).captureRoboImage(
+            filePath = "$component/${variant.fileName}.png",
+            roborazziOptions = optionsFor(component)
+        )
     }
+}
+
+/**
+ * Roborazzi's defaults, with the compare directory narrowed to [component].
+ *
+ * A verify run names its diff `<baseline name>_compare.png` directly in the compare directory —
+ * the file name only, not the path the test gave. Every component has an `en_light_fs100_default`
+ * variant, so without a folder per component each component's diff would overwrite the last and
+ * the one left would be labelled with the wrong component. `tools/screenshot-gallery.js` reads
+ * the diffs back from this layout.
+ */
+private fun optionsFor(component: String): RoborazziOptions {
+    val defaults = RoborazziOptions()
+    return defaults.copy(
+        compareOptions = defaults.compareOptions.copy(
+            outputDirectoryPath = File(defaults.compareOptions.outputDirectoryPath, component).path
+        )
+    )
 }
 
 /**
