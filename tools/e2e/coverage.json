@@ -66,6 +66,64 @@
     },
     "export_receipts": {
       "exempt": "Closed to every client; the callables that write it are listed under functions."
+    },
+    "family_settings": {
+      "e2e": [
+        "TwoParentAgreementsTest#firstRatioOnAFreshPairAppliesAndIsAnnouncedAsAgreed",
+        "TwoParentAgreementsTest#proposalIsSeenPendingAcceptedAndBothPhonesHoldTheNewRatio",
+        "TwoParentAgreementsTest#proposerWithdrawsAndTheCoParentCannot"
+      ]
+    },
+    "parenting_plans": {
+      "e2e": [
+        "TwoParentAgreementsTest#planAgreementRecordsTheWordingAndLapsesWhenItChanges",
+        "TwoParentAgreementsTest#aWriteToTheCoParentsHalfIsRefused"
+      ]
+    },
+    "change_requests": {
+      "e2e": [
+        "TwoParentRequestsAndEventPushesTest#bobAcceptsAlicesChangeRequestAndEachSideIsNotified",
+        "TwoParentRequestsAndEventPushesTest#bobDeclinesAChangeRequestAndAliceIsNotified",
+        "TwoParentRequestsAndEventPushesTest#aliceCancelsHerChangeRequestAndBobIsNotified"
+      ]
+    },
+    "event_versions": {
+      "e2e": [
+        "TwoParentRequestsAndEventPushesTest#revisionsOfASharedEventReachBobAndNeitherParentCanChangeThem",
+        "TwoParentRequestsAndEventPushesTest#aPrivateEventRecordsNoRevision"
+      ]
+    },
+    "custody_models": {
+      "e2e": [
+        "TwoParentCustodyTest#aPatternChangeWaitsForTheCoParentAndADeclineKeepsTheAgreedOne",
+        "TwoParentCustodyTest#aSingleDaySwapIsOfferedOnOnePhoneAndAnsweredOnTheOther",
+        "TwoParentCustodyTest#aGroupSwapIsOfferedAndAnsweredAsOneAgreement"
+      ]
+    },
+    "notification_queue": {
+      "e2e": [
+        "TwoParentAgreementsTest#firstRatioOnAFreshPairAppliesAndIsAnnouncedAsAgreed",
+        "TwoParentCustodyTest",
+        "TwoParentChatTest#aMessageCrossesTheDateLineAsUnreadThenDeliveredThenRead"
+      ]
+    },
+    "child_info": {
+      "e2e": [
+        "TwoParentFamilyRecordsTest#aChildAliceSavesReachesBobIntactAndItsDeletionArrivesAsATombstone",
+        "TwoParentFamilyRecordsTest#aChildEditTheSyncUploadsQueuesChildInfoUpdatedForBob",
+        "TwoParentFamilyRecordsTest#recordsMadeBeforePairingAreSharedWithTheNewCoParentAndAnnouncedOnce"
+      ]
+    },
+    "pets": {
+      "e2e": [
+        "TwoParentFamilyRecordsTest#aPetAliceSavesReachesBobAndItsDeletionArrivesAsATombstone",
+        "TwoParentFamilyRecordsTest#aPetPhotoAliceAttachesOpensOnBobsPhone"
+      ]
+    },
+    "budgets": {
+      "e2e": [
+        "TwoParentFamilyRecordsTest#aBudgetAliceSetsReachesBobWhoMayEditItAndAStrangerCannotReadIt"
+      ]
     }
   },
   "storage": {
@@ -84,6 +142,24 @@
       "checklist": [
         "5.5"
       ]
+    },
+    "event_images": {
+      "e2e": [
+        "TwoParentRequestsAndEventPushesTest#anEventPhotoAliceUploadsDownloadsOnBobsPhone",
+        "TwoParentRequestsAndEventPushesTest#anEventPhotoIsRefusedSignedOutAndAsAnythingButJpeg"
+      ]
+    },
+    "pet_photos": {
+      "e2e": [
+        "TwoParentFamilyRecordsTest#aPetPhotoAliceAttachesOpensOnBobsPhone",
+        "TwoParentFamilyRecordsTest#aPhotoThatIsNotAJpegIsRefused"
+      ]
+    },
+    "medical_photos": {
+      "e2e": [
+        "TwoParentFamilyRecordsTest#aMedicalPhotoAliceAttachesOpensOnBobsPhone",
+        "TwoParentFamilyRecordsTest#aPhotoThatIsNotAJpegIsRefused"
+      ]
     }
   },
   "push": {
@@ -98,6 +174,114 @@
     "pairing_accepted": {
       "e2e": [
         "TwoParentPairingTest#bothProfilesNameTheOtherParentAndTheFamilyHasTwoSlots"
+      ]
+    },
+    "split_ratio_agreed": {
+      "e2e": [
+        "TwoParentAgreementsTest#firstRatioOnAFreshPairAppliesAndIsAnnouncedAsAgreed",
+        "TwoParentAgreementsTest#ratioChosenBeforePairingIsPublishedToTheNewPair"
+      ]
+    },
+    "split_ratio_proposed": {
+      "e2e": [
+        "TwoParentAgreementsTest#proposalIsSeenPendingAcceptedAndBothPhonesHoldTheNewRatio"
+      ]
+    },
+    "split_ratio_accepted": {
+      "e2e": [
+        "TwoParentAgreementsTest#proposalIsSeenPendingAcceptedAndBothPhonesHoldTheNewRatio"
+      ]
+    },
+    "split_ratio_declined": {
+      "e2e": [
+        "TwoParentAgreementsTest#declinedProposalLeavesTheAgreedRatioOnBothPhones"
+      ]
+    },
+    "change_request_created": {
+      "e2e": [
+        "TwoParentRequestsAndEventPushesTest#bobAcceptsAlicesChangeRequestAndEachSideIsNotified"
+      ]
+    },
+    "change_request_accepted": {
+      "e2e": [
+        "TwoParentRequestsAndEventPushesTest#bobAcceptsAlicesChangeRequestAndEachSideIsNotified"
+      ]
+    },
+    "change_request_declined": {
+      "e2e": [
+        "TwoParentRequestsAndEventPushesTest#bobDeclinesAChangeRequestAndAliceIsNotified"
+      ]
+    },
+    "change_request_cancelled": {
+      "e2e": [
+        "TwoParentRequestsAndEventPushesTest#aliceCancelsHerChangeRequestAndBobIsNotified"
+      ]
+    },
+    "event_created": {
+      "e2e": [
+        "TwoParentRequestsAndEventPushesTest#anEventAliceCreatesQueuesEventCreatedForBobFromTheServer"
+      ]
+    },
+    "event_updated": {
+      "exempt": "Nothing produces it: SyncService.notifyEventUpdate is only called with \"created\", and the only event trigger in functions/ writes event_created. It survives in PushPayload, PUSH_TEXT and the rules allow-list for older builds."
+    },
+    "event_deleted": {
+      "exempt": "Nothing produces it: no client path or function queues it. It survives in PushPayload, PUSH_TEXT and the rules allow-list for older builds."
+    },
+    "custody_proposal_proposed": {
+      "e2e": [
+        "TwoParentCustodyTest#aPatternChangeWaitsForTheCoParentAndADeclineKeepsTheAgreedOne"
+      ]
+    },
+    "custody_proposal_accepted": {
+      "e2e": [
+        "TwoParentCustodyTest#aPatternChangeWaitsForTheCoParentAndADeclineKeepsTheAgreedOne"
+      ]
+    },
+    "custody_proposal_declined": {
+      "e2e": [
+        "TwoParentCustodyTest#aPatternChangeWaitsForTheCoParentAndADeclineKeepsTheAgreedOne"
+      ]
+    },
+    "day_swap_offered": {
+      "e2e": [
+        "TwoParentCustodyTest#aSingleDaySwapIsOfferedOnOnePhoneAndAnsweredOnTheOther"
+      ]
+    },
+    "day_swap_accepted": {
+      "e2e": [
+        "TwoParentCustodyTest#aSingleDaySwapIsOfferedOnOnePhoneAndAnsweredOnTheOther"
+      ]
+    },
+    "day_swap_declined": {
+      "e2e": [
+        "TwoParentCustodyTest#aSingleDaySwapIsOfferedOnOnePhoneAndAnsweredOnTheOther"
+      ]
+    },
+    "day_swap_group_offered": {
+      "e2e": [
+        "TwoParentCustodyTest#aGroupSwapIsOfferedAndAnsweredAsOneAgreement"
+      ]
+    },
+    "day_swap_group_accepted": {
+      "e2e": [
+        "TwoParentCustodyTest#aGroupSwapIsOfferedAndAnsweredAsOneAgreement"
+      ]
+    },
+    "day_swap_group_declined": {
+      "e2e": [
+        "TwoParentCustodyTest#aGroupSwapIsOfferedAndAnsweredAsOneAgreement"
+      ]
+    },
+    "child_info_updated": {
+      "e2e": [
+        "TwoParentFamilyRecordsTest#aChildEditTheSyncUploadsQueuesChildInfoUpdatedForBob",
+        "TwoParentFamilyRecordsTest#anUpdatedChildDocumentMakesTheServerQueueChildInfoUpdatedForBob"
+      ]
+    },
+    "records_shared": {
+      "e2e": [
+        "TwoParentFamilyRecordsTest#recordsMadeBeforePairingAreSharedWithTheNewCoParentAndAnnouncedOnce"
       ]
     }
   },

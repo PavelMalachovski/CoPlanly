@@ -62,7 +62,10 @@ class TwoParentAgreementsTest : TwoParentTest() {
         val agreed = pushesTo(bob).filter { it.type == AGREED }
         assertEquals("one split_ratio_agreed push for Bob", 1, agreed.size)
         assertEquals(FamilyKey.of(alice.uid, bob.uid), agreed.single().familyId)
-        assertTrue("nothing about the split is addressed to Alice", pushesTo(alice).none { it.type in SPLIT_TYPES })
+        assertTrue(
+            "nothing about the split is addressed to Alice",
+            pushesTo(alice).none { it.type in SPLIT_TYPES }
+        )
     }
 
     @Test
@@ -84,7 +87,7 @@ class TwoParentAgreementsTest : TwoParentTest() {
         val onDavesPhone = dave.settingsWhere { true }
         assertEquals(expected, onDavesPhone.ratio)
         assertNull(onDavesPhone.proposal)
-        assertEquals(listOf(AGREED), pushesTo(dave).map { it.type }.filter { it in SPLIT_TYPES })
+        assertEquals(listOf(AGREED), pushTypesTo(dave).filter { it in SPLIT_TYPES })
     }
 
     @Test
@@ -152,7 +155,7 @@ class TwoParentAgreementsTest : TwoParentTest() {
         // A withdrawal pushes nothing: Bob holds exactly the agreement and the proposal.
         assertEquals(
             listOf(AGREED, PROPOSED),
-            pushesTo(bob).map { it.type }.filter { it in SPLIT_TYPES }.sorted()
+            pushTypesTo(bob).filter { it in SPLIT_TYPES }.sorted()
         )
         assertTrue(pushesTo(alice).none { it.type in SPLIT_TYPES })
     }
@@ -197,7 +200,8 @@ class TwoParentAgreementsTest : TwoParentTest() {
             answers = mapOf(QUESTION to FORGED_ANSWER),
             updatedAtMillis = System.currentTimeMillis()
         )
-        assertDenied(runCatching { FirestoreParentingPlanDataSource(alice.firestore).uploadHalf(familyId, bob.uid, forged) })
+        val alicesWriter = FirestoreParentingPlanDataSource(alice.firestore)
+        assertDenied(runCatching { alicesWriter.uploadHalf(familyId, bob.uid, forged) })
 
         // A crafted merge that writes Alice's own half and slips Bob's in beside it.
         val crafted = mapOf(
@@ -228,10 +232,13 @@ class TwoParentAgreementsTest : TwoParentTest() {
             QueuedPush(type = data?.get("type") as? String, familyId = data?.get("familyId") as? String)
         }
 
+    /** The types of every push queued for [receiver], in no particular order. */
+    private fun pushTypesTo(receiver: EmulatorParent): List<String> = pushesTo(receiver).mapNotNull { it.type }
+
     /** Waits until this phone's `observeSettings` shows a document matching [predicate]. */
     private suspend fun EmulatorParent.settingsWhere(predicate: (FamilySettings) -> Boolean): FamilySettings =
         withTimeout(EmulatorParent.WAIT_MS) {
-            familySettingsRepository.observeSettings().filterNotNull().first(predicate)
+            familySettingsRepository.observeSettings().filterNotNull().first { predicate(it) }
         }
 
     /**
@@ -251,13 +258,13 @@ class TwoParentAgreementsTest : TwoParentTest() {
         familyId: String,
         predicate: (ParentingPlanPair) -> Boolean
     ): ParentingPlanPair = withTimeout(EmulatorParent.WAIT_MS) {
-        parentingPlanRepository.observe(familyId, uid).first(predicate)
+        parentingPlanRepository.observe(familyId, uid).first { predicate(it) }
     }
 
     private fun status(plan: ParentingPlanPair): PlanQuestionStatus =
         ParentingPlanComparison.statusOf(QUESTION, plan.yours, plan.theirs)
 
-    private fun assertDenied(result: Result<Unit>) {
+    private fun assertDenied(result: Result<*>) {
         val error = result.exceptionOrNull()
         assertTrue("expected a refusal, got $result", error is FirebaseFirestoreException)
         assertEquals(
