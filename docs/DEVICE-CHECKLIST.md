@@ -27,7 +27,7 @@ in the same commit; its test in the CI `invariants` job fails otherwise.
 | **3A** | Needs three accounts: you plus two co-parents. |
 | **[branch]** | Only in a build that includes `claude/charming-ritchie-d6uqz8` (merged to `main`, or built from that branch). On `main` @ `44f9d66` the check does not apply yet. |
 | **[#99]** | Lands with PR #99. Check it against the merged PR, because the details may differ. |
-| **[CI]** | The `instrumented` CI job already exercises the mechanism on an emulator (table below). The phone still confirms it against real data and real services. |
+| **[CI]** | The `instrumented` or `e2e` CI job already exercises the mechanism on an emulator (table below). The phone still confirms it against real data and real services. |
 
 **Warning: switching accounts wipes the phone's local data.** `AccountSwitchGuard` clears Room
 when a *different* uid signs in. Records that already synced come back from the cloud. Records
@@ -516,6 +516,12 @@ the Settings row, and it cannot see Android 13's system setting or a Play instal
 - [ ] **Google Calendar** connect and import. This needs REL-3's OAuth env and a functions
       deploy. It also covers SEC-5 (tokens in `EncryptedPreferences`): relaunch the app and the
       account stays connected.
+- [ ] **SEC-5 upgrade [branch]:** with Google Calendar connected on the *previous* build, install
+      this one over it (no uninstall). Calendar is still connected, Settings keep their values,
+      and the app does not ask the telemetry question again — the old store was copied into
+      `no_backup/secure_prefs.bin` on the first launch. **[CI]** runs that copy on the emulators
+      (`EncryptedPreferencesMigrationTest`); only a phone has a store an older build wrote under
+      a hardware-backed Keystore.
 
 ### 3.10 Pet and medical photo upload · 1P
 
@@ -728,7 +734,7 @@ Preconditions: A and B are paired, and each phone has its own account signed in.
 
 ### 5.1 Cross-time-zone chat (CQ-18) · 2P, no real fallback
 
-> **[CI e2e]** `TwoParentChatTest` (the `e2e` job, two accounts on the Firebase emulators, UTC+14 vs UTC−11) proves the unread count, DELIVERED and READ agree across zones. The phones are still needed for what is drawn — the badge, the ticks, displayed times, on-screen order — and for push delivery.
+> **[CI e2e]** `TwoParentChatTest` (the `e2e` job, two accounts on the Firebase emulators, UTC+14 vs UTC−11) proves the unread count, DELIVERED and READ agree across zones. `OneParentOnScreenTest` adds one screen: A's real app draws B's message in the thread, and what A types into the composer reaches B. The phones are still needed for two screens at once in two zones — the badge, the ticks, displayed times, on-screen order — and for push delivery.
 
 - [ ] Set B's phone **2–3 hours** away from A's (e.g. A on Prague, B on Dubai or on
       Reykjavík). Force-stop both apps.
@@ -838,6 +844,12 @@ professional), signed in on its own phone or after A/B on the fallback phone.
 Needs `firebase deploy --only storage` **and** the rules and indexes deploy (§0): before the
 storage deploy every upload is refused; before the rules deploy the vault list is refused.
 A and B paired.
+
+**[CI]** The `e2e` job runs the mechanism on the Storage emulator against the real rules
+(`TwoParentAttachmentsTest`): a vault document opens for B, who cannot delete it, and A's delete is
+a tombstone; a chat file stays off the server while its upload fails and arrives after the retry,
+with B's download matching its SHA-256; a stranger's download is refused. What is left here is
+the screens, the pickers, the camera, a viewer app and a real network.
 
 - [ ] A: Settings → Family → **Documents**. The first line says everything here is shared and
       nothing is private. **Add a file** → pick a PDF → name it, choose *Court orders* → **Upload
