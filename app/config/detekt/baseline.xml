@@ -98,7 +98,6 @@
     <ID>LongMethod:MedicationEditor.kt$@Composable private fun MedicationForm( medication: Medication? = null, onSave: (Medication) -&gt; Unit, onCancel: () -&gt; Unit )</ID>
     <ID>LongMethod:PairingScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun PairingScreen( onNavigateBack: () -&gt; Unit, onCustodyConflict: () -&gt; Unit, prefilledCode: String? = null, startOnCodeEntry: Boolean = false, viewModel: PairingViewModel = hiltViewModel() )</ID>
     <ID>LongMethod:PetsScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun PetsScreen( onNavigateBack: () -&gt; Unit, onEditPet: (String) -&gt; Unit, viewModel: PetsViewModel = hiltViewModel() )</ID>
-    <ID>LongMethod:RecordFixtures.kt$RecordFixtures$fun labels()</ID>
     <ID>LongMethod:SchoolInfoEditor.kt$@Composable fun SchoolInfoEditor( schoolInfo: SchoolInfo?, onSave: (SchoolInfo?) -&gt; Unit, modifier: Modifier = Modifier )</ID>
     <ID>LongMethod:SettingsScreen.kt$@Composable @Suppress("LongParameterList") // one call site; splitting it would only add a wrapper type private fun GoogleCalendarActions( isSignedIn: Boolean, isSyncEnabled: Boolean, onToggleSync: (Boolean) -&gt; Unit, syncState: GoogleCalendarSyncState, onSignIn: () -&gt; Unit, onSyncNow: () -&gt; Unit, onCalendarSignOut: () -&gt; Unit )</ID>
     <ID>LongMethod:SplashScreen.kt$@Composable fun SplashScreen( onFinished: () -&gt; Unit = {} )</ID>
@@ -114,7 +113,6 @@
     <ID>LongParameterList:ExpenseAnalytics.kt$( title: String, titleColor: androidx.compose.ui.graphics.Color, expenses: List&lt;Expense&gt;, currency: String, modifier: Modifier = Modifier, photoUrl: String? = null )</ID>
     <ID>LongParameterList:ExpenseList.kt$( expense: Expense, parentNames: ParentNames, payerRole: String? = null, splitKnown: Boolean, onClick: (() -&gt; Unit)? = null, onReceiptClick: (String) -&gt; Unit = {} )</ID>
     <ID>LongParameterList:ExpenseViewModel.kt$ExpenseViewModel$( private val expenseRepository: ExpenseRepository, private val userRepository: UserRepository, private val receiptStorage: ReceiptStorage, private val preferencesRepository: PreferencesRepository, private val receiptTextRecognizer: ReceiptTextRecognizer, private val familySettingsRepository: FamilySettingsRepository, private val parentsSource: ParentsSource, familyMembersSource: FamilyMembersSource )</ID>
-    <ID>LongParameterList:ExportScreen.kt$( state: ExportUiState, statement: List&lt;String&gt;, onPick: (RangeEnd) -&gt; Unit, onIncludePlan: (Boolean) -&gt; Unit, onExport: (ExportFormat) -&gt; Unit, modifier: Modifier = Modifier )</ID>
     <ID>LongParameterList:GoogleCalendarApi.kt$GoogleCalendarApi$( credential: Credential, calendarId: String = "primary", eventId: String, title: String, description: String?, startDateTime: LocalDateTime, endDateTime: LocalDateTime? )</ID>
     <ID>LongParameterList:GoogleCalendarApi.kt$GoogleCalendarApi$( credential: Credential, calendarId: String = "primary", title: String, description: String?, startDateTime: LocalDateTime, endDateTime: LocalDateTime? )</ID>
     <ID>LongParameterList:HomeScreen.kt$( state: HomeUiState.Dashboard, parentNames: ParentNames, pendingProposal: com.coparently.app.domain.custody.CustodyProposal?, pendingProposalDiff: com.coparently.app.domain.custody.CustodyPatternDiff?, onAcceptSwap: (DaySwapGroup) -&gt; Unit, onDeclineSwap: (DaySwapGroup) -&gt; Unit, onAcceptProposal: () -&gt; Unit, onDeclineProposal: () -&gt; Unit, onOpenChangeRequests: () -&gt; Unit )</ID>
@@ -124,7 +122,6 @@
     <ID>LongParameterList:ParentLabels.kt$( slot: String, me: NamedParent?, coParent: NamedParent?, youFallback: String, coParentFallback: String, unknownFallback: String )</ID>
     <ID>LongParameterList:PhotoStrip.kt$( photo: String, position: Int, total: Int, strings: PhotoStripStrings, onOpen: () -&gt; Unit, onRemove: ((String) -&gt; Unit)? )</ID>
     <ID>LongParameterList:PhotoStrip.kt$( photos: List&lt;String&gt;, strings: PhotoStripStrings, modifier: Modifier = Modifier, onAdd: (() -&gt; Unit)? = null, onRemove: ((String) -&gt; Unit)? = null, enabled: Boolean = true )</ID>
-    <ID>LongParameterList:RecordFixtures.kt$RecordFixtures$( revisions: List&lt;EventRevisionInput&gt; = emptyList(), currentEvents: List&lt;CurrentEventInput&gt; = emptyList(), messages: List&lt;MessageInput&gt; = emptyList(), expenses: List&lt;Expense&gt; = emptyList(), serverReached: Boolean = true, plan: PlanSource? = null )</ID>
     <ID>LongParameterList:SettingsViewModel.kt$SettingsViewModel$( private val fcmService: FcmService, private val accountDeletionService: AccountDeletionService, private val userRepository: UserRepository, private val preferencesRepository: PreferencesRepository, private val analyticsManager: AnalyticsManager, signedInAccountSource: SignedInAccountSource, private val familyKindSource: FamilyKindSource, parentsSource: ParentsSource, private val familySettingsRepository: FamilySettingsRepository )</ID>
     <ID>LoopWithTooManyJumpStatements:ChildInfoRepositoryImpl.kt$ChildInfoRepositoryImpl$for</ID>
     <ID>LoopWithTooManyJumpStatements:PetRepositoryImpl.kt$PetRepositoryImpl$for</ID>
@@ -522,7 +519,6 @@
     <ID>TooGenericExceptionCaught:UserRepositoryImpl.kt$UserRepositoryImpl$e: Exception</ID>
     <ID>TooManyFunctions:AnalyticsManager.kt$AnalyticsManager</ID>
     <ID>TooManyFunctions:ChildInfoDao.kt$ChildInfoDao</ID>
-    <ID>TooManyFunctions:CommunicationRecordCsv.kt$CommunicationRecordCsv</ID>
     <ID>TooManyFunctions:DatabaseModule.kt$DatabaseModule</ID>
     <ID>TooManyFunctions:EncryptedPreferences.kt$EncryptedPreferences</ID>
     <ID>TooManyFunctions:EventDao.kt$EventDao</ID>

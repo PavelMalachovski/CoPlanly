@@ -130,21 +130,28 @@ fun ExportScreen(
             state = state,
             statement = labels.statement,
             modifier = Modifier.padding(padding),
-            onPick = { end -> picking = end },
-            onIncludePlan = viewModel::setIncludePlan,
-            onExport = { format -> viewModel.export(format, labels, fallbacks) }
+            actions = ExportActions(
+                onPick = { end -> picking = end },
+                onIncludePlan = viewModel::setIncludePlan,
+                onExport = { format -> viewModel.export(format, labels, fallbacks) }
+            )
         )
     }
 }
+
+/** What the export screen's controls do, passed as one value so the content takes few parameters. */
+private class ExportActions(
+    val onPick: (RangeEnd) -> Unit,
+    val onIncludePlan: (Boolean) -> Unit,
+    val onExport: (ExportFormat) -> Unit
+)
 
 /** The range, whether the plan goes in, the statement the file makes about itself, and the two formats. */
 @Composable
 private fun ExportContent(
     state: ExportUiState,
     statement: List<String>,
-    onPick: (RangeEnd) -> Unit,
-    onIncludePlan: (Boolean) -> Unit,
-    onExport: (ExportFormat) -> Unit,
+    actions: ExportActions,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -159,8 +166,12 @@ private fun ExportContent(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        RangeGroup(state = state, onPick = onPick)
-        IncludePlanGroup(included = state.includePlan, enabled = state.working == null, onChange = onIncludePlan)
+        RangeGroup(state = state, onPick = actions.onPick)
+        IncludePlanGroup(
+            included = state.includePlan,
+            enabled = state.working == null,
+            onChange = actions.onIncludePlan
+        )
         Column {
             GroupLabel(stringResource(R.string.export_what_it_says))
             Surface(
@@ -183,9 +194,17 @@ private fun ExportContent(
             }
         }
         SectionGroup {
-            ExportRow(format = ExportFormat.PDF, working = state.working, onClick = { onExport(ExportFormat.PDF) })
+            ExportRow(
+                format = ExportFormat.PDF,
+                working = state.working,
+                onClick = { actions.onExport(ExportFormat.PDF) }
+            )
             Divider()
-            ExportRow(format = ExportFormat.CSV, working = state.working, onClick = { onExport(ExportFormat.CSV) })
+            ExportRow(
+                format = ExportFormat.CSV,
+                working = state.working,
+                onClick = { actions.onExport(ExportFormat.CSV) }
+            )
         }
     }
 }

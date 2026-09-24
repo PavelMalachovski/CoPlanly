@@ -70,20 +70,23 @@ internal object RecordFixtures {
             notRegistered = "NOT REGISTERED, CANNOT BE VERIFIED",
             notRegisteredShort = "NOT REGISTERED"
         ),
-        plan = PlanLabels(
-            section = "Plan",
-            disclaimer = "NOT THE MINISTRY FORM",
-            currentState = "CURRENT STATE AT EXPORT",
-            notFromServer = "PLAN FROM THIS PHONE",
-            unsentHere = "UNSENT EDITS NOT SHOWN",
-            noPlan = "NO PLAN RECORDED",
-            lastChanged = "Last changed",
-            agreed = "Agreed",
-            notAgreed = "Not agreed",
-            notAnswered = "Not answered",
-            retired = "NO LONGER ASKED",
-            questions = mapOf("residence_home" to "Where will the child live?")
-        )
+        plan = planLabels()
+    )
+
+    /** The parenting plan's section words, short and upper-case so a test can find them. */
+    fun planLabels() = PlanLabels(
+        section = "Plan",
+        disclaimer = "NOT THE MINISTRY FORM",
+        currentState = "CURRENT STATE AT EXPORT",
+        notFromServer = "PLAN FROM THIS PHONE",
+        unsentHere = "UNSENT EDITS NOT SHOWN",
+        noPlan = "NO PLAN RECORDED",
+        lastChanged = "Last changed",
+        agreed = "Agreed",
+        notAgreed = "Not agreed",
+        notAnswered = "Not answered",
+        retired = "NO LONGER ASKED",
+        questions = mapOf("residence_home" to "Where will the child live?")
     )
 
     /** A record id as the server mints them. */
@@ -161,9 +164,8 @@ internal object RecordFixtures {
         currentEvents: List<CurrentEventInput> = emptyList(),
         messages: List<MessageInput> = emptyList(),
         expenses: List<Expense> = emptyList(),
-        serverReached: Boolean = true,
-        plan: PlanSource? = null
-    ) = RecordSources(revisions, currentEvents, messages, expenses, serverReached, plan)
+        serverReached: Boolean = true
+    ) = RecordSources(revisions, currentEvents, messages, expenses, serverReached)
 
     /** 2026-03-09 18:00 in Prague — when Bob last changed his half of the plan. */
     const val MARCH_9_1800 = 1_773_075_600_000L
