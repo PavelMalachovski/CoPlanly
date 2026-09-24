@@ -183,13 +183,15 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
 15. **Money is never cut off** (October 2026 audit, D-1). No `maxLines`, ellipsis or
     `softWrap = false` on an amount, a total or the sentence saying who owes whom; a figure that
     does not fit wraps. Pairs that sit side by side at the default size stack **from font scale
-    1.3**: Home's two stat tiles, the Expenses total and its label, the balance sentence and Settle
-    up, and the event preview's Delete and Edit. Each reads `LocalDensity.current.fontScale` against
-    a `STACK_*_FONT_SCALE` beside it. At 150 % the German label beside a total was squeezed to a
-    word per line and the amount broke mid-number, at a size the screenshot matrix never rendered.
-    That is why the matrix now renders the text-heavy components at 2.0× in German (see the
-    `screenshots` job). A title or a row's meta line may still end in an ellipsis; the amount beside
-    it may not.
+    1.3**: Home's two stat tiles, the Expenses total and its label, the paid-by amounts under the
+    split bar, the balance sentence and Settle up, and the event preview's Delete and Edit. Each
+    reads `LocalDensity.current.fontScale` against a `STACK_*_FONT_SCALE` beside it. At 150 % the
+    German label beside a total was squeezed to a word per line and the amount broke mid-number, at
+    a size the screenshot matrix never rendered. That is why the matrix now renders the text-heavy
+    components at 2.0× in German (see the `screenshots` job). Wrapping is not enough on its own: a
+    currency formatter joins the amount to its code with a no-break space, so a figure wider than
+    its column never breaks at the space but inside the code ("CZ|K") — give it the width instead. A
+    title or a row's meta line may still end in an ellipsis; the amount beside it may not.
 
 ## UX/UI overhaul (July 2026 design review) — implemented, keep consistent
 
