@@ -248,10 +248,15 @@ class OnScreenAgreementsTest : AliceOnScreenTest() {
 
     // ---- custody --------------------------------------------------------------------------------
 
-    /** Alice's slot and Bob's, as each phone's Room row holds it; pairing gives them different ones. */
+    /**
+     * Alice's slot and Bob's, as the server assigned them at pairing (`assignSlots` writes each
+     * `users/{uid}.role`) — the copy Alice's app reads for the co-parent. Not Bob's Room row:
+     * on a phone the accepter's row is re-stamped by `PairingViewModel.withSlotReslot`, a screen
+     * Bob's data-layer phone never runs, so there it keeps the default slot.
+     */
     private suspend fun slots(): Pair<String, String> {
-        val aliceSlot = checkNotNull(userDao.getUserById(aliceUid)).role
-        val bobSlot = checkNotNull(bob.database.userDao().getUserById(bob.uid)).role
+        val aliceSlot = checkNotNull(bob.userRepository.getRemoteUserProfile(aliceUid)).role
+        val bobSlot = checkNotNull(bob.userRepository.getRemoteUserProfile(bob.uid)).role
         assertNotEquals("the pair still shares one slot", aliceSlot, bobSlot)
         return aliceSlot to bobSlot
     }
