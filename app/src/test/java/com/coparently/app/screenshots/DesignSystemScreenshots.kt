@@ -1,7 +1,9 @@
 package com.coparently.app.screenshots
 
 import android.app.Application
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.height
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Contacts
@@ -17,7 +19,9 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import com.coparently.app.R
 import com.coparently.app.presentation.common.BannerTone
 import com.coparently.app.presentation.common.ConnectivityBanner
@@ -29,6 +33,8 @@ import com.coparently.app.presentation.common.PillChip
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.StickyActionBar
+import com.coparently.app.presentation.navigation.CoPlanlyNavigationRail
+import com.coparently.app.presentation.navigation.Screen
 import com.coparently.app.presentation.theme.ParentColors
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -96,7 +102,17 @@ class DesignSystemScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(var
         ConnectivityBanner(offline = true)
     }
 
+    /** The rail a wide window gets instead of the bottom bar, on Calendar with Chat badged. */
+    @Test
+    fun navigationRail() = snap("navigation_rail") {
+        Box(modifier = Modifier.height(RAIL_HEIGHT)) {
+            CoPlanlyNavigationRail(currentRoute = Screen.Calendar.route, onNavigate = {}, chatUnreadCount = 3)
+        }
+    }
+
     companion object {
+        private val RAIL_HEIGHT = 420.dp
+
         /** The variants this class runs over. */
         @JvmStatic
         @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")

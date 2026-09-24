@@ -80,7 +80,8 @@ const RULES = [
     sections: ['3.2'],
     why: 'the splash, a form\'s transition or a looping decoration',
     paths: ['K/presentation/MainActivity.kt', 'K/presentation/common/animations/**',
-      'K/presentation/components/SkeletonLoading.kt'],
+      'K/presentation/components/SkeletonLoading.kt', 'K/presentation/common/DiscardGuard.kt',
+      'K/presentation/common/FormDraft.kt', 'K/presentation/navigation/BottomNavDestination.kt'],
   },
   {
     sections: ['3.14'],

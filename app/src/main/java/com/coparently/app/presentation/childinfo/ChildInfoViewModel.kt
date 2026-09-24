@@ -16,6 +16,7 @@ import com.coparently.app.domain.model.PairingError
 import com.coparently.app.domain.repository.ChildInfoRepository
 import com.coparently.app.domain.repository.GuestRepository
 import com.coparently.app.domain.repository.MedicalPhotoStorage
+import com.coparently.app.presentation.common.FormDraft
 import com.coparently.app.presentation.common.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
@@ -91,6 +92,12 @@ class ChildInfoViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow<ChildInfoUiState>(ChildInfoUiState.Loading)
     val uiState: StateFlow<ChildInfoUiState> = _uiState.asStateFlow()
+
+    /**
+     * The editor's fields, here rather than in the screen so a rotation keeps what was typed
+     * (docs/AUDIT-2026-10-design.md D-11). Seeded once per record by the editor.
+     */
+    internal val childForm = FormDraft(ChildFields.EMPTY)
 
     /**
      * The one child an editor is open on, set only by [loadChildInfoById]. Null until a child is

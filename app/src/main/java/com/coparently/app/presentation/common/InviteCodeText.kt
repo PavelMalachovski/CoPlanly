@@ -7,7 +7,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
 /**
@@ -30,7 +29,6 @@ fun InviteCodeText(code: String, modifier: Modifier = Modifier, color: Color = C
         text = code,
         modifier = modifier.semantics { contentDescription = code.toList().joinToString(" ") },
         style = MaterialTheme.typography.displaySmall.copy(fontFeatureSettings = "tnum"),
-        fontWeight = FontWeight.Bold,
         letterSpacing = CODE_TRACKING,
         color = color
     )

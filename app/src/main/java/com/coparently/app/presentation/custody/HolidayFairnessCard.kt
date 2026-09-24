@@ -33,6 +33,7 @@ import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.theme.ParentColors
+import com.coparently.app.presentation.theme.Spacing
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.util.Locale
@@ -62,9 +63,9 @@ fun HolidayFairnessCard(
     onProposeChange: (() -> Unit)?
 ) {
     var showAllHolidays by rememberSaveable { mutableStateOf(false) }
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.S)) {
         GroupLabel(text = stringResource(R.string.fairness_title))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
             state.years.forEach { year ->
                 FilterChip(
                     selected = state.year == year,

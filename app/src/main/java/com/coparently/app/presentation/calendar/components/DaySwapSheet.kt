@@ -21,10 +21,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import com.coparently.app.R
 import com.coparently.app.presentation.common.ParentNames
+import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.presentation.theme.titleLargeEmphasized
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
@@ -79,9 +79,9 @@ fun DaySwapSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 24.dp)
-                .padding(bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .padding(horizontal = Spacing.XL)
+                .padding(bottom = Spacing.XL),
+            verticalArrangement = Arrangement.spacedBy(Spacing.M)
         ) {
             Text(
                 text = stringResource(
@@ -91,8 +91,7 @@ fun DaySwapSheet(
                         R.string.day_swap_sheet_title_range
                     }
                 ),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
+                style = MaterialTheme.typography.titleLargeEmphasized
             )
             Text(
                 text = if (dates.size == 1) {
@@ -144,7 +143,7 @@ fun DaySwapSheet(
                 )
             }
 
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
                 TextButton(onClick = onDismiss) {
                     Text(stringResource(R.string.day_swap_cancel))
                 }

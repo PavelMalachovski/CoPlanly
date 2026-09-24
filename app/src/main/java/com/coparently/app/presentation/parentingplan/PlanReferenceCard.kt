@@ -10,13 +10,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
-import androidx.compose.ui.unit.dp
 import com.coparently.app.R
 import com.coparently.app.domain.parentingplan.CitationStatus
 import com.coparently.app.domain.parentingplan.PlanReference
 import com.coparently.app.presentation.common.GroupLabel
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.SectionGroup
+import com.coparently.app.presentation.theme.Spacing
 
 /**
  * The agreed parenting-plan answer, quoted read-only above the schedule editor it was opened into
@@ -36,8 +36,8 @@ fun PlanReferenceCard(reference: PlanReference, coParentName: String, modifier: 
         GroupLabel(text = stringResource(R.string.plan_reference_title))
         SectionGroup {
             Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                modifier = Modifier.padding(Spacing.L),
+                verticalArrangement = Arrangement.spacedBy(Spacing.S)
             ) {
                 PlanStrings.questionPrompt(reference.questionId)?.let { prompt ->
                     Text(text = stringResource(prompt), style = MaterialTheme.typography.titleSmall)
@@ -64,7 +64,7 @@ fun PlanReferenceCard(reference: PlanReference, coParentName: String, modifier: 
 /** One labelled wording, set apart as a quotation. */
 @Composable
 private fun Quote(label: String, text: String) {
-    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.XXS)) {
         Text(
             text = label,
             style = MaterialTheme.typography.labelMedium,

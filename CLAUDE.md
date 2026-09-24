@@ -61,6 +61,19 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
    swap arrows, a block's lock, a bubble's ticks) keep named sizes of their own. Icons do not
    scale with the font; `Dimensions.hourGutterWidth`, which holds a number, does.
 
+   **Corners, spacing, emphasis and buttons come from the theme too** (week 5, D-19/D-20):
+   - A corner is `MaterialTheme.shapes` (8/12/16/24/32), `CoPlanlyCorners` (`Mark` 2, `Tag` 4,
+     `Pill`) or `chatBubbleShape`, all in `theme/Shape.kt`. detekt's `ForbiddenImport` refuses
+     `RoundedCornerShape` outside `presentation/theme/` — pick a step, or add one there with its
+     reason.
+   - A padding, a `spacedBy` gap or a spacer on the 4 dp grid names a `theme/Spacing.kt` step
+     (`XXS` 2 … `XXL` 32). An off-grid value (the calendar banners' 9 dp) is a literal with a
+     reason, not a step.
+   - Emphasis is a role, not a weight: `MaterialTheme.typography.titleMediumEmphasized` and its
+     siblings in `theme/Type.kt`, one weight step up. Don't write `style = X, fontWeight = …`.
+   - `AddItemButton` (filled tonal) is how a form adds a row to a list it holds. A dialog answers
+     with text buttons, a destructive one in the error colour (`ConfirmationDialog`).
+
    `GroupLabel` and the screens' section headers carry `heading()` semantics for TalkBack. Don't
    draw a second anatomy for any of these. The calendar's compact banners over the grid
    (`CalendarBanners.kt`, one row of icon, text and action, which wraps rather than cuts) are the
@@ -226,11 +239,15 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     record**: the event and expense forms keep their fields in `rememberSaveable` (the member chips
     through `FamilyMemberRefListSaver`) and load under a saveable `seeded`/`prefilled` flag, so a
     rotation keeps the edits instead of reloading the stored record over them; the child and pet
-    forms key the seeding on the record's id, because their observed record re-emits on every sync
-    write and copying each emission overwrote what was being typed. **A new event asks nothing**:
-    its draft is saved as the parent types and returns on the next "+". The child and pet forms
-    still lose edits on rotation — their nested lists belong in the ViewModels (the project's rule
-    for state).
+    forms keep theirs in their ViewModels (`common/FormDraft.kt`: `ChildInfoViewModel.childForm`,
+    `PetsViewModel.petForm`), because their nested lists do not fit `rememberSaveable` — each field
+    is still a local `var` in the screen, delegated to the draft — and `FormDraft.seed` takes a
+    record once per id, because their observed record re-emits on every sync write and copying each
+    emission overwrote what was being typed. **A new event asks nothing**: its draft is saved as the
+    parent types and returns on the next "+". **The Back is predictive**: `rememberDiscardGuard`
+    returns a `DiscardGuard`, still the `() -> Unit` the up arrow calls, whose `backPreview` a form
+    wears on its Scaffold, so a back gesture over edits shrinks the form by up to a tenth before it
+    asks (week 5); don't swap it back for a plain `BackHandler`.
 17. **The theme follows the system's contrast setting** (October 2026 audit, D-25). On Android 14
     and later `CoPlanlyTheme` reads `UiModeManager`'s contrast and follows it while it changes
     (`theme/ContrastLevel.kt`), choosing the standard scheme or a medium or high one. Those two are
@@ -253,7 +270,9 @@ Direction agreed after a live walkthrough and shipped on `feature/ux-overhaul`.
 When touching the UI, keep these invariants:
 
 1. **Bottom navigation bar** (Home / Calendar / Chat / Expenses) is the top-level
-   navigation — see `presentation/navigation/BottomNavDestination.kt`. It shows only on
+   navigation — see `presentation/navigation/BottomNavDestination.kt`. **On a window 600 dp wide
+   or more it is a rail instead** (`NavigationLayout`: a tablet, an unfolded foldable, a phone on
+   its side; October 2026 audit, week 5), with the same destinations and badge. It shows only on
    those routes (`BottomNavDestination.topLevelRoutes`); detail screens hide it and keep
    an up-arrow. **Settings is NOT a tab** — it opens from a gear action in each top-level
    screen's top bar and is a detail screen (`onNavigateUp = popBackStack`, bottom bar
@@ -643,7 +662,7 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   audit found money cut off at sizes the matrix never rendered) and the default vs a purple/orange
   parent palette (`ScreenshotVariants`: ten variants for text-heavy components, four for the rest,
   and high contrast in both themes for the month grid, a Settings group and a banner
-  (`ContrastScreenshots`, design item 17); 190 images — the count the committed baselines hold).
+  (`ContrastScreenshots`, design item 17); 200 images — the count the committed baselines hold).
   **To view:** open the run's `screenshots` artefact, unzip, open `index.html`
   (`tools/screenshot-gallery.js`, no dependencies, filters by component/language/theme/scale/
   palette/contrast). Locally: `./gradlew recordRoborazziDebug` writes into `app/src/test/screenshots/` — don't commit what a laptop records (below).
@@ -775,7 +794,8 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   (e.g. `LocalDate.ofInstant` is API 34+; use `Instant.atZone(...).toLocalDate()`).
 - **KDoc** on public classes/functions; code and comments in **English**.
 - Material 3 components; theme tokens from `presentation/theme/`
-  (`CoPlanlyColors`, `Typography`, `CoPlanlyShapes`, `IconSizes`, `dimensions()`).
+  (`CoPlanlyColors`, `Typography`, `CoPlanlyShapes`, `CoPlanlyCorners`, `Spacing`, `IconSizes`,
+  `dimensions()`).
 - **The typeface is Onest** (`theme/Type.kt`, four static weights cut from the variable font; SIL
   OFL 1.1 in `third_party/fonts/onest/` and Settings → Data sources and licences). It replaced
   Poppins, which has no Cyrillic, so Russian and Ukrainian fell back to Roboto mid-line. Any

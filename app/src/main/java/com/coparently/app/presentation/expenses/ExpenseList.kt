@@ -16,7 +16,6 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -44,7 +43,6 @@ import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -58,6 +56,9 @@ import com.coparently.app.presentation.common.FullScreenImageDialog
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.ParentColors
+import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.presentation.theme.bodyMediumEmphasized
+import com.coparently.app.presentation.theme.titleSmallEmphasized
 import com.coparently.app.utils.localizedDate
 import java.util.Locale
 
@@ -69,14 +70,6 @@ private const val PAYER_TINT_ALPHA = 0.18f
  * thumbnail is padded out to the 48dp minimum with `minimumInteractiveComponentSize`.
  */
 private val TILE_SIZE = 40.dp
-
-/**
- * Corner radius of an expense row **and** of the delete surface behind it.
- *
- * The two must be the same value: the swipe backdrop sits directly under the row at rest, so a
- * backdrop with tighter corners shows as a red outline around every row in the list.
- */
-private val ROW_CORNER = 12.dp
 
 /**
  * Slot 1, whose share the stored ratio counts. Never shown as the word — [ParentNames] turns it
@@ -135,8 +128,8 @@ fun ExpenseList(
         contentPadding = PaddingValues(
             start = 14.dp,
             end = 14.dp,
-            top = 4.dp,
-            bottom = 4.dp + bottomClearance
+            top = Spacing.XS,
+            bottom = Spacing.XS + bottomClearance
         ),
         verticalArrangement = Arrangement.spacedBy(7.dp)
     ) {
@@ -266,7 +259,7 @@ fun ExpenseItem(
     }
 
     Surface(
-        shape = RoundedCornerShape(ROW_CORNER),
+        shape = MaterialTheme.shapes.small,
         // Was surfaceContainerLow, a 1.2:1 separation from the background in dark — the rows
         // barely read as cards at all.
         color = MaterialTheme.colorScheme.surfaceContainer,
@@ -275,9 +268,9 @@ fun ExpenseItem(
             .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier)
     ) {
         Row(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier.padding(Spacing.M),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(Spacing.M)
         ) {
             // A receipt photo, when present, keeps its own tappable thumbnail here: the viewer
             // is a working feature and losing its entry point to match a mockup would be a
@@ -292,14 +285,14 @@ fun ExpenseItem(
                     modifier = Modifier
                         .minimumInteractiveComponentSize()
                         .size(TILE_SIZE)
-                        .clip(RoundedCornerShape(12.dp))
+                        .clip(MaterialTheme.shapes.small)
                         .clickable(role = Role.Button) { onReceiptClick(receiptUrl) }
                 )
             } else {
                 Box(
                     modifier = Modifier
                         .size(TILE_SIZE)
-                        .clip(RoundedCornerShape(12.dp))
+                        .clip(MaterialTheme.shapes.small)
                         .background(payerTint(payerColor)),
                     contentAlignment = Alignment.Center
                 ) {
@@ -316,8 +309,7 @@ fun ExpenseItem(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = expense.title,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium,
+                    style = MaterialTheme.typography.bodyMediumEmphasized,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -336,8 +328,7 @@ fun ExpenseItem(
 
             Text(
                 text = format.format(expense.amount),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold
+                style = MaterialTheme.typography.titleSmallEmphasized
             )
         }
     }
@@ -387,7 +378,7 @@ private fun SwipeToDeleteRow(
                     .fillMaxSize()
                     .background(
                         color = MaterialTheme.colorScheme.error,
-                        shape = RoundedCornerShape(ROW_CORNER)
+                        shape = MaterialTheme.shapes.small
                     )
                     .padding(horizontal = 20.dp),
                 contentAlignment = Alignment.CenterEnd

@@ -4,7 +4,6 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
@@ -13,11 +12,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.unit.dp
 import com.coparently.app.R
 import com.coparently.app.domain.model.EmergencyContact
+import com.coparently.app.presentation.common.AddItemButton
 import com.coparently.app.presentation.common.animations.sectionEnter
 import com.coparently.app.presentation.common.animations.sectionExit
+import com.coparently.app.presentation.theme.Spacing
 
 /**
  * Editor for managing emergency contacts.
@@ -41,7 +41,7 @@ fun EmergencyContactEditor(
 
     Column(
         modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(Spacing.S)
     ) {
         // List of existing contacts
         contacts.forEachIndexed { index, contact ->
@@ -87,14 +87,11 @@ fun EmergencyContactEditor(
 
         // Add button
         if (!isAddingNew && editingIndex == null) {
-            OutlinedButton(
+            AddItemButton(
+                label = stringResource(R.string.childinfo_add_emergency_contact),
                 onClick = { isAddingNew = true },
                 modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.childinfo_add))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(stringResource(R.string.childinfo_add_emergency_contact))
-            }
+            )
         }
     }
 }
@@ -114,7 +111,7 @@ private fun EmergencyContactCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
+                .padding(Spacing.M),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -185,8 +182,8 @@ private fun EmergencyContactForm(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+                .padding(Spacing.M),
+            verticalArrangement = Arrangement.spacedBy(Spacing.S)
         ) {
             Text(
                 text = if (contact == null) {
@@ -243,7 +240,7 @@ private fun EmergencyContactForm(
                 TextButton(onClick = onCancel) {
                     Text(stringResource(R.string.childinfo_cancel))
                 }
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(Spacing.S))
                 Button(
                     onClick = {
                         if (name.isNotBlank() && relationship.isNotBlank() && phone.isNotBlank()) {

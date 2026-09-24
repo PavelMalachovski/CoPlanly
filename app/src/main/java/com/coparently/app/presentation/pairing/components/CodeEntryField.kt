@@ -16,10 +16,10 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.coparently.app.R
 import com.coparently.app.domain.pairing.InviteCodeGenerator
+import com.coparently.app.presentation.theme.Spacing
 
 /**
  * Input for a code the user was given. Accepts a pasted pairing link or share
@@ -43,7 +43,7 @@ fun CodeEntryField(
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(Spacing.S)
     ) {
         Text(
             text = stringResource(R.string.pairing_have_a_code),

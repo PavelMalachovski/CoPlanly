@@ -56,6 +56,7 @@ import com.coparently.app.presentation.common.PillChip
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.StickyActionBar
+import com.coparently.app.presentation.theme.Spacing
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
@@ -159,7 +160,7 @@ private fun ProfileContent(
             .fillMaxSize()
             .padding(paddingValues)
             .verticalScroll(rememberScrollState())
-            .padding(16.dp),
+            .padding(Spacing.L),
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
         if (editable) {
@@ -272,7 +273,7 @@ private fun MyProfileContent(
         modifier = Modifier.fillMaxWidth()
     )
 
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.S)) {
         ProfileSectionLabel(stringResource(R.string.profile_allergies_label))
         AllergyEditor(
             allergies = person.allergies,
@@ -363,7 +364,7 @@ private fun CoParentDetailRows(coParent: User) {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun CoParentAllergiesSection(allergies: List<String>) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.S)) {
         ProfileSectionLabel(stringResource(R.string.profile_allergies_label))
         if (allergies.isEmpty()) {
             Text(
@@ -373,8 +374,8 @@ private fun CoParentAllergiesSection(allergies: List<String>) {
             )
         } else {
             FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.S),
+                verticalArrangement = Arrangement.spacedBy(Spacing.S),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 allergies.forEach { allergy -> PillChip(label = allergy) }
@@ -411,7 +412,7 @@ private fun ProfileEmptyState(text: String, modifier: Modifier = Modifier) {
         textAlign = TextAlign.Center,
         modifier = modifier
             .fillMaxWidth()
-            .padding(vertical = 24.dp)
+            .padding(vertical = Spacing.XL)
     )
 }
 

@@ -12,7 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.ZeroCornerSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -34,7 +34,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.coparently.app.R
@@ -43,8 +42,12 @@ import com.coparently.app.presentation.common.NamedParent
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.PillChip
+import com.coparently.app.presentation.theme.CoPlanlyCorners
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.ParentColors
+import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.presentation.theme.labelLargeEmphasized
+import com.coparently.app.presentation.theme.titleSmallEmphasized
 import com.coparently.app.utils.LightDarkPreviews
 import com.coparently.app.utils.PreviewWrapper
 import java.text.NumberFormat
@@ -117,12 +120,12 @@ fun ExpenseSummaryHeader(
 
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
+        shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
         )
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(Spacing.L)) {
             if (monthNavigation != null) {
                 MonthSwitcherBar(
                     navigation = monthNavigation,
@@ -155,7 +158,7 @@ fun ExpenseSummaryHeader(
                     format = format,
                     monthLabel = monthLabel,
                     onSettleUp = onSettleUp,
-                    modifier = Modifier.padding(top = 12.dp)
+                    modifier = Modifier.padding(top = Spacing.M)
                 )
             }
         }
@@ -257,8 +260,7 @@ internal fun MonthSwitcherBar(navigation: MonthNavigation, modifier: Modifier = 
                     navigation.expenseCount
                 )
             ),
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.SemiBold,
+            style = MaterialTheme.typography.labelLargeEmphasized,
             textAlign = TextAlign.Center,
             // Wraps rather than cutting the count ("Mai 2026 · 5 Ausgab…" in German at 2.0x).
             modifier = Modifier.weight(1f)
@@ -294,11 +296,11 @@ internal fun CollapsedMonthSummary(
 ) {
     Surface(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp),
+        shape = MaterialTheme.shapes.large.copy(topStart = ZeroCornerSize, topEnd = ZeroCornerSize),
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
         shadowElevation = 2.dp
     ) {
-        Column(modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 8.dp)) {
+        Column(modifier = Modifier.padding(start = Spacing.M, end = Spacing.M, bottom = Spacing.S)) {
             MonthSwitcherBar(navigation = navigation)
             Text(
                 text = stringResource(
@@ -360,8 +362,7 @@ private fun TotalWithLabel(total: String) {
     val totalText: @Composable () -> Unit = {
         Text(
             text = total,
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold
+            style = MaterialTheme.typography.headlineMedium
         )
     }
     val label = stringResource(R.string.expenses_shared_spend)
@@ -381,7 +382,7 @@ private fun TotalWithLabel(total: String) {
                 text = label,
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(start = 10.dp, bottom = 4.dp)
+                modifier = Modifier.padding(start = 10.dp, bottom = Spacing.XS)
             )
         }
     }
@@ -394,7 +395,7 @@ private fun SplitBar(momShare: Float, modifier: Modifier = Modifier) {
         modifier = modifier
             .fillMaxWidth()
             .height(SPLIT_BAR_HEIGHT)
-            .clip(RoundedCornerShape(4.dp))
+            .clip(CoPlanlyCorners.Tag)
     ) {
         if (momShare > 0f) {
             Box(
@@ -484,9 +485,9 @@ private fun BalanceStrip(
 ) {
     val strip = modifier
         .fillMaxWidth()
-        .clip(RoundedCornerShape(12.dp))
+        .clip(MaterialTheme.shapes.small)
         .background(accent.copy(alpha = BALANCE_STRIP_ALPHA))
-        .padding(horizontal = 12.dp, vertical = 10.dp)
+        .padding(horizontal = Spacing.M, vertical = 10.dp)
     val sentence: @Composable RowScope.() -> Unit = {
         Icon(
             imageVector = Icons.Default.AccountBalanceWallet,
@@ -499,8 +500,7 @@ private fun BalanceStrip(
         // English at the default size (docs/AUDIT-2026-10-design.md D-1).
         Text(
             text = label,
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.SemiBold,
+            style = MaterialTheme.typography.titleSmallEmphasized,
             modifier = Modifier.weight(1f)
         )
     }
@@ -514,7 +514,7 @@ private fun BalanceStrip(
         )
     }
     if (LocalDensity.current.fontScale >= STACK_FONT_SCALE) {
-        Column(modifier = strip, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(modifier = strip, verticalArrangement = Arrangement.spacedBy(Spacing.S)) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(9.dp),

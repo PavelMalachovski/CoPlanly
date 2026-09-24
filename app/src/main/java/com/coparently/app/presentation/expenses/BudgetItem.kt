@@ -16,11 +16,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import com.coparently.app.R
 import com.coparently.app.domain.model.Budget
 import com.coparently.app.presentation.theme.IconSizes
+import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.presentation.theme.bodySmallEmphasized
 import kotlin.math.roundToInt
 
 /**
@@ -51,9 +51,9 @@ fun BudgetItem(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp)
+            .padding(vertical = Spacing.XS)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(Spacing.L)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -78,7 +78,7 @@ fun BudgetItem(
                 color = color,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 8.dp)
+                    .padding(vertical = Spacing.S)
             )
 
             // The percentage stays `onSurface`. It used to be painted in the status colour,
@@ -96,7 +96,7 @@ fun BudgetItem(
                 )
                 if (statusLabel != null) {
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.XS),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         status.icon?.let {
@@ -109,8 +109,7 @@ fun BudgetItem(
                         }
                         Text(
                             text = statusLabel,
-                            style = MaterialTheme.typography.bodySmall,
-                            fontWeight = FontWeight.Medium
+                            style = MaterialTheme.typography.bodySmallEmphasized
                         )
                     }
                 }

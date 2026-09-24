@@ -24,7 +24,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.coparently.app.R
 import com.coparently.app.domain.professionals.ProfessionalAccessDuration
@@ -32,6 +31,7 @@ import com.coparently.app.domain.professionals.ProfessionalRole
 import com.coparently.app.presentation.common.GroupLabel
 import com.coparently.app.presentation.common.InviteCodeText
 import com.coparently.app.presentation.common.PillChip
+import com.coparently.app.presentation.theme.Spacing
 
 /**
  * Inviting a professional (MON-18): who, for how long, then a code.
@@ -65,13 +65,12 @@ fun ProfessionalInviteSheet(
                 .navigationBarsPadding()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp)
-                .padding(bottom = 24.dp),
+                .padding(bottom = Spacing.XL),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Text(
                 text = stringResource(R.string.professional_invite_action),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold
+                style = MaterialTheme.typography.titleLarge
             )
             Text(
                 text = stringResource(R.string.professional_invite_explainer),
@@ -105,15 +104,15 @@ private fun InviteChoices(
 ) {
     GroupLabel(stringResource(R.string.professional_invite_role_label))
     FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(Spacing.S),
+        verticalArrangement = Arrangement.spacedBy(Spacing.S)
     ) {
         ProfessionalRole.entries.forEach { role ->
             ChoiceChip(stringResource(role.labelRes()), role == state.role) { onChooseRole(role) }
         }
     }
     GroupLabel(stringResource(R.string.professional_invite_duration_label))
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
         ProfessionalAccessDuration.entries.forEach { duration ->
             ChoiceChip(stringResource(duration.labelRes()), duration == state.duration) {
                 onChooseDuration(duration)

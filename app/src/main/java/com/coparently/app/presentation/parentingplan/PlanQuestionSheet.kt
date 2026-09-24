@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import com.coparently.app.R
 import com.coparently.app.data.repository.ParentingPlanPair
 import com.coparently.app.presentation.common.ConfirmationDialog
+import com.coparently.app.presentation.theme.Spacing
 
 /**
  * One question, both answers, and the tick that turns them into an agreement (MON-5).
@@ -90,9 +91,9 @@ fun PlanQuestionSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 24.dp)
-                .padding(bottom = 32.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(horizontal = Spacing.XL)
+                .padding(bottom = Spacing.XXL),
+            verticalArrangement = Arrangement.spacedBy(Spacing.L)
         ) {
             Text(text = stringResource(prompt), style = MaterialTheme.typography.titleMedium)
 
@@ -179,7 +180,7 @@ private fun YourAnswerField(draft: String, onDraftChange: (String) -> Unit) {
 
 @Composable
 private fun TheirAnswer(theirAnswer: String?, coParentName: String) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.XS)) {
         Text(
             text = stringResource(R.string.parenting_plan_their_answer, coParentName),
             style = MaterialTheme.typography.labelLarge,
@@ -199,7 +200,7 @@ private fun TheirAnswer(theirAnswer: String?, coParentName: String) {
                 } else {
                     MaterialTheme.colorScheme.onSurface
                 },
-                modifier = Modifier.padding(16.dp)
+                modifier = Modifier.padding(Spacing.L)
             )
         }
     }
@@ -207,10 +208,10 @@ private fun TheirAnswer(theirAnswer: String?, coParentName: String) {
 
 @Composable
 private fun AgreementRow(agreed: Boolean, onToggle: () -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.XS)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.S),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Checkbox(checked = agreed, onCheckedChange = { onToggle() })

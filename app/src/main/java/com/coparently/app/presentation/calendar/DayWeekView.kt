@@ -33,7 +33,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Lock
@@ -94,10 +93,15 @@ import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.rememberToday
 import com.coparently.app.presentation.theme.CoPlanlyColors
+import com.coparently.app.presentation.theme.CoPlanlyCorners
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Motion
 import com.coparently.app.presentation.theme.ParentColors
+import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.presentation.theme.bodyMediumEmphasized
 import com.coparently.app.presentation.theme.dimensions
+import com.coparently.app.presentation.theme.labelMediumEmphasized
+import com.coparently.app.presentation.theme.labelSmallEmphasized
 import com.coparently.app.utils.localizedDate
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -126,9 +130,6 @@ private const val TODAY_TINT_ALPHA = 0.05f
 
 /** Full-hue edge on a contact-window band: the marker that carries whose afternoon it is. */
 private val CONTACT_WINDOW_EDGE_WIDTH = 3.dp
-
-/** Corner radius of a contact-window band, matching the hour cells it lies over. */
-private val CONTACT_WINDOW_CORNER = 4.dp
 
 /** Timestamp format of a contact window's label in Day view. */
 private val CONTACT_WINDOW_TIME: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
@@ -342,7 +343,7 @@ private fun DayWeekPage(
                     modifier = Modifier
                         .fillMaxWidth()
                         .align(Alignment.Center),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.XS)
                 ) {
                     // Time column space - fixed width for consistency (matches content layout)
                     Box(
@@ -366,7 +367,7 @@ private fun DayWeekPage(
                                     } else {
                                         Color.Transparent
                                     },
-                                    shape = RoundedCornerShape(8.dp)
+                                    shape = MaterialTheme.shapes.extraSmall
                                 ),
                             contentAlignment = Alignment.Center
                         ) {
@@ -380,7 +381,7 @@ private fun DayWeekPage(
                                 modifier = Modifier.fillMaxWidth(),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(
-                                    12.dp,
+                                    Spacing.M,
                                     Alignment.CenterHorizontally
                                 )
                             ) {
@@ -401,8 +402,7 @@ private fun DayWeekPage(
                                     )
                                     Text(
                                         text = date.dayOfMonth.toString(),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.Bold,
+                                        style = MaterialTheme.typography.bodyMediumEmphasized,
                                         color = when {
                                             isToday -> MaterialTheme.colorScheme.primary
                                             isPublicHoliday -> if (isDarkTheme) {
@@ -463,8 +463,8 @@ private fun DayWeekPage(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            .padding(horizontal = Spacing.S),
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.XS)
                     ) {
                         // Hour label - static, outside AnimatedContent
                         // Fixed width to ensure consistent layout and single-line time display
@@ -485,7 +485,6 @@ private fun DayWeekPage(
                                 // with the user's font-size setting.
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontWeight = FontWeight.Medium,
                                 maxLines = 1
                             )
                         }
@@ -506,7 +505,7 @@ private fun DayWeekPage(
                             // Background cells only (no events)
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                horizontalArrangement = Arrangement.spacedBy(Spacing.XS)
                             ) {
                                 currentDates.forEachIndexed { dayIndex, date ->
                                     val isToday = date == today
@@ -576,15 +575,15 @@ private fun DayWeekPage(
                                             .height(hourCellHeight)
                                             .background(
                                                 color = baseColor,
-                                                shape = RoundedCornerShape(dims.paddingSmall)
+                                                shape = MaterialTheme.shapes.extraSmall
                                             )
                                             .background(
                                                 color = overlayColor,
-                                                shape = RoundedCornerShape(dims.paddingSmall)
+                                                shape = MaterialTheme.shapes.extraSmall
                                             )
                                             .background(
                                                 color = proposalColor,
-                                                shape = RoundedCornerShape(dims.paddingSmall)
+                                                shape = MaterialTheme.shapes.extraSmall
                                             )
                                             // Hour cells had no outline at all, so on a dark
                                             // surface the grid read as one flat block and the
@@ -593,7 +592,7 @@ private fun DayWeekPage(
                                                 width = 1.dp,
                                                 color = MaterialTheme.colorScheme.outlineVariant
                                                     .copy(alpha = GRIDLINE_ALPHA),
-                                                shape = RoundedCornerShape(dims.paddingSmall)
+                                                shape = MaterialTheme.shapes.extraSmall
                                             )
                                             .clickable {
                                                 onAddEventClick(date, hour)
@@ -781,7 +780,7 @@ private fun ContactWindowBand(
     showLabel: Boolean
 ) {
     val density = LocalDensity.current
-    val shape = RoundedCornerShape(CONTACT_WINDOW_CORNER)
+    val shape = CoPlanlyCorners.Tag
     val from = window.start.format(CONTACT_WINDOW_TIME)
     val to = window.end.format(CONTACT_WINDOW_TIME)
     val description = stringResource(R.string.calendar_contact_window_desc, parentName, from, to)
@@ -811,7 +810,7 @@ private fun ContactWindowBand(
                 color = ParentColors.text(window.parent),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(start = CONTACT_WINDOW_EDGE_WIDTH + 4.dp, top = 2.dp)
+                modifier = Modifier.padding(start = CONTACT_WINDOW_EDGE_WIDTH + Spacing.XS, top = Spacing.XXS)
             )
         }
     }
@@ -980,7 +979,7 @@ private fun EventChip(
                 // localToWindow converts local coordinates to window coordinates
                 eventGlobalPosition = coordinates.localToWindow(Offset.Zero)
             }
-            .clip(RoundedCornerShape(6.dp))
+            .clip(MaterialTheme.shapes.extraSmall)
             .background(
                 color = if (isDraggingEvent && isOverDeleteButton) {
                     MaterialTheme.colorScheme.error.copy(alpha = 0.3f)
@@ -997,7 +996,7 @@ private fun EventChip(
             .border(
                 width = 1.dp,
                 color = borderColor,
-                shape = RoundedCornerShape(6.dp)
+                shape = MaterialTheme.shapes.extraSmall
             )
             .pointerInput(event.id, onDelete, onLongPressStart, onLongPressEnd) {
                 if (onDelete != null && onLongPressStart != null && onLongPressEnd != null) {
@@ -1109,7 +1108,7 @@ private fun EventChip(
                 // them. What it actually did was eat 24dp of a ~53dp week column, leaving
                 // roughly one and a half characters — which is why week blocks rendered as
                 // nothing but an ellipsis.
-                .padding(start = 5.dp, end = 3.dp, top = 4.dp, bottom = 4.dp)
+                .padding(start = 5.dp, end = 3.dp, top = Spacing.XS, bottom = Spacing.XS)
                 .pointerInput(
                     columnWidthPx,
                     hourHeightPx,
@@ -1242,7 +1241,6 @@ private fun EventChip(
                     // Medium rather than SemiBold: at this size the heavier weight is no more
                     // legible on a tinted fill, and it costs about half a character per line —
                     // which in a ~54dp column is the difference between fitting a word and not.
-                    fontWeight = FontWeight.Medium,
                     textAlign = TextAlign.Start,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -1271,8 +1269,8 @@ private fun EventChip(
             Surface(
                 modifier = Modifier
                     .align(Alignment.Center)
-                    .padding(4.dp),
-                shape = RoundedCornerShape(4.dp),
+                    .padding(Spacing.XS),
+                shape = CoPlanlyCorners.Tag,
                 color = MaterialTheme.colorScheme.inverseSurface.copy(alpha = 0.9f),
                 shadowElevation = 4.dp
             ) {
@@ -1281,9 +1279,8 @@ private fun EventChip(
                         java.time.format.DateTimeFormatter.ofPattern("HH:mm")
                     )} - ${tempEndTime.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))}",
                     color = MaterialTheme.colorScheme.inverseOnSurface,
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    style = MaterialTheme.typography.labelMediumEmphasized,
+                    modifier = Modifier.padding(horizontal = Spacing.S, vertical = Spacing.XS)
                 )
             }
         }
@@ -1381,7 +1378,7 @@ private fun EventChip(
 private fun OfferDayButton(onClick: () -> Unit) {
     OutlinedButton(
         onClick = onClick,
-        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+        contentPadding = PaddingValues(horizontal = Spacing.M, vertical = Spacing.XS)
     ) {
         Icon(
             imageVector = Icons.Default.SwapHoriz,
@@ -1646,7 +1643,7 @@ private fun CustodyWeekBand(
         modifier = modifier
             .fillMaxWidth()
             .height(CUSTODY_BAND_HEIGHT),
-        horizontalArrangement = Arrangement.spacedBy(4.dp)
+        horizontalArrangement = Arrangement.spacedBy(Spacing.XS)
     ) {
         Box(modifier = Modifier.width(gutterWidth))
 
@@ -1663,14 +1660,13 @@ private fun CustodyWeekBand(
                 modifier = Modifier
                     .weight(days.toFloat())
                     .fillMaxHeight()
-                    .background(color, RoundedCornerShape(4.dp)),
+                    .background(color, CoPlanlyCorners.Tag),
                 contentAlignment = Alignment.Center
             ) {
                 if (custody != null && days >= 2) {
                     Text(
                         text = parentNames.labelFor(custody),
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.SemiBold,
+                        style = MaterialTheme.typography.labelSmallEmphasized,
                         color = ParentColors.onFill(color),
                         maxLines = 1,
                         softWrap = false,

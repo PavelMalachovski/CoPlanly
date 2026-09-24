@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Image
@@ -59,6 +58,7 @@ import com.coparently.app.domain.model.MessageSendStatus
 import com.coparently.app.presentation.common.LocalAppMessages
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.openSharedFile
+import com.coparently.app.presentation.theme.Spacing
 import java.io.File
 
 /**
@@ -174,9 +174,9 @@ internal fun ChatAttachmentBlock(
     val pending = isCurrentUser &&
         (message.status == MessageSendStatus.SENDING || message.status == MessageSendStatus.ERROR)
     Column(
-        modifier = Modifier.padding(top = 4.dp, bottom = 2.dp),
+        modifier = Modifier.padding(top = Spacing.XS, bottom = Spacing.XXS),
         horizontalAlignment = if (isCurrentUser) Alignment.End else Alignment.Start,
-        verticalArrangement = Arrangement.spacedBy(4.dp)
+        verticalArrangement = Arrangement.spacedBy(Spacing.XS)
     ) {
         attachments.forEach { attachment ->
             key(attachment.storagePath) {
@@ -199,7 +199,7 @@ private fun ImageAttachment(attachment: ChatAttachment, file: File?, onOpen: () 
     Box(
         modifier = Modifier
             .size(THUMBNAIL_SIZE)
-            .clip(RoundedCornerShape(16.dp))
+            .clip(MaterialTheme.shapes.medium)
             .background(MaterialTheme.colorScheme.surfaceContainerHigh)
             .clickable(onClickLabel = label, role = Role.Image, onClick = onOpen),
         contentAlignment = Alignment.Center
@@ -224,12 +224,12 @@ private fun FileAttachment(attachment: ChatAttachment, onOpen: () -> Unit) {
     Row(
         modifier = Modifier
             .widthIn(max = THUMBNAIL_SIZE * 2)
-            .clip(RoundedCornerShape(16.dp))
+            .clip(MaterialTheme.shapes.medium)
             .background(MaterialTheme.colorScheme.surfaceContainerHigh)
             .clickable(onClickLabel = label, role = Role.Button, onClick = onOpen)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
+            .padding(horizontal = Spacing.M, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(Spacing.S)
     ) {
         Icon(Icons.Default.PictureAsPdf, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
         Column {

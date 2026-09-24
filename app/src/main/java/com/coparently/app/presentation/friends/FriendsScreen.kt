@@ -35,6 +35,7 @@ import com.coparently.app.presentation.common.AccountAvatar
 import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
+import com.coparently.app.presentation.theme.Spacing
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -89,8 +90,8 @@ fun FriendsScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .padding(Spacing.L),
+            verticalArrangement = Arrangement.spacedBy(Spacing.M)
         ) {
             // The friend's own view of this screen: their grant, and the way into their
             // profile. A friend has no family friends to list and no invitations to mint, so
@@ -201,7 +202,7 @@ private fun FriendRedeemRow(
     onCodeChange: (String) -> Unit,
     onRedeem: () -> Unit
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.S)) {
         OutlinedTextField(
             value = state.code,
             onValueChange = onCodeChange,

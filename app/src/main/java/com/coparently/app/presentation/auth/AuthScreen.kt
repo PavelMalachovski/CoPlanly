@@ -10,7 +10,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -21,6 +20,7 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,8 +42,11 @@ import com.coparently.app.presentation.common.animations.sectionEnter
 import com.coparently.app.presentation.common.animations.sectionExit
 import com.coparently.app.presentation.theme.CoPlanlyColors
 import com.coparently.app.presentation.theme.IconSizes
+import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.dimensions
+import com.coparently.app.presentation.theme.headlineSmallEmphasized
 import com.coparently.app.presentation.theme.rememberReducedMotion
+import com.coparently.app.presentation.theme.titleMediumEmphasized
 import com.coparently.app.utils.findActivity
 import kotlinx.coroutines.launch
 
@@ -121,12 +124,11 @@ fun AuthScreen(
                     tint = CoPlanlyColors.BrandPrimary
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(Spacing.L))
 
                 Text(
                     text = stringResource(R.string.app_name),
                     style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground
                 )
 
@@ -141,14 +143,14 @@ fun AuthScreen(
             // Auth Card with elevated design
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(24.dp),
+                shape = MaterialTheme.shapes.large,
                 elevation = CardDefaults.cardElevation(
                     defaultElevation = 8.dp
                 )
             ) {
                 Column(
-                    modifier = Modifier.padding(24.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                    modifier = Modifier.padding(Spacing.XL),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.L)
                 ) {
                     // Title
                     Text(
@@ -157,8 +159,7 @@ fun AuthScreen(
                         } else {
                             stringResource(R.string.auth_create_your_account)
                         },
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold
+                        style = MaterialTheme.typography.headlineSmallEmphasized
                     )
 
                     Text(
@@ -171,7 +172,7 @@ fun AuthScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(Spacing.S))
 
                     // Email Field
                     OutlinedTextField(
@@ -192,7 +193,7 @@ fun AuthScreen(
                             keyboardType = KeyboardType.Email,
                             imeAction = ImeAction.Next
                         ),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = MaterialTheme.shapes.small
                     )
 
                     // Password Field
@@ -237,7 +238,7 @@ fun AuthScreen(
                             keyboardType = KeyboardType.Password,
                             imeAction = ImeAction.Done
                         ),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = MaterialTheme.shapes.small
                     )
 
                     // Sign-in only: a fresh account has no password to have forgotten. Needs only
@@ -268,13 +269,13 @@ fun AuthScreen(
                             colors = CardDefaults.cardColors(
                                 containerColor = MaterialTheme.colorScheme.secondaryContainer
                             ),
-                            shape = RoundedCornerShape(8.dp)
+                            shape = MaterialTheme.shapes.extraSmall
                         ) {
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(dims.paddingSmall * 1.5f),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(Spacing.S),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Icon(
@@ -308,13 +309,13 @@ fun AuthScreen(
                             colors = CardDefaults.cardColors(
                                 containerColor = MaterialTheme.colorScheme.errorContainer
                             ),
-                            shape = RoundedCornerShape(8.dp)
+                            shape = MaterialTheme.shapes.extraSmall
                         ) {
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(dims.paddingSmall * 1.5f),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(Spacing.S),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Icon(
@@ -332,7 +333,7 @@ fun AuthScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(Spacing.S))
 
                     // Google Sign-In Button
                     OutlinedButton(
@@ -345,7 +346,7 @@ fun AuthScreen(
                             .fillMaxWidth()
                             .height(dims.buttonHeight),
                         enabled = !uiState.isLoading,
-                        shape = RoundedCornerShape(16.dp),
+                        shape = MaterialTheme.shapes.medium,
                         border = ButtonDefaults.outlinedButtonBorder(enabled = true).copy(
                             width = 2.dp
                         )
@@ -382,13 +383,13 @@ fun AuthScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 16.dp),
+                            .padding(vertical = Spacing.L),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         HorizontalDivider(modifier = Modifier.weight(1f))
                         Text(
                             text = stringResource(R.string.auth_divider_or),
-                            modifier = Modifier.padding(horizontal = 16.dp),
+                            modifier = Modifier.padding(horizontal = Spacing.L),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -414,7 +415,7 @@ fun AuthScreen(
                             uiState.password.isNotBlank(),
                         // Theme primary, not BrandPrimary: the brand indigo is light-theme-only
                         // (2.73:1 on the dark surface) and under onPrimary's dark text in dark theme.
-                        shape = RoundedCornerShape(16.dp)
+                        shape = MaterialTheme.shapes.medium
                     ) {
                         if (uiState.isLoading) {
                             CircularProgressIndicator(
@@ -429,15 +430,14 @@ fun AuthScreen(
                                 } else {
                                     stringResource(R.string.auth_action_create_account)
                                 },
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
+                                style = MaterialTheme.typography.titleMediumEmphasized
                             )
                         }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(Spacing.XL))
 
             // Toggle Sign In/Sign Up
             Row(

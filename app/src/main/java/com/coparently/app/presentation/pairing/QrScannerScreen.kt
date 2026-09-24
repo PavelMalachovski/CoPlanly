@@ -38,13 +38,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.coparently.app.R
 import com.coparently.app.domain.pairing.PairingUri
+import com.coparently.app.presentation.theme.Spacing
 import com.google.mlkit.vision.barcode.BarcodeScanner
 import com.google.mlkit.vision.barcode.BarcodeScannerOptions
 import com.google.mlkit.vision.barcode.BarcodeScanning
@@ -122,7 +122,7 @@ private fun CameraPermissionRationale(
     onOpenSettings: () -> Unit
 ) {
     Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp),
+        modifier = Modifier.fillMaxSize().padding(Spacing.XL),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
@@ -141,7 +141,7 @@ private fun CameraPermissionRationale(
             ),
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center,
-            modifier = Modifier.padding(vertical = 16.dp)
+            modifier = Modifier.padding(vertical = Spacing.L)
         )
         if (permanentlyDenied) {
             Button(onClick = onOpenSettings) {
@@ -215,7 +215,7 @@ private fun CameraPreview(onCodeScanned: (String) -> Unit) {
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onPrimary,
             textAlign = TextAlign.Center,
-            modifier = Modifier.align(Alignment.BottomCenter).padding(32.dp)
+            modifier = Modifier.align(Alignment.BottomCenter).padding(Spacing.XXL)
         )
     }
 }

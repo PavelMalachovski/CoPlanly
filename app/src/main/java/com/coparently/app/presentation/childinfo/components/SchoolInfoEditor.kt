@@ -7,10 +7,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.unit.dp
 import com.coparently.app.R
 import com.coparently.app.domain.model.SchoolInfo
+import com.coparently.app.presentation.common.AddItemButton
 import com.coparently.app.presentation.common.ConfirmationDialog
+import com.coparently.app.presentation.theme.Spacing
 
 /**
  * Editor for managing school information.
@@ -65,7 +66,7 @@ fun SchoolInfoEditor(
 
     Column(
         modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(Spacing.S)
     ) {
         if (isEditing) {
             Card(
@@ -77,8 +78,8 @@ fun SchoolInfoEditor(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                        .padding(Spacing.M),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.S)
                 ) {
                     Text(
                         text = stringResource(R.string.childinfo_section_school),
@@ -119,7 +120,7 @@ fun SchoolInfoEditor(
                         singleLine = true
                     )
 
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                    HorizontalDivider(modifier = Modifier.padding(vertical = Spacing.S))
 
                     Text(
                         text = stringResource(R.string.childinfo_section_teacher),
@@ -145,7 +146,7 @@ fun SchoolInfoEditor(
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.S)
                     ) {
                         OutlinedButton(
                             onClick = { if (hasContent) confirmClear = true else clear() },
@@ -178,12 +179,11 @@ fun SchoolInfoEditor(
                 }
             }
         } else {
-            OutlinedButton(
+            AddItemButton(
+                label = stringResource(R.string.childinfo_add_school_info),
                 onClick = { isEditing = true },
                 modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(stringResource(R.string.childinfo_add_school_info))
-            }
+            )
         }
     }
 }

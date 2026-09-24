@@ -12,10 +12,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import com.coparently.app.R
 import com.coparently.app.domain.holidays.HolidayCountry
 import com.coparently.app.domain.holidays.HolidayCoverage
+import com.coparently.app.presentation.theme.Spacing
 
 /**
  * What this country is called on screen.
@@ -227,7 +227,7 @@ fun CountryPicker(
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.S),
             modifier = Modifier.fillMaxWidth()
         ) {
             HolidayCountry.entries.forEach { country ->
@@ -253,7 +253,7 @@ fun CountryPicker(
             text = selected.coverageNote(selectedRegion),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = 8.dp)
+            modifier = Modifier.padding(top = Spacing.S)
         )
     }
 }
@@ -276,10 +276,10 @@ private fun RegionChips(
         text = label,
         style = MaterialTheme.typography.labelLarge,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(top = 12.dp, bottom = 4.dp)
+        modifier = Modifier.padding(top = Spacing.M, bottom = Spacing.XS)
     )
     FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.S),
         modifier = Modifier.fillMaxWidth()
     ) {
         FilterChip(

@@ -25,9 +25,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.unit.dp
 import com.coparently.app.R
 import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.model.Budget
@@ -36,6 +34,8 @@ import com.coparently.app.presentation.common.ConfirmationDialog
 import com.coparently.app.presentation.common.FamilyMember
 import com.coparently.app.presentation.common.FamilyMemberChips
 import com.coparently.app.presentation.common.toggling
+import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.presentation.theme.titleLargeEmphasized
 
 /**
  * Bottom sheet for creating **or editing** a budget: a category and a monthly limit.
@@ -99,16 +99,15 @@ fun BudgetSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 24.dp)
-                .padding(bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(horizontal = Spacing.XL)
+                .padding(bottom = Spacing.XL),
+            verticalArrangement = Arrangement.spacedBy(Spacing.L)
         ) {
             Text(
                 text = stringResource(
                     if (existing == null) R.string.budget_add_title else R.string.budget_edit_title
                 ),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
+                style = MaterialTheme.typography.titleLargeEmphasized
             )
 
             if (existing == null) {

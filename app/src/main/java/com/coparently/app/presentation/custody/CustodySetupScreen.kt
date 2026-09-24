@@ -25,7 +25,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -76,8 +75,13 @@ import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.parentingplan.PlanReferenceCard
 import com.coparently.app.presentation.parentingplan.coParentLabel
+import com.coparently.app.presentation.theme.CoPlanlyCorners
 import com.coparently.app.presentation.theme.ParentColors
+import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.dimensions
+import com.coparently.app.presentation.theme.labelMediumEmphasized
+import com.coparently.app.presentation.theme.titleMediumEmphasized
+import com.coparently.app.presentation.theme.titleSmallEmphasized
 import java.time.DayOfWeek
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
@@ -183,8 +187,7 @@ fun CustodySetupScreen(
             // Model type selection
             Text(
                 text = stringResource(R.string.custody_select_schedule_type),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleMediumEmphasized,
                 modifier = Modifier.padding(vertical = dims.paddingSmall)
             )
 
@@ -206,8 +209,7 @@ fun CustodySetupScreen(
             // Start date picker
             Text(
                 text = stringResource(R.string.custody_pattern_start_date),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleMediumEmphasized,
                 modifier = Modifier.padding(vertical = dims.paddingSmall)
             )
             Text(
@@ -251,8 +253,7 @@ fun CustodySetupScreen(
             if (uiState.selectedModelType != CustodyModelType.CUSTOM) {
                 Text(
                     text = stringResource(rolesQuestionFor(uiState.selectedModelType)),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleMediumEmphasized,
                     modifier = Modifier.padding(vertical = dims.paddingSmall)
                 )
 
@@ -272,7 +273,7 @@ fun CustodySetupScreen(
                                     CircleShape
                                 )
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(Spacing.S))
                         Text(
                             text = stringResource(
                                 rolesAnswerFor(uiState.selectedModelType),
@@ -313,8 +314,7 @@ fun CustodySetupScreen(
                 Column {
                     Text(
                         text = stringResource(R.string.custody_custom_pattern),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.titleMediumEmphasized,
                         modifier = Modifier.padding(vertical = dims.paddingSmall)
                     )
                     Text(
@@ -343,7 +343,7 @@ fun CustodySetupScreen(
                             Box(
                                 modifier = Modifier
                                     .size(40.dp)
-                                    .clip(RoundedCornerShape(8.dp))
+                                    .clip(MaterialTheme.shapes.extraSmall)
                                     .background(
                                         ParentColors.container(
                                             if (isMomDay) "mom" else "dad",
@@ -353,7 +353,7 @@ fun CustodySetupScreen(
                                     .border(
                                         width = 2.dp,
                                         color = ParentColors.fill(if (isMomDay) "mom" else "dad"),
-                                        shape = RoundedCornerShape(8.dp)
+                                        shape = MaterialTheme.shapes.extraSmall
                                     )
                                     .clickable { viewModel.toggleCustomMomDay(dayIndex) },
                                 contentAlignment = Alignment.Center
@@ -375,8 +375,7 @@ fun CustodySetupScreen(
                                     )
                                     Text(
                                         text = stringResource(R.string.custody_day_abbrev, dayInWeek),
-                                        style = MaterialTheme.typography.labelMedium,
-                                        fontWeight = FontWeight.Bold,
+                                        style = MaterialTheme.typography.labelMediumEmphasized,
                                         color = ParentColors.text(if (isMomDay) "mom" else "dad")
                                     )
                                 }
@@ -446,8 +445,7 @@ fun CustodySetupScreen(
                 ) {
                     Text(
                         text = stringResource(R.string.custody_preview),
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.titleSmallEmphasized,
                         color = MaterialTheme.colorScheme.primary
                     )
                     Spacer(modifier = Modifier.height(dims.paddingSmall))
@@ -465,10 +463,10 @@ fun CustodySetupScreen(
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.primary
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(Spacing.XS))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(2.dp)
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.XXS)
                     ) {
                         val tempModel = createTempModel(uiState)
                         repeat(14) { dayOffset ->
@@ -488,7 +486,7 @@ fun CustodySetupScreen(
                                     // `heightIn`, not `height`: a fixed box clips its own
                                     // label as soon as the reader's font scale grows.
                                     .heightIn(min = 24.dp)
-                                    .background(color, RoundedCornerShape(4.dp)),
+                                    .background(color, CoPlanlyCorners.Tag),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
@@ -514,7 +512,7 @@ fun CustodySetupScreen(
                                 .size(10.dp)
                                 .background(ParentColors.chipFill("mom"), CircleShape)
                         )
-                        Spacer(modifier = Modifier.width(4.dp))
+                        Spacer(modifier = Modifier.width(Spacing.XS))
                         Text(
                             text = parentNames.labelFor("mom"),
                             style = MaterialTheme.typography.labelSmall,
@@ -523,13 +521,13 @@ fun CustodySetupScreen(
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f, fill = false)
                         )
-                        Spacer(modifier = Modifier.width(16.dp))
+                        Spacer(modifier = Modifier.width(Spacing.L))
                         Box(
                             modifier = Modifier
                                 .size(10.dp)
                                 .background(ParentColors.chipFill("dad"), CircleShape)
                         )
-                        Spacer(modifier = Modifier.width(4.dp))
+                        Spacer(modifier = Modifier.width(Spacing.XS))
                         Text(
                             text = parentNames.labelFor("dad"),
                             style = MaterialTheme.typography.labelSmall,
@@ -672,8 +670,7 @@ private fun MidweekContactSection(
     Column {
         Text(
             text = stringResource(R.string.custody_midweek_title),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.titleMediumEmphasized,
             modifier = Modifier.padding(vertical = dims.paddingSmall)
         )
 

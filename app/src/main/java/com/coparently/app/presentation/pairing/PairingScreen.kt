@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.LinkOff
@@ -55,7 +54,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
@@ -72,6 +70,8 @@ import com.coparently.app.presentation.pairing.components.IncomingInviteCard
 import com.coparently.app.presentation.pairing.components.InviteCodeCard
 import com.coparently.app.presentation.pairing.components.PairedPartnerCard
 import com.coparently.app.presentation.theme.IconSizes
+import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.presentation.theme.labelLargeEmphasized
 import kotlinx.coroutines.launch
 
 /**
@@ -154,8 +154,8 @@ fun PairingScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
-            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            contentPadding = PaddingValues(horizontal = Spacing.XL, vertical = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(Spacing.L)
         ) {
             // First, above every state: which of the two phones is this? The invite code
             // looks identical on both, so the account is what tells them apart. Kept to a
@@ -388,7 +388,7 @@ private fun LazyListScope.loadingSection(
     viewModel: PairingViewModel,
     actions: NotPairedActions
 ) {
-    item { CircularProgressIndicator(Modifier.padding(32.dp)) }
+    item { CircularProgressIndicator(Modifier.padding(Spacing.XXL)) }
     // There is no invite to share yet, so only the "enter a code" half is meaningful here.
     enterCodeSection(form, viewModel, actions)
     item { TrustPanel() }
@@ -602,18 +602,18 @@ private fun PairingModeToggle(selected: PairingMode, onSelect: (PairingMode) -> 
 private fun TrustPanel() {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.tertiary.copy(alpha = TRUST_PANEL_ALPHA)
         )
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier.padding(Spacing.L),
+            verticalArrangement = Arrangement.spacedBy(Spacing.S)
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(Spacing.S)
             ) {
                 Icon(
                     imageVector = Icons.Default.Lock,
@@ -623,8 +623,7 @@ private fun TrustPanel() {
                 )
                 Text(
                     text = stringResource(R.string.pairing_trust_title),
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold,
+                    style = MaterialTheme.typography.labelLargeEmphasized,
                     color = MaterialTheme.colorScheme.tertiary
                 )
             }
@@ -646,7 +645,7 @@ private fun ScanQrButton(onClick: () -> Unit) {
         Icon(Icons.Default.QrCodeScanner, contentDescription = null)
         Text(
             text = stringResource(R.string.pairing_scan_qr_code),
-            modifier = Modifier.padding(start = 8.dp)
+            modifier = Modifier.padding(start = Spacing.S)
         )
     }
 }

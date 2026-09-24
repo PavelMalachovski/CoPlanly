@@ -22,7 +22,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -73,7 +72,9 @@ import com.coparently.app.presentation.common.monthPagingTween
 import com.coparently.app.presentation.common.rememberToday
 import com.coparently.app.presentation.theme.CoPlanlyColors
 import com.coparently.app.presentation.theme.ParentColors
+import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.dimensions
+import com.coparently.app.presentation.theme.labelSmallEmphasized
 import com.coparently.app.utils.localizedDate
 import com.kizitonwose.calendar.compose.CalendarState
 import com.kizitonwose.calendar.compose.HorizontalCalendar
@@ -224,7 +225,7 @@ fun MonthView(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 8.dp)
+            .padding(horizontal = Spacing.S)
     ) {
         WeekdayHeader(firstDayOfWeek)
 
@@ -351,7 +352,7 @@ private fun WeekdayHeader(firstDayOfWeek: DayOfWeek) {
                         } else {
                             Color.Transparent
                         },
-                        shape = RoundedCornerShape(dims.cornerRadius / 2)
+                        shape = MaterialTheme.shapes.extraSmall
                     )
                     .padding(dims.paddingSmall / 2),
                 contentAlignment = Alignment.Center
@@ -659,11 +660,11 @@ private fun DayCell(
             .padding(dims.paddingSmall / 8)
             .background(
                 color = baseColor,
-                shape = RoundedCornerShape(dims.cornerRadius / 2)
+                shape = MaterialTheme.shapes.extraSmall
             )
             .background(
                 color = overlayColor,
-                shape = RoundedCornerShape(dims.cornerRadius / 2)
+                shape = MaterialTheme.shapes.extraSmall
             )
             // A handover day is split on a diagonal: the parent who had the child yesterday in
             // the top-left triangle, today's parent in the bottom-right, reading the way time
@@ -679,7 +680,7 @@ private fun DayCell(
             // two translucent parent hues stacked would read as a muddy third colour — and the
             // second lays yesterday's parent over it at the same custody alpha. The weekend base
             // still shows through both halves, so this file's invariant survives.
-            .clip(RoundedCornerShape(dims.cornerRadius / 2))
+            .clip(MaterialTheme.shapes.extraSmall)
             // A day picked for a multi-day swap gets an outline, not a fill. The cell already
             // stacks a weekend base, a custody overlay, a handover diagonal, a proposal preview
             // and a today circle; a sixth fill would fight all of them, and the one thing the
@@ -689,7 +690,7 @@ private fun DayCell(
                     Modifier.border(
                         width = SWAP_SELECTION_BORDER,
                         color = MaterialTheme.colorScheme.primary,
-                        shape = RoundedCornerShape(dims.cornerRadius / 2)
+                        shape = MaterialTheme.shapes.extraSmall
                     )
                 } else {
                     Modifier
@@ -780,7 +781,7 @@ private fun DayCell(
 
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(2.dp)
+            verticalArrangement = Arrangement.spacedBy(Spacing.XXS)
         ) {
             // Day number: filled circle for today, outlined ring for the selected day
             Box(
@@ -845,9 +846,8 @@ private fun DayCell(
                     if (events.size > MAX_EVENT_DOTS) {
                         Text(
                             text = "+",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontWeight = FontWeight.Bold
+                            style = MaterialTheme.typography.labelSmallEmphasized,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }

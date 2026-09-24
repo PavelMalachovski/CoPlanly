@@ -82,6 +82,7 @@ import com.coparently.app.presentation.custody.labelRes
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.ParentColorChoice
 import com.coparently.app.presentation.theme.ParentColors
+import com.coparently.app.presentation.theme.Spacing
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
@@ -189,7 +190,7 @@ private fun OnboardingTopBar(state: OnboardingUiState) {
             ),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            modifier = Modifier.padding(horizontal = Spacing.L, vertical = Spacing.S)
         )
     }
 }
@@ -208,7 +209,7 @@ private fun OnboardingBody(
             .fillMaxSize()
             .padding(padding)
             .verticalScroll(rememberScrollState())
-            .padding(16.dp),
+            .padding(Spacing.L),
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
         when (state.step) {
@@ -250,7 +251,7 @@ private fun CoParentStep(state: OnboardingUiState, onOpenPairing: (enterCode: Bo
                     contentDescription = null,
                     modifier = Modifier.size(IconSizes.Small)
                 )
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(Spacing.S))
                 Text(stringResource(R.string.onboarding_coparent_enter_code))
             }
             OutlinedButton(onClick = { onOpenPairing(false) }, modifier = Modifier.fillMaxWidth()) {
@@ -259,7 +260,7 @@ private fun CoParentStep(state: OnboardingUiState, onOpenPairing: (enterCode: Bo
                     contentDescription = null,
                     modifier = Modifier.size(IconSizes.Small)
                 )
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(Spacing.S))
                 Text(stringResource(R.string.onboarding_coparent_invite))
             }
         }
@@ -269,7 +270,7 @@ private fun CoParentStep(state: OnboardingUiState, onOpenPairing: (enterCode: Bo
 /** The linked half of [CoParentStep]: who, and what has come across so far. */
 @Composable
 private fun LinkedCoParent(name: String, fetch: CoParentFetch) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
         Icon(
             imageVector = Icons.Default.CheckCircle,
             contentDescription = null,
@@ -318,7 +319,7 @@ private fun LinkedCoParent(name: String, fetch: CoParentFetch) {
 /** One line of status beside an icon or a spinner. */
 @Composable
 private fun StatusRow(text: String, leading: @Composable () -> Unit) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.M)) {
         leading()
         Text(text = text, style = MaterialTheme.typography.bodyMedium)
     }
@@ -398,7 +399,7 @@ private fun ParentColorSwatches(
     selected: ParentColorChoice?,
     onSelect: (ParentColorChoice) -> Unit
 ) {
-    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.M)) {
         ParentColorChoice.entries.forEach { choice ->
             val label = stringResource(choice.labelRes)
             Box(
@@ -569,7 +570,7 @@ private fun ChildDraftForm(
         )
     }
 
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.M)) {
         if (showHeader) {
             DraftHeader(
                 title = draft.name.ifBlank {
@@ -643,7 +644,7 @@ private fun AddAnotherButton(@StringRes label: Int, onClick: () -> Unit) {
             contentDescription = null,
             modifier = Modifier.size(IconSizes.Small)
         )
-        Spacer(modifier = Modifier.width(8.dp))
+        Spacer(modifier = Modifier.width(Spacing.S))
         Text(stringResource(label))
     }
 }
@@ -758,7 +759,7 @@ private fun PetDraftForm(
         )
     }
 
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.M)) {
         if (showHeader) {
             DraftHeader(
                 title = draft.name.ifBlank {
@@ -781,7 +782,7 @@ private fun PetDraftForm(
             modifier = Modifier
                 .fillMaxWidth()
                 .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(Spacing.S)
         ) {
             PetSpecies.entries.forEach { species ->
                 FilterChip(
@@ -885,7 +886,7 @@ private fun RelativesStep(state: OnboardingUiState, viewModel: OnboardingViewMod
                 modifier = Modifier
                     .fillMaxWidth()
                     .horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(Spacing.S)
             ) {
                 state.namedChildren.forEach { candidate ->
                     FilterChip(
@@ -956,7 +957,7 @@ private fun CustodyStep(state: OnboardingUiState, onOpen: () -> Unit) {
 /** A step's title, and the sentence under it where one exists. */
 @Composable
 private fun StepHeading(@StringRes title: Int, @StringRes body: Int? = null) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.S)) {
         Text(
             text = stringResource(title),
             style = MaterialTheme.typography.headlineSmall
@@ -1047,8 +1048,8 @@ private fun OnboardingBottomBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                .padding(Spacing.L),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.S)
         ) {
             if (!state.isFirstStep) {
                 TextButton(onClick = onBack) {

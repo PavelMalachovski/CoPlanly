@@ -36,6 +36,7 @@ import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.parentingplan.PlanReferenceCard
 import com.coparently.app.presentation.parentingplan.coParentLabel
 import com.coparently.app.presentation.theme.ParentColors
+import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.dimensions
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -76,7 +77,7 @@ fun SeasonalScheduleSection(viewModel: SeasonalScheduleViewModel = hiltViewModel
             text = stringResource(R.string.seasonal_hint),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 4.dp)
+            modifier = Modifier.padding(horizontal = Spacing.XS)
         )
         Spacer(modifier = Modifier.height(dims.paddingSmall))
         layers.planReference?.let {
@@ -93,7 +94,7 @@ fun SeasonalScheduleSection(viewModel: SeasonalScheduleViewModel = hiltViewModel
                 text = it.asString(),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(horizontal = 4.dp, vertical = dims.paddingSmall)
+                modifier = Modifier.padding(horizontal = Spacing.XS, vertical = dims.paddingSmall)
             )
         }
         Spacer(modifier = Modifier.height(dims.paddingMedium))

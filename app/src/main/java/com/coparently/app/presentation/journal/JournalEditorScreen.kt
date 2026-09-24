@@ -44,6 +44,7 @@ import com.coparently.app.presentation.common.StickyActionBar
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.rememberDiscardGuard
+import com.coparently.app.presentation.theme.Spacing
 
 /**
  * Writing or editing one private journal entry (MON-22): the day it is about, the text, and a
@@ -99,6 +100,8 @@ fun JournalEditorScreen(
     val leave = rememberDiscardGuard(dirty = state.hasUnsavedEdits && !state.saving, onLeave = onNavigateUp)
 
     Scaffold(
+        // A back gesture over unsaved edits shrinks the form before it asks (D-11).
+        modifier = Modifier.then(leave.backPreview),
         topBar = { EditorTopBar(isNew = state.isNew, onNavigateUp = leave) },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
@@ -150,8 +153,8 @@ private fun EditorForm(
         modifier = modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .padding(horizontal = Spacing.L, vertical = Spacing.S),
+        verticalArrangement = Arrangement.spacedBy(Spacing.L)
     ) {
         Text(
             text = stringResource(R.string.journal_editor_notice),

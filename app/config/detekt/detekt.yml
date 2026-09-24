@@ -354,7 +354,13 @@ style:
       - 'TODO:'
     allowedPatterns: ''
   ForbiddenImport:
-    active: false
+    # A corner is chosen in presentation/theme/Shape.kt and nowhere else
+    # (docs/AUDIT-2026-10-design.md D-19): the audit counted 71 hand-written corners in 20 radii.
+    active: true
+    excludes: ['**/presentation/theme/**', '**/test/**', '**/androidTest/**']
+    imports:
+      - value: 'androidx.compose.foundation.shape.RoundedCornerShape'
+        reason: 'Use MaterialTheme.shapes, CoPlanlyCorners or chatBubbleShape from presentation/theme/Shape.kt.'
   ForbiddenMethodCall:
     active: false
   ForbiddenPublicDataClass:

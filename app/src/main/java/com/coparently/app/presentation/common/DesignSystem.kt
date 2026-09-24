@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Balance
@@ -40,12 +39,14 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.coparently.app.presentation.theme.CoPlanlyCorners
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.LayoutConstants
+import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.presentation.theme.labelMediumEmphasized
 import com.coparently.app.utils.LightDarkPreviews
 import com.coparently.app.utils.PreviewWrapper
 import java.util.Locale
@@ -62,12 +63,6 @@ import java.util.Locale
  * Everything below takes its colours from `MaterialTheme.colorScheme`, never from literal hex,
  * so the same composables render correctly in light and dark.
  */
-
-/** Corner radius of a grouped section container. */
-private val GROUP_CORNER = 16.dp
-
-/** Corner radius of a pill chip; large enough to always read as fully rounded. */
-private val PILL_CORNER = 16.dp
 
 /**
  * An uppercase label above a [SectionGroup], e.g. "FAMILY".
@@ -88,11 +83,10 @@ fun GroupLabel(
 ) {
     Text(
         text = text.uppercase(Locale.getDefault()),
-        style = MaterialTheme.typography.labelMedium,
-        fontWeight = FontWeight.SemiBold,
+        style = MaterialTheme.typography.labelMediumEmphasized,
         color = MaterialTheme.colorScheme.primary,
         modifier = modifier
-            .padding(start = 4.dp, end = 4.dp, bottom = 6.dp)
+            .padding(start = Spacing.XS, end = Spacing.XS, bottom = 6.dp)
             // A heading, so TalkBack can move from group to group instead of row by row, read in
             // the case it was written: a screen reader may spell an all-caps word out letter by
             // letter (docs/AUDIT-2026-10-design.md D-17).
@@ -120,7 +114,7 @@ fun SectionGroup(
 ) {
     Surface(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(GROUP_CORNER),
+        shape = MaterialTheme.shapes.medium,
         color = MaterialTheme.colorScheme.surfaceContainer
     ) {
         Column {
@@ -195,7 +189,7 @@ fun SectionRow(
             .fillMaxWidth()
             .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier)
             .defaultMinSize(minHeight = 56.dp)
-            .padding(horizontal = 16.dp, vertical = 14.dp),
+            .padding(horizontal = Spacing.L, vertical = 14.dp),
         horizontalArrangement = Arrangement.spacedBy(14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -274,7 +268,7 @@ fun PillChip(
     onClick: (() -> Unit)? = null,
     selected: Boolean? = null
 ) {
-    val shape = RoundedCornerShape(PILL_CORNER)
+    val shape = CoPlanlyCorners.Pill
     Row(
         modifier = modifier
             .clip(shape)
@@ -310,7 +304,7 @@ fun PillChip(
                     Modifier
                 }
             )
-            .padding(PaddingValues(horizontal = 12.dp, vertical = 6.dp)),
+            .padding(PaddingValues(horizontal = Spacing.M, vertical = 6.dp)),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -333,7 +327,6 @@ fun PillChip(
         Text(
             text = label,
             style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Medium,
             color = contentColor,
             maxLines = 1,
             // Ellipsised rather than clipped when a caller bounds the chip's width — a person's
@@ -395,9 +388,9 @@ fun EmptyState(
             modifier = Modifier
                 .fillMaxWidth()
                 .then(scrolling)
-                .padding(horizontal = 24.dp, vertical = 32.dp),
+                .padding(horizontal = Spacing.XL, vertical = Spacing.XXL),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically)
+            verticalArrangement = Arrangement.spacedBy(Spacing.M, Alignment.CenterVertically)
         ) {
             HeroIcon(icon)
             Text(
@@ -415,7 +408,7 @@ fun EmptyState(
                 )
             }
             if (actionLabel != null && onAction != null) {
-                Button(onClick = onAction, modifier = Modifier.padding(top = 4.dp)) {
+                Button(onClick = onAction, modifier = Modifier.padding(top = Spacing.XS)) {
                     Text(actionLabel)
                 }
             }
@@ -471,7 +464,7 @@ private fun EmptyStatePreview() {
 @Composable
 private fun SectionGroupPreview() {
     PreviewWrapper {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(Spacing.L)) {
             GroupLabel("Family")
             SectionGroup {
                 SectionRow(

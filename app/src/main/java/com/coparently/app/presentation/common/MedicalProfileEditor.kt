@@ -6,12 +6,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
@@ -22,7 +19,6 @@ import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -35,13 +31,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.dp
 import com.coparently.app.R
 import com.coparently.app.domain.model.BloodType
 import com.coparently.app.domain.model.MedicalProfile
 import com.coparently.app.presentation.common.animations.sectionEnter
 import com.coparently.app.presentation.common.animations.sectionExit
 import com.coparently.app.presentation.theme.IconSizes
+import com.coparently.app.presentation.theme.Spacing
 
 /**
  * Edits a [MedicalProfile], or renders one read-only.
@@ -64,7 +60,7 @@ fun MedicalProfileEditor(
     modifier: Modifier = Modifier,
     enabled: Boolean = true
 ) {
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(Spacing.L)) {
         BloodTypeSection(
             bloodType = profile.bloodType,
             onSelect = { onChange(profile.copy(bloodType = it)) },
@@ -196,7 +192,7 @@ private fun MedicalStringListSection(
     enabled: Boolean,
     modifier: Modifier = Modifier
 ) {
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(Spacing.S)) {
         Text(
             text = label,
             style = MaterialTheme.typography.labelMedium,
@@ -212,8 +208,8 @@ private fun MedicalStringListSection(
                 )
             } else {
                 FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.S),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.S),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     values.forEach { value -> PillChip(label = value) }
@@ -238,8 +234,8 @@ private fun MedicalStringListSection(
 @Composable
 private fun MedicalStringChips(values: List<String>, onRemove: (Int) -> Unit, modifier: Modifier = Modifier) {
     FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.S),
+        verticalArrangement = Arrangement.spacedBy(Spacing.S),
         modifier = modifier.fillMaxWidth()
     ) {
         values.forEachIndexed { index, value ->
@@ -277,7 +273,7 @@ private fun MedicalStringAddRow(hint: String, onAdd: (String) -> Unit, modifier:
         AnimatedVisibility(visible = isAdding, enter = sectionEnter(), exit = sectionExit()) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.S),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 OutlinedTextField(
@@ -303,11 +299,11 @@ private fun MedicalStringAddRow(hint: String, onAdd: (String) -> Unit, modifier:
         }
 
         if (!isAdding) {
-            OutlinedButton(onClick = { isAdding = true }, modifier = Modifier.fillMaxWidth()) {
-                Icon(imageVector = Icons.Default.Add, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(stringResource(R.string.medical_item_add))
-            }
+            AddItemButton(
+                label = stringResource(R.string.medical_item_add),
+                onClick = { isAdding = true },
+                modifier = Modifier.fillMaxWidth()
+            )
         }
     }
 }

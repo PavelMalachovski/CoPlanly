@@ -2,8 +2,8 @@ package com.coparently.app.presentation.childinfo.components
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -12,11 +12,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.dp
 import com.coparently.app.R
+import com.coparently.app.presentation.common.AddItemButton
 import com.coparently.app.presentation.common.animations.sectionEnter
 import com.coparently.app.presentation.common.animations.sectionExit
 import com.coparently.app.presentation.theme.IconSizes
+import com.coparently.app.presentation.theme.Spacing
 
 /**
  * Editor for managing a list of allergies.
@@ -39,13 +40,13 @@ fun AllergyEditor(
 
     Column(
         modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(Spacing.S)
     ) {
         // Display existing allergies as chips
         if (allergies.isNotEmpty()) {
             FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.S),
+                verticalArrangement = Arrangement.spacedBy(Spacing.S),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 allergies.forEachIndexed { index, allergy ->
@@ -77,7 +78,7 @@ fun AllergyEditor(
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.S),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 OutlinedTextField(
@@ -106,14 +107,11 @@ fun AllergyEditor(
 
         // Add button
         if (!isAddingNew) {
-            OutlinedButton(
+            AddItemButton(
+                label = stringResource(R.string.childinfo_add_allergy),
                 onClick = { isAddingNew = true },
                 modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.childinfo_add))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(stringResource(R.string.childinfo_add_allergy))
-            }
+            )
         }
     }
 }

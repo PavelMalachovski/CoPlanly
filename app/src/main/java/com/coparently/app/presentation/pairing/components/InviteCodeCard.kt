@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Refresh
@@ -41,6 +40,7 @@ import com.coparently.app.domain.model.PairingInvite
 import com.coparently.app.presentation.common.InviteCodeText
 import com.coparently.app.presentation.common.dashedRoundedBorder
 import com.coparently.app.presentation.theme.IconSizes
+import com.coparently.app.presentation.theme.Spacing
 import kotlinx.coroutines.delay
 import java.util.concurrent.TimeUnit
 
@@ -78,7 +78,7 @@ fun InviteCodeCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
+        shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
         )
@@ -86,7 +86,7 @@ fun InviteCodeCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 24.dp),
+                .padding(horizontal = 20.dp, vertical = Spacing.XL),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
@@ -99,15 +99,15 @@ fun InviteCodeCard(
             // Dashed container + copy glyph: the affordance the old bare code had none of.
             Row(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(16.dp))
+                    .clip(MaterialTheme.shapes.medium)
                     .dashedRoundedBorder(
                         color = MaterialTheme.colorScheme.outline,
                         cornerRadius = 16.dp
                     )
                     .clickable(onClick = onCopy)
-                    .padding(horizontal = 20.dp, vertical = 12.dp),
+                    .padding(horizontal = 20.dp, vertical = Spacing.M),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(Spacing.M)
             ) {
                 InviteCodeText(code = invite.code, color = MaterialTheme.colorScheme.primary)
                 Icon(
@@ -133,7 +133,7 @@ fun InviteCodeCard(
             Box(
                 modifier = Modifier
                     .size(QR_SIZE)
-                    .clip(RoundedCornerShape(16.dp))
+                    .clip(MaterialTheme.shapes.medium)
                     .background(MaterialTheme.colorScheme.inverseOnSurface),
                 contentAlignment = Alignment.Center
             ) {
@@ -142,14 +142,14 @@ fun InviteCodeCard(
                         bitmap = it.asImageBitmap(),
                         contentDescription =
                         stringResource(R.string.pairing_qr_code_content_description),
-                        modifier = Modifier.padding(8.dp)
+                        modifier = Modifier.padding(Spacing.S)
                     )
                 }
             }
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(Spacing.S)
             ) {
                 Button(onClick = onShare, modifier = Modifier.weight(1f)) {
                     Icon(
@@ -159,7 +159,7 @@ fun InviteCodeCard(
                     )
                     Text(
                         text = stringResource(R.string.pairing_share_link),
-                        modifier = Modifier.padding(start = 8.dp)
+                        modifier = Modifier.padding(start = Spacing.S)
                     )
                 }
             }
@@ -168,7 +168,7 @@ fun InviteCodeCard(
                 Icon(Icons.Default.Refresh, contentDescription = null)
                 Text(
                     text = stringResource(R.string.pairing_new_code),
-                    modifier = Modifier.padding(start = 8.dp)
+                    modifier = Modifier.padding(start = Spacing.S)
                 )
             }
         }

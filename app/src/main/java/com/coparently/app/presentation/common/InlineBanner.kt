@@ -16,8 +16,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.unit.dp
 import com.coparently.app.presentation.theme.IconSizes
+import com.coparently.app.presentation.theme.Spacing
 
 /**
  * A banner inside a screen's content (docs/AUDIT-2026-10-design.md D-15): the app telling the
@@ -58,8 +58,8 @@ fun InlineBanner(
         color = colours.container
     ) {
         Row(
-            modifier = Modifier.padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            modifier = Modifier.padding(Spacing.L),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.M)
         ) {
             if (icon != null) {
                 Icon(
@@ -69,13 +69,13 @@ fun InlineBanner(
                     modifier = Modifier.size(IconSizes.Small)
                 )
             }
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.XS)) {
                 if (title != null) {
                     Text(text = title, style = MaterialTheme.typography.titleSmall, color = colours.title)
                 }
                 Text(text = text, style = MaterialTheme.typography.bodyMedium, color = colours.body)
                 if (actions != null) {
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) { actions() }
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) { actions() }
                 }
             }
         }

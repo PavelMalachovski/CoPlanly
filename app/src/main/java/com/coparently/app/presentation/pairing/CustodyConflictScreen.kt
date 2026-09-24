@@ -35,7 +35,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -46,6 +45,7 @@ import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.dimensions
+import com.coparently.app.presentation.theme.labelMediumEmphasized
 import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
@@ -244,8 +244,7 @@ private fun PatternOption(
         ) {
             Text(
                 text = stringResource(choice.labelRes),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
+                style = MaterialTheme.typography.titleMedium
             )
             Text(
                 text = stringResource(R.string.custody_next_14_days),
@@ -322,8 +321,7 @@ private fun DayCell(date: LocalDate, slot: String, modifier: Modifier = Modifier
             )
             Text(
                 text = date.dayOfMonth.toString(),
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.labelMediumEmphasized,
                 color = ParentColors.text(slot),
                 maxLines = 1
             )

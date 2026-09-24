@@ -18,6 +18,7 @@ import com.coparently.app.R
 import com.coparently.app.domain.model.Budget
 import com.coparently.app.domain.model.Expense
 import com.coparently.app.presentation.common.PillChip
+import com.coparently.app.presentation.theme.Spacing
 
 /**
  * How far past a budget's own alert threshold spending has gone.
@@ -83,7 +84,7 @@ fun BudgetChips(
             .fillMaxWidth()
             .horizontalScroll(rememberScrollState())
             .padding(horizontal = 14.dp, vertical = 6.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(Spacing.S)
     ) {
         progress.forEach { entry ->
             val format = currencyFormat(entry.budget.currency)

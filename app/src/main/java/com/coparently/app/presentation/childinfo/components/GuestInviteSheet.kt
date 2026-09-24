@@ -31,6 +31,7 @@ import com.coparently.app.domain.guests.GuestInviteUri
 import com.coparently.app.presentation.childinfo.GuestInviteState
 import com.coparently.app.presentation.common.InviteCodeText
 import com.coparently.app.presentation.common.PillChip
+import com.coparently.app.presentation.theme.Spacing
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -71,10 +72,10 @@ fun GuestInviteSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 24.dp)
-                .padding(bottom = 24.dp)
+                .padding(horizontal = Spacing.XL)
+                .padding(bottom = Spacing.XL)
                 .navigationBarsPadding(),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(Spacing.L)
         ) {
             Text(
                 text = stringResource(R.string.guest_invite_title),
@@ -129,7 +130,7 @@ private fun DurationChoice(
         text = stringResource(R.string.guest_invite_how_long),
         style = MaterialTheme.typography.titleSmall
     )
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
         GuestAccessDuration.entries.forEach { choice ->
             val selected = choice == state.duration
             PillChip(
@@ -166,7 +167,7 @@ private fun MintedCode(code: String, grantEndsAtMillis: Long, onShare: (String) 
         Icon(Icons.Default.Share, contentDescription = null)
         Text(
             text = stringResource(R.string.guest_invite_share),
-            modifier = Modifier.padding(start = 8.dp)
+            modifier = Modifier.padding(start = Spacing.S)
         )
     }
 }

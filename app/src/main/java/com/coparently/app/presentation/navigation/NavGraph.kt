@@ -7,11 +7,15 @@ import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.imePadding
@@ -29,7 +33,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
@@ -67,6 +70,7 @@ import com.coparently.app.presentation.pets.PetsScreen
 import com.coparently.app.presentation.settings.SettingsScreen
 import com.coparently.app.presentation.sync.AuthStateViewModel
 import com.coparently.app.presentation.sync.SyncViewModel
+import com.coparently.app.presentation.theme.Spacing
 import kotlinx.coroutines.flow.StateFlow
 
 /**
@@ -139,6 +143,9 @@ fun NavGraph(
     val currentRoute = backStackEntry?.destination?.route
     val offline by connectivityViewModel.isOffline.collectAsState()
 
+    val navigationLayout = rememberNavigationLayout()
+    val onTopLevelRoute = currentRoute in BottomNavDestination.topLevelRoutes
+
     Scaffold(
         // Empty while online, so the status-bar inset the NavHost consumes below is the
         // Scaffold's own; while offline the banner pads itself below the status bar instead.
@@ -147,934 +154,934 @@ fun NavGraph(
         // warning. Above the bottom bar on a tab; at the bottom on a detail screen.
         snackbarHost = { LocalAppMessages.current?.let { SnackbarHost(it.hostState) } },
         bottomBar = {
-            AnimatedVisibility(
-                visible = currentRoute in BottomNavDestination.topLevelRoutes,
-                enter = slideInVertically(initialOffsetY = { it }),
-                exit = slideOutVertically(targetOffsetY = { it })
-            ) {
-                CoPlanlyBottomBar(
-                    currentRoute = currentRoute,
-                    onNavigate = navController::navigateToTab,
-                    chatUnreadCount = chatUnreadCount
-                )
-            }
+            BottomBarSlot(navigationLayout, onTopLevelRoute, currentRoute, navController, chatUnreadCount)
         }
     ) { innerPadding ->
-        NavHost(
-            navController = navController,
-            startDestination = startDestination,
-            // Consumed as well as applied. Every screen below brings its own Scaffold and
-            // TopAppBar, which apply the system bars again unless they are told these are taken:
-            // padding alone gave every top bar a second status-bar inset (88 dp where M3's is 64)
-            // and lifted each tab's FAB by a second navigation-bar inset. And the keyboard is
-            // taken here, once, for every screen: the manifest's adjustResize stops the window
-            // panning — which scrolled the chat header away and left a form's sticky Save under
-            // the keyboard — and this is what then resizes the screen above it
-            // (docs/AUDIT-2026-10-design.md D-2, D-9).
+        Row(
             modifier = Modifier
+                .fillMaxSize()
                 .padding(innerPadding)
                 .consumeWindowInsets(innerPadding)
-                .imePadding(),
-            // The standard push for any route that names no transitions of its own. Without
-            // these, such a route got Navigation's own 700 ms crossfade — more than twice as
-            // slow as every other screen.
-            enterTransition = { slideInFromRight() },
-            exitTransition = { slideOutToLeft() },
-            popEnterTransition = { slideInFromLeft() },
-            popExitTransition = { slideOutToRight() }
         ) {
-            // Loading screen while checking authentication
-            composable(
-                route = Screen.Loading.route,
-                enterTransition = { fadeIn() },
-                exitTransition = { fadeOut() }
+            RailSlot(navigationLayout, onTopLevelRoute, currentRoute, navController, chatUnreadCount)
+            NavHost(
+                navController = navController,
+                startDestination = startDestination,
+                // Consumed as well as applied. Every screen below brings its own Scaffold and
+                // TopAppBar, which apply the system bars again unless they are told these are taken:
+                // padding alone gave every top bar a second status-bar inset (88 dp where M3's is 64)
+                // and lifted each tab's FAB by a second navigation-bar inset. And the keyboard is
+                // taken here, once, for every screen: the manifest's adjustResize stops the window
+                // panning — which scrolled the chat header away and left a form's sticky Save under
+                // the keyboard — and this is what then resizes the screen above it
+                // (docs/AUDIT-2026-10-design.md D-2, D-9). The Row above applies and consumes the
+                // Scaffold's padding, so a rail beside this is inset once too.
+                modifier = Modifier
+                    .weight(1f)
+                    .imePadding(),
+                // The standard push for any route that names no transitions of its own. Without
+                // these, such a route got Navigation's own 700 ms crossfade — more than twice as
+                // slow as every other screen.
+                enterTransition = { slideInFromRight() },
+                exitTransition = { slideOutToLeft() },
+                popEnterTransition = { slideInFromLeft() },
+                popExitTransition = { slideOutToRight() }
             ) {
-                LoadingScreen()
-            }
+                // Loading screen while checking authentication
+                composable(
+                    route = Screen.Loading.route,
+                    enterTransition = { fadeIn() },
+                    exitTransition = { fadeOut() }
+                ) {
+                    LoadingScreen()
+                }
 
-            // The telemetry consent, asked once before anything else happens.
-            composable(
-                route = Screen.PrivacyConsent.route,
-                enterTransition = { fadeIn() },
-                exitTransition = { fadeOut() }
-            ) {
-                TelemetryConsentScreen(
-                    // Answering re-runs the start-destination decision above, which now falls
-                    // through to whatever this account's real next screen is. Navigating to a
-                    // named route here would have to duplicate that decision, and the two copies
-                    // would drift.
-                    onAnswered = {
-                        navController.navigate(Screen.Loading.route) {
-                            popUpTo(Screen.PrivacyConsent.route) { inclusive = true }
-                        }
-                    }
-                )
-            }
-
-            // The first-run questionnaire, for an account that has not been through it.
-            composable(
-                route = Screen.Onboarding.route,
-                enterTransition = { fadeIn() },
-                exitTransition = { fadeOut() }
-            ) {
-                OnboardingScreen(
-                    onFinished = {
-                        navController.navigate(Screen.Home.route) {
-                            popUpTo(Screen.Onboarding.route) { inclusive = true }
-                        }
-                    },
-                    onOpenCustodySetup = { navController.navigate(Screen.CustodySetup.routeFor()) },
-                    // The wizard's first step offers both halves of pairing as two buttons —
-                    // "I have their code" opens on code entry, "Invite" on this account's own
-                    // code — because the second parent to install the app is holding a code and
-                    // must not be shown their own first.
-                    onOpenPairing = { enterCode ->
-                        navController.navigate(
-                            if (enterCode) {
-                                Screen.Pairing.routeForCodeEntry()
-                            } else {
-                                Screen.Pairing.routeWithCode(null)
+                // The telemetry consent, asked once before anything else happens.
+                composable(
+                    route = Screen.PrivacyConsent.route,
+                    enterTransition = { fadeIn() },
+                    exitTransition = { fadeOut() }
+                ) {
+                    TelemetryConsentScreen(
+                        // Answering re-runs the start-destination decision above, which now falls
+                        // through to whatever this account's real next screen is. Navigating to a
+                        // named route here would have to duplicate that decision, and the two copies
+                        // would drift.
+                        onAnswered = {
+                            navController.navigate(Screen.Loading.route) {
+                                popUpTo(Screen.PrivacyConsent.route) { inclusive = true }
                             }
-                        )
-                    }
-                )
-            }
-
-            // Authentication screen for unauthenticated users
-            composable(
-                route = Screen.Auth.route,
-                enterTransition = { slideInFromRight() },
-                exitTransition = { slideOutToLeft() },
-                popEnterTransition = { slideInFromLeft() },
-                popExitTransition = { slideOutToRight() }
-            ) {
-                AuthScreen(
-                    onAuthSuccess = {
-                        // Re-runs the whole start-destination decision, questionnaire included,
-                        // and parks on Loading until it resolves. Navigating straight to Home
-                        // here — as this did — is what would let a parent who signed up in this
-                        // very session never see the wizard at all: the start-destination
-                        // decision above resolves once per authentication check, not per frame.
-                        authStateViewModel.refreshAuthState()
-                        navController.navigate(Screen.Loading.route) {
-                            popUpTo(Screen.Auth.route) { inclusive = true }
                         }
-                    },
-                    onViewModelReady = { authViewModel ->
-                        // Set callback to refresh auth state when authentication succeeds
-                        authViewModel.onAuthStateChanged = {
+                    )
+                }
+
+                // The first-run questionnaire, for an account that has not been through it.
+                composable(
+                    route = Screen.Onboarding.route,
+                    enterTransition = { fadeIn() },
+                    exitTransition = { fadeOut() }
+                ) {
+                    OnboardingScreen(
+                        onFinished = {
+                            navController.navigate(Screen.Home.route) {
+                                popUpTo(Screen.Onboarding.route) { inclusive = true }
+                            }
+                        },
+                        onOpenCustodySetup = { navController.navigate(Screen.CustodySetup.routeFor()) },
+                        // The wizard's first step offers both halves of pairing as two buttons —
+                        // "I have their code" opens on code entry, "Invite" on this account's own
+                        // code — because the second parent to install the app is holding a code and
+                        // must not be shown their own first.
+                        onOpenPairing = { enterCode ->
+                            navController.navigate(
+                                if (enterCode) {
+                                    Screen.Pairing.routeForCodeEntry()
+                                } else {
+                                    Screen.Pairing.routeWithCode(null)
+                                }
+                            )
+                        }
+                    )
+                }
+
+                // Authentication screen for unauthenticated users
+                composable(
+                    route = Screen.Auth.route,
+                    enterTransition = { slideInFromRight() },
+                    exitTransition = { slideOutToLeft() },
+                    popEnterTransition = { slideInFromLeft() },
+                    popExitTransition = { slideOutToRight() }
+                ) {
+                    AuthScreen(
+                        onAuthSuccess = {
+                            // Re-runs the whole start-destination decision, questionnaire included,
+                            // and parks on Loading until it resolves. Navigating straight to Home
+                            // here — as this did — is what would let a parent who signed up in this
+                            // very session never see the wizard at all: the start-destination
+                            // decision above resolves once per authentication check, not per frame.
                             authStateViewModel.refreshAuthState()
+                            navController.navigate(Screen.Loading.route) {
+                                popUpTo(Screen.Auth.route) { inclusive = true }
+                            }
+                        },
+                        onViewModelReady = { authViewModel ->
+                            // Set callback to refresh auth state when authentication succeeds
+                            authViewModel.onAuthStateChanged = {
+                                authStateViewModel.refreshAuthState()
+                            }
                         }
-                    }
-                )
-            }
+                    )
+                }
 
-            // Home / overview dashboard — first screen (MVP 2)
-            composable(
-                route = Screen.Home.route,
-                enterTransition = { tabEnter(forward = true) },
-                exitTransition = { tabExit(forward = true) },
-                popEnterTransition = { tabEnter(forward = false) },
-                popExitTransition = { tabExit(forward = false) }
-            ) {
-                com.coparently.app.presentation.home.HomeScreen(
-                    onOpenEvent = { eventId ->
-                        navController.navigate(Screen.EditEvent.createRoute(eventId))
-                    },
-                    onOpenChangeRequests = {
-                        navController.navigate(Screen.ChangeRequests.createRoute())
-                    },
-                    onOpenContacts = {
-                        navController.navigate(Screen.Contacts.route)
-                    },
-                    onOpenChildInfo = {
-                        navController.navigate(Screen.ChildInfo.route)
-                    },
-                    onOpenPets = {
-                        navController.navigate(Screen.Pets.route)
-                    },
-                    onOpenSettings = {
-                        navController.navigate(Screen.Settings.route)
-                    },
-                    onNavigateToPairing = {
-                        navController.navigate(Screen.Pairing.routeWithCode(null))
-                    },
-                    // The dashboard's stat tiles deep-link into the tabs that own those
-                    // numbers, so they behave exactly like tapping the tab itself — same
-                    // back stack, same restored state, bottom bar highlights correctly.
-                    onOpenExpenses = {
-                        navController.navigateToTab(BottomNavDestination.EXPENSES)
-                    },
-                    onOpenChat = {
-                        navController.navigateToTab(BottomNavDestination.CHAT)
-                    },
-                    // The empty week's action: the same form the calendar opens, with no date
-                    // preset, so the form starts from its own default.
-                    onAddEvent = {
-                        navController.navigate(Screen.AddEvent.createRoute())
-                    }
-                )
-            }
-
-            composable(
-                route = Screen.Calendar.route,
-                enterTransition = { tabEnter(forward = true) },
-                exitTransition = { tabExit(forward = true) },
-                popEnterTransition = { tabEnter(forward = false) },
-                popExitTransition = { tabExit(forward = false) }
-            ) {
-                CalendarScreen(
-                    onEventClick = { eventId ->
-                        navController.navigate(Screen.EditEvent.createRoute(eventId))
-                    },
-                    onAddEventClick = { date, hour ->
-                        navController.navigate(Screen.AddEvent.createRoute(date, hour))
-                    },
-                    onSettingsClick = {
-                        navController.navigate(Screen.Settings.route)
-                    },
-                    onChangeRequestsClick = {
-                        navController.navigate(Screen.ChangeRequests.createRoute())
-                    }
-                )
-            }
-
-            composable(
-                route = Screen.EventList.route,
-                enterTransition = { slideInFromRight() },
-                exitTransition = { slideOutToLeft() },
-                popEnterTransition = { slideInFromLeft() },
-                popExitTransition = { slideOutToRight() }
-            ) {
-                EventListScreen(
-                    onEventClick = { eventId ->
-                        navController.navigate(Screen.EditEvent.createRoute(eventId))
-                    },
-                    onAddEventClick = {
-                        navController.navigate(Screen.AddEvent.route)
-                    },
-                    onNavigateUp = {
-                        navController.popBackStack()
-                    }
-                )
-            }
-
-            composable(
-                route = Screen.AddEvent.route,
-                arguments = listOf(
-                    navArgument(Screen.AddEvent.ARG_DATE) {
-                        type = NavType.StringType
-                        nullable = true
-                        defaultValue = null
-                    },
-                    navArgument(Screen.AddEvent.ARG_HOUR) {
-                        type = NavType.IntType
-                        defaultValue = -1
-                    }
-                )
-            ) { backStackEntry ->
-                val dateString = backStackEntry.arguments?.getString(Screen.AddEvent.ARG_DATE)
-                val hourValue = backStackEntry.arguments?.getInt(Screen.AddEvent.ARG_HOUR) ?: -1
-                val hour = if (hourValue >= 0) hourValue else null
-                val initialDate = dateString?.takeIf { it != "null" }?.let { java.time.LocalDate.parse(it) }
-
-                AddEditEventScreen(
-                    eventId = null,
-                    initialDate = initialDate,
-                    initialHour = hour,
-                    onSave = {
-                        navController.popBackStack()
-                    },
-                    onCancel = {
-                        navController.popBackStack()
-                    }
-                )
-            }
-
-            composable(
-                route = Screen.EditEvent.route,
-                arguments = listOf(
-                    navArgument(Screen.EditEvent.ARG_EVENT_ID) {
-                        type = NavType.StringType
-                    }
-                )
-            ) { backStackEntry ->
-                val eventId = backStackEntry.arguments?.getString(Screen.EditEvent.ARG_EVENT_ID) ?: return@composable
-                AddEditEventScreen(
-                    eventId = eventId,
-                    onSave = {
-                        navController.popBackStack()
-                    },
-                    onCancel = {
-                        navController.popBackStack()
-                    },
-                    onRequestChange = { id ->
-                        navController.navigate(Screen.RequestChange.createRoute(id))
-                    }
-                )
-            }
-
-            // Contacts — the numbers worth finding in a hurry. A detail screen, deliberately
-            // not a tab: it is opened rarely and urgently, not browsed.
-            composable(
-                route = Screen.Contacts.route,
-                enterTransition = { slideInFromRight() },
-                exitTransition = { slideOutToLeft() },
-                popEnterTransition = { slideInFromLeft() },
-                popExitTransition = { slideOutToRight() }
-            ) {
-                com.coparently.app.presentation.contacts.ContactsScreen(
-                    onNavigateUp = { navController.popBackStack() },
-                    // A contact lives on a child's record, so adding one starts at the children.
-                    onAddContact = { navController.navigate(Screen.ChildInfo.route) }
-                )
-            }
-
-            // Event change requests inbox (MVP 2)
-            composable(
-                route = Screen.ChangeRequests.route,
-                arguments = listOf(
-                    navArgument(Screen.ChangeRequests.ARG_EVENT_ID) {
-                        type = NavType.StringType
-                        nullable = true
-                        defaultValue = null
-                    }
-                ),
-                enterTransition = { slideInFromRight() },
-                exitTransition = { slideOutToLeft() },
-                popEnterTransition = { slideInFromLeft() },
-                popExitTransition = { slideOutToRight() }
-            ) { backStackEntry ->
-                val linkedEventId = backStackEntry.arguments
-                    ?.getString(Screen.ChangeRequests.ARG_EVENT_ID)
-                    ?.takeIf { it != "null" }
-                com.coparently.app.presentation.changerequests.ChangeRequestsScreen(
-                    onBack = { navController.popBackStack() },
-                    onOpenEvent = { eventId ->
-                        navController.navigate(Screen.EditEvent.createRoute(eventId))
-                    },
-                    linkedEventId = linkedEventId
-                )
-            }
-
-            // Propose a new time for an event (MVP 2). The thread the proposal is announced in
-            // is resolved from the two uids by `ActivityAnnouncer`, not carried in the route.
-            composable(
-                route = Screen.RequestChange.route,
-                arguments = listOf(
-                    navArgument(Screen.RequestChange.ARG_EVENT_ID) {
-                        type = NavType.StringType
-                    }
-                )
-            ) { backStackEntry ->
-                val eventId = backStackEntry.arguments?.getString(Screen.RequestChange.ARG_EVENT_ID) ?: return@composable
-                com.coparently.app.presentation.changerequests.RequestChangeScreen(
-                    eventId = eventId,
-                    onBack = {
-                        navController.popBackStack()
-                    }
-                )
-            }
-
-            composable(
-                route = Screen.Settings.route,
-                enterTransition = { slideInFromRight() },
-                exitTransition = { slideOutToLeft() },
-                popEnterTransition = { slideInFromLeft() },
-                popExitTransition = { slideOutToRight() }
-            ) {
-                val googleSignInCallback = LocalGoogleSignInCallback.current
-                SettingsScreen(
-                    // Reached via the gear action in the top-level top bars — it opens as
-                    // a detail screen, so it gets a back arrow.
-                    onNavigateUp = { navController.popBackStack() },
-                    onNavigateToChildInfo = {
-                        navController.navigate(Screen.ChildInfo.route)
-                    },
-                    onNavigateToPets = {
-                        navController.navigate(Screen.Pets.route)
-                    },
-                    onNavigateToFriends = {
-                        navController.navigate(Screen.Friends.route)
-                    },
-                    onNavigateToCalendarFeed = {
-                        navController.navigate(Screen.CalendarFeed.route)
-                    },
-                    onNavigateToDataSources = {
-                        navController.navigate(Screen.DataSources.route)
-                    },
-                    onNavigateToProfessionals = {
-                        navController.navigate(Screen.Professionals.route)
-                    },
-                    onNavigateToPairing = {
-                        navController.navigate(Screen.Pairing.routeWithCode(null))
-                    },
-                    onNavigateToCustodySetup = {
-                        navController.navigate(Screen.CustodySetup.routeFor())
-                    },
-                    onNavigateToParentingPlan = {
-                        navController.navigate(Screen.ParentingPlan.route)
-                    },
-                    onNavigateToExport = {
-                        navController.navigate(Screen.Export.route)
-                    },
-                    onNavigateToDocuments = {
-                        navController.navigate(Screen.Documents.route)
-                    },
-                    onNavigateToJournal = {
-                        navController.navigate(Screen.Journal.route)
-                    },
-                    onNavigateToMyProfile = {
-                        navController.navigate(Screen.MyProfile.route)
-                    },
-                    onNavigateToCoParentProfile = {
-                        navController.navigate(Screen.CoParentProfile.route)
-                    },
-                    onStartGoogleSignIn = googleSignInCallback,
-                    onSignOut = {
-                        navController.navigate(Screen.Auth.route) {
-                            popUpTo(Screen.Home.route) { inclusive = true }
+                // Home / overview dashboard — first screen (MVP 2)
+                composable(
+                    route = Screen.Home.route,
+                    enterTransition = { tabEnter(forward = true) },
+                    exitTransition = { tabExit(forward = true) },
+                    popEnterTransition = { tabEnter(forward = false) },
+                    popExitTransition = { tabExit(forward = false) }
+                ) {
+                    com.coparently.app.presentation.home.HomeScreen(
+                        onOpenEvent = { eventId ->
+                            navController.navigate(Screen.EditEvent.createRoute(eventId))
+                        },
+                        onOpenChangeRequests = {
+                            navController.navigate(Screen.ChangeRequests.createRoute())
+                        },
+                        onOpenContacts = {
+                            navController.navigate(Screen.Contacts.route)
+                        },
+                        onOpenChildInfo = {
+                            navController.navigate(Screen.ChildInfo.route)
+                        },
+                        onOpenPets = {
+                            navController.navigate(Screen.Pets.route)
+                        },
+                        onOpenSettings = {
+                            navController.navigate(Screen.Settings.route)
+                        },
+                        onNavigateToPairing = {
+                            navController.navigate(Screen.Pairing.routeWithCode(null))
+                        },
+                        // The dashboard's stat tiles deep-link into the tabs that own those
+                        // numbers, so they behave exactly like tapping the tab itself — same
+                        // back stack, same restored state, bottom bar highlights correctly.
+                        onOpenExpenses = {
+                            navController.navigateToTab(BottomNavDestination.EXPENSES)
+                        },
+                        onOpenChat = {
+                            navController.navigateToTab(BottomNavDestination.CHAT)
+                        },
+                        // The empty week's action: the same form the calendar opens, with no date
+                        // preset, so the form starts from its own default.
+                        onAddEvent = {
+                            navController.navigate(Screen.AddEvent.createRoute())
                         }
-                    },
-                    syncViewModel = syncViewModel
-                )
-            }
+                    )
+                }
 
-            // A detail screen off Settings, like Custody Setup: it is a document the two parents
-            // fill in over weeks, not something the bottom bar should carry.
-            composable(
-                route = Screen.ParentingPlan.route,
-                enterTransition = { slideInFromRight() },
-                exitTransition = { slideOutToLeft() },
-                popEnterTransition = { slideInFromLeft() },
-                popExitTransition = { slideOutToRight() }
-            ) {
-                ParentingPlanScreen(
-                    onNavigateBack = { navController.popBackStack() },
-                    onProposeSchedule = { questionId ->
-                        navController.navigate(Screen.CustodySetup.routeFor(questionId))
-                    }
-                )
-            }
-
-            // The communication record (MON-3), off Settings beside the parenting plan: both are
-            // documents two parents may hand to a court, and neither is a tab's daily business.
-            composable(
-                route = Screen.Export.route,
-                enterTransition = { slideInFromRight() },
-                exitTransition = { slideOutToLeft() },
-                popEnterTransition = { slideInFromLeft() },
-                popExitTransition = { slideOutToRight() }
-            ) {
-                ExportScreen(onNavigateBack = { navController.popBackStack() })
-            }
-
-            // The document vault (MON-23), beside the export: the family's papers, shared with both
-            // parents, opened from Settings → Family like the other family records.
-            composable(
-                route = Screen.Documents.route,
-                enterTransition = { slideInFromRight() },
-                exitTransition = { slideOutToLeft() },
-                popEnterTransition = { slideInFromLeft() },
-                popExitTransition = { slideOutToRight() }
-            ) {
-                FamilyDocumentsScreen(onNavigateUp = { navController.popBackStack() })
-            }
-
-            // The private journal (MON-22), after the vault: this parent's own notes, kept on this
-            // phone only. The list, then the editor as a third level, like Pets.
-            composable(
-                route = Screen.Journal.route,
-                enterTransition = { slideInFromRight() },
-                exitTransition = { slideOutToLeft() },
-                popEnterTransition = { slideInFromLeft() },
-                popExitTransition = { slideOutToRight() }
-            ) {
-                JournalListScreen(
-                    onNavigateUp = { navController.popBackStack() },
-                    onOpenEntry = { id -> navController.navigate(Screen.JournalEditor.createRoute(id)) },
-                    onNewEntry = {
-                        navController.navigate(Screen.JournalEditor.createRoute(JournalEditorViewModel.NEW_ENTRY))
-                    }
-                )
-            }
-
-            composable(
-                route = Screen.JournalEditor.route,
-                arguments = listOf(
-                    navArgument(JournalEditorViewModel.ARG_ENTRY_ID) { type = NavType.StringType }
-                ),
-                enterTransition = { slideInFromRight() },
-                exitTransition = { slideOutToLeft() },
-                popEnterTransition = { slideInFromLeft() },
-                popExitTransition = { slideOutToRight() }
-            ) {
-                JournalEditorScreen(onNavigateUp = { navController.popBackStack() })
-            }
-
-            composable(
-                route = Screen.ChildInfo.route,
-                enterTransition = { slideInFromRight() },
-                exitTransition = { slideOutToLeft() },
-                popEnterTransition = { slideInFromLeft() },
-                popExitTransition = { slideOutToRight() }
-            ) {
-                ChildInfoScreen(
-                    onNavigateBack = {
-                        navController.popBackStack()
-                    },
-                    onOpenChild = { childInfoId ->
-                        navController.navigate(Screen.ChildDetail.createRoute(childInfoId))
-                    },
-                    onAddChild = {
-                        navController.navigate(Screen.EditChildInfo.createRoute("new"))
-                    }
-                )
-            }
-
-            // The child's own record. A third level rather than the two Pets uses: the summary
-            // here carries medical photos, the medical profile and the guest-access group, none
-            // of which belong in a form.
-            composable(
-                route = Screen.ChildDetail.route,
-                arguments = listOf(
-                    navArgument(Screen.ChildDetail.ARG_CHILD_INFO_ID) {
-                        type = NavType.StringType
-                    }
-                ),
-                enterTransition = { slideInFromRight() },
-                exitTransition = { slideOutToLeft() },
-                popEnterTransition = { slideInFromLeft() },
-                popExitTransition = { slideOutToRight() }
-            ) { backStackEntry ->
-                val childInfoId = backStackEntry.arguments
-                    ?.getString(Screen.ChildDetail.ARG_CHILD_INFO_ID)
-                    .orEmpty()
-                com.coparently.app.presentation.childinfo.ChildDetailScreen(
-                    childInfoId = childInfoId,
-                    onNavigateBack = { navController.popBackStack() },
-                    onEditClick = { id ->
-                        navController.navigate(Screen.EditChildInfo.createRoute(id))
-                    }
-                )
-            }
-
-            composable(
-                route = Screen.EditChildInfo.route,
-                arguments = listOf(
-                    navArgument(Screen.EditChildInfo.ARG_CHILD_INFO_ID) {
-                        type = NavType.StringType
-                    }
-                )
-            ) { backStackEntry ->
-                val childInfoId = backStackEntry.arguments?.getString(Screen.EditChildInfo.ARG_CHILD_INFO_ID) ?: "new"
-                com.coparently.app.presentation.childinfo.AddEditChildInfoScreen(
-                    childInfoId = childInfoId,
-                    onNavigateBack = {
-                        navController.popBackStack()
-                    }
-                )
-            }
-
-            // Pets: a list screen plus its editor, both detail routes (bottom bar hidden),
-            // mirroring the ChildInfo pair above.
-            composable(
-                route = Screen.Pets.route,
-                enterTransition = { slideInFromRight() },
-                exitTransition = { slideOutToLeft() },
-                popEnterTransition = { slideInFromLeft() },
-                popExitTransition = { slideOutToRight() }
-            ) {
-                PetsScreen(
-                    onNavigateBack = { navController.popBackStack() },
-                    onEditPet = { petId ->
-                        navController.navigate(Screen.EditPet.createRoute(petId))
-                    }
-                )
-            }
-
-            composable(
-                route = Screen.EditPet.route,
-                arguments = listOf(
-                    navArgument(Screen.EditPet.ARG_PET_ID) {
-                        type = NavType.StringType
-                    }
-                )
-            ) { backStackEntry ->
-                val petId = backStackEntry.arguments?.getString(Screen.EditPet.ARG_PET_ID) ?: "new"
-                AddEditPetScreen(
-                    petId = petId,
-                    onNavigateBack = { navController.popBackStack() }
-                )
-            }
-
-            composable(
-                route = Screen.Pairing.route,
-                arguments = listOf(
-                    navArgument(Screen.Pairing.ARG_CODE) {
-                        type = NavType.StringType
-                        defaultValue = ""
-                    },
-                    navArgument(Screen.Pairing.ARG_ENTER) {
-                        type = NavType.BoolType
-                        defaultValue = false
-                    }
-                ),
-                enterTransition = { slideInFromRight() },
-                exitTransition = { slideOutToLeft() },
-                popEnterTransition = { slideInFromLeft() },
-                popExitTransition = { slideOutToRight() }
-            ) { backStackEntry ->
-                PairingScreen(
-                    onNavigateBack = {
-                        navController.popBackStack()
-                    },
-                    onCustodyConflict = {
-                        navController.navigate(Screen.CustodyConflict.route)
-                    },
-                    prefilledCode = backStackEntry.arguments
-                        ?.getString(Screen.Pairing.ARG_CODE)
-                        ?.takeIf { it.isNotEmpty() },
-                    startOnCodeEntry = backStackEntry.arguments
-                        ?.getBoolean(Screen.Pairing.ARG_ENTER) ?: false
-                )
-            }
-
-            composable(
-                route = Screen.GuestAccept.route,
-                arguments = listOf(
-                    navArgument(Screen.GuestAccept.ARG_CODE) {
-                        type = NavType.StringType
-                        defaultValue = ""
-                    }
-                ),
-                enterTransition = { slideInFromRight() },
-                exitTransition = { slideOutToLeft() },
-                popEnterTransition = { slideInFromLeft() },
-                popExitTransition = { slideOutToRight() }
-            ) { backStackEntry ->
-                com.coparently.app.presentation.guests.GuestAcceptScreen(
-                    onDone = { navController.popBackStack() },
-                    prefilledCode = backStackEntry.arguments
-                        ?.getString(Screen.GuestAccept.ARG_CODE)
-                        ?.takeIf { it.isNotEmpty() }
-                )
-            }
-
-            composable(
-                route = Screen.CustodyConflict.route,
-                enterTransition = { slideInFromRight() },
-                exitTransition = { slideOutToLeft() },
-                popEnterTransition = { slideInFromLeft() },
-                popExitTransition = { slideOutToRight() }
-            ) {
-                // No `onNavigateBack`: the screen offers two actions and no third exit, and
-                // swallows the system back gesture itself. This lambda runs only once a choice
-                // has been written (or when there is no conflict left to show), so popping here
-                // never discards an unmade decision.
-                com.coparently.app.presentation.pairing.CustodyConflictScreen(
-                    onResolved = {
-                        navController.popBackStack()
-                    }
-                )
-            }
-
-            // Read-only calendar links for an iPhone (MON-17). A Settings detail route.
-            composable(route = Screen.CalendarFeed.route) {
-                com.coparently.app.presentation.settings.CalendarFeedScreen(
-                    onNavigateUp = { navController.popBackStack() }
-                )
-            }
-
-            // Data sources and licences (MON-13's ODbL attribution). A Settings detail route.
-            composable(route = Screen.DataSources.route) {
-                com.coparently.app.presentation.settings.DataSourcesScreen(
-                    onNavigateUp = { navController.popBackStack() }
-                )
-            }
-
-            // The parents' friend list, and the friend's own profile. Detail routes: the
-            // bottom bar hides and an up-arrow returns, like every other Settings destination.
-            composable(route = Screen.Friends.route) {
-                com.coparently.app.presentation.friends.FriendsScreen(
-                    onNavigateUp = { navController.popBackStack() },
-                    onOpenFriend = { uid ->
-                        navController.navigate(Screen.FriendDetail.createRoute(uid))
-                    },
-                    onOpenMyProfile = { navController.navigate(Screen.FriendProfile.route) }
-                )
-            }
-
-            composable(
-                route = Screen.FriendDetail.route,
-                arguments = listOf(
-                    navArgument(Screen.FriendDetail.ARG_FRIEND_UID) {
-                        type = NavType.StringType
-                    }
-                )
-            ) { backStackEntry ->
-                val friendUid = backStackEntry.arguments
-                    ?.getString(Screen.FriendDetail.ARG_FRIEND_UID).orEmpty()
-                com.coparently.app.presentation.friends.FriendDetailScreen(
-                    friendUid = friendUid,
-                    onNavigateUp = { navController.popBackStack() },
-                    // Revoking removes the row this screen was opened from, so it returns to
-                    // the list rather than leaving a card for an access that no longer exists.
-                    onRevoked = { navController.popBackStack() }
-                )
-            }
-
-            composable(route = Screen.FriendProfile.route) {
-                com.coparently.app.presentation.friends.FriendProfileScreen(
-                    onNavigateUp = { navController.popBackStack() }
-                )
-            }
-
-            // Professional access (MON-18): the parents' list and, on a professional's phone, the
-            // families they read. The two read-only views are detail routes keyed by grant id.
-            composable(route = Screen.Professionals.route) {
-                com.coparently.app.presentation.professionals.ProfessionalsScreen(
-                    onNavigateUp = { navController.popBackStack() },
-                    onOpenCalendar = { grantId ->
-                        navController.navigate(Screen.ProfessionalCalendar.createRoute(grantId))
-                    },
-                    onOpenPlan = { grantId ->
-                        navController.navigate(Screen.ProfessionalPlan.createRoute(grantId))
-                    }
-                )
-            }
-
-            composable(
-                route = Screen.ProfessionalCalendar.route,
-                arguments = listOf(
-                    navArgument(Screen.ProfessionalCalendar.ARG_GRANT_ID) { type = NavType.StringType }
-                )
-            ) {
-                com.coparently.app.presentation.professionals.ProfessionalCalendarScreen(
-                    onNavigateUp = { navController.popBackStack() }
-                )
-            }
-
-            composable(
-                route = Screen.ProfessionalPlan.route,
-                arguments = listOf(
-                    navArgument(Screen.ProfessionalPlan.ARG_GRANT_ID) { type = NavType.StringType }
-                )
-            ) {
-                com.coparently.app.presentation.professionals.ProfessionalPlanScreen(
-                    onNavigateUp = { navController.popBackStack() }
-                )
-            }
-
-            composable(
-                route = Screen.CustodySetup.route,
-                // Read by `CustodySetupViewModel` and `SeasonalScheduleViewModel` through their
-                // SavedStateHandle; blank opens the editor exactly as it always opened.
-                arguments = listOf(
-                    navArgument(Screen.CustodySetup.ARG_PLAN_QUESTION) {
-                        type = NavType.StringType
-                        defaultValue = ""
-                    }
-                ),
-                enterTransition = { slideInFromRight() },
-                exitTransition = { slideOutToLeft() },
-                popEnterTransition = { slideInFromLeft() },
-                popExitTransition = { slideOutToRight() }
-            ) {
-                com.coparently.app.presentation.custody.CustodySetupScreen(
-                    onNavigateBack = {
-                        navController.popBackStack()
-                    }
-                )
-            }
-
-            // Both are detail screens: neither route is in BottomNavDestination.topLevelRoutes,
-            // so the bottom bar hides itself automatically, same as Settings/ChildInfo above.
-            composable(
-                route = Screen.MyProfile.route,
-                enterTransition = { slideInFromRight() },
-                exitTransition = { slideOutToLeft() },
-                popEnterTransition = { slideInFromLeft() },
-                popExitTransition = { slideOutToRight() }
-            ) {
-                com.coparently.app.presentation.profile.ProfileScreen(
-                    editable = true,
-                    onNavigateUp = navController::popBackStack
-                )
-            }
-
-            composable(
-                route = Screen.CoParentProfile.route,
-                enterTransition = { slideInFromRight() },
-                exitTransition = { slideOutToLeft() },
-                popEnterTransition = { slideInFromLeft() },
-                popExitTransition = { slideOutToRight() }
-            ) {
-                com.coparently.app.presentation.profile.ProfileScreen(
-                    editable = false,
-                    onNavigateUp = navController::popBackStack
-                )
-            }
-
-            // Chat & Communications
-            composable(
-                route = Screen.Conversations.route,
-                arguments = listOf(
-                    navArgument(Screen.Conversations.ARG_DRAFT) {
-                        type = NavType.StringType
-                        defaultValue = ""
-                    }
-                ),
-                enterTransition = { tabEnter(forward = true) },
-                exitTransition = { tabExit(forward = true) },
-                popEnterTransition = { tabEnter(forward = false) },
-                popExitTransition = { tabExit(forward = false) }
-            ) { backStackEntry ->
-                val draft = backStackEntry.arguments
-                    ?.getString(Screen.Conversations.ARG_DRAFT).orEmpty()
-                com.coparently.app.presentation.chat.ConversationsScreen(
-                    onConversationClick = { conversationId ->
-                        navController.navigate(
-                            Screen.Chat.createRoute(conversationId, draft.ifEmpty { null })
-                        )
-                    },
-                    onNavigateToPairing = {
-                        navController.navigate(Screen.Pairing.routeWithCode(null))
-                    },
-                    onOpenSettings = {
-                        navController.navigate(Screen.Settings.route)
-                    },
-                    // With one co-parent there is one conversation, and the tab renders that
-                    // thread in place — so the draft and the change-request route have to
-                    // reach it here too, not only via the Chat detail route below.
-                    draft = draft,
-                    onRequestChangeForEvent = { eventId ->
-                        navController.navigate(Screen.RequestChange.createRoute(eventId))
-                    },
-                    onOpenChangeRequest = { eventId ->
-                        navController.navigate(Screen.ChangeRequests.createRoute(eventId))
-                    },
-                    // A day-swap chat card: the inbox with nothing highlighted — its
-                    // entity is a date the event-id argument would misread.
-                    onOpenInbox = {
-                        navController.navigate(Screen.ChangeRequests.createRoute())
-                    }
-                )
-            }
-
-            composable(
-                route = Screen.Chat.route,
-                arguments = listOf(
-                    navArgument(Screen.Chat.ARG_CONVERSATION_ID) {
-                        type = NavType.StringType
-                    },
-                    navArgument(Screen.Chat.ARG_DRAFT) {
-                        type = NavType.StringType
-                        defaultValue = ""
-                    }
-                ),
-                enterTransition = { slideInFromRight() },
-                exitTransition = { slideOutToLeft() },
-                popEnterTransition = { slideInFromLeft() },
-                popExitTransition = { slideOutToRight() }
-            ) { backStackEntry ->
-                val conversationId = backStackEntry.arguments?.getString(Screen.Chat.ARG_CONVERSATION_ID) ?: return@composable
-                com.coparently.app.presentation.chat.ChatScreen(
-                    conversationId = conversationId,
-                    draft = backStackEntry.arguments?.getString(Screen.Chat.ARG_DRAFT).orEmpty(),
-                    onBack = {
-                        navController.popBackStack()
-                    },
-                    onRequestChangeForEvent = { eventId ->
-                        navController.navigate(
-                            Screen.RequestChange.createRoute(eventId)
-                        )
-                    },
-                    onOpenChangeRequest = { eventId ->
-                        navController.navigate(Screen.ChangeRequests.createRoute(eventId))
-                    },
-                    // A day-swap chat card: the inbox with nothing highlighted — its
-                    // entity is a date the event-id argument would misread.
-                    onOpenInbox = {
-                        navController.navigate(Screen.ChangeRequests.createRoute())
-                    }
-                )
-            }
-
-            // Expenses & Budget
-            composable(
-                route = Screen.Expenses.route,
-                enterTransition = { tabEnter(forward = true) },
-                exitTransition = { tabExit(forward = true) },
-                popEnterTransition = { tabEnter(forward = false) },
-                popExitTransition = { tabExit(forward = false) }
-            ) {
-                com.coparently.app.presentation.expenses.ExpenseScreen(
-                    onAddExpense = {
-                        navController.navigate(Screen.AddExpense.route)
-                    },
-                    onEditExpense = { expenseId ->
-                        navController.navigate(Screen.EditExpense.createRoute(expenseId))
-                    },
-                    onOpenSettings = {
-                        navController.navigate(Screen.Settings.route)
-                    },
-                    onSettleUp = { draft ->
-                        // Carries the message to the thread the user opens and stops there:
-                        // sending it is theirs to do. Same tab semantics as navigateToTab — a
-                        // plain navigate() here was the one path that pushed the Chat route
-                        // onto the Expenses tab's stack, so the next tab switch saved that
-                        // mixed stack and every later visit to Expenses restored the chat
-                        // screen on top of it instead of the expenses list.
-                        navController.navigate(Screen.Conversations.createRoute(draft)) {
-                            popUpTo(Screen.Home.route) { saveState = true }
-                            launchSingleTop = true
-                            restoreState = false
+                composable(
+                    route = Screen.Calendar.route,
+                    enterTransition = { tabEnter(forward = true) },
+                    exitTransition = { tabExit(forward = true) },
+                    popEnterTransition = { tabEnter(forward = false) },
+                    popExitTransition = { tabExit(forward = false) }
+                ) {
+                    CalendarScreen(
+                        onEventClick = { eventId ->
+                            navController.navigate(Screen.EditEvent.createRoute(eventId))
+                        },
+                        onAddEventClick = { date, hour ->
+                            navController.navigate(Screen.AddEvent.createRoute(date, hour))
+                        },
+                        onSettingsClick = {
+                            navController.navigate(Screen.Settings.route)
+                        },
+                        onChangeRequestsClick = {
+                            navController.navigate(Screen.ChangeRequests.createRoute())
                         }
-                    }
-                )
-            }
+                    )
+                }
 
-            composable(
-                route = Screen.AddExpense.route
-            ) {
-                com.coparently.app.presentation.expenses.AddExpenseScreen(
-                    onBack = {
-                        navController.popBackStack()
-                    }
-                )
-            }
+                composable(
+                    route = Screen.EventList.route,
+                    enterTransition = { slideInFromRight() },
+                    exitTransition = { slideOutToLeft() },
+                    popEnterTransition = { slideInFromLeft() },
+                    popExitTransition = { slideOutToRight() }
+                ) {
+                    EventListScreen(
+                        onEventClick = { eventId ->
+                            navController.navigate(Screen.EditEvent.createRoute(eventId))
+                        },
+                        onAddEventClick = {
+                            navController.navigate(Screen.AddEvent.route)
+                        },
+                        onNavigateUp = {
+                            navController.popBackStack()
+                        }
+                    )
+                }
 
-            composable(
-                route = Screen.EditExpense.route,
-                arguments = listOf(
-                    navArgument(Screen.EditExpense.ARG_EXPENSE_ID) {
-                        type = NavType.StringType
-                    }
-                )
-            ) { backStackEntry ->
-                val expenseId = backStackEntry.arguments
-                    ?.getString(Screen.EditExpense.ARG_EXPENSE_ID) ?: return@composable
-                com.coparently.app.presentation.expenses.AddExpenseScreen(
-                    onBack = {
-                        navController.popBackStack()
-                    },
-                    expenseId = expenseId
-                )
-            }
+                composable(
+                    route = Screen.AddEvent.route,
+                    arguments = listOf(
+                        navArgument(Screen.AddEvent.ARG_DATE) {
+                            type = NavType.StringType
+                            nullable = true
+                            defaultValue = null
+                        },
+                        navArgument(Screen.AddEvent.ARG_HOUR) {
+                            type = NavType.IntType
+                            defaultValue = -1
+                        }
+                    )
+                ) { backStackEntry ->
+                    val dateString = backStackEntry.arguments?.getString(Screen.AddEvent.ARG_DATE)
+                    val hourValue = backStackEntry.arguments?.getInt(Screen.AddEvent.ARG_HOUR) ?: -1
+                    val hour = if (hourValue >= 0) hourValue else null
+                    val initialDate = dateString?.takeIf { it != "null" }?.let { java.time.LocalDate.parse(it) }
 
-            composable(
-                route = Screen.Budgets.route,
-                enterTransition = { slideInFromRight() },
-                exitTransition = { slideOutToLeft() },
-                popEnterTransition = { slideInFromLeft() },
-                popExitTransition = { slideOutToRight() }
-            ) {
-                com.coparently.app.presentation.expenses.BudgetScreen(
-                    onBack = {
-                        navController.popBackStack()
-                    }
-                )
+                    AddEditEventScreen(
+                        eventId = null,
+                        initialDate = initialDate,
+                        initialHour = hour,
+                        onSave = {
+                            navController.popBackStack()
+                        },
+                        onCancel = {
+                            navController.popBackStack()
+                        }
+                    )
+                }
+
+                composable(
+                    route = Screen.EditEvent.route,
+                    arguments = listOf(
+                        navArgument(Screen.EditEvent.ARG_EVENT_ID) {
+                            type = NavType.StringType
+                        }
+                    )
+                ) { backStackEntry ->
+                    val eventId = backStackEntry.arguments?.getString(Screen.EditEvent.ARG_EVENT_ID)
+                        ?: return@composable
+                    AddEditEventScreen(
+                        eventId = eventId,
+                        onSave = {
+                            navController.popBackStack()
+                        },
+                        onCancel = {
+                            navController.popBackStack()
+                        },
+                        onRequestChange = { id ->
+                            navController.navigate(Screen.RequestChange.createRoute(id))
+                        }
+                    )
+                }
+
+                // Contacts — the numbers worth finding in a hurry. A detail screen, deliberately
+                // not a tab: it is opened rarely and urgently, not browsed.
+                composable(
+                    route = Screen.Contacts.route,
+                    enterTransition = { slideInFromRight() },
+                    exitTransition = { slideOutToLeft() },
+                    popEnterTransition = { slideInFromLeft() },
+                    popExitTransition = { slideOutToRight() }
+                ) {
+                    com.coparently.app.presentation.contacts.ContactsScreen(
+                        onNavigateUp = { navController.popBackStack() },
+                        // A contact lives on a child's record, so adding one starts at the children.
+                        onAddContact = { navController.navigate(Screen.ChildInfo.route) }
+                    )
+                }
+
+                // Event change requests inbox (MVP 2)
+                composable(
+                    route = Screen.ChangeRequests.route,
+                    arguments = listOf(
+                        navArgument(Screen.ChangeRequests.ARG_EVENT_ID) {
+                            type = NavType.StringType
+                            nullable = true
+                            defaultValue = null
+                        }
+                    ),
+                    enterTransition = { slideInFromRight() },
+                    exitTransition = { slideOutToLeft() },
+                    popEnterTransition = { slideInFromLeft() },
+                    popExitTransition = { slideOutToRight() }
+                ) { backStackEntry ->
+                    val linkedEventId = backStackEntry.arguments
+                        ?.getString(Screen.ChangeRequests.ARG_EVENT_ID)
+                        ?.takeIf { it != "null" }
+                    com.coparently.app.presentation.changerequests.ChangeRequestsScreen(
+                        onBack = { navController.popBackStack() },
+                        onOpenEvent = { eventId ->
+                            navController.navigate(Screen.EditEvent.createRoute(eventId))
+                        },
+                        linkedEventId = linkedEventId
+                    )
+                }
+
+                // Propose a new time for an event (MVP 2). The thread the proposal is announced in
+                // is resolved from the two uids by `ActivityAnnouncer`, not carried in the route.
+                composable(
+                    route = Screen.RequestChange.route,
+                    arguments = listOf(
+                        navArgument(Screen.RequestChange.ARG_EVENT_ID) {
+                            type = NavType.StringType
+                        }
+                    )
+                ) { backStackEntry ->
+                    val eventId = backStackEntry.arguments?.getString(Screen.RequestChange.ARG_EVENT_ID) ?: return@composable
+                    com.coparently.app.presentation.changerequests.RequestChangeScreen(
+                        eventId = eventId,
+                        onBack = {
+                            navController.popBackStack()
+                        }
+                    )
+                }
+
+                composable(
+                    route = Screen.Settings.route,
+                    enterTransition = { slideInFromRight() },
+                    exitTransition = { slideOutToLeft() },
+                    popEnterTransition = { slideInFromLeft() },
+                    popExitTransition = { slideOutToRight() }
+                ) {
+                    val googleSignInCallback = LocalGoogleSignInCallback.current
+                    SettingsScreen(
+                        // Reached via the gear action in the top-level top bars — it opens as
+                        // a detail screen, so it gets a back arrow.
+                        onNavigateUp = { navController.popBackStack() },
+                        onNavigateToChildInfo = {
+                            navController.navigate(Screen.ChildInfo.route)
+                        },
+                        onNavigateToPets = {
+                            navController.navigate(Screen.Pets.route)
+                        },
+                        onNavigateToFriends = {
+                            navController.navigate(Screen.Friends.route)
+                        },
+                        onNavigateToCalendarFeed = {
+                            navController.navigate(Screen.CalendarFeed.route)
+                        },
+                        onNavigateToDataSources = {
+                            navController.navigate(Screen.DataSources.route)
+                        },
+                        onNavigateToProfessionals = {
+                            navController.navigate(Screen.Professionals.route)
+                        },
+                        onNavigateToPairing = {
+                            navController.navigate(Screen.Pairing.routeWithCode(null))
+                        },
+                        onNavigateToCustodySetup = {
+                            navController.navigate(Screen.CustodySetup.routeFor())
+                        },
+                        onNavigateToParentingPlan = {
+                            navController.navigate(Screen.ParentingPlan.route)
+                        },
+                        onNavigateToExport = {
+                            navController.navigate(Screen.Export.route)
+                        },
+                        onNavigateToDocuments = {
+                            navController.navigate(Screen.Documents.route)
+                        },
+                        onNavigateToJournal = {
+                            navController.navigate(Screen.Journal.route)
+                        },
+                        onNavigateToMyProfile = {
+                            navController.navigate(Screen.MyProfile.route)
+                        },
+                        onNavigateToCoParentProfile = {
+                            navController.navigate(Screen.CoParentProfile.route)
+                        },
+                        onStartGoogleSignIn = googleSignInCallback,
+                        onSignOut = {
+                            navController.navigate(Screen.Auth.route) {
+                                popUpTo(Screen.Home.route) { inclusive = true }
+                            }
+                        },
+                        syncViewModel = syncViewModel
+                    )
+                }
+
+                // A detail screen off Settings, like Custody Setup: it is a document the two parents
+                // fill in over weeks, not something the bottom bar should carry.
+                composable(
+                    route = Screen.ParentingPlan.route,
+                    enterTransition = { slideInFromRight() },
+                    exitTransition = { slideOutToLeft() },
+                    popEnterTransition = { slideInFromLeft() },
+                    popExitTransition = { slideOutToRight() }
+                ) {
+                    ParentingPlanScreen(
+                        onNavigateBack = { navController.popBackStack() },
+                        onProposeSchedule = { questionId ->
+                            navController.navigate(Screen.CustodySetup.routeFor(questionId))
+                        }
+                    )
+                }
+
+                // The communication record (MON-3), off Settings beside the parenting plan: both are
+                // documents two parents may hand to a court, and neither is a tab's daily business.
+                composable(
+                    route = Screen.Export.route,
+                    enterTransition = { slideInFromRight() },
+                    exitTransition = { slideOutToLeft() },
+                    popEnterTransition = { slideInFromLeft() },
+                    popExitTransition = { slideOutToRight() }
+                ) {
+                    ExportScreen(onNavigateBack = { navController.popBackStack() })
+                }
+
+                // The document vault (MON-23), beside the export: the family's papers, shared with both
+                // parents, opened from Settings → Family like the other family records.
+                composable(
+                    route = Screen.Documents.route,
+                    enterTransition = { slideInFromRight() },
+                    exitTransition = { slideOutToLeft() },
+                    popEnterTransition = { slideInFromLeft() },
+                    popExitTransition = { slideOutToRight() }
+                ) {
+                    FamilyDocumentsScreen(onNavigateUp = { navController.popBackStack() })
+                }
+
+                // The private journal (MON-22), after the vault: this parent's own notes, kept on this
+                // phone only. The list, then the editor as a third level, like Pets.
+                composable(
+                    route = Screen.Journal.route,
+                    enterTransition = { slideInFromRight() },
+                    exitTransition = { slideOutToLeft() },
+                    popEnterTransition = { slideInFromLeft() },
+                    popExitTransition = { slideOutToRight() }
+                ) {
+                    JournalListScreen(
+                        onNavigateUp = { navController.popBackStack() },
+                        onOpenEntry = { id -> navController.navigate(Screen.JournalEditor.createRoute(id)) },
+                        onNewEntry = {
+                            navController.navigate(Screen.JournalEditor.createRoute(JournalEditorViewModel.NEW_ENTRY))
+                        }
+                    )
+                }
+
+                composable(
+                    route = Screen.JournalEditor.route,
+                    arguments = listOf(
+                        navArgument(JournalEditorViewModel.ARG_ENTRY_ID) { type = NavType.StringType }
+                    ),
+                    enterTransition = { slideInFromRight() },
+                    exitTransition = { slideOutToLeft() },
+                    popEnterTransition = { slideInFromLeft() },
+                    popExitTransition = { slideOutToRight() }
+                ) {
+                    JournalEditorScreen(onNavigateUp = { navController.popBackStack() })
+                }
+
+                composable(
+                    route = Screen.ChildInfo.route,
+                    enterTransition = { slideInFromRight() },
+                    exitTransition = { slideOutToLeft() },
+                    popEnterTransition = { slideInFromLeft() },
+                    popExitTransition = { slideOutToRight() }
+                ) {
+                    ChildInfoScreen(
+                        onNavigateBack = {
+                            navController.popBackStack()
+                        },
+                        onOpenChild = { childInfoId ->
+                            navController.navigate(Screen.ChildDetail.createRoute(childInfoId))
+                        },
+                        onAddChild = {
+                            navController.navigate(Screen.EditChildInfo.createRoute("new"))
+                        }
+                    )
+                }
+
+                // The child's own record. A third level rather than the two Pets uses: the summary
+                // here carries medical photos, the medical profile and the guest-access group, none
+                // of which belong in a form.
+                composable(
+                    route = Screen.ChildDetail.route,
+                    arguments = listOf(
+                        navArgument(Screen.ChildDetail.ARG_CHILD_INFO_ID) {
+                            type = NavType.StringType
+                        }
+                    ),
+                    enterTransition = { slideInFromRight() },
+                    exitTransition = { slideOutToLeft() },
+                    popEnterTransition = { slideInFromLeft() },
+                    popExitTransition = { slideOutToRight() }
+                ) { backStackEntry ->
+                    val childInfoId = backStackEntry.arguments
+                        ?.getString(Screen.ChildDetail.ARG_CHILD_INFO_ID)
+                        .orEmpty()
+                    com.coparently.app.presentation.childinfo.ChildDetailScreen(
+                        childInfoId = childInfoId,
+                        onNavigateBack = { navController.popBackStack() },
+                        onEditClick = { id ->
+                            navController.navigate(Screen.EditChildInfo.createRoute(id))
+                        }
+                    )
+                }
+
+                composable(
+                    route = Screen.EditChildInfo.route,
+                    arguments = listOf(
+                        navArgument(Screen.EditChildInfo.ARG_CHILD_INFO_ID) {
+                            type = NavType.StringType
+                        }
+                    )
+                ) { backStackEntry ->
+                    val childInfoId = backStackEntry.arguments?.getString(Screen.EditChildInfo.ARG_CHILD_INFO_ID)
+                        ?: "new"
+                    com.coparently.app.presentation.childinfo.AddEditChildInfoScreen(
+                        childInfoId = childInfoId,
+                        onNavigateBack = {
+                            navController.popBackStack()
+                        }
+                    )
+                }
+
+                // Pets: a list screen plus its editor, both detail routes (bottom bar hidden),
+                // mirroring the ChildInfo pair above.
+                composable(
+                    route = Screen.Pets.route,
+                    enterTransition = { slideInFromRight() },
+                    exitTransition = { slideOutToLeft() },
+                    popEnterTransition = { slideInFromLeft() },
+                    popExitTransition = { slideOutToRight() }
+                ) {
+                    PetsScreen(
+                        onNavigateBack = { navController.popBackStack() },
+                        onEditPet = { petId ->
+                            navController.navigate(Screen.EditPet.createRoute(petId))
+                        }
+                    )
+                }
+
+                composable(
+                    route = Screen.EditPet.route,
+                    arguments = listOf(
+                        navArgument(Screen.EditPet.ARG_PET_ID) {
+                            type = NavType.StringType
+                        }
+                    )
+                ) { backStackEntry ->
+                    val petId = backStackEntry.arguments?.getString(Screen.EditPet.ARG_PET_ID) ?: "new"
+                    AddEditPetScreen(
+                        petId = petId,
+                        onNavigateBack = { navController.popBackStack() }
+                    )
+                }
+
+                composable(
+                    route = Screen.Pairing.route,
+                    arguments = listOf(
+                        navArgument(Screen.Pairing.ARG_CODE) {
+                            type = NavType.StringType
+                            defaultValue = ""
+                        },
+                        navArgument(Screen.Pairing.ARG_ENTER) {
+                            type = NavType.BoolType
+                            defaultValue = false
+                        }
+                    ),
+                    enterTransition = { slideInFromRight() },
+                    exitTransition = { slideOutToLeft() },
+                    popEnterTransition = { slideInFromLeft() },
+                    popExitTransition = { slideOutToRight() }
+                ) { backStackEntry ->
+                    PairingScreen(
+                        onNavigateBack = {
+                            navController.popBackStack()
+                        },
+                        onCustodyConflict = {
+                            navController.navigate(Screen.CustodyConflict.route)
+                        },
+                        prefilledCode = backStackEntry.arguments
+                            ?.getString(Screen.Pairing.ARG_CODE)
+                            ?.takeIf { it.isNotEmpty() },
+                        startOnCodeEntry = backStackEntry.arguments
+                            ?.getBoolean(Screen.Pairing.ARG_ENTER) ?: false
+                    )
+                }
+
+                composable(
+                    route = Screen.GuestAccept.route,
+                    arguments = listOf(
+                        navArgument(Screen.GuestAccept.ARG_CODE) {
+                            type = NavType.StringType
+                            defaultValue = ""
+                        }
+                    ),
+                    enterTransition = { slideInFromRight() },
+                    exitTransition = { slideOutToLeft() },
+                    popEnterTransition = { slideInFromLeft() },
+                    popExitTransition = { slideOutToRight() }
+                ) { backStackEntry ->
+                    com.coparently.app.presentation.guests.GuestAcceptScreen(
+                        onDone = { navController.popBackStack() },
+                        prefilledCode = backStackEntry.arguments
+                            ?.getString(Screen.GuestAccept.ARG_CODE)
+                            ?.takeIf { it.isNotEmpty() }
+                    )
+                }
+
+                composable(
+                    route = Screen.CustodyConflict.route,
+                    enterTransition = { slideInFromRight() },
+                    exitTransition = { slideOutToLeft() },
+                    popEnterTransition = { slideInFromLeft() },
+                    popExitTransition = { slideOutToRight() }
+                ) {
+                    // No `onNavigateBack`: the screen offers two actions and no third exit, and
+                    // swallows the system back gesture itself. This lambda runs only once a choice
+                    // has been written (or when there is no conflict left to show), so popping here
+                    // never discards an unmade decision.
+                    com.coparently.app.presentation.pairing.CustodyConflictScreen(
+                        onResolved = {
+                            navController.popBackStack()
+                        }
+                    )
+                }
+
+                // Read-only calendar links for an iPhone (MON-17). A Settings detail route.
+                composable(route = Screen.CalendarFeed.route) {
+                    com.coparently.app.presentation.settings.CalendarFeedScreen(
+                        onNavigateUp = { navController.popBackStack() }
+                    )
+                }
+
+                // Data sources and licences (MON-13's ODbL attribution). A Settings detail route.
+                composable(route = Screen.DataSources.route) {
+                    com.coparently.app.presentation.settings.DataSourcesScreen(
+                        onNavigateUp = { navController.popBackStack() }
+                    )
+                }
+
+                // The parents' friend list, and the friend's own profile. Detail routes: the
+                // bottom bar hides and an up-arrow returns, like every other Settings destination.
+                composable(route = Screen.Friends.route) {
+                    com.coparently.app.presentation.friends.FriendsScreen(
+                        onNavigateUp = { navController.popBackStack() },
+                        onOpenFriend = { uid ->
+                            navController.navigate(Screen.FriendDetail.createRoute(uid))
+                        },
+                        onOpenMyProfile = { navController.navigate(Screen.FriendProfile.route) }
+                    )
+                }
+
+                composable(
+                    route = Screen.FriendDetail.route,
+                    arguments = listOf(
+                        navArgument(Screen.FriendDetail.ARG_FRIEND_UID) {
+                            type = NavType.StringType
+                        }
+                    )
+                ) { backStackEntry ->
+                    val friendUid = backStackEntry.arguments
+                        ?.getString(Screen.FriendDetail.ARG_FRIEND_UID).orEmpty()
+                    com.coparently.app.presentation.friends.FriendDetailScreen(
+                        friendUid = friendUid,
+                        onNavigateUp = { navController.popBackStack() },
+                        // Revoking removes the row this screen was opened from, so it returns to
+                        // the list rather than leaving a card for an access that no longer exists.
+                        onRevoked = { navController.popBackStack() }
+                    )
+                }
+
+                composable(route = Screen.FriendProfile.route) {
+                    com.coparently.app.presentation.friends.FriendProfileScreen(
+                        onNavigateUp = { navController.popBackStack() }
+                    )
+                }
+
+                // Professional access (MON-18): the parents' list and, on a professional's phone, the
+                // families they read. The two read-only views are detail routes keyed by grant id.
+                composable(route = Screen.Professionals.route) {
+                    com.coparently.app.presentation.professionals.ProfessionalsScreen(
+                        onNavigateUp = { navController.popBackStack() },
+                        onOpenCalendar = { grantId ->
+                            navController.navigate(Screen.ProfessionalCalendar.createRoute(grantId))
+                        },
+                        onOpenPlan = { grantId ->
+                            navController.navigate(Screen.ProfessionalPlan.createRoute(grantId))
+                        }
+                    )
+                }
+
+                composable(
+                    route = Screen.ProfessionalCalendar.route,
+                    arguments = listOf(
+                        navArgument(Screen.ProfessionalCalendar.ARG_GRANT_ID) { type = NavType.StringType }
+                    )
+                ) {
+                    com.coparently.app.presentation.professionals.ProfessionalCalendarScreen(
+                        onNavigateUp = { navController.popBackStack() }
+                    )
+                }
+
+                composable(
+                    route = Screen.ProfessionalPlan.route,
+                    arguments = listOf(
+                        navArgument(Screen.ProfessionalPlan.ARG_GRANT_ID) { type = NavType.StringType }
+                    )
+                ) {
+                    com.coparently.app.presentation.professionals.ProfessionalPlanScreen(
+                        onNavigateUp = { navController.popBackStack() }
+                    )
+                }
+
+                composable(
+                    route = Screen.CustodySetup.route,
+                    // Read by `CustodySetupViewModel` and `SeasonalScheduleViewModel` through their
+                    // SavedStateHandle; blank opens the editor exactly as it always opened.
+                    arguments = listOf(
+                        navArgument(Screen.CustodySetup.ARG_PLAN_QUESTION) {
+                            type = NavType.StringType
+                            defaultValue = ""
+                        }
+                    ),
+                    enterTransition = { slideInFromRight() },
+                    exitTransition = { slideOutToLeft() },
+                    popEnterTransition = { slideInFromLeft() },
+                    popExitTransition = { slideOutToRight() }
+                ) {
+                    com.coparently.app.presentation.custody.CustodySetupScreen(
+                        onNavigateBack = {
+                            navController.popBackStack()
+                        }
+                    )
+                }
+
+                // Both are detail screens: neither route is in BottomNavDestination.topLevelRoutes,
+                // so the bottom bar hides itself automatically, same as Settings/ChildInfo above.
+                composable(
+                    route = Screen.MyProfile.route,
+                    enterTransition = { slideInFromRight() },
+                    exitTransition = { slideOutToLeft() },
+                    popEnterTransition = { slideInFromLeft() },
+                    popExitTransition = { slideOutToRight() }
+                ) {
+                    com.coparently.app.presentation.profile.ProfileScreen(
+                        editable = true,
+                        onNavigateUp = navController::popBackStack
+                    )
+                }
+
+                composable(
+                    route = Screen.CoParentProfile.route,
+                    enterTransition = { slideInFromRight() },
+                    exitTransition = { slideOutToLeft() },
+                    popEnterTransition = { slideInFromLeft() },
+                    popExitTransition = { slideOutToRight() }
+                ) {
+                    com.coparently.app.presentation.profile.ProfileScreen(
+                        editable = false,
+                        onNavigateUp = navController::popBackStack
+                    )
+                }
+
+                // Chat & Communications
+                composable(
+                    route = Screen.Conversations.route,
+                    arguments = listOf(
+                        navArgument(Screen.Conversations.ARG_DRAFT) {
+                            type = NavType.StringType
+                            defaultValue = ""
+                        }
+                    ),
+                    enterTransition = { tabEnter(forward = true) },
+                    exitTransition = { tabExit(forward = true) },
+                    popEnterTransition = { tabEnter(forward = false) },
+                    popExitTransition = { tabExit(forward = false) }
+                ) { backStackEntry ->
+                    val draft = backStackEntry.arguments
+                        ?.getString(Screen.Conversations.ARG_DRAFT).orEmpty()
+                    com.coparently.app.presentation.chat.ConversationsScreen(
+                        onConversationClick = { conversationId ->
+                            navController.navigate(
+                                Screen.Chat.createRoute(conversationId, draft.ifEmpty { null })
+                            )
+                        },
+                        onNavigateToPairing = {
+                            navController.navigate(Screen.Pairing.routeWithCode(null))
+                        },
+                        onOpenSettings = {
+                            navController.navigate(Screen.Settings.route)
+                        },
+                        // With one co-parent there is one conversation, and the tab renders that
+                        // thread in place — so the draft and the change-request route have to
+                        // reach it here too, not only via the Chat detail route below.
+                        draft = draft,
+                        onRequestChangeForEvent = { eventId ->
+                            navController.navigate(Screen.RequestChange.createRoute(eventId))
+                        },
+                        onOpenChangeRequest = { eventId ->
+                            navController.navigate(Screen.ChangeRequests.createRoute(eventId))
+                        },
+                        // A day-swap chat card: the inbox with nothing highlighted — its
+                        // entity is a date the event-id argument would misread.
+                        onOpenInbox = {
+                            navController.navigate(Screen.ChangeRequests.createRoute())
+                        }
+                    )
+                }
+
+                composable(
+                    route = Screen.Chat.route,
+                    arguments = listOf(
+                        navArgument(Screen.Chat.ARG_CONVERSATION_ID) {
+                            type = NavType.StringType
+                        },
+                        navArgument(Screen.Chat.ARG_DRAFT) {
+                            type = NavType.StringType
+                            defaultValue = ""
+                        }
+                    ),
+                    enterTransition = { slideInFromRight() },
+                    exitTransition = { slideOutToLeft() },
+                    popEnterTransition = { slideInFromLeft() },
+                    popExitTransition = { slideOutToRight() }
+                ) { backStackEntry ->
+                    val conversationId = backStackEntry.arguments?.getString(Screen.Chat.ARG_CONVERSATION_ID) ?: return@composable
+                    com.coparently.app.presentation.chat.ChatScreen(
+                        conversationId = conversationId,
+                        draft = backStackEntry.arguments?.getString(Screen.Chat.ARG_DRAFT).orEmpty(),
+                        onBack = {
+                            navController.popBackStack()
+                        },
+                        onRequestChangeForEvent = { eventId ->
+                            navController.navigate(
+                                Screen.RequestChange.createRoute(eventId)
+                            )
+                        },
+                        onOpenChangeRequest = { eventId ->
+                            navController.navigate(Screen.ChangeRequests.createRoute(eventId))
+                        },
+                        // A day-swap chat card: the inbox with nothing highlighted — its
+                        // entity is a date the event-id argument would misread.
+                        onOpenInbox = {
+                            navController.navigate(Screen.ChangeRequests.createRoute())
+                        }
+                    )
+                }
+
+                // Expenses & Budget
+                composable(
+                    route = Screen.Expenses.route,
+                    enterTransition = { tabEnter(forward = true) },
+                    exitTransition = { tabExit(forward = true) },
+                    popEnterTransition = { tabEnter(forward = false) },
+                    popExitTransition = { tabExit(forward = false) }
+                ) {
+                    com.coparently.app.presentation.expenses.ExpenseScreen(
+                        onAddExpense = {
+                            navController.navigate(Screen.AddExpense.route)
+                        },
+                        onEditExpense = { expenseId ->
+                            navController.navigate(Screen.EditExpense.createRoute(expenseId))
+                        },
+                        onOpenSettings = {
+                            navController.navigate(Screen.Settings.route)
+                        },
+                        onSettleUp = { draft ->
+                            // Carries the message to the thread the user opens and stops there:
+                            // sending it is theirs to do. Same tab semantics as navigateToTab — a
+                            // plain navigate() here was the one path that pushed the Chat route
+                            // onto the Expenses tab's stack, so the next tab switch saved that
+                            // mixed stack and every later visit to Expenses restored the chat
+                            // screen on top of it instead of the expenses list.
+                            navController.navigate(Screen.Conversations.createRoute(draft)) {
+                                popUpTo(Screen.Home.route) { saveState = true }
+                                launchSingleTop = true
+                                restoreState = false
+                            }
+                        }
+                    )
+                }
+
+                composable(
+                    route = Screen.AddExpense.route
+                ) {
+                    com.coparently.app.presentation.expenses.AddExpenseScreen(
+                        onBack = {
+                            navController.popBackStack()
+                        }
+                    )
+                }
+
+                composable(
+                    route = Screen.EditExpense.route,
+                    arguments = listOf(
+                        navArgument(Screen.EditExpense.ARG_EXPENSE_ID) {
+                            type = NavType.StringType
+                        }
+                    )
+                ) { backStackEntry ->
+                    val expenseId = backStackEntry.arguments
+                        ?.getString(Screen.EditExpense.ARG_EXPENSE_ID) ?: return@composable
+                    com.coparently.app.presentation.expenses.AddExpenseScreen(
+                        onBack = {
+                            navController.popBackStack()
+                        },
+                        expenseId = expenseId
+                    )
+                }
+
+                composable(
+                    route = Screen.Budgets.route,
+                    enterTransition = { slideInFromRight() },
+                    exitTransition = { slideOutToLeft() },
+                    popEnterTransition = { slideInFromLeft() },
+                    popExitTransition = { slideOutToRight() }
+                ) {
+                    com.coparently.app.presentation.expenses.BudgetScreen(
+                        onBack = {
+                            navController.popBackStack()
+                        }
+                    )
+                }
             }
         }
     }
@@ -1262,6 +1269,70 @@ internal fun startDestinationFor(
 }
 
 /**
+ * The bottom bar on a narrow window, sliding in and out with the four tab routes; nothing on a
+ * wide one, which gets [RailSlot] instead.
+ *
+ * @param layout Bar or rail, for this window
+ * @param visible Whether the route on screen is one of the four tabs
+ * @param currentRoute The route on screen, to mark its tab
+ * @param navController Tabs switch through [navigateToTab]
+ * @param chatUnreadCount The Chat tab's badge
+ */
+@Composable
+private fun BottomBarSlot(
+    layout: NavigationLayout,
+    visible: Boolean,
+    currentRoute: String?,
+    navController: NavHostController,
+    chatUnreadCount: Int
+) {
+    if (layout != NavigationLayout.BAR) return
+    AnimatedVisibility(
+        visible = visible,
+        enter = slideInVertically(initialOffsetY = { it }),
+        exit = slideOutVertically(targetOffsetY = { it })
+    ) {
+        CoPlanlyBottomBar(
+            currentRoute = currentRoute,
+            onNavigate = navController::navigateToTab,
+            chatUnreadCount = chatUnreadCount
+        )
+    }
+}
+
+/**
+ * The rail down the start edge on a wide window (see [NavigationLayout]), on the same four routes
+ * the bar shows on; nothing on a narrow window.
+ *
+ * @param layout Bar or rail, for this window
+ * @param visible Whether the route on screen is one of the four tabs
+ * @param currentRoute The route on screen, to mark its tab
+ * @param navController Tabs switch through [navigateToTab]
+ * @param chatUnreadCount The Chat tab's badge
+ */
+@Composable
+private fun RowScope.RailSlot(
+    layout: NavigationLayout,
+    visible: Boolean,
+    currentRoute: String?,
+    navController: NavHostController,
+    chatUnreadCount: Int
+) {
+    if (layout != NavigationLayout.RAIL) return
+    AnimatedVisibility(
+        visible = visible,
+        enter = slideInHorizontally(initialOffsetX = { -it }),
+        exit = slideOutHorizontally(targetOffsetX = { -it })
+    ) {
+        CoPlanlyNavigationRail(
+            currentRoute = currentRoute,
+            onNavigate = navController::navigateToTab,
+            chatUnreadCount = chatUnreadCount
+        )
+    }
+}
+
+/**
  * The screen a tapped push names, awaiting hand-off, bundled with the callback that clears it —
  * the same shape as [PendingChatOpen], for the same reason.
  *
@@ -1364,7 +1435,7 @@ private fun LoadingScreen() {
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(Spacing.L)
         ) {
             CircularProgressIndicator()
             Text(

@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ExpandMore
@@ -34,7 +33,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -43,6 +41,9 @@ import com.coparently.app.presentation.calendar.CalendarViewMode
 import com.coparently.app.presentation.common.rememberToday
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.LayoutConstants
+import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.presentation.theme.labelMediumEmphasized
+import com.coparently.app.presentation.theme.titleLargeEmphasized
 import com.coparently.app.utils.LightDarkPreviews
 import com.coparently.app.utils.PreviewWrapper
 import java.time.LocalDate
@@ -141,16 +142,15 @@ private fun MonthTitle(
             // bare `clickable` Row does not. It measured about 28dp and announced no role, so
             // TalkBack did not call it a control at all.
             modifier = Modifier
-                .clip(RoundedCornerShape(8.dp))
+                .clip(MaterialTheme.shapes.extraSmall)
                 .clickable(role = Role.Button) { menuOpen = true }
                 .defaultMinSize(minHeight = LayoutConstants.MIN_TOUCH_TARGET)
-                .padding(end = 4.dp),
+                .padding(end = Spacing.XS),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                 text = monthLabel,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleLargeEmphasized,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -211,7 +211,7 @@ private fun FiltersButton(onClick: () -> Unit, active: Boolean) {
                 modifier = Modifier.size(IconSizes.Inline)
             )
         },
-        modifier = Modifier.padding(end = 4.dp)
+        modifier = Modifier.padding(end = Spacing.XS)
     )
 }
 
@@ -225,14 +225,13 @@ private fun FiltersButton(onClick: () -> Unit, active: Boolean) {
 private fun TodayButton(onClick: () -> Unit) {
     OutlinedButton(
         onClick = onClick,
-        shape = RoundedCornerShape(12.dp),
-        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
-        modifier = Modifier.padding(end = 2.dp)
+        shape = MaterialTheme.shapes.small,
+        contentPadding = PaddingValues(horizontal = 10.dp, vertical = Spacing.XXS),
+        modifier = Modifier.padding(end = Spacing.XXS)
     ) {
         Text(
             text = stringResource(R.string.calendar_today_button),
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.SemiBold
+            style = MaterialTheme.typography.labelMediumEmphasized
         )
     }
 }

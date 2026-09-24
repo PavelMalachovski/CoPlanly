@@ -22,7 +22,9 @@ import com.coparently.app.domain.model.*
 import com.coparently.app.presentation.childinfo.components.*
 import com.coparently.app.presentation.common.ConfirmationDialog
 import com.coparently.app.presentation.common.MedicalProfileEditor
+import com.coparently.app.presentation.common.field
 import com.coparently.app.presentation.common.rememberDiscardGuard
+import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.utils.localizedDate
 import java.time.LocalDateTime
 import java.util.UUID
@@ -44,23 +46,26 @@ fun AddEditChildInfoScreen(
 ) {
     val haptic = LocalHapticFeedback.current
 
-    // State for form fields
-    var childName by remember { mutableStateOf("") }
-    var dateOfBirth by remember { mutableStateOf<LocalDateTime?>(null) }
-    var medications by remember { mutableStateOf<List<Medication>>(emptyList()) }
-    var activities by remember { mutableStateOf<List<Activity>>(emptyList()) }
-    var allergies by remember { mutableStateOf<List<String>>(emptyList()) }
-    var medicalNotes by remember { mutableStateOf("") }
-    var emergencyContacts by remember { mutableStateOf<List<EmergencyContact>>(emptyList()) }
-    var schoolInfo by remember { mutableStateOf<SchoolInfo?>(null) }
-    var medicalProfile by remember { mutableStateOf(MedicalProfile()) }
+    // The fields live in the ViewModel (FormDraft), so a rotation keeps what was typed (D-11);
+    // each `var` below reads the draft and assigns into it.
+    val form = viewModel.childForm
+    val draft = form.state.collectAsState()
+    var childName by draft.field(form, { it.childName }) { f, v -> f.copy(childName = v) }
+    var dateOfBirth by draft.field(form, { it.dateOfBirth }) { f, v -> f.copy(dateOfBirth = v) }
+    var medications by draft.field(form, { it.medications }) { f, v -> f.copy(medications = v) }
+    var activities by draft.field(form, { it.activities }) { f, v -> f.copy(activities = v) }
+    var allergies by draft.field(form, { it.allergies }) { f, v -> f.copy(allergies = v) }
+    var medicalNotes by draft.field(form, { it.medicalNotes }) { f, v -> f.copy(medicalNotes = v) }
+    var emergencyContacts by draft.field(form, { it.emergencyContacts }) { f, v -> f.copy(emergencyContacts = v) }
+    var schoolInfo by draft.field(form, { it.schoolInfo }) { f, v -> f.copy(schoolInfo = v) }
+    var medicalProfile by draft.field(form, { it.medicalProfile }) { f, v -> f.copy(medicalProfile = v) }
     // Photographs already on the record, those picked here and not yet uploaded, and those the
     // user asked to remove. Three lists rather than one, because the three have different
     // consequences on save: a picked URI is uploaded, a removed URL has its object deleted
-    // *before* the reference goes, and a kept URL is left alone.
-    var storedPhotos by remember { mutableStateOf<List<String>>(emptyList()) }
-    var pickedPhotos by remember { mutableStateOf<List<String>>(emptyList()) }
-    var removedPhotos by remember { mutableStateOf<List<String>>(emptyList()) }
+    // *before* the reference goes, and a kept URL is left alone. The stored ones are the
+    // record's own, read from it rather than copied, so they survive a rotation as it does.
+    var pickedPhotos by draft.field(form, { it.pickedPhotos }) { f, v -> f.copy(pickedPhotos = v) }
+    var removedPhotos by draft.field(form, { it.removedPhotos }) { f, v -> f.copy(removedPhotos = v) }
     var isSaving by remember { mutableStateOf(false) }
     var showDatePicker by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
@@ -98,47 +103,17 @@ fun AddEditChildInfoScreen(
     // Observe current child info for editing
     val currentChildInfo by viewModel.currentChildInfo.collectAsState()
 
-    // Seed the form once per record. `currentChildInfo` is an observation, so it emits again on
-    // every write to the row — a background sync tick or the co-parent's own edit — and copying
-    // each emission into the fields overwrote whatever the parent was typing. Plain `remember`,
-    // like the fields themselves: after a configuration change both reset, and the form is
-    // seeded again from the stored record.
-    var seededForId by remember { mutableStateOf<String?>(null) }
-    // What the form was seeded with, so Back can tell an edit from an untouched form (D-11).
-    var seededFields by remember { mutableStateOf(ChildFields.EMPTY) }
+    // Seeded once per record (FormDraft.seed): `currentChildInfo` is an observation, so it emits
+    // again on every write to the row — a background sync tick or the co-parent's own edit — and
+    // copying each emission into the fields overwrote whatever the parent was typing.
     LaunchedEffect(currentChildInfo) {
-        currentChildInfo?.takeIf { it.id != seededForId }?.let { info ->
-            seededForId = info.id
-            seededFields = ChildFields.of(info)
-            childName = info.childName
-            dateOfBirth = info.dateOfBirth
-            medications = info.medications
-            activities = info.activities
-            allergies = info.allergies
-            medicalNotes = info.medicalNotes ?: ""
-            emergencyContacts = info.emergencyContacts
-            schoolInfo = info.schoolInfo
-            medicalProfile = info.medicalProfile
-            storedPhotos = info.medicalPhotos
-        }
+        currentChildInfo?.let { info -> form.seed(info.id, ChildFields.of(info)) }
     }
+    val storedPhotos = currentChildInfo?.medicalPhotos.orEmpty()
 
     // Asked before an edit is dropped (docs/AUDIT-2026-10-design.md D-11): a parent who typed out
     // a medication and pressed Back lost it without a word.
-    val formFields = ChildFields(
-        childName = childName,
-        dateOfBirth = dateOfBirth,
-        medications = medications,
-        activities = activities,
-        allergies = allergies,
-        medicalNotes = medicalNotes,
-        emergencyContacts = emergencyContacts,
-        schoolInfo = schoolInfo,
-        medicalProfile = medicalProfile,
-        pickedPhotos = pickedPhotos,
-        removedPhotos = removedPhotos
-    )
-    val leave = rememberDiscardGuard(dirty = formFields != seededFields && !isSaving, onLeave = onNavigateBack)
+    val leave = rememberDiscardGuard(dirty = draft.value.dirty && !isSaving, onLeave = onNavigateBack)
 
     if (showDeleteConfirm) {
         val child = currentChildInfo
@@ -198,6 +173,8 @@ fun AddEditChildInfoScreen(
     }
 
     Scaffold(
+        // A back gesture over unsaved edits shrinks the form before it asks (D-11).
+        modifier = Modifier.then(leave.backPreview),
         topBar = {
             TopAppBar(
                 title = {
@@ -241,17 +218,17 @@ fun AddEditChildInfoScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(16.dp)
+                .padding(Spacing.L)
                 .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(Spacing.L)
         ) {
             // Basic Information Section
             Card(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    modifier = Modifier.padding(Spacing.L),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.M)
                 ) {
                     Text(
                         text = stringResource(R.string.childinfo_section_basic),
@@ -292,8 +269,8 @@ fun AddEditChildInfoScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    modifier = Modifier.padding(Spacing.L),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.S)
                 ) {
                     Text(
                         text = stringResource(R.string.childinfo_section_medications),
@@ -324,8 +301,8 @@ fun AddEditChildInfoScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    modifier = Modifier.padding(Spacing.L),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.S)
                 ) {
                     Text(
                         text = stringResource(R.string.childinfo_section_activities),
@@ -356,8 +333,8 @@ fun AddEditChildInfoScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    modifier = Modifier.padding(Spacing.L),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.S)
                 ) {
                     Text(
                         text = stringResource(R.string.childinfo_section_allergies),
@@ -383,8 +360,8 @@ fun AddEditChildInfoScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    modifier = Modifier.padding(Spacing.L),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.S)
                 ) {
                     Text(
                         text = stringResource(R.string.medical_section_title),
@@ -404,8 +381,8 @@ fun AddEditChildInfoScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    modifier = Modifier.padding(Spacing.L),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.S)
                 ) {
                     Text(
                         text = stringResource(R.string.childinfo_section_medical_notes),
@@ -450,8 +427,8 @@ fun AddEditChildInfoScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    modifier = Modifier.padding(Spacing.L),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.S)
                 ) {
                     Text(
                         text = stringResource(R.string.childinfo_section_emergency_contacts),
@@ -482,8 +459,8 @@ fun AddEditChildInfoScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    modifier = Modifier.padding(Spacing.L),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.S)
                 ) {
                     Text(
                         text = stringResource(R.string.childinfo_section_school),
@@ -550,7 +527,7 @@ fun AddEditChildInfoScreen(
                         strokeWidth = 2.dp,
                         color = MaterialTheme.colorScheme.onPrimary
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(Spacing.S))
                 }
                 Text(
                     if (childInfoId == "new") {
@@ -562,54 +539,7 @@ fun AddEditChildInfoScreen(
             }
 
             // Bottom spacing
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(Spacing.L))
         }
-    }
-}
-
-/**
- * The values the child form edits, compared with what it was seeded with to tell whether Back
- * would drop an edit (D-11). A photo picked or marked for removal counts as an edit.
- */
-private data class ChildFields(
-    val childName: String,
-    val dateOfBirth: LocalDateTime?,
-    val medications: List<Medication>,
-    val activities: List<Activity>,
-    val allergies: List<String>,
-    val medicalNotes: String,
-    val emergencyContacts: List<EmergencyContact>,
-    val schoolInfo: SchoolInfo?,
-    val medicalProfile: MedicalProfile,
-    val pickedPhotos: List<String>,
-    val removedPhotos: List<String>
-) {
-    /** A blank form, and the form seeded from a stored record. */
-    companion object {
-        val EMPTY = ChildFields(
-            childName = "",
-            dateOfBirth = null,
-            medications = emptyList(),
-            activities = emptyList(),
-            allergies = emptyList(),
-            medicalNotes = "",
-            emergencyContacts = emptyList(),
-            schoolInfo = null,
-            medicalProfile = MedicalProfile(),
-            pickedPhotos = emptyList(),
-            removedPhotos = emptyList()
-        )
-
-        fun of(info: ChildInfo) = EMPTY.copy(
-            childName = info.childName,
-            dateOfBirth = info.dateOfBirth,
-            medications = info.medications,
-            activities = info.activities,
-            allergies = info.allergies,
-            medicalNotes = info.medicalNotes ?: "",
-            emergencyContacts = info.emergencyContacts,
-            schoolInfo = info.schoolInfo,
-            medicalProfile = info.medicalProfile
-        )
     }
 }

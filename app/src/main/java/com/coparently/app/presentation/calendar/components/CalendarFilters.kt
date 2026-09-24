@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.toggleable
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
@@ -48,9 +47,11 @@ import com.coparently.app.R
 import com.coparently.app.presentation.calendar.ParentFilter
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.theme.CoPlanlyColors
+import com.coparently.app.presentation.theme.CoPlanlyCorners
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.LayoutConstants
 import com.coparently.app.presentation.theme.ParentColors
+import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.dimensions
 import androidx.compose.foundation.layout.ExperimentalLayoutApi as FoundationExperimentalLayoutApi
 
@@ -94,8 +95,7 @@ fun EventTypeFilterSheet(
         ) {
             Text(
                 text = stringResource(R.string.calendar_filter_show),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
+                style = MaterialTheme.typography.titleMedium
             )
             ParentFilterSegments(
                 parentNames = parentNames,
@@ -129,8 +129,7 @@ fun EventTypeFilterSheet(
 
             Text(
                 text = stringResource(R.string.calendar_filter_event_types),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
+                style = MaterialTheme.typography.titleMedium
             )
             Text(
                 text = stringResource(R.string.calendar_filter_hidden_types_hint),
@@ -139,7 +138,7 @@ fun EventTypeFilterSheet(
             )
 
             FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(Spacing.S)
             ) {
                 allEventTypes.forEach { type ->
                     val isVisible = type !in hiddenEventTypes
@@ -168,7 +167,7 @@ fun EventTypeFilterSheet(
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(Spacing.S)
             ) {
                 OutlinedTextField(
                     value = newTypeName,
@@ -238,24 +237,24 @@ private fun FilterPill(
 ) {
     Row(
         modifier = Modifier
-            .clip(RoundedCornerShape(50))
+            .clip(CoPlanlyCorners.Pill)
             .background(if (selected) color.copy(alpha = 0.15f) else Color.Transparent)
             .border(
                 width = if (selected) 1.5.dp else 1.dp,
                 color = if (selected) color else MaterialTheme.colorScheme.outlineVariant,
-                shape = RoundedCornerShape(50)
+                shape = CoPlanlyCorners.Pill
             )
             // A checkbox to TalkBack — on/off was said by colour and weight alone — and 48dp tall.
             .toggleable(value = selected, role = Role.Checkbox, onValueChange = { onClick() })
             .heightIn(min = LayoutConstants.MIN_TOUCH_TARGET)
-            .padding(horizontal = 14.dp, vertical = 8.dp),
+            .padding(horizontal = 14.dp, vertical = Spacing.S),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(Spacing.S)
     ) {
         Box(
             modifier = Modifier
                 .size(10.dp)
-                .clip(RoundedCornerShape(50))
+                .clip(CoPlanlyCorners.Pill)
                 .background(color)
         )
         Text(

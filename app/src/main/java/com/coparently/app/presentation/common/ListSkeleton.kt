@@ -5,7 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.coparently.app.R
 import com.coparently.app.presentation.components.SkeletonBox
+import com.coparently.app.presentation.theme.Spacing
 
 /**
  * The placeholder a list shows while it does not yet know what is in it.
@@ -42,16 +43,16 @@ fun ListSkeleton(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .padding(horizontal = Spacing.L, vertical = Spacing.M)
             .semantics { contentDescription = loading },
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(Spacing.M)
     ) {
         repeat(rows) {
             SkeletonBox(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(rowHeight)
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(MaterialTheme.shapes.small)
             )
         }
     }

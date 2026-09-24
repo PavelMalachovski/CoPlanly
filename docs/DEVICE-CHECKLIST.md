@@ -398,6 +398,17 @@ zone back to automatic afterwards.
 - [ ] **Forms push:** "+" on the calendar, an expense, a child and a pet form slide in from the
       right like any detail screen — none of them zooms in from the middle. The event form's
       "whose day" cards grow slightly when chosen, without a bounce.
+- [ ] **Predictive back over edits** (Android 14+, gesture navigation). Open an expense, change the
+      amount, and start a back swipe without letting go: the form shrinks a little under the
+      finger. Let go early and nothing happens; finish the swipe and "Discard changes?" appears.
+      With nothing changed, the same swipe goes straight back.
+- [ ] **A rail on a wide window.** Turn the phone on its side, or open the app on a tablet or an
+      unfolded foldable: Home, Calendar, Chat and Expenses sit in a rail down the left edge,
+      with Chat's unread badge, instead of a bar along the bottom. A detail screen hides it as
+      it hides the bar. Upright on a phone, the bar is back.
+- [ ] **Rotation keeps a child's or a pet's form.** Edit a child: type a name, add a medication and
+      an allergy, then rotate the phone. Everything typed is still there, and Back still asks
+      before dropping it. The same for a pet's breed and vaccination.
 - [ ] Not a pass/fail check: write down anything in AUDIT §3.3 points 1–7 that still looks wrong
       on the phone. Of those points, forms scaling from 0.8 and the one bouncy spring are fixed;
       the three expand/collapse styles, the calendar's four ways of moving, the Settings chevron,

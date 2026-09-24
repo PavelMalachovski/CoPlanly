@@ -38,7 +38,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
@@ -50,6 +49,7 @@ import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.newSharedFileCaptureUri
 import com.coparently.app.presentation.common.openSharedFile
 import com.coparently.app.presentation.common.rememberParentNames
+import com.coparently.app.presentation.theme.Spacing
 
 /**
  * The family's document vault (MON-23): court orders, school letters, identity scans.
@@ -207,16 +207,16 @@ private fun AddActions(enabled: Boolean, onPickFile: () -> Unit, onTakePhoto: ()
         modifier = Modifier
             .fillMaxWidth()
             .navigationBarsPadding()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+            .padding(horizontal = Spacing.L, vertical = Spacing.M),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.M)
     ) {
         Button(onClick = onPickFile, enabled = enabled, modifier = Modifier.weight(1f)) {
             Icon(Icons.Default.AttachFile, contentDescription = null)
-            Text(stringResource(R.string.documents_add_file), modifier = Modifier.padding(start = 8.dp))
+            Text(stringResource(R.string.documents_add_file), modifier = Modifier.padding(start = Spacing.S))
         }
         OutlinedButton(onClick = onTakePhoto, enabled = enabled, modifier = Modifier.weight(1f)) {
             Icon(Icons.Default.PhotoCamera, contentDescription = null)
-            Text(stringResource(R.string.documents_take_photo), modifier = Modifier.padding(start = 8.dp))
+            Text(stringResource(R.string.documents_take_photo), modifier = Modifier.padding(start = Spacing.S))
         }
     }
 }

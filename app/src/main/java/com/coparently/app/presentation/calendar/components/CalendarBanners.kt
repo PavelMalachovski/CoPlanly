@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PriorityHigh
@@ -30,7 +29,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.coparently.app.R
@@ -38,9 +36,13 @@ import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.theme.CoPlanlyColors
+import com.coparently.app.presentation.theme.CoPlanlyCorners
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.LayoutConstants
 import com.coparently.app.presentation.theme.ParentColors
+import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.presentation.theme.bodyMediumEmphasized
+import com.coparently.app.presentation.theme.labelMediumEmphasized
 import com.coparently.app.utils.LightDarkPreviews
 import com.coparently.app.utils.PreviewWrapper
 import com.coparently.app.utils.createSampleEvent
@@ -86,8 +88,7 @@ fun ChangeRequestBanner(
     val review: @Composable (Modifier) -> Unit = { reviewModifier ->
         Text(
             text = stringResource(R.string.calendar_change_requests_review),
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.SemiBold,
+            style = MaterialTheme.typography.labelMediumEmphasized,
             color = MaterialTheme.colorScheme.primary,
             modifier = reviewModifier
         )
@@ -95,12 +96,12 @@ fun ChangeRequestBanner(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
+            .clip(MaterialTheme.shapes.small)
             .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f))
             // A button to TalkBack, and a 48dp target: the padded row was about 36dp.
             .clickable(role = Role.Button, onClick = onReview)
             .heightIn(min = LayoutConstants.MIN_TOUCH_TARGET)
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+            .padding(horizontal = Spacing.M, vertical = Spacing.S),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(9.dp)
     ) {
@@ -133,7 +134,7 @@ fun ChangeRequestBanner(
                 )
             }
             if (stacked) {
-                review(Modifier.align(Alignment.End).padding(top = 2.dp))
+                review(Modifier.align(Alignment.End).padding(top = Spacing.XXS))
             }
         }
         if (!stacked) {
@@ -163,17 +164,17 @@ fun VacationBanner(label: String, modifier: Modifier = Modifier) {
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
+            .clip(MaterialTheme.shapes.extraSmall)
             .background(CoPlanlyColors.VacationTint.copy(alpha = BANNER_TINT_ALPHA))
             .padding(horizontal = 11.dp, vertical = 5.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(Spacing.S)
     ) {
         Box(
             modifier = Modifier
                 .width(10.dp)
                 .height(3.dp)
-                .clip(RoundedCornerShape(2.dp))
+                .clip(CoPlanlyCorners.Mark)
                 .background(CoPlanlyColors.VacationTint)
         )
         Text(
@@ -211,17 +212,17 @@ fun CustodyChangedBanner(byName: String, onDismiss: () -> Unit, modifier: Modifi
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
+            .clip(MaterialTheme.shapes.extraSmall)
             .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = BANNER_TINT_ALPHA))
-            .padding(start = 11.dp, top = 5.dp, bottom = 5.dp, end = 4.dp),
+            .padding(start = 11.dp, top = 5.dp, bottom = 5.dp, end = Spacing.XS),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(Spacing.S)
     ) {
         Box(
             modifier = Modifier
                 .width(10.dp)
                 .height(3.dp)
-                .clip(RoundedCornerShape(2.dp))
+                .clip(CoPlanlyCorners.Mark)
                 .background(MaterialTheme.colorScheme.secondary)
         )
         Text(
@@ -278,10 +279,10 @@ fun DayAgendaCard(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(MaterialTheme.shapes.medium)
             .background(MaterialTheme.colorScheme.surfaceContainer)
-            .padding(horizontal = 14.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+            .padding(horizontal = 14.dp, vertical = Spacing.M),
+        verticalArrangement = Arrangement.spacedBy(Spacing.S)
     ) {
         // Two lines, not one (UX-8). Whose day it is used to be a suffix on the date, at
         // `labelMedium` in `onSurfaceVariant` and in no parent colour at all — the smallest,
@@ -292,11 +293,10 @@ fun DayAgendaCard(
         // The date stays small and muted, because it is the context. The custody line is
         // promoted and carries the parent's own colour, through `ParentColors.text` — the
         // text-grade member of the pair, never the raw fill, which fails AA as a foreground.
-        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(Spacing.XXS)) {
             Text(
                 text = date.format(dateFormatter),
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.labelMediumEmphasized,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             if (custody != null) {
@@ -306,7 +306,6 @@ fun DayAgendaCard(
                         parentNames.labelFor(custody)
                     ),
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
                     color = ParentColors.text(custody)
                 )
             }
@@ -337,7 +336,7 @@ fun DayAgendaCard(
                         modifier = Modifier
                             .width(3.dp)
                             .height(28.dp)
-                            .clip(RoundedCornerShape(2.dp))
+                            .clip(CoPlanlyCorners.Mark)
                             .background(ParentColors.fill(event.parentOwner))
                     )
                     Column(modifier = Modifier.weight(1f)) {
@@ -360,8 +359,7 @@ fun DayAgendaCard(
                             }
                             Text(
                                 text = event.title,
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Medium,
+                                style = MaterialTheme.typography.bodyMediumEmphasized,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -395,13 +393,13 @@ private fun ContactWindowLine(
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(Spacing.S)
     ) {
         Box(
             modifier = Modifier
                 .width(10.dp)
                 .height(3.dp)
-                .clip(RoundedCornerShape(2.dp))
+                .clip(CoPlanlyCorners.Mark)
                 .background(ParentColors.fill(window.parent))
         )
         Text(
@@ -411,8 +409,7 @@ private fun ContactWindowLine(
                 window.end.format(formatter),
                 parentNames.labelFor(window.parent)
             ),
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Medium,
+            style = MaterialTheme.typography.bodyMediumEmphasized,
             color = ParentColors.text(window.parent),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
@@ -445,7 +442,7 @@ private fun DayAgendaCardPreview() {
             custody = "mom",
             parentNames = previewParentNames,
             onEventClick = {},
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(Spacing.L),
             contactWindows = listOf(
                 ContactWindow(
                     dayIndex = 2,
@@ -468,7 +465,7 @@ private fun DayAgendaCardEmptyPreview() {
             custody = "dad",
             parentNames = previewParentNames,
             onEventClick = {},
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(Spacing.L)
         )
     }
 }

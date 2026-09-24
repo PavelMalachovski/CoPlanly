@@ -32,7 +32,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.domain.contacts.ContactDirectory
@@ -46,6 +45,7 @@ import com.coparently.app.presentation.common.PillChip
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.valueOrNull
+import com.coparently.app.presentation.theme.Spacing
 import kotlinx.coroutines.launch
 
 /** How the numbers on one row are joined. Punctuation, not text — nothing to translate. */
@@ -112,8 +112,8 @@ fun ContactsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            contentPadding = PaddingValues(Spacing.L),
+            verticalArrangement = Arrangement.spacedBy(Spacing.L)
         ) {
             items(items = groups, key = { it.childId }) { group ->
                 ChildContacts(

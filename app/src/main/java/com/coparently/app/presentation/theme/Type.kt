@@ -162,3 +162,50 @@ val Typography = Typography(
         letterSpacing = 0.5.sp
     )
 )
+
+/*
+ * Emphasised styles: a role's size and line height one weight step heavier.
+ *
+ * Screens used to write `style = titleMedium, fontWeight = FontWeight.Bold`: 83 weight overrides,
+ * the same role made heavier by different amounts on different screens, and 18 that set the
+ * weight the role already had (docs/AUDIT-2026-10-design.md, Typography). A screen now names the
+ * emphasis instead, and it is one step for every role. Material 3 Expressive has these as
+ * `Typography` members in material3 1.5, which is still alpha; these carry the same names, so
+ * moving to it deletes this block.
+ */
+
+/** [Typography.headlineSmall], one weight step heavier. */
+val Typography.headlineSmallEmphasized: TextStyle get() = headlineSmall.emphasized()
+
+/** [Typography.titleLarge], one weight step heavier. */
+val Typography.titleLargeEmphasized: TextStyle get() = titleLarge.emphasized()
+
+/** [Typography.titleMedium], one weight step heavier. */
+val Typography.titleMediumEmphasized: TextStyle get() = titleMedium.emphasized()
+
+/** [Typography.titleSmall], one weight step heavier. */
+val Typography.titleSmallEmphasized: TextStyle get() = titleSmall.emphasized()
+
+/** [Typography.bodyMedium], one weight step heavier. */
+val Typography.bodyMediumEmphasized: TextStyle get() = bodyMedium.emphasized()
+
+/** [Typography.bodySmall], one weight step heavier. */
+val Typography.bodySmallEmphasized: TextStyle get() = bodySmall.emphasized()
+
+/** [Typography.labelLarge], one weight step heavier. */
+val Typography.labelLargeEmphasized: TextStyle get() = labelLarge.emphasized()
+
+/** [Typography.labelMedium], one weight step heavier. */
+val Typography.labelMediumEmphasized: TextStyle get() = labelMedium.emphasized()
+
+/** [Typography.labelSmall], one weight step heavier. */
+val Typography.labelSmallEmphasized: TextStyle get() = labelSmall.emphasized()
+
+/** One of Onest's four weights up from the style's own, and no further than Bold. */
+private fun TextStyle.emphasized(): TextStyle {
+    val weight = (fontWeight ?: FontWeight.Normal).weight
+    return copy(fontWeight = FontWeight(minOf(weight + WEIGHT_STEP, FontWeight.Bold.weight)))
+}
+
+/** The step between two of the typeface's weights: 400, 500, 600, 700. */
+private const val WEIGHT_STEP = 100

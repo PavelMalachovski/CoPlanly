@@ -40,7 +40,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
@@ -51,6 +50,8 @@ import com.coparently.app.presentation.common.FullScreenImageDialog
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.ParentColors
+import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.presentation.theme.titleLargeEmphasized
 import com.coparently.app.utils.localizedDate
 import java.time.format.DateTimeFormatter
 
@@ -124,9 +125,9 @@ internal fun EventPreviewContent(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 24.dp)
-            .padding(bottom = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+            .padding(horizontal = Spacing.XL)
+            .padding(bottom = Spacing.XL),
+        verticalArrangement = Arrangement.spacedBy(Spacing.M)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
@@ -136,8 +137,7 @@ internal fun EventPreviewContent(
             )
             Text(
                 text = event.title,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleLargeEmphasized,
                 // Long titles used to wrap mid-word and push the sheet's actions down.
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
@@ -231,7 +231,7 @@ internal fun EventPreviewContent(
             }
         }
 
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(Spacing.XS))
 
         PreviewActions(onEdit = onEdit, onDelete = onDelete)
     }
@@ -279,7 +279,7 @@ private fun PreviewActions(onEdit: () -> Unit, onDelete: (() -> Unit)?) {
     if (LocalDensity.current.fontScale >= STACK_ACTIONS_FONT_SCALE) {
         Column(
             modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(Spacing.S)
         ) {
             editButton(Modifier.fillMaxWidth())
             if (onDelete != null) deleteButton(Modifier.fillMaxWidth(), onDelete)
@@ -287,7 +287,7 @@ private fun PreviewActions(onEdit: () -> Unit, onDelete: (() -> Unit)?) {
     } else {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(Spacing.M)
         ) {
             if (onDelete != null) deleteButton(Modifier.weight(1f), onDelete)
             editButton(Modifier.weight(1f))

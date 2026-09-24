@@ -4,11 +4,8 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
@@ -25,12 +22,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import com.coparently.app.R
 import com.coparently.app.domain.model.Vaccination
 import com.coparently.app.presentation.childinfo.components.DatePickerDialog
 import com.coparently.app.presentation.common.animations.sectionEnter
 import com.coparently.app.presentation.common.animations.sectionExit
+import com.coparently.app.presentation.theme.Spacing
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
@@ -61,7 +58,7 @@ fun VaccinationListEditor(
     val dateFormatter = remember { DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM) }
     val noDateLabel = stringResource(R.string.medical_vaccination_no_date)
 
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(Spacing.S)) {
         Text(
             text = stringResource(R.string.medical_vaccinations_label),
             style = MaterialTheme.typography.labelMedium,
@@ -79,7 +76,7 @@ fun VaccinationListEditor(
         vaccinations.forEachIndexed { index, vaccination ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.S),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
@@ -136,7 +133,7 @@ private fun VaccinationAddRow(
 
     Column(modifier = modifier) {
         AnimatedVisibility(visible = isAdding, enter = sectionEnter(), exit = sectionExit()) {
-            Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Spacing.S)) {
                 OutlinedTextField(
                     value = newName,
                     onValueChange = { newName = it },
@@ -168,11 +165,11 @@ private fun VaccinationAddRow(
         }
 
         if (!isAdding) {
-            OutlinedButton(onClick = { isAdding = true }, modifier = Modifier.fillMaxWidth()) {
-                Icon(imageVector = Icons.Default.Add, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(stringResource(R.string.medical_vaccination_add))
-            }
+            AddItemButton(
+                label = stringResource(R.string.medical_vaccination_add),
+                onClick = { isAdding = true },
+                modifier = Modifier.fillMaxWidth()
+            )
         }
     }
 }

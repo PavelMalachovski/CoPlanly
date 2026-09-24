@@ -32,7 +32,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -42,6 +41,8 @@ import com.coparently.app.presentation.common.AccountAvatar
 import com.coparently.app.presentation.common.PillChip
 import com.coparently.app.presentation.theme.CoPlanlyColors
 import com.coparently.app.presentation.theme.ParentColors
+import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.presentation.theme.labelLargeEmphasized
 
 /**
  * The friend's own profile, authored by them (item 16).
@@ -101,7 +102,7 @@ fun FriendProfileScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
+                .padding(Spacing.L),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             // The Google account's own picture, taken at the first save. There is no upload
@@ -125,10 +126,9 @@ fun FriendProfileScreen(
 
             Text(
                 text = stringResource(R.string.friend_section_title),
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.SemiBold
+                style = MaterialTheme.typography.labelLargeEmphasized
             )
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
                 FriendRole.entries.forEach { option ->
                     PillChip(
                         label = stringResource(option.labelRes()),

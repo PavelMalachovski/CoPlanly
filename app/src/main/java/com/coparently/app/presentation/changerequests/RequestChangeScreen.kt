@@ -43,6 +43,7 @@ import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.common.LocalDatePickerDialog
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.components.TimePickerDialog
+import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.utils.localizedDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -105,7 +106,7 @@ fun RequestChangeScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(padding)
-                        .padding(32.dp),
+                        .padding(Spacing.XXL),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
@@ -163,14 +164,14 @@ private fun RequestChangeForm(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(16.dp)
+            .padding(Spacing.L)
             .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(Spacing.L)
     ) {
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+                modifier = Modifier.padding(Spacing.L),
+                verticalArrangement = Arrangement.spacedBy(Spacing.XS)
             ) {
                 Text(
                     text = event.title,
@@ -207,7 +208,7 @@ private fun RequestChangeForm(
 
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(Spacing.S)
         ) {
             OutlinedButton(
                 onClick = { showStartTimePicker = true },
@@ -243,7 +244,7 @@ private fun RequestChangeForm(
             minLines = 3
         )
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(Spacing.S))
 
         Button(
             onClick = {

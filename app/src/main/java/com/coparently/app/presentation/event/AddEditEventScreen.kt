@@ -109,6 +109,7 @@ import com.coparently.app.presentation.components.TimePickerDialog
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Motion
 import com.coparently.app.presentation.theme.ParentColors
+import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.dimensions
 import com.coparently.app.utils.ValidationResult
 import com.coparently.app.utils.ValidationUtils
@@ -604,6 +605,8 @@ fun AddEditEventScreen(
     }
 
     Scaffold(
+        // A back gesture over unsaved edits shrinks the form before it asks (D-11).
+        modifier = Modifier.then(leave.backPreview),
         topBar = {
             TopAppBar(
                 title = {
@@ -806,13 +809,12 @@ fun AddEditEventScreen(
             if (showParentOwnerSelector(parentsLoaded, isPaired, parentOwner, currentUser?.slot)) {
                 Text(
                     text = stringResource(R.string.event_form_assigned_to),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
+                    style = MaterialTheme.typography.titleMedium
                 )
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.M)
                 ) {
                     // Slots have an order, so when a card resolves to nobody a caption of
                     // "first"/"second" (never "You"/"Co-parent" positionally - an unpaired
@@ -899,7 +901,7 @@ fun AddEditEventScreen(
                             Column(
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .padding(12.dp),
+                                    .padding(Spacing.M),
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.Center
                             ) {
@@ -934,14 +936,13 @@ fun AddEditEventScreen(
             // Event Type Selection
             Text(
                 text = stringResource(R.string.event_form_event_type),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
+                style = MaterialTheme.typography.titleMedium
             )
 
             // Default types plus user-defined types created in the calendar filter sheet
             androidx.compose.foundation.layout.FlowRow(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(Spacing.S)
             ) {
                 val allTypes = listOf(
                     "general" to stringResource(R.string.event_type_general),
@@ -988,8 +989,7 @@ fun AddEditEventScreen(
             // Date & Time Section
             Text(
                 text = stringResource(R.string.event_form_date_time),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
+                style = MaterialTheme.typography.titleMedium
             )
 
             // Date Picker Button
@@ -1057,7 +1057,7 @@ fun AddEditEventScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(dims.paddingMedium),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.M),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
@@ -1078,7 +1078,7 @@ fun AddEditEventScreen(
             // Time Pickers
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(Spacing.M)
             ) {
                 // Start Time
                 OutlinedCard(
@@ -1168,13 +1168,12 @@ fun AddEditEventScreen(
             // Repeat Section
             Text(
                 text = stringResource(R.string.event_form_repeat),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
+                style = MaterialTheme.typography.titleMedium
             )
 
             androidx.compose.foundation.layout.FlowRow(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(Spacing.S)
             ) {
                 listOf(
                     null to stringResource(R.string.event_repeat_none),
@@ -1246,8 +1245,7 @@ fun AddEditEventScreen(
             // Reminder Section
             Text(
                 text = stringResource(R.string.event_form_reminder),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
+                style = MaterialTheme.typography.titleMedium
             )
 
             // Picking a reminder is the moment notifications become relevant —
@@ -1256,7 +1254,7 @@ fun AddEditEventScreen(
                 com.coparently.app.presentation.common.rememberNotificationPermissionRequester()
             androidx.compose.foundation.layout.FlowRow(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(Spacing.S)
             ) {
                 REMINDER_OPTIONS.forEach { (value, labelRes) ->
                     FilterChip(
