@@ -4,11 +4,14 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.coparently.app.data.crashlytics.CrashlyticsManager
+import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.ParentingPlanPair
 import com.coparently.app.data.repository.ParentingPlanRepository
+import com.coparently.app.domain.custody.CustodyProposalTransition
 import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.model.PairingState
 import com.coparently.app.domain.parentingplan.ParentingPlanEntry
+import com.coparently.app.domain.parentingplan.PlanScheduleLink
 import com.coparently.app.domain.repository.PairingRepository
 import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.presentation.common.Parents
@@ -25,7 +28,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -46,8 +49,42 @@ sealed interface ParentingPlanUiState {
      */
     data object NoCoParent : ParentingPlanUiState
 
-    /** Both halves, whichever of them exist. */
-    data class Ready(val plan: ParentingPlanPair, val coParentUid: String) : ParentingPlanUiState
+    /**
+     * Both halves, whichever of them exist.
+     *
+     * @property coParentProposalPending The co-parent's own custody proposal is waiting for this
+     *   parent's answer, so "Propose as the schedule" (MON-21) says why it cannot send rather than
+     *   offering to — [CustodyProposalTransition.pendingFromCoParent], the rule the seasonal
+     *   section already applies.
+     */
+    data class Ready(
+        val plan: ParentingPlanPair,
+        val coParentUid: String,
+        val coParentProposalPending: Boolean = false
+    ) : ParentingPlanUiState {
+
+        /** Whether [questionId] offers "Propose as the schedule" right now (MON-21). */
+        fun offersProposal(questionId: String): Boolean = PlanScheduleLink.offersProposal(
+            questionId = questionId,
+            yours = plan.yours,
+            theirs = plan.theirs,
+            paired = true,
+            coParentProposalPending = coParentProposalPending
+        )
+
+        /**
+         * Whether [questionId] would offer it but for the co-parent's pending proposal — the row
+         * then says so, so the missing action is explained rather than simply absent.
+         */
+        fun proposalBlocked(questionId: String): Boolean =
+            coParentProposalPending && PlanScheduleLink.offersProposal(
+                questionId = questionId,
+                yours = plan.yours,
+                theirs = plan.theirs,
+                paired = true,
+                coParentProposalPending = false
+            )
+    }
 }
 
 /**
@@ -59,7 +96,8 @@ class ParentingPlanViewModel @Inject constructor(
     private val userRepository: UserRepository,
     private val pairingRepository: PairingRepository,
     parentsSource: ParentsSource,
-    private val crashlyticsManager: CrashlyticsManager
+    private val crashlyticsManager: CrashlyticsManager,
+    private val custodyModelRepository: CustodyModelRepository
 ) : ViewModel() {
 
     /** Names and colours for the two parents; the screen renders both halves side by side. */
@@ -84,8 +122,21 @@ class ParentingPlanViewModel @Inject constructor(
             if (planScope == null) {
                 flowOf(ParentingPlanUiState.NoCoParent)
             } else {
-                repository.observe(planScope.familyId, planScope.myUid)
-                    .map { ParentingPlanUiState.Ready(it, planScope.partnerUid) }
+                combine(
+                    repository.observe(planScope.familyId, planScope.myUid),
+                    // Only to know whether the co-parent's proposal is waiting (MON-21); a null
+                    // first so the plan renders before the custody document has answered.
+                    custodyModelRepository.observeShared().onStart { emit(null) }
+                ) { plan, shared ->
+                    ParentingPlanUiState.Ready(
+                        plan = plan,
+                        coParentUid = planScope.partnerUid,
+                        coParentProposalPending = CustodyProposalTransition.pendingFromCoParent(
+                            shared,
+                            planScope.myUid
+                        )
+                    )
+                }
             }
         }
         .catch { e ->

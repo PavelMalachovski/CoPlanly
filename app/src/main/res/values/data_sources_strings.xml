@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Settings → App → Data sources and licences (MON-13). The OpenHolidays notice is the
+  attribution the Open Database License 1.0 asks for; don't shorten it away.
+-->
+<resources>
+    <string name="settings_data_sources_title">Data sources and licences</string>
+    <string name="settings_data_sources_description">Where the calendar\'s holidays and school vacations come from</string>
+    <string name="data_sources_intro">The public holidays and school vacations on the calendar are built into the app, so nothing is downloaded while you use it. They were prepared from the sources below.</string>
+    <string name="data_sources_group_holidays">Holidays and school vacations</string>
+    <string name="data_sources_openholidays_title" translatable="false">OpenHolidays API</string>
+    <string name="data_sources_openholidays_description">School vacations for Slovakia, Austria and each German state. Contains information from OpenHolidays API data, which is made available under the Open Database License (ODbL) 1.0.</string>
+    <string name="data_sources_odbl_title" translatable="false">Open Database License (ODbL) 1.0</string>
+    <string name="data_sources_holidays_title">holidays (Python library)</string>
+    <string name="data_sources_holidays_description">The public holidays for Slovakia, Germany, Austria and Russia were checked against it, date by date. © Vacanza Team and contributors, MIT licence.</string>
+    <string name="data_sources_computed_note">Czech public holidays and school vacations are calculated by the app itself.</string>
+</resources>

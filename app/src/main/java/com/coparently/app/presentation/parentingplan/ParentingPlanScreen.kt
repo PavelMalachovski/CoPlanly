@@ -12,6 +12,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -41,6 +42,7 @@ import com.coparently.app.presentation.common.GroupLabel
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.PillChip
 import com.coparently.app.presentation.common.SectionGroup
+import com.coparently.app.presentation.common.SectionGroupScope
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.rememberParentNames
 
@@ -57,13 +59,19 @@ import com.coparently.app.presentation.common.rememberParentNames
  * the law and that form name, in this project's wording, and a parent who takes it to a mediator
  * has to know which of those two things they are holding.
  *
+ * **An agreed answer about the schedule offers to become a proposal** (MON-21), and only that:
+ * "Propose as the schedule" opens the ordinary custody or seasonal-layer editor with the answer
+ * quoted above it. The parent builds the schedule; nothing here reads the answer's words.
+ *
  * @param onNavigateBack Pops back to wherever the plan was opened from.
+ * @param onProposeSchedule Opens the schedule editor for the agreed answer to a question id.
  * @param viewModel Supplies both halves and records this parent's edits.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ParentingPlanScreen(
     onNavigateBack: () -> Unit,
+    onProposeSchedule: (String) -> Unit = {},
     viewModel: ParentingPlanViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -91,10 +99,10 @@ fun ParentingPlanScreen(
             is ParentingPlanUiState.NoCoParent -> NoCoParentBody(Modifier.padding(padding))
             is ParentingPlanUiState.Ready -> {
                 PlanBody(
-                    plan = state.plan,
+                    state = state,
                     names = names,
-                    coParentUid = state.coParentUid,
                     onOpenQuestion = { openQuestionId = it },
+                    onProposeSchedule = onProposeSchedule,
                     modifier = Modifier.padding(padding)
                 )
                 openQuestionId?.let { questionId ->
@@ -147,12 +155,13 @@ private fun NoCoParentBody(modifier: Modifier = Modifier) {
 
 @Composable
 private fun PlanBody(
-    plan: ParentingPlanPair,
+    state: ParentingPlanUiState.Ready,
     names: ParentNames,
-    coParentUid: String,
     onOpenQuestion: (String) -> Unit,
+    onProposeSchedule: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val plan = state.plan
     val total = ParentingPlanCatalogue.questions.size
     val agreed = remember(plan) { ParentingPlanComparison.agreedCount(plan.yours, plan.theirs) }
     val answered = remember(plan) { ParentingPlanComparison.answeredByYou(plan.yours) }
@@ -175,8 +184,14 @@ private fun PlanBody(
                             questionId = question.id,
                             plan = plan,
                             names = names,
-                            coParentUid = coParentUid,
+                            coParentUid = state.coParentUid,
                             onClick = { onOpenQuestion(question.id) }
+                        )
+                        ProposeScheduleRow(
+                            offered = state.offersProposal(question.id),
+                            blocked = state.proposalBlocked(question.id),
+                            coParentName = names.labelForUid(state.coParentUid),
+                            onPropose = { onProposeSchedule(question.id) }
                         )
                     }
                 }
@@ -227,6 +242,36 @@ private fun QuestionRow(
         supporting = yourAnswer ?: stringResource(R.string.parenting_plan_not_answered),
         onClick = onClick,
         trailing = { StatusChip(status, names.labelForUid(coParentUid)) }
+    )
+}
+
+/**
+ * "Propose as the schedule" under an agreed schedule question (MON-21), as a row of its own — the
+ * question row's one trailing slot is its status.
+ *
+ * Offered: a tappable row that opens the editor. Blocked by the co-parent's own pending proposal:
+ * the same row, not tappable, saying why — a missing action with no reason reads as a bug. Neither:
+ * nothing at all, so a question that is not about the schedule, or not yet agreed, looks exactly
+ * as it did.
+ */
+@Composable
+private fun SectionGroupScope.ProposeScheduleRow(
+    offered: Boolean,
+    blocked: Boolean,
+    coParentName: String,
+    onPropose: () -> Unit
+) {
+    if (!offered && !blocked) return
+    Divider()
+    SectionRow(
+        title = stringResource(R.string.parenting_plan_propose_schedule),
+        icon = Icons.Default.DateRange,
+        supporting = if (blocked) {
+            stringResource(R.string.parenting_plan_propose_blocked, coParentName)
+        } else {
+            stringResource(R.string.parenting_plan_propose_hint)
+        },
+        onClick = onPropose.takeIf { offered }
     )
 }
 

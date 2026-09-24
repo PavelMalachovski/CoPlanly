@@ -76,5 +76,12 @@ data class CustodyModelEntity(
      * [contactWindowsJson] is: a row with no layers must be byte-identical to one written before
      * this column existed.
      */
-    val seasonalLayersJson: String? = null
+    val seasonalLayersJson: String? = null,
+    /**
+     * Each child's own schedule (FAM-4) as a JSON array of `ChildOverrideCodec` strings —
+     * unreadable entries included, verbatim — or null for none. Null rather than `"[]"`, for the
+     * reason [contactWindowsJson] is: a row with no overrides must be byte-identical to one written
+     * before this column existed (schema 42).
+     */
+    val childOverridesJson: String? = null
 )

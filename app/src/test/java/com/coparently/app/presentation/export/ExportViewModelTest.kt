@@ -7,6 +7,7 @@ import com.coparently.app.data.export.CommunicationRecordSource
 import com.coparently.app.data.export.ExportFileWriter
 import com.coparently.app.data.export.ExportReceipts
 import com.coparently.app.data.export.ExportedFile
+import com.coparently.app.data.export.OptionalRecordSections
 import com.coparently.app.data.export.ParentingPlanRecordSource
 import com.coparently.app.domain.export.CommunicationRecord
 import com.coparently.app.domain.export.ExportFingerprint
@@ -15,8 +16,10 @@ import com.coparently.app.domain.export.PlanSource
 import com.coparently.app.domain.export.RecordFixtures
 import com.coparently.app.domain.export.RecordSources
 import com.coparently.app.domain.export.RecordVerification
+import com.coparently.app.domain.journal.JournalEntry
 import com.coparently.app.domain.model.PartnerSummary
 import com.coparently.app.domain.model.User
+import com.coparently.app.domain.repository.JournalRepository
 import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.testParentsSource
@@ -61,6 +64,7 @@ class ExportViewModelTest {
     )
     private val source = mockk<CommunicationRecordSource>()
     private val planSource = mockk<ParentingPlanRecordSource>()
+    private val journal = mockk<JournalRepository>()
     private val writer = mockk<ExportFileWriter>()
     private val receipts = mockk<ExportReceipts>()
     private val userRepository = mockk<UserRepository>()
@@ -89,8 +93,14 @@ class ExportViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun viewModel() =
-        ExportViewModel(source, planSource, writer, receipts, testParentsSource(me, partner), userRepository)
+    private fun viewModel() = ExportViewModel(
+        source,
+        OptionalRecordSections(planSource, journal),
+        writer,
+        receipts,
+        testParentsSource(me, partner),
+        userRepository
+    )
 
     /** Distinct bytes per verification state, so a test can tell which rendering was saved. */
     private fun bytesFor(record: CommunicationRecord): ByteArray = when (val v = record.verification) {
@@ -232,6 +242,55 @@ class ExportViewModelTest {
         assertEquals(null, record.captured.plan)
     }
 
+    // ---- MON-22 in the record: the private journal is out by default, and in only when ticked ----
+
+    @Test
+    fun `the journal is left out by default and not even read`() = runTest {
+        val record = slot<CommunicationRecord>()
+        coEvery { writer.save(any(), capture(record), any()) } returns ExportedFile(mockk<Uri>(), "text/csv")
+        val vm = viewModel()
+        assertFalse(vm.state.value.includeJournal)
+
+        vm.files.test {
+            vm.export(ExportFormat.CSV, RecordFixtures.labels(), fallbacks)
+            awaitItem()
+        }
+
+        coVerify(exactly = 0) { journal.entriesBetween(any(), any(), any()) }
+        assertEquals(null, record.captured.journal)
+    }
+
+    @Test
+    fun `a ticked journal carries this parent's own entries for the period, by name`() = runTest {
+        val record = slot<CommunicationRecord>()
+        coEvery { writer.save(any(), capture(record), any()) } returns ExportedFile(mockk<Uri>(), "text/csv")
+        val vm = viewModel()
+        val from = vm.state.value.from
+        val to = vm.state.value.to
+        coEvery { journal.entriesBetween("u1", from, to) } returns listOf(
+            JournalEntry(
+                id = "j1",
+                entryDate = to,
+                text = "Pickup was an hour late",
+                createdAtMillis = 1_000L,
+                updatedAtMillis = 1_000L,
+                familyId = null,
+                createdByFirebaseUid = "u1"
+            )
+        )
+
+        vm.setIncludeJournal(true)
+        vm.files.test {
+            vm.export(ExportFormat.CSV, RecordFixtures.labels(), fallbacks)
+            awaitItem()
+        }
+
+        coVerify { journal.entriesBetween("u1", from, to) }
+        val entry = record.captured.journal?.entries?.single()
+        assertEquals("Pickup was an hour late", entry?.text)
+        assertEquals("Alice", entry?.authorName)
+    }
+
     // ---- MON-16: the record id is inside the bytes it vouches for -------------------------
 
     @Test
@@ -290,7 +349,14 @@ class ExportViewModelTest {
     @Test
     fun `an account with no co-parent reserves under a blank family`() = runTest {
         coEvery { writer.save(any(), any(), any()) } returns ExportedFile(mockk<Uri>(), "text/csv")
-        val vm = ExportViewModel(source, planSource, writer, receipts, testParentsSource(me, null), userRepository)
+        val vm = ExportViewModel(
+            source,
+            OptionalRecordSections(planSource, journal),
+            writer,
+            receipts,
+            testParentsSource(me, null),
+            userRepository
+        )
 
         vm.files.test {
             vm.export(ExportFormat.CSV, RecordFixtures.labels(), fallbacks)

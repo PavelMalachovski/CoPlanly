@@ -17,6 +17,7 @@ import com.coparently.app.domain.repository.PreferencesRepository
 import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.presentation.common.FamilyKindSource
 import com.coparently.app.presentation.common.ParentsSource
+import com.coparently.app.presentation.common.testFamilyMembersSource
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -106,7 +107,8 @@ class HomeViewModelTest {
             homeIdentityDependencies = HomeIdentityDependencies(
                 userRepository,
                 pairingRepository,
-                ParentsSource(userRepository, pairingRepository)
+                ParentsSource(userRepository, pairingRepository),
+                testFamilyMembersSource()
             )
         )
     }

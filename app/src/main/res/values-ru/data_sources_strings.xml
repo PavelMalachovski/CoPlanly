@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_data_sources_title">Источники данных и лицензии</string>
+    <string name="settings_data_sources_description">Откуда в календаре праздники и школьные каникулы</string>
+    <string name="data_sources_intro">Праздники и школьные каникулы в календаре встроены в приложение, поэтому во время работы ничего не загружается. Они подготовлены по источникам, перечисленным ниже.</string>
+    <string name="data_sources_group_holidays">Праздники и школьные каникулы</string>
+    <string name="data_sources_openholidays_description">Школьные каникулы Словакии, Австрии и каждой федеральной земли Германии. Содержит информацию из данных OpenHolidays API, предоставленных на условиях лицензии Open Database License (ODbL) 1.0.</string>
+    <string name="data_sources_holidays_title">holidays (библиотека для Python)</string>
+    <string name="data_sources_holidays_description">Праздники Словакии, Германии, Австрии и России сверены с ней день за днём. © Vacanza Team и участники проекта, лицензия MIT.</string>
+    <string name="data_sources_computed_note">Чешские праздники и школьные каникулы приложение вычисляет само.</string>
+</resources>

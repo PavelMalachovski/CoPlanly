@@ -6,6 +6,7 @@ import com.coparently.app.data.local.entity.ChildInfoEntity
 import com.coparently.app.data.local.entity.UserEntity
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestoreChildInfoDataSource
+import com.coparently.app.domain.events.EventTimestamp
 import com.coparently.app.domain.model.ChildInfo
 import com.google.firebase.auth.FirebaseUser
 import io.mockk.coEvery
@@ -151,6 +152,26 @@ class ChildInfoRepositoryImplTest {
             firestoreChildInfoDataSource.tombstoneChildInfo(any(), any(), any())
         }
         coVerify(exactly = 0) { childInfoDao.deleteChildInfoById(any()) }
+    }
+
+    @Test
+    fun `a saved child carries its instant in the row and as UTC text on the wire`() = runTest {
+        // Schema 40: the wall clock every save stamps becomes the instant at the mapping
+        // boundary, so no save path can forget it, and the document says it in UTC.
+        coEvery { userDao.getUserById(ALICE) } returns userEntity(partnerId = BOB)
+        coEvery { firestoreChildInfoDataSource.upsertChildInfo(any(), any()) } returns
+            Result.success(Unit)
+
+        repository.upsertChildInfo(childInfo(createdByFirebaseUid = ALICE))
+
+        val instant = EventTimestamp.ofWallClock(NOW)
+        val uploaded = slot<Map<String, Any?>>()
+        coVerify { firestoreChildInfoDataSource.upsertChildInfo(CHILD_ID, capture(uploaded)) }
+        assertEquals(EventTimestamp.toWire(instant), uploaded.captured["updatedAt"])
+        val saved = slot<ChildInfoEntity>()
+        coVerify { childInfoDao.updateChildInfo(capture(saved)) }
+        assertEquals(instant, saved.captured.updatedAtMillis)
+        assertEquals(NOW, saved.captured.updatedAt, "the displayed wall clock is unchanged")
     }
 
     private fun childInfo(createdByFirebaseUid: String?) = ChildInfo(

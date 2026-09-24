@@ -877,6 +877,43 @@ class SyncServiceTest {
         assertEquals("2026-08-01T10:00:00", uploaded.captured["updatedAt"])
     }
 
+    @Test
+    fun `an uploaded child record is dated by its instant, as UTC text`() = runTest {
+        // Schema 40: the child record follows MON-4's events — the same field, the same
+        // offset-free type, now expressing UTC. 12:00 at UTC+2 goes up as 10:00.
+        pairWith(partnerId = BOB)
+        val saved = childInfoEntity(updatedAt = now, synced = false).copy(
+            updatedAtMillis = Instant.parse("2026-08-01T10:00:00Z").toEpochMilli()
+        )
+        coEvery { childInfoDao.getUnsyncedChildInfo() } returns listOf(saved)
+        val uploaded = slot<Map<String, Any?>>()
+        coEvery { firestoreChildInfoDataSource.upsertChildInfo(CHILD_ID, capture(uploaded)) } returns
+            Result.success(Unit)
+
+        syncService.performFullSync()
+
+        assertEquals("2026-08-01T10:00:00", uploaded.captured["updatedAt"])
+    }
+
+    @Test
+    fun `a later edit in real time wins a child conflict, whatever the wall clocks say`() = runTest {
+        // The local row reads 12:00 on a UTC+2 phone (10:00Z); the co-parent saved at 11:00Z,
+        // which a naive comparison of "12:00" against "11:00" would have thrown away.
+        pairWith(partnerId = BOB)
+        val local = childInfoEntity(updatedAt = LocalDateTime.of(2026, 8, 1, 12, 0), synced = false)
+            .copy(updatedAtMillis = Instant.parse("2026-08-01T10:00:00Z").toEpochMilli())
+        every { firestoreChildInfoDataSource.getChildInfoForParent(ALICE) } returns
+            flowOf(listOf(remoteChildInfoMap(updatedAt = now) + ("updatedAt" to "2026-08-01T11:00:00")))
+        coEvery { childInfoDao.getChildInfoById(CHILD_ID) } returns local
+        val stored = slot<ChildInfoEntity>()
+        coEvery { childInfoDao.insertChildInfo(capture(stored)) } returns Unit
+
+        syncService.performFullSync()
+
+        coVerify(exactly = 0) { firestoreChildInfoDataSource.updateChildInfo(any(), any()) }
+        assertEquals(Instant.parse("2026-08-01T11:00:00Z").toEpochMilli(), stored.captured.updatedAtMillis)
+    }
+
     /** The Firestore document `SyncService` would write for [entity]. */
     private fun eventDocument(entity: EventEntity, sharedWith: List<String>): Map<String, Any?> =
         mapOf(
@@ -939,11 +976,17 @@ class SyncServiceTest {
         schoolInfoJson = null,
         createdAt = now,
         updatedAt = updatedAt,
+        updatedAtMillis = EventTimestamp.ofWallClock(updatedAt),
         createdByFirebaseUid = ALICE,
         lastModifiedBy = ALICE,
         syncedToFirestore = synced
     )
 
+    /**
+     * A child document as an upgraded build writes it: `updatedAt` is the UTC text of the instant
+     * [updatedAt] names on this machine, so a comparison against [childInfoEntity] means the same
+     * thing whatever zone the test runs in (schema 40).
+     */
     private fun remoteChildInfoMap(updatedAt: LocalDateTime): Map<String, Any?> = mapOf(
         "id" to CHILD_ID,
         "childName" to "Ema",
@@ -955,7 +998,7 @@ class SyncServiceTest {
         "emergencyContacts" to emptyList<Any>(),
         "schoolInfo" to null,
         "createdAt" to now.format(formatter),
-        "updatedAt" to updatedAt.format(formatter),
+        "updatedAt" to EventTimestamp.toWire(EventTimestamp.ofWallClock(updatedAt)),
         "createdByFirebaseUid" to ALICE,
         "lastModifiedBy" to ALICE,
         "sharedWith" to listOf(ALICE, BOB)

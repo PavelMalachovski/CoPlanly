@@ -74,4 +74,12 @@ object RecordFormat {
         val files = attachments.map { "${it.fileName} (SHA-256 ${it.sha256})" }
         return (listOfNotNull(words?.takeIf { it.isNotBlank() }) + files).joinToString("\n")
     }
+
+    /**
+     * "Proposed from the parenting plan's answer to: <question>" for a schedule-proposal message
+     * that cited the plan (MON-21), or empty. The question is printed in its current wording, or as
+     * its id once the plan no longer asks it — never dropped.
+     */
+    fun planCitation(message: RecordMessage, words: PlanLabels): String =
+        message.citedPlanQuestionId?.let { "${words.cited}: ${words.question(it)}" }.orEmpty()
 }

@@ -49,6 +49,9 @@ import com.coparently.app.presentation.documents.FamilyDocumentsScreen
 import com.coparently.app.presentation.event.AddEditEventScreen
 import com.coparently.app.presentation.event.EventListScreen
 import com.coparently.app.presentation.export.ExportScreen
+import com.coparently.app.presentation.journal.JournalEditorScreen
+import com.coparently.app.presentation.journal.JournalEditorViewModel
+import com.coparently.app.presentation.journal.JournalListScreen
 import com.coparently.app.presentation.onboarding.OnboardingScreen
 import com.coparently.app.presentation.pairing.PairingScreen
 import com.coparently.app.presentation.parentingplan.ParentingPlanScreen
@@ -197,7 +200,7 @@ fun NavGraph(
                             popUpTo(Screen.Onboarding.route) { inclusive = true }
                         }
                     },
-                    onOpenCustodySetup = { navController.navigate(Screen.CustodySetup.route) },
+                    onOpenCustodySetup = { navController.navigate(Screen.CustodySetup.routeFor()) },
                     // The wizard's first step offers both halves of pairing as two buttons —
                     // "I have their code" opens on code entry, "Invite" on this account's own
                     // code — because the second parent to install the app is holding a code and
@@ -486,6 +489,9 @@ fun NavGraph(
                     onNavigateToCalendarFeed = {
                         navController.navigate(Screen.CalendarFeed.route)
                     },
+                    onNavigateToDataSources = {
+                        navController.navigate(Screen.DataSources.route)
+                    },
                     onNavigateToProfessionals = {
                         navController.navigate(Screen.Professionals.route)
                     },
@@ -493,7 +499,7 @@ fun NavGraph(
                         navController.navigate(Screen.Pairing.routeWithCode(null))
                     },
                     onNavigateToCustodySetup = {
-                        navController.navigate(Screen.CustodySetup.route)
+                        navController.navigate(Screen.CustodySetup.routeFor())
                     },
                     onNavigateToParentingPlan = {
                         navController.navigate(Screen.ParentingPlan.route)
@@ -503,6 +509,9 @@ fun NavGraph(
                     },
                     onNavigateToDocuments = {
                         navController.navigate(Screen.Documents.route)
+                    },
+                    onNavigateToJournal = {
+                        navController.navigate(Screen.Journal.route)
                     },
                     onNavigateToMyProfile = {
                         navController.navigate(Screen.MyProfile.route)
@@ -529,7 +538,12 @@ fun NavGraph(
                 popEnterTransition = { slideInFromLeft() },
                 popExitTransition = { slideOutToRight() }
             ) {
-                ParentingPlanScreen(onNavigateBack = { navController.popBackStack() })
+                ParentingPlanScreen(
+                    onNavigateBack = { navController.popBackStack() },
+                    onProposeSchedule = { questionId ->
+                        navController.navigate(Screen.CustodySetup.routeFor(questionId))
+                    }
+                )
             }
 
             // The communication record (MON-3), off Settings beside the parenting plan: both are
@@ -554,6 +568,37 @@ fun NavGraph(
                 popExitTransition = { slideOutToRight() }
             ) {
                 FamilyDocumentsScreen(onNavigateUp = { navController.popBackStack() })
+            }
+
+            // The private journal (MON-22), after the vault: this parent's own notes, kept on this
+            // phone only. The list, then the editor as a third level, like Pets.
+            composable(
+                route = Screen.Journal.route,
+                enterTransition = { slideInFromRight() },
+                exitTransition = { slideOutToLeft() },
+                popEnterTransition = { slideInFromLeft() },
+                popExitTransition = { slideOutToRight() }
+            ) {
+                JournalListScreen(
+                    onNavigateUp = { navController.popBackStack() },
+                    onOpenEntry = { id -> navController.navigate(Screen.JournalEditor.createRoute(id)) },
+                    onNewEntry = {
+                        navController.navigate(Screen.JournalEditor.createRoute(JournalEditorViewModel.NEW_ENTRY))
+                    }
+                )
+            }
+
+            composable(
+                route = Screen.JournalEditor.route,
+                arguments = listOf(
+                    navArgument(JournalEditorViewModel.ARG_ENTRY_ID) { type = NavType.StringType }
+                ),
+                enterTransition = { slideInFromRight() },
+                exitTransition = { slideOutToLeft() },
+                popEnterTransition = { slideInFromLeft() },
+                popExitTransition = { slideOutToRight() }
+            ) {
+                JournalEditorScreen(onNavigateUp = { navController.popBackStack() })
             }
 
             composable(
@@ -738,6 +783,13 @@ fun NavGraph(
                 )
             }
 
+            // Data sources and licences (MON-13's ODbL attribution). A Settings detail route.
+            composable(route = Screen.DataSources.route) {
+                com.coparently.app.presentation.settings.DataSourcesScreen(
+                    onNavigateUp = { navController.popBackStack() }
+                )
+            }
+
             // The parents' friend list, and the friend's own profile. Detail routes: the
             // bottom bar hides and an up-arrow returns, like every other Settings destination.
             composable(route = Screen.Friends.route) {
@@ -813,6 +865,14 @@ fun NavGraph(
 
             composable(
                 route = Screen.CustodySetup.route,
+                // Read by `CustodySetupViewModel` and `SeasonalScheduleViewModel` through their
+                // SavedStateHandle; blank opens the editor exactly as it always opened.
+                arguments = listOf(
+                    navArgument(Screen.CustodySetup.ARG_PLAN_QUESTION) {
+                        type = NavType.StringType
+                        defaultValue = ""
+                    }
+                ),
                 enterTransition = { slideInFromRight() },
                 exitTransition = { slideOutToLeft() },
                 popEnterTransition = { slideInFromLeft() },
@@ -1301,6 +1361,16 @@ sealed class Screen(val route: String) {
     data object ParentingPlan : Screen("parenting_plan")
     data object Export : Screen("export")
     data object Documents : Screen("family_documents")
+
+    /** The private journal's list (MON-22). */
+    data object Journal : Screen("journal")
+
+    /** One journal entry in the editor; `new` opens an empty one. */
+    data object JournalEditor : Screen("journal_entry/{entryId}") {
+        /** The route for [entryId], or for a new entry when it is [JournalEditorViewModel.NEW_ENTRY]. */
+        fun createRoute(entryId: String): String = "journal_entry/$entryId"
+    }
+
     data object Pets : Screen("pets")
     data object Pairing : Screen("pairing?code={code}&enter={enter}") {
         /** Optional invite code carried by a `coplanly://pair` deep link. */
@@ -1338,6 +1408,9 @@ sealed class Screen(val route: String) {
 
     /** Read-only calendar links for an iPhone or any other calendar app (MON-17). */
     data object CalendarFeed : Screen("calendar_feed")
+
+    /** Where the calendar's holiday data comes from, and its licences (MON-13). */
+    data object DataSources : Screen("data_sources")
 
     /**
      * One friend as the parents read them — their face, phone number and blood group, and the
@@ -1378,7 +1451,19 @@ sealed class Screen(val route: String) {
         fun createRoute(grantId: String): String = "professional_plan/$grantId"
     }
 
-    data object CustodySetup : Screen("custody_setup")
+    /**
+     * The custody schedule editor. Opened plainly from Settings and onboarding, or — MON-21 —
+     * from an agreed parenting-plan answer, whose question id it carries so the editor can quote
+     * the answer and the proposal can cite it.
+     */
+    data object CustodySetup : Screen("custody_setup?planQuestion={planQuestion}") {
+        /** The parenting-plan question the editor was opened from; blank when none. */
+        const val ARG_PLAN_QUESTION = "planQuestion"
+
+        /** Builds the route, carrying [planQuestion] when the editor is opened from the plan. */
+        fun routeFor(planQuestion: String? = null): String =
+            if (planQuestion.isNullOrBlank()) "custody_setup" else "custody_setup?planQuestion=$planQuestion"
+    }
 
     /** The signed-in user's own profile — editable. */
     data object MyProfile : Screen("my_profile")

@@ -47,13 +47,23 @@ enum class DayCellOverlay {
  *   same fills at a reduced strength, the way the day number and the event dots are already
  *   dimmed. Encoded here rather than left to the view so that every consequence of a day being
  *   borrowed is decided in this file, which is the whole point of it.
+ * @property schoolVacation Whether the day falls in a school vacation (MON-13). It is a **line,
+ *   not a fill**: a thin neutral hairline along the cell's bottom edge, in the theme's `outline`
+ *   role, drawn over every other layer and taking no height. Not a colour channel — pink and blue
+ *   are the parents, teal is a calendar friend, grey is the weekend, red is a public holiday — and
+ *   not a tint, because a summer break covers every cell of July and August and the teal strip that
+ *   used to do this was removed for washing a whole month. It crosses into the borrowed days like
+ *   the custody band does: a vacation is a run of days, and a run that stops mid-row is the defect
+ *   that band was fixed for. Nothing on it can be acted on, so it has none of the reasons the
+ *   holiday tint has to stop at the month's edge.
  */
 data class DayCellFill(
     val base: DayCellBase,
     val overlay: DayCellOverlay,
     val handoverFrom: DayCellOverlay? = null,
     val pendingProposalFor: DayCellOverlay? = null,
-    val isAdjacentMonth: Boolean = false
+    val isAdjacentMonth: Boolean = false,
+    val schoolVacation: Boolean = false
 )
 
 /**
@@ -73,7 +83,8 @@ data class DayCellFill(
  * the cells the screen exists to give it in.
  *
  * **Every case a cell can be in is decided here, in one place**: weekend base, custody overlay,
- * public holiday, today, the handover diagonal and the pending-proposal preview. Two functions
+ * public holiday, today, the handover diagonal, the pending-proposal preview and the
+ * school-vacation line. Two functions
  * that each knew some of the cases is precisely how the weekend band became unreachable, so a new
  * case folds in rather than growing a second decision beside this one. (Pending *swap* arrows are
  * the deliberate exception: they are a glyph, not a fill, and `MonthView` draws them from a set of
@@ -99,8 +110,8 @@ object DayCellFills {
      * @param previousCustody Whose day *yesterday* was, resolved through the same lookup. When it
      *   differs from [custody] the child changes hands on this cell's morning, and the cell is
      *   split diagonally — see [DayCellFill.handoverFrom].
-     * @param isPublicHoliday A public holiday, not a school vacation — school vacation is a
-     *   month-level banner and never a cell fill.
+     * @param isPublicHoliday A public holiday, not a school vacation — school vacation is never a
+     *   cell fill.
      * @param proposedCustody Whose day this would be under a **pending** custody proposal, or
      *   null when nothing is pending. Resolved from the proposal's own pattern, never from the
      *   agreed one. See [pendingProposal].
@@ -110,6 +121,9 @@ object DayCellFills {
      *   is; this flag only says the answer came from a swap rather than the pattern.
      * @param previousSwapped Whether an accepted swap decides *yesterday*. Suppresses the split
      *   this cell would otherwise inherit from the swap's far edge, for the same reason.
+     * @param isSchoolVacation Whether the day falls in a school vacation — on a public holiday
+     *   inside one too, which is why it is its own input and not read off the day's `Holiday`.
+     *   Passed through unchanged on a borrowed day; see [DayCellFill.schoolVacation].
      */
     @Suppress("LongParameterList") // one cell's inputs, expressed as one parameter list
     fun monthCell(
@@ -120,7 +134,8 @@ object DayCellFills {
         isPublicHoliday: Boolean,
         proposedCustody: String? = null,
         isSwapped: Boolean = false,
-        previousSwapped: Boolean = false
+        previousSwapped: Boolean = false,
+        isSchoolVacation: Boolean = false
     ): DayCellFill = DayCellFill(
         base = baseFor(isWeekend),
         // The holiday tint is the one overlay the borrowed days give up: it marks a single day,
@@ -141,7 +156,10 @@ object DayCellFills {
             handoverFrom(custody, previousCustody)
         },
         pendingProposalFor = if (isCurrentMonth) pendingProposal(custody, proposedCustody) else null,
-        isAdjacentMonth = !isCurrentMonth
+        isAdjacentMonth = !isCurrentMonth,
+        // Independent of every layer above: a vacation neither changes whose day it is nor hides
+        // the holiday tint, and it runs to the grid's edge like the band.
+        schoolVacation = isSchoolVacation
     )
 
     /**

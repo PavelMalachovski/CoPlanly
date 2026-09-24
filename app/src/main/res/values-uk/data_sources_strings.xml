@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_data_sources_title">Джерела даних і ліцензії</string>
+    <string name="settings_data_sources_description">Звідки в календарі свята та шкільні канікули</string>
+    <string name="data_sources_intro">Свята та шкільні канікули в календарі вбудовані в застосунок, тож під час роботи нічого не завантажується. Їх підготовлено за джерелами, наведеними нижче.</string>
+    <string name="data_sources_group_holidays">Свята та шкільні канікули</string>
+    <string name="data_sources_openholidays_description">Шкільні канікули Словаччини, Австрії та кожної федеральної землі Німеччини. Містить інформацію з даних OpenHolidays API, наданих на умовах ліцензії Open Database License (ODbL) 1.0.</string>
+    <string name="data_sources_holidays_title">holidays (бібліотека для Python)</string>
+    <string name="data_sources_holidays_description">Свята Словаччини, Німеччини, Австрії та Росії звірено з нею день за днем. © Vacanza Team і учасники проєкту, ліцензія MIT.</string>
+    <string name="data_sources_computed_note">Чеські свята та шкільні канікули застосунок обчислює сам.</string>
+</resources>

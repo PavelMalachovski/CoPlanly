@@ -1,6 +1,7 @@
 package com.coparently.app.presentation.custody
 
 import android.util.Log
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.coparently.app.R
@@ -8,18 +9,27 @@ import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.PatternSubmission
 import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.custody.ContactWindowCodec
+import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.CustodyModelType
 import com.coparently.app.domain.model.MidweekContact
+import com.coparently.app.domain.parentingplan.PlanReference
+import com.coparently.app.domain.parentingplan.PlanScheduleTarget
+import com.coparently.app.presentation.common.FamilyMember
+import com.coparently.app.presentation.common.FamilyMembersSource
 import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.presentation.common.UiText
+import com.coparently.app.presentation.parentingplan.PlanReferenceSource
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -31,14 +41,31 @@ private const val PARENTS_STOP_TIMEOUT_MS = 5_000L
 /** Days in one week of a custom custody pattern. */
 private const val DAYS_PER_WEEK = 7
 
+/** Index of the contact Saturday in the fortnight: day 0 is Monday. */
+private const val CONTACT_SATURDAY = 5
+
+/** Index of the contact Sunday. */
+private const val CONTACT_SUNDAY = 6
+
 /**
  * ViewModel for custody setup screen.
  * Handles custody model selection and configuration.
+ *
+ * Opened from an agreed parenting-plan answer (MON-21), it also holds that answer as
+ * [CustodySetupUiState.planReference]: the screen quotes it above the form, and a save cites it on
+ * the proposal. The form itself is filled by the parent, as always — the answer is never parsed.
+ *
+ * Scoped to one child (FAM-4, [editSchedule]) it is the same editor for that child's own schedule:
+ * it opens on their override, or on the family pattern when they have none, and a save becomes
+ * their override — a proposal for a paired family, like any pattern change.
  */
 @HiltViewModel
 class CustodySetupViewModel @Inject constructor(
     private val custodyModelRepository: CustodyModelRepository,
-    parentsSource: ParentsSource
+    parentsSource: ParentsSource,
+    savedStateHandle: SavedStateHandle,
+    private val planReferenceSource: PlanReferenceSource,
+    familyMembersSource: FamilyMembersSource
 ) : ViewModel() {
 
     /**
@@ -54,8 +81,42 @@ class CustodySetupViewModel @Inject constructor(
     private val _currentModel = MutableStateFlow<CustodyModel?>(null)
     val currentModel: StateFlow<CustodyModel?> = _currentModel.asStateFlow()
 
+    /**
+     * The family's children, for "Different schedule for a child" (FAM-4). A stream for what the
+     * screen renders; the section itself decides it appears only at two.
+     */
+    val children: StateFlow<List<FamilyMember>> = familyMembersSource.observe()
+        .map { members -> members.filter { it.ref is FamilyMemberRef.Child } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(PARENTS_STOP_TIMEOUT_MS), emptyList())
+
     init {
         loadCurrentModel()
+        savedStateHandle.get<String>(ARG_PLAN_QUESTION)?.takeIf { it.isNotBlank() }?.let { loadPlanReference(it) }
+    }
+
+    /**
+     * Loads the agreed answer the editor was opened from, when it is about the base pattern.
+     *
+     * A holiday answer opens the same screen but belongs to the seasonal-layer editor, which
+     * loads it itself; quoting it above the base form would suggest the base Save cites it.
+     */
+    private fun loadPlanReference(questionId: String) {
+        viewModelScope.launch {
+            val reference = try {
+                planReferenceSource.referenceFor(questionId)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (
+                @Suppress("TooGenericExceptionCaught") e: Exception
+            ) {
+                // The editor still works without the quote; the proposal simply cites nothing.
+                Log.w(TAG, "Could not read the parenting plan answer", e)
+                null
+            }
+            _uiState.update { state ->
+                state.copy(planReference = reference?.takeIf { it.target == PlanScheduleTarget.BASE_PATTERN })
+            }
+        }
     }
 
     /**
@@ -65,7 +126,7 @@ class CustodySetupViewModel @Inject constructor(
         viewModelScope.launch {
             custodyModelRepository.getActiveModel().collect { model ->
                 _currentModel.value = model
-                model?.let { updateUiFromModel(it) }
+                model?.let { updateUiFromModel(it.scopedTo(_uiState.value.childScope)) }
             }
         }
     }
@@ -104,48 +165,17 @@ class CustodySetupViewModel @Inject constructor(
     }
 
     /**
-     * Reads a saved every-other-weekend model's midweek day back into the form.
+     * Scopes the editor to [child]'s own schedule, or back to the family's with null (FAM-4).
      *
-     * The model stores only which fortnight indices belong to slot 1, so the midweek day is
-     * recovered rather than stored: take the contact parent's days, drop the two weekend
-     * indices, and whatever weekday is left is the one that was chosen. Re-opening the screen
-     * has to show the schedule the family actually has — a form that silently reset the toggle
-     * would turn "save" into "remove the midweek day".
+     * The form refills from what the new scope holds — the child's override, else the family
+     * pattern — so switching never carries one schedule's half-made edits into another's save.
      */
-    private fun CustodySetupUiState.withMidweekFrom(model: CustodyModel): CustodySetupUiState {
-        val residentIsSlotOne = model.isResidentSlotOne()
-        val contactDays = if (residentIsSlotOne) {
-            (0 until model.patternDays).toSet() - model.momDayIndices
-        } else {
-            model.momDayIndices
-        }
-        val midweekIndices = contactDays - setOf(CONTACT_SATURDAY, CONTACT_SUNDAY)
-        val day = midweekIndices.minOrNull()?.let { DayOfWeek.of((it % DAYS_IN_WEEK) + 1) }
-            ?: return copy(midweekEnabled = false)
-        return copy(
-            midweekEnabled = true,
-            midweekDay = day,
-            midweekEveryWeek = midweekIndices.size > 1
-        )
+    fun editSchedule(child: FamilyMember?) {
+        val childId = (child?.ref as? FamilyMemberRef.Child)?.id
+        val scope = if (child != null && childId != null) ChildScope(childId, child.name) else null
+        _uiState.value = _uiState.value.copy(childScope = scope)
+        _currentModel.value?.let { updateUiFromModel(it.scopedTo(scope)) }
     }
-
-    /**
-     * Whether slot 1 is the parent the child lives with, for a resident/contact pattern.
-     *
-     * By share of the fortnight, which is the definition, rather than by any particular index:
-     * every index the contact parent holds is negotiable — the two weekend days plus an optional
-     * midweek day that may itself be a Monday — while "holds most of the cycle" is exactly what
-     * makes a parent the resident one. Only meaningful for a pattern that is not a 50/50 split.
-     *
-     * Counts only indices the pattern can reach, the stance `CustodyModel.complemented` already
-     * takes: `getCustodyFor` reduces a date modulo `patternDays` and never sees an index outside
-     * the cycle, so counting one would answer about days the calendar does not paint — and could
-     * invert the form for a document written by an older or foreign build, which is the exact
-     * failure this function exists to prevent. It also keeps a zero `patternDays` from making an
-     * empty set the majority.
-     */
-    private fun CustodyModel.isResidentSlotOne(): Boolean =
-        momDayIndices.count { it in 0 until patternDays } * 2 > patternDays
 
     /**
      * Selects a model type.
@@ -263,44 +293,21 @@ class CustodySetupViewModel @Inject constructor(
 
     /**
      * Saves the custody model configuration.
+     *
+     * Scoped to a child (FAM-4), it saves that child's own schedule instead — or, with
+     * [followFamily], sends the child back to the family schedule, which needs no valid form.
      */
-    fun save(onSuccess: () -> Unit = {}) {
+    fun save(followFamily: Boolean = false, onSuccess: () -> Unit = {}) {
         val state = _uiState.value
-        if (!state.isValid) return
+        if (!state.isValid && !followFamily) return
 
         _uiState.value = state.copy(isLoading = true)
 
+        // Only a family pattern opened from the plan cites it; everything else saves as it always did.
+        val citation = state.planReference?.citationWire?.takeIf { state.childScope == null }
         viewModelScope.launch {
             try {
-                val submission = when (state.selectedModelType) {
-                    CustodyModelType.WEEK_ON_WEEK_OFF -> custodyModelRepository.createWeekOnWeekOff(
-                        startDate = state.startDate,
-                        momFirst = state.momFirst,
-                        contactWindows = state.contactWindows
-                    )
-                    CustodyModelType.EVERY_OTHER_WEEKEND -> custodyModelRepository.createEveryOtherWeekend(
-                        startDate = state.startDate,
-                        momIsResident = state.momFirst,
-                        midweek = state.midweek,
-                        contactWindows = state.contactWindows
-                    )
-                    CustodyModelType.TWO_TWO_THREE -> custodyModelRepository.createTwoTwoThree(
-                        startDate = state.startDate,
-                        momStartsFirst = state.momFirst,
-                        contactWindows = state.contactWindows
-                    )
-                    CustodyModelType.THREE_FOUR_FOUR_THREE -> custodyModelRepository.createThreeFourFourThree(
-                        startDate = state.startDate,
-                        momStartsFirst = state.momFirst,
-                        contactWindows = state.contactWindows
-                    )
-                    CustodyModelType.CUSTOM -> custodyModelRepository.createCustom(
-                        startDate = state.startDate,
-                        patternDays = state.customPatternDays,
-                        momDayIndices = state.customMomDays,
-                        contactWindows = state.contactWindows
-                    )
-                }
+                val submission = custodyModelRepository.submitFor(state, citation, followFamily)
                 _uiState.value = state.copy(
                     isLoading = false,
                     isSaved = true,
@@ -311,7 +318,7 @@ class CustodySetupViewModel @Inject constructor(
                 onSuccess()
             } catch (e: Exception) {
                 // The exception's own text is English and technical: it goes to the log.
-                Log.w("CustodySetupViewModel", "Saving the custody model failed", e)
+                Log.w(TAG, "Saving the custody model failed", e)
                 _uiState.value = state.copy(
                     isLoading = false,
                     error = UiText.Res(R.string.custody_setup_save_failed)
@@ -328,16 +335,56 @@ class CustodySetupViewModel @Inject constructor(
     }
 
     private companion object {
-        /** Index of the contact Saturday in the fortnight: day 0 is Monday. */
-        const val CONTACT_SATURDAY = 5
+        const val TAG = "CustodySetupViewModel"
 
-        /** Index of the contact Sunday. */
-        const val CONTACT_SUNDAY = 6
-
-        /** Days in a week, for turning a fortnight index back into a weekday. */
-        const val DAYS_IN_WEEK = 7
+        /** The navigation argument naming the plan question the editor was opened from (MON-21). */
+        const val ARG_PLAN_QUESTION = "planQuestion"
     }
 }
+
+/**
+ * Reads a saved every-other-weekend model's midweek day back into the form.
+ *
+ * The model stores only which fortnight indices belong to slot 1, so the midweek day is
+ * recovered rather than stored: take the contact parent's days, drop the two weekend
+ * indices, and whatever weekday is left is the one that was chosen. Re-opening the screen
+ * has to show the schedule the family actually has — a form that silently reset the toggle
+ * would turn "save" into "remove the midweek day".
+ */
+private fun CustodySetupUiState.withMidweekFrom(model: CustodyModel): CustodySetupUiState {
+    val residentIsSlotOne = model.isResidentSlotOne()
+    val contactDays = if (residentIsSlotOne) {
+        (0 until model.patternDays).toSet() - model.momDayIndices
+    } else {
+        model.momDayIndices
+    }
+    val midweekIndices = contactDays - setOf(CONTACT_SATURDAY, CONTACT_SUNDAY)
+    val day = midweekIndices.minOrNull()?.let { DayOfWeek.of((it % DAYS_PER_WEEK) + 1) }
+        ?: return copy(midweekEnabled = false)
+    return copy(
+        midweekEnabled = true,
+        midweekDay = day,
+        midweekEveryWeek = midweekIndices.size > 1
+    )
+}
+
+/**
+ * Whether slot 1 is the parent the child lives with, for a resident/contact pattern.
+ *
+ * By share of the fortnight, which is the definition, rather than by any particular index:
+ * every index the contact parent holds is negotiable — the two weekend days plus an optional
+ * midweek day that may itself be a Monday — while "holds most of the cycle" is exactly what
+ * makes a parent the resident one. Only meaningful for a pattern that is not a 50/50 split.
+ *
+ * Counts only indices the pattern can reach, the stance `CustodyModel.complemented` already
+ * takes: `getCustodyFor` reduces a date modulo `patternDays` and never sees an index outside
+ * the cycle, so counting one would answer about days the calendar does not paint — and could
+ * invert the form for a document written by an older or foreign build, which is the exact
+ * failure this function exists to prevent. It also keeps a zero `patternDays` from making an
+ * empty set the majority.
+ */
+private fun CustodyModel.isResidentSlotOne(): Boolean =
+    momDayIndices.count { it in 0 until patternDays } * 2 > patternDays
 
 /**
  * UI state for custody setup screen.
@@ -366,6 +413,13 @@ data class CustodySetupUiState(
      * with the overnight, and a saved schedule that has one keeps it exactly as it was.
      */
     val contactWindows: List<ContactWindow> = emptyList(),
+    /**
+     * The agreed parenting-plan answer this editor was opened from (MON-21), quoted above the
+     * form and cited on the proposal a save makes; null when opened any other way.
+     */
+    val planReference: PlanReference? = null,
+    /** The child this editor is scoped to (FAM-4), or null while it edits the family schedule. */
+    val childScope: ChildScope? = null,
     val isLoading: Boolean = false,
     val isSaved: Boolean = false,
     /** True when the save was sent to the co-parent as a proposal rather than applied. */
@@ -378,7 +432,9 @@ data class CustodySetupUiState(
      */
     val isValid: Boolean
         get() = when (selectedModelType) {
-            CustodyModelType.CUSTOM -> customPatternDays > 0 && customMomDays.isNotEmpty()
+            // A child's own schedule may give every day to slot 2 — "always with the other parent"
+            // is the ordinary case there (FAM-4); the family pattern still needs one slot-1 day.
+            CustodyModelType.CUSTOM -> customPatternDays > 0 && (customMomDays.isNotEmpty() || childScope != null)
             else -> true
         }
 

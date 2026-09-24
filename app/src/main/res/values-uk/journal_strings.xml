@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The private journal (MON-22): kept on this phone only, never synced or shared. -->
+    <string name="journal_title">Особистий щоденник</string>
+    <string name="journal_settings_description">Ваші власні нотатки, лише на цьому телефоні</string>
+    <string name="journal_private_notice">Цей щоденник можете читати лише ви. Записи залишаються на цьому телефоні: вони не синхронізуються, не потрапляють у резервні копії й ніколи не надсилаються іншому з батьків. Якщо видалити застосунок або увійти на цьому телефоні в інший обліковий запис, їх буде видалено. Ви можете самі додати записи до експорту.</string>
+    <string name="journal_empty_title">Записів поки немає</string>
+    <string name="journal_empty_description">Запишіть своїми словами, що сталося, поки це свіже.</string>
+    <string name="journal_add">Новий запис</string>
+    <string name="journal_deleted">Запис видалено</string>
+    <string name="journal_undo">Скасувати</string>
+    <string name="journal_delete">Видалити запис</string>
+    <string name="journal_editor_new_title">Новий запис</string>
+    <string name="journal_editor_edit_title">Змінити запис</string>
+    <string name="journal_editor_notice">Зберігається лише на цьому телефоні. Інший із батьків ніколи його не побачить.</string>
+    <string name="journal_entry_date">День, якого стосується запис</string>
+    <string name="journal_entry_text">Що сталося</string>
+    <string name="journal_save">Зберегти</string>
+    <string name="journal_pick_ok">ОК</string>
+    <string name="journal_pick_cancel">Скасувати</string>
+    <string name="journal_error_save">Не вдалося зберегти запис. Спробуйте ще раз.</string>
+    <string name="journal_error_signed_out">Ви вийшли з облікового запису. Увійдіть, щоб зберегти запис.</string>
+</resources>

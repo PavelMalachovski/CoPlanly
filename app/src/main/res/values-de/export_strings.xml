@@ -87,4 +87,14 @@
     <string name="export_plan_last_changed">Zuletzt geändert</string>
     <string name="export_plan_not_agreed">Nicht geeinigt</string>
     <string name="export_plan_retired">Antworten auf Fragen, die der Plan nicht mehr stellt (aufbewahrt, nicht gelöscht)</string>
+    <string name="export_plan_cited">Vorgeschlagen nach der Antwort im Elternplan auf die Frage</string>
+
+    <!-- The private journal as an optional section (MON-22). -->
+    <string name="export_include_journal">Mein privates Tagebuch</string>
+    <string name="export_include_journal_supporting">Ihre eigenen Einträge zu Tagen in diesem Zeitraum, in der Datei als Ihre privaten Notizen gekennzeichnet. Aus, solange Sie es nicht ankreuzen.</string>
+    <string name="export_journal_private_note">Dies sind die privaten Notizen eines Elternteils, gespeichert auf dessen Telefon. Sie wurden über die App nie mit dem anderen Elternteil geteilt, und der andere Elternteil hat sie nicht gesehen. Sie sind enthalten, weil dieser Elternteil sie aufnehmen wollte.</string>
+    <string name="export_journal_clock_note">Jeder Eintrag ist nach dem Tag datiert, um den es geht. Wann er geschrieben und zuletzt bearbeitet wurde, stammt von der Uhr dieses Telefons; kein Server hat diese Einträge je erhalten.</string>
+    <string name="export_journal_none">Keine Tagebucheinträge zu Tagen in diesem Zeitraum.</string>
+    <string name="export_journal_written">Geschrieben</string>
+    <string name="export_journal_edited">Zuletzt bearbeitet</string>
 </resources>

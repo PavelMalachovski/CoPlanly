@@ -61,15 +61,18 @@ private const val BANNER_TINT_ALPHA = 0.14f
  * @param pendingCount Number of pending incoming requests; the caller hides this at zero
  * @param onReview Opens the change-requests inbox
  * @param modifier Modifier for the banner
+ * @param message When set, replaces the pluralised "N requests" line — used for the
+ *   custody-proposal banner, which names the proposer rather than counting rows.
+ * @param detail One short secondary line under [message], or null for none — the parenting-plan
+ *   answer a custody proposal cites (MON-21). Still one banner, a line taller; never a second one.
  */
 @Composable
 fun ChangeRequestBanner(
     pendingCount: Int,
     onReview: () -> Unit,
     modifier: Modifier = Modifier,
-    // When set, replaces the pluralised "N requests" line — used for the custody-proposal
-    // banner, which names the proposer rather than counting rows.
-    message: String? = null
+    message: String? = null,
+    detail: String? = null
 ) {
     Row(
         modifier = modifier
@@ -89,18 +92,28 @@ fun ChangeRequestBanner(
             tint = MaterialTheme.colorScheme.primary,
             modifier = Modifier.size(18.dp)
         )
-        Text(
-            text = message ?: pluralStringResource(
-                R.plurals.calendar_change_requests_banner,
-                pendingCount,
-                pendingCount
-            ),
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurface,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f)
-        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = message ?: pluralStringResource(
+                    R.plurals.calendar_change_requests_banner,
+                    pendingCount,
+                    pendingCount
+                ),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            if (detail != null) {
+                Text(
+                    text = detail,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
         Text(
             text = stringResource(R.string.calendar_change_requests_review),
             style = MaterialTheme.typography.labelMedium,
@@ -116,6 +129,12 @@ fun ChangeRequestBanner(
  * In July and August every single cell used to carry a teal strip, which is per-day noise for a
  * month-level fact: the strip stopped distinguishing anything precisely when it was most
  * visible. One banner says the same thing and gives the grid its bottom edge back.
+ *
+ * **Not rendered by the calendar any more**: a banner present only in some months changed the
+ * grid's height mid-swipe, so `CalendarScreen` dropped it, and the month grid now marks each
+ * vacation day with a thin neutral line instead (`DayCellFill.schoolVacation`, MON-13) — neutral
+ * where the old strip was teal, which is now the calendar friend's colour. Kept for the screenshot
+ * suite and for a surface that does not page.
  *
  * @param label Vacation name, or a range description
  * @param modifier Modifier for the banner

@@ -880,6 +880,95 @@ object DatabaseMigrations {
     }
 
     /**
+     * v39 -> v40: children and pets are dated by an instant too (the MON-4 finding).
+     *
+     * [MIGRATION_38_39] moved events; `child_info.updatedAt` is the same naive wall clock and
+     * `ConflictResolver.resolveChildInfoConflict` compared it, so two parents in different zones
+     * did not order their edits to a child's record by real time. `pets` carries the same field;
+     * nothing compares it today, and it moves with the child record so the two collections keep
+     * one wire form and a future conflict check starts from the instant.
+     *
+     * Same backfill, same reasons: the stored wall clock is read in **this device's zone**
+     * through [wallClockToEpochMillis], because the only rows the resolver ever compares are this
+     * device's own unsynced edits, written here; downloaded rows are read in the wrong zone, are
+     * never compared while synced, and are replaced with an exactly dated copy on the next
+     * download. An unreadable value lands on the epoch and loses every comparison.
+     *
+     * `updatedAt` stays in both tables: it is what the app displays. Needs `40.json` from the
+     * Regenerate workflow before `CoPlanlyDatabaseMigrationTest` can run it.
+     */
+    val MIGRATION_39_40 = object : Migration(39, 40) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            listOf("child_info", "pets").forEach { table ->
+                database.execSQL("ALTER TABLE $table ADD COLUMN updatedAtMillis INTEGER NOT NULL DEFAULT 0")
+                backfillUpdatedAtMillis(database, table)
+            }
+        }
+    }
+
+    /**
+     * v40 -> v41: the private journal (MON-22).
+     *
+     * A new table and nothing else: entries start on the day this ships, and no other table is
+     * touched. It has no `syncedToFirestore` column because nothing in it is ever uploaded — see
+     * `JournalEntryEntity`. The column list must match what Room generates for that entity, which
+     * `CoPlanlyDatabaseMigrationTest` checks against `41.json` once the Regenerate workflow has
+     * exported it.
+     */
+    val MIGRATION_40_41 = object : Migration(40, 41) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL(
+                "CREATE TABLE IF NOT EXISTS journal_entries (" +
+                    "id TEXT NOT NULL, " +
+                    "createdByFirebaseUid TEXT NOT NULL, " +
+                    "familyId TEXT, " +
+                    "entryDate TEXT NOT NULL, " +
+                    "text TEXT NOT NULL, " +
+                    "createdAtMillis INTEGER NOT NULL, " +
+                    "updatedAtMillis INTEGER NOT NULL, " +
+                    "PRIMARY KEY(id))"
+            )
+        }
+    }
+
+    /**
+     * v41 -> v42: a child's own custody schedule (FAM-4).
+     *
+     * One nullable column on the custody pattern, holding the per-child overrides as
+     * `ChildOverrideCodec` strings. Every existing pattern has none, which is what null says (see
+     * `CustodyModelEntity.childOverridesJson`), so every child keeps following the family schedule
+     * on upgrade.
+     */
+    val MIGRATION_41_42 = object : Migration(41, 42) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL("ALTER TABLE custody_models ADD COLUMN childOverridesJson TEXT")
+        }
+    }
+
+    /**
+     * Writes each row's [wallClockToEpochMillis] reading of `updatedAt` into `updatedAtMillis`.
+     *
+     * Reads every value out first and writes afterwards — nothing iterates a cursor while
+     * writing to the table it came from, as in [MIGRATION_38_39]. [table] is one of this file's
+     * own literals, never input.
+     */
+    private fun backfillUpdatedAtMillis(database: SupportSQLiteDatabase, table: String) {
+        val instants = mutableListOf<Pair<String, Long>>()
+        database.query("SELECT id, updatedAt FROM $table").use { cursor ->
+            while (cursor.moveToNext()) {
+                val id = cursor.getString(0) ?: continue
+                instants += id to wallClockToEpochMillis(cursor.getString(1))
+            }
+        }
+        instants.forEach { (id, millis) ->
+            database.execSQL(
+                "UPDATE $table SET updatedAtMillis = ? WHERE id = ?",
+                arrayOf<Any>(millis, id)
+            )
+        }
+    }
+
+    /**
      * List of all migrations in order.
      */
     val ALL_MIGRATIONS = arrayOf(
@@ -916,6 +1005,9 @@ object DatabaseMigrations {
         MIGRATION_35_36,
         MIGRATION_36_37,
         MIGRATION_37_38,
-        MIGRATION_38_39
+        MIGRATION_38_39,
+        MIGRATION_39_40,
+        MIGRATION_40_41,
+        MIGRATION_41_42
     )
 }

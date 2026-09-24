@@ -372,9 +372,12 @@ service cloud.firestore {
     function swapWriteTouchesOnlyTheSwap(before, after) {
       return after.diff(before).affectedKeys()
                   .hasOnly(['dayOverrides', 'lastSwapDate', 'lastModifiedBy', 'lastModifiedKind',
-                            'contactWindows', 'seasonalLayers']) &&
+                            'contactWindows', 'seasonalLayers', 'childOverrides',
+                            'proposalPlanCitation']) &&
              contactWindowsKeptOrDropped(before, after) &&
-             seasonalLayersKeptOrDropped(before, after);
+             seasonalLayersKeptOrDropped(before, after) &&
+             childOverridesKeptOrDropped(before, after) &&
+             planCitationKeptOrDropped(before, after);
     }
 
     // True when a write leaves `contactWindows` (MON-6b) exactly as it was, or drops the key.
@@ -410,6 +413,19 @@ service cloud.firestore {
              !after.diff(before).affectedKeys().hasAny(['seasonalLayers']);
     }
 
+    // True when a write leaves `childOverrides` (FAM-4) exactly as it was, or drops the key.
+    //
+    // The same rule as the two above, for the same two reasons. A child's own schedule is part of
+    // the agreed arrangement — it decides whose every day is for that child — so only a pattern
+    // write, which stamps `lastModifiedBy` and is announced, may change it; a swap or proposal
+    // write that did would move a child in silence. And a build that predates the key rewrites
+    // the whole document without it, so dropping it stays allowed; a build that knows the key
+    // reads its absence as an older build's write and keeps its own copy.
+    function childOverridesKeptOrDropped(before, after) {
+      return !('childOverrides' in after) ||
+             !after.diff(before).affectedKeys().hasAny(['childOverrides']);
+    }
+
     // True when a write only puts, clears, or records the outcome of a custody *proposal* (item
     // 7) — it never touches the agreed pattern, its dates, or `lastModifiedBy`. That is the whole
     // safety property: a proposal write can never move anyone's calendar, so it is allowed
@@ -419,9 +435,54 @@ service cloud.firestore {
     // model and stamps the accepter — and passes the normal pattern branch below, not this one.
     function proposalWriteTouchesOnlyProposal(before, after) {
       return after.diff(before).affectedKeys()
-                  .hasOnly(['proposal', 'lastDecision', 'contactWindows', 'seasonalLayers']) &&
+                  .hasOnly(['proposal', 'lastDecision', 'contactWindows', 'seasonalLayers',
+                            'childOverrides', 'proposalPlanCitation']) &&
              contactWindowsKeptOrDropped(before, after) &&
-             seasonalLayersKeptOrDropped(before, after);
+             seasonalLayersKeptOrDropped(before, after) &&
+             childOverridesKeptOrDropped(before, after);
+    }
+
+    // True when a write leaves `proposalPlanCitation` (MON-21) exactly as it was, or drops the
+    // key. A swap write re-sends the pending proposal verbatim and so must re-send its citation
+    // verbatim too; dropping it is what a build that predates the field does, and costs only the
+    // "from the parenting plan" line on the other phone.
+    function planCitationKeptOrDropped(before, after) {
+      return !('proposalPlanCitation' in after) ||
+             !after.diff(before).affectedKeys().hasAny(['proposalPlanCitation']);
+    }
+
+    // The shape of a proposal's parenting-plan citation (MON-21), on every write: absent — an
+    // older build's proposal, or no proposal at all — or a string of at most 128 characters that
+    // sits beside a pending `proposal`. It is a citation (`PlanCitationCodec`,
+    // "p1|<questionId>|<16 hex>"), never text a reader is shown, so the bound is the whole of what
+    // the rule needs to know about its content.
+    //
+    // It goes where the proposal goes. It may not outlive the proposal — accepting, declining or
+    // withdrawing clears both, and a citation left beside no proposal would cite nothing — and
+    // only the parent whose proposal it is may put or change it, whether the citation or the
+    // proposal under it is what moves: otherwise the co-parent could re-attribute somebody's
+    // proposal to a plan answer they never read. Removing it with the proposal needs no such
+    // check; that is the decline.
+    function planCitationValid(before, after) {
+      return !('proposalPlanCitation' in after) ||
+             (after.proposalPlanCitation is string &&
+              after.proposalPlanCitation.size() <= 128 &&
+              'proposal' in after &&
+              after.proposal is map &&
+              (!after.diff(before).affectedKeys().hasAny(['proposalPlanCitation', 'proposal']) ||
+               after.proposal.get('proposedBy', '') == request.auth.uid));
+    }
+
+    // The same bound on a newly created document, which has no `before` to diff against. No client
+    // creates the document with a proposal on it — the first schedule of a pair is simply saved —
+    // so this only keeps a create from planting an oversized or orphaned key.
+    function planCitationValidOnCreate(data) {
+      return !('proposalPlanCitation' in data) ||
+             (data.proposalPlanCitation is string &&
+              data.proposalPlanCitation.size() <= 128 &&
+              'proposal' in data &&
+              data.proposal is map &&
+              data.proposal.get('proposedBy', '') == request.auth.uid);
     }
 
     // The canonical pair id for a 2-element participants list — the same sorted-join formula
@@ -1609,6 +1670,7 @@ service cloud.firestore {
                       request.resource.data.participants[0] < request.resource.data.participants[1] &&
                       request.resource.data.lastModifiedBy == request.auth.uid &&
                       request.resource.data.get('dayOverrides', {}).keys().size() == 0 &&
+                      planCitationValidOnCreate(request.resource.data) &&
                       (isPartnerOf(request.resource.data.participants[0]) ||
                        isPartnerOf(request.resource.data.participants[1]));
 
@@ -1639,6 +1701,7 @@ service cloud.firestore {
                       request.resource.data.participants == resource.data.participants &&
                       (isPartnerOf(resource.data.participants[0]) ||
                        isPartnerOf(resource.data.participants[1])) &&
+                      planCitationValid(resource.data, request.resource.data) &&
                       (
                         proposalWriteTouchesOnlyProposal(resource.data, request.resource.data) ||
                         (

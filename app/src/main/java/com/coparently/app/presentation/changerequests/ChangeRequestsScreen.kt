@@ -50,11 +50,13 @@ import com.coparently.app.domain.custody.DaySwapGroup
 import com.coparently.app.domain.model.ChangeRequest
 import com.coparently.app.domain.model.ChangeRequestStatus
 import com.coparently.app.domain.model.Event
+import com.coparently.app.domain.parentingplan.CitationStatus
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.PillChip
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.custody.custodyDiffDescription
+import com.coparently.app.presentation.parentingplan.planCitationLine
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
@@ -100,6 +102,7 @@ fun ChangeRequestsScreen(
     val daySwapGroups by viewModel.daySwapGroups.collectAsState()
     val pendingProposal by viewModel.pendingProposal.collectAsState()
     val pendingProposalDiff by viewModel.pendingProposalDiff.collectAsState()
+    val pendingProposalCitation by viewModel.pendingProposalCitation.collectAsState()
     val parents by viewModel.parents.collectAsState()
     val parentNames = rememberParentNames(parents)
     // Header plus one card per swap, or nothing at all. `indexInInbox` needs the count because
@@ -204,6 +207,7 @@ fun ChangeRequestsScreen(
                         CustodyProposalCard(
                             proposal = proposal,
                             diff = pendingProposalDiff,
+                            citation = pendingProposalCitation,
                             parentNames = parentNames,
                             onAccept = { viewModel.acceptProposal() },
                             onDecline = { viewModel.declineProposal() }
@@ -426,9 +430,11 @@ private fun DaySwapCard(
  * to the parent who must answer — the ViewModel filters out one's own proposal (item 7).
  */
 @Composable
+@Suppress("LongParameterList") // the proposal, what it changes, where it came from, two answers
 private fun CustodyProposalCard(
     proposal: com.coparently.app.domain.custody.CustodyProposal,
     diff: com.coparently.app.domain.custody.CustodyPatternDiff?,
+    citation: CitationStatus,
     parentNames: ParentNames,
     onAccept: () -> Unit,
     onDecline: () -> Unit
@@ -456,6 +462,15 @@ private fun CustodyProposalCard(
                 Text(
                     text = description,
                     style = MaterialTheme.typography.bodyMedium
+                )
+            }
+            // Where it came from (MON-21): the agreed plan answer it cites, or that the answer has
+            // changed since. A proposal citing nothing — an older build's — shows nothing here.
+            planCitationLine(citation)?.let { line ->
+                Text(
+                    text = line,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

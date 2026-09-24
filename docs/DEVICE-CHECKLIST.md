@@ -380,8 +380,7 @@ Settings → Family → **Country** (and **State** when it appears). Open the ca
 October–November 2026 and check the dates below.
 
 - [ ] **Czechia:** 28 Sep, 28 Oct, 17 Nov drawn. The coverage note mentions school vacations.
-      Record whether any school vacation actually appears: AUDIT §4.2 says `VacationBanner` has
-      no caller.
+      **29–30 Oct 2026** carry the school-vacation line (below).
 - [ ] **Slovakia:** 1 Nov drawn. **15 Sep 2026 and 17 Nov 2026 not drawn** (both are working
       days by law in 2026). The note says school vacations are shown and spring holidays are not.
       **Day view on 29 Oct 2026** is labelled "Jesenné prázdniny" (app in Slovak or matching
@@ -399,9 +398,22 @@ October–November 2026 and check the dates below.
 - [ ] **Austria:** 26 Oct, 1 Nov, 8 Dec drawn. There is no state picker. The note says the
       nationwide school vacations are shown and the semester and summer breaks are not. **Day view
       on 28 Oct 2026** is labelled "Herbstferien"; **2 Nov 2026** "Allerseelen".
-- [ ] **School vacations are not marked on the month grid** for any country, Czechia included —
-      record it, do not fail it: the month banner was removed on purpose (ROADMAP MON-13, "Where
-      they show").
+- [ ] **School-vacation line on the month grid, and how it looks.** Germany → Bavaria, month
+      view, **November 2026**: 2–6 Nov and 18 Nov each carry a thin grey line along the cell's
+      bottom edge; the days around them do not. Then Czechia, **December 2026**: 23–31 Dec carry
+      it, **24–26 Dec included** (public holidays inside the break keep both the red tint and the
+      line), and the January days the last row borrows (1–2 Jan 2027) carry it too, fainter, like
+      the custody band there. Judge it in **light and dark theme**, on a custody-coloured cell, on
+      a weekend and on a Wednesday with a contact-window corner: the line must read as a line
+      under the cell — never as a colour of its own, a parent's hue or the friend's teal — and must
+      not hide whose day it is. Swipe between October and November: **the grid does not change
+      height** (the reason the old month banner was removed). Then **Czechia, July–August 2026**:
+      every cell carries it; record whether that reads as calm texture or as noise — that is the
+      owner call ROADMAP MON-13 names. With TalkBack, a vacation day reads its vacation's name,
+      and 24 Dec reads "Christmas Eve" and "School vacation".
+- [ ] **Settings → App → Data sources and licences** opens a screen with an up-arrow and no
+      bottom bar; the OpenHolidays row names ODbL 1.0, and tapping the licence row opens
+      opendatacommons.org in the browser. Check the screen in one non-English language.
 - [ ] **Russia:** 4 Nov drawn.
 - [ ] **Ukraine:** nothing drawn, and the note says holidays are suspended under martial law.
 - [ ] **Other:** nothing drawn, and the note says so.
@@ -549,6 +561,102 @@ base pattern; schema 38 (the Regenerate workflow must have exported `38.json` fo
 - **If it fails:** tag `SeasonalScheduleVM` / `CustodyModelRepo`; `presentation/custody/Seasonal*`,
   `HolidayFairnessCard.kt`, `domain/custody/SeasonalLayer.kt`, `HolidayFairness.kt`,
   `firestore.rules` `seasonalLayersKeptOrDropped`.
+
+### 3.12 From the parenting plan to the schedule (MON-21) · 2P, 1P fallback [branch]
+
+Settings → Family → **Parenting plan**, then Custody setup. Needs two paired accounts that already
+share a custody schedule, and **`firebase deploy --only firestore:rules`** with the
+`proposalPlanCitation` clauses — until then the live rules refuse every proposal that cites the
+plan (their `hasOnly` lists do not name the key), and the repository falls back to a local save.
+
+- [ ] A and B each answer **"How will you divide weekdays, weekends and school holidays"** with the
+      same words (e.g. "Week on, week off, changing on Monday") and each ticks the other's. The
+      question reads **Agreed**, and a row **Propose as the schedule** appears under it. It does
+      not appear under an agreed question that is not about the schedule (the doctor, the
+      handover place), nor under one only one parent has ticked.
+- [ ] A taps it: Custody setup opens with **From your parenting plan** at the top quoting the
+      question and the agreed wording ("You both agreed"), and the form below is **not** filled in
+      from it. A builds week-on-week-off and saves → "sent for approval"; A's grid is unchanged.
+- [ ] B: the proposal card in the inbox (change requests) reads **"From the parenting plan: How
+      will you divide weekdays, …"** under the description of what changes.
+- [ ] B, the same proposal on the other two surfaces: **Home's pop-up** carries the same line under
+      the description, in smaller grey text; the **calendar's** "review" banner above the grid is
+      one line taller, with "From the parenting plan: …" (ellipsised, not wrapped) under it. After
+      A edits the answer (next check) the banner reads **"Plan answer changed since proposed: …"**
+      and the pop-up the long "changed since" sentence. A proposal made without the plan leaves
+      both exactly as they were before MON-21 (a one-line banner).
+- [ ] **Export:** B, Settings → Family → *Export the record*, a period covering the proposal, both
+      formats. The chat's "proposed a new schedule" message carries **"Proposed from the parenting
+      plan answer to: How will you divide weekdays, …"** — under the message text in the PDF, in
+      the *Notes* column of that message's row in the CSV. It still names the question after the
+      proposal was accepted, and after the answer was edited (it records what was cited, not the
+      plan today). A proposal made before this build, or without the plan, prints no such line.
+- [ ] **Changed since:** before B answers, A edits the answer (the agreement lapses). B's card now
+      says the answer **has changed since this was proposed**, live, without reopening. B accepts
+      or declines; the card disappears, and a later proposal A makes without the plan shows no
+      plan line at all.
+- [ ] A holiday answer ("How will you divide the school holidays") agreed the same way:
+      **Propose as the schedule** opens Custody setup with the **seasonal-layer editor already
+      open**, the answer quoted at the top of the dialog; saving the layer sends a proposal whose
+      card on B cites the holiday question. Dismissing the dialog leaves the quote above the
+      seasonal list; adding a layer from there does **not** cite the plan.
+- [ ] While **B's own** schedule proposal waits for A, A's plan screen shows the row with
+      "<B's name> has a schedule proposal waiting for your answer…" and it does nothing on tap.
+- [ ] **Mixed versions:** B on a build without MON-21 accepts or declines a cited proposal
+      normally (the key is simply dropped); a swap offered by B while A's cited proposal is
+      pending keeps A's proposal.
+- **1P fallback:** none that shows the citation — it is read on the other phone. On one phone
+  check only that the row appears under an agreed schedule question and that the editor quotes it;
+  `custody-models.test.js` "parenting-plan citation (MON-21)" and `PlanScheduleLinkTest` cover the
+  rest.
+- **If it fails:** tag `CustodySetupViewModel` / `SeasonalScheduleVM` / `ChangeRequestViewModel`;
+  `domain/parentingplan/PlanScheduleLink.kt`, `PlanCitation.kt`,
+  `presentation/parentingplan/PlanReferenceSource.kt`, `firestore.rules` `planCitationValid`; for
+  the other surfaces `presentation/home/AwaitingDialogs.kt`, `ChangeRequestBanner`
+  (`CalendarBanners.kt`), and for the export `RecordFormat.planCitation` and the
+  `CUSTODY_PROPOSED` card's `activity.planCitation`.
+
+### 3.13 A child's own schedule (FAM-4) · 1P, proposal check 2P [branch]
+
+Custody setup with a saved family pattern and **two children** (Settings → Family → children).
+Schema 42 (the Regenerate workflow must have exported `42.json` for CI to be green); the
+`childOverridesKeptOrDropped` rule needs `firebase deploy --only firestore:rules` before a paired
+family's proposal can carry an override.
+
+- [ ] **With one child** there is no "Different schedule for a child" section at all, Home's hero
+      is the one family sentence, and the calendar looks exactly as before. Add a second child:
+      the section appears under the seasonal schedules, one row per child, each reading "Follows
+      the family schedule". Pets are never listed.
+- [ ] Tap a child: the same editor opens titled **"Schedule for <name>"**, with a line saying
+      seasonal schedules and one-off swaps do not change it; it starts from the family pattern.
+      The seasonal section and the child rows are gone. Back (arrow and system back) returns to
+      the family editor, unchanged; it does not leave the screen.
+- [ ] Unpaired: choose **Custom**, clear every day (the child is always with the other parent) →
+      Save is enabled → Save. The row now reads "Own schedule". Reopen it: it opens as Custom with
+      the same days.
+- [ ] Calendar, month view: the band is still the family's. Filter to **that child alone** → the
+      band becomes the child's (all one parent here), with **no new colour**; swap arrows are gone
+      and a long press offers no swap. Filter to both children, or to the other child → the family
+      band again.
+- [ ] Home on a day the family schedule gives the children to the other parent: under the hero's
+      chips, one line per child — "Ema is with <name> today", "Tomáš is with <name> today" — names
+      only, no dot or tint. On a day they are all with the same parent the lines are absent.
+- [ ] Reopen the child → **Follow the family schedule again** → the screen closes, the row reads
+      "Follows the family schedule", and Home and the filtered grid are the family's again.
+- [ ] **2P, paired, schedule already shared:** A gives a child their own schedule → "Sent to your
+      co-parent for approval"; A's grid is unchanged. B's proposal description says "A child's own
+      schedule changes too" even though no family day moves. B accepts → both phones' filtered
+      grids and Home heroes follow it. A then changes the **family** pattern: B's proposal keeps
+      the child's schedule (it is not proposed away).
+- [ ] **2P, mixed versions:** a swap or proposal from a build without FAM-4 keeps the child's
+      schedule on the newer phone (the key is dropped, the mirror keeps its copy). No one-phone
+      fallback: `custody-models.test.js` "per-child overrides (FAM-4)" is the substitute.
+- [ ] **Calendar feed (MON-17), if deployed:** the subscribed calendar still shows the **family**
+      schedule only — no per-child bars.
+- **If it fails:** tag `CustodySetupViewModel` / `CustodyModelRepo`; `presentation/custody/Child*`,
+  `presentation/calendar/ChildCustodyBand.kt`, `presentation/home/ChildrenToday*.kt`,
+  `domain/custody/ChildScheduleOverride.kt`, `ChildCustody.kt`, `firestore.rules`
+  `childOverridesKeptOrDropped`.
 
 ---
 
@@ -784,6 +892,14 @@ Preconditions:
       that question now reads **Not agreed**. Untick the box: the section is gone.
 - [ ] In **airplane mode**, the plan section says it is **this phone's copy** and the record's face
       carries the incomplete line.
+- [ ] **Private journal (MON-22, schema 41).** Settings → Family → **Private journal**: the screen
+      says the entries stay on this phone and are never shared. Add two entries (one dated inside
+      the export range, one outside it), edit one, swipe one away and tap **Undo** — it comes back
+      with its text and day. On the **co-parent's phone** nothing of the journal appears anywhere.
+      Export with **My private journal** unticked (the default): no journal section. Tick it: both
+      files carry a **Private journal** section, after the expenses and before the plan, that
+      starts with "one parent's own private notes … the other parent has not seen them", lists only
+      the entry inside the range under your **name**, and shows **Last edited** for the edited one.
 - [ ] The **share sheet** opens from both, and sending to e-mail or Drive delivers a file that
       opens.
 - **If it fails:** read the PR's own description for the file and tag names.

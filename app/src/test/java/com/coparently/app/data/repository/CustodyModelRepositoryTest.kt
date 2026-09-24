@@ -3,6 +3,9 @@ package com.coparently.app.data.repository
 import com.coparently.app.data.local.dao.CustodyModelDao
 import com.coparently.app.data.local.entity.CustodyModelEntity
 import com.coparently.app.data.remote.firebase.FirestoreCustodyDataSource
+import com.coparently.app.domain.activity.ActivityAnnouncer
+import com.coparently.app.domain.activity.ActivityKind
+import com.coparently.app.domain.custody.ChildOverrideCodec
 import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.custody.CustodyTimestamp
 import com.coparently.app.domain.custody.SeasonalLayer
@@ -65,6 +68,7 @@ class CustodyModelRepositoryTest {
     private lateinit var custodyModelDao: CustodyModelDao
     private lateinit var userRepository: UserRepository
     private lateinit var firestoreCustodyDataSource: FirestoreCustodyDataSource
+    private lateinit var activityAnnouncer: ActivityAnnouncer
     private lateinit var repository: CustodyModelRepository
 
     @Before
@@ -76,11 +80,12 @@ class CustodyModelRepositoryTest {
         custodyModelDao = mockk(relaxed = true)
         userRepository = mockk()
         firestoreCustodyDataSource = mockk()
+        activityAnnouncer = mockk(relaxed = true)
         repository = CustodyModelRepository(
             custodyModelDao,
             userRepository,
             firestoreCustodyDataSource,
-            mockk(relaxed = true),
+            activityAnnouncer,
             mockk(relaxed = true),
             CoroutineScope(dispatcher)
         )
@@ -600,6 +605,183 @@ class CustodyModelRepositoryTest {
         assertEquals("""["$SUMMER_WIRE"]""", entity.captured.seasonalLayersJson)
     }
 
+    // ---- a child's own schedule (FAM-4) --------------------------------------
+
+    @Test
+    fun `a pattern save writes the children's overrides, and an empty list rather than no key`() =
+        runTest(dispatcher) {
+            val custody = slot<SharedCustody>()
+            coEvery {
+                firestoreCustodyDataSource.setCustody(any(), any(), capture(custody))
+            } returns Unit
+
+            repository.saveAndActivate(
+                localModel().copy(childOverrides = listOf(baby()), unreadableChildOverrides = listOf(CHILD_FUTURE))
+            )
+            assertEquals(listOf(BABY_WIRE, CHILD_FUTURE).sorted(), custody.captured.childOverridesWire)
+
+            repository.saveAndActivate(localModel())
+            assertEquals(emptyList<String>(), custody.captured.childOverridesWire)
+        }
+
+    @Test
+    fun `a document an older build wrote without overrides keeps this device's overrides`() =
+        runTest(dispatcher) {
+            val stored = mirroredEntity().copy(childOverridesJson = """["$BABY_WIRE"]""")
+            coEvery { custodyModelDao.getModelById(REMOTE_MODEL_ID) } returns stored
+            every { firestoreCustodyDataSource.observeCustody(DOCUMENT_ID) } returns
+                flowOf(remoteCustody(lastModifiedAtMillis = RECENTLY))
+            val entity = slot<CustodyModelEntity>()
+            coEvery { custodyModelDao.insertModel(capture(entity)) } returns Unit
+
+            repository.observeShared().first()
+
+            assertEquals(stored.childOverridesJson, entity.captured.childOverridesJson)
+        }
+
+    @Test
+    fun `an explicit empty override list on the document sends every child back to the family schedule`() =
+        runTest(dispatcher) {
+            val stored = mirroredEntity().copy(childOverridesJson = """["$BABY_WIRE"]""")
+            coEvery { custodyModelDao.getModelById(REMOTE_MODEL_ID) } returns stored
+            every { firestoreCustodyDataSource.observeCustody(DOCUMENT_ID) } returns
+                flowOf(remoteCustody().copy(childOverridesWire = emptyList()))
+            val entity = slot<CustodyModelEntity>()
+            coEvery { custodyModelDao.insertModel(capture(entity)) } returns Unit
+
+            repository.observeShared().first()
+
+            assertNull(entity.captured.childOverridesJson)
+        }
+
+    @Test
+    fun `saving the base pattern carries the agreed overrides, unreadable ones included`() =
+        runTest(dispatcher) {
+            coEvery { custodyModelDao.getActiveModelSync() } returns
+                mirroredEntity().copy(childOverridesJson = """["$BABY_WIRE","$CHILD_FUTURE"]""")
+            val entity = slot<CustodyModelEntity>()
+            coEvery { custodyModelDao.insertModel(capture(entity)) } returns Unit
+
+            repository.createWeekOnWeekOff(START_DATE)
+
+            assertEquals("""["$BABY_WIRE","$CHILD_FUTURE"]""", entity.captured.childOverridesJson)
+        }
+
+    @Test
+    fun `a child's override replaces only that child's and keeps the base pattern`() = runTest(dispatcher) {
+        coEvery { custodyModelDao.getActiveModelSync() } returns null
+        assertNull(repository.submitChildOverride("baby-1", baby()))
+
+        coEvery { custodyModelDao.getActiveModelSync() } returns
+            mirroredEntity().copy(childOverridesJson = """["$TEEN_WIRE","$CHILD_FUTURE"]""")
+        val entity = slot<CustodyModelEntity>()
+        coEvery { custodyModelDao.insertModel(capture(entity)) } returns Unit
+
+        repository.submitChildOverride("baby-1", baby())
+
+        assertEquals("[0,1,2,3,4,5,6]", entity.captured.momDaysPattern)
+        val stored = ChildOverrideJson.decode(entity.captured.childOverridesJson)
+        assertEquals(listOf("baby-1", "teen-1"), stored.overrides.map { it.childId })
+        assertEquals(listOf(CHILD_FUTURE), stored.unreadable)
+    }
+
+    @Test
+    fun `sending a child back to the family schedule removes only that child's override`() =
+        runTest(dispatcher) {
+            coEvery { custodyModelDao.getActiveModelSync() } returns
+                mirroredEntity().copy(childOverridesJson = """["$BABY_WIRE","$TEEN_WIRE"]""")
+            val entity = slot<CustodyModelEntity>()
+            coEvery { custodyModelDao.insertModel(capture(entity)) } returns Unit
+
+            repository.submitChildOverride("baby-1", null)
+
+            assertEquals("""["$TEEN_WIRE"]""", entity.captured.childOverridesJson)
+        }
+
+    @Test
+    fun `a paired family's override change is a proposal that leaves the agreed list verbatim`() =
+        runTest(dispatcher) {
+            coEvery { custodyModelDao.getActiveModelSync() } returns mirroredEntity()
+            val agreed = remoteCustody().copy(childOverridesWire = listOf(CHILD_FUTURE))
+            coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID) } returns agreed
+            val custody = slot<SharedCustody>()
+            coEvery { firestoreCustodyDataSource.setCustody(any(), any(), capture(custody)) } returns Unit
+
+            val result = repository.submitChildOverride("baby-1", baby())
+
+            assertEquals(PatternSubmission.PROPOSED, result)
+            // The proposal states the new list; the agreed one rides along exactly as stored,
+            // which is what `childOverridesKeptOrDropped` requires of a proposal-only write.
+            assertEquals(listOf(BABY_WIRE), custody.captured.proposal?.childOverridesWire)
+            assertEquals(listOf(CHILD_FUTURE), custody.captured.childOverridesWire)
+            coVerify(exactly = 0) { custodyModelDao.insertModel(any()) }
+        }
+
+    private fun baby() = requireNotNull(ChildOverrideCodec.decode(BABY_WIRE))
+
+    // ---- parenting-plan citation (MON-21) -----------------------------------
+
+    @Test
+    fun `a pattern built from the plan goes as a proposal that cites it, pattern untouched`() =
+        runTest(dispatcher) {
+            coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID) } returns remoteCustody()
+            val custody = slot<SharedCustody>()
+            coEvery { firestoreCustodyDataSource.setCustody(any(), any(), capture(custody)) } returns Unit
+
+            val result = repository.createWeekOnWeekOff(START_DATE, planCitation = PLAN_CITATION)
+
+            assertEquals(PatternSubmission.PROPOSED, result)
+            assertEquals(PLAN_CITATION, custody.captured.proposal?.planCitationWire)
+            // A proposal, never an overwrite: the agreed pattern on the document is unchanged.
+            assertEquals(remoteCustody().model, custody.captured.model)
+        }
+
+    @Test
+    fun `seasonal layers from the plan cite it too, and a plain save cites nothing`() =
+        runTest(dispatcher) {
+            coEvery { custodyModelDao.getActiveModelSync() } returns mirroredEntity()
+            coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID) } returns remoteCustody()
+            val custody = slot<SharedCustody>()
+            coEvery { firestoreCustodyDataSource.setCustody(any(), any(), capture(custody)) } returns Unit
+
+            repository.submitSeasonalLayers(listOf(SUMMER), PLAN_CITATION)
+            assertEquals(PLAN_CITATION, custody.captured.proposal?.planCitationWire)
+
+            repository.submitSeasonalLayers(listOf(SUMMER))
+            assertNull(custody.captured.proposal?.planCitationWire)
+        }
+
+    @Test
+    fun `the proposal's chat card carries the citation, so the export can still name it later`() =
+        runTest(dispatcher) {
+            coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID) } returns remoteCustody()
+
+            repository.createWeekOnWeekOff(START_DATE, planCitation = PLAN_CITATION)
+
+            coVerify(exactly = 1) {
+                activityAnnouncer.announce(
+                    match { it.kind == ActivityKind.CUSTODY_PROPOSED && it.planCitation == PLAN_CITATION },
+                    any(),
+                    any()
+                )
+            }
+        }
+
+    @Test
+    fun `a proposal built without the plan announces no citation`() = runTest(dispatcher) {
+        coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID) } returns remoteCustody()
+
+        repository.createWeekOnWeekOff(START_DATE)
+
+        coVerify(exactly = 1) {
+            activityAnnouncer.announce(
+                match { it.kind == ActivityKind.CUSTODY_PROPOSED && it.planCitation == null },
+                any(),
+                any()
+            )
+        }
+    }
+
     // ---- fixtures ---------------------------------------------------------
 
     /** Points both the one-shot and the streaming uid lookups at [partnerUid]. */
@@ -657,6 +839,9 @@ class CustodyModelRepositoryTest {
     )
 
     private companion object {
+        /** A parenting-plan citation as `PlanCitationCodec` writes it (MON-21). */
+        const val PLAN_CITATION = "p1|care_weekday|0123456789abcdef"
+
         /** July with slot 1 (MON-14). */
         val SUMMER = SeasonalLayer.allWith(
             "summer-26",
@@ -668,6 +853,15 @@ class CustodyModelRepositoryTest {
 
         /** A layer from a newer build, which this one must carry without reading. */
         const val FUTURE = "L2;written-by-a-newer-build"
+
+        /** A child who is with slot 1 every day (FAM-4). */
+        const val BABY_WIRE = "C1;child:baby-1;2026-09-07;1;0;"
+
+        /** Alternate weeks for another child, starting with slot 2. */
+        const val TEEN_WIRE = "C1;child:teen-1;2026-09-07;14;7,8,9,10,11,12,13;"
+
+        /** An override entry from a newer build, carried verbatim. */
+        const val CHILD_FUTURE = "C2;written-by-a-newer-build"
 
         const val MY_UID = "uidA"
         const val PARTNER_UID = "uidB"

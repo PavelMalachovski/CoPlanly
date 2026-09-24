@@ -9,6 +9,7 @@ import com.coparently.app.data.sync.ChildInfoAudience
 import com.coparently.app.data.sync.ChildInfoGuests
 import com.coparently.app.data.sync.ChildInfoPhotos
 import com.coparently.app.data.sync.Tombstone
+import com.coparently.app.domain.events.EventTimestamp
 import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.guests.GuestGrantPolicy
 import com.coparently.app.domain.model.ChildInfo
@@ -266,6 +267,9 @@ class ChildInfoRepositoryImpl @Inject constructor(
             guestsJson = gson.toJson(ChildInfoGuests.encode(guests)),
             createdAt = createdAt,
             updatedAt = updatedAt,
+            // Derived at the one boundary every save crosses, from the wall clock each save path
+            // already stamps — so no path can forget it (schema 40, see `EventTimestamp`).
+            updatedAtMillis = EventTimestamp.ofWallClock(updatedAt),
             createdByFirebaseUid = createdByFirebaseUid,
             lastModifiedBy = lastModifiedBy,
             syncedToFirestore = syncedToFirestore,
@@ -319,7 +323,9 @@ class ChildInfoRepositoryImpl @Inject constructor(
             "medicalPhotos" to medicalPhotos,
             "guests" to ChildInfoGuests.encode(guests),
             "createdAt" to createdAt.format(formatter),
-            "updatedAt" to updatedAt.format(formatter),
+            // UTC, offset-free: the field keeps its name and type so an older build still parses
+            // it, and only the zone it expresses changed (schema 40, see `EventTimestamp`).
+            "updatedAt" to EventTimestamp.toWire(EventTimestamp.ofWallClock(updatedAt)),
             "createdByFirebaseUid" to createdByFirebaseUid,
             "lastModifiedBy" to lastModifiedBy,
             "sharedWith" to audience,
@@ -381,7 +387,8 @@ class ChildInfoRepositoryImpl @Inject constructor(
             medicalPhotos = ChildInfoPhotos.decode(this["medicalPhotos"]),
             guests = ChildInfoGuests.decode(this["guests"]),
             createdAt = LocalDateTime.parse(this["createdAt"] as String, formatter),
-            updatedAt = LocalDateTime.parse(this["updatedAt"] as String, formatter),
+            // The instant the document names, shown in this phone's zone (see `EventTimestamp`).
+            updatedAt = EventTimestamp.toWallClock(EventTimestamp.fromWire(this["updatedAt"] as String)),
             createdByFirebaseUid = this["createdByFirebaseUid"] as? String,
             lastModifiedBy = this["lastModifiedBy"] as? String,
             syncedToFirestore = true,

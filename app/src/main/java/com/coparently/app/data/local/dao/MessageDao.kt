@@ -123,8 +123,12 @@ interface MessageDao {
      * "čas" from "cas"; `ChatSearch.candidatePattern` therefore passes `%` (the whole
      * conversation) for any query with a letter in it, and `ChatSearch.search` makes the real
      * decision in Kotlin. The bound is the conversation: nothing here reads another thread, and
-     * nothing in chat search reads Firestore. A full-text index (FTS4) would answer in SQL; it is
-     * a schema change, recorded as the later step in docs/ROADMAP.md MON-15.
+     * nothing in chat search reads Firestore.
+     *
+     * **Not a full-text index, on purpose.** FTS4 with `unicode61` was measured and cannot be a
+     * safe prefilter for this search: it matches token prefixes, so "ick" never finds "pickup",
+     * and it does not fold "й", "ё" or "ї" the way `TextFold` does, so Russian and Ukrainian
+     * queries would lose messages the search accepts. docs/ROADMAP.md MON-15 has the finding.
      *
      * `ESCAPE '\'` is what lets a literal "%" or "_" in a query mean itself —
      * `ChatSearch.escapeLike` escapes them with that character.

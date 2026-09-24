@@ -1,5 +1,7 @@
 package com.coparently.app.domain.model
 
+import com.coparently.app.domain.custody.ChildOverrideCodec
+import com.coparently.app.domain.custody.ChildScheduleOverride
 import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.custody.SeasonalLayer
 import com.coparently.app.domain.custody.SeasonalLayerCodec
@@ -26,6 +28,11 @@ import java.time.LocalDate
  * @property unreadableLayers Stored layer entries this build cannot read, verbatim. They decide
  *   nothing here and are written back unchanged, so an older build never erases a layer a newer
  *   one wrote (see `DecodedLayers.unreadable`).
+ * @property childOverrides Children who follow a schedule of their own instead of this one (FAM-4).
+ *   Nothing on this model reads them: [getCustodyFor] stays the family's answer, and a caller that
+ *   has to name a child apart asks `ChildCustody`. See [ChildScheduleOverride].
+ * @property unreadableChildOverrides Stored override entries this build cannot read, verbatim,
+ *   written back unchanged for the reason [unreadableLayers] is.
  */
 data class CustodyModel(
     val id: String,
@@ -36,7 +43,9 @@ data class CustodyModel(
     val isActive: Boolean = true,
     val contactWindows: List<ContactWindow> = emptyList(),
     val seasonalLayers: List<SeasonalLayer> = emptyList(),
-    val unreadableLayers: List<String> = emptyList()
+    val unreadableLayers: List<String> = emptyList(),
+    val childOverrides: List<ChildScheduleOverride> = emptyList(),
+    val unreadableChildOverrides: List<String> = emptyList()
 ) {
     /**
      * Determines which parent has custody on the given date.
@@ -72,6 +81,14 @@ data class CustodyModel(
 
     /** The layers as their canonical wire list, unreadable entries included (see [SeasonalLayerCodec]). */
     fun seasonalLayersWire(): List<String> = SeasonalLayerCodec.encodeAll(seasonalLayers, unreadableLayers)
+
+    /** The per-child overrides as their canonical wire list, unreadable entries included (FAM-4). */
+    fun childOverridesWire(): List<String> =
+        ChildOverrideCodec.encodeAll(childOverrides, unreadableChildOverrides)
+
+    /** [childId]'s own schedule, or null when that child follows this one (FAM-4). */
+    fun childOverrideFor(childId: String): ChildScheduleOverride? =
+        childOverrides.firstOrNull { it.childId == childId }
 
     /**
      * The contact windows that fall on [date], earliest first (MON-6b).
@@ -121,11 +138,13 @@ data class CustodyModel(
         if (patternDays <= 0) return this
         // Contact windows name a slot too, so they flip with the days: the afternoon that was
         // the co-parent's must still be the co-parent's after this device changes slot.
-        // Layers flip too. Unreadable entries cannot be re-expressed and are kept as they are.
+        // Layers flip too, and so does each child's own schedule (FAM-4). Unreadable entries
+        // cannot be re-expressed and are kept as they are.
         return copy(
             momDayIndices = (0 until patternDays).toSet() - momDayIndices,
             contactWindows = contactWindows.map { it.withOtherParent() },
-            seasonalLayers = seasonalLayers.map { it.withOtherParent() }
+            seasonalLayers = seasonalLayers.map { it.withOtherParent() },
+            childOverrides = childOverrides.map { it.withOtherParent() }
         )
     }
 
@@ -159,7 +178,10 @@ data class CustodyModel(
             baseCustodyFor(date) == other.baseCustodyFor(date) &&
                 sameContactWindows(baseWindowsOn(date), other.baseWindowsOn(date))
         }
-        return basesAgree && layersAgree(other)
+        // Per-child schedules (FAM-4) compare by their canonical wire form: two overrides that
+        // happen to agree by outcome but differ in anchor count as different, which surfaces a
+        // pairing conflict for a person to settle rather than silently keeping one side's.
+        return basesAgree && layersAgree(other) && childOverridesWire() == other.childOverridesWire()
     }
 
     /**

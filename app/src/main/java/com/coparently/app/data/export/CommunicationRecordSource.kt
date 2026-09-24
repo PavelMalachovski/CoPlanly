@@ -112,7 +112,8 @@ class CommunicationRecordSource @Inject constructor(
                     it.sentAtMillis,
                     it.content,
                     delivered = true,
-                    attachments = ChatAttachmentCodec.attachmentsOf(it.attachments)
+                    attachments = ChatAttachmentCodec.attachmentsOf(it.attachments),
+                    planCitation = it.activity?.planCitation
                 )
             }
         val remoteIds = remote.orEmpty().map { it.messageId }.toSet()
@@ -126,7 +127,8 @@ class CommunicationRecordSource @Inject constructor(
                     sentAtMillis = it.sentAtMillis,
                     text = it.content,
                     delivered = it.syncedToFirestore && it.status != MessageSendStatus.ERROR,
-                    attachments = ChatAttachmentCodec.attachmentsOf(it.attachments)
+                    attachments = ChatAttachmentCodec.attachmentsOf(it.attachments),
+                    planCitation = it.activity?.planCitation
                 )
             }
         return (remote.orEmpty() + local) to (remote != null)

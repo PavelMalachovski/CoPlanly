@@ -8,7 +8,7 @@ import com.coparently.app.data.export.CommunicationRecordSource
 import com.coparently.app.data.export.ExportFileWriter
 import com.coparently.app.data.export.ExportReceipts
 import com.coparently.app.data.export.ExportedFile
-import com.coparently.app.data.export.ParentingPlanRecordSource
+import com.coparently.app.data.export.OptionalRecordSections
 import com.coparently.app.domain.chat.ConversationKey
 import com.coparently.app.domain.export.CommunicationRecord
 import com.coparently.app.domain.export.CommunicationRecordBuilder
@@ -47,6 +47,9 @@ import javax.inject.Inject
  * @property to Last day of the range, inclusive.
  * @property includePlan Whether the record carries the family's parenting plan. On by default: a
  *   plan is the other document two parents hand to a mediator, and leaving it out is the choice.
+ * @property includeJournal Whether the record carries this parent's own private journal entries
+ *   about days in the period (MON-22). **Off by default**, the opposite of the plan: nobody else
+ *   has ever seen the journal, and putting it in a file for a third person is the parent's choice.
  * @property working The format being produced, or null when idle.
  * @property error What went wrong with the last attempt, for a snackbar; cleared once shown.
  */
@@ -54,6 +57,7 @@ data class ExportUiState(
     val from: LocalDate,
     val to: LocalDate,
     val includePlan: Boolean = true,
+    val includeJournal: Boolean = false,
     val working: ExportFormat? = null,
     val error: UiText? = null
 )
@@ -92,7 +96,7 @@ data class FinishedExport(val file: ExportedFile, val recordId: String?)
 @HiltViewModel
 class ExportViewModel @Inject constructor(
     private val source: CommunicationRecordSource,
-    private val planSource: ParentingPlanRecordSource,
+    private val sections: OptionalRecordSections,
     private val writer: ExportFileWriter,
     private val receipts: ExportReceipts,
     private val parentsSource: ParentsSource,
@@ -121,6 +125,9 @@ class ExportViewModel @Inject constructor(
 
     /** Puts the parenting plan in the record, or leaves it out. */
     fun setIncludePlan(include: Boolean) = _state.update { it.copy(includePlan = include) }
+
+    /** Puts this parent's private journal entries for the period in the record, or leaves them out. */
+    fun setIncludeJournal(include: Boolean) = _state.update { it.copy(includeJournal = include) }
 
     /** Clears the error once the screen has shown it. */
     fun errorShown() = _state.update { it.copy(error = null) }
@@ -154,7 +161,7 @@ class ExportViewModel @Inject constructor(
         }
     }
 
-    /** [request] is the screen's state when the parent tapped: the range and whether the plan goes in. */
+    /** [request] is the screen's state when the parent tapped: the range and which optional sections go in. */
     private suspend fun produce(
         format: ExportFormat,
         request: ExportUiState,
@@ -210,7 +217,10 @@ class ExportViewModel @Inject constructor(
             to = to,
             zone = zone
         )
-        val sources = if (request.includePlan) gathered.copy(plan = planSource.read(myUid, partnerUid)) else gathered
+        val sources = gathered.copy(
+            plan = if (request.includePlan) sections.plan(myUid, partnerUid) else null,
+            journal = if (request.includeJournal) sections.journal(myUid, from, to) else null
+        )
         return CommunicationRecordBuilder.build(
             sources,
             RecordScope(

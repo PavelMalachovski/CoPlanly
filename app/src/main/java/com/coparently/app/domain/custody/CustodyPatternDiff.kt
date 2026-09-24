@@ -49,6 +49,9 @@ data class MovedDay(val date: LocalDate, val fromSlot: String, val toSlot: Strin
  *   (MON-14). Compared on the whole list rather than over the window: a summer layer proposed in
  *   March moves nothing in the next eight weeks, and "nothing on the calendar would change" over
  *   it would be a false sentence.
+ * @property childOverridesChanged True when the proposal adds, removes or edits a child's own
+ *   schedule (FAM-4). Compared on the whole list for the reason layers are: the days above are the
+ *   family's, and a proposal that moves only one child moves none of them.
  */
 data class CustodyPatternDiff(
     val movedDays: List<MovedDay>,
@@ -57,7 +60,8 @@ data class CustodyPatternDiff(
     val identical: Boolean,
     val comparable: Boolean,
     val contactWindowsChanged: Boolean = false,
-    val seasonalLayersChanged: Boolean = false
+    val seasonalLayersChanged: Boolean = false,
+    val childOverridesChanged: Boolean = false
 ) {
     /** How many days move — the number the summary sentence leads with. */
     val movedDayCount: Int get() = movedDays.size
@@ -116,6 +120,7 @@ data class CustodyPatternDiff(
             }
 
             val layersChanged = agreed.seasonalLayersWire() != proposed.seasonalLayersWire()
+            val childrenChanged = agreed.childOverridesWire() != proposed.childOverridesWire()
 
             val net = mutableMapOf<String, Int>()
             moved.forEach { day ->
@@ -127,10 +132,11 @@ data class CustodyPatternDiff(
                 movedDays = moved,
                 netDaysBySlot = net.filterValues { it != 0 },
                 windowDays = window,
-                identical = moved.isEmpty() && !windowsChanged && !layersChanged,
+                identical = moved.isEmpty() && !windowsChanged && !layersChanged && !childrenChanged,
                 comparable = true,
                 contactWindowsChanged = windowsChanged,
-                seasonalLayersChanged = layersChanged
+                seasonalLayersChanged = layersChanged,
+                childOverridesChanged = childrenChanged
             )
         }
 

@@ -31,6 +31,15 @@ import com.coparently.app.domain.model.CustodyModel
  *   [contactWindowsWire]: carried verbatim by a swap write, and when null [model]'s layers are
  *   the agreed pattern's, because a proposal that could not express layers is not a proposal to
  *   remove them.
+ * @property childOverridesWire The proposal's own `childOverrides` list exactly as stored, or null
+ *   when the sub-map has none — a proposal from a build that predates FAM-4. Same rule as
+ *   [seasonalLayersWire]: carried verbatim, and when null [model]'s overrides are the agreed ones.
+ * @property planCitationWire The parenting-plan answer this proposal was built from (MON-21), as
+ *   a `PlanCitationCodec` string, or null when it cites none — which is every proposal from a
+ *   build that predates MON-21, and never an error. Stored as the document's top-level
+ *   `proposalPlanCitation` beside the `proposal` sub-map, and carried **verbatim**, including a
+ *   string this build cannot read, so a swap write re-sends exactly what was there. A citation,
+ *   never a parse: [model] is what the parent built in the editor.
  */
 data class CustodyProposal(
     val model: CustodyModel,
@@ -38,5 +47,7 @@ data class CustodyProposal(
     val proposedBy: String,
     val proposedAt: String,
     val contactWindowsWire: List<String>? = null,
-    val seasonalLayersWire: List<String>? = null
+    val seasonalLayersWire: List<String>? = null,
+    val childOverridesWire: List<String>? = null,
+    val planCitationWire: String? = null
 )

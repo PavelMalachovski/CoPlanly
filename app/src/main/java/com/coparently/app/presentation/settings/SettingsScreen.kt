@@ -53,6 +53,7 @@ import androidx.compose.material.icons.filled.PrivacyTip
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.School
+import androidx.compose.material.icons.filled.Source
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.AlertDialog
@@ -160,6 +161,7 @@ private val syncTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
  * @param onNavigateToPets Opens the pets list
  * @param onNavigateToExport Opens the communication-record export (MON-3)
  * @param onNavigateToDocuments Opens the family document vault (MON-23)
+ * @param onNavigateToJournal Opens the private journal (MON-22)
  * @param onNavigateToPairing Opens co-parent pairing
  * @param onNavigateToFriends Opens the calendar-friend list (item 16)
  * @param onNavigateToCalendarFeed Opens the read-only calendar links (MON-17); the row shows
@@ -168,6 +170,7 @@ private val syncTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
  * @param onNavigateToCustodySetup Opens custody schedule setup
  * @param onNavigateToMyProfile Opens the signed-in user's own profile, editable
  * @param onNavigateToCoParentProfile Opens the co-parent's profile, read-only
+ * @param onNavigateToDataSources Opens the data sources and licences (MON-13's ODbL notice)
  * @param onStartGoogleSignIn Launches the Google Sign-In activity
  * @param onSignOut Called after the user signs out of the app
  * @param syncViewModel Sync operations
@@ -185,6 +188,7 @@ fun SettingsScreen(
     onNavigateToParentingPlan: (() -> Unit)? = null,
     onNavigateToExport: (() -> Unit)? = null,
     onNavigateToDocuments: (() -> Unit)? = null,
+    onNavigateToJournal: (() -> Unit)? = null,
     onNavigateToPets: (() -> Unit)? = null,
     onNavigateToPairing: (() -> Unit)? = null,
     onNavigateToFriends: (() -> Unit)? = null,
@@ -193,6 +197,7 @@ fun SettingsScreen(
     onNavigateToCustodySetup: (() -> Unit)? = null,
     onNavigateToMyProfile: (() -> Unit)? = null,
     onNavigateToCoParentProfile: (() -> Unit)? = null,
+    onNavigateToDataSources: (() -> Unit)? = null,
     onStartGoogleSignIn: ((android.content.Intent) -> Unit)? = null,
     onSignOut: (() -> Unit)? = null,
     syncViewModel: SyncViewModel = hiltViewModel(),
@@ -656,6 +661,22 @@ fun SettingsScreen(
                         )
                         Divider()
                     }
+                    // The private journal (MON-22) after the shared papers: it is family business
+                    // a parent may put in an export, but it is theirs alone and never leaves the
+                    // phone — the row's description says so before it is opened.
+                    onNavigateToJournal?.let { navigate ->
+                        SectionRow(
+                            icon = Icons.Default.Lock,
+                            title = stringResource(R.string.journal_title),
+                            supporting = stringResource(R.string.journal_settings_description),
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                navigate()
+                            },
+                            trailing = { Chevron() }
+                        )
+                        Divider()
+                    }
                     onNavigateToMyProfile?.let { navigate ->
                         SectionRow(
                             icon = Icons.Default.Person,
@@ -913,6 +934,21 @@ fun SettingsScreen(
                             )
                         }
                     )
+                    // Last in App: the attribution the OpenHolidays data's licence (ODbL 1.0)
+                    // asks for, and the answer to "where do these holiday dates come from".
+                    onNavigateToDataSources?.let { navigate ->
+                        Divider()
+                        SectionRow(
+                            icon = Icons.Default.Source,
+                            title = stringResource(R.string.settings_data_sources_title),
+                            supporting = stringResource(R.string.settings_data_sources_description),
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                navigate()
+                            },
+                            trailing = { Chevron() }
+                        )
+                    }
                 }
             }
 

@@ -33,6 +33,12 @@ import java.time.format.DateTimeFormatter
  * never stored. Between two upgraded builds the ordering is exact; against a legacy value it is
  * no worse than the comparison it replaces. The displayed wall clock ([toWallClock]) of a legacy
  * document is shifted by the same offset, once, until the event is next saved.
+ *
+ * **Children and pets use the same wire form** (schema 40): `child_info` and `pets` carry an
+ * `updatedAt` of exactly this shape, `ChildInfoEntity`/`PetEntity` gained the same
+ * `updatedAtMillis`, and `ConflictResolver.resolveChildInfoConflict` compares it. One definition
+ * rather than a copy per collection, because the three must never disagree about what the string
+ * means.
  */
 object EventTimestamp {
 

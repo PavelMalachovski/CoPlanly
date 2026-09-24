@@ -1,13 +1,22 @@
 package com.coparently.app.presentation.custody
 
+import androidx.lifecycle.SavedStateHandle
 import com.coparently.app.R
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.PatternSubmission
+import com.coparently.app.domain.custody.ChildScheduleOverride
+import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.CustodyModelType
 import com.coparently.app.domain.model.MidweekContact
+import com.coparently.app.domain.parentingplan.PlanCitation
+import com.coparently.app.domain.parentingplan.PlanReference
+import com.coparently.app.domain.parentingplan.PlanScheduleTarget
+import com.coparently.app.presentation.common.FamilyMember
 import com.coparently.app.presentation.common.UiText
+import com.coparently.app.presentation.common.testFamilyMembersSource
 import com.coparently.app.presentation.common.testParentsSource
+import com.coparently.app.presentation.parentingplan.PlanReferenceSource
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -15,6 +24,7 @@ import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -41,9 +51,25 @@ class CustodySetupViewModelTest {
     private val start = LocalDate.of(2026, 9, 7)
     private val repository = mockk<CustodyModelRepository>()
 
-    private fun viewModel(active: CustodyModel? = null): CustodySetupViewModel {
+    private val planReferences = mockk<PlanReferenceSource>()
+    private val custodyReference = PlanReference(
+        questionId = "care_weekday",
+        target = PlanScheduleTarget.BASE_PATTERN,
+        yourAnswer = "Week on, week off, changing on Mondays",
+        theirAnswer = "Week on, week off, changing on Mondays",
+        citation = PlanCitation("care_weekday", "0123456789abcdef")
+    )
+
+    private fun viewModel(active: CustodyModel? = null, planQuestion: String? = null): CustodySetupViewModel {
         every { repository.getActiveModel() } returns flowOf(active)
-        return CustodySetupViewModel(repository, testParentsSource())
+        val args = planQuestion?.let { mapOf("planQuestion" to it) }.orEmpty()
+        return CustodySetupViewModel(
+            repository,
+            testParentsSource(),
+            SavedStateHandle(args),
+            planReferences,
+            testFamilyMembersSource(childNames = listOf("Ema", "Tomas"))
+        )
     }
 
     @Before
@@ -158,4 +184,172 @@ class CustodySetupViewModelTest {
         assertFalse(state.isSaved)
         assertFalse(succeeded)
     }
+
+    @Test
+    fun `opened from the agreed custody answer, the form quotes it and the save cites it`() =
+        runTest(dispatcher) {
+            coEvery { planReferences.referenceFor("care_weekday") } returns custodyReference
+            coEvery { repository.createWeekOnWeekOff(any(), any(), any(), any()) } returns PatternSubmission.PROPOSED
+            val vm = viewModel(planQuestion = "care_weekday")
+            advanceUntilIdle()
+
+            assertEquals(custodyReference, vm.uiState.value.planReference)
+            vm.selectModelType(CustodyModelType.WEEK_ON_WEEK_OFF)
+            vm.setStartDate(start)
+            vm.save()
+            advanceUntilIdle()
+
+            // The pattern is the one the parent built; the answer only rides along as a citation.
+            coVerify(exactly = 1) {
+                repository.createWeekOnWeekOff(start, true, emptyList(), "p1|care_weekday|0123456789abcdef")
+            }
+            assertTrue(vm.uiState.value.proposedForApproval)
+        }
+
+    @Test
+    fun `opened any other way, the save cites nothing and no plan is read`() = runTest(dispatcher) {
+        coEvery { repository.createWeekOnWeekOff(any(), any(), any(), any()) } returns PatternSubmission.ACTIVATED
+        val vm = viewModel()
+        advanceUntilIdle()
+
+        vm.save()
+        advanceUntilIdle()
+
+        assertNull(vm.uiState.value.planReference)
+        coVerify(exactly = 1) { repository.createWeekOnWeekOff(any(), any(), any(), null) }
+        coVerify(exactly = 0) { planReferences.referenceFor(any()) }
+    }
+
+    @Test
+    fun `a holiday answer is left to the seasonal editor, so the base form neither quotes nor cites it`() =
+        runTest(dispatcher) {
+            coEvery { planReferences.referenceFor("holidays_school") } returns custodyReference.copy(
+                questionId = "holidays_school",
+                target = PlanScheduleTarget.SEASONAL_LAYER
+            )
+            coEvery { repository.createWeekOnWeekOff(any(), any(), any(), any()) } returns PatternSubmission.PROPOSED
+            val vm = viewModel(planQuestion = "holidays_school")
+            advanceUntilIdle()
+
+            vm.save()
+            advanceUntilIdle()
+
+            assertNull(vm.uiState.value.planReference)
+            coVerify(exactly = 1) { repository.createWeekOnWeekOff(any(), any(), any(), null) }
+        }
+
+    @Test
+    fun `an answer that is no longer agreed opens the plain form`() = runTest(dispatcher) {
+        coEvery { planReferences.referenceFor("care_weekday") } returns null
+        val vm = viewModel(planQuestion = "care_weekday")
+        advanceUntilIdle()
+
+        assertNull(vm.uiState.value.planReference)
+    }
+
+    // ---- a child's own schedule (FAM-4) --------------------------------------
+
+    private val ema = FamilyMember(FamilyMemberRef.Child("c-Ema"), "Ema")
+
+    /** Ema is with slot 2 every day of a one-day cycle. */
+    private val emaAlwaysWithSlotTwo = ChildScheduleOverride(
+        childId = "c-Ema",
+        patternDays = 1,
+        momDayIndices = emptySet(),
+        startDate = start
+    )
+
+    private val family = CustodyModel.weekOnWeekOff(id = "m1", startDate = start)
+
+    @Test
+    fun `the children are offered for a schedule of their own`() = runTest(dispatcher) {
+        val vm = viewModel(active = family)
+        val collected = mutableListOf<List<FamilyMember>>()
+        backgroundScope.launch { vm.children.collect { collected += it } }
+        advanceUntilIdle()
+
+        assertEquals(listOf("Ema", "Tomas"), collected.last().map { it.name })
+    }
+
+    @Test
+    fun `scoped to a child, the form opens on their own schedule and saves it as theirs`() =
+        runTest(dispatcher) {
+            val active = family.copy(childOverrides = listOf(emaAlwaysWithSlotTwo))
+            coEvery { repository.submitChildOverride(any(), any()) } returns PatternSubmission.PROPOSED
+            val vm = viewModel(active = active)
+            advanceUntilIdle()
+
+            vm.editSchedule(ema)
+
+            val state = vm.uiState.value
+            assertEquals(ChildScope("c-Ema", "Ema"), state.childScope)
+            assertEquals(CustodyModelType.CUSTOM, state.selectedModelType)
+            assertEquals(1, state.customPatternDays)
+            // "Always with the other parent" is a valid child schedule, though not a family one.
+            assertTrue(state.isValid)
+
+            vm.save()
+            advanceUntilIdle()
+
+            coVerify(exactly = 1) { repository.submitChildOverride("c-Ema", emaAlwaysWithSlotTwo) }
+            coVerify(exactly = 0) { repository.createCustom(any(), any(), any(), any(), any()) }
+            assertTrue(vm.uiState.value.proposedForApproval)
+        }
+
+    @Test
+    fun `a child with no schedule of their own starts from the family pattern`() = runTest(dispatcher) {
+        val vm = viewModel(active = family)
+        advanceUntilIdle()
+
+        vm.editSchedule(ema)
+
+        assertEquals(CustodyModelType.WEEK_ON_WEEK_OFF, vm.uiState.value.selectedModelType)
+        assertTrue(vm.uiState.value.momFirst)
+    }
+
+    @Test
+    fun `following the family schedule again removes the child's override`() = runTest(dispatcher) {
+        coEvery { repository.submitChildOverride(any(), any()) } returns PatternSubmission.ACTIVATED
+        val vm = viewModel(active = family.copy(childOverrides = listOf(emaAlwaysWithSlotTwo)))
+        advanceUntilIdle()
+        vm.editSchedule(ema)
+
+        vm.save(followFamily = true)
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) { repository.submitChildOverride("c-Ema", null) }
+        assertTrue(vm.uiState.value.isSaved)
+    }
+
+    @Test
+    fun `leaving the child's scope refills the form from the family pattern`() = runTest(dispatcher) {
+        coEvery { repository.createWeekOnWeekOff(any(), any(), any(), any()) } returns PatternSubmission.ACTIVATED
+        val vm = viewModel(active = family.copy(childOverrides = listOf(emaAlwaysWithSlotTwo)))
+        advanceUntilIdle()
+        vm.editSchedule(ema)
+
+        vm.editSchedule(null)
+        vm.save()
+        advanceUntilIdle()
+
+        assertNull(vm.uiState.value.childScope)
+        assertEquals(CustodyModelType.WEEK_ON_WEEK_OFF, vm.uiState.value.selectedModelType)
+        coVerify(exactly = 1) { repository.createWeekOnWeekOff(start, true, emptyList(), null) }
+        coVerify(exactly = 0) { repository.submitChildOverride(any(), any()) }
+    }
+
+    @Test
+    fun `a child's schedule with no family schedule under it is a failed save, not a crash`() =
+        runTest(dispatcher) {
+            coEvery { repository.submitChildOverride(any(), any()) } returns null
+            val vm = viewModel(active = family)
+            advanceUntilIdle()
+            vm.editSchedule(ema)
+
+            vm.save()
+            advanceUntilIdle()
+
+            assertEquals(UiText.Res(R.string.custody_setup_save_failed), vm.uiState.value.error)
+            assertFalse(vm.uiState.value.isSaved)
+        }
 }

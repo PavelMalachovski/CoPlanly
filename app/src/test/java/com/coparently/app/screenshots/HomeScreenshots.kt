@@ -7,6 +7,7 @@ import com.coparently.app.domain.expenses.CurrencyBalance
 import com.coparently.app.domain.expenses.ExpenseBalance
 import com.coparently.app.domain.home.WeekEntry
 import com.coparently.app.presentation.calendar.components.DayAgendaCard
+import com.coparently.app.presentation.home.ChildWithParent
 import com.coparently.app.presentation.home.CurrencyAmount
 import com.coparently.app.presentation.home.HandoverHero
 import com.coparently.app.presentation.home.MonthSpend
@@ -41,6 +42,22 @@ class HomeScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant) {
             ),
             parentNames = ScreenshotFixtures.parentNames,
             onConfirm = {}
+        )
+    }
+
+    /** FAM-4: a day the children are with different parents names each child with theirs. */
+    @Test
+    fun handoverHeroChildrenApart() = snap("home_handover_hero_children_apart") {
+        HandoverHero(
+            info = HandoverInfo(
+                date = ScreenshotFixtures.TODAY.plusDays(HANDOVER_IN_DAYS),
+                daysUntil = HANDOVER_IN_DAYS,
+                fromParent = "mom",
+                toParent = "dad"
+            ),
+            parentNames = ScreenshotFixtures.parentNames,
+            onConfirm = {},
+            childrenToday = listOf(ChildWithParent("Ema", "mom"), ChildWithParent("Tomáš", "dad"))
         )
     }
 

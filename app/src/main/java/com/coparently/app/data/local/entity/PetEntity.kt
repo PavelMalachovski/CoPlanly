@@ -23,7 +23,7 @@ import java.time.LocalDateTime
  * @property vetPhone Phone number of the vet
  * @property photosJson JSON array of photograph download URLs; `[]` when none
  * @property createdAt Timestamp when the record was created
- * @property updatedAt Timestamp when the record was last updated
+ * @property updatedAt Wall-clock time, for display, when the record was last updated
  * @property createdByFirebaseUid Firebase UID of the user who created this record
  * @property lastModifiedBy Firebase UID of the user who last modified this record
  * @property syncedToFirestore Whether the record has been synced to Firestore
@@ -45,6 +45,14 @@ data class PetEntity(
     val photosJson: String = "[]", // JSON array
     val createdAt: LocalDateTime,
     val updatedAt: LocalDateTime,
+    /**
+     * When the pet record was last saved, epoch millis — the instant two phones compare (schema 40).
+     *
+     * [updatedAt] stays as the wall clock the app displays. No default, for the reason
+     * [EventEntity.updatedAtMillis] gives: a forgotten value would upload as 1970 and lose every
+     * conflict. See [com.coparently.app.domain.events.EventTimestamp].
+     */
+    val updatedAtMillis: Long,
     val createdByFirebaseUid: String?,
     val lastModifiedBy: String?,
     val syncedToFirestore: Boolean,

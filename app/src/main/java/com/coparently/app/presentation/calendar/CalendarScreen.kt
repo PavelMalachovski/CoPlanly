@@ -78,6 +78,7 @@ import com.coparently.app.presentation.common.toggling
 import com.coparently.app.presentation.event.EventOperation
 import com.coparently.app.presentation.event.EventUiState
 import com.coparently.app.presentation.event.EventViewModel
+import com.coparently.app.presentation.parentingplan.planCitationShortLine
 import com.coparently.app.presentation.theme.dimensions
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -202,8 +203,9 @@ internal fun eventsByDay(events: List<Event>): Map<LocalDate, List<Event>> {
  *
  * Restructured by the August 2026 design review: the header is one row (its four actions and
  * the segmented view-mode bar under it are now a title menu, a Today pill and one Filters
- * chip), change requests and school vacation surface as labelled banners over the grid, and
- * the month cells carry event dots with the selected day's titles listed underneath.
+ * chip), change requests surface as labelled banners over the grid, and the month cells carry
+ * event dots. School vacation, a banner in that review, is a neutral line along each vacation
+ * day's bottom edge since MON-13 (the banner changed the grid's height between months).
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -369,6 +371,26 @@ fun CalendarScreen(
         CustodyResolver.contactWindowsResolver(custodyModel, getCustody)
     }
 
+    // FAM-4: the band follows one child's own schedule only while the member filter narrows to
+    // exactly that child — `ChildCustodyBand` holds the rule. Everything that acts on a day (the
+    // swap sheet, `DaySwapInbox`) keeps reading the family's `getCustody` above, because a swap is
+    // offered against the family schedule; the grid only draws from `grid`.
+    val grid: GridCustody = remember(
+        custodyModel,
+        pendingProposal,
+        activeMemberFilter,
+        getCustody,
+        getProposedCustody,
+        getContactWindows
+    ) {
+        ChildCustodyBand.of(
+            model = custodyModel,
+            proposal = pendingProposal?.model,
+            filter = activeMemberFilter,
+            family = GridCustody(getCustody, getProposedCustody, getContactWindows)
+        )
+    }
+
     // The dates a swap is being negotiated on. A pending swap has changed nothing about whose
     // day it is, so it is deliberately not part of `getCustody` — the grid marks it separately.
     val pendingSwapDates: Set<LocalDate> = remember(dayOverrides) {
@@ -436,6 +458,24 @@ fun CalendarScreen(
         } else {
             val (start, end) = queryRangeFor(viewMode, queryAnchorDate)
             provider.holidaysInRange(start.toLocalDate(), end.toLocalDate())
+        }
+    }
+
+    // The days the month grid underlines as school vacation. Asked separately from `holidays`,
+    // which keys one entry per date with the public holiday first — so Christmas Eve would drop
+    // out of the Christmas break. Same switch, same range, same parent's country.
+    val schoolVacationDays: Set<LocalDate> = remember(
+        viewMode,
+        queryAnchorDate,
+        showHolidays,
+        holidayLocation
+    ) {
+        val provider = holidayLocation.provider
+        if (!showHolidays || provider == null || viewMode != CalendarViewMode.MONTH) {
+            emptySet()
+        } else {
+            val (start, end) = queryRangeFor(viewMode, queryAnchorDate)
+            provider.schoolVacationDaysInRange(start.toLocalDate(), end.toLocalDate())
         }
     }
 
@@ -537,6 +577,8 @@ fun CalendarScreen(
     // `pendingProposal` (CalendarViewModel) is either party's; `proposalAwaitingMe`
     // (ChangeRequestViewModel) is only the co-parent's, so the difference tells them apart.
     val proposalAwaitingMe by changeRequestViewModel.pendingProposal.collectAsState()
+    // Where that proposal came from (MON-21) — the inbox card's own live derivation, re-used.
+    val proposalCitation by changeRequestViewModel.pendingProposalCitation.collectAsState()
     val proposerWaiting = pendingProposal != null && proposalAwaitingMe == null
 
     Scaffold(
@@ -656,13 +698,14 @@ fun CalendarScreen(
                 // roughness — and reported week and day view as the smoothest precisely
                 // because nothing there changes height between pages.
                 //
-                // Removed rather than hidden because that is what was asked for now. **This
-                // loses the school-vacation signal entirely** — the July 2026 design replaced
-                // a per-day teal strip with this banner, so there is no longer any other
-                // marker for it. When it comes back, it must reserve its height in every
-                // month, vacation or not, or it will reintroduce exactly this defect.
-                // `VacationBanner` itself is left in `CalendarBanners.kt`; the label helper
-                // that fed it is recoverable from this commit's parent.
+                // Removed rather than hidden because that is what was asked for then. The signal
+                // came back in September 2026 (MON-13) *inside* the cells rather than above them:
+                // a thin neutral line along each vacation day's bottom edge, drawn over the
+                // fills and taking no height (`DayCellFill.schoolVacation`), so every month is
+                // the same height whether it holds a vacation or not. Don't bring the banner
+                // back on top of it — it would reintroduce exactly this defect.
+                // `VacationBanner` itself is left in `CalendarBanners.kt` (the screenshot suite
+                // still renders it); the label helper that fed it is recoverable from history.
 
                 // The banners share one container that animates its height, so a banner arriving
                 // or leaving moves the grid over the standard duration instead of shoving it in
@@ -686,6 +729,7 @@ fun CalendarScreen(
                                     R.string.custody_proposal_review,
                                     parentNames.labelForUid(proposal.proposedBy)
                                 ),
+                                detail = planCitationShortLine(proposalCitation),
                                 onReview = onChangeRequestsClick,
                                 modifier = Modifier.padding(
                                     horizontal = dims.paddingMedium,
@@ -795,9 +839,9 @@ fun CalendarScreen(
                                     selectedDate = anchorDate,
                                     daysCount = if (mode == CalendarViewMode.DAY) 1 else 7,
                                     events = filteredEvents,
-                                    getCustody = getCustody,
-                                    getProposedCustody = getProposedCustody,
-                                    getContactWindows = getContactWindows,
+                                    getCustody = grid.custody,
+                                    getProposedCustody = grid.proposed,
+                                    getContactWindows = grid.windows,
                                     parentNames = parentNames,
                                     onDateChange = { calendarViewModel.setSelectedDate(it) },
                                     onEventClick = { eventId -> previewEventId = eventId },
@@ -832,16 +876,17 @@ fun CalendarScreen(
                                     selectedMonth = displayedMonth,
                                     selectedDate = selectedDate,
                                     eventsByDay = eventsByDay,
-                                    getCustody = getCustody,
-                                    getProposedCustody = getProposedCustody,
-                                    getContactWindows = getContactWindows,
+                                    getCustody = grid.custody,
+                                    getProposedCustody = grid.proposed,
+                                    getContactWindows = grid.windows,
                                     parentNames = parentNames,
-                                    pendingSwapDates = pendingSwapDates,
-                                    swappedDates = swappedDates,
-                                    onDayLongClick = offerSwapDay,
+                                    // A child's own band (FAM-4) is not the schedule a swap moves.
+                                    pendingSwapDates = if (grid.followsFamily) pendingSwapDates else emptySet(),
+                                    swappedDates = if (grid.followsFamily) swappedDates else emptySet(),
+                                    onDayLongClick = offerSwapDay?.takeIf { grid.followsFamily },
                                     // A finger that long-pressed and kept moving redraws the run
                                     // from the anchor, so coming back shortens it again.
-                                    onSwapDragTo = dragSwapTo,
+                                    onSwapDragTo = dragSwapTo?.takeIf { grid.followsFamily },
                                     swapSelection = swapSelection,
                                     // Selects the day and opens Day view, where an empty hour
                                     // slot creates an event — the owner's walkthrough found the
@@ -858,7 +903,8 @@ fun CalendarScreen(
                                     onMonthChange = { newMonth ->
                                         calendarViewModel.showMonth(newMonth)
                                     },
-                                    holidays = holidays
+                                    holidays = holidays,
+                                    schoolVacationDays = schoolVacationDays
                                 )
                             }
                         }

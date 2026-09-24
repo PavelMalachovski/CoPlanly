@@ -909,6 +909,134 @@ class CoPlanlyDatabaseMigrationTest {
         }
     }
 
+    /**
+     * 39-to-40 dates every child and pet record by an instant (the MON-4 finding), exactly as
+     * 38-to-39 dated events: `updatedAtMillis` is the stored wall clock read in this device's
+     * zone — the forced UTC+05:30 above — the wall clock itself is kept for display, and an
+     * unreadable value lands on the epoch. Needs `40.json`, which the Regenerate workflow exports.
+     */
+    @Test
+    fun migration39To40_datesEveryChildAndPetByItsInstant() {
+        val db = helper.createDatabase(TEST_DB, VERSION_39)
+        listOf("c1" to "2026-08-01T12:00:00", "c2" to "not a date").forEach { (id, updatedAt) ->
+            db.execSQL(
+                """
+                INSERT INTO child_info (id, childName, medicationsJson, activitiesJson, allergiesJson,
+                                        emergencyContactsJson, medicalProfileJson, medicalPhotosJson,
+                                        guestsJson, createdAt, updatedAt, syncedToFirestore)
+                VALUES (?, 'Ema', '[]', '[]', '[]', '[]', '{}', '[]', '{}',
+                        '2026-08-01T09:00:00', ?, 0)
+                """.trimIndent(),
+                arrayOf<Any>(id, updatedAt)
+            )
+        }
+        db.execSQL(
+            """
+            INSERT INTO pets (id, name, species, medicationsJson, vaccinationsJson, photosJson,
+                              createdAt, updatedAt, syncedToFirestore)
+            VALUES ('p1', 'Rex', 'DOG', '[]', '[]', '[]', '2026-08-01T09:00:00',
+                    '2026-08-01T12:00:00', 0)
+            """.trimIndent()
+        )
+        db.close()
+
+        val migrated = helper.runMigrationsAndValidate(
+            TEST_DB,
+            VERSION_40,
+            true,
+            DatabaseMigrations.MIGRATION_39_40
+        )
+
+        migrated.query("SELECT id, updatedAt, updatedAtMillis FROM child_info ORDER BY id").use {
+            assertTrue(it.moveToFirst())
+            assertEquals("c1", it.getString(0))
+            assertEquals("the displayed wall clock is kept", "2026-08-01T12:00:00", it.getString(1))
+            assertEquals(NOON_AT_PLUS_FIVE_THIRTY_MILLIS, it.getLong(2))
+            assertTrue(it.moveToNext())
+            assertEquals("c2", it.getString(0))
+            assertEquals("an unreadable value lands on the epoch", 0L, it.getLong(2))
+        }
+        migrated.query("SELECT updatedAt, updatedAtMillis FROM pets").use {
+            assertTrue(it.moveToFirst())
+            assertEquals("2026-08-01T12:00:00", it.getString(0))
+            assertEquals(NOON_AT_PLUS_FIVE_THIRTY_MILLIS, it.getLong(1))
+        }
+    }
+
+    /**
+     * 40-to-41 adds the private journal (MON-22): a new, empty table, and nothing else moves. The
+     * insert at the end proves the table Room validated is the one the app writes — an author, an
+     * optional family, the day it is about as ISO text, the text and two epoch-millis times — with
+     * no outbox column, because nothing in it is ever uploaded. Needs `41.json`, which the
+     * Regenerate workflow exports.
+     */
+    @Test
+    fun migration40To41_addsAnEmptyJournal() {
+        val db = helper.createDatabase(TEST_DB, VERSION_40)
+        db.close()
+
+        val migrated = helper.runMigrationsAndValidate(
+            TEST_DB,
+            VERSION_41,
+            true,
+            DatabaseMigrations.MIGRATION_40_41
+        )
+
+        migrated.query("SELECT COUNT(*) FROM journal_entries").use {
+            assertTrue(it.moveToFirst())
+            assertEquals("nothing is backfilled", 0, it.getInt(0))
+        }
+        migrated.execSQL(
+            """
+            INSERT INTO journal_entries (id, createdByFirebaseUid, familyId, entryDate, text,
+                                         createdAtMillis, updatedAtMillis)
+            VALUES ('j1', 'alice', NULL, '2026-09-01', 'Late pickup', 1787000000000, 1787000000000)
+            """.trimIndent()
+        )
+        migrated.query("SELECT entryDate, familyId FROM journal_entries").use {
+            assertTrue(it.moveToFirst())
+            assertEquals("2026-09-01", it.getString(0))
+            assertTrue("an entry written while unpaired has no family", it.isNull(1))
+        }
+    }
+
+    /**
+     * 41-to-42 adds each child's own custody schedule (FAM-4) and gives every existing pattern
+     * none: the pattern, its windows and its layers come through untouched, and the new column is
+     * null rather than `[]`, which keeps a row with no overrides byte-identical to the mirror's own
+     * output. Needs `42.json`, which the Regenerate workflow exports (`.github/regenerate-request`).
+     */
+    @Test
+    fun migration41To42_keepsThePatternAndAddsNoChildSchedules() {
+        val db = helper.createDatabase(TEST_DB, VERSION_41)
+        db.execSQL(
+            """
+            INSERT INTO custody_models (id, modelType, patternDays, momDaysPattern, startDate,
+                                        isActive, repeatYearly, createdAt, lastModifiedAt,
+                                        lastModifiedAtMillis, dayOverridesJson, contactWindowsJson,
+                                        seasonalLayersJson)
+            VALUES ('m1', 'week_on_week_off', 14, '[0,1,2,3,4,5,6]',
+                    '2026-08-03', 1, 1, '2026-08-01T09:00:00', '', 1785578400000, NULL,
+                    '["2|15:00|19:00|dad"]', NULL)
+            """.trimIndent()
+        )
+        db.close()
+
+        val migrated = helper.runMigrationsAndValidate(
+            TEST_DB,
+            VERSION_42,
+            true,
+            DatabaseMigrations.MIGRATION_41_42
+        )
+
+        migrated.query("SELECT momDaysPattern, contactWindowsJson, childOverridesJson FROM custody_models").use {
+            assertTrue(it.moveToFirst())
+            assertEquals("[0,1,2,3,4,5,6]", it.getString(0))
+            assertEquals("[\"2|15:00|19:00|dad\"]", it.getString(1))
+            assertTrue("every child keeps following the family schedule", it.isNull(2))
+        }
+    }
+
     private companion object {
         const val TEST_DB = "coplanly-migration-test.db"
         const val VERSION_11 = 11
@@ -930,6 +1058,9 @@ class CoPlanlyDatabaseMigrationTest {
         const val VERSION_37 = 37
         const val VERSION_38 = 38
         const val VERSION_39 = 39
+        const val VERSION_40 = 40
+        const val VERSION_41 = 41
+        const val VERSION_42 = 42
 
         /** 2026-08-01T12:00:00 at UTC+05:30, i.e. 06:30:00Z. */
         const val NOON_AT_PLUS_FIVE_THIRTY_MILLIS = 1_785_565_800_000L

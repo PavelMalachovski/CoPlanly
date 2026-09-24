@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A child's own custody schedule (FAM-4). -->
+<resources>
+    <string name="custody_child_schedules_title">Окремий графік для дитини</string>
+    <string name="custody_child_schedules_hint">Дитина може мати власний графік; решта дітей дотримується сімейного. Зміну надсилають іншому з батьків на погодження, як будь-яку зміну графіка.</string>
+    <string name="custody_child_own_schedule">Власний графік</string>
+    <string name="custody_child_family_schedule">Дотримується сімейного графіка</string>
+    <string name="custody_child_scope_title">Графік: %1$s</string>
+    <string name="custody_child_scope_hint">Цього графіка дотримується лише %1$s. Сезонні графіки та разові обміни днями його не змінюють, а решта дітей дотримується сімейного графіка.</string>
+    <string name="custody_child_follow_family">Знову дотримуватися сімейного графіка</string>
+    <string name="custody_diff_child_schedule_changed">Змінюється й власний графік дитини.</string>
+    <string name="home_child_with_parent_today">%1$s сьогодні з: %2$s</string>
+</resources>

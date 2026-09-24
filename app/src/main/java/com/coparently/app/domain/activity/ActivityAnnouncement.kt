@@ -23,6 +23,12 @@ package com.coparently.app.domain.activity
  * @property amount Formatted amount for an expense, or null. Already carries its currency symbol.
  * @property currency ISO currency code, or null. Kept beside [amount] so a reader can group by it
  *   without parsing the formatted string — the app never converts between currencies.
+ * @property planCitation On a `CUSTODY_PROPOSED` card only: the parenting-plan answer the proposal
+ *   was built from (MON-21), as the same `PlanCitationCodec` string the custody document carries
+ *   under `proposalPlanCitation`, or null. Copied here because the custody document forgets it the
+ *   moment the proposal is answered, while a message is immutable — so this is what lets the
+ *   export (MON-3) say which answer a proposal cited, months later. Kept verbatim, never decoded
+ *   on read: a string this build cannot parse still survives a round trip through Room.
  */
 data class ActivityAnnouncement(
     val kind: ActivityKind,
@@ -31,7 +37,8 @@ data class ActivityAnnouncement(
     val title: String,
     val whenIso: String? = null,
     val amount: String? = null,
-    val currency: String? = null
+    val currency: String? = null,
+    val planCitation: String? = null
 ) {
     /**
      * The payload as a Firestore sub-map, keys stable from the start.
@@ -48,6 +55,7 @@ data class ActivityAnnouncement(
         whenIso?.let { put("whenIso", it) }
         amount?.let { put("amount", it) }
         currency?.let { put("currency", it) }
+        planCitation?.let { put("planCitation", it) }
     }
 
     companion object {
@@ -76,7 +84,8 @@ data class ActivityAnnouncement(
                 title = (map["title"] as? String).orEmpty(),
                 whenIso = (map["whenIso"] as? String)?.takeIf { it.isNotBlank() },
                 amount = (map["amount"] as? String)?.takeIf { it.isNotBlank() },
-                currency = (map["currency"] as? String)?.takeIf { it.isNotBlank() }
+                currency = (map["currency"] as? String)?.takeIf { it.isNotBlank() },
+                planCitation = (map["planCitation"] as? String)?.takeIf { it.isNotBlank() }
             )
         }
     }

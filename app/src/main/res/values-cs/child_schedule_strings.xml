@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A child's own custody schedule (FAM-4). -->
+<resources>
+    <string name="custody_child_schedules_title">Jiný rozvrh pro dítě</string>
+    <string name="custody_child_schedules_hint">Dítě může mít vlastní rozvrh; ostatní děti se řídí rodinným rozvrhem. Změna se odešle druhému rodiči ke schválení jako každá změna rozvrhu.</string>
+    <string name="custody_child_own_schedule">Vlastní rozvrh</string>
+    <string name="custody_child_family_schedule">Řídí se rodinným rozvrhem</string>
+    <string name="custody_child_scope_title">Rozvrh pro: %1$s</string>
+    <string name="custody_child_scope_hint">Tímto rozvrhem se řídí jen %1$s. Sezónní rozvrhy a jednorázové výměny dnů ho nemění a ostatní děti se řídí rodinným rozvrhem.</string>
+    <string name="custody_child_follow_family">Znovu se řídit rodinným rozvrhem</string>
+    <string name="custody_diff_child_schedule_changed">Mění se i vlastní rozvrh dítěte.</string>
+    <string name="home_child_with_parent_today">%1$s je dnes s: %2$s</string>
+</resources>

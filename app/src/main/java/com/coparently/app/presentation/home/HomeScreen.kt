@@ -39,7 +39,6 @@ import androidx.compose.material.icons.filled.Pets
 import androidx.compose.material.icons.filled.PriorityHigh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SwapHoriz
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
@@ -54,16 +53,12 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -80,7 +75,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
-import com.coparently.app.domain.custody.DaySwapGroup
 import com.coparently.app.domain.custody.HandoverInfo
 import com.coparently.app.domain.expenses.CurrencyBalance
 import com.coparently.app.domain.home.WeekEntry
@@ -97,7 +91,6 @@ import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.common.rememberToday
 import com.coparently.app.presentation.components.SkeletonBox
-import com.coparently.app.presentation.custody.custodyDiffDescription
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.utils.LightDarkPreviews
 import com.coparently.app.utils.PreviewWrapper
@@ -188,6 +181,7 @@ fun HomeScreen(
     val parentNames = rememberParentNames(viewModel.parents.collectAsState().value)
     val pendingProposal by changeRequestViewModel.pendingProposal.collectAsState()
     val pendingProposalDiff by changeRequestViewModel.pendingProposalDiff.collectAsState()
+    val pendingProposalCitation by changeRequestViewModel.pendingProposalCitation.collectAsState()
 
     // The swap and proposal dialogs live here, and until this existed their refusals did not:
     // `ChangeRequestViewModel` wrote every failure into `errorMessage`, and only the inbox
@@ -282,172 +276,25 @@ fun HomeScreen(
                 AwaitingDialogs(
                     state = state,
                     parentNames = parentNames,
-                    pendingProposal = pendingProposal,
-                    pendingProposalDiff = pendingProposalDiff,
-                    onAcceptSwap = { group ->
-                        changeRequestViewModel.decideSwapGroup(group, accept = true)
+                    proposal = pendingProposal?.let {
+                        ProposalAsk(it, pendingProposalDiff, pendingProposalCitation)
                     },
-                    onDeclineSwap = { group ->
-                        changeRequestViewModel.decideSwapGroup(group, accept = false)
-                    },
-                    onAcceptProposal = changeRequestViewModel::acceptProposal,
-                    onDeclineProposal = changeRequestViewModel::declineProposal,
-                    onOpenChangeRequests = onOpenChangeRequests
-                )
-            }
-        }
-    }
-}
-
-/**
- * The pop-up ask the owner walkthrough called for (items 4/13): what waits on this parent's
- * answer confronts them on open, instead of hiding behind a row they may never tap.
- *
- * One dialog at a time, day swaps first — a swap carries enough context to answer right here
- * (who, which day), so it gets real Accept/Decline buttons; event change requests carry times
- * and notes, so their dialog routes to the inbox that can show them. "Later" (or tapping
- * outside) puts the ask away for this screen instance only — it returns on the next visit,
- * which is the level of insistence a request that blocks the other parent deserves.
- */
-@Composable
-private fun AwaitingDialogs(
-    state: HomeUiState.Dashboard,
-    parentNames: ParentNames,
-    pendingProposal: com.coparently.app.domain.custody.CustodyProposal?,
-    pendingProposalDiff: com.coparently.app.domain.custody.CustodyPatternDiff?,
-    onAcceptSwap: (DaySwapGroup) -> Unit,
-    onDeclineSwap: (DaySwapGroup) -> Unit,
-    onAcceptProposal: () -> Unit,
-    onDeclineProposal: () -> Unit,
-    onOpenChangeRequests: () -> Unit
-) {
-    // rememberSaveable so a rotation mid-"Later" does not resurrect the dialog; a List because
-    // a Set has no built-in saver.
-    var dismissed by rememberSaveable { mutableStateOf(listOf<String>()) }
-
-    // A custody proposal is the largest ask and leads. Keyed on proposedAt so a fresh proposal
-    // (or a re-proposal) re-opens the dialog even after the last was put off.
-    if (pendingProposal != null) {
-        val key = "proposal_${pendingProposal.proposedAt}"
-        if (key !in dismissed) {
-            AlertDialog(
-                onDismissRequest = { dismissed = dismissed + key },
-                title = { Text(stringResource(R.string.custody_proposal_inbox_title)) },
-                text = {
-                    // Who proposed it, and — the part that was missing — what it would actually
-                    // do. The agreed pattern and the proposed one sit on the same document, so
-                    // the diff costs no extra read; the dialog simply never asked for it.
-                    val diff = custodyDiffDescription(pendingProposalDiff, parentNames)
-                    val who = stringResource(
-                        R.string.custody_proposal_inbox_body,
-                        parentNames.labelForUid(pendingProposal.proposedBy)
+                    actions = AwaitingActions(
+                        onAcceptSwap = { group ->
+                            changeRequestViewModel.decideSwapGroup(group, accept = true)
+                        },
+                        onDeclineSwap = { group ->
+                            changeRequestViewModel.decideSwapGroup(group, accept = false)
+                        },
+                        onAcceptProposal = changeRequestViewModel::acceptProposal,
+                        onDeclineProposal = changeRequestViewModel::declineProposal,
+                        onOpenChangeRequests = onOpenChangeRequests
                     )
-                    Text(if (diff == null) who else "$who\n\n$diff")
-                },
-                confirmButton = {
-                    TextButton(onClick = {
-                        dismissed = dismissed + key
-                        onAcceptProposal()
-                    }) { Text(stringResource(R.string.custody_proposal_accept)) }
-                },
-                dismissButton = {
-                    Row {
-                        TextButton(onClick = { dismissed = dismissed + key }) {
-                            Text(stringResource(R.string.home_dialog_later))
-                        }
-                        TextButton(onClick = {
-                            dismissed = dismissed + key
-                            onDeclineProposal()
-                        }) { Text(stringResource(R.string.custody_proposal_decline)) }
-                    }
-                }
-            )
-            return
+                )
+            }
         }
     }
-
-    // One dialog per *offer*, not per day. A week offered as one agreement used to raise seven
-    // dialogs in a row, each dismissal revealing the next and every one asking the same question.
-    val swapGroup = state.awaitingSwaps.firstOrNull { "swap_${it.key}" !in dismissed }
-    if (swapGroup != null) {
-        val key = "swap_${swapGroup.key}"
-        val first = swapGroup.swaps.first()
-        val dateFormat = DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL)
-        val context = LocalContext.current
-        AlertDialog(
-            onDismissRequest = { dismissed = dismissed + key },
-            title = { Text(stringResource(R.string.home_dialog_swap_title)) },
-            text = {
-                Text(
-                    if (swapGroup.dayCount == 1) {
-                        stringResource(
-                            R.string.home_dialog_swap_message,
-                            parentNames.labelForUid(first.override.requestedBy),
-                            swapGroup.firstDate.format(dateFormat)
-                        )
-                    } else {
-                        context.resources.getQuantityString(
-                            R.plurals.home_dialog_swap_message_days,
-                            swapGroup.dayCount,
-                            swapGroup.dayCount,
-                            parentNames.labelForUid(first.override.requestedBy),
-                            swapGroup.firstDate.format(dateFormat),
-                            swapGroup.lastDate.format(dateFormat)
-                        )
-                    }
-                )
-            },
-            confirmButton = {
-                // Dismissed on tap as well: the answer's round trip through Firestore takes a
-                // moment, and the dialog must not sit there inviting a second tap meanwhile.
-                TextButton(onClick = {
-                    dismissed = dismissed + key
-                    onAcceptSwap(swapGroup)
-                }) {
-                    Text(stringResource(R.string.day_swap_accept))
-                }
-            },
-            dismissButton = {
-                Row {
-                    TextButton(onClick = { dismissed = dismissed + key }) {
-                        Text(stringResource(R.string.home_dialog_later))
-                    }
-                    TextButton(onClick = {
-                        dismissed = dismissed + key
-                        onDeclineSwap(swapGroup)
-                    }) {
-                        Text(stringResource(R.string.day_swap_decline))
-                    }
-                }
-            }
-        )
-        return
-    }
-
-    if (state.awaitingRequestCount > 0 && REQUESTS_DIALOG_KEY !in dismissed) {
-        AlertDialog(
-            onDismissRequest = { dismissed = dismissed + REQUESTS_DIALOG_KEY },
-            title = { Text(stringResource(R.string.home_dialog_requests_title)) },
-            text = { Text(stringResource(R.string.home_dialog_requests_message)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    dismissed = dismissed + REQUESTS_DIALOG_KEY
-                    onOpenChangeRequests()
-                }) {
-                    Text(stringResource(R.string.home_dialog_review))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { dismissed = dismissed + REQUESTS_DIALOG_KEY }) {
-                    Text(stringResource(R.string.home_dialog_later))
-                }
-            }
-        )
-    }
 }
-
-/** The one requests-summary dialog's dismissal key — swaps key on their date instead. */
-private const val REQUESTS_DIALOG_KEY = "requests"
 
 /**
  * What the page draws before it knows whether there is a co-parent.
@@ -647,7 +494,8 @@ private fun Dashboard(
                 HandoverHero(
                     info = handover,
                     parentNames = parentNames,
-                    onConfirm = onOpenChangeRequests
+                    onConfirm = onOpenChangeRequests,
+                    childrenToday = state.childrenToday
                 )
             }
         }
@@ -790,7 +638,8 @@ private fun SectionHeader(text: String) {
 internal fun HandoverHero(
     info: HandoverInfo,
     parentNames: ParentNames,
-    onConfirm: () -> Unit
+    onConfirm: () -> Unit,
+    childrenToday: List<ChildWithParent> = emptyList()
 ) {
     val fromColor = ParentColors.fill(info.fromParent)
     val toColor = ParentColors.fill(info.toParent)
@@ -868,6 +717,7 @@ internal fun HandoverHero(
                     onClick = onConfirm
                 )
             }
+            ChildrenTodayLines(childrenToday, parentNames)
         }
     }
 }

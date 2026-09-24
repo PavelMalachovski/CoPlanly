@@ -93,7 +93,6 @@
     <ID>LongMethod:FriendInviteSheet.kt$@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class) @Composable fun FriendInviteSheet( state: FriendInviteState, onChooseDuration: (GuestAccessDuration) -&gt; Unit, onCreate: () -&gt; Unit, onDismiss: () -&gt; Unit )</ID>
     <ID>LongMethod:FriendProfileScreen.kt$@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class) @Composable fun FriendProfileScreen( onNavigateUp: () -&gt; Unit, viewModel: FriendViewModel = hiltViewModel() )</ID>
     <ID>LongMethod:FriendsScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun FriendsScreen( onNavigateUp: () -&gt; Unit, onOpenFriend: (String) -&gt; Unit, onOpenMyProfile: () -&gt; Unit, viewModel: FriendViewModel = hiltViewModel() )</ID>
-    <ID>LongMethod:HomeScreen.kt$@Composable private fun AwaitingDialogs( state: HomeUiState.Dashboard, parentNames: ParentNames, pendingProposal: com.coparently.app.domain.custody.CustodyProposal?, pendingProposalDiff: com.coparently.app.domain.custody.CustodyPatternDiff?, onAcceptSwap: (DaySwapGroup) -&gt; Unit, onDeclineSwap: (DaySwapGroup) -&gt; Unit, onAcceptProposal: () -&gt; Unit, onDeclineProposal: () -&gt; Unit, onOpenChangeRequests: () -&gt; Unit )</ID>
     <ID>LongMethod:MainActivity.kt$MainActivity$override fun onCreate(savedInstanceState: Bundle?)</ID>
     <ID>LongMethod:MedicationEditor.kt$@Composable private fun MedicationForm( medication: Medication? = null, onSave: (Medication) -&gt; Unit, onCancel: () -&gt; Unit )</ID>
     <ID>LongMethod:PairingScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun PairingScreen( onNavigateBack: () -&gt; Unit, onCustodyConflict: () -&gt; Unit, prefilledCode: String? = null, startOnCodeEntry: Boolean = false, viewModel: PairingViewModel = hiltViewModel() )</ID>
@@ -115,7 +114,6 @@
     <ID>LongParameterList:ExpenseViewModel.kt$ExpenseViewModel$( private val expenseRepository: ExpenseRepository, private val userRepository: UserRepository, private val receiptStorage: ReceiptStorage, private val preferencesRepository: PreferencesRepository, private val receiptTextRecognizer: ReceiptTextRecognizer, private val familySettingsRepository: FamilySettingsRepository, private val parentsSource: ParentsSource, familyMembersSource: FamilyMembersSource )</ID>
     <ID>LongParameterList:GoogleCalendarApi.kt$GoogleCalendarApi$( credential: Credential, calendarId: String = "primary", eventId: String, title: String, description: String?, startDateTime: LocalDateTime, endDateTime: LocalDateTime? )</ID>
     <ID>LongParameterList:GoogleCalendarApi.kt$GoogleCalendarApi$( credential: Credential, calendarId: String = "primary", title: String, description: String?, startDateTime: LocalDateTime, endDateTime: LocalDateTime? )</ID>
-    <ID>LongParameterList:HomeScreen.kt$( state: HomeUiState.Dashboard, parentNames: ParentNames, pendingProposal: com.coparently.app.domain.custody.CustodyProposal?, pendingProposalDiff: com.coparently.app.domain.custody.CustodyPatternDiff?, onAcceptSwap: (DaySwapGroup) -&gt; Unit, onDeclineSwap: (DaySwapGroup) -&gt; Unit, onAcceptProposal: () -&gt; Unit, onDeclineProposal: () -&gt; Unit, onOpenChangeRequests: () -&gt; Unit )</ID>
     <ID>LongParameterList:HomeViewModel.kt$HomeViewModel$( eventRepository: EventRepository, changeRequestRepository: ChangeRequestRepository, custodyModelRepository: CustodyModelRepository, monthSpendDependencies: MonthSpendDependencies, messageRepository: MessageRepository, familyKindSource: FamilyKindSource, homeIdentityDependencies: HomeIdentityDependencies )</ID>
     <ID>LongParameterList:MessagesList.kt$( message: Message, isCurrentUser: Boolean, startsGroup: Boolean = true, endsGroup: Boolean = true, onEventLinkClick: ((String) -&gt; Unit)? = null, onOpenInbox: (() -&gt; Unit)? = null, onRetryFailed: (() -&gt; Unit)? = null )</ID>
     <ID>LongParameterList:PairingRepositoryImpl.kt$PairingRepositoryImpl$( private val firestore: FirebaseFirestore, private val authService: FirebaseAuthService, private val pairingFunctions: PairingFunctions, private val postPairingConversationSetup: PostPairingConversationSetup, private val userDao: UserDao, private val selectedFamilySource: SelectedFamilySource, private val syncRequester: SyncRequester, // Application context only, for the localized conversation-title fallback. This is a // repository, not a ViewModel, so it is allowed to resolve resources directly. @ApplicationContext private val context: Context )</ID>
@@ -349,17 +347,14 @@
     <ID>MultiLineIfElse:AddEditPetScreen.kt$stringResource(R.string.pet_title_add)</ID>
     <ID>MultiLineIfElse:AddEditPetScreen.kt$stringResource(R.string.pet_title_edit)</ID>
     <ID>MultiLineIfElse:CalendarFilters.kt$null</ID>
-    <ID>MultiLineIfElse:CustodySetupScreen.kt$null</ID>
     <ID>MultiLineIfElse:Extensions.kt$take(maxLength - ellipsis.length) + ellipsis</ID>
     <ID>MultiLineIfElse:Extensions.kt$this</ID>
     <ID>MultiLineIfElse:RecurrenceExpander.kt$RecurrenceExpander$emptyList()</ID>
     <ID>MultiLineIfElse:RecurrenceExpander.kt$RecurrenceExpander$listOf(event)</ID>
     <ID>NestedBlockDepth:SyncService.kt$SyncService$private suspend fun syncEvents(userId: String): Int</ID>
     <ID>NoBlankLineBeforeRbrace:ChangeRequestHighlightTest.kt$ChangeRequestHighlightTest$ </ID>
-    <ID>NoBlankLineBeforeRbrace:ChatMappersWireFormatTest.kt$ChatMappersWireFormatTest$ </ID>
     <ID>NoBlankLineBeforeRbrace:CredentialManagerService.kt$CredentialManagerService$ </ID>
     <ID>NoBlankLineBeforeRbrace:CredentialProviderImpl.kt$CredentialProviderImpl$ </ID>
-    <ID>NoBlankLineBeforeRbrace:DayCellFillsTest.kt$DayCellFillsTest$ </ID>
     <ID>NoBlankLineBeforeRbrace:RequestChangeViewModel.kt$RequestChangeViewModel$ </ID>
     <ID>NoConsecutiveBlankLines:ActivityEditor.kt$ </ID>
     <ID>NoConsecutiveBlankLines:AllergyEditor.kt$ </ID>
@@ -471,7 +466,6 @@
     <ID>ReturnCount:CustodyModelRepository.kt$CustodyModelRepository$private suspend fun decideProposal( transform: (SharedCustody, String, String, Long) -&gt; Result&lt;SharedCustody&gt; ): Result&lt;Unit&gt;</ID>
     <ID>ReturnCount:CustodyModelRepository.kt$CustodyModelRepository$private suspend fun writeSwap( pair: CustodyPair, date: String, transform: (Map&lt;String, DayOverride&gt;) -&gt; Result&lt;Map&lt;String, DayOverride&gt;&gt; ): Result&lt;SwapWrite&gt;</ID>
     <ID>ReturnCount:CustodyModelRepository.kt$CustodyModelRepository$suspend fun applyDayOverridesForDates( dates: List&lt;String&gt;, transform: (Map&lt;String, DayOverride&gt;, String) -&gt; Result&lt;Map&lt;String, DayOverride&gt;&gt; ): Result&lt;Map&lt;String, DayOverride&gt;&gt;</ID>
-    <ID>ReturnCount:CustodyModelRepository.kt$CustodyModelRepository$suspend fun submitPattern(model: CustodyModel): PatternSubmission</ID>
     <ID>ReturnCount:DayOverrideTransition.kt$DayOverrideTransition$@Suppress("LongParameterList") // the caller's five inputs, plus which answer is being given private fun Map&lt;String, DayOverride&gt;.decide( date: String, byUid: String, atIso: String, note: String?, outcome: DayOverrideStatus ): Result&lt;Map&lt;String, DayOverride&gt;&gt;</ID>
     <ID>ReturnCount:EventAcceptanceTransition.kt$EventAcceptanceTransition$fun required(event: Event, creatorSlot: String?, partnerUid: String?): Boolean</ID>
     <ID>ReturnCount:EventRepositoryImpl.kt$EventRepositoryImpl$override suspend fun fetchRemoteEvent(id: String): Event?</ID>

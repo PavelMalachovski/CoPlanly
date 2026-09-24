@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The private journal (MON-22): kept on this phone only, never synced or shared. -->
+    <string name="journal_title">Private journal</string>
+    <string name="journal_settings_description">Your own notes, kept on this phone only</string>
+    <string name="journal_private_notice">Only you can read this journal. Entries stay on this phone: they are not synced, not backed up and never shared with your co-parent. Uninstalling the app, or signing in to a different account on this phone, deletes them. You can choose to add entries to an export yourself.</string>
+    <string name="journal_empty_title">No entries yet</string>
+    <string name="journal_empty_description">Write down what happened, in your own words, while it is fresh.</string>
+    <string name="journal_add">New entry</string>
+    <string name="journal_deleted">Entry deleted</string>
+    <string name="journal_undo">Undo</string>
+    <string name="journal_delete">Delete entry</string>
+    <string name="journal_editor_new_title">New entry</string>
+    <string name="journal_editor_edit_title">Edit entry</string>
+    <string name="journal_editor_notice">Saved on this phone only. Your co-parent never sees it.</string>
+    <string name="journal_entry_date">Day it is about</string>
+    <string name="journal_entry_text">What happened</string>
+    <string name="journal_save">Save</string>
+    <string name="journal_pick_ok">OK</string>
+    <string name="journal_pick_cancel">Cancel</string>
+    <string name="journal_error_save">The entry could not be saved. Try again.</string>
+    <string name="journal_error_signed_out">You are signed out. Sign in to save the entry.</string>
+</resources>

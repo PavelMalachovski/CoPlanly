@@ -79,8 +79,11 @@ class ConflictResolver @Inject constructor() {
      *
      * Strategy:
      * 1. If one is deleted, mark as deleted
-     * 2. Latest timestamp wins
+     * 2. Latest save wins, by [ChildInfoEntity.updatedAtMillis]
      * 3. For ties, merge data intelligently
+     *
+     * An instant, as for events (schema 40): it used to compare the naive `updatedAt` wall
+     * clocks, so a parent in the later time zone kept their edit whether or not it was newer.
      *
      * @param local Local child info entity
      * @param remote Remote child info entity
@@ -94,7 +97,7 @@ class ConflictResolver @Inject constructor() {
     ): ConflictResolution<ChildInfoEntity> {
         return when {
             // Remote is newer - use remote
-            remote.updatedAt > local.updatedAt -> {
+            remote.updatedAtMillis > local.updatedAtMillis -> {
                 ConflictResolution.UseRemote(
                     data = remote,
                     reason = "Remote version is newer"
@@ -102,7 +105,7 @@ class ConflictResolver @Inject constructor() {
             }
 
             // Local is newer - use local
-            local.updatedAt > remote.updatedAt -> {
+            local.updatedAtMillis > remote.updatedAtMillis -> {
                 ConflictResolution.UseLocal(
                     data = local,
                     reason = "Local version is newer"

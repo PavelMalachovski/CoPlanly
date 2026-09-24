@@ -54,8 +54,11 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
    first: it is the product, and it used to sit below the sync cards that depend on it).
    Google Calendar's actions expand from its row rather than stacking buttons in a card.
 5. **Calendar header is one row**: title (which *is* the Month/Week/Day picker), Today,
-   Filters, gear. Change requests and school vacation are inline banners over the grid
-   (`components/CalendarBanners.kt`), not a badged glyph and a per-day teal strip. Month
+   Filters, gear. Change requests are inline banners over the grid
+   (`components/CalendarBanners.kt`), not a badged glyph. School vacation is neither a banner (it
+   changed the grid's height between months) nor the old teal strip: since MON-13 it is a thin
+   neutral line along each vacation day's bottom edge (`DayCellFill.schoolVacation`, theme
+   `outline`, no height). Month
    cells carry event **dots**, tapping a day selects it **and opens Day view** (an owner
    decision from the Aug 2026 walkthrough — a select-only tap left no route to creating an
    event on a chosen day; an empty hour slot in Day view is that route), and
@@ -102,7 +105,9 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     `ADJACENT_MONTH_TINT_SCALE` of the custody alpha, because the grid must still say which month
     it is showing. What a borrowed cell still refuses is everything you would *act on*: the
     holiday tint, the proposal preview, the swap arrows, the long press. That is the line — a
-    pattern crosses the month boundary, a thing you would answer does not.
+    pattern crosses the month boundary, a thing you would answer does not. The school-vacation
+    line (MON-13) is a pattern too and crosses into borrowed days at the same scale; it is a line,
+    never a fill or a hue.
 
 11. **Motion has one vocabulary** (September 2026 audit, `docs/AUDIT-2026-09.md` §4).
     `presentation/theme/Motion.kt` holds the only durations — `SHORT_MS` 150 (fades, crossfades),
@@ -165,7 +170,8 @@ When touching the UI, keep these invariants:
 3. **Calendar**: month view is a classic grid from the 1st with horizontal month paging
    (kizitonwose `HorizontalCalendar`); day/week use `HorizontalPager` with fling physics.
    Event chips are single-line (`softWrap = false` + ellipsis). School vacation is a thin
-   bottom strip, never a full-cell fill (it used to drown custody colors).
+   neutral line along the cell's bottom edge (theme `outline`, 2 dp, no height), never a
+   full-cell fill (it used to drown custody colors) and never a hue (teal is the calendar friend).
 4. **Custody coloring** must go through the unified lookup in `CalendarScreen`
    (`getCustody`): active `CustodyModel` first, legacy `CustodyScheduleEntity` as fallback.
    Don't read the legacy schedules directly in a view — model-based custody would vanish.
@@ -371,7 +377,7 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   banners, a Settings group, `EmptyState`, the Expenses summary header, a chat thread, the event
   preview body, the consent screen and the family switcher chip — over a variant matrix of theme,
   the five languages, 1.0×/1.5× font scale and the default vs a purple/orange parent palette
-  (`ScreenshotVariants`: nine variants for text-heavy components, four for the rest, 112 images).
+  (`ScreenshotVariants`: nine variants for text-heavy components, four for the rest, 113 images).
   **To view:** open the run's `screenshots` artefact, unzip, open `index.html`
   (`tools/screenshot-gallery.js`, no dependencies, filters by component/language/theme/scale/
   palette). Locally: `./gradlew recordRoborazziDebug`, images in `app/build/outputs/roborazzi/`.
@@ -588,7 +594,7 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
 
 ```
 domain/    — models, repository interfaces, use cases, holidays, ReminderScheduler
-data/      — Room (v39 + migrations), Firestore/Google clients, repository impls, sync
+data/      — Room (v42 + migrations), Firestore/Google clients, repository impls, sync
 presentation/ — Compose screens per feature + ViewModels + theme
 di/        — Hilt modules (Database, Firebase, Google, UseCase, Notification, …)
 ```
@@ -631,8 +637,12 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
    period by `SchoolVacationReferenceTest`. From school year 2025/26 to whatever the dataset
    publishes — no extrapolation. What is set per region the app does not model stays out: Slovak
    spring holidays (by kraj), Austrian semester and summer breaks (by Land; the dataset's later
-   ones are all `Provisional`), and Germany without a Land draws none. Russia has none. Only Day
-   view labels a school-vacation day today; the month grid has no marker (ROADMAP MON-13).
+   ones are all `Provisional`), and Germany without a Land draws none. Russia has none. Day view
+   labels a school-vacation day and the month grid underlines it; the grid reads
+   `HolidayProvider.schoolVacationDaysInRange`, not the `holidaysInRange` map, because that map
+   names a public holiday first and would break the line over Christmas. The OpenHolidays data's
+   ODbL 1.0 attribution lives in Settings → App → Data sources and licences
+   (`DataSourcesScreen.kt`, held by `DataSourcesTest`); a new dataset gets a row there.
    The tables were written against the Python `holidays` library (September 2026, superseding the
    August decision to wait for verified data — this is that data) and are **pinned to it**:
    `HolidayReferenceTest` compares every date and name, 2020–2035, with a fixture generated by
@@ -698,7 +708,7 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     the conversation as `{uid: epochMillis}` maps — one write per event — and the ticks and
     unread badge are derived from them by `ChatReadState`, never stored per message.
     Message times are stored the same way: `Message.sentAtMillis`, epoch millis (Room
-    schema v13, since superseded — the database is at v39), not a naive `LocalDateTime`, so two
+    schema v13, since superseded — the database is at v42), not a naive `LocalDateTime`, so two
     parents in different time zones agree
     on what a mark means and on when a message was sent. The Firestore field keeps its name
     (`timestamp`) and the read path still accepts a legacy ISO string, so a co-parent on an
@@ -715,6 +725,11 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     — no `Z`, because an older build's `ISO_LOCAL_DATE_TIME` parse would throw and skip the event),
     and `EventRepositoryImpl.toEntity` derives it from the `updatedAt` wall clock every save already
     stamps, so no save path can forget it. `Event.updatedAt` stays a `LocalDateTime` for display.
+    **`ChildInfoEntity`/`PetEntity.updatedAtMillis` followed (schema 40)**: `resolveChildInfoConflict`
+    compares the instant; `ChildInfoRepositoryImpl`, `PetRepositoryImpl` and `SyncService`'s two
+    child maps write `updatedAt` through `EventTimestamp` as offset-free UTC text, and `toEntity`
+    derives the instant from the wall clock each save stamps. Pets have no conflict comparison;
+    their column keeps the two collections on one wire form.
 14. **A delete is a tombstone, never a document removal** (CQ-3). `data/sync/Tombstone.kt` is
     the one definition: the client writes `deletedAtMillis` (epoch millis) and `deletedBy` onto
     the document with `update()` — never `set()`, which would replace the `createdByFirebaseUid`
@@ -1084,8 +1099,10 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     screen, which follows `ChatPartnerSource` (M-8). `MessageDao.searchCandidates` is only a
     `LIKE … ESCAPE '\'` prefilter: SQLite folds ASCII case and nothing else, so the decision is
     `domain/chat/ChatSearch` over `TextFold` (case and diacritics ignored, "cas" finds "čas"). Don't
-    "simplify" it into a bare `LIKE` — four of the five languages break — and don't add an FTS table
-    without the schema bump and Regenerate run that MON-15 describes. The hold (`SendHold`) keeps a
+    "simplify" it into a bare `LIKE` — four of the five languages break — and don't put an FTS4 table
+    in front of it: `unicode61` matches token prefixes and does not fold й/ё/ї, so it would drop
+    messages the search accepts (measured, ROADMAP MON-15; `ChatSearchTest` pins both). If a thread
+    is ever measured slow, the prefilter is a `TextFold`ed column under the same `LIKE`. The hold (`SendHold`) keeps a
     message out of Room and the outbox until the pause ends, which is what makes Undo real, and hands
     a held message back to the draft store if the ViewModel is cleared rather than sending it. The
     hint (`ToneCheck`) is three string tests computed while rendering: it never disables Send, is
@@ -1197,6 +1214,74 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     (`AUTHORED_FILES.family_documents`, keyed on the stored `familyId`, never a blank prefix), and
     every conversation's `chat_attachments/{id}/` with the thread.
     None of it works live until `firebase deploy --only storage` — the known issue below.
+
+32. **The parenting plan never becomes a schedule by itself; a proposal cites it and never parses
+    it** (MON-21, September 2026, owner decision). `domain/parentingplan/PlanScheduleLink.kt`
+    names the schedule questions (`SCHEDULE_QUESTIONS`: `care_weekday` → base pattern,
+    `holidays_school`/`holidays_special` → a seasonal layer) and offers **Propose as the schedule**
+    only when `ParentingPlanComparison.statusOf` is `AGREED`, the account is paired, and no
+    co-parent proposal waits (`CustodyProposalTransition.pendingFromCoParent`, shared with the
+    seasonal section). Four things not to undo. **The parent builds the pattern** in the ordinary
+    editor under a read-only quote of the answer; nothing turns the free text into a pattern, and
+    saving goes through `submitPattern`/`submitSeasonalLayers` unchanged — a paired family gets a
+    proposal, never an overwrite. **The citation is one top-level key, `proposalPlanCitation`,
+    beside `proposal`**, as a `PlanCitationCodec` string (`"p1|<questionId>|<16 hex of SHA-256>"`),
+    never Gson; `CustodyProposal.planCitationWire` carries it **verbatim**, unreadable ones
+    included, so a swap write re-sends what was there. The hashed text is both agreed answers,
+    sorted and joined (one text when identical), so either phone derives the same hash. **The
+    rules bound it and tie it to the proposal**: it is in the proposal-only and swap `hasOnly`
+    lists, `planCitationValid` requires a string of at most 128 characters beside a `proposal` and
+    lets only that proposal's author put or change it, and `planCitationKeptOrDropped` keeps a swap
+    from changing it while an older build may drop it; accept, decline and withdraw clear it with
+    the proposal. And **the reader re-derives, never trusts**: the proposal card says "From the
+    parenting plan" only while the plan still hashes to the citation, "changed since" once it does
+    not, and nothing for a missing key (an older build), an unreadable one or an unknown question
+    — never an error. The calendar feed never reads `proposal`, so it never reads this.
+    The same live `pendingProposalCitation` is printed by Home's proposal pop-up
+    (`presentation/home/AwaitingDialogs.kt`, which takes a `ProposalAsk` and an `AwaitingActions`
+    so its signature stays small) and by the calendar's review banner (`ChangeRequestBanner`'s one
+    optional `detail` line, worded by `planCitationShortLine`). Don't re-derive it per screen.
+    **The export reads the citation from the chat, not the custody document**: the
+    `CUSTODY_PROPOSED` card carries the same codec string as `activity.planCitation`, because
+    messages can't be edited and the document drops the key once the proposal is answered. The
+    record prints the question as cited when the proposal was made (`RecordFormat.planCitation`),
+    never re-hashed against today's plan.
+
+33. **A child's own schedule overrides the family's inside the one custody document, and is the
+    family schedule everywhere it is not asked for** (FAM-4, September 2026; schema 42).
+    `domain/custody/ChildScheduleOverride.kt` is the one definition — `{childId, patternDays,
+    momDayIndices, startDate, contactWindows}` — stored under `childOverrides` as
+    `ChildOverrideCodec` strings (`C1;child:<id>;<anchor>;<cycle>;<slot-1 days>;<windows>`, the
+    child in its `FamilyMemberRef` form), never Gson, never a second document per child (SEC-4's
+    comparison would multiply). Room keeps it in `custody_models.childOverridesJson` (null = none,
+    `ChildOverrideJson`). Five things not to undo. **An override is self-contained**: the family's
+    seasonal layers and accepted swaps do not move an overridden child, and `getCustodyFor` never
+    reads overrides — `ChildCustody` is the separate question. **Item 24's three wire rules apply
+    under `childOverrides`**: a missing key keeps the mirror's copy (`ChildOverrideJson.mirrored`),
+    a pattern write always writes the key, proposal and swap writes carry
+    `SharedCustody`/`CustodyProposal.childOverridesWire` verbatim, and `firestore.rules`'
+    `childOverridesKeptOrDropped` refuses one that changes it; unreadable entries (another version,
+    a second entry for one child, past 16) are kept verbatim. **Saving the base pattern carries the
+    agreed overrides** (`CustodyModelRepository.withActiveLayers`), and **a change is a pattern
+    change** — `submitChildOverride` goes through `submitPattern`, so a paired family gets a
+    proposal. **It appears at two, never at one**: the calendar band follows a child only when the
+    member filter is exactly that child (`presentation/calendar/ChildCustodyBand.kt`, which also
+    switches the swap markers and long-press off — a swap is about the family schedule), Home's
+    hero adds "<child> is with <parent> today" per child only on a day they are apart
+    (`ChildrenToday`, names, never colours), and custody setup's "Different schedule for a child"
+    scopes the same editor to one child (`CustodySetupViewModel.editSchedule`) and is hidden below
+    two children. **The calendar feed stays the family schedule** and ignores the key. See
+    `docs/DESIGN-custody-per-child.md`.
+
+34. **The private journal never leaves the phone** (MON-22, schema 41). `journal_entries` has no
+    `syncedToFirestore` column, no Firestore data source, no rule and no push;
+    `JournalRepositoryImpl` depends on `JournalDao` alone, and every query is scoped to the author.
+    `clearAllTables` (account switch, deletion) wipes it; sign-out keeps it. `familyId` is stamped
+    at create and never re-derived (item 18). The only exit is the export's "My private journal"
+    checkbox, **off by default**, which prints this parent's entries for the period after the
+    expenses, labelled in both formats as one parent's private notes the other never saw, with that
+    phone's clock (`domain/export/RecordJournal.kt`). Don't add a sync path, a backup or an outbox
+    column.
 
 ## Known issues / do not "fix" silently
 

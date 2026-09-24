@@ -15,6 +15,7 @@ import com.coparently.app.domain.events.EventAcceptanceTransition
 import com.coparently.app.domain.model.ChangeRequest
 import com.coparently.app.domain.model.ChangeRequestStatus
 import com.coparently.app.domain.model.Event
+import com.coparently.app.domain.parentingplan.CitationStatus
 import com.coparently.app.domain.repository.ChangeRequestRepository
 import com.coparently.app.domain.repository.EventRepository
 import com.coparently.app.domain.repository.UserRepository
@@ -22,14 +23,18 @@ import com.coparently.app.domain.usecase.EventUseCases
 import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.presentation.common.UiText
+import com.coparently.app.presentation.parentingplan.PlanReferenceSource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
@@ -58,7 +63,8 @@ class ChangeRequestViewModel @Inject constructor(
     private val eventUseCases: EventUseCases,
     private val userRepository: UserRepository,
     private val custodyModelRepository: CustodyModelRepository,
-    parentsSource: ParentsSource
+    parentsSource: ParentsSource,
+    private val planReferenceSource: PlanReferenceSource
 ) : ViewModel() {
 
     /**
@@ -312,6 +318,35 @@ class ChangeRequestViewModel @Inject constructor(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = null
+    )
+
+    /**
+     * What the card says about where the pending proposal came from (MON-21).
+     *
+     * [CitationStatus.None] for a proposal that cites nothing — every proposal from an older build
+     * — and for one whose citation this build cannot read. Otherwise live against this phone's
+     * copy of the plan, so an edit to the cited answer while the card is open turns "from the
+     * parenting plan" into "the answer has changed since". A plan that cannot be read is
+     * [CitationStatus.None] too: the card then reads as it always did, never as an error.
+     */
+    val pendingProposalCitation: StateFlow<CitationStatus> = combine(
+        custodyModelRepository.observeShared(),
+        _currentUserId
+    ) { shared, uid ->
+        uid to shared?.proposal?.takeIf { uid.isNotEmpty() && it.proposedBy != uid }
+    }.distinctUntilChanged().flatMapLatest { (uid, proposal) ->
+        if (proposal == null) {
+            flowOf(CitationStatus.None)
+        } else {
+            planReferenceSource.observeCitation(proposal.planCitationWire, uid, proposal.proposedBy)
+        }
+    }.catch { e ->
+        Log.w(TAG, "Could not read the parenting plan a proposal cites", e)
+        emit(CitationStatus.None)
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = CitationStatus.None
     )
 
     /**

@@ -15,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.TableChart
 import androidx.compose.material3.AlertDialog
@@ -40,6 +41,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -48,6 +50,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.data.export.ExportedFile
 import com.coparently.app.domain.export.ExportFormat
+import com.coparently.app.domain.export.JournalLabels
 import com.coparently.app.domain.export.PlanLabels
 import com.coparently.app.domain.export.RecordActions
 import com.coparently.app.domain.export.RecordColumns
@@ -133,20 +136,28 @@ fun ExportScreen(
             actions = ExportActions(
                 onPick = { end -> picking = end },
                 onIncludePlan = viewModel::setIncludePlan,
+                onIncludeJournal = viewModel::setIncludeJournal,
                 onExport = { format -> viewModel.export(format, labels, fallbacks) }
             )
         )
     }
 }
 
-/** What the export screen's controls do, passed as one value so the content takes few parameters. */
+/**
+ * What the export screen's controls do, as one value — the screen has more of them than a
+ * composable should take one parameter each.
+ */
 private class ExportActions(
     val onPick: (RangeEnd) -> Unit,
     val onIncludePlan: (Boolean) -> Unit,
+    val onIncludeJournal: (Boolean) -> Unit,
     val onExport: (ExportFormat) -> Unit
 )
 
-/** The range, whether the plan goes in, the statement the file makes about itself, and the two formats. */
+/**
+ * The range, which optional sections go in, the statement the file makes about itself, and the
+ * two formats.
+ */
 @Composable
 private fun ExportContent(
     state: ExportUiState,
@@ -167,11 +178,7 @@ private fun ExportContent(
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         RangeGroup(state = state, onPick = actions.onPick)
-        IncludePlanGroup(
-            included = state.includePlan,
-            enabled = state.working == null,
-            onChange = actions.onIncludePlan
-        )
+        IncludeGroup(state = state, actions = actions)
         Column {
             GroupLabel(stringResource(R.string.export_what_it_says))
             Surface(
@@ -194,17 +201,9 @@ private fun ExportContent(
             }
         }
         SectionGroup {
-            ExportRow(
-                format = ExportFormat.PDF,
-                working = state.working,
-                onClick = { actions.onExport(ExportFormat.PDF) }
-            )
+            ExportRow(format = ExportFormat.PDF, working = state.working, onClick = actions.onExport)
             Divider()
-            ExportRow(
-                format = ExportFormat.CSV,
-                working = state.working,
-                onClick = { actions.onExport(ExportFormat.CSV) }
-            )
+            ExportRow(format = ExportFormat.CSV, working = state.working, onClick = actions.onExport)
         }
     }
 }
@@ -233,28 +232,62 @@ private fun RangeGroup(state: ExportUiState, onPick: (RangeEnd) -> Unit) {
 }
 
 /**
- * Whether the family's parenting plan goes into the file. The plan has no period, so the row says
- * it is printed as it stands now, whatever range is picked above.
+ * Which optional sections go into the file.
+ *
+ * The parenting plan has no period, so its row says it is printed as it stands now, whatever range
+ * is picked above. The private journal (MON-22) is off until the parent ticks it, and its row says
+ * whose entries go in and how the file labels them — nobody else has ever read them.
  */
 @Composable
-private fun IncludePlanGroup(included: Boolean, enabled: Boolean, onChange: (Boolean) -> Unit) {
+private fun IncludeGroup(state: ExportUiState, actions: ExportActions) {
+    val enabled = state.working == null
     Column {
         GroupLabel(stringResource(R.string.export_include_label))
         SectionGroup {
-            SectionRow(
-                modifier = Modifier.toggleable(
-                    value = included,
-                    enabled = enabled,
-                    role = Role.Checkbox,
-                    onValueChange = onChange
-                ),
+            IncludeRow(
+                included = state.includePlan,
+                enabled = enabled,
+                onChange = actions.onIncludePlan,
                 icon = Icons.AutoMirrored.Filled.Assignment,
                 title = stringResource(R.string.export_include_plan),
-                supporting = stringResource(R.string.export_include_plan_supporting),
-                trailing = { Checkbox(checked = included, onCheckedChange = null, enabled = enabled) }
+                supporting = stringResource(R.string.export_include_plan_supporting)
+            )
+            Divider()
+            IncludeRow(
+                included = state.includeJournal,
+                enabled = enabled,
+                onChange = actions.onIncludeJournal,
+                icon = Icons.Default.Lock,
+                title = stringResource(R.string.export_include_journal),
+                supporting = stringResource(R.string.export_include_journal_supporting)
             )
         }
     }
+}
+
+/** One checkbox row: the whole row toggles, and the box only shows the state. */
+@Composable
+@Suppress("LongParameterList") // one checkbox row's anatomy, expressed as one parameter list
+private fun IncludeRow(
+    included: Boolean,
+    enabled: Boolean,
+    onChange: (Boolean) -> Unit,
+    icon: ImageVector,
+    title: String,
+    supporting: String
+) {
+    SectionRow(
+        modifier = Modifier.toggleable(
+            value = included,
+            enabled = enabled,
+            role = Role.Checkbox,
+            onValueChange = onChange
+        ),
+        icon = icon,
+        title = title,
+        supporting = supporting,
+        trailing = { Checkbox(checked = included, onCheckedChange = null, enabled = enabled) }
+    )
 }
 
 /**
@@ -308,7 +341,7 @@ private enum class RangeEnd { FROM, TO }
 
 /** One format's row: its name, what the file is, and a spinner while it is being made. */
 @Composable
-private fun ExportRow(format: ExportFormat, working: ExportFormat?, onClick: () -> Unit) {
+private fun ExportRow(format: ExportFormat, working: ExportFormat?, onClick: (ExportFormat) -> Unit) {
     val (title, supporting) = when (format) {
         ExportFormat.PDF -> R.string.export_pdf to R.string.export_pdf_supporting
         ExportFormat.CSV -> R.string.export_csv to R.string.export_csv_supporting
@@ -323,7 +356,7 @@ private fun ExportRow(format: ExportFormat, working: ExportFormat?, onClick: () 
         title = stringResource(title),
         supporting = stringResource(if (working == format) R.string.export_working else supporting),
         // Disabled while either format runs: two exports at once would clear each other's file.
-        onClick = onClick.takeIf { working == null },
+        onClick = { onClick(format) }.takeIf { working == null },
         trailing = spinner
     )
 }
@@ -396,7 +429,19 @@ private fun rememberRecordLabels(): RecordLabels = RecordLabels(
         notRegistered = stringResource(R.string.export_verify_not_registered),
         notRegisteredShort = stringResource(R.string.export_verify_not_registered_short)
     ),
-    plan = rememberPlanLabels()
+    plan = rememberPlanLabels(),
+    journal = rememberJournalLabels()
+)
+
+/** The private-journal section's words (MON-22). */
+@Composable
+private fun rememberJournalLabels(): JournalLabels = JournalLabels(
+    section = stringResource(R.string.journal_title),
+    privateNote = stringResource(R.string.export_journal_private_note),
+    clockNote = stringResource(R.string.export_journal_clock_note),
+    none = stringResource(R.string.export_journal_none),
+    written = stringResource(R.string.export_journal_written),
+    edited = stringResource(R.string.export_journal_edited)
 )
 
 /** The parenting-plan section's words; the questions are the plan screen's own wording. */
@@ -417,7 +462,8 @@ private fun rememberPlanLabels(): PlanLabels = PlanLabels(
     // the same order on every composition.
     questions = ParentingPlanCatalogue.questions.mapNotNull { question ->
         PlanStrings.questionPrompt(question.id)?.let { question.id to stringResource(it) }
-    }.toMap()
+    }.toMap(),
+    cited = stringResource(R.string.export_plan_cited)
 )
 
 /** Hands [file] to the share sheet, through [recordShareIntent]. */

@@ -87,4 +87,14 @@
     <string name="export_plan_last_changed">Naposledy změněno</string>
     <string name="export_plan_not_agreed">Bez shody</string>
     <string name="export_plan_retired">Odpovědi na otázky, které plán už neklade (uchované, nesmazané)</string>
+    <string name="export_plan_cited">Navrženo podle odpovědi v rodičovském plánu na otázku</string>
+
+    <!-- The private journal as an optional section (MON-22). -->
+    <string name="export_include_journal">Můj soukromý deník</string>
+    <string name="export_include_journal_supporting">Vaše vlastní záznamy o dnech v tomto období, v souboru označené jako vaše soukromé poznámky. Vypnuto, dokud to nezaškrtnete.</string>
+    <string name="export_journal_private_note">Jde o soukromé poznámky jednoho z rodičů, uložené v jeho telefonu. Nikdy nebyly sdíleny s druhým rodičem prostřednictvím aplikace a druhý rodič je neviděl. Jsou zahrnuty, protože se je tento rodič rozhodl zahrnout.</string>
+    <string name="export_journal_clock_note">Každý záznam je datován dnem, kterého se týká. Kdy byl napsán a naposledy upraven, udávají hodiny daného telefonu; žádný server tyto záznamy nikdy neobdržel.</string>
+    <string name="export_journal_none">Žádné záznamy v deníku o dnech v tomto období.</string>
+    <string name="export_journal_written">Napsáno</string>
+    <string name="export_journal_edited">Naposledy upraveno</string>
 </resources>
