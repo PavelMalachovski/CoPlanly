@@ -41,7 +41,8 @@ class RecordPlanTest {
         )
     )
 
-    private fun recordWith(source: PlanSource?) = CommunicationRecordBuilder.build(sources().copy(plan = source), scope())
+    private fun recordWith(source: PlanSource?) =
+        CommunicationRecordBuilder.build(sources().copy(plan = source), scope())
 
     // ---- The builder ----------------------------------------------------------------------
 
