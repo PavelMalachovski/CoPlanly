@@ -343,6 +343,15 @@ fun CalendarScreen(
         }
     }
     var swapSheetOpen by remember { mutableStateOf(false) }
+    // Day view's visible "Swap this day" (D-10): one day, straight to the sheet. The long-press
+    // on a month cell had been the only way to offer a day.
+    val offerDayFromDayView: ((LocalDate) -> Unit)? = offerSwapDay?.let {
+        fun(date: LocalDate) {
+            swapAnchor = date
+            swapSelection = setOf(date)
+            swapSheetOpen = true
+        }
+    }
 
     // Unified custody lookup: an accepted one-off swap, then the active CustodyModel (Custody
     // Setup), then the legacy CustodyScheduleEntity rows. Views must use this — reading only the
@@ -896,6 +905,8 @@ fun CalendarScreen(
                                         isDragOverDeleteButton = isOver
                                     },
                                     deleteTargetBounds = deleteTarget,
+                                    // A child's own band (FAM-4) is not the schedule a swap moves.
+                                    onOfferDay = offerDayFromDayView?.takeIf { grid.followsFamily },
                                     holidays = holidays
                                 )
                             }
