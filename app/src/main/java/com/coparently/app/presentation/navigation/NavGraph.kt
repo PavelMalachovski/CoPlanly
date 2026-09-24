@@ -404,7 +404,7 @@ fun NavGraph(
                     )
                 ) { backStackEntry ->
                     val eventId = backStackEntry.arguments?.getString(Screen.EditEvent.ARG_EVENT_ID)
-                        ?: return@composable
+                        ?: return@pane
                     AddEditEventScreen(
                         eventId = eventId,
                         onSave = {
@@ -472,7 +472,7 @@ fun NavGraph(
                         }
                     )
                 ) { backStackEntry ->
-                    val eventId = backStackEntry.arguments?.getString(Screen.RequestChange.ARG_EVENT_ID) ?: return@composable
+                    val eventId = backStackEntry.arguments?.getString(Screen.RequestChange.ARG_EVENT_ID) ?: return@pane
                     com.coparently.app.presentation.changerequests.RequestChangeScreen(
                         eventId = eventId,
                         onBack = {
@@ -984,7 +984,7 @@ fun NavGraph(
                     popEnterTransition = { slideInFromLeft() },
                     popExitTransition = { slideOutToRight() }
                 ) { backStackEntry ->
-                    val conversationId = backStackEntry.arguments?.getString(Screen.Chat.ARG_CONVERSATION_ID) ?: return@composable
+                    val conversationId = backStackEntry.arguments?.getString(Screen.Chat.ARG_CONVERSATION_ID) ?: return@pane
                     com.coparently.app.presentation.chat.ChatScreen(
                         conversationId = conversationId,
                         draft = backStackEntry.arguments?.getString(Screen.Chat.ARG_DRAFT).orEmpty(),
@@ -1060,7 +1060,7 @@ fun NavGraph(
                     )
                 ) { backStackEntry ->
                     val expenseId = backStackEntry.arguments
-                        ?.getString(Screen.EditExpense.ARG_EXPENSE_ID) ?: return@composable
+                        ?.getString(Screen.EditExpense.ARG_EXPENSE_ID) ?: return@pane
                     com.coparently.app.presentation.expenses.AddExpenseScreen(
                         onBack = {
                             navController.popBackStack()
