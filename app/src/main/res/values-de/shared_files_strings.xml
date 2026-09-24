@@ -12,6 +12,7 @@
     <string name="documents_no_family_title">Verbinde zuerst den anderen Elternteil</string>
     <string name="documents_no_family_description">Dokumente gehören zu einer Familie: Ab dem Hinzufügen sind sie mit beiden Eltern geteilt.</string>
     <string name="documents_unavailable">Dokumente können gerade nicht geladen werden. Prüfe deine Verbindung.</string>
+    <string name="documents_possibly_outdated">Server nicht erreichbar — angezeigt wird die Liste, die dieses Handy zuletzt gesehen hat. Sie ist womöglich nicht aktuell.</string>
     <string name="documents_category_court_order">Gerichtsbeschlüsse</string>
     <string name="documents_category_school">Schule</string>
     <string name="documents_category_medical">Gesundheit</string>

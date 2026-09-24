@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Image
@@ -97,6 +98,9 @@ internal fun DocumentsBody(
         if (list is DocumentsList.Unavailable) {
             item(key = "unavailable") { Text(stringResource(R.string.documents_unavailable)) }
         }
+        if (list is DocumentsList.Loaded && list.possiblyOutdated) {
+            item(key = "outdated") { OutdatedNotice() }
+        }
         documents.groupBy { it.category }.forEach { (category, inCategory) ->
             item(key = "group-${category.wire}") {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -126,6 +130,22 @@ private fun SharedNotice() {
         Icon(Icons.Default.Info, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
         Text(
             text = stringResource(R.string.documents_shared_notice),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+/**
+ * The list below is this phone's last copy of the server's (the Room cache, schema 43), not the
+ * server's answer now — a document the co-parent filed or deleted since may be missing or listed.
+ */
+@Composable
+private fun OutdatedNotice() {
+    Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Icon(Icons.Default.CloudOff, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(
+            text = stringResource(R.string.documents_possibly_outdated),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

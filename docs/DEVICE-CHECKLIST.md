@@ -857,6 +857,14 @@ A and B paired.
 - [ ] A in **flight mode** → send a photo: "Not uploaded yet" under it, the clock tick, never a
       check. Leave flight mode, pull to refresh: "Uploading…", then the tick. B receives it once.
 - [ ] Open the same attachment twice: the second time it opens without a download (cache).
+- [ ] **Vault offline (schema 43 cache).** A: open Documents online once, go back, switch on
+      **flight mode**, reopen Documents. The list A last saw is shown under the line "Can't reach
+      the server — showing the list this phone saw last. It may be out of date"; a document
+      already opened once still opens (file cache), one never opened does not open until the
+      network returns (note how long it takes to say so — Storage retries).
+      Meanwhile B files a new document; A leaves flight mode: the line goes and B's document
+      appears without reopening the screen. With two families (M-8), switch family offline:
+      the other family's list is never shown under this one.
 - **Fallback (1P):** do A's steps, sign in as B on the same phone and look.
 - **If it fails:** tag `FamilyDocuments` / `ChatAttachments` / `MessageRepo`; `storage.rules`
   (`isOneOfPair`, `isAcceptableSharedFile`), `firestore.rules` `family_documents`,

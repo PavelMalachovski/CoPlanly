@@ -12,6 +12,7 @@
     <string name="documents_no_family_title">Nejprve propojte druhého rodiče</string>
     <string name="documents_no_family_description">Dokumenty patří rodině: od chvíle přidání jsou sdílené s oběma rodiči.</string>
     <string name="documents_unavailable">Dokumenty teď nelze načíst. Zkontrolujte připojení.</string>
+    <string name="documents_possibly_outdated">Server je nedostupný — zobrazuje se seznam, který tento telefon viděl naposledy. Nemusí být aktuální.</string>
     <string name="documents_category_court_order">Soudní rozhodnutí</string>
     <string name="documents_category_school">Škola</string>
     <string name="documents_category_medical">Zdraví</string>

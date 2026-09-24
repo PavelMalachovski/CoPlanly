@@ -55,6 +55,19 @@ class FamilyDocumentMapperTest {
     }
 
     @Test
+    fun `the index entry keeps a tombstone, with the time it was deleted, for the cache`() {
+        val written = FamilyDocumentMapper.toFirestoreMap(document)
+        assertEquals(
+            FamilyDocumentMapper.IndexEntry(document, deletedAtMillis = null),
+            FamilyDocumentMapper.indexEntry("doc-1", written)
+        )
+        assertEquals(
+            FamilyDocumentMapper.IndexEntry(document, deletedAtMillis = 7L),
+            FamilyDocumentMapper.indexEntry("doc-1", written + FamilyDocumentMapper.tombstone("alice", 7L))
+        )
+    }
+
+    @Test
     fun `a category a newer build wrote reads as other, and a missing path drops the row`() {
         val map = FamilyDocumentMapper.toFirestoreMap(document)
         assertEquals(

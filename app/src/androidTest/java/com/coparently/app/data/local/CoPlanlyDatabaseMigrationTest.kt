@@ -1037,6 +1037,52 @@ class CoPlanlyDatabaseMigrationTest {
         }
     }
 
+    /**
+     * 42-to-43 adds the vault index cache (MON-23): a new, empty table, and nothing else moves. It
+     * is filled from the next server answer, so nothing is backfilled. The inserts at the end prove
+     * the table Room validated is the one the cache writes — the index fields, a family to scope
+     * every read, and a nullable tombstone time — with no outbox column, because nothing in it is
+     * ever uploaded. Needs `43.json`, which the Regenerate workflow exports
+     * (`.github/regenerate-request`).
+     */
+    @Test
+    fun migration42To43_addsAnEmptyVaultCache() {
+        val db = helper.createDatabase(TEST_DB, VERSION_42)
+        db.close()
+
+        val migrated = helper.runMigrationsAndValidate(
+            TEST_DB,
+            VERSION_43,
+            true,
+            DatabaseMigrations.MIGRATION_42_43
+        )
+
+        migrated.query("SELECT COUNT(*) FROM family_documents_cache").use {
+            assertTrue(it.moveToFirst())
+            assertEquals("nothing is backfilled", 0, it.getInt(0))
+        }
+        migrated.execSQL(
+            """
+            INSERT INTO family_documents_cache (id, familyId, createdByFirebaseUid, title, category,
+                                                fileName, storagePath, contentType, sizeBytes, sha256,
+                                                createdAtMillis, deletedAtMillis)
+            VALUES ('d1', 'alice__bob', 'alice', 'Custody order', 'court_order', 'order.pdf',
+                    'family_documents/alice__bob/d1/order.pdf', 'application/pdf', 12345,
+                    'aaaa', 1787000000000, NULL),
+                   ('d2', 'alice__bob', 'bob', 'Old letter', 'school', 'letter.pdf',
+                    'family_documents/alice__bob/d2/letter.pdf', 'application/pdf', 10,
+                    'bbbb', 1787000000000, 1788000000000)
+            """.trimIndent()
+        )
+        migrated.query(
+            "SELECT id FROM family_documents_cache WHERE familyId = 'alice__bob' AND deletedAtMillis IS NULL"
+        ).use {
+            assertTrue(it.moveToFirst())
+            assertEquals("a tombstoned row is kept but not live", "d1", it.getString(0))
+            assertEquals(1, it.count)
+        }
+    }
+
     private companion object {
         const val TEST_DB = "coplanly-migration-test.db"
         const val VERSION_11 = 11
@@ -1061,6 +1107,7 @@ class CoPlanlyDatabaseMigrationTest {
         const val VERSION_40 = 40
         const val VERSION_41 = 41
         const val VERSION_42 = 42
+        const val VERSION_43 = 43
 
         /** 2026-08-01T12:00:00 at UTC+05:30, i.e. 06:30:00Z. */
         const val NOON_AT_PLUS_FIVE_THIRTY_MILLIS = 1_785_565_800_000L

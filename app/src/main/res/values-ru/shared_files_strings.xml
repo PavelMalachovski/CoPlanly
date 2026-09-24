@@ -12,6 +12,7 @@
     <string name="documents_no_family_title">Сначала свяжитесь со вторым родителем</string>
     <string name="documents_no_family_description">Документы принадлежат семье: с момента добавления они доступны обоим родителям.</string>
     <string name="documents_unavailable">Сейчас не удаётся загрузить документы. Проверьте подключение.</string>
+    <string name="documents_possibly_outdated">Сервер недоступен — показан список, который телефон видел последним. Он может быть устаревшим.</string>
     <string name="documents_category_court_order">Решения суда</string>
     <string name="documents_category_school">Школа</string>
     <string name="documents_category_medical">Здоровье</string>

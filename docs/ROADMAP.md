@@ -2402,11 +2402,31 @@ both parents can find it, and a photo of a prescription is a message, not an ema
   digest stamped; no listing, no overwrite; chat files never deletable by a client.
 - **The export** lists each attachment by name and SHA-256; **account deletion** removes the
   departing parent's vault files and the whole thread's chat files.
+- **A Room cache of the vault index** (September 2026, schema 43, `family_documents_cache`) —
+  the follow-up this entry used to list as not done, taken as its own schema version on purpose
+  rather than quietly. `data/documents/FamilyDocumentIndexCache` stores every **server-confirmed**
+  snapshot of the vault query (the listener runs with `MetadataChanges.INCLUDE`; an answer from
+  Firestore's own cache or one with pending writes is not one) as the family's whole set of rows,
+  tombstones kept with their `deletedAtMillis` and never listed; a row the server stops returning
+  (an unpair narrowing the audience, the 90-day sweep) leaves the cache with it. When the listener
+  fails, or Firestore answers from its offline cache, the screen gets those rows under
+  `documents_possibly_outdated` ("Can't reach the server — showing the list this phone saw last").
+  Four limits, deliberate. **The index only** — the bytes stay in Storage and `SharedFileCache`,
+  checked by SHA-256, and still never through a download URL. **No outbox, no upload**: every
+  add and delete goes to Firestore first and reaches the cache only through the next server
+  answer. **Scoped to one family**: every read and write names the `familyId`, a server row naming
+  another family is neither cached nor listed, the repository refuses a family the signed-in uid
+  is not one of the two parents of, and an account switch wipes the table with the rest of Room
+  (`AccountSwitchGuard` → `clearAllTables`; sign-out keeps it, as it keeps every table). **An empty
+  cache is not an empty vault**: with nothing stored a failed listener still says "unavailable",
+  and an answer from Firestore's own cache with nothing stored says nothing, rather than flashing
+  "unavailable" over the server's answer a beat later — so a phone that has never seen the vault
+  and is offline shows only the shared notice until the network returns.
+  `FamilyDocumentIndexCacheTest`, `FamilyDocumentRepositoryImplTest`, the 42→43 migration test
+  (needs `43.json` from the Regenerate workflow) and `docs/DEVICE-CHECKLIST.md` §5.5.
 
 **Not done, recorded rather than hidden:**
 
-- **No Room cache.** The vault is a Firestore listener; offline it says "unavailable". A cached
-  vault is a schema version — take it with the next bump (v38 is MON-14's), not on its own.
 - **The path gate outlives unpair.** An ex-partner who kept a path can still fetch that file;
   the index narrows at unpair, the bytes do not. The stronger rule is cross-service
   (`firestore.get` on the live pairing) and is untestable in the emulator (SEC-1 §1's problem).
