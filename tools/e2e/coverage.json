@@ -68,7 +68,18 @@
       ]
     }
   },
-  "push": {},
+  "push": {
+    "chat_message": {
+      "e2e": [
+        "TwoParentChatTest#aMessageCrossesTheDateLineAsUnreadThenDeliveredThenRead"
+      ]
+    },
+    "pairing_accepted": {
+      "e2e": [
+        "TwoParentPairingTest#bothProfilesNameTheOtherParentAndTheFamilyHasTwoSlots"
+      ]
+    }
+  },
   "functions": {
     "acceptPairingInvitation": {
       "e2e": [

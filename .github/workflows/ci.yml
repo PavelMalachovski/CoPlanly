@@ -926,6 +926,15 @@ jobs:
       - name: Check locale completeness, format arguments and push types
         run: node tools/check-invariants.js
 
+      # Every feature two phones share — a Firestore collection in firestore.rules, a Storage
+      # prefix in storage.rules, a push type in PushPayload.kt, a callable or HTTPS function in
+      # functions/ — names the two-parent e2e test that covers it in tools/e2e/coverage.json, or
+      # says why none can. A new one fails here until it does, which is the point: a feature
+      # between two phones arrives with its emulator test rather than with a tester's afternoon.
+      - name: Every shared feature has a two-parent test
+        if: always()
+        run: node tools/check-e2e-coverage.js
+
       # The CI report's own scripts: the path → DEVICE-CHECKLIST.md mapping (including that
       # every section it names still exists) and the JUnit/coverage parsing. node:test, no deps.
       - name: Test the CI report tools

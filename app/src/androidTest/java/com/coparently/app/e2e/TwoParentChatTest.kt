@@ -55,6 +55,10 @@ class TwoParentChatTest : TwoParentTest() {
             assertEquals(message.sentAtMillis, received.single { it.id == message.id }.sentAtMillis)
             assertEquals(1, ChatReadState.unreadCount(received, bob.uid, lastReadAtMillis = null))
             assertEquals(1, bob.messageRepository.observeUnreadCount(conversationId, bob.uid).first())
+            // `onChatMessageCreated` queues the push that would wake Bob's phone, under the thread's
+            // family (a conversation id is its family id, M-8).
+            val push = EmulatorEnvironment.awaitQueuedPush(bob.uid, "chat_message")
+            assertEquals(conversationId, push["familyId"])
 
             bob.messageRepository.markDelivered(conversationId, bob.uid)
         }

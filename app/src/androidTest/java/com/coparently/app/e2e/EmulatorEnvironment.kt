@@ -11,6 +11,7 @@ import com.google.firebase.firestore.FirebaseFirestoreSettings
 import com.google.firebase.firestore.MemoryCacheSettings
 import com.google.firebase.functions.FirebaseFunctions
 import com.google.firebase.storage.FirebaseStorage
+import kotlinx.coroutines.delay
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Assume.assumeTrue
@@ -215,6 +216,27 @@ object EmulatorEnvironment {
             connection.disconnect()
         }
     }
+
+    /**
+     * Waits for a push of [type] addressed to [targetUid] to appear in `notification_queue` —
+     * queued by a phone's `FcmService` or by a Cloud Function — and returns its `data` payload.
+     * Delivery is the one thing FCM has no emulator for; what *was* sent, to whom and with which
+     * family, is this document, and `sendNotification` reads nothing else.
+     */
+    suspend fun awaitQueuedPush(targetUid: String, type: String, timeoutMs: Long = PUSH_WAIT_MS): Map<*, *> {
+        val deadline = System.currentTimeMillis() + timeoutMs
+        while (true) {
+            val match = queryAsAdmin("notification_queue", "targetUserId", targetUid)
+                .mapNotNull { it["data"] as? Map<*, *> }
+                .firstOrNull { it["type"] == type }
+            if (match != null) return match
+            check(System.currentTimeMillis() < deadline) { "No \"$type\" push was queued for $targetUid" }
+            delay(PUSH_POLL_MS)
+        }
+    }
+
+    private const val PUSH_WAIT_MS = 30_000L
+    private const val PUSH_POLL_MS = 500L
 
     private fun decodeFields(fields: JSONObject): Map<String, Any?> =
         fields.keys().asSequence().associateWith { decodeValue(fields.getJSONObject(it)) }
