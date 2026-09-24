@@ -42,3 +42,5 @@ requested: 2026-09-24 — screenshot baselines for the October 2026 audit's week
            only lose entries
 requested: 2026-09-24 — again for week 3: the first run stopped at a compile error in
            ExpenseScreen (fixed in the commit before this one), so no screenshot was recorded
+requested: 2026-09-24 — again for week 3: the change-request banner stacks its action from 1.3x,
+           the custody and vacation banners and the month line wrap instead of cutting
