@@ -219,10 +219,6 @@ class UiTourTest : AliceOnScreenTest() {
             driver.linger()
         }
         driver.pressIfPresent(textButton(R.string.expense_analytics_tab_list))
-        camera.shot("budgets") {
-            driver.press("+ Budget", textButton(R.string.expenses_budget_add))
-            driver.linger()
-        }
         camera.shot("expense_add") {
             driver.backToTabs()
             driver.press("Add expense", hasContentDescription(string(R.string.expenses_add)) and hasClickAction())

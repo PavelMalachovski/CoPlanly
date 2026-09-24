@@ -278,8 +278,12 @@ When touching the UI, keep these invariants:
    screen's top bar and is a detail screen (`onNavigateUp = popBackStack`, bottom bar
    hidden). `QuickActionsBottomSheet` was dead code and is gone — genuinely so as of the
    August 2026 audit; the file had in fact survived this note by several months.
-   *(Aug 2026: budgets no longer open from an unlabelled Expenses top-bar action — they are
-   a chip strip on the Expenses screen itself. Tab switches, including Home's stat-tile deep
+   *(Aug 2026: budgets no longer open from an unlabelled Expenses top-bar action — and since
+   `85f1afb` they open from nowhere: the chip strip that replaced it was dropped with the
+   Expenses scroll fix (owner decision), so `BudgetScreen` and its ViewModel are unreachable
+   until a separate change deletes them with their data layer. This line said they were a chip
+   strip for a month after that, and the UI tour kept a budgets step that timed out on every
+   run. Tab switches, including Home's stat-tile deep
    links, go through `NavHostController.navigateToTab` so they share one back-stack policy.)*
 2. **Toolchain**: compileSdk/targetSdk 36, Kotlin 2.1 (+ `kotlin.plugin.compose`),
    Compose BOM 2025.10 (Material 3 1.4 — whose public API has none of M3 Expressive:
