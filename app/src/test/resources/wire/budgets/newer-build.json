@@ -1,0 +1,31 @@
+{
+  "about": "A newer build's budget scoped to a member reference this build does not know (kept, FAM-2).",
+  "document": {
+    "alertThreshold": 0.8,
+    "category": "EDUCATION",
+    "createdAt": "2026-03-01T09:30:00",
+    "createdByFirebaseUid": "uidA",
+    "currency": "CZK",
+    "familyId": "uidA__uidB",
+    "forMembers": [
+      "pet:p1",
+      "future:xyz"
+    ],
+    "id": "budget-2",
+    "isActive": false,
+    "monthlyLimit": 3000
+  },
+  "reads": {
+    "alertThreshold": 0.8,
+    "category": "EDUCATION",
+    "currency": "CZK",
+    "familyId": "uidA__uidB",
+    "forMembers": [
+      "pet:p1",
+      "future:xyz"
+    ],
+    "id": "budget-2",
+    "isActive": false,
+    "monthlyLimit": 3000.0
+  }
+}

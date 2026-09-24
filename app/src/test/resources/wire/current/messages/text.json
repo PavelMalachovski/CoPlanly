@@ -1,0 +1,33 @@
+{
+  "about": "A text message with a reply and an attachment reference (Message.toFirestoreMap).",
+  "document": {
+    "attachments": [
+      "att1|chat_attachments/c/m/receipt.pdf|application/pdf|1024|0000000000000000000000000000000000000000000000000000000000000000|receipt.pdf"
+    ],
+    "content": "Pick-up moved to 17:30",
+    "conversationId": "uidA_uidB",
+    "id": "msg-current-1",
+    "isRead": false,
+    "messageType": "TEXT",
+    "replyToMessageId": "msg-0",
+    "senderId": "uidA",
+    "senderName": "Alice",
+    "timestamp": 1778580000000
+  },
+  "reads": {
+    "activityKind": null,
+    "activityPlanCitation": null,
+    "attachments": [
+      "att1|chat_attachments/c/m/receipt.pdf|application/pdf|1024|0000000000000000000000000000000000000000000000000000000000000000|receipt.pdf"
+    ],
+    "content": "Pick-up moved to 17:30",
+    "conversationId": "uidA_uidB",
+    "id": "msg-current-1",
+    "isRead": false,
+    "messageType": "TEXT",
+    "replyToMessageId": "msg-0",
+    "senderId": "uidA",
+    "senderName": "Alice",
+    "sentAtMillis": 1778580000000
+  }
+}

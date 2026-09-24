@@ -1,0 +1,56 @@
+{
+  "about": "A save through EventRepositoryImpl of an event with nothing optional: blanks, not absent keys.",
+  "document": {
+    "acceptance": "NOT_REQUIRED",
+    "acceptedAt": "",
+    "acceptedBy": "",
+    "createdAt": "2026-05-01T08:00:00",
+    "createdByFirebaseUid": "uidA",
+    "description": "",
+    "endDateTime": "",
+    "eventType": "activity",
+    "familyId": "",
+    "forMembers": [],
+    "friendParticipates": "",
+    "id": "evt-current-2",
+    "imageUrl": "",
+    "isImportant": false,
+    "isRecurring": false,
+    "lastModifiedBy": "uidA",
+    "parentOwner": "dad",
+    "permissions": "read_write",
+    "pickupConfirmedAt": "",
+    "pickupConfirmedBy": "",
+    "recurrenceEndDate": "",
+    "recurrencePattern": "",
+    "reminderMinutes": null,
+    "sharedWith": [
+      "uidA"
+    ],
+    "startDateTime": "2026-05-14T16:00:00",
+    "title": "Swim",
+    "updatedAt": "2026-05-01T08:00:00"
+  },
+  "reads": {
+    "acceptance": "NOT_REQUIRED",
+    "createdByFirebaseUid": "uidA",
+    "deleted": false,
+    "description": "",
+    "endDateTime": null,
+    "eventType": "activity",
+    "familyId": null,
+    "forMembers": [],
+    "id": "evt-current-2",
+    "isImportant": false,
+    "isRecurring": false,
+    "parentOwner": "dad",
+    "recurrencePattern": null,
+    "reminderMinutes": null,
+    "sharedWith": [
+      "uidA"
+    ],
+    "startDateTime": "2026-05-14T16:00:00",
+    "title": "Swim",
+    "updatedAtMillis": 1777622400000
+  }
+}

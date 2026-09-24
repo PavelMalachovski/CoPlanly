@@ -186,7 +186,7 @@ class BudgetRepositoryImpl @Inject constructor(
      * prior owner), while [updateBudget] passes the document's existing owner so ownership
      * stays immutable across edits, as `firestore.rules` requires.
      */
-    private fun budgetToFirestoreMap(budget: Budget, ownerUid: String): Map<String, Any> = mapOf(
+    internal fun budgetToFirestoreMap(budget: Budget, ownerUid: String): Map<String, Any> = mapOf(
         "id" to budget.id,
         "forMembers" to FamilyMemberRef.store(budget.forMembers),
         "familyId" to (budget.familyId ?: ""),
@@ -227,19 +227,7 @@ class BudgetRepositoryImpl @Inject constructor(
                     // See `ExpenseRepositoryImpl.observeRemote`: one malformed document must
                     // not crash the reader.
                     val budget = runCatching {
-                        Budget(
-                            id = data["id"] as String,
-                            familyId = (data["familyId"] as? String)?.takeIf { it.isNotEmpty() },
-                            forMembers = FamilyMemberRef.parse(data["forMembers"])
-                                .ifEmpty { FamilyMemberRef.fromLegacyChildId(data["childId"] as? String) },
-                            category = ExpenseCategory.valueOf(data["category"] as String),
-                            monthlyLimit = (data["monthlyLimit"] as Number).toDouble(),
-                            currency = data["currency"] as String,
-                            alertThreshold = (data["alertThreshold"] as Number).toDouble(),
-                            isActive = (data["isActive"] as? Boolean) ?: true,
-                            createdAt = LocalDateTime.parse(data["createdAt"] as String, dateTimeFormatter),
-                            syncedToFirestore = true
-                        )
+                        budgetFromDocument(data)
                     }.getOrElse { e ->
                         android.util.Log.w("BudgetRepo", "Skipping a budget document that does not parse", e)
                         return@forEach
@@ -249,7 +237,27 @@ class BudgetRepositoryImpl @Inject constructor(
             }
     }
 
-    private fun BudgetEntity.toDomain(): Budget {
+    /**
+     * A `budgets` document as a domain budget, as [observeRemote] downloads it. Throws on a
+     * document it cannot read; the caller skips that one document. `internal` so the wire-format
+     * contract tests run it on the JVM.
+     */
+    internal fun budgetFromDocument(data: Map<String, Any?>): Budget = Budget(
+        id = data["id"] as String,
+        familyId = (data["familyId"] as? String)?.takeIf { it.isNotEmpty() },
+        forMembers = FamilyMemberRef.parse(data["forMembers"])
+            .ifEmpty { FamilyMemberRef.fromLegacyChildId(data["childId"] as? String) },
+        category = ExpenseCategory.valueOf(data["category"] as String),
+        monthlyLimit = (data["monthlyLimit"] as Number).toDouble(),
+        currency = data["currency"] as String,
+        alertThreshold = (data["alertThreshold"] as Number).toDouble(),
+        isActive = (data["isActive"] as? Boolean) ?: true,
+        createdAt = LocalDateTime.parse(data["createdAt"] as String, dateTimeFormatter),
+        syncedToFirestore = true
+    )
+
+    /** A Room row as a domain budget. `internal` for the wire-format contract tests. */
+    internal fun BudgetEntity.toDomain(): Budget {
         return Budget(
             id = id,
             familyId = familyId,
@@ -264,7 +272,8 @@ class BudgetRepositoryImpl @Inject constructor(
         )
     }
 
-    private fun Budget.toEntity(): BudgetEntity {
+    /** A domain budget as a Room row. `internal` for the wire-format contract tests. */
+    internal fun Budget.toEntity(): BudgetEntity {
         return BudgetEntity(
             id = id,
             familyId = familyId,

@@ -436,7 +436,12 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   than the base (a longer migration chain — `CoPlanlyDatabaseMigrationTest`'s job, as far as
   schemas exist), SEC-2's plaintext → encrypted conversion of an install older than SQLCipher (the
   base already encrypts, so this is encrypted → encrypted), a reboot, and a real phone's
-  hardware-backed Keystore — those stay on the device checklist.
+  hardware-backed Keystore — those stay on the device checklist. **The job also runs the base
+  build's `WireContractTest` over this branch's `wire/current/`** (item 5 of "Things that are easy
+  to get wrong"), after the base's APK and before the emulator: skipped with a notice while the base
+  predates that class or when the fixtures are unchanged, `continue-on-error` so the install-over
+  still runs, and failed at the end by its own step. It costs the base's unit-test compile, and only
+  on a wire-format change — `app/src/test/resources/wire/current/` is one of the job's inputs.
 
   **A second workflow file exists and is not part of CI**: `.github/workflows/regenerate.yml` runs
   `detektBaseline` and exports the Room schema, then commits both back to the branch it ran on.
@@ -552,7 +557,8 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   what API 26 and 16 KB exist for — `data/local/` (SQLCipher, Room), the manifest, `androidTest/`,
   `src/debug/`, the emulator script — or the build; and the `upgrade` job runs when the diff reaches
   what stored data depends on (`data/local/`, `data/security/`, `di/DatabaseModule.kt`, the
-  telemetry answer's form, `app/schemas/`, the manifest, its own tests and scripts), the build, or
+  telemetry answer's form, `app/schemas/`, the manifest, its own tests and scripts, the
+  `wire/current/` fixtures), the build, or
   any path the script does not know; and the `web` job runs on anything but docs and the Android
   app and its build — `web/`, `web-tests/`, `functions/`, `firebase.json`, `firestore-tests/`' lock
   file, the workflow, or an unfamiliar path. A push to `main` always runs everything, which
@@ -781,8 +787,38 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
 4. **Recurring events** are stored once and expanded to occurrences at query time via
    `RecurrenceExpander` (wired in `EventRepositoryImpl.getEventsByDateRange`).
    Occurrences share the master event id — don't use the id as a unique list key.
-5. **The Firestore document schema for events** is defined in one place:
-   `EventRepositoryImpl.toFirestoreMap()`. `SyncService` maps must stay in sync with it.
+5. **The Firestore document schema for events** is defined in one place, `data/sync/EventDocument.kt`:
+   `fromEvent` (what `EventRepositoryImpl.toFirestoreMap()` delegates to), `uploadDocument`
+   (`SyncService`'s `set()` of a queued row — which dropped `reminderMinutes` until the wire contracts
+   below caught it) and `toEntity`, the reader. `SyncService`'s conflict-branch `update()` map must stay
+   in sync with them.
+   **A wire-format change arrives with its fixture diff** (September 2026) — how "a co-parent on the
+   previous build" is checked without a second phone. `app/src/test/resources/wire/` is the contract
+   between builds: `wire/<collection>/` holds documents *other* builds write, by hand — older shapes
+   with keys missing, newer ones with unknown keys, `FamilyMemberRef`s and codec versions (`C2;…`,
+   `L2;…`, `p2|…`) — and `wire/current/<collection>/` holds what *this* build writes, generated.
+   `WireContractTest` (`app/src/test/java/com/coparently/app/wire/`) runs every fixture through the
+   production reader and writer of its collection (one `WireContract` each: `events`,
+   `custody_models`, `messages`, `child_info`, `pets`, `expenses`, `budgets`, `event_versions`) and
+   checks that it reads what `reads` says (or is skipped, where `skipped` says why), and that a
+   read-then-write loses exactly the paths `notPreserved` declares, each with its reason — so an
+   unreadable codec entry, an unknown member or a proposal's citation that stops surviving turns it
+   red, and so does a loss that was fixed but is still declared. `CurrentWireFixturesTest` fails when a
+   writer's output no longer matches `wire/current/`: regenerate with
+   `UPDATE_WIRE_FIXTURES=1 ./gradlew testDebugUnitTest --tests '*CurrentWireFixturesTest*' --rerun`
+   and review the diff like a screenshot baseline. **The other direction runs in the `upgrade` job**:
+   it copies this branch's `wire/current/` into the base checkout and runs the *base's own*
+   `WireContractTest` over it, so the previous build's code reads what this one writes and writes it
+   back; a key an older build may lose that way must be declared in `CurrentWrite.olderBuildsMayDrop`.
+   Three things to know. **A new top-level key is not safe from an older build**: these collections
+   are rewritten with `set()`, so anything a newer build must not lose goes in a list older builds
+   carry verbatim (items 24, 30, 33), not in a new key — the fixtures record what drops today (an
+   unknown top-level key everywhere, an unknown `medicalProfile` field, a pet species read as
+   `OTHER`, a swap in an unknown state), and a newer expense category makes the whole expense
+   invisible to an older build. **A new synced collection or full-document writer gets a contract and
+   fixtures** — `CurrentWireFixturesTest` also fails on a contract without hand-written fixtures. And
+   **it is not the device check**: real sync timing, the older build's screens and the conflict rule
+   stay in `docs/DEVICE-CHECKLIST.md` §3.5, §3.11 and §5.3.
 6. **Calendar query ranges** come from `queryRangeFor()` in `CalendarScreen.kt` —
    extend that function instead of inlining new range math.
 7. **View modes** are `MONTH, WEEK, DAY` (roadmap order). There is no 3-day view anymore.

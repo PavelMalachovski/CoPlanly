@@ -1,0 +1,55 @@
+{
+  "about": "PetRepositoryImpl's upsert document: a medication, a dated vaccination, a photo.",
+  "document": {
+    "breed": "Beagle",
+    "createdAt": "2026-05-01T08:00:00",
+    "createdByFirebaseUid": "uidA",
+    "dateOfBirth": "2021-03-14T00:00:00",
+    "familyId": "uidA__uidB",
+    "feedingNotes": null,
+    "id": "pet-current-1",
+    "lastModifiedBy": "uidA",
+    "medications": [
+      {
+        "dosage": "1 tablet",
+        "frequency": "quarterly",
+        "name": "Wormer",
+        "notes": null
+      }
+    ],
+    "name": "Rex",
+    "photos": [
+      "pet_photos/uidA/pet-current-1/1.jpg"
+    ],
+    "sharedWith": [
+      "uidA",
+      "uidB"
+    ],
+    "specialNeeds": null,
+    "species": "DOG",
+    "updatedAt": "2026-05-02T18:45:10",
+    "vaccinations": [
+      {
+        "date": "2026-02-01",
+        "name": "Rabies"
+      }
+    ],
+    "vetName": "Dr. Novak",
+    "vetPhone": null
+  },
+  "reads": {
+    "createdByFirebaseUid": "uidA",
+    "deleted": false,
+    "familyId": "uidA__uidB",
+    "id": "pet-current-1",
+    "name": "Rex",
+    "photos": [
+      "pet_photos/uidA/pet-current-1/1.jpg"
+    ],
+    "species": "DOG",
+    "updatedAtMillis": 1777747510000,
+    "vaccinations": [
+      "Rabies@2026-02-01"
+    ]
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "about": "A newer build's expense in a category this build does not have. It is skipped, whole: the co-parent's expense is missing from this build's list and balance until it upgrades.",
+  "document": {
+    "amount": 40,
+    "category": "PET_CARE",
+    "childId": "c1",
+    "createdAt": "2026-03-01T09:30:00",
+    "createdByFirebaseUid": "uidA",
+    "currency": "EUR",
+    "date": "2026-03-01",
+    "id": "exp-3",
+    "notes": "",
+    "paidBy": "uidA",
+    "receiptUrl": "",
+    "splitBetween": [
+      "uidA",
+      "uidB"
+    ],
+    "title": "Shoes"
+  },
+  "reads": null,
+  "skipped": "ExpenseCategory.valueOf throws; observeRemote skips the document"
+}

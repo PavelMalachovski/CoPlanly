@@ -56,9 +56,12 @@ const EMULATOR_SENSITIVE = /^(app\/src\/main\/AndroidManifest\.xml$|app\/src\/ma
  * database and everything under `data/local/` (entities, migrations, SQLCipher, the preference
  * store), the Keystore wrapper, the builder in `DatabaseModule`, the telemetry answer's stored
  * form, the constructors the seed calls (`UpgradeFixture` lists them), the exported schemas, the
- * manifest, native libraries, the test runner, and the job's own tests and scripts.
+ * manifest, native libraries, the test runner, and the job's own tests and scripts. Also
+ * `app/src/test/resources/wire/current/`: the job runs the *base* build's `WireContractTest` over
+ * what this branch writes, and a change there is exactly a change to the wire format — a mapper
+ * change that alters a document cannot land without one, because `CurrentWireFixturesTest` fails.
  */
-const UPGRADE_INPUTS = /^(app\/src\/main\/java\/com\/coparently\/app\/(data\/local\/|data\/security\/|data\/crashlytics\/|data\/telemetry\/|domain\/telemetry\/|di\/DatabaseModule\.kt$)|app\/schemas\/|app\/src\/main\/AndroidManifest\.xml$|app\/src\/main\/jniLibs\/|app\/src\/androidTest\/java\/com\/coparently\/app\/(upgrade\/|HiltTestRunner\.kt$)|tools\/upgrade\/|tools\/ci-background-build\.sh$|tools\/stop-emulator\.sh$)/;
+const UPGRADE_INPUTS = /^(app\/src\/test\/resources\/wire\/current\/|app\/src\/main\/java\/com\/coparently\/app\/(data\/local\/|data\/security\/|data\/crashlytics\/|data\/telemetry\/|domain\/telemetry\/|di\/DatabaseModule\.kt$)|app\/schemas\/|app\/src\/main\/AndroidManifest\.xml$|app\/src\/main\/jniLibs\/|app\/src\/androidTest\/java\/com\/coparently\/app\/(upgrade\/|HiltTestRunner\.kt$)|tools\/upgrade\/|tools\/ci-background-build\.sh$|tools\/stop-emulator\.sh$)/;
 
 /**
  * Paths the `upgrade` job is known not to depend on. Anything outside this list *and* outside

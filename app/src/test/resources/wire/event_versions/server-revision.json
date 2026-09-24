@@ -1,0 +1,64 @@
+{
+  "about": "A revision the server recorded for an older build's save: recordedBy \"server\", no device time.",
+  "document": {
+    "deviceTimeMillis": null,
+    "editorUid": "uidA",
+    "event": {
+      "acceptance": "NOT_REQUIRED",
+      "acceptedAt": "",
+      "acceptedBy": "",
+      "createdAt": "2026-03-01T09:30:00",
+      "createdByFirebaseUid": "uidA",
+      "description": "",
+      "endDateTime": "",
+      "eventType": "school",
+      "familyId": "uidA__uidB",
+      "forMembers": [
+        "child:c1"
+      ],
+      "friendParticipates": "",
+      "id": "evt-old-1",
+      "imageUrl": "",
+      "isImportant": false,
+      "isRecurring": false,
+      "lastModifiedBy": "uidA",
+      "parentOwner": "mom",
+      "permissions": "read_write",
+      "pickupConfirmedAt": "",
+      "pickupConfirmedBy": "",
+      "recurrenceEndDate": "",
+      "recurrencePattern": "",
+      "reminderMinutes": 15,
+      "sharedWith": [
+        "uidA",
+        "uidB"
+      ],
+      "startDateTime": "2026-03-05T17:00:00",
+      "title": "School play",
+      "updatedAt": "2026-03-01T10:00:00"
+    },
+    "eventId": "evt-old-1",
+    "familyId": "uidA__uidB",
+    "formatVersion": 1,
+    "kind": "updated",
+    "recordedAt": {
+      "$timestamp": 1772359201500
+    },
+    "recordedBy": "server",
+    "sharedWith": [
+      "uidA",
+      "uidB"
+    ]
+  },
+  "reads": {
+    "deviceTimeMillis": null,
+    "editorUid": "uidA",
+    "eventId": "evt-old-1",
+    "eventTitle": "School play",
+    "familyId": "uidA__uidB",
+    "kind": "updated",
+    "recordedAtMillis": 1772359201500,
+    "recordedByServer": true,
+    "writeKey": "saved|2026-03-01T10:00:00"
+  }
+}

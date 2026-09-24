@@ -221,7 +221,7 @@ class ChildInfoRepositoryImpl @Inject constructor(
     /**
      * Converts ChildInfoEntity to domain ChildInfo.
      */
-    private fun ChildInfoEntity.toDomain(): ChildInfo {
+    internal fun ChildInfoEntity.toDomain(): ChildInfo {
         return ChildInfo(
             id = id,
             childName = childName,
@@ -265,7 +265,7 @@ class ChildInfoRepositoryImpl @Inject constructor(
     /**
      * Converts domain ChildInfo to ChildInfoEntity.
      */
-    private fun ChildInfo.toEntity(): ChildInfoEntity {
+    internal fun ChildInfo.toEntity(): ChildInfoEntity {
         return ChildInfoEntity(
             id = id,
             childName = childName,
@@ -299,7 +299,7 @@ class ChildInfoRepositoryImpl @Inject constructor(
      *   both callers ([upsertChildInfo] and [pullOnce]) go through the single
      *   policy instead of each computing their own.
      */
-    private fun ChildInfo.toFirestoreMap(audience: List<String>): Map<String, Any?> {
+    internal fun ChildInfo.toFirestoreMap(audience: List<String>): Map<String, Any?> {
         return mapOf(
             "id" to id,
             "childName" to childName,
@@ -359,7 +359,7 @@ class ChildInfoRepositoryImpl @Inject constructor(
      * Converts Firestore map to ChildInfo.
      */
     @Suppress("UNCHECKED_CAST")
-    private fun Map<String, Any?>.toChildInfo(): ChildInfo {
+    internal fun Map<String, Any?>.toChildInfo(): ChildInfo {
         return ChildInfo(
             id = this["id"] as String,
             childName = this["childName"] as String,

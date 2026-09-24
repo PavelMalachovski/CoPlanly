@@ -1,0 +1,34 @@
+{
+  "about": "A deleted event (CQ-3): the tombstone fields on the last saved document. Read as a deletion and never written back.",
+  "document": {
+    "createdAt": "2026-03-01T09:30:00",
+    "createdByFirebaseUid": "uidA",
+    "deletedAtMillis": 1778414400000,
+    "deletedBy": "uidB",
+    "description": "",
+    "endDateTime": "",
+    "eventType": "school",
+    "id": "evt-old-2",
+    "imageUrl": "",
+    "isRecurring": false,
+    "lastModifiedBy": "uidA",
+    "parentOwner": "mom",
+    "permissions": "read_write",
+    "pickupConfirmedAt": "",
+    "pickupConfirmedBy": "",
+    "recurrenceEndDate": "",
+    "recurrencePattern": "",
+    "sharedWith": [
+      "uidA",
+      "uidB"
+    ],
+    "startDateTime": "2026-03-05T17:00:00",
+    "title": "School play",
+    "updatedAt": "2026-03-01T10:00:00"
+  },
+  "reads": {
+    "deleted": true,
+    "deletedAtMillis": 1778414400000,
+    "id": "evt-old-2"
+  }
+}

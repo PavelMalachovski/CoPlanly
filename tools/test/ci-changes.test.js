@@ -131,6 +131,8 @@ test('the upgrade job runs on the database, the stored preferences, the schemas 
     'app/src/androidTest/java/com/coparently/app/HiltTestRunner.kt',
     'tools/upgrade/run-upgrade-test.sh',
     'tools/stop-emulator.sh',
+    // A wire-format change: the base build's WireContractTest reads the new documents in this job.
+    'app/src/test/resources/wire/current/events/sync-upload.json',
     'app/build.gradle.kts',
     'gradle/libs.versions.toml',
     '.github/workflows/ci.yml',
@@ -148,6 +150,9 @@ test('the upgrade job skips what cannot reach stored data', () => {
     'app/src/main/java/com/coparently/app/data/sync/SyncService.kt',
     'app/src/main/res/values/strings.xml',
     'app/src/test/java/com/coparently/app/domain/FooTest.kt',
+    // Another build's documents, read by this build's own tests: build-test runs those.
+    'app/src/test/resources/wire/events/older-build.json',
+    'app/src/test/java/com/coparently/app/wire/WireContractTest.kt',
     'app/src/androidTest/java/com/coparently/app/e2e/TwoParentChatTest.kt',
     'tools/ci-report.js',
     'tools/test/ci-changes.test.js',

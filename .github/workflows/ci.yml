@@ -1171,6 +1171,44 @@ jobs:
         # daemon and the emulator on a 16 GB runner.
         run: ./gradlew assembleDebug && ./gradlew --stop
 
+      # "A co-parent on the previous build", for the Firestore wire format (CLAUDE.md, the rule
+      # under item 5). This branch's `app/src/test/resources/wire/current/` is what it writes; the
+      # base build's *own* `WireContractTest` reads it — parses it, reads what the writer read, and
+      # writes it back losing only what the writer declared droppable. Skipped with a notice when the
+      # base has no such test (the first PRs after it lands) and when `wire/current` is unchanged
+      # (the base's own CI read those documents already), so it costs the base's unit-test compile
+      # only on a wire-format change. Before the background build, so the two daemons never overlap;
+      # `continue-on-error` so the install-over check below still runs, and the last step fails the
+      # job on its outcome.
+      - name: The base build reads what this branch writes (wire contracts)
+        id: wire
+        continue-on-error: true
+        working-directory: upgrade-base
+        run: |
+          set -euo pipefail
+          current="$GITHUB_WORKSPACE/app/src/test/resources/wire/current"
+          if [ ! -f app/src/test/java/com/coparently/app/wire/WireContractTest.kt ]; then
+            echo "::notice::The base build predates WireContractTest; the previous-build wire check starts once the base has it."
+            exit 0
+          fi
+          if [ ! -d "$current" ]; then
+            echo "::error::This branch has no app/src/test/resources/wire/current/ for the base build to read."
+            exit 1
+          fi
+          if diff -rq app/src/test/resources/wire/current "$current" > /dev/null 2>&1; then
+            echo "::notice::wire/current is unchanged from the base build; nothing new for it to read."
+            exit 0
+          fi
+          rm -rf app/src/test/resources/wire/current
+          cp -R "$current" app/src/test/resources/wire/current
+          status=0
+          ./gradlew testDebugUnitTest --tests '*WireContractTest*' || status=$?
+          ./gradlew --stop
+          if [ "$status" != "0" ]; then
+            echo "::error::The base build cannot read, or would lose, what this branch writes. See the failures above and CLAUDE.md's wire-format rule: declare a key older builds may drop in CurrentWrite.olderBuildsMayDrop, or keep the old shape readable."
+          fi
+          exit $status
+
       # This branch's app and test APKs, while the AVD restores and the emulator boots; the
       # emulator script's first line waits for it (tools/ci-background-build.sh).
       - name: Start building this branch's APKs in the background
@@ -1234,6 +1272,12 @@ jobs:
             echo "::warning::The upgrade check passed; the emulator step then failed while shutting the emulator down. That is not a test result."
           fi
 
+      - name: The base build read this branch's wire documents
+        if: always() && steps.wire.outcome == 'failure'
+        run: |
+          echo "::error::The wire-contract step failed: the previous build cannot read what this branch writes (see that step's log and the android-reports-upgrade artefact)."
+          exit 1
+
       - name: Upload upgrade results (JUnit XML)
         if: always()
         uses: actions/upload-artifact@v4
@@ -1258,7 +1302,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: android-reports-upgrade
-          path: app/build/outputs/upgrade-results/
+          path: |
+            app/build/outputs/upgrade-results/
+            upgrade-base/app/build/reports/tests/testDebugUnitTest/
           if-no-files-found: ignore
           retention-days: 14
 

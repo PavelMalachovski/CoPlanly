@@ -1,0 +1,123 @@
+{
+  "about": "A swap write re-sending a pending proposal that cites the parenting plan, and the last decision.",
+  "document": {
+    "childOverrides": [],
+    "contactWindows": [],
+    "createdAt": "2026-05-01T09:00:00",
+    "dayOverrides": {
+      "2026-05-16": {
+        "decidedAt": "2026-05-05T09:30:00",
+        "decidedBy": "uidB",
+        "groupId": "run-1",
+        "requestedAt": "2026-05-05T08:00:00",
+        "requestedBy": "uidA",
+        "status": "ACCEPTED",
+        "toParent": "dad"
+      }
+    },
+    "id": "model-current",
+    "lastDecision": {
+      "at": "2026-05-05T09:00:00",
+      "by": "uidA",
+      "note": "Not in June",
+      "outcome": "DECLINED",
+      "proposalAt": "2026-05-04T21:00:00"
+    },
+    "lastModifiedAt": "2026-05-04T08:00:00",
+    "lastModifiedBy": "uidB",
+    "lastModifiedKind": "SWAP",
+    "lastSwapDate": "2026-05-16",
+    "modelType": "week_on_week_off",
+    "momDayIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ],
+    "participants": [
+      "uidA",
+      "uidB"
+    ],
+    "patternDays": 14,
+    "proposal": {
+      "childOverrides": [],
+      "contactWindows": [],
+      "modelType": "week_on_week_off",
+      "momDayIndices": [
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13
+      ],
+      "patternDays": 14,
+      "proposedAt": "2026-05-06T10:00:00",
+      "proposedBy": "uidB",
+      "repeatYearly": true,
+      "seasonalLayers": [],
+      "startDate": "2026-05-04"
+    },
+    "proposalPlanCitation": "p1|care_weekday|0123456789abcdef",
+    "repeatYearly": true,
+    "seasonalLayers": [],
+    "startDate": "2026-05-04"
+  },
+  "reads": {
+    "childOverrides": [],
+    "childOverridesWire": [],
+    "contactWindows": [],
+    "contactWindowsWire": [],
+    "dayOverrides": {
+      "2026-05-16": "ACCEPTED"
+    },
+    "id": "model-current",
+    "lastDecision": "DECLINED",
+    "lastModifiedAtMillis": 1777881600000,
+    "lastModifiedBy": "uidB",
+    "lastModifiedKind": "SWAP",
+    "lastSwapDate": "2026-05-16",
+    "modelType": "week_on_week_off",
+    "momDayIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ],
+    "patternDays": 14,
+    "proposal": {
+      "childOverrides": [],
+      "childOverridesWire": [],
+      "contactWindows": [],
+      "contactWindowsWire": [],
+      "momDayIndices": [
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13
+      ],
+      "patternDays": 14,
+      "planCitation": "p1|care_weekday|0123456789abcdef",
+      "planCitationQuestion": "care_weekday",
+      "proposedBy": "uidB",
+      "seasonalLayers": [],
+      "seasonalLayersWire": []
+    },
+    "repeatYearly": true,
+    "seasonalLayers": [],
+    "seasonalLayersWire": [],
+    "startDate": "2026-05-04",
+    "unreadableChildOverrides": [],
+    "unreadableLayers": []
+  }
+}

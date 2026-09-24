@@ -1,0 +1,16 @@
+{
+  "about": "A document with no senderId is skipped rather than shown as nobody's.",
+  "document": {
+    "attachments": [],
+    "content": "See you at five",
+    "conversationId": "uidA_uidB",
+    "id": "msg-3",
+    "isRead": false,
+    "messageType": "TEXT",
+    "replyToMessageId": "",
+    "senderName": "Alice",
+    "timestamp": 1778414400000
+  },
+  "reads": null,
+  "skipped": "toMessageOrNull returns null when a required field is missing"
+}

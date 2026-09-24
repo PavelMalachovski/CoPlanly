@@ -1,0 +1,29 @@
+{
+  "about": "BudgetRepositoryImpl.addBudget's document, scoped to one child.",
+  "document": {
+    "alertThreshold": 0.75,
+    "category": "EDUCATION",
+    "createdAt": "2026-05-01T08:00:00",
+    "createdByFirebaseUid": "uidA",
+    "currency": "CZK",
+    "familyId": "uidA__uidB",
+    "forMembers": [
+      "child:c1"
+    ],
+    "id": "budget-current-1",
+    "isActive": true,
+    "monthlyLimit": 3000.0
+  },
+  "reads": {
+    "alertThreshold": 0.75,
+    "category": "EDUCATION",
+    "currency": "CZK",
+    "familyId": "uidA__uidB",
+    "forMembers": [
+      "child:c1"
+    ],
+    "id": "budget-current-1",
+    "isActive": true,
+    "monthlyLimit": 3000.0
+  }
+}

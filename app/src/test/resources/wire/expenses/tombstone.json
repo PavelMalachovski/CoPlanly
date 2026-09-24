@@ -1,0 +1,27 @@
+{
+  "about": "A deleted expense (CQ-3): read as a deletion, never written back.",
+  "document": {
+    "amount": 40,
+    "category": "CLOTHING",
+    "childId": "c1",
+    "createdAt": "2026-03-01T09:30:00",
+    "createdByFirebaseUid": "uidA",
+    "currency": "EUR",
+    "date": "2026-03-01",
+    "deletedAtMillis": 1778414400000,
+    "deletedBy": "uidA",
+    "id": "exp-4",
+    "notes": "",
+    "paidBy": "uidA",
+    "receiptUrl": "",
+    "splitBetween": [
+      "uidA",
+      "uidB"
+    ],
+    "title": "Shoes"
+  },
+  "reads": {
+    "deleted": true,
+    "id": "exp-4"
+  }
+}

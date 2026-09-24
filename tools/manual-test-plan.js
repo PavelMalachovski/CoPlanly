@@ -165,6 +165,11 @@ const RULES = [
   },
   {
     sections: ['5.3'],
+    why: 'a wire-format fixture changed: this build writes a shape the previous build has not read on a phone',
+    paths: ['app/src/test/resources/wire/current/**'],
+  },
+  {
+    sections: ['5.3'],
     why: 'pairing or anything the co-parent\'s phone reads',
     paths: ['K/domain/pairing/**', 'K/presentation/pairing/**', 'K/data/sync/**',
       'K/data/repository/**', 'K/data/remote/**', 'firestore.rules', 'functions/**'],

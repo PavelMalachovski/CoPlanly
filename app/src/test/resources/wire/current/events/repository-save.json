@@ -1,0 +1,66 @@
+{
+  "about": "A save through EventRepositoryImpl (EventDocument.fromEvent): every optional field set.",
+  "document": {
+    "acceptance": "ACCEPTED",
+    "acceptedAt": "2026-05-03T07:00:00",
+    "acceptedBy": "uidB",
+    "createdAt": "2026-05-01T08:00:00",
+    "createdByFirebaseUid": "uidA",
+    "description": "Bring the card",
+    "endDateTime": "2026-05-12T10:15:00",
+    "eventType": "medical",
+    "familyId": "uidA__uidB",
+    "forMembers": [
+      "child:c1",
+      "pet:p1",
+      "future:xyz"
+    ],
+    "friendParticipates": "friend-1",
+    "id": "evt-current-1",
+    "imageUrl": "https://example.invalid/event.jpg",
+    "isImportant": true,
+    "isRecurring": true,
+    "lastModifiedBy": "uidB",
+    "parentOwner": "mom",
+    "permissions": "read_write",
+    "pickupConfirmedAt": "2026-05-12T08:55:00",
+    "pickupConfirmedBy": "uidB",
+    "recurrenceEndDate": "2026-06-30",
+    "recurrencePattern": "WEEKLY",
+    "reminderMinutes": 30,
+    "sharedWith": [
+      "uidA",
+      "uidB"
+    ],
+    "startDateTime": "2026-05-12T09:30:00",
+    "title": "Dentist",
+    "updatedAt": "2026-05-02T18:45:10"
+  },
+  "reads": {
+    "acceptance": "ACCEPTED",
+    "createdByFirebaseUid": "uidA",
+    "deleted": false,
+    "description": "Bring the card",
+    "endDateTime": "2026-05-12T10:15:00",
+    "eventType": "medical",
+    "familyId": "uidA__uidB",
+    "forMembers": [
+      "child:c1",
+      "pet:p1",
+      "future:xyz"
+    ],
+    "id": "evt-current-1",
+    "isImportant": true,
+    "isRecurring": true,
+    "parentOwner": "mom",
+    "recurrencePattern": "WEEKLY",
+    "reminderMinutes": 30,
+    "sharedWith": [
+      "uidA",
+      "uidB"
+    ],
+    "startDateTime": "2026-05-12T09:30:00",
+    "title": "Dentist",
+    "updatedAtMillis": 1777747510000
+  }
+}

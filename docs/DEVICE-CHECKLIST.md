@@ -497,7 +497,12 @@ who does **not** have today.
       B. Try a swap and a proposal each way. Windows survive a write from the newer phone. A
       write from the old phone may drop them, and that is allowed. A proposal or swap from the
       new phone never *changes* them. There is no one-phone fallback: the rules suite
-      (`custody-models.test.js`) is the substitute.
+      (`custody-models.test.js`) is the substitute. **[CI]** the wire contracts
+      (`WireContractTest`, `custody_models` fixtures) run both builds' mappers over each other's
+      documents: an older build's document keeps its missing `contactWindows` key through a write,
+      an unreadable window survives a swap write verbatim, and the `upgrade` job has the *previous*
+      build read this one's pattern and swap writes. The phone still shows the grid each build draws
+      and the real timing of two syncs.
 - **If it fails:** `presentation/custody/ContactWindowsSection.kt`, `MonthView.kt`,
   `DayWeekView.kt`, `CustodyResolver.contactWindowsResolver` [branch]; tag `CustodyModelRepo`.
 
@@ -625,6 +630,10 @@ base pattern; schema 38 (the Regenerate workflow must have exported `38.json` fo
 - [ ] **2P, mixed versions:** a swap or a proposal from a build without MON-14 keeps the layers on
       the newer phone (the rules allow the older build to drop the key; the mirror keeps its
       copy). No one-phone fallback: `custody-models.test.js` "seasonal layers" is the substitute.
+      **[CI]** the wire contracts cover the document half: an `L2;…` layer and a `C2;…` child
+      schedule are kept verbatim through a swap write *and* a pattern write, a `p2|…` citation
+      survives, and the previous build reads this build's writes in the `upgrade` job. What is left
+      here is the grid on each phone and the proposal banner.
 - [ ] **Calendar feed (MON-17), if deployed:** an iPhone subscribed to the feed shows the layer's
       custody bars on its dates after the next refresh. **[CI]** the `web` job parses the feed —
       layer, swap and contact windows included — as a calendar app would; what is left is the app.
@@ -883,6 +892,14 @@ Preconditions: A is paired with **both** B and C (two families). Invite C from S
       `EventRepository`. The conflict rule itself (`ConflictResolverTest`, two zones) is hard to
       reach by hand: the sync uploads a phone's own edits before it downloads, so it only
       decides when an upload failed and the download that follows succeeded.
+      **[CI]** "one phone on the previous build" is now a wire contract first (CLAUDE.md, the rule
+      under item 5 of "Things that are easy to get wrong"): `WireContractTest` reads older and newer
+      builds' `events`, `messages` (legacy ISO `timestamp` included), `child_info`, `pets`,
+      `expenses`, `budgets` and `event_versions` documents through this build's mappers and writes
+      them back, and the `upgrade` job runs the *previous* build's copy of it over what this build
+      writes. A PR that changes `app/src/test/resources/wire/current/` is the one to do this check
+      for; otherwise it confirms what CI saw. The phone adds the real sync timing, both builds'
+      screens, and the conflict rule under a failed upload.
 
 ### 5.4 Professional access (MON-18) · 3A, 2P or 1P fallback
 

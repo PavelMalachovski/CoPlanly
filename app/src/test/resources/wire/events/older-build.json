@@ -1,0 +1,50 @@
+{
+  "about": "An event from a build before acceptance, importance, members, family, reminders and friends: those keys are absent, \"no end\" is \"\", and updatedAt is the writer's naive wall clock (read as UTC).",
+  "document": {
+    "createdAt": "2026-03-01T09:30:00",
+    "createdByFirebaseUid": "uidA",
+    "description": "",
+    "endDateTime": "",
+    "eventType": "school",
+    "id": "evt-old-1",
+    "imageUrl": "",
+    "isRecurring": false,
+    "lastModifiedBy": "uidA",
+    "parentOwner": "mom",
+    "permissions": "read_write",
+    "pickupConfirmedAt": "",
+    "pickupConfirmedBy": "",
+    "recurrenceEndDate": "",
+    "recurrencePattern": "",
+    "sharedWith": [
+      "uidA",
+      "uidB"
+    ],
+    "startDateTime": "2026-03-05T17:00:00",
+    "title": "School play",
+    "updatedAt": "2026-03-01T10:00:00"
+  },
+  "reads": {
+    "acceptance": "NOT_REQUIRED",
+    "createdByFirebaseUid": "uidA",
+    "deleted": false,
+    "description": "",
+    "endDateTime": null,
+    "eventType": "school",
+    "familyId": null,
+    "forMembers": [],
+    "id": "evt-old-1",
+    "isImportant": false,
+    "isRecurring": false,
+    "parentOwner": "mom",
+    "recurrencePattern": null,
+    "reminderMinutes": null,
+    "sharedWith": [
+      "uidA",
+      "uidB"
+    ],
+    "startDateTime": "2026-03-05T17:00:00",
+    "title": "School play",
+    "updatedAtMillis": 1772359200000
+  }
+}

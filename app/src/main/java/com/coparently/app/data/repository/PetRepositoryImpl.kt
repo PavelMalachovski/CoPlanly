@@ -217,7 +217,7 @@ class PetRepositoryImpl @Inject constructor(
     /**
      * Converts PetEntity to domain Pet.
      */
-    private fun PetEntity.toDomain(): Pet {
+    internal fun PetEntity.toDomain(): Pet {
         return Pet(
             id = id,
             name = name,
@@ -245,7 +245,7 @@ class PetRepositoryImpl @Inject constructor(
     /**
      * Converts domain Pet to PetEntity.
      */
-    private fun Pet.toEntity(): PetEntity {
+    internal fun Pet.toEntity(): PetEntity {
         return PetEntity(
             id = id,
             name = name,
@@ -277,7 +277,7 @@ class PetRepositoryImpl @Inject constructor(
      * @param audience The `sharedWith` UIDs this write should publish to, from
      *   [PetAudience.entitled] — a parameter so every writer goes through the one policy.
      */
-    private fun Pet.toFirestoreMap(audience: List<String>): Map<String, Any?> {
+    internal fun Pet.toFirestoreMap(audience: List<String>): Map<String, Any?> {
         return mapOf(
             "id" to id,
             "name" to name,
@@ -321,7 +321,7 @@ class PetRepositoryImpl @Inject constructor(
      * build must degrade to defaults rather than throw and poison the whole pull.
      */
     @Suppress("UNCHECKED_CAST")
-    private fun Map<String, Any?>.toPet(): Pet {
+    internal fun Map<String, Any?>.toPet(): Pet {
         return Pet(
             id = this["id"] as String,
             name = this["name"] as String,
