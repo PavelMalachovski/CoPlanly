@@ -44,6 +44,8 @@ import com.coparently.app.presentation.auth.AuthScreen
 import com.coparently.app.presentation.calendar.CalendarScreen
 import com.coparently.app.presentation.chat.ChatViewModel
 import com.coparently.app.presentation.childinfo.ChildInfoScreen
+import com.coparently.app.presentation.common.ConnectivityBanner
+import com.coparently.app.presentation.common.ConnectivityViewModel
 import com.coparently.app.presentation.common.animations.*
 import com.coparently.app.presentation.consent.TelemetryConsentScreen
 import com.coparently.app.presentation.consent.TelemetryConsentViewModel
@@ -94,6 +96,7 @@ fun NavGraph(
 ) {
     val authStateViewModel: AuthStateViewModel = hiltViewModel()
     val telemetryConsentViewModel: TelemetryConsentViewModel = hiltViewModel()
+    val connectivityViewModel: ConnectivityViewModel = hiltViewModel()
     val isAuthenticated by authStateViewModel.isAuthenticated.collectAsState()
     val isLoading by authStateViewModel.isLoading.collectAsState()
     val needsOnboarding by authStateViewModel.needsOnboarding.collectAsState()
@@ -134,8 +137,12 @@ fun NavGraph(
 
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
+    val offline by connectivityViewModel.isOffline.collectAsState()
 
     Scaffold(
+        // Empty while online, so the status-bar inset the NavHost consumes below is the
+        // Scaffold's own; while offline the banner pads itself below the status bar instead.
+        topBar = { ConnectivityBanner(offline = offline) },
         bottomBar = {
             AnimatedVisibility(
                 visible = currentRoute in BottomNavDestination.topLevelRoutes,

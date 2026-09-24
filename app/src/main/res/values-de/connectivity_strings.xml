@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The offline banner above every screen (docs/AUDIT-2026-10-design.md D-16): what still
+         works, not what failed. -->
+    <string name="connectivity_offline">Du bist offline. Änderungen bleiben gespeichert und werden synchronisiert, sobald du wieder online bist.</string>
+</resources>

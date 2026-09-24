@@ -16,6 +16,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import com.coparently.app.R
+import com.coparently.app.presentation.common.ConnectivityBanner
 import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.GroupLabel
 import com.coparently.app.presentation.common.PillChip
@@ -100,6 +101,11 @@ class DesignSystemScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(var
             actionLabel = stringResource(R.string.contacts_empty_action),
             onAction = {}
         )
+    }
+
+    @Test
+    fun connectivityBanner() = snap("common_connectivity_banner") {
+        ConnectivityBanner(offline = true)
     }
 
     companion object {
