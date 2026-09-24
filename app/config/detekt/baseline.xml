@@ -188,7 +188,6 @@
     <ID>MaxLineLength:SyncService.kt$SyncService$"emergencyContacts" to gson.fromJson(localEntity.emergencyContactsJson, List::class.java)</ID>
     <ID>MaximumLineLength:CalendarScreen.kt$ </ID>
     <ID>MaximumLineLength:DatabaseMigrations.kt$DatabaseMigrations.&lt;no name provided&gt;$ </ID>
-    <ID>MaximumLineLength:NavGraph.kt$ </ID>
     <ID>MaximumLineLength:SyncService.kt$SyncService$ </ID>
     <ID>NestedBlockDepth:SyncService.kt$SyncService$private suspend fun syncEvents(userId: String): Int</ID>
     <ID>NoWildcardImports:ActivityEditor.kt$import androidx.compose.foundation.layout.*</ID>
