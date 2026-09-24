@@ -1924,6 +1924,10 @@ Ukrainian** (`values-cs/`, `values-de/`, `values-ru/`, `values-uk/`). Rules:
 - Dates/day/month names come from `java.time` formatters with the default locale —
   never from string arrays.
 - There is no `values-en/` — base `values/` IS English; don't recreate it.
+- **English is written in sentence case** (October 2026 audit, D-21): "Event title", "Week on /
+  week off", "Save changes" — only the first word and proper names (Google Calendar, CoPlanly)
+  are capitalised, as Material 3 and the rest of the app do. Title Case crept into 101 labels
+  before this was written down.
 
 ## Language conventions
 

@@ -18,8 +18,8 @@
     <string name="pairing_camera_permission_title">Camera permission required</string>
     <string name="pairing_camera_permission_message">Please grant camera permission to scan QR codes for co-parent invitations.</string>
     <string name="pairing_camera_permission_denied_message">Camera access was denied. Enable it in system settings to scan QR codes.</string>
-    <string name="pairing_open_app_settings">Open Settings</string>
-    <string name="pairing_grant_permission">Grant Permission</string>
+    <string name="pairing_open_app_settings">Open settings</string>
+    <string name="pairing_grant_permission">Grant permission</string>
     <string name="pairing_qr_hint">Make sure the QR code is well lit and fits within the frame.</string>
 
     <!-- Pairing errors (Task 6) -->
