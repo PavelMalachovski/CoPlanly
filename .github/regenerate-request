@@ -22,3 +22,4 @@ requested: 2026-09-23 — export schema 38 (custody_models seasonal layers, MON-
 requested: 2026-09-23 — export schema 39 (events.updatedAtMillis, MON-4)
 requested: 2026-09-24 — export schema 40 (child_info/pets.updatedAtMillis, MON-4 finding)
 requested: 2026-09-24 — export schema 41 (journal_entries, MON-22)
+requested: 2026-09-24 — export schema 42 (custody_models.childOverridesJson, FAM-4)

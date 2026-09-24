@@ -1,5 +1,6 @@
 package com.coparently.app.presentation.custody
 
+import androidx.activity.compose.BackHandler
 import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
@@ -100,6 +101,11 @@ fun CustodySetupScreen(
     val dims = dimensions()
     val uiState by viewModel.uiState.collectAsState()
     val parentNames = rememberParentNames(viewModel.parents.collectAsState().value)
+    val currentModel by viewModel.currentModel.collectAsState()
+    val children by viewModel.children.collectAsState()
+    val childScope = uiState.childScope
+    // Scoped to one child (FAM-4), Back returns to the family schedule rather than leaving.
+    BackHandler(enabled = childScope != null) { viewModel.editSchedule(null) }
     val snackbarHostState = remember { SnackbarHostState() }
     var showDatePicker by remember { mutableStateOf(false) }
 
@@ -124,12 +130,15 @@ fun CustodySetupScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = stringResource(R.string.custody_title),
+                        text = childScope?.let { stringResource(R.string.custody_child_scope_title, it.name) }
+                            ?: stringResource(R.string.custody_title),
                         style = MaterialTheme.typography.titleLarge
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
+                    IconButton(
+                        onClick = { if (childScope != null) viewModel.editSchedule(null) else onNavigateBack() }
+                    ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = stringResource(R.string.custody_back)
@@ -183,7 +192,14 @@ fun CustodySetupScreen(
         ) {
             // Opened from an agreed parenting-plan answer (MON-21): quote it above the form the
             // parent fills in. Read-only — nothing below is filled from its words.
-            uiState.planReference?.let { reference ->
+            childScope?.let { scope ->
+                ChildScopeHeader(
+                    childName = scope.name,
+                    hasOwnSchedule = currentModel?.childOverrideFor(scope.childId) != null,
+                    onFollowFamily = { viewModel.save(followFamily = true) }
+                )
+            }
+            uiState.planReference?.takeIf { childScope == null }?.let { reference ->
                 PlanReferenceCard(
                     reference = reference,
                     coParentName = parentNames.coParentLabel(),
@@ -554,8 +570,17 @@ fun CustodySetupScreen(
             }
 
             // Seasonal schedules (MON-14) and holiday fairness (MON-20). Sent on their own, not by
-            // the Save button below, which saves only the base pattern above.
-            SeasonalScheduleSection()
+            // the Save button below, which saves only the base pattern above. Both belong to the
+            // family schedule, and so does "Different schedule for a child" (FAM-4), which appears
+            // only at two children: none of the three is shown while the editor is on one child.
+            if (childScope == null) {
+                SeasonalScheduleSection()
+                ChildSchedulesSection(
+                    children = children,
+                    childrenWithOwnSchedule = currentModel?.childOverrides.orEmpty().map { it.childId }.toSet(),
+                    onEdit = { viewModel.editSchedule(it) }
+                )
+            }
 
             Spacer(modifier = Modifier.height(80.dp)) // Space for bottom bar
         }
@@ -811,41 +836,13 @@ private fun getModelTypeDescription(modelType: CustodyModelType): String = strin
  * Creates a temporary CustodyModel from the UI state for preview purposes.
  */
 private fun createTempModel(state: CustodySetupUiState): com.coparently.app.domain.model.CustodyModel? {
-    return when (state.selectedModelType) {
-        CustodyModelType.WEEK_ON_WEEK_OFF ->
-            com.coparently.app.domain.model.CustodyModel.weekOnWeekOff(
-                id = "preview",
-                startDate = state.startDate,
-                momFirst = state.momFirst
-            )
-        CustodyModelType.EVERY_OTHER_WEEKEND ->
-            com.coparently.app.domain.model.CustodyModel.everyOtherWeekend(
-                id = "preview",
-                startDate = state.startDate,
-                momIsResident = state.momFirst,
-                midweek = state.midweek
-            )
-        CustodyModelType.TWO_TWO_THREE ->
-            com.coparently.app.domain.model.CustodyModel.twoTwoThree(
-                id = "preview",
-                startDate = state.startDate,
-                momStartsFirst = state.momFirst
-            )
-        CustodyModelType.THREE_FOUR_FOUR_THREE ->
-            com.coparently.app.domain.model.CustodyModel.threeFourFourThree(
-                id = "preview",
-                startDate = state.startDate,
-                momStartsFirst = state.momFirst
-            )
-        CustodyModelType.CUSTOM ->
-            if (state.customMomDays.isNotEmpty()) {
-                com.coparently.app.domain.model.CustodyModel.custom(
-                    id = "preview",
-                    startDate = state.startDate,
-                    patternDays = state.customPatternDays,
-                    momDayIndices = state.customMomDays
-                )
-            } else null
+    // A custom pattern with no slot-1 day yet has nothing to preview for the family schedule; a
+    // child's own schedule (FAM-4) may mean exactly that — every day with the other parent.
+    val nothingToDraw = state.selectedModelType == CustodyModelType.CUSTOM && state.customMomDays.isEmpty()
+    return if (nothingToDraw && state.childScope == null) {
+        null
+    } else {
+        state.toPatternModel("preview")
     }
 }
 

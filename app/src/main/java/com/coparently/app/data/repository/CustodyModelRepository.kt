@@ -10,6 +10,7 @@ import com.coparently.app.domain.activity.ActivityAnnouncement
 import com.coparently.app.domain.activity.ActivityAnnouncer
 import com.coparently.app.domain.activity.ActivityEntityType
 import com.coparently.app.domain.activity.ActivityKind
+import com.coparently.app.domain.custody.ChildScheduleOverride
 import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.custody.ContactWindowCodec
 import com.coparently.app.domain.custody.CustodyKey
@@ -587,15 +588,40 @@ class CustodyModelRepository(
         copy(contactWindows = ContactWindowCodec.canonical(windows.filter { it.dayIndex < patternDays }))
 
     /**
-     * [model] carrying the active pattern's seasonal layers (MON-14).
+     * [model] carrying the active pattern's seasonal layers (MON-14) and each child's own schedule
+     * (FAM-4).
      *
-     * The pattern editor builds a fresh model from the base form, which knows nothing of layers;
-     * without this, saving the base pattern would propose deleting every layer the pair agreed —
-     * a change nobody asked for, riding on one somebody did. Unreadable entries travel too.
+     * The pattern editor builds a fresh model from the base form, which knows nothing of layers or
+     * of the children who follow a schedule of their own; without this, saving the base pattern
+     * would propose deleting every layer and every override the pair agreed — a change nobody
+     * asked for, riding on one somebody did. Unreadable entries travel too.
      */
     private suspend fun withActiveLayers(model: CustodyModel): CustodyModel {
         val active = getActiveModelSync() ?: return model
-        return model.copy(seasonalLayers = active.seasonalLayers, unreadableLayers = active.unreadableLayers)
+        return model.copy(
+            seasonalLayers = active.seasonalLayers,
+            unreadableLayers = active.unreadableLayers,
+            childOverrides = active.childOverrides,
+            unreadableChildOverrides = active.unreadableChildOverrides
+        )
+    }
+
+    /**
+     * Gives [childId] a schedule of their own, replaces the one they have, or — with a null
+     * [override] — sends them back to the family schedule (FAM-4).
+     *
+     * A pattern change like any other, through [submitPattern]: applied directly on an unpaired
+     * account or before the pair shares a schedule, and otherwise a **proposal** the co-parent
+     * accepts or declines — never written onto their calendar unasked. The base pattern, its
+     * layers, the other children's overrides and any entry this build cannot read are carried
+     * unchanged.
+     *
+     * @return How the change landed, or null when there is no family schedule to override.
+     */
+    suspend fun submitChildOverride(childId: String, override: ChildScheduleOverride?): PatternSubmission? {
+        val active = getActiveModelSync() ?: return null
+        val others = active.childOverrides.filterNot { it.childId == childId }
+        return submitPattern(active.copy(childOverrides = others + listOfNotNull(override)))
     }
 
     /**
@@ -715,7 +741,9 @@ class CustodyModelRepository(
                 existing?.seasonalLayersJson
             } else {
                 SeasonalLayerJson.encode(remote.model.seasonalLayers, remote.model.unreadableLayers)
-            }
+            },
+            // And for each child's own schedule (FAM-4).
+            childOverridesJson = ChildOverrideJson.mirrored(remote, existing?.childOverridesJson)
         )
         if (entity == existing) return
 
@@ -797,7 +825,9 @@ class CustodyModelRepository(
                     // a removal is told apart from an older build that never wrote the key.
                     contactWindowsWire = ContactWindowCodec.encodeAll(model.contactWindows),
                     // The same for the seasonal layers (MON-14), unreadable entries included.
-                    seasonalLayersWire = model.seasonalLayersWire()
+                    seasonalLayersWire = model.seasonalLayersWire(),
+                    // And each child's own schedule (FAM-4), `[]` for none.
+                    childOverridesWire = model.childOverridesWire()
                 )
             )
         }
@@ -1131,6 +1161,7 @@ class CustodyModelRepository(
             .toSet()
 
         val layers = SeasonalLayerJson.decode(seasonalLayersJson)
+        val children = ChildOverrideJson.decode(childOverridesJson)
         return CustodyModel(
             id = id,
             modelType = CustodyModelType.fromString(modelType),
@@ -1140,7 +1171,9 @@ class CustodyModelRepository(
             isActive = isActive,
             contactWindows = ContactWindowJson.decode(contactWindowsJson),
             seasonalLayers = layers.layers,
-            unreadableLayers = layers.unreadable
+            unreadableLayers = layers.unreadable,
+            childOverrides = children.overrides,
+            unreadableChildOverrides = children.unreadable
         )
     }
 
@@ -1176,7 +1209,8 @@ class CustodyModelRepository(
             dayOverridesJson = DayOverrideJson.encode(dayOverrides),
             // Null for none, for the same reason.
             contactWindowsJson = ContactWindowJson.encode(contactWindows),
-            seasonalLayersJson = SeasonalLayerJson.encode(seasonalLayers, unreadableLayers)
+            seasonalLayersJson = SeasonalLayerJson.encode(seasonalLayers, unreadableLayers),
+            childOverridesJson = ChildOverrideJson.encode(childOverrides, unreadableChildOverrides)
         )
     }
 

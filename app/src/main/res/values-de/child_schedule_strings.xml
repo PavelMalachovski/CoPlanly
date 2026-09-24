@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A child's own custody schedule (FAM-4). -->
+<resources>
+    <string name="custody_child_schedules_title">Eigener Plan für ein Kind</string>
+    <string name="custody_child_schedules_hint">Ein Kind kann einen eigenen Plan haben; die anderen Kinder folgen dem Familienplan. Eine Änderung geht wie jede Planänderung zur Zustimmung an den anderen Elternteil.</string>
+    <string name="custody_child_own_schedule">Eigener Plan</string>
+    <string name="custody_child_family_schedule">Folgt dem Familienplan</string>
+    <string name="custody_child_scope_title">Plan für %1$s</string>
+    <string name="custody_child_scope_hint">Nur %1$s folgt diesem Plan. Saisonale Pläne und einzelne Tagestausche ändern ihn nicht, und die anderen Kinder folgen dem Familienplan.</string>
+    <string name="custody_child_follow_family">Wieder dem Familienplan folgen</string>
+    <string name="custody_diff_child_schedule_changed">Auch der eigene Plan eines Kindes ändert sich.</string>
+    <string name="home_child_with_parent_today">%1$s ist heute bei %2$s</string>
+</resources>

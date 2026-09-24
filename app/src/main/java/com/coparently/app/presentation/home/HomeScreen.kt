@@ -494,7 +494,8 @@ private fun Dashboard(
                 HandoverHero(
                     info = handover,
                     parentNames = parentNames,
-                    onConfirm = onOpenChangeRequests
+                    onConfirm = onOpenChangeRequests,
+                    childrenToday = state.childrenToday
                 )
             }
         }
@@ -637,7 +638,8 @@ private fun SectionHeader(text: String) {
 internal fun HandoverHero(
     info: HandoverInfo,
     parentNames: ParentNames,
-    onConfirm: () -> Unit
+    onConfirm: () -> Unit,
+    childrenToday: List<ChildWithParent> = emptyList()
 ) {
     val fromColor = ParentColors.fill(info.fromParent)
     val toColor = ParentColors.fill(info.toParent)
@@ -715,6 +717,7 @@ internal fun HandoverHero(
                     onClick = onConfirm
                 )
             }
+            ChildrenTodayLines(childrenToday, parentNames)
         }
     }
 }

@@ -64,6 +64,8 @@ object CustodyProposalTransition {
                     contactWindowsWire = ContactWindowCodec.encodeAll(model.contactWindows),
                     // The same rule for the seasonal layers (MON-14): the proposal states them.
                     seasonalLayersWire = model.seasonalLayersWire(),
+                    // And for each child's own schedule (FAM-4).
+                    childOverridesWire = model.childOverridesWire(),
                     planCitationWire = planCitation?.takeIf { it.isNotBlank() }
                 )
             )
@@ -107,6 +109,7 @@ object CustodyProposalTransition {
                 // this is a pattern write, the one kind that may replace the stored list.
                 contactWindowsWire = ContactWindowCodec.encodeAll(pending.model.contactWindows),
                 seasonalLayersWire = pending.model.seasonalLayersWire(),
+                childOverridesWire = pending.model.childOverridesWire(),
                 proposal = null,
                 lastDecision = CustodyDecision(
                     outcome = CustodyDecisionOutcome.ACCEPTED,

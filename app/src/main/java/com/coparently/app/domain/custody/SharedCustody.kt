@@ -59,6 +59,11 @@ import com.coparently.app.domain.model.CustodyModel
  *   `seasonalLayersKeptOrDropped`), and a missing key is an older build's write, never "no
  *   layers" — the mirror keeps its own copy, and this build always writes the key on a pattern
  *   write. [model]'s `seasonalLayers`/`unreadableLayers` are the decoded form.
+ * @property childOverridesWire The document's `childOverrides` list **exactly as stored**, or null
+ *   when the document has no such key (FAM-4). The same two rules again: sent back byte for byte by
+ *   a proposal or swap write (`childOverridesKeptOrDropped`), and a missing key is an older build's
+ *   write, never "no overrides". [model]'s `childOverrides`/`unreadableChildOverrides` are the
+ *   decoded form.
  */
 data class SharedCustody(
     val model: CustodyModel,
@@ -72,7 +77,8 @@ data class SharedCustody(
     val lastSwapDate: String? = null,
     val lastModifiedKind: CustodyWriteKind = CustodyWriteKind.PATTERN,
     val contactWindowsWire: List<String>? = null,
-    val seasonalLayersWire: List<String>? = null
+    val seasonalLayersWire: List<String>? = null,
+    val childOverridesWire: List<String>? = null
 )
 
 /**

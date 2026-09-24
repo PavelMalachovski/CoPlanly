@@ -6,6 +6,7 @@ import org.junit.Test
 import java.time.LocalDate
 import java.time.LocalTime
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
@@ -185,6 +186,53 @@ class ChildScheduleOverrideTest {
         assertTrue(ChildCustody.whereaboutsOn(day, listOf("baby-1"), overrides, familyResolver).isEmpty())
         assertTrue(ChildCustody.whereaboutsOn(day, listOf("a-1", "b-1"), overrides, familyResolver).isEmpty())
         assertTrue(ChildCustody.whereaboutsOn(day, listOf("a-1", "b-1"), emptyList(), familyResolver).isEmpty())
+    }
+
+    // ---- on the model, in a proposal ----------------------------------------
+
+    private fun withBaby() = family.copy(childOverrides = ChildOverrideCodec.decodeAll(listOf(BABY)).overrides)
+
+    @Test
+    fun `complementing the family pattern flips each child's own schedule too`() {
+        val flipped = withBaby().complemented()
+
+        assertEquals("dad", flipped.childOverrideFor("baby-1")?.custodyFor(start))
+        assertEquals(listOf(BABY), flipped.complemented().childOverridesWire())
+    }
+
+    @Test
+    fun `two patterns that differ only in a child's schedule are not equivalent`() {
+        assertTrue(family.isEquivalentTo(family.copy()))
+        assertFalse(family.isEquivalentTo(withBaby()))
+        assertTrue(withBaby().isEquivalentTo(withBaby()))
+    }
+
+    @Test
+    fun `a proposal that only moves a child is never described as changing nothing`() {
+        val diff = CustodyPatternDiff.of(family, withBaby(), from = start)
+
+        assertTrue(diff.childOverridesChanged)
+        assertFalse(diff.identical)
+        assertTrue(diff.movedDays.isEmpty())
+    }
+
+    @Test
+    fun `a proposal states the children's schedules and accepting it makes them the agreed ones`() {
+        val shared = SharedCustody(model = family, lastModifiedBy = "alice", lastModifiedAtMillis = 1L, createdAt = "")
+        val proposed = CustodyProposalTransition.propose(
+            current = shared,
+            model = withBaby(),
+            repeatYearly = true,
+            byUid = "alice",
+            atIso = "2026-09-07T10:00:00"
+        ).getOrThrow()
+        assertEquals(listOf(BABY), proposed.proposal?.childOverridesWire)
+        // The agreed document's own list is untouched by a proposal write.
+        assertNull(proposed.childOverridesWire)
+
+        val accepted = CustodyProposalTransition.accept(proposed, "bob", "2026-09-08T10:00:00", 2L).getOrThrow()
+        assertEquals(listOf(BABY), accepted.childOverridesWire)
+        assertEquals("mom", accepted.model.childOverrideFor("baby-1")?.custodyFor(date("2026-09-14")))
     }
 
     private companion object {

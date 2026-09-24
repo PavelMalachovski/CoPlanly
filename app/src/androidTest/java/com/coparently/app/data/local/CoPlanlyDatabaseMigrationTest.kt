@@ -1000,6 +1000,43 @@ class CoPlanlyDatabaseMigrationTest {
         }
     }
 
+    /**
+     * 41-to-42 adds each child's own custody schedule (FAM-4) and gives every existing pattern
+     * none: the pattern, its windows and its layers come through untouched, and the new column is
+     * null rather than `[]`, which keeps a row with no overrides byte-identical to the mirror's own
+     * output. Needs `42.json`, which the Regenerate workflow exports (`.github/regenerate-request`).
+     */
+    @Test
+    fun migration41To42_keepsThePatternAndAddsNoChildSchedules() {
+        val db = helper.createDatabase(TEST_DB, VERSION_41)
+        db.execSQL(
+            """
+            INSERT INTO custody_models (id, modelType, patternDays, momDaysPattern, startDate,
+                                        isActive, repeatYearly, createdAt, lastModifiedAt,
+                                        lastModifiedAtMillis, dayOverridesJson, contactWindowsJson,
+                                        seasonalLayersJson)
+            VALUES ('m1', 'week_on_week_off', 14, '[0,1,2,3,4,5,6]',
+                    '2026-08-03', 1, 1, '2026-08-01T09:00:00', '', 1785578400000, NULL,
+                    '["2|15:00|19:00|dad"]', NULL)
+            """.trimIndent()
+        )
+        db.close()
+
+        val migrated = helper.runMigrationsAndValidate(
+            TEST_DB,
+            VERSION_42,
+            true,
+            DatabaseMigrations.MIGRATION_41_42
+        )
+
+        migrated.query("SELECT momDaysPattern, contactWindowsJson, childOverridesJson FROM custody_models").use {
+            assertTrue(it.moveToFirst())
+            assertEquals("[0,1,2,3,4,5,6]", it.getString(0))
+            assertEquals("[\"2|15:00|19:00|dad\"]", it.getString(1))
+            assertTrue("every child keeps following the family schedule", it.isNull(2))
+        }
+    }
+
     private companion object {
         const val TEST_DB = "coplanly-migration-test.db"
         const val VERSION_11 = 11
@@ -1023,6 +1060,7 @@ class CoPlanlyDatabaseMigrationTest {
         const val VERSION_39 = 39
         const val VERSION_40 = 40
         const val VERSION_41 = 41
+        const val VERSION_42 = 42
 
         /** 2026-08-01T12:00:00 at UTC+05:30, i.e. 06:30:00Z. */
         const val NOON_AT_PLUS_FIVE_THIRTY_MILLIS = 1_785_565_800_000L

@@ -932,6 +932,20 @@ object DatabaseMigrations {
     }
 
     /**
+     * v41 -> v42: a child's own custody schedule (FAM-4).
+     *
+     * One nullable column on the custody pattern, holding the per-child overrides as
+     * `ChildOverrideCodec` strings. Every existing pattern has none, which is what null says (see
+     * `CustodyModelEntity.childOverridesJson`), so every child keeps following the family schedule
+     * on upgrade.
+     */
+    val MIGRATION_41_42 = object : Migration(41, 42) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL("ALTER TABLE custody_models ADD COLUMN childOverridesJson TEXT")
+        }
+    }
+
+    /**
      * Writes each row's [wallClockToEpochMillis] reading of `updatedAt` into `updatedAtMillis`.
      *
      * Reads every value out first and writes afterwards — nothing iterates a cursor while
@@ -993,6 +1007,7 @@ object DatabaseMigrations {
         MIGRATION_37_38,
         MIGRATION_38_39,
         MIGRATION_39_40,
-        MIGRATION_40_41
+        MIGRATION_40_41,
+        MIGRATION_41_42
     )
 }

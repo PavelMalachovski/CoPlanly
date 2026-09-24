@@ -371,6 +371,21 @@ fun CalendarScreen(
         CustodyResolver.contactWindowsResolver(custodyModel, getCustody)
     }
 
+    // FAM-4: the band follows one child's own schedule only while the member filter narrows to
+    // exactly that child — `ChildCustodyBand` holds the rule. Everything that acts on a day (the
+    // swap sheet, `DaySwapInbox`) keeps reading the family's `getCustody` above, because a swap is
+    // offered against the family schedule; the grid only draws from `grid`.
+    val grid: GridCustody = remember(
+        custodyModel, pendingProposal, activeMemberFilter, getCustody, getProposedCustody, getContactWindows
+    ) {
+        ChildCustodyBand.of(
+            model = custodyModel,
+            proposal = pendingProposal?.model,
+            filter = activeMemberFilter,
+            family = GridCustody(getCustody, getProposedCustody, getContactWindows)
+        )
+    }
+
     // The dates a swap is being negotiated on. A pending swap has changed nothing about whose
     // day it is, so it is deliberately not part of `getCustody` — the grid marks it separately.
     val pendingSwapDates: Set<LocalDate> = remember(dayOverrides) {
@@ -819,9 +834,9 @@ fun CalendarScreen(
                                     selectedDate = anchorDate,
                                     daysCount = if (mode == CalendarViewMode.DAY) 1 else 7,
                                     events = filteredEvents,
-                                    getCustody = getCustody,
-                                    getProposedCustody = getProposedCustody,
-                                    getContactWindows = getContactWindows,
+                                    getCustody = grid.custody,
+                                    getProposedCustody = grid.proposed,
+                                    getContactWindows = grid.windows,
                                     parentNames = parentNames,
                                     onDateChange = { calendarViewModel.setSelectedDate(it) },
                                     onEventClick = { eventId -> previewEventId = eventId },
@@ -856,16 +871,17 @@ fun CalendarScreen(
                                     selectedMonth = displayedMonth,
                                     selectedDate = selectedDate,
                                     eventsByDay = eventsByDay,
-                                    getCustody = getCustody,
-                                    getProposedCustody = getProposedCustody,
-                                    getContactWindows = getContactWindows,
+                                    getCustody = grid.custody,
+                                    getProposedCustody = grid.proposed,
+                                    getContactWindows = grid.windows,
                                     parentNames = parentNames,
-                                    pendingSwapDates = pendingSwapDates,
-                                    swappedDates = swappedDates,
-                                    onDayLongClick = offerSwapDay,
+                                    // A child's own band (FAM-4) is not the schedule a swap moves.
+                                    pendingSwapDates = if (grid.followsFamily) pendingSwapDates else emptySet(),
+                                    swappedDates = if (grid.followsFamily) swappedDates else emptySet(),
+                                    onDayLongClick = offerSwapDay?.takeIf { grid.followsFamily },
                                     // A finger that long-pressed and kept moving redraws the run
                                     // from the anchor, so coming back shortens it again.
-                                    onSwapDragTo = dragSwapTo,
+                                    onSwapDragTo = dragSwapTo?.takeIf { grid.followsFamily },
                                     swapSelection = swapSelection,
                                     // Selects the day and opens Day view, where an empty hour
                                     // slot creates an event — the owner's walkthrough found the

@@ -25,12 +25,12 @@ fun custodyDiffDescription(diff: CustodyPatternDiff?, parentNames: ParentNames):
     if (diff == null || !diff.comparable) return null
     if (diff.identical) return stringResource(R.string.custody_diff_none)
     // A seasonal layer (MON-14) can change without a day moving inside the compared window — a
-    // summer proposed in March — so it always gets its own line.
-    val layersLine = if (diff.seasonalLayersChanged) {
-        stringResource(R.string.custody_diff_layers_changed)
-    } else {
-        null
-    }
+    // summer proposed in March — so it always gets its own line. So does a child's own schedule
+    // (FAM-4): the days counted below are the family's, and one child's move none of them.
+    val layersLine = listOfNotNull(
+        stringResource(R.string.custody_diff_layers_changed).takeIf { diff.seasonalLayersChanged },
+        stringResource(R.string.custody_diff_child_schedule_changed).takeIf { diff.childOverridesChanged }
+    ).joinToString("\n").ifEmpty { null }
     // Only the afternoons or the layers move: "0 days move" would read as "nothing changes".
     if (diff.movedDays.isEmpty()) {
         val windowsOnly = if (diff.contactWindowsChanged) {

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A child's own custody schedule (FAM-4). -->
+<resources>
+    <string name="custody_child_schedules_title">Different schedule for a child</string>
+    <string name="custody_child_schedules_hint">A child can follow a schedule of their own; the other children keep the family schedule. A change is sent to your co-parent for approval, like any change to the schedule.</string>
+    <string name="custody_child_own_schedule">Own schedule</string>
+    <string name="custody_child_family_schedule">Follows the family schedule</string>
+    <string name="custody_child_scope_title">Schedule for %1$s</string>
+    <string name="custody_child_scope_hint">Only %1$s follows this schedule. Seasonal schedules and one-off swaps do not change it, and the other children keep the family schedule.</string>
+    <string name="custody_child_follow_family">Follow the family schedule again</string>
+    <string name="custody_diff_child_schedule_changed">A child\'s own schedule changes too.</string>
+    <string name="home_child_with_parent_today">%1$s is with %2$s today</string>
+</resources>

@@ -1,5 +1,6 @@
 package com.coparently.app.data.remote.firebase
 
+import com.coparently.app.domain.custody.ChildOverrideCodec
 import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.custody.ContactWindowCodec
 import com.coparently.app.domain.custody.CustodyDecision
@@ -9,6 +10,7 @@ import com.coparently.app.domain.custody.CustodyTimestamp
 import com.coparently.app.domain.custody.CustodyWriteKind
 import com.coparently.app.domain.custody.DayOverride
 import com.coparently.app.domain.custody.DayOverrideStatus
+import com.coparently.app.domain.custody.DecodedChildOverrides
 import com.coparently.app.domain.custody.DecodedLayers
 import com.coparently.app.domain.custody.SeasonalLayerCodec
 import com.coparently.app.domain.custody.SharedCustody
@@ -159,6 +161,8 @@ class FirestoreCustodyDataSource @Inject constructor(
             // The seasonal layers (MON-14) follow the contact windows' rule exactly: verbatim,
             // omitted when the document never had the key. See `SharedCustody.seasonalLayersWire`.
             seasonalLayersWire?.let { put("seasonalLayers", it) }
+            // Each child's own schedule (FAM-4), under the same rule once more.
+            childOverridesWire?.let { put(CHILD_OVERRIDES, it) }
         }
 
     /**
@@ -194,6 +198,7 @@ class FirestoreCustodyDataSource @Inject constructor(
         put("proposedAt", proposedAt)
         contactWindowsWire?.let { put("contactWindows", it) }
         seasonalLayersWire?.let { put("seasonalLayers", it) }
+        childOverridesWire?.let { put(CHILD_OVERRIDES, it) }
     }
 
     /** The decision as a sub-map. `note` is omitted when absent rather than written as null. */
@@ -229,6 +234,8 @@ class FirestoreCustodyDataSource @Inject constructor(
         val windows = ContactWindowCodec.decodeAll(windowsWire)
         val layersWire = (this["seasonalLayers"] as? List<*>)?.mapNotNull { it as? String }
         val layers = SeasonalLayerCodec.decodeAll(layersWire)
+        val childrenWire = (this[CHILD_OVERRIDES] as? List<*>)?.mapNotNull { it as? String }
+        val children = ChildOverrideCodec.decodeAll(childrenWire)
 
         return SharedCustody(
             model = CustodyModel(
@@ -243,13 +250,15 @@ class FirestoreCustodyDataSource @Inject constructor(
                 isActive = true,
                 contactWindows = windows,
                 seasonalLayers = layers.layers,
-                unreadableLayers = layers.unreadable
+                unreadableLayers = layers.unreadable,
+                childOverrides = children.overrides,
+                unreadableChildOverrides = children.unreadable
             ),
             lastModifiedBy = (this["lastModifiedBy"] as? String).orEmpty(),
             lastModifiedAtMillis = CustodyTimestamp.fromWire(this["lastModifiedAt"] as? String),
             createdAt = (this["createdAt"] as? String).orEmpty(),
             repeatYearly = this["repeatYearly"] as? Boolean ?: true,
-            proposal = (this["proposal"] as? Map<*, *>)?.toProposal(documentId, windows, layers)
+            proposal = (this["proposal"] as? Map<*, *>)?.toProposal(documentId, AgreedExtras(windows, layers, children))
                 ?.copy(planCitationWire = (this[PLAN_CITATION] as? String)?.takeIf { it.isNotBlank() }),
             lastDecision = (this["lastDecision"] as? Map<*, *>)?.toDecision(),
             dayOverrides = (this["dayOverrides"] as? Map<*, *>).toDayOverrides(),
@@ -262,7 +271,8 @@ class FirestoreCustodyDataSource @Inject constructor(
                 ?.let { name -> CustodyWriteKind.entries.firstOrNull { it.name == name } }
                 ?: CustodyWriteKind.PATTERN,
             contactWindowsWire = windowsWire,
-            seasonalLayersWire = layersWire
+            seasonalLayersWire = layersWire,
+            childOverridesWire = childrenWire
         )
     }
 
@@ -317,17 +327,10 @@ class FirestoreCustodyDataSource @Inject constructor(
      *
      * @param documentId Used as the proposed model's id — the sub-map carries no id of its own,
      *   and the pair's document is the only identity a pending proposal has.
-     * @param agreedWindows The agreed pattern's contact windows, which a proposal with no
-     *   `contactWindows` of its own keeps: it was written by a build that could not express
-     *   windows, and that is not a proposal to remove them.
-     * @param agreedLayers The agreed pattern's seasonal layers, kept by a proposal with no
-     *   `seasonalLayers` of its own for the same reason (MON-14).
+     * @param agreed What the agreed pattern carries beside its days, which a proposal missing the
+     *   matching key keeps — see [AgreedExtras].
      */
-    private fun Map<*, *>.toProposal(
-        documentId: String,
-        agreedWindows: List<ContactWindow>,
-        agreedLayers: DecodedLayers
-    ): CustodyProposal? {
+    private fun Map<*, *>.toProposal(documentId: String, agreed: AgreedExtras): CustodyProposal? {
         val startDate = (this["startDate"] as? String)?.let { iso ->
             runCatching { LocalDate.parse(iso) }.getOrNull()
         }
@@ -336,7 +339,9 @@ class FirestoreCustodyDataSource @Inject constructor(
         if (startDate == null || patternDays == null || proposedBy == null) return null
         val windowsWire = (this["contactWindows"] as? List<*>)?.mapNotNull { it as? String }
         val layersWire = (this["seasonalLayers"] as? List<*>)?.mapNotNull { it as? String }
-        val layers = layersWire?.let { SeasonalLayerCodec.decodeAll(it) } ?: agreedLayers
+        val layers = layersWire?.let { SeasonalLayerCodec.decodeAll(it) } ?: agreed.layers
+        val childrenWire = (this[CHILD_OVERRIDES] as? List<*>)?.mapNotNull { it as? String }
+        val children = childrenWire?.let { ChildOverrideCodec.decodeAll(it) } ?: agreed.children
 
         return CustodyProposal(
             model = CustodyModel(
@@ -351,17 +356,36 @@ class FirestoreCustodyDataSource @Inject constructor(
                 // Not the active pattern, and must never be mistaken for one by a caller that
                 // reads the field to decide what the calendar should colour.
                 isActive = false,
-                contactWindows = windowsWire?.let { ContactWindowCodec.decodeAll(it) } ?: agreedWindows,
+                contactWindows = windowsWire?.let { ContactWindowCodec.decodeAll(it) } ?: agreed.windows,
                 seasonalLayers = layers.layers,
-                unreadableLayers = layers.unreadable
+                unreadableLayers = layers.unreadable,
+                childOverrides = children.overrides,
+                unreadableChildOverrides = children.unreadable
             ),
             repeatYearly = this["repeatYearly"] as? Boolean ?: true,
             proposedBy = proposedBy,
             proposedAt = (this["proposedAt"] as? String).orEmpty(),
             contactWindowsWire = windowsWire,
-            seasonalLayersWire = layersWire
+            seasonalLayersWire = layersWire,
+            childOverridesWire = childrenWire
         )
     }
+
+    /**
+     * What the agreed pattern carries beside its days, handed to [toProposal].
+     *
+     * A proposal sub-map missing one of these keys was written by a build that could not express
+     * it, and that is not a proposal to remove it: the proposed model keeps the agreed value.
+     *
+     * @property windows The agreed contact windows (MON-6b).
+     * @property layers The agreed seasonal layers (MON-14).
+     * @property children The agreed per-child schedules (FAM-4).
+     */
+    private data class AgreedExtras(
+        val windows: List<ContactWindow>,
+        val layers: DecodedLayers,
+        val children: DecodedChildOverrides
+    )
 
     /**
      * The decision sub-map, or null when its outcome is not one this build knows.
@@ -389,5 +413,8 @@ class FirestoreCustodyDataSource @Inject constructor(
 
         /** The top-level key a proposal's plan citation is stored under (MON-21). */
         const val PLAN_CITATION = "proposalPlanCitation"
+
+        /** The key each child's own schedule is stored under, top level and in a proposal (FAM-4). */
+        const val CHILD_OVERRIDES = "childOverrides"
     }
 }

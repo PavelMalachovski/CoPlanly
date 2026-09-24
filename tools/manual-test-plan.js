@@ -107,6 +107,13 @@ const RULES = [
       'K/presentation/parentingplan/**', 'K/domain/custody/CustodyProposal*'],
   },
   {
+    sections: ['3.13'],
+    why: 'a child\'s own custody schedule',
+    paths: ['K/domain/custody/ChildScheduleOverride.kt', 'K/domain/custody/ChildCustody.kt',
+      'K/presentation/custody/Child*', 'K/presentation/calendar/ChildCustodyBand.kt',
+      'K/presentation/home/ChildrenToday*', 'K/data/repository/ChildOverrideJson.kt'],
+  },
+  {
     sections: ['3.6', '4.2'],
     why: 'strings, locales or the language picker',
     paths: ['app/src/main/res/values*/**', 'app/src/main/res/xml/locales_config.xml',

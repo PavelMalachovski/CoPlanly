@@ -54,7 +54,7 @@ import com.coparently.app.data.local.entity.UserEntity
         EventVersionOutboxEntity::class,
         JournalEntryEntity::class
     ],
-    version = 41,
+    version = 42,
     exportSchema = true
 )
 @TypeConverters(Converters::class)

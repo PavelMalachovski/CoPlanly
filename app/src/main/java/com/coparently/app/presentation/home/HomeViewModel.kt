@@ -32,6 +32,7 @@ import com.coparently.app.domain.repository.PairingRepository
 import com.coparently.app.domain.repository.PreferencesRepository
 import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.presentation.common.FamilyKindSource
+import com.coparently.app.presentation.common.FamilyMembersSource
 import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.ParentsSource
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -115,11 +116,16 @@ data class MonthSpendDependencies @Inject constructor(
  * [parentsSource] joined them rather than becoming a seventh constructor parameter, for the
  * same reason the other two are here and because "who are the two parents" is precisely what
  * this bundle is about.
+ *
+ * [familyMembersSource] joined for the other half of that question — who the children are — which
+ * the handover hero needs to name each child on a day they are not all with the same parent
+ * (FAM-4). It is the family's identity too, and the constructor was still at its limit.
  */
 data class HomeIdentityDependencies @Inject constructor(
     val userRepository: UserRepository,
     val pairingRepository: PairingRepository,
-    val parentsSource: ParentsSource
+    val parentsSource: ParentsSource,
+    val familyMembersSource: FamilyMembersSource
 )
 
 /**
@@ -175,6 +181,9 @@ sealed interface HomeUiState {
      *   and answerable — from the main page, not only from an inbox nothing pointed at.
      * @property awaitingRequestCount Incoming event change requests and pending events still
      *   waiting for this parent's answer, for the same reason.
+     * @property childrenToday Each child with the parent they are with today, on a day the
+     *   children are not all with the same one (FAM-4) — empty on every other day and in every
+     *   family without two children and an override, so the hero stays the one family sentence.
      */
     data class Dashboard(
         val partner: PartnerSummary?,
@@ -186,7 +195,8 @@ sealed interface HomeUiState {
         val monthBalances: List<CurrencyBalance>,
         val unreadCount: Int,
         val awaitingSwaps: List<DaySwapGroup> = emptyList(),
-        val awaitingRequestCount: Int = 0
+        val awaitingRequestCount: Int = 0,
+        val childrenToday: List<ChildWithParent> = emptyList()
     ) : HomeUiState
 }
 
@@ -349,6 +359,17 @@ class HomeViewModel @Inject constructor(
             model?.let { HandoverCalculator.nextHandoverFrom(it, LocalDate.now(), overrides) }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), null)
+
+    /**
+     * Each child with the parent they are with today, on a day they are not all with the same one
+     * (FAM-4). Read through [custody], so the hero's two halves share one lookup.
+     */
+    private val childrenToday: StateFlow<List<ChildWithParent>> = combine(
+        custody,
+        homeIdentityDependencies.familyMembersSource.observe()
+    ) { (model, overrides), members ->
+        ChildrenToday.of(LocalDate.now(), model, overrides, members)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())
 
     /**
      * Today's agenda and the child's week, from one event subscription.
@@ -613,9 +634,9 @@ class HomeViewModel @Inject constructor(
         combine(monthSpend, monthBalances, unreadCount) { spend, balances, unread ->
             Triple(spend, balances, unread)
         },
-        recentChanges,
+        combine(recentChanges, childrenToday) { changes, children -> changes to children },
         combine(awaitingSwaps, awaitingRequestCount) { swaps, requests -> swaps to requests }
-    ) { (coParent, handover, sections), (spend, balances, unread), changes, (swaps, requests) ->
+    ) { (coParent, handover, sections), (spend, balances, unread), (changes, children), (swaps, requests) ->
         HomeUiState.Dashboard(
             partner = coParent,
             nextHandover = handover,
@@ -626,7 +647,8 @@ class HomeViewModel @Inject constructor(
             monthBalances = balances,
             unreadCount = unread,
             awaitingSwaps = swaps,
-            awaitingRequestCount = requests
+            awaitingRequestCount = requests,
+            childrenToday = children
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), EMPTY_DASHBOARD)
 
