@@ -31,6 +31,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.rememberNavController
 import com.coparently.app.data.family.SelectedFamilySource
 import com.coparently.app.data.notification.NotificationManager
+import com.coparently.app.data.remote.firebase.PushDestination
 import com.coparently.app.data.remote.firebase.PushPayload
 import com.coparently.app.domain.chat.ChatUri
 import com.coparently.app.domain.guests.GuestInviteUri
@@ -41,6 +42,7 @@ import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.navigation.NavGraph
 import com.coparently.app.presentation.navigation.PendingChatLink
 import com.coparently.app.presentation.navigation.PendingChatOpen
+import com.coparently.app.presentation.navigation.PendingDestinationOpen
 import com.coparently.app.presentation.navigation.PendingInviteCodes
 import com.coparently.app.presentation.splash.SplashScreen
 import com.coparently.app.presentation.sync.SyncViewModel
@@ -126,6 +128,13 @@ class MainActivity : AppCompatActivity() {
     private val pendingChatOpen = PendingChatOpen(
         link = _pendingChatLink,
         onConsumed = { _pendingChatLink.value = null }
+    )
+
+    /** The screen a tapped push names (D-13), awaiting hand-off to [NavGraph]. */
+    private val _pendingDestination = MutableStateFlow<PushDestination?>(null)
+    private val pendingDestinationOpen = PendingDestinationOpen(
+        destination = _pendingDestination,
+        onConsumed = { _pendingDestination.value = null }
     )
 
     private val syncViewModel: SyncViewModel by viewModels()
@@ -257,7 +266,8 @@ class MainActivity : AppCompatActivity() {
                                 navController = navController,
                                 syncViewModel = syncViewModel,
                                 pendingInviteCodes = pendingInviteCodes,
-                                pendingChatOpen = pendingChatOpen
+                                pendingChatOpen = pendingChatOpen,
+                                pendingDestinationOpen = pendingDestinationOpen
                             )
                         }
 
@@ -315,6 +325,19 @@ class MainActivity : AppCompatActivity() {
         readPairingCode(intent)
         readGuestCode(intent)
         readChatDeepLink(intent)
+        readPushDestination(intent)
+    }
+
+    /**
+     * Reads the screen a push tap names ([PushDestination.EXTRA], D-13) and arms
+     * [pendingDestinationOpen]. Only a value [PushDestination.fromKey] knows is accepted: this
+     * activity is exported, and the extra may do no more than pick one of the app's own screens.
+     * The extra is removed once read, so a configuration change cannot open the screen again.
+     */
+    private fun readPushDestination(intent: Intent?) {
+        val destination = PushDestination.fromKey(intent?.getStringExtra(PushDestination.EXTRA)) ?: return
+        intent?.removeExtra(PushDestination.EXTRA)
+        _pendingDestination.value = destination
     }
 
     /**

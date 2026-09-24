@@ -1080,7 +1080,12 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     **What the phone then shows is tested** (`androidTest/.../PushNotificationTest`, every leg
     including 16 KB): every worded type posted and read back from `activeNotifications` in English
     and German, composed in all five, an unknown type and another account's push posting nothing,
-    and each tap's PendingIntent matched to its deep link, family extra and request code. It words
+    and each tap's PendingIntent matched to its deep link, family extra and request code. **A push
+    opens the screen it is about and posts to its own channel** (D-13): `PushRouting` maps each
+    type to a `PushDestination` (the launcher intent carries it as `PushDestination.EXTRA`, which
+    `MainActivity` accepts only through `fromKey` — the activity is exported) and to one of four
+    `PushChannel`s — chat, schedule, money, family — so money can be muted without muting a
+    handover. A new type gets both, and `PushRoutingTest` fails until it does. It words
     through a configuration context because the service does: on API 32 and below AppCompat's
     per-app language reaches activities only, so a push follows the *device* language there.
 16. **`sharedWith` is computed at upload time and never recomputed for a row already marked

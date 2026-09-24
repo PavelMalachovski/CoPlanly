@@ -80,7 +80,7 @@ Play install, a vendor skin.
 | `presentation/common/PickerDatesTest`, `LocalDatePickerDialogTest` | §3.1: every picker's conversion and both picker composables, tapped, in Prague, Kiritimati (+14), Los Angeles and Pago Pago (−11) | Each *screen* saving what its picker returned, and a stored date staying put across a zone change |
 | `presentation/settings/PerAppLocaleTest` | §3.6: `setApplicationLocales` to cs/de/ru/uk renders Settings in that language | The Settings row itself, Android 13's system setting, and §4.2 (a Play install) — never CI |
 | `data/export/ExportFileWriterTest` | §6: a CSV (RFC 4180, statement first, formula guard, both clocks, no private event) and a PDF that `PdfRenderer` opens, written through the real writer; the share intent's `FileProvider` URI and read-only grant | Real revisions from the server, the share sheet, and a spreadsheet or PDF app opening the file |
-| `data/remote/firebase/PushNotificationTest` | §3.7 and every push's wording: real data payloads through `PushNotifier` (what `CoPlanlyMessagingService` hands each message to), read back from `NotificationManager.activeNotifications` — every worded type in English and German, composed in all five languages with its names shown; an unknown type (even with a `title`/`body`) and a push for another account post nothing; each tap's PendingIntent matched to its deep link, `familyId` extra and request code, two families kept apart. Runs on all three legs, 16 KB included (not a Hilt test) | FCM delivering it, the shade as the phone's skin draws it, a tap actually switching family (§5.2), and the language on Android 12 or older when the app language differs from the phone's (a push follows the phone's there) |
+| `data/remote/firebase/PushNotificationTest` | §3.7 and every push's wording: real data payloads through `PushNotifier` (what `CoPlanlyMessagingService` hands each message to), read back from `NotificationManager.activeNotifications` — every worded type in English and German, composed in all five languages with its names shown; an unknown type (even with a `title`/`body`) and a push for another account post nothing; each tap's PendingIntent matched to its deep link, `familyId` extra and request code, two families kept apart; every type posted to its channel and naming its screen (D-13). Runs on all three legs, 16 KB included (not a Hilt test) | FCM delivering it, the shade as the phone's skin draws it, a tap actually switching family (§5.2), and the language on Android 12 or older when the app language differs from the phone's (a push follows the phone's there) |
 | `presentation/navigation/MainNavigationSmokeTest` | A signed-in launch visiting Home, Calendar (month/week/day), Chat, Expenses and Settings without a crash; bottom bar on the tabs only; icon-only controls named and ≥ 48 dp | Everything that needs data, a co-parent or a server; TalkBack itself (§3.9) |
 | `upgrade/UpgradeSeedTest` → `adb install -r` → `upgrade/UpgradeVerifyTest` (the **`upgrade` job**, API 30, not `instrumented`) | §2.1 and §3.9's SEC-5 box for **one release step**: the base build (the PR's base commit, or the previous `main`) writes a family's rows into eight tables through its own SQLCipher open path, plus a refresh token, settings and the telemetry answer into the sealed store; this build is installed over it keeping the data, and must open the database with the **recovered** passphrase (the wrapped value unchanged), run every migration to the newest exported schema, read every row back (six tables also through its own DAOs), leave the file ciphertext, and keep the preferences and the consent answer | An upgrade from a build older than the base (a longer migration chain), the plaintext → encrypted conversion of an install that predates SEC-2, a hardware-backed Keystore, a reboot between launches, and a real family's volume of data |
 | `app/src/r8Test/.../R8GsonProbe` — not an `androidTest`: the **`r8-runtime`** job runs it inside the *minified* `r8Test` build (`release` plus the probe) on API 30 | §4.1's Gson half: a child's medical profile (blood type, intolerances, hereditary conditions, a dated vaccination), medications, activities, emergency contacts and school, and a pet, written through the real repositories into Room with the source key names and read back equal; custody swaps, the event draft, the chat and revision `TypeToken`s, and the Google Calendar `@Key` models parsed | The Firestore document itself (the probe never signs in), the co-parent's phone reading it, a real Google Calendar import, and the telemetry check — a signed release build with a real `google-services.json` |
@@ -540,8 +540,10 @@ the Settings row, and it cannot see Android 13's system setting or a Play instal
 off deletes `fcmToken` from `users/{uid}` and the token itself, on writes a fresh token back,
 and while off nothing re-registers one. `PushNotificationTest` (instrumented) pins what arrives:
 a push for another account posts nothing and triggers no sync, every type is worded in the
-reader's language, and the tap carries the family. What only the phones add: the console showing
-the field gone, the OS permission turning the switch off, and a real push arriving or not.
+reader's language, posts to its own channel (chat, schedule, money, family — D-13) and names the
+screen its tap opens, and the tap carries the family. What only the phones add: the console
+showing the field gone, the OS permission turning the switch off, a real push arriving or not, and
+the tap actually landing on that screen.
 
 - [ ] Settings → App → **Push notifications** off. In the Firebase console → Firestore →
       `users/{A's uid}`, `fcmToken` is removed or empty.
@@ -550,6 +552,11 @@ the field gone, the OS permission turning the switch off, and a real push arrivi
       have B create another event, and no push arrives. Turn it on again and pushes arrive.
 - [ ] **2P:** sign A out. B's next event must **not** arrive on A's phone
       (`FcmService.unregisterToken` runs on sign-out).
+- [ ] **2P, D-13:** tap B's event push on A: the **calendar** opens, not Home. A day-swap offer
+      opens Home (where it is answered), a change request the inbox, a split proposal Expenses.
+      System Settings → Apps → CoPlanly → Notifications lists **Messages, Schedule, Expenses,
+      Family** and no "CoPlanly notifications"; muting Expenses silences B's split proposal and
+      not B's event.
 - **If it fails:** tag `CoPlanlyMessaging` (it also logs when it drops a push addressed to
   another uid); `data/remote/firebase/FcmService.kt`.
 

@@ -70,8 +70,15 @@
     <string name="push_records_shared_body">%1$s shared their calendar and family records with you</string>
 
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
-    <string name="push_channel_name">CoPlanly notifications</string>
-    <string name="push_channel_description">Notifications about events, requests and messages from your co-parent</string>
+    <!-- One notification channel per kind of news (D-13): what system Settings lists. -->
+    <string name="push_channel_chat_name">Messages</string>
+    <string name="push_channel_chat_description">New messages from your co-parent</string>
+    <string name="push_channel_schedule_name">Schedule</string>
+    <string name="push_channel_schedule_description">Events, change requests, custody proposals and day swaps</string>
+    <string name="push_channel_money_name">Expenses</string>
+    <string name="push_channel_money_description">Proposals and agreements about how shared expenses are split</string>
+    <string name="push_channel_family_name">Family</string>
+    <string name="push_channel_family_description">Pairing with your co-parent, child records, shared records and professional access</string>
     <string name="push_professional_access_requested_title">Professional access requested</string>
     <string name="push_professional_access_requested_body">%1$s redeemed an invitation to read the family calendar and parenting plan. It opens only when both parents consent.</string>
 </resources>

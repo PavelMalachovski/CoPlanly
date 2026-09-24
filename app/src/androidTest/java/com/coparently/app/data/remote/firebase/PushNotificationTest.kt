@@ -59,7 +59,7 @@ class PushNotificationTest {
             InstrumentationRegistry.getInstrumentation().uiAutomation
                 .grantRuntimePermission(appContext.packageName, Manifest.permission.POST_NOTIFICATIONS)
         }
-        PushNotifier(appContext).createChannel()
+        PushNotifier(appContext).createChannels()
         assertTrue("notifications are enabled for the app under test", manager.areNotificationsEnabled())
         clearAll()
     }
@@ -203,7 +203,7 @@ class PushNotificationTest {
     }
 
     @Test
-    fun theTap_carriesTheFamily_andOpensTheApp() {
+    fun theTap_carriesTheFamily_andOpensTheCalendar() {
         val data = payload(PushPayload.EVENT_CREATED)
         val posted = awaitPosted(PushNotifier(appContext).receive(data, SIGNED_IN)!!)
         val tap = tapIntentFor(data)
@@ -211,7 +211,28 @@ class PushNotificationTest {
         val launcher = appContext.packageManager.getLaunchIntentForPackage(appContext.packageName)
         assertEquals(launcher?.component, tap.component)
         assertEquals(FAMILY, tap.getStringExtra(PushPayload.FAMILY_ID))
+        assertEquals(PushDestination.CALENDAR.key, tap.getStringExtra(PushDestination.EXTRA))
         assertIsTheTapOf(posted, data, tap)
+    }
+
+    @Test
+    fun everyWordedType_postsToItsOwnChannel_andNamesItsScreen() {
+        val channels = manager.notificationChannels.map { it.id }.toSet()
+        assertTrue("the four push channels exist: $channels", channels.containsAll(PushChannel.entries.map { it.id }))
+        assertFalse("the channel every push shared is gone", PushChannel.LEGACY_ID in channels)
+        for (type in PushNotifier.PUSH_TEXT.keys) {
+            val data = payload(type)
+            val id = requireNotNull(PushNotifier(appContext).receive(data, SIGNED_IN)) { "$type was posted" }
+            val posted = awaitPosted(id)
+            assertEquals("$type channel", PushRouting.channelOf(type).id, posted.notification.channelId)
+            PushRouting.destinationOf(type)?.let { destination ->
+                assertEquals("$type screen", destination.key, tapIntentFor(data).getStringExtra(PushDestination.EXTRA))
+            }
+            manager.cancel(id)
+            SystemClock.sleep(POST_INTERVAL_MS)
+        }
+        val chat = awaitPosted(PushNotifier(appContext).receive(chatPayload(), SIGNED_IN)!!)
+        assertEquals(PushChannel.CHAT.id, chat.notification.channelId)
     }
 
     @Test
