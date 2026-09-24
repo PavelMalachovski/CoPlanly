@@ -104,3 +104,25 @@ test('markdown: an empty plan says so, a link gets GitHub\'s anchor', () => {
   assert.equal(plan.anchorFor('7. Last: account deletion · 1P · **destructive**'),
       '7-last-account-deletion--1p--destructive');
 });
+
+test('a section the e2e job exercises says so, and says what is left for the phone', () => {
+  const e2e = plan.e2eBySection({
+    firestore: {family_documents: {e2e: ['TwoParentAttachmentsTest#aVault'], checklist: ['5.5']}},
+    storage: {chat_attachments: {e2e: ['TwoParentAttachmentsTest'], checklist: ['5.5']}},
+    push: {x: {exempt: 'none'}},
+  });
+  assert.deepEqual(e2e.get('5.5'), ['TwoParentAttachmentsTest']);
+  const planned = plan.planFor([K + 'presentation/documents/DocumentsScreen.kt'], CHECKLIST, e2e);
+  const item = planned.items.find((i) => i.section === '5.5');
+  assert.ok(item, 'the documents screen maps to §5.5');
+  assert.deepEqual(item.e2e, ['TwoParentAttachmentsTest']);
+  assert.match(plan.toMarkdown(planned), /CI already runs the mechanism between two parents/);
+});
+
+test('every checklist section the coverage map names exists', () => {
+  const sections = plan.parseSections(CHECKLIST);
+  const coverage = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'e2e', 'coverage.json'), 'utf8'));
+  for (const section of plan.e2eBySection(coverage).keys()) {
+    assert.ok(sections.has(section), `tools/e2e/coverage.json names §${section}, which the checklist lacks`);
+  }
+});

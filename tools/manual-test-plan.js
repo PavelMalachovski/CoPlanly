@@ -253,10 +253,12 @@ function anchorFor(heading) {
  * The heart of it, pure so it can be tested.
  * @param {string[]} files changed paths, repository-relative
  * @param {string} checklist the checklist's markdown
- * @return {{items: {section: string, title: string, why: string[], files: string[]}[],
+ * @param {Map<string, string[]>} [e2eBySection] checklist section → the two-parent e2e tests that
+ *   already run its mechanism (from `tools/e2e/coverage.json`, see {@link e2eBySection})
+ * @return {{items: {section: string, title: string, why: string[], files: string[], e2e: string[]}[],
  *   unmapped: string[], missing: string[]}} the plan
  */
-function planFor(files, checklist) {
+function planFor(files, checklist, e2eBySection = new Map()) {
   const sections = parseSections(checklist);
   const compiled = RULES.map((r) => ({...r, res: r.paths.map(globToRegExp)}));
   const noDevice = NO_DEVICE.map(globToRegExp);
@@ -276,7 +278,8 @@ function planFor(files, checklist) {
           missing.add(s);
           continue;
         }
-        const item = bySection.get(s) || {section: s, title: sections.get(s), why: [], files: []};
+        const item = bySection.get(s) ||
+          {section: s, title: sections.get(s), why: [], files: [], e2e: e2eBySection.get(s) || []};
         if (!item.why.includes(rule.why)) item.why.push(rule.why);
         if (!item.files.includes(file)) item.files.push(file);
         bySection.set(s, item);
@@ -312,6 +315,10 @@ function toMarkdown(plan, opts = {}) {
       const shown = item.files.slice(0, 3).map((f) => '`' + f.replace(K, '…/') + '`').join(', ');
       const more = item.files.length > 3 ? ` and ${item.files.length - 3} more` : '';
       lines.push(`- [ ] ${heading}  `, `  ${item.why.join('; ')}: ${shown}${more}`);
+      if (item.e2e && item.e2e.length) {
+        lines.push(`  CI already runs the mechanism between two parents (${item.e2e.map((t) => '`' + t + '`').join(', ')}): ` +
+            'on the phone, check only what is drawn, the pushes and the real network.');
+      }
     }
   }
   if (plan.unmapped.length) {
@@ -327,6 +334,28 @@ function toMarkdown(plan, opts = {}) {
         `${plan.missing.join(', ')}, which \`${CHECKLIST}\` no longer has.`);
   }
   return lines.join('\n') + '\n';
+}
+
+/**
+ * Which checklist sections the two-parent e2e job already exercises, from the optional
+ * `checklist` list on each entry of `tools/e2e/coverage.json` — so the plan can tell a tester
+ * which half of a section is left for the phone instead of sending them through all of it.
+ * @param {object} coverage the parsed coverage map
+ * @return {Map<string, string[]>} section → test class names, sorted and de-duplicated
+ */
+function e2eBySection(coverage) {
+  const out = new Map();
+  for (const [kind, entries] of Object.entries(coverage || {})) {
+    if (kind.startsWith('_')) continue;
+    for (const entry of Object.values(entries || {})) {
+      for (const section of entry.checklist || []) {
+        const tests = out.get(section) || new Set();
+        for (const ref of entry.e2e || []) tests.add(ref.split('#')[0]);
+        out.set(section, tests);
+      }
+    }
+  }
+  return new Map([...out].map(([s, t]) => [s, [...t].sort()]));
 }
 
 /**
@@ -360,11 +389,13 @@ function main() {
   const repo = process.env.GITHUB_REPOSITORY;
   const sha = args.ref || process.env.GITHUB_SHA;
   const link = repo && sha ? `https://github.com/${repo}/blob/${sha}/${CHECKLIST}` : undefined;
-  const markdown = toMarkdown(planFor(files, checklist), {link});
+  const coveragePath = path.join(ROOT, 'tools/e2e/coverage.json');
+  const e2e = fs.existsSync(coveragePath) ? e2eBySection(JSON.parse(fs.readFileSync(coveragePath, 'utf8'))) : new Map();
+  const markdown = toMarkdown(planFor(files, checklist, e2e), {link});
   if (args.out) fs.writeFileSync(args.out, markdown);
   else process.stdout.write(markdown);
 }
 
 if (require.main === module) main();
 
-module.exports = {RULES, NO_DEVICE, K, globToRegExp, parseSections, anchorFor, planFor, toMarkdown};
+module.exports = {RULES, NO_DEVICE, K, globToRegExp, parseSections, anchorFor, planFor, toMarkdown, e2eBySection};

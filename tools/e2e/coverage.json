@@ -1,5 +1,5 @@
 {
-  "_comment": "Every feature two phones share, and the two-parent test that covers it (tools/check-e2e-coverage.js). 'e2e' names classes or Class#method in app/src/androidTest/java/com/coparently/app/e2e/; 'exempt' says why no emulator run can cover it and what does instead. A new collection, storage prefix, push type or callable fails the invariants job until it has an entry here.",
+  "_comment": "Every feature two phones share, and the two-parent test that covers it (tools/check-e2e-coverage.js). 'e2e' names classes or Class#method in app/src/androidTest/java/com/coparently/app/e2e/; 'exempt' says why no emulator run can cover it and what does instead. A new collection, storage prefix, push type or callable fails the invariants job until it has an entry here. Optional 'checklist' names the docs/DEVICE-CHECKLIST.md sections whose mechanism the named tests already run; the PR comment's manual plan then tells the tester only what is drawn is left.",
   "firestore": {
     "users": {
       "e2e": [
@@ -21,12 +21,18 @@
         "TwoParentEventsTest",
         "MultiFamilyTest",
         "OneParentOnScreenTest"
+      ],
+      "checklist": [
+        "5.2"
       ]
     },
     "conversations": {
       "e2e": [
         "TwoParentChatTest",
         "TwoParentPairingTest#bothPhonesMirrorThePairingIntoRoomAndShareOneConversation"
+      ],
+      "checklist": [
+        "5.1"
       ]
     },
     "messages": {
@@ -34,6 +40,9 @@
         "TwoParentChatTest",
         "TwoParentAttachmentsTest",
         "OneParentOnScreenTest"
+      ],
+      "checklist": [
+        "5.1"
       ]
     },
     "expenses": {
@@ -44,6 +53,9 @@
     "family_documents": {
       "e2e": [
         "TwoParentAttachmentsTest#aVaultDocumentOpensForBobWhoCannotDeleteItAndAliceDeletesItAsATombstone"
+      ],
+      "checklist": [
+        "5.5"
       ]
     },
     "google_oauth": {
@@ -60,11 +72,17 @@
     "chat_attachments": {
       "e2e": [
         "TwoParentAttachmentsTest"
+      ],
+      "checklist": [
+        "5.5"
       ]
     },
     "family_documents": {
       "e2e": [
         "TwoParentAttachmentsTest#aVaultDocumentOpensForBobWhoCannotDeleteItAndAliceDeletesItAsATombstone"
+      ],
+      "checklist": [
+        "5.5"
       ]
     }
   },
@@ -72,6 +90,9 @@
     "chat_message": {
       "e2e": [
         "TwoParentChatTest#aMessageCrossesTheDateLineAsUnreadThenDeliveredThenRead"
+      ],
+      "checklist": [
+        "5.1"
       ]
     },
     "pairing_accepted": {
