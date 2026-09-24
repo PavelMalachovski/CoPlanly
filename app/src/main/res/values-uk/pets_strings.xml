@@ -8,7 +8,6 @@
     <string name="pets_add">Додати улюбленця</string>
     <string name="pets_group_label">Улюбленці</string>
     <string name="pets_empty_state">Улюбленців ще немає</string>
-    <string name="pets_retry">Повторити</string>
 
     <!-- Editor -->
     <string name="pet_title_add">Додати улюбленця</string>

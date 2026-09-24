@@ -42,6 +42,19 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
    `Card { Text }` for one, and don't pass an action that does nothing). Home,
    Settings, Expenses and Chat all render through these — do not reintroduce
    `Card { ListItem { … } }` per row, which is what the audit called "double surfaces".
+   **Five more sit beside them in `presentation/common/`** (October 2026 audit, D-15/D-16), each
+   the one anatomy for something screens used to draw their own way:
+   - `StickyActionBar` is a form's pinned primary action. It has a minimum height, not a fixed
+     one, so its label grows at 200 % rather than clipping.
+   - `InlineBanner` with `BannerTone` (INFO for a fact, ATTENTION for an ask) is what a screen
+     tells or asks its reader. Its actions sit in a `FlowRow`.
+   - `ErrorState` is the `EmptyState` anatomy with Retry. It is not red.
+   - `InviteCodeText` is how every invitation code is drawn.
+   - `ConnectivityBanner` is the offline line in the root Scaffold's top bar.
+
+   `GroupLabel` and the screens' section headers carry `heading()` semantics for TalkBack. Don't
+   draw a second anatomy for any of these. The calendar's one-line banners over the grid
+   (`CalendarBanners.kt`) are the deliberate exception.
 2. **Parent colours go through `presentation/theme/ParentColors.kt`**: `fill()` for dots,
    bars and tints; `text()` for anything that is a foreground (it picks the theme-aware
    `*Light`/`*Dark` partner). The raw `MomPink`/`DadBlue` are fill-only — using them as text
@@ -127,6 +140,11 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     colour uses `chipFill` (the deep tone) with `ParentColors.onFill(...)` for the text, never
     white on the full hue (4.35:1 on pink). The picker (Settings → Family, onboarding profile
     step) was hidden behind `PARENT_COLOUR_PICKER_ENABLED` until this landed; the flag is gone.
+    `ParentColors.fill` is theme-aware. In the dark theme it draws the choice's `darkFill`, which
+    differs only where the hue falls under 3:1 on a dark surface: purple, 2.09:1, now Purple 300.
+    `ParentColors.choiceFill` is the same for a picker's swatch. `ParentColorsTest` holds every
+    choice to 3:1 on the four surfaces it is drawn on in each theme, so **a new colour choice
+    arrives with a dark fill that passes it**.
 13. **The family switcher is one state and one dialog, and it appears at two** (M-8, September
     2026). `presentation/common/FamilySwitcher.kt` holds `FamilySwitcherChip` (Home and Expenses
     top bars, beside the gear) and `FamilySwitcherDialog`, which the Settings row opens too; both
@@ -165,13 +183,15 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
 15. **Money is never cut off** (October 2026 audit, D-1). No `maxLines`, ellipsis or
     `softWrap = false` on an amount, a total or the sentence saying who owes whom; a figure that
     does not fit wraps. Pairs that sit side by side at the default size stack **from font scale
-    1.3**: Home's two stat tiles, the Expenses total and its label, the balance sentence and Settle
-    up, and the event preview's Delete and Edit. Each reads `LocalDensity.current.fontScale` against
-    a `STACK_*_FONT_SCALE` beside it. At 150 % the German label beside a total was squeezed to a
-    word per line and the amount broke mid-number, at a size the screenshot matrix never rendered.
-    That is why the matrix now renders the text-heavy components at 2.0× in German (see the
-    `screenshots` job). A title or a row's meta line may still end in an ellipsis; the amount beside
-    it may not.
+    1.3**: Home's two stat tiles, the Expenses total and its label, the paid-by amounts under the
+    split bar, the balance sentence and Settle up, and the event preview's Delete and Edit. Each
+    reads `LocalDensity.current.fontScale` against a `STACK_*_FONT_SCALE` beside it. At 150 % the
+    German label beside a total was squeezed to a word per line and the amount broke mid-number, at
+    a size the screenshot matrix never rendered. That is why the matrix now renders the text-heavy
+    components at 2.0× in German (see the `screenshots` job). Wrapping is not enough on its own: a
+    currency formatter joins the amount to its code with a no-break space, so a figure wider than
+    its column never breaks at the space but inside the code ("CZ|K") — give it the width instead. A
+    title or a row's meta line may still end in an ellipsis; the amount beside it may not.
 
 ## UX/UI overhaul (July 2026 design review) — implemented, keep consistent
 
@@ -560,12 +580,13 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
 - **The `screenshots` job is how UI is reviewed without a phone** (September 2026). Roborazzi on
   Robolectric's native graphics renders the tests in `app/src/test/java/com/coparently/app/
   screenshots/` — Home's cards, the month grid with every `DayCellFills` layer, the calendar
-  banners, a Settings group, `EmptyState`, the Expenses summary header, a chat thread, the event
-  preview body, the consent screen and the family switcher chip — over a variant matrix of theme,
+  banners, a Settings group, `EmptyState`, `ErrorState`, `InlineBanner`, `StickyActionBar`, the
+  offline banner, the Expenses summary header, a chat thread, the event preview body, the consent
+  screen and the family switcher chip — over a variant matrix of theme,
   the five languages, 1.0×/1.5×/2.0× font scale (2.0× in German only, added after the October 2026
   audit found money cut off at sizes the matrix never rendered) and the default vs a purple/orange
   parent palette (`ScreenshotVariants`: ten variants for text-heavy components, four for the rest,
-  134 images — the count the committed baselines hold).
+  174 images — the count the committed baselines hold).
   **To view:** open the run's `screenshots` artefact, unzip, open `index.html`
   (`tools/screenshot-gallery.js`, no dependencies, filters by component/language/theme/scale/
   palette). Locally: `./gradlew recordRoborazziDebug` writes into `app/src/test/screenshots/` — don't commit what a laptop records (below).
@@ -698,6 +719,11 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
 - **KDoc** on public classes/functions; code and comments in **English**.
 - Material 3 components; theme tokens from `presentation/theme/`
   (`CoPlanlyColors`, `Typography`, `CoPlanlyShapes`, `dimensions()`).
+- **The typeface is Onest** (`theme/Type.kt`, four static weights cut from the variable font; SIL
+  OFL 1.1 in `third_party/fonts/onest/` and Settings → Data sources and licences). It replaced
+  Poppins, which has no Cyrillic, so Russian and Ukrainian fell back to Roboto mid-line. Any
+  replacement must cover Czech and German Latin, Russian and Ukrainian Cyrillic (і ї є ґ ʼ), ₴
+  and №. Check that with fontTools against the file, not against a specimen page.
 - **Parent colours identify a person, not a role.** The app never shows the words "Mom" or
   "Dad": every parent label goes through `presentation/common/ParentLabels.kt` and renders
   that person's name. `"mom"`/`"dad"` survive as the two *slot identifiers* in Room, in the

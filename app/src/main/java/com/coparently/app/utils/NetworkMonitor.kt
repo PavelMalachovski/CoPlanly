@@ -36,28 +36,33 @@ class NetworkMonitor @Inject constructor(
     }
 
     /**
-     * Flow that emits network connectivity status changes.
+     * Whether the device has validated internet, as it changes.
+     *
+     * Tracks every network that currently has it rather than reacting to single callbacks: a
+     * device holds two networks at once while it hands over from Wi-Fi to mobile data, and the
+     * old version answered `onLost(wifi)` with "offline" after mobile data had already come up —
+     * which the offline banner (docs/AUDIT-2026-10-design.md D-16) would then have shown for as
+     * long as nothing else changed. Callbacks arrive on one thread, so the set needs no lock.
      */
     val networkStatus: Flow<Boolean> = callbackFlow {
+        val validated = mutableSetOf<Network>()
         val callback = object : ConnectivityManager.NetworkCallback() {
-            override fun onAvailable(network: Network) {
-                trySend(true)
-            }
-
-            override fun onLost(network: Network) {
-                trySend(false)
-            }
-
             override fun onCapabilitiesChanged(
                 network: Network,
                 networkCapabilities: NetworkCapabilities
             ) {
-                val isConnected = networkCapabilities.hasCapability(
+                val hasInternet = networkCapabilities.hasCapability(
                     NetworkCapabilities.NET_CAPABILITY_INTERNET
                 ) && networkCapabilities.hasCapability(
                     NetworkCapabilities.NET_CAPABILITY_VALIDATED
                 )
-                trySend(isConnected)
+                if (hasInternet) validated += network else validated -= network
+                trySend(validated.isNotEmpty())
+            }
+
+            override fun onLost(network: Network) {
+                validated -= network
+                trySend(validated.isNotEmpty())
             }
         }
 
@@ -65,10 +70,10 @@ class NetworkMonitor @Inject constructor(
             .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
             .build()
 
-        connectivityManager.registerNetworkCallback(request, callback)
-
-        // Send initial state
+        // The state before the first callback; registering reports every matching network
+        // through onCapabilitiesChanged straight after.
         trySend(isOnline())
+        connectivityManager.registerNetworkCallback(request, callback)
 
         awaitClose {
             connectivityManager.unregisterNetworkCallback(callback)

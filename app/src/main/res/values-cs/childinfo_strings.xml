@@ -10,7 +10,6 @@
     <string name="childinfo_cancel">Zrušit</string>
     <string name="childinfo_clear">Vymazat</string>
     <string name="childinfo_ok">OK</string>
-    <string name="childinfo_retry">Zkusit znovu</string>
     <string name="childinfo_sync">Synchronizovat</string>
 
     <!-- Child info: titles and sections -->

@@ -4,17 +4,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -23,7 +19,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -43,6 +38,7 @@ import com.coparently.app.R
 import com.coparently.app.presentation.common.LocalDatePickerDialog
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
+import com.coparently.app.presentation.common.StickyActionBar
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.asString
 
@@ -88,7 +84,14 @@ fun JournalEditorScreen(
     Scaffold(
         topBar = { EditorTopBar(isNew = state.isNew, onNavigateUp = onNavigateUp) },
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        bottomBar = { SaveBar(saving = state.saving, enabled = state.canSave, onSave = viewModel::save) }
+        bottomBar = {
+            StickyActionBar(
+                label = stringResource(R.string.journal_save),
+                onClick = viewModel::save,
+                enabled = state.canSave,
+                busy = state.saving
+            )
+        }
     ) { padding ->
         EditorForm(
             state = state,
@@ -157,31 +160,6 @@ private fun EditorTopBar(isNew: Boolean, onNavigateUp: () -> Unit) {
             }
         }
     )
-}
-
-/** The sticky Save button, with a spinner while the entry is written. */
-@Composable
-private fun SaveBar(saving: Boolean, enabled: Boolean, onSave: () -> Unit) {
-    Surface(shadowElevation = 8.dp) {
-        Button(
-            onClick = onSave,
-            enabled = enabled,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-                .height(52.dp)
-        ) {
-            if (saving) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(20.dp),
-                    strokeWidth = 2.dp,
-                    color = MaterialTheme.colorScheme.onPrimary
-                )
-            } else {
-                Text(stringResource(R.string.journal_save))
-            }
-        }
-    }
 }
 
 /** Room for a few paragraphs before the field starts to scroll with the page. */

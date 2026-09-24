@@ -60,7 +60,6 @@ import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -102,6 +101,7 @@ import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.common.FamilyMemberChips
 import com.coparently.app.presentation.common.FullScreenImageDialog
 import com.coparently.app.presentation.common.LocalDatePickerDialog
+import com.coparently.app.presentation.common.StickyActionBar
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.common.toggling
 import com.coparently.app.presentation.components.TimePickerDialog
@@ -646,44 +646,28 @@ fun AddEditEventScreen(
         bottomBar = {
             // Sticky Save: the primary action stays reachable without scrolling
             // back to the top-bar check icon on this long form
-            Surface(shadowElevation = 8.dp) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = dims.paddingMedium, vertical = dims.paddingSmall)
-                ) {
-                    // parentOwner == null is not just a first-frame beat: an account whose
-                    // profile UserRepositoryImpl declined to name (see isFormValid) can sit here
-                    // indefinitely. Save being merely disabled would leave no clue why - this
-                    // says what's missing, next to the selector that (per isPaired || parentOwner
-                    // == null above) is showing precisely so there's something to do about it.
-                    if (parentOwner == null) {
+            StickyActionBar(
+                label = stringResource(R.string.event_form_save),
+                onClick = performSave,
+                enabled = isFormValid && !isDeleting,
+                busy = isSaving,
+                // parentOwner == null is not just a first-frame beat: an account whose
+                // profile UserRepositoryImpl declined to name (see isFormValid) can sit here
+                // indefinitely. Save being merely disabled would leave no clue why - this
+                // says what's missing, next to the selector that (per isPaired || parentOwner
+                // == null above) is showing precisely so there's something to do about it.
+                notice = if (parentOwner == null) {
+                    {
                         Text(
                             text = stringResource(R.string.event_form_owner_unknown),
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.padding(bottom = dims.paddingSmall)
+                            color = MaterialTheme.colorScheme.error
                         )
                     }
-                    Button(
-                        onClick = performSave,
-                        enabled = isFormValid && !isSaving && !isDeleting,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp)
-                    ) {
-                        if (isSaving) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(24.dp),
-                                color = MaterialTheme.colorScheme.onPrimary,
-                                strokeWidth = 2.dp
-                            )
-                        } else {
-                            Text(stringResource(R.string.event_form_save))
-                        }
-                    }
+                } else {
+                    null
                 }
-            }
+            )
         }
     ) { paddingValues ->
         Column(

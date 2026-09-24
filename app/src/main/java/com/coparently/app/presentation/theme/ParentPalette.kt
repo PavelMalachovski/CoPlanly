@@ -37,13 +37,18 @@ import com.coparently.app.R
  * @property labelRes What the picker calls it. A name and not a swatch alone, because a colour
  *   with no label is unusable to anyone who cannot tell two of them apart — and because a
  *   screen reader has nothing else to announce.
+ * @property darkFill The hue drawn as a fill in the dark theme. The same as [fill] unless [fill]
+ *   falls under 3:1 — the WCAG minimum for a graphic — on a dark surface or the dark weekend
+ *   grey, which only purple did (2.09:1 on the surface, 1.74:1 on the weekend).
+ *   `ParentColorsTest` holds every choice to 3:1 in both themes.
  */
 enum class ParentColorChoice(
     val storedCode: String,
     val fill: Color,
     val light: Color,
     val dark: Color,
-    @StringRes val labelRes: Int
+    @StringRes val labelRes: Int,
+    val darkFill: Color = fill
 ) {
     /** Material Pink. The app's original slot-1 colour, kept so nobody's calendar changes. */
     PINK(
@@ -76,7 +81,8 @@ enum class ParentColorChoice(
         PURPLE_700,
         PURPLE_200,
         PURPLE_900,
-        R.string.parent_color_purple
+        R.string.parent_color_purple,
+        darkFill = PURPLE_300
     ),
 
     /** Material Deep Orange 800 / 200 / 900. */
@@ -171,6 +177,7 @@ data class ParentPalette(
 // The two hues beyond pink and blue, named after their Material palette steps. Pink and blue live
 // in `CoPlanlyColors` because the theme uses them too; these two exist only as parent choices.
 private val PURPLE_700 = Color(0xFF7B1FA2)
+private val PURPLE_300 = Color(0xFFBA68C8)
 private val PURPLE_200 = Color(0xFFCE93D8)
 private val PURPLE_900 = Color(0xFF4A148C)
 private val DEEP_ORANGE_800 = Color(0xFFD84315)

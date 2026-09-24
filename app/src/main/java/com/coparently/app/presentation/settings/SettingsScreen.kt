@@ -135,6 +135,7 @@ import com.coparently.app.presentation.sync.GoogleCalendarSyncState
 import com.coparently.app.presentation.sync.SyncViewModel
 import com.coparently.app.presentation.theme.Motion
 import com.coparently.app.presentation.theme.ParentColorChoice
+import com.coparently.app.presentation.theme.ParentColors
 import kotlinx.coroutines.launch
 import java.time.format.DateTimeFormatter
 
@@ -513,12 +514,12 @@ fun SettingsScreen(
                                     .size(24.dp)
                                     .clip(CircleShape)
                                     .background(
-                                        (
+                                        ParentColors.choiceFill(
                                             ParentColorChoice.fromStored(parents.me?.colorCode)
                                                 ?: ParentColorChoice.defaultFor(
                                                     parents.me?.slot.orEmpty()
                                                 )
-                                            ).fill
+                                        )
                                     )
                             )
                         }
@@ -1515,7 +1516,7 @@ private fun ParentColorDialog(
                             modifier = Modifier
                                 .size(20.dp)
                                 .clip(CircleShape)
-                                .background(choice.fill)
+                                .background(ParentColors.choiceFill(choice))
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                         // Named, not just shown: a swatch alone is unusable to anyone who cannot

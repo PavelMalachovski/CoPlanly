@@ -136,38 +136,18 @@ fun ExpenseSummaryHeader(
                     momShare = balance.momShareOfPaid,
                     modifier = Modifier.padding(top = 10.dp)
                 )
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 6.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    // Each half gets an equal share of the row and wraps inside it. The name is
-                    // arbitrary length, and without the equal shares a long one on the start side
-                    // would push the other parent's figure off the end entirely. It used to
-                    // ellipsise, which at 150 % cut the amount itself ("Olya: 3.120,00 C…").
-                    Text(
-                        text = stringResource(
-                            R.string.expenses_paid_by,
-                            parentNames.labelFor("mom"),
-                            format.format(balance.momPaid)
-                        ),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = ParentColors.text("mom"),
-                        modifier = Modifier.weight(1f)
+                PaidByRow(
+                    momLine = stringResource(
+                        R.string.expenses_paid_by,
+                        parentNames.labelFor("mom"),
+                        format.format(balance.momPaid)
+                    ),
+                    dadLine = stringResource(
+                        R.string.expenses_paid_by,
+                        parentNames.labelFor("dad"),
+                        format.format(balance.dadPaid)
                     )
-                    Text(
-                        text = stringResource(
-                            R.string.expenses_paid_by,
-                            parentNames.labelFor("dad"),
-                            format.format(balance.dadPaid)
-                        ),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = ParentColors.text("dad"),
-                        textAlign = TextAlign.End,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
+                )
 
                 BalanceRow(
                     balance = balance,
@@ -195,6 +175,53 @@ data class MonthNavigation(
     val onPrevious: () -> Unit,
     val onNext: () -> Unit
 )
+
+/**
+ * Who paid what, by name, directly under the split bar: side by side, or one above the other
+ * from [STACK_FONT_SCALE] (design refresh item 15).
+ *
+ * Side by side, each half gets an equal share of the row and wraps inside it: a long name on the
+ * start side would otherwise push the other parent's figure off the end. It used to ellipsise,
+ * which at 150 % cut the amount itself ("Olya: 3.120,00 C…"). Wrapping alone stops working at
+ * larger sizes, because the currency formatter joins an amount to its code with a no-break space:
+ * once "1.480,00 CZK" is wider than half the card, it breaks inside the code ("CZ|K", German at
+ * 2.0×) instead of at the space. Stacked, each line has the whole width.
+ *
+ * @param momLine Slot 1's name and amount, formatted
+ * @param dadLine Slot 2's name and amount, formatted
+ */
+@Composable
+private fun PaidByRow(momLine: String, dadLine: String) {
+    val style = MaterialTheme.typography.labelMedium
+    val momColor = ParentColors.text("mom")
+    val dadColor = ParentColors.text("dad")
+    if (LocalDensity.current.fontScale >= STACK_FONT_SCALE) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 6.dp)
+        ) {
+            Text(text = momLine, style = style, color = momColor)
+            Text(text = dadLine, style = style, color = dadColor)
+        }
+    } else {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 6.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(text = momLine, style = style, color = momColor, modifier = Modifier.weight(1f))
+            Text(
+                text = dadLine,
+                style = style,
+                color = dadColor,
+                textAlign = TextAlign.End,
+                modifier = Modifier.weight(1f)
+            )
+        }
+    }
+}
 
 /**
  * The month switcher: back/forward around "August 2026 · 5 expenses".

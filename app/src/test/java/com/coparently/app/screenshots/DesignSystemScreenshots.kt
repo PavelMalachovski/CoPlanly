@@ -10,17 +10,25 @@ import androidx.compose.material.icons.filled.FamilyRestroom
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.SwapHoriz
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import com.coparently.app.R
+import com.coparently.app.presentation.common.BannerTone
+import com.coparently.app.presentation.common.ConnectivityBanner
 import com.coparently.app.presentation.common.EmptyState
+import com.coparently.app.presentation.common.ErrorState
 import com.coparently.app.presentation.common.GroupLabel
+import com.coparently.app.presentation.common.InlineBanner
 import com.coparently.app.presentation.common.PillChip
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
+import com.coparently.app.presentation.common.StickyActionBar
 import com.coparently.app.presentation.theme.ParentColors
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -100,6 +108,50 @@ class DesignSystemScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(var
             actionLabel = stringResource(R.string.contacts_empty_action),
             onAction = {}
         )
+    }
+
+    @Test
+    fun stickyActionBar() = snap("common_sticky_action_bar") {
+        // Disabled, with the notice saying why: the event form's worst case, and the one whose
+        // label used to clip at a fixed 52 dp.
+        StickyActionBar(
+            label = stringResource(R.string.event_form_save),
+            onClick = {},
+            enabled = false,
+            notice = {
+                Text(
+                    text = stringResource(R.string.event_form_owner_unknown),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+        )
+    }
+
+    @Test
+    fun inlineBanner() = snap("common_inline_banner") {
+        // The expense split's ask: a title, the figures and three answers, which wrap onto a
+        // second line at large text instead of squeezing their labels.
+        InlineBanner(
+            title = stringResource(R.string.expenses_split_proposal_title),
+            text = stringResource(R.string.expenses_split_proposal_body, 70, 30),
+            tone = BannerTone.ATTENTION,
+            actions = {
+                Button(onClick = {}) { Text(stringResource(R.string.expenses_split_proposal_confirm)) }
+                TextButton(onClick = {}) { Text(stringResource(R.string.expenses_split_proposal_decline)) }
+                TextButton(onClick = {}) { Text(stringResource(R.string.expenses_split_proposal_later)) }
+            }
+        )
+    }
+
+    @Test
+    fun errorState() = snap("common_error_state") {
+        ErrorState(message = stringResource(R.string.profile_load_failed), onRetry = {})
+    }
+
+    @Test
+    fun connectivityBanner() = snap("common_connectivity_banner") {
+        ConnectivityBanner(offline = true)
     }
 
     companion object {

@@ -80,6 +80,7 @@ import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.labelRes
 import com.coparently.app.presentation.custody.labelRes
 import com.coparently.app.presentation.theme.ParentColorChoice
+import com.coparently.app.presentation.theme.ParentColors
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
@@ -387,7 +388,7 @@ private fun ParentColorSwatches(
                 modifier = Modifier
                     .size(44.dp)
                     .clip(CircleShape)
-                    .background(choice.fill)
+                    .background(ParentColors.choiceFill(choice))
                     .border(
                         width = if (selected == choice) 3.dp else 0.dp,
                         color = MaterialTheme.colorScheme.onSurface,

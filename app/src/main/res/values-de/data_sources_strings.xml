@@ -8,4 +8,6 @@
     <string name="data_sources_holidays_title">holidays (Python-Bibliothek)</string>
     <string name="data_sources_holidays_description">Die Feiertage für die Slowakei, Deutschland, Österreich und Russland wurden Tag für Tag mit ihr abgeglichen. © Vacanza Team und Mitwirkende, MIT-Lizenz.</string>
     <string name="data_sources_computed_note">Tschechische Feiertage und Schulferien berechnet die App selbst.</string>
+    <string name="data_sources_group_typeface">Schrift</string>
+    <string name="data_sources_onest_description">Die Schrift der App, für lateinische wie kyrillische Buchstaben. © 2021 The Onest Project Authors, unter der SIL Open Font License 1.1.</string>
 </resources>

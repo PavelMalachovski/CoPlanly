@@ -10,7 +10,6 @@
     <string name="childinfo_cancel">Отмена</string>
     <string name="childinfo_clear">Очистить</string>
     <string name="childinfo_ok">ОК</string>
-    <string name="childinfo_retry">Повторить</string>
     <string name="childinfo_sync">Синхронизировать</string>
 
     <!-- Child info: titles and sections -->

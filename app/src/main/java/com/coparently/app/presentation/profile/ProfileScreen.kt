@@ -8,15 +8,12 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -27,7 +24,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -43,6 +39,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -52,10 +50,12 @@ import com.coparently.app.domain.model.MedicalProfile
 import com.coparently.app.domain.model.User
 import com.coparently.app.presentation.childinfo.components.AllergyEditor
 import com.coparently.app.presentation.childinfo.components.DatePickerDialog
+import com.coparently.app.presentation.common.ErrorState
 import com.coparently.app.presentation.common.MedicalProfileEditor
 import com.coparently.app.presentation.common.PillChip
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
+import com.coparently.app.presentation.common.StickyActionBar
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
@@ -188,26 +188,12 @@ private fun ProfileContent(
  */
 @Composable
 private fun ProfileSaveBar(isSaving: Boolean, onSave: () -> Unit, modifier: Modifier = Modifier) {
-    Surface(modifier = modifier, shadowElevation = 8.dp) {
-        Button(
-            onClick = onSave,
-            enabled = !isSaving,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-                .height(52.dp)
-        ) {
-            if (isSaving) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(20.dp),
-                    strokeWidth = 2.dp,
-                    color = MaterialTheme.colorScheme.onPrimary
-                )
-            } else {
-                Text(stringResource(R.string.profile_save))
-            }
-        }
-    }
+    StickyActionBar(
+        label = stringResource(R.string.profile_save),
+        onClick = onSave,
+        modifier = modifier,
+        busy = isSaving
+    )
 }
 
 /**
@@ -234,24 +220,11 @@ private fun ProfileLoadingIndicator(modifier: Modifier = Modifier) {
  */
 @Composable
 private fun ProfileLoadFailed(onRetry: () -> Unit, modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(vertical = 48.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        Text(
-            text = stringResource(R.string.profile_load_failed),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth()
-        )
-        OutlinedButton(onClick = onRetry) {
-            Text(stringResource(R.string.common_action_retry))
-        }
-    }
+    ErrorState(
+        message = stringResource(R.string.profile_load_failed),
+        onRetry = onRetry,
+        modifier = modifier.fillMaxWidth()
+    )
 }
 
 /** The signed-in user's own record: editable fields, allergies and the medical profile. */
@@ -417,7 +390,8 @@ private fun ProfileSectionLabel(text: String, modifier: Modifier = Modifier) {
         text = text,
         style = MaterialTheme.typography.labelMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = modifier
+        // A heading, so TalkBack can jump between the profile's sections (D-17).
+        modifier = modifier.semantics { heading() }
     )
 }
 

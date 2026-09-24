@@ -16,6 +16,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Event
+import androidx.compose.material.icons.filled.HourglassTop
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -27,7 +28,6 @@ import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
-import androidx.compose.material3.Surface
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
@@ -48,6 +48,8 @@ import com.coparently.app.R
 import com.coparently.app.domain.events.CalendarVisibility
 import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.common.EmptyState
+import com.coparently.app.presentation.common.ErrorState
+import com.coparently.app.presentation.common.InlineBanner
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.rememberParentNames
@@ -143,18 +145,13 @@ fun EventListScreen(
             }
 
             is EventUiState.Error -> {
-                Box(
+                ErrorState(
+                    message = stringResource(R.string.event_list_error, state.message.asString()),
+                    onRetry = viewModel::refresh,
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(paddingValues)
-                ) {
-                    Text(
-                        text = stringResource(R.string.event_list_error, state.message.asString()),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.padding(16.dp)
-                    )
-                }
+                )
             }
 
             // Both the settled list (Success) and the transient post-op state show
@@ -303,22 +300,13 @@ private fun EventCardContent(
  */
 @Composable
 private fun WaitingOnCoParentStrip(count: Int) {
-    Surface(
-        color = MaterialTheme.colorScheme.secondaryContainer,
-        shape = MaterialTheme.shapes.medium,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp)
-    ) {
-        Text(
-            text = if (count == 1) {
-                stringResource(R.string.event_acceptance_waiting_strip_one)
-            } else {
-                stringResource(R.string.event_acceptance_waiting_strip, count)
-            },
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSecondaryContainer,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
-        )
-    }
+    InlineBanner(
+        text = if (count == 1) {
+            stringResource(R.string.event_acceptance_waiting_strip_one)
+        } else {
+            stringResource(R.string.event_acceptance_waiting_strip, count)
+        },
+        icon = Icons.Default.HourglassTop,
+        modifier = Modifier.padding(vertical = 8.dp)
+    )
 }

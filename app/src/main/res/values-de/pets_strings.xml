@@ -8,7 +8,6 @@
     <string name="pets_add">Haustier hinzufügen</string>
     <string name="pets_group_label">Haustiere</string>
     <string name="pets_empty_state">Noch keine Haustiere</string>
-    <string name="pets_retry">Erneut versuchen</string>
 
     <!-- Editor -->
     <string name="pet_title_add">Haustier hinzufügen</string>

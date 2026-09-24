@@ -16,6 +16,7 @@ import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.Gavel
 import androidx.compose.material.icons.filled.School
+import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -51,7 +52,7 @@ internal data class DataSourceNotice(
     val kind: Kind
 ) {
     /** What the row is about, for its icon. */
-    enum class Kind { DATASET, LICENCE, REFERENCE }
+    enum class Kind { DATASET, LICENCE, REFERENCE, TYPEFACE }
 }
 
 /**
@@ -81,6 +82,9 @@ internal object DataSources {
     /** The reference library the public-holiday tables are pinned to. */
     const val HOLIDAYS_LIBRARY_URL = "https://github.com/vacanza/holidays"
 
+    /** The licence the app's typeface, Onest, is distributed under. */
+    const val OFL_URL = "https://openfontlicense.org"
+
     /** Every notice, in the order the screen shows them. */
     val notices: List<DataSourceNotice> = listOf(
         DataSourceNotice(
@@ -100,6 +104,19 @@ internal object DataSources {
             descriptionRes = R.string.data_sources_holidays_description,
             url = HOLIDAYS_LIBRARY_URL,
             kind = DataSourceNotice.Kind.REFERENCE
+        )
+    )
+
+    /**
+     * The typeface bundled in `res/font` (D-8), under a group of its own: it is not holiday data,
+     * and the SIL Open Font License asks for its notice to travel with the fonts.
+     */
+    val typefaceNotices: List<DataSourceNotice> = listOf(
+        DataSourceNotice(
+            titleRes = R.string.data_sources_onest_title,
+            descriptionRes = R.string.data_sources_onest_description,
+            url = OFL_URL,
+            kind = DataSourceNotice.Kind.TYPEFACE
         )
     )
 }
@@ -159,6 +176,15 @@ fun DataSourcesScreen(onNavigateUp: () -> Unit) {
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            Column {
+                GroupLabel(stringResource(R.string.data_sources_group_typeface))
+                SectionGroup {
+                    DataSources.typefaceNotices.forEachIndexed { index, notice ->
+                        if (index > 0) Divider()
+                        NoticeRow(notice = notice, onOpen = { openExternal(uriHandler, notice.url) })
+                    }
+                }
+            }
         }
     }
 }
@@ -192,6 +218,7 @@ private fun DataSourceNotice.Kind.icon(): ImageVector = when (this) {
     DataSourceNotice.Kind.DATASET -> Icons.Default.School
     DataSourceNotice.Kind.LICENCE -> Icons.Default.Gavel
     DataSourceNotice.Kind.REFERENCE -> Icons.Default.Event
+    DataSourceNotice.Kind.TYPEFACE -> Icons.Default.TextFields
 }
 
 private const val TAG = "DataSourcesScreen"

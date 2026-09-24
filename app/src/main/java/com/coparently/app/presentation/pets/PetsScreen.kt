@@ -2,12 +2,9 @@ package com.coparently.app.presentation.pets
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
@@ -15,13 +12,11 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Pets
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -38,6 +33,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.domain.model.Pet
 import com.coparently.app.presentation.common.EmptyState
+import com.coparently.app.presentation.common.ErrorState
 import com.coparently.app.presentation.common.GroupLabel
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
@@ -118,7 +114,11 @@ fun PetsScreen(
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                 }
                 is PetsUiState.Error -> {
-                    ErrorState(message = state.message.asString(), onRetry = viewModel::loadPets)
+                    ErrorState(
+                        message = state.message.asString(),
+                        onRetry = viewModel::loadPets,
+                        modifier = Modifier.fillMaxSize()
+                    )
                 }
                 is PetsUiState.Success -> {
                     if (state.pets.isEmpty()) {
@@ -172,31 +172,6 @@ private fun PetsList(pets: List<Pet>, onEditPet: (String) -> Unit) {
                     }
                 }
             }
-        }
-    }
-}
-
-/** Shown when the pets flow fails; the retry re-collects it from scratch. */
-@Composable
-private fun BoxScope.ErrorState(message: String, onRetry: () -> Unit) {
-    val haptic = LocalHapticFeedback.current
-    Column(
-        modifier = Modifier
-            .align(Alignment.Center)
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            text = message,
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.error
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Button(onClick = {
-            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-            onRetry()
-        }) {
-            Text(stringResource(R.string.pets_retry))
         }
     }
 }

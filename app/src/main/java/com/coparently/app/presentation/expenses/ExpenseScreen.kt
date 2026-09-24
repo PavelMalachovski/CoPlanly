@@ -2,10 +2,8 @@ package com.coparently.app.presentation.expenses
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.ScrollState
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -29,7 +27,6 @@ import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -52,9 +49,11 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.domain.expenses.SplitRatioProposal
 import com.coparently.app.domain.model.Expense
+import com.coparently.app.presentation.common.BannerTone
 import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.FamilyMemberChips
 import com.coparently.app.presentation.common.FamilySwitcherChip
+import com.coparently.app.presentation.common.InlineBanner
 import com.coparently.app.presentation.common.ListSkeleton
 import com.coparently.app.presentation.common.Loadable
 import com.coparently.app.presentation.common.monthPagingTransition
@@ -506,32 +505,20 @@ private fun SplitRatioWaitingBanner(
     proposal: SplitRatioProposal,
     onWithdraw: () -> Unit
 ) {
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 14.dp, vertical = 6.dp),
-        shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.surfaceContainer
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = stringResource(R.string.expenses_split_proposal_waiting_title),
-                style = MaterialTheme.typography.titleSmall
-            )
-            Text(
-                text = stringResource(
-                    R.string.expenses_split_proposal_waiting_body,
-                    proposal.ratio.momPercent,
-                    proposal.ratio.dadPercent
-                ),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+    InlineBanner(
+        title = stringResource(R.string.expenses_split_proposal_waiting_title),
+        text = stringResource(
+            R.string.expenses_split_proposal_waiting_body,
+            proposal.ratio.momPercent,
+            proposal.ratio.dadPercent
+        ),
+        modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+        actions = {
             TextButton(onClick = onWithdraw) {
                 Text(stringResource(R.string.expenses_split_proposal_withdraw))
             }
         }
-    }
+    )
 }
 
 /**
@@ -556,38 +543,25 @@ private fun SplitRatioProposalBanner(
     onDecline: () -> Unit,
     onLater: () -> Unit
 ) {
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 14.dp, vertical = 6.dp),
-        shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = stringResource(R.string.expenses_split_proposal_title),
-                style = MaterialTheme.typography.titleSmall
-            )
-            Text(
-                text = stringResource(
-                    R.string.expenses_split_proposal_body,
-                    proposal.ratio.momPercent,
-                    proposal.ratio.dadPercent
-                ),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = onAccept) {
-                    Text(stringResource(R.string.expenses_split_proposal_confirm))
-                }
-                TextButton(onClick = onDecline) {
-                    Text(stringResource(R.string.expenses_split_proposal_decline))
-                }
-                TextButton(onClick = onLater) {
-                    Text(stringResource(R.string.expenses_split_proposal_later))
-                }
+    InlineBanner(
+        title = stringResource(R.string.expenses_split_proposal_title),
+        text = stringResource(
+            R.string.expenses_split_proposal_body,
+            proposal.ratio.momPercent,
+            proposal.ratio.dadPercent
+        ),
+        modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+        tone = BannerTone.ATTENTION,
+        actions = {
+            Button(onClick = onAccept) {
+                Text(stringResource(R.string.expenses_split_proposal_confirm))
+            }
+            TextButton(onClick = onDecline) {
+                Text(stringResource(R.string.expenses_split_proposal_decline))
+            }
+            TextButton(onClick = onLater) {
+                Text(stringResource(R.string.expenses_split_proposal_later))
             }
         }
-    }
+    )
 }

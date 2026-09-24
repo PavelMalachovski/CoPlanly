@@ -51,8 +51,60 @@ class ParentColorsTest {
         assertEquals(Color.White, ParentColors.onFill(ParentColorChoice.BLUE.dark))
     }
 
+    @Test
+    fun `every choice's fill is a visible graphic on every surface it is drawn on, in both themes`() {
+        // WCAG 1.4.11: a dot or bar that identifies a parent needs 3:1 against what is under it.
+        // Purple was 2.09:1 on the dark surface and 1.74:1 on the dark weekend grey before it got
+        // a dark-theme fill (docs/AUDIT-2026-10-design.md D-14).
+        ParentColorChoice.entries.forEach { choice ->
+            LIGHT_SURFACES.forEach { (name, surface) ->
+                val ratio = ParentColors.contrastRatio(choice.fill, surface)
+                assertTrue(ratio >= NON_TEXT_MINIMUM, "${choice.name} on light $name: $ratio")
+            }
+            DARK_SURFACES.forEach { (name, surface) ->
+                val ratio = ParentColors.contrastRatio(choice.darkFill, surface)
+                assertTrue(ratio >= NON_TEXT_MINIMUM, "${choice.name} on dark $name: $ratio")
+            }
+        }
+    }
+
+    @Test
+    fun `a holiday's day number reads at AA on the plain surface and the weekend grey`() {
+        LIGHT_SURFACES.filter { (name, _) -> name != "surfaceContainer" }.forEach { (name, surface) ->
+            val ratio = ParentColors.contrastRatio(CoPlanlyColors.HolidayRed, surface)
+            assertTrue(ratio >= AA_NORMAL_TEXT, "light $name: $ratio")
+        }
+        DARK_SURFACES.forEach { (name, surface) ->
+            val ratio = ParentColors.contrastRatio(CoPlanlyColors.HolidayRedDark, surface)
+            assertTrue(ratio >= AA_NORMAL_TEXT, "dark $name: $ratio")
+        }
+    }
+
     private companion object {
         /** WCAG 2.x AA minimum for normal-size text. */
         const val AA_NORMAL_TEXT = 4.5f
+
+        /** WCAG 2.1 minimum for a graphical object that carries meaning (1.4.11). */
+        const val NON_TEXT_MINIMUM = 3f
+
+        /**
+         * What a parent fill is drawn over in the light theme: the surface and background, the
+         * weekend base, and `surfaceContainer` (`Theme.kt`'s literal, which the scheme keeps
+         * private).
+         */
+        val LIGHT_SURFACES = listOf(
+            "surface" to CoPlanlyColors.LightSurface,
+            "background" to CoPlanlyColors.LightBackground,
+            "weekend" to CoPlanlyColors.WeekendBackgroundLight,
+            "surfaceContainer" to Color(0xFFF0EEF5)
+        )
+
+        /** The same four in the dark theme. */
+        val DARK_SURFACES = listOf(
+            "surface" to CoPlanlyColors.DarkSurface,
+            "background" to CoPlanlyColors.DarkBackground,
+            "weekend" to CoPlanlyColors.WeekendBackgroundDark,
+            "surfaceContainer" to Color(0xFF1F1F25)
+        )
     }
 }

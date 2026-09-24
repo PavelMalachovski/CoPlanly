@@ -62,6 +62,9 @@ object ParentColors {
      * The parent's identity hue at full strength, for **fills only** — dots, bars, borders,
      * custody tints. Never use as a text colour; use [text] for that.
      *
+     * In the dark theme this is the choice's [ParentColorChoice.darkFill], which differs only
+     * where the light-theme hue falls under 3:1 on a dark surface (purple).
+     *
      * @param parent `"mom"` or `"dad"`; anything else falls back to slot 1.
      * @param palette The family's two chosen colours. Defaults to [LocalParentPalette], the
      *   palette of the family on screen; pass one explicitly only to draw a different family.
@@ -69,7 +72,17 @@ object ParentColors {
     @Composable
     @ReadOnlyComposable
     fun fill(parent: String, palette: ParentPalette = LocalParentPalette.current): Color =
-        palette.of(parent).fill
+        choiceFill(palette.of(parent))
+
+    /**
+     * A colour choice's fill for the theme on screen — what the pickers' swatches draw, so a
+     * swatch shows the hue the calendar will actually use.
+     *
+     * @param choice The colour a parent chose, or is about to.
+     */
+    @Composable
+    @ReadOnlyComposable
+    fun choiceFill(choice: ParentColorChoice): Color = if (isDarkTheme) choice.darkFill else choice.fill
 
     /**
      * The parent's identity hue as a **text-grade** foreground for the current theme.

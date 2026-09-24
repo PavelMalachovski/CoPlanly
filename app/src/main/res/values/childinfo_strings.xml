@@ -10,7 +10,6 @@
     <string name="childinfo_cancel">Cancel</string>
     <string name="childinfo_clear">Clear</string>
     <string name="childinfo_ok">OK</string>
-    <string name="childinfo_retry">Retry</string>
     <string name="childinfo_sync">Sync</string>
 
     <!-- Child info: titles and sections -->

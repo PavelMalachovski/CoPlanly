@@ -14,4 +14,9 @@
     <string name="data_sources_holidays_title">holidays (Python library)</string>
     <string name="data_sources_holidays_description">The public holidays for Slovakia, Germany, Austria and Russia were checked against it, date by date. © Vacanza Team and contributors, MIT licence.</string>
     <string name="data_sources_computed_note">Czech public holidays and school vacations are calculated by the app itself.</string>
+    <!-- The typeface's notice (docs/AUDIT-2026-10-design.md D-8): the Onest fonts in res/font are
+         distributed under the SIL Open Font License 1.1. -->
+    <string name="data_sources_onest_title" translatable="false">Onest</string>
+    <string name="data_sources_group_typeface">Typeface</string>
+    <string name="data_sources_onest_description">The app’s typeface, for Latin and Cyrillic alike. © 2021 The Onest Project Authors, under the SIL Open Font License 1.1.</string>
 </resources>

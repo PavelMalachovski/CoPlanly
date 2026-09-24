@@ -21,9 +21,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.coparently.app.R
 import com.coparently.app.domain.guests.GuestAccessDuration
+import com.coparently.app.presentation.common.InviteCodeText
 import com.coparently.app.presentation.common.PillChip
 
 /**
@@ -120,12 +120,7 @@ fun FriendInviteSheet(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Text(
-                    text = code,
-                    style = MaterialTheme.typography.displaySmall,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 34.sp
-                )
+                InviteCodeText(code = code)
             }
 
             state.errorRes?.let { res ->
