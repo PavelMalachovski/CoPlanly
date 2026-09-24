@@ -1,7 +1,6 @@
 package com.coparently.app.presentation.expenses
 
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -459,7 +458,9 @@ fun ExpenseScreen(
                                         state = listState,
                                         modifier = Modifier.fillMaxSize()
                                     )
-                                    AnimatedVisibility(
+                                    // Qualified: this Box sits in a Column, and the bare name would
+                                    // resolve to ColumnScope's overload, which cannot be called here.
+                                    androidx.compose.animation.AnimatedVisibility(
                                         visible = summaryScrolledAway,
                                         enter = fadeIn(tween(Motion.SHORT_MS)),
                                         exit = fadeOut(tween(Motion.SHORT_MS)),
