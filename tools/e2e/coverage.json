@@ -1,0 +1,94 @@
+{
+  "_comment": "Every feature two phones share, and the two-parent test that covers it (tools/check-e2e-coverage.js). 'e2e' names classes or Class#method in app/src/androidTest/java/com/coparently/app/e2e/; 'exempt' says why no emulator run can cover it and what does instead. A new collection, storage prefix, push type or callable fails the invariants job until it has an entry here.",
+  "firestore": {
+    "users": {
+      "e2e": [
+        "TwoParentPairingTest#bothProfilesNameTheOtherParentAndTheFamilyHasTwoSlots"
+      ]
+    },
+    "families": {
+      "e2e": [
+        "TwoParentPairingTest#bothProfilesNameTheOtherParentAndTheFamilyHasTwoSlots"
+      ]
+    },
+    "invitations": {
+      "e2e": [
+        "TwoParentPairingTest"
+      ]
+    },
+    "events": {
+      "e2e": [
+        "TwoParentEventsTest",
+        "MultiFamilyTest",
+        "OneParentOnScreenTest"
+      ]
+    },
+    "conversations": {
+      "e2e": [
+        "TwoParentChatTest",
+        "TwoParentPairingTest#bothPhonesMirrorThePairingIntoRoomAndShareOneConversation"
+      ]
+    },
+    "messages": {
+      "e2e": [
+        "TwoParentChatTest",
+        "TwoParentAttachmentsTest",
+        "OneParentOnScreenTest"
+      ]
+    },
+    "expenses": {
+      "e2e": [
+        "TwoParentExpensesTest"
+      ]
+    },
+    "family_documents": {
+      "e2e": [
+        "TwoParentAttachmentsTest#aVaultDocumentOpensForBobWhoCannotDeleteItAndAliceDeletesItAsATombstone"
+      ]
+    },
+    "google_oauth": {
+      "exempt": "Server-only (closed to every client) and needs a real Google OAuth exchange; functions/test covers the hash check, firestore-tests the closed rule."
+    },
+    "calendar_feeds": {
+      "exempt": "Closed to every client; the callables that write it are listed under functions."
+    },
+    "export_receipts": {
+      "exempt": "Closed to every client; the callables that write it are listed under functions."
+    }
+  },
+  "storage": {
+    "chat_attachments": {
+      "e2e": [
+        "TwoParentAttachmentsTest"
+      ]
+    },
+    "family_documents": {
+      "e2e": [
+        "TwoParentAttachmentsTest#aVaultDocumentOpensForBobWhoCannotDeleteItAndAliceDeletesItAsATombstone"
+      ]
+    }
+  },
+  "push": {},
+  "functions": {
+    "acceptPairingInvitation": {
+      "e2e": [
+        "TwoParentPairingTest"
+      ]
+    },
+    "exchangeGoogleAuthCode": {
+      "exempt": "Needs a real Google authorization code; functions/test covers the exchange and the refresh-token hash."
+    },
+    "refreshGoogleAccessToken": {
+      "exempt": "Needs a real Google refresh token; functions/test covers the oracle check."
+    },
+    "backfillRecordFamilyIds": {
+      "exempt": "Operator-only maintenance callable, not a phone-to-phone feature; functions/test covers it."
+    },
+    "backfillFamilyDocuments": {
+      "exempt": "Operator-only maintenance callable, not a phone-to-phone feature; functions/test covers it."
+    },
+    "backfillParentSlots": {
+      "exempt": "Operator-only maintenance callable, not a phone-to-phone feature; functions/test covers it."
+    }
+  }
+}
