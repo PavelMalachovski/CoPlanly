@@ -24,7 +24,7 @@
     <string name="push_custody_proposal_declined_title">Betreuungsvorschlag abgelehnt</string>
     <string name="push_custody_proposal_declined_body">Der andere Elternteil hat den Plan abgelehnt</string>
     <string name="push_day_swap_offered_title">Tagestausch vorgeschlagen</string>
-    <string name="push_day_swap_offered_body">Der andere Elternteil schlägt vor, %1$s zu tauschen</string>
+    <string name="push_day_swap_offered_body">Der andere Elternteil schlägt einen Tausch am %1$s vor</string>
     <string name="push_day_swap_accepted_title">Tagestausch vereinbart</string>
     <string name="push_day_swap_accepted_body">Der andere Elternteil stimmt dem Tausch am %1$s zu</string>
     <string name="push_day_swap_declined_title">Tagestausch abgelehnt</string>
@@ -58,8 +58,15 @@
     <string name="push_records_shared_body">%1$s hat den Kalender und die Familieneinträge mit dir geteilt</string>
 
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
-    <string name="push_channel_name">CoPlanly-Benachrichtigungen</string>
-    <string name="push_channel_description">Benachrichtigungen zu Terminen, Anfragen und Nachrichten des anderen Elternteils</string>
+    <!-- One notification channel per kind of news (D-13): what system Settings lists. -->
+    <string name="push_channel_chat_name">Nachrichten</string>
+    <string name="push_channel_chat_description">Neue Nachrichten vom anderen Elternteil</string>
+    <string name="push_channel_schedule_name">Zeitplan</string>
+    <string name="push_channel_schedule_description">Termine, Änderungsanfragen, Betreuungspläne und Tagestausche</string>
+    <string name="push_channel_money_name">Ausgaben</string>
+    <string name="push_channel_money_description">Vorschläge und Einigungen zur Aufteilung gemeinsamer Ausgaben</string>
+    <string name="push_channel_family_name">Familie</string>
+    <string name="push_channel_family_description">Verbindung mit dem anderen Elternteil, Kinderdaten, geteilte Einträge und Zugang für Fachpersonen</string>
     <string name="push_professional_access_requested_title">Zugang für Fachperson angefragt</string>
     <string name="push_professional_access_requested_body">%1$s hat eine Einladung angenommen, den Familienkalender und den Elternplan zu lesen. Er öffnet sich erst mit der Zustimmung beider Eltern.</string>
 </resources>

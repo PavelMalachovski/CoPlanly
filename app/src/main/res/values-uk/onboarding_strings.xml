@@ -47,6 +47,7 @@
     <string name="onboarding_coparent_linked_title">Зв\'язок із %1$s встановлено</string>
     <string name="onboarding_coparent_linked_body">Усе, що вже є у %1$s, підтягнеться до вас. Перевірте це на наступних кроках і доповніть, чого бракує.</string>
     <string name="onboarding_coparent_fetching">Отримуємо дані від %1$s…</string>
+    <string name="onboarding_coparent_fetching_hint">Можна продовжувати: усе, що ще не надійшло, завантажиться у фоні.</string>
     <string name="onboarding_coparent_found_title">Уже внесено — %1$s</string>
     <string name="onboarding_coparent_found_children">Діти</string>
     <string name="onboarding_coparent_found_pets">Тварини</string>

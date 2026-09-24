@@ -5,7 +5,6 @@ import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.pm.PackageManager
 import android.net.Uri
-import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -86,6 +85,7 @@ import com.coparently.app.domain.receipts.ReceiptScan
 import com.coparently.app.presentation.common.FamilyMemberChips
 import com.coparently.app.presentation.common.FamilyMemberRefListSaver
 import com.coparently.app.presentation.common.FullScreenImageDialog
+import com.coparently.app.presentation.common.LocalAppMessages
 import com.coparently.app.presentation.common.LocalDatePickerDialog
 import com.coparently.app.presentation.common.StickyActionBar
 import com.coparently.app.presentation.common.asString
@@ -171,6 +171,7 @@ fun AddExpenseScreen(
     val amountValue = amount.toDoubleOrNull()
     val isFormValid = title.isNotBlank() && amountValue != null
     val context = LocalContext.current
+    val appMessages = LocalAppMessages.current
     val snackbarHostState = remember { SnackbarHostState() }
 
     val photoPicker = rememberLauncherForActivityResult(
@@ -195,7 +196,7 @@ fun AddExpenseScreen(
         try {
             cameraLauncher.launch(uri)
         } catch (e: ActivityNotFoundException) {
-            Toast.makeText(context, R.string.receipt_camera_unavailable, Toast.LENGTH_LONG).show()
+            appMessages?.show(context.getString(R.string.receipt_camera_unavailable))
         }
     }
 
@@ -205,7 +206,7 @@ fun AddExpenseScreen(
         if (granted) {
             takePhoto()
         } else {
-            Toast.makeText(context, R.string.receipt_camera_denied, Toast.LENGTH_LONG).show()
+            appMessages?.show(context.getString(R.string.receipt_camera_denied))
         }
     }
 
@@ -488,8 +489,9 @@ private fun OtherMonthWarningDialog(
 }
 
 /**
- * Reacts to [ExpenseSaveState] changes: shows a warning toast on a partial save, an error as a
- * toast, and calls [onSaved] once the expense is actually saved. Extracted out of
+ * Reacts to [ExpenseSaveState] changes: shows a warning on a partial save and an error, through
+ * the app's message host so a warning survives leaving the form (D-25), and calls [onSaved] once
+ * the expense is actually saved. Extracted out of
  * [AddExpenseScreen] to keep that composable's cyclomatic complexity down.
  */
 @Composable
@@ -499,15 +501,16 @@ private fun ExpenseSaveEffect(
     onConsumed: () -> Unit
 ) {
     val context = LocalContext.current
+    val appMessages = LocalAppMessages.current
     LaunchedEffect(saveState) {
         when (val state = saveState) {
             is ExpenseSaveState.Saved -> {
-                state.warning?.let { Toast.makeText(context, it.asString(context), Toast.LENGTH_LONG).show() }
+                state.warning?.let { appMessages?.show(it.asString(context)) }
                 onConsumed()
                 onSaved()
             }
             is ExpenseSaveState.Error -> {
-                Toast.makeText(context, state.message.asString(context), Toast.LENGTH_LONG).show()
+                appMessages?.show(state.message.asString(context))
                 onConsumed()
             }
             else -> Unit

@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -38,6 +39,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
 import com.coparently.app.R
+import com.coparently.app.data.remote.firebase.PushDestination
 import com.coparently.app.domain.telemetry.TelemetryConsent
 import com.coparently.app.presentation.LocalGoogleSignInCallback
 import com.coparently.app.presentation.auth.AuthScreen
@@ -46,6 +48,7 @@ import com.coparently.app.presentation.chat.ChatViewModel
 import com.coparently.app.presentation.childinfo.ChildInfoScreen
 import com.coparently.app.presentation.common.ConnectivityBanner
 import com.coparently.app.presentation.common.ConnectivityViewModel
+import com.coparently.app.presentation.common.LocalAppMessages
 import com.coparently.app.presentation.common.animations.*
 import com.coparently.app.presentation.consent.TelemetryConsentScreen
 import com.coparently.app.presentation.consent.TelemetryConsentViewModel
@@ -81,6 +84,8 @@ import kotlinx.coroutines.flow.StateFlow
  *   loose parameters — that shape would have pushed this function's parameter count to
  *   detekt's `LongParameterList` threshold of 6, which is also why the two invite codes
  *   above travel together.
+ * @param pendingDestinationOpen The screen a tapped push names ([PushDestination], D-13),
+ *   awaiting hand-off, with its consumption callback — see [PendingDestinationOpen].
  */
 @Composable
 // A NavHost's body is one flat list of route declarations, not branching logic — splitting it
@@ -92,7 +97,8 @@ fun NavGraph(
     navController: NavHostController,
     syncViewModel: SyncViewModel,
     pendingInviteCodes: PendingInviteCodes,
-    pendingChatOpen: PendingChatOpen
+    pendingChatOpen: PendingChatOpen,
+    pendingDestinationOpen: PendingDestinationOpen
 ) {
     val authStateViewModel: AuthStateViewModel = hiltViewModel()
     val telemetryConsentViewModel: TelemetryConsentViewModel = hiltViewModel()
@@ -117,14 +123,7 @@ fun NavGraph(
     // reading" state to park on Loading for; the value is one already-read field.
     val telemetryConsent by telemetryConsentViewModel.consent.collectAsState()
 
-    val startDestination = when {
-        telemetryConsent == TelemetryConsent.UNANSWERED -> Screen.PrivacyConsent.route
-        isLoading -> Screen.Loading.route
-        isAuthenticated != true -> Screen.Auth.route
-        needsOnboarding == null -> Screen.Loading.route
-        needsOnboarding == true -> Screen.Onboarding.route
-        else -> Screen.Home.route
-    }
+    val startDestination = startDestinationFor(telemetryConsent, isLoading, isAuthenticated, needsOnboarding)
 
     PairingDeepLinkEffect(
         pendingInviteCodes.pairing,
@@ -134,6 +133,7 @@ fun NavGraph(
     )
     GuestDeepLinkEffect(pendingInviteCodes, isAuthenticated, navController)
     ChatDeepLinkEffect(pendingChatOpen, isAuthenticated, navController)
+    PushDestinationEffect(pendingDestinationOpen, isAuthenticated, navController)
 
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
@@ -143,6 +143,9 @@ fun NavGraph(
         // Empty while online, so the status-bar inset the NavHost consumes below is the
         // Scaffold's own; while offline the banner pads itself below the status bar instead.
         topBar = { ConnectivityBanner(offline = offline) },
+        // Messages that outlive their screen (D-25): a save that navigates away and still owes a
+        // warning. Above the bottom bar on a tab; at the bottom on a detail screen.
+        snackbarHost = { LocalAppMessages.current?.let { SnackbarHost(it.hostState) } },
         bottomBar = {
             AnimatedVisibility(
                 visible = currentRoute in BottomNavDestination.topLevelRoutes,
@@ -368,11 +371,7 @@ fun NavGraph(
                         type = NavType.IntType
                         defaultValue = -1
                     }
-                ),
-                enterTransition = { fadeInScaleUp() },
-                exitTransition = { fadeOutScaleDown() },
-                popEnterTransition = { fadeInScaleUp() },
-                popExitTransition = { fadeOutScaleDown() }
+                )
             ) { backStackEntry ->
                 val dateString = backStackEntry.arguments?.getString(Screen.AddEvent.ARG_DATE)
                 val hourValue = backStackEntry.arguments?.getInt(Screen.AddEvent.ARG_HOUR) ?: -1
@@ -398,11 +397,7 @@ fun NavGraph(
                     navArgument(Screen.EditEvent.ARG_EVENT_ID) {
                         type = NavType.StringType
                     }
-                ),
-                enterTransition = { fadeInScaleUp() },
-                exitTransition = { fadeOutScaleDown() },
-                popEnterTransition = { fadeInScaleUp() },
-                popExitTransition = { fadeOutScaleDown() }
+                )
             ) { backStackEntry ->
                 val eventId = backStackEntry.arguments?.getString(Screen.EditEvent.ARG_EVENT_ID) ?: return@composable
                 AddEditEventScreen(
@@ -470,11 +465,7 @@ fun NavGraph(
                     navArgument(Screen.RequestChange.ARG_EVENT_ID) {
                         type = NavType.StringType
                     }
-                ),
-                enterTransition = { fadeInScaleUp() },
-                exitTransition = { fadeOutScaleDown() },
-                popEnterTransition = { fadeInScaleUp() },
-                popExitTransition = { fadeOutScaleDown() }
+                )
             ) { backStackEntry ->
                 val eventId = backStackEntry.arguments?.getString(Screen.RequestChange.ARG_EVENT_ID) ?: return@composable
                 com.coparently.app.presentation.changerequests.RequestChangeScreen(
@@ -674,11 +665,7 @@ fun NavGraph(
                     navArgument(Screen.EditChildInfo.ARG_CHILD_INFO_ID) {
                         type = NavType.StringType
                     }
-                ),
-                enterTransition = { fadeInScaleUp() },
-                exitTransition = { fadeOutScaleDown() },
-                popEnterTransition = { fadeInScaleUp() },
-                popExitTransition = { fadeOutScaleDown() }
+                )
             ) { backStackEntry ->
                 val childInfoId = backStackEntry.arguments?.getString(Screen.EditChildInfo.ARG_CHILD_INFO_ID) ?: "new"
                 com.coparently.app.presentation.childinfo.AddEditChildInfoScreen(
@@ -712,11 +699,7 @@ fun NavGraph(
                     navArgument(Screen.EditPet.ARG_PET_ID) {
                         type = NavType.StringType
                     }
-                ),
-                enterTransition = { fadeInScaleUp() },
-                exitTransition = { fadeOutScaleDown() },
-                popEnterTransition = { fadeInScaleUp() },
-                popExitTransition = { fadeOutScaleDown() }
+                )
             ) { backStackEntry ->
                 val petId = backStackEntry.arguments?.getString(Screen.EditPet.ARG_PET_ID) ?: "new"
                 AddEditPetScreen(
@@ -1053,11 +1036,7 @@ fun NavGraph(
             }
 
             composable(
-                route = Screen.AddExpense.route,
-                enterTransition = { fadeInScaleUp() },
-                exitTransition = { fadeOutScaleDown() },
-                popEnterTransition = { fadeInScaleUp() },
-                popExitTransition = { fadeOutScaleDown() }
+                route = Screen.AddExpense.route
             ) {
                 com.coparently.app.presentation.expenses.AddExpenseScreen(
                     onBack = {
@@ -1072,11 +1051,7 @@ fun NavGraph(
                     navArgument(Screen.EditExpense.ARG_EXPENSE_ID) {
                         type = NavType.StringType
                     }
-                ),
-                enterTransition = { fadeInScaleUp() },
-                exitTransition = { fadeOutScaleDown() },
-                popEnterTransition = { fadeInScaleUp() },
-                popExitTransition = { fadeOutScaleDown() }
+                )
             ) { backStackEntry ->
                 val expenseId = backStackEntry.arguments
                     ?.getString(Screen.EditExpense.ARG_EXPENSE_ID) ?: return@composable
@@ -1266,6 +1241,66 @@ data class PendingChatLink(val conversationId: String?)
  *   re-navigating on the next recomposition.
  */
 class PendingChatOpen(val link: StateFlow<PendingChatLink?>, val onConsumed: () -> Unit)
+
+/**
+ * The route the graph starts on, in the order [NavGraph]'s comment explains: the telemetry
+ * question before everything, then loading, sign-in, and the first-run questionnaire while its
+ * answer is unknown or owed. A function of its own so [NavGraph] stays one flat list of routes.
+ */
+internal fun startDestinationFor(
+    telemetryConsent: TelemetryConsent,
+    isLoading: Boolean,
+    isAuthenticated: Boolean?,
+    needsOnboarding: Boolean?
+): String = when {
+    telemetryConsent == TelemetryConsent.UNANSWERED -> Screen.PrivacyConsent.route
+    isLoading -> Screen.Loading.route
+    isAuthenticated != true -> Screen.Auth.route
+    needsOnboarding == null -> Screen.Loading.route
+    needsOnboarding == true -> Screen.Onboarding.route
+    else -> Screen.Home.route
+}
+
+/**
+ * The screen a tapped push names, awaiting hand-off, bundled with the callback that clears it —
+ * the same shape as [PendingChatOpen], for the same reason.
+ *
+ * @property destination The screen, or null when none is outstanding.
+ * @property onConsumed Called once the screen has been opened.
+ */
+class PendingDestinationOpen(val destination: StateFlow<PushDestination?>, val onConsumed: () -> Unit)
+
+/**
+ * Opens the screen a tapped push names (D-13) once the account is known to be signed in — the
+ * guard every deep link here has: nothing opens behind the auth gate, and a destination waits
+ * through the sign-in rather than being dropped. The three tabs go through [navigateToTab], so a
+ * push shares the bottom bar's back-stack policy; the three detail screens are pushed once.
+ */
+@Composable
+private fun PushDestinationEffect(
+    open: PendingDestinationOpen,
+    isAuthenticated: Boolean?,
+    navController: NavHostController
+) {
+    val destination by open.destination.collectAsState()
+    LaunchedEffect(destination, isAuthenticated) {
+        val target = destination
+        if (target != null && isAuthenticated == true) {
+            when (target) {
+                PushDestination.HOME -> navController.navigateToTab(BottomNavDestination.HOME)
+                PushDestination.CALENDAR -> navController.navigateToTab(BottomNavDestination.CALENDAR)
+                PushDestination.EXPENSES -> navController.navigateToTab(BottomNavDestination.EXPENSES)
+                PushDestination.CHANGE_REQUESTS ->
+                    navController.navigate(Screen.ChangeRequests.createRoute()) { launchSingleTop = true }
+                PushDestination.CHILD_INFO ->
+                    navController.navigate(Screen.ChildInfo.route) { launchSingleTop = true }
+                PushDestination.PROFESSIONALS ->
+                    navController.navigate(Screen.Professionals.route) { launchSingleTop = true }
+            }
+            open.onConsumed()
+        }
+    }
+}
 
 /**
  * The route a [PendingChatLink] should open: the specific thread when it carries a

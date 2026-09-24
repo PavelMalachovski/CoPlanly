@@ -40,6 +40,18 @@ test('describe reads the component and the four facets from the key', () => {
   assert.equal(entry.palette, 'purpleorange');
 });
 
+test('describe reads a raised contrast level as a fifth facet, and standard when none is named', () => {
+  const images = gallery.group([
+    'calendar_month_grid/en_dark_fs100_pinkblue_high.png',
+    'calendar_month_grid/en_dark_fs100_pinkblue.png',
+  ]).map(gallery.describe);
+  const high = images.find((i) => i.name.endsWith('_high'));
+  const standard = images.find((i) => !i.name.endsWith('_high'));
+  assert.equal(high.palette, 'pinkblue');
+  assert.equal(high.contrast, 'high');
+  assert.equal(standard.contrast, 'standard');
+});
+
 test('summary lists what changed and what has no baseline', () => {
   const images = gallery.group([
     'a/en_light_fs100_default.png',

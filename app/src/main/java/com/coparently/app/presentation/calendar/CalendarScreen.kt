@@ -84,6 +84,7 @@ import com.coparently.app.presentation.event.EventOperation
 import com.coparently.app.presentation.event.EventUiState
 import com.coparently.app.presentation.event.EventViewModel
 import com.coparently.app.presentation.parentingplan.planCitationShortLine
+import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.dimensions
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -665,7 +666,7 @@ fun CalendarScreen(
                         Icon(
                             imageVector = Icons.Default.Close,
                             contentDescription = stringResource(R.string.calendar_delete_event),
-                            modifier = Modifier.size(dims.iconSize)
+                            modifier = Modifier.size(IconSizes.Standard)
                         )
                     }
                 }
@@ -685,7 +686,7 @@ fun CalendarScreen(
                     Icon(
                         imageVector = Icons.Default.Add,
                         contentDescription = stringResource(R.string.calendar_add_event),
-                        modifier = Modifier.size(dims.iconSize)
+                        modifier = Modifier.size(IconSizes.Standard)
                     )
                 }
             }

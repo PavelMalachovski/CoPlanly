@@ -41,6 +41,7 @@ import com.coparently.app.R
 import com.coparently.app.presentation.common.animations.sectionEnter
 import com.coparently.app.presentation.common.animations.sectionExit
 import com.coparently.app.presentation.theme.CoPlanlyColors
+import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.dimensions
 import com.coparently.app.presentation.theme.rememberReducedMotion
 import com.coparently.app.utils.findActivity
@@ -112,7 +113,7 @@ fun AuthScreen(
                     imageVector = Icons.Default.ChildCare,
                     contentDescription = stringResource(R.string.auth_cd_logo),
                     modifier = Modifier
-                        .size(dims.iconSize * 3.33f) // ~80dp for compact
+                        .size(AUTH_LOGO_SIZE)
                         .graphicsLayer {
                             scaleX = pulse
                             scaleY = pulse
@@ -280,7 +281,7 @@ fun AuthScreen(
                                     imageVector = Icons.Default.Email,
                                     contentDescription = null,
                                     tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                                    modifier = Modifier.size(20.dp)
+                                    modifier = Modifier.size(IconSizes.Small)
                                 )
                                 Text(
                                     text = resetSentTo
@@ -320,7 +321,7 @@ fun AuthScreen(
                                     imageVector = Icons.Default.Error,
                                     contentDescription = null,
                                     tint = MaterialTheme.colorScheme.error,
-                                    modifier = Modifier.size(20.dp)
+                                    modifier = Modifier.size(IconSizes.Small)
                                 )
                                 Text(
                                     text = errorRes?.let { stringResource(it) }.orEmpty(),
@@ -468,3 +469,6 @@ fun AuthScreen(
         }
     }
 }
+
+/** The logo the sign-in screen opens with: a brand mark, sized on its own rather than as an icon. */
+private val AUTH_LOGO_SIZE = 80.dp

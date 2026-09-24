@@ -1,6 +1,5 @@
 package com.coparently.app.presentation.changerequests
 
-import android.widget.Toast
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -53,6 +52,7 @@ import com.coparently.app.domain.model.ChangeRequest
 import com.coparently.app.domain.model.ChangeRequestStatus
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.parentingplan.CitationStatus
+import com.coparently.app.presentation.common.LocalAppMessages
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.PillChip
 import com.coparently.app.presentation.common.asString
@@ -90,10 +90,11 @@ fun ChangeRequestsScreen(
     val currentUserId by viewModel.currentUserId.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
     val context = LocalContext.current
+    val appMessages = LocalAppMessages.current
 
     LaunchedEffect(errorMessage) {
         errorMessage?.let {
-            Toast.makeText(context, it.asString(context), Toast.LENGTH_LONG).show()
+            appMessages?.show(it.asString(context))
             viewModel.clearError()
         }
     }

@@ -2,7 +2,7 @@
 <!-- Change-request inbox and form strings. Kept out of strings.xml because
      strings.xml is gitignored in this project (it holds local OAuth values). -->
 <resources>
-    <string name="change_request_inbox_title">Change Requests</string>
+    <string name="change_request_inbox_title">Change requests</string>
     <string name="change_request_back">Back</string>
     <string name="change_request_empty_title">No change requests yet</string>
     <string name="change_request_empty_hint">Open an event and tap \"Request change\" to propose a new time to your co-parent.</string>
@@ -19,8 +19,8 @@
     <string name="change_request_note_quoted">“%1$s”</string>
     <string name="change_request_accept">Accept</string>
     <string name="change_request_decline">Decline</string>
-    <string name="change_request_withdraw">Withdraw Request</string>
-    <string name="change_request_form_title">Request Change</string>
+    <string name="change_request_withdraw">Withdraw request</string>
+    <string name="change_request_form_title">Request change</string>
     <!-- %1$s = date, %2$s = time or time range, e.g. "14:00 – 15:00". -->
     <string name="change_request_currently">Currently: %1$s at %2$s</string>
     <string name="change_request_proposed_new_time">Proposed new time</string>
@@ -28,7 +28,7 @@
     <string name="change_request_to_time">To %1$s</string>
     <string name="change_request_to_unset">To —</string>
     <string name="change_request_note_label">Message to your co-parent (optional)</string>
-    <string name="change_request_send">Send Request</string>
+    <string name="change_request_send">Send request</string>
     <string name="change_request_ok">OK</string>
     <string name="change_request_cancel">Cancel</string>
     <string name="change_request_link_missing">That request is no longer open.</string>

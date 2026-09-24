@@ -40,6 +40,7 @@ import com.coparently.app.R
 import com.coparently.app.domain.model.PairingInvite
 import com.coparently.app.presentation.common.InviteCodeText
 import com.coparently.app.presentation.common.dashedRoundedBorder
+import com.coparently.app.presentation.theme.IconSizes
 import kotlinx.coroutines.delay
 import java.util.concurrent.TimeUnit
 
@@ -113,7 +114,7 @@ fun InviteCodeCard(
                     imageVector = Icons.Default.ContentCopy,
                     contentDescription = stringResource(R.string.pairing_copy_code),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(22.dp)
+                    modifier = Modifier.size(IconSizes.Standard)
                 )
             }
 
@@ -154,7 +155,7 @@ fun InviteCodeCard(
                     Icon(
                         imageVector = Icons.Default.Share,
                         contentDescription = null,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(IconSizes.Small)
                     )
                     Text(
                         text = stringResource(R.string.pairing_share_link),

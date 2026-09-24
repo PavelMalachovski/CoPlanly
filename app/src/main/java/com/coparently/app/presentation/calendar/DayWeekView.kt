@@ -94,10 +94,11 @@ import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.rememberToday
 import com.coparently.app.presentation.theme.CoPlanlyColors
-import com.coparently.app.presentation.theme.Dimensions
+import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Motion
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.dimensions
+import com.coparently.app.utils.localizedDate
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -131,20 +132,6 @@ private val CONTACT_WINDOW_CORNER = 4.dp
 
 /** Timestamp format of a contact window's label in Day view. */
 private val CONTACT_WINDOW_TIME: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
-
-/**
- * Width of the hour-label gutter.
- *
- * The day headers, the custody band, the hour grid and the absolutely-positioned events
- * overlay all measure from this. They have to agree: if one drifts, blocks stop lining up
- * with the day they belong to. It used to be written out as `iconSize * 2.17f` in four
- * separate places.
- *
- * 1.25x (~30dp on a compact phone) rather than the old 2.17x (~52dp). The gutter shows a
- * bare hour number ("13"), so it no longer has to fit "13:00"; the 22dp reclaimed goes to the
- * seven day columns, which are the scarce resource here.
- */
-private val Dimensions.hourGutterWidth: Dp get() = iconSize * 1.25f
 
 /**
  * Hourly view for day/week calendar views.
@@ -335,7 +322,7 @@ private fun DayWeekPage(
 
                     Box(
                         modifier = Modifier
-                            .width(dims.iconSize * 1.33f) // ~32dp for compact
+                            .width(WEEK_NUMBER_WIDTH)
                             .fillMaxHeight()
                             .align(Alignment.CenterStart),
                         contentAlignment = Alignment.Center
@@ -580,7 +567,7 @@ private fun DayWeekPage(
                                     val slotDescription = stringResource(
                                         R.string.calendar_time_slot_description,
                                         String.format(Locale.getDefault(), "%02d:00", hour),
-                                        date.format(DateTimeFormatter.ofPattern("MMM dd"))
+                                        date.format(localizedDate("MMMd"))
                                     )
 
                                     Box(
@@ -1227,7 +1214,7 @@ private fun EventChip(
                         imageVector = Icons.Default.Lock,
                         contentDescription = stringResource(R.string.calendar_event_private),
                         tint = textColor,
-                        modifier = Modifier.size(10.dp)
+                        modifier = Modifier.size(BLOCK_MARK_SIZE)
                     )
                 }
                 if (event.pickupConfirmedBy != null) {
@@ -1240,7 +1227,7 @@ private fun EventChip(
                             confirmedByName
                         ),
                         tint = textColor,
-                        modifier = Modifier.size(10.dp)
+                        modifier = Modifier.size(BLOCK_MARK_SIZE)
                     )
                 }
                 Text(
@@ -1399,7 +1386,7 @@ private fun OfferDayButton(onClick: () -> Unit) {
         Icon(
             imageVector = Icons.Default.SwapHoriz,
             contentDescription = null,
-            modifier = Modifier.size(18.dp)
+            modifier = Modifier.size(IconSizes.Small)
         )
         Spacer(modifier = Modifier.width(6.dp))
         Text(
@@ -1472,6 +1459,15 @@ private const val MIN_EVENT_MINUTES = 15L
 
 /** Google-Calendar-style red "now" indicator. */
 private val NowIndicatorColor = Color(0xFFEA4335)
+
+/**
+ * The lock and the pickup tick drawn inside an event block. Sized by the block, whose one line of
+ * label text they sit beside, rather than by a step of `IconSizes`: a block can be 15 minutes tall.
+ */
+private val BLOCK_MARK_SIZE = 10.dp
+
+/** Width of the week-number column at the start of the week header. */
+private val WEEK_NUMBER_WIDTH = 32.dp
 
 /**
  * A single event's visible slice within one day, with its lane assignment for

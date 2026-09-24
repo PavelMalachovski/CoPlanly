@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="common_splash_tagline">Общий календарь для со-родителей</string>
     <string name="common_checking_authentication">Проверка авторизации…</string>
     <string name="common_confirm">Подтвердить</string>
     <string name="common_dialog_cancel">Отмена</string>

@@ -13,6 +13,8 @@ import androidx.core.app.NotificationCompat
 import com.coparently.app.R
 import com.coparently.app.domain.chat.ChatUri
 import com.coparently.app.domain.pairing.PairingUri
+import com.coparently.app.utils.DAY_IN_SENTENCE
+import com.coparently.app.utils.isoDateText
 
 /**
  * Turns a push's data into the notification a person sees — or into nothing.
@@ -117,7 +119,12 @@ class PushNotifier(private val context: Context) {
         return when (spec.args) {
             BodyArgs.ACTOR_AND_SUBJECT -> context.getString(spec.body, actor, data[PushPayload.SUBJECT].orEmpty())
             BodyArgs.ACTOR -> context.getString(spec.body, actor)
-            BodyArgs.DATE -> context.getString(spec.body, data[PushPayload.DATE].orEmpty())
+            // The date travels as ISO text; the reader's language says it (D-18). An unreadable
+            // one is shown as it came rather than dropped.
+            BodyArgs.DATE -> context.getString(
+                spec.body,
+                isoDateText(data[PushPayload.DATE], DAY_IN_SENTENCE, context.resources.configuration.locales[0])
+            )
             // An unparseable count composes nothing rather than announcing "0 days" — the same
             // rule as an unrecognised type. Only this build's own writer produces it.
             BodyArgs.DAY_COUNT -> data[PushPayload.DAY_COUNT]?.toIntOrNull()?.let { count ->
@@ -130,7 +137,10 @@ class PushNotifier(private val context: Context) {
     /**
      * Where tapping [target] leads: pairing events into the pairing screen, a chat message into
      * its conversation (or the Chat tab's list when the conversation id is null — a manual test
-     * push or an older payload), and everything else into the app's launcher activity.
+     * push or an older payload), and everything else into the app's launcher activity, naming
+     * the screen it is about as [PushDestination.EXTRA] (D-13) — the calendar for an event, the
+     * inbox for a change request, Home for an ask waiting on this parent. A type with no
+     * destination opens the app as it always did.
      *
      * **The family rides along as an intent extra** ([PushPayload.FAMILY_ID], M-8), and
      * `MainActivity` switches to it before it hands the link to navigation — a push from the
@@ -143,7 +153,9 @@ class PushNotifier(private val context: Context) {
             TYPE_CHAT_MESSAGE ->
                 Intent(Intent.ACTION_VIEW, Uri.parse(ChatUri.build(target.conversationId)))
                     .setPackage(context.packageName)
-            else -> context.packageManager.getLaunchIntentForPackage(context.packageName)
+            else -> context.packageManager.getLaunchIntentForPackage(context.packageName)?.also { launch ->
+                PushRouting.destinationOf(target.type)?.let { launch.putExtra(PushDestination.EXTRA, it.key) }
+            }
         }
         target.familyId?.let { intent?.putExtra(PushPayload.FAMILY_ID, it) }
         return intent
@@ -170,7 +182,7 @@ class PushNotifier(private val context: Context) {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
-        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+        val notification = NotificationCompat.Builder(context, PushRouting.channelOf(target.type).id)
             .setContentTitle(target.text.title)
             .setContentText(target.text.body)
             // android.R.drawable.ic_dialog_info is a framework placeholder and
@@ -192,22 +204,27 @@ class PushNotifier(private val context: Context) {
     }
 
     /**
-     * Creates the notification channel on Android O and above.
+     * Creates the four notification channels on Android O and above, one per [PushChannel], and
+     * deletes the single channel every push used to share (D-13).
      *
-     * The name and description are what system Settings shows for this channel, so they are
-     * resources (CQ-14). Re-creating an existing channel updates both, which is how a language
-     * change reaches it.
+     * The names and descriptions are what system Settings shows, so they are resources (CQ-14).
+     * Re-creating an existing channel updates both, which is how a language change reaches it,
+     * and leaves the importance a person chose alone.
      */
-    fun createChannel() {
+    fun createChannels() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                context.getString(R.string.push_channel_name),
-                NotificationManager.IMPORTANCE_HIGH
-            ).apply {
-                description = context.getString(R.string.push_channel_description)
+            val manager = context.getSystemService(NotificationManager::class.java)
+            PushChannel.entries.forEach { kind ->
+                val channel = NotificationChannel(
+                    kind.id,
+                    context.getString(kind.nameRes),
+                    NotificationManager.IMPORTANCE_HIGH
+                ).apply {
+                    description = context.getString(kind.descriptionRes)
+                }
+                manager.createNotificationChannel(channel)
             }
-            context.getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+            manager.deleteNotificationChannel(PushChannel.LEGACY_ID)
         }
     }
 
@@ -248,9 +265,6 @@ class PushNotifier(private val context: Context) {
     internal companion object {
         /** Log tag; `docs/DEVICE-CHECKLIST.md` §3.7 tells a tester to filter on it. */
         private const val TAG = "CoPlanlyMessaging"
-
-        /** The one channel every push is posted to. */
-        const val CHANNEL_ID = "coparently_notifications"
 
         // The three server-only types, aliased from `PushPayload` rather than re-declared.
         // They were literals here and in the sending code, in the rules and in

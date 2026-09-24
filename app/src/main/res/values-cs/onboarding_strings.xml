@@ -47,6 +47,7 @@
     <string name="onboarding_coparent_linked_title">Propojeno s %1$s</string>
     <string name="onboarding_coparent_linked_body">Všechno, co už %1$s zadal(a), se přenese k vám. Zkontrolujte to v dalších krocích a doplňte, co chybí.</string>
     <string name="onboarding_coparent_fetching">Načítáme údaje od %1$s…</string>
+    <string name="onboarding_coparent_fetching_hint">Můžete pokračovat. Co ještě nedorazilo, dorazí na pozadí.</string>
     <string name="onboarding_coparent_found_title">Už zadáno — %1$s</string>
     <string name="onboarding_coparent_found_children">Děti</string>
     <string name="onboarding_coparent_found_pets">Zvířata</string>

@@ -3,8 +3,8 @@
     <!-- Brand colors for CoPlanly app.
          brand_primary is the ONE brand colour (UX-14) and must equal CoPlanlyColors.BrandPrimary
          (presentation/theme/Color.kt), which is the source of truth: the light theme's primary.
-         The system splash (themes.xml), the Compose splash and the launcher icon background all
-         draw it, so the four surfaces a cold start shows in a row read as one colour. -->
+         The system splash (themes.xml) and the launcher icon background both draw it, so the
+         surfaces a cold start shows in a row read as one colour. -->
     <color name="brand_primary">#4F46E5</color>
     <color name="brand_secondary">#958DA5</color>
 

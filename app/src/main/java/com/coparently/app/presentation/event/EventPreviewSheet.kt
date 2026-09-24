@@ -49,7 +49,9 @@ import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.common.FamilyMember
 import com.coparently.app.presentation.common.FullScreenImageDialog
 import com.coparently.app.presentation.common.ParentNames
+import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.ParentColors
+import com.coparently.app.utils.localizedDate
 import java.time.format.DateTimeFormatter
 
 /**
@@ -144,7 +146,7 @@ internal fun EventPreviewContent(
         }
 
         PreviewRow(icon = Icons.Default.Schedule) {
-            val dateFormat = DateTimeFormatter.ofPattern("EEE, d MMM yyyy")
+            val dateFormat = localizedDate("yMMMEEEd")
             val timeFormat = DateTimeFormatter.ofPattern("HH:mm")
             val dateText = event.startDateTime.format(dateFormat)
             val timeText = buildString {
@@ -253,7 +255,7 @@ private fun PreviewActions(onEdit: () -> Unit, onDelete: (() -> Unit)?) {
             Icon(
                 imageVector = Icons.Default.Delete,
                 contentDescription = null,
-                modifier = Modifier.size(18.dp)
+                modifier = Modifier.size(IconSizes.Small)
             )
             Text(
                 text = stringResource(R.string.event_preview_delete),
@@ -266,7 +268,7 @@ private fun PreviewActions(onEdit: () -> Unit, onDelete: (() -> Unit)?) {
             Icon(
                 imageVector = Icons.Default.Edit,
                 contentDescription = null,
-                modifier = Modifier.size(18.dp)
+                modifier = Modifier.size(IconSizes.Small)
             )
             Text(
                 text = stringResource(R.string.event_preview_edit),
@@ -306,7 +308,7 @@ private fun PreviewRow(
             imageVector = icon,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(18.dp)
+            modifier = Modifier.size(IconSizes.Small)
         )
         Box(modifier = Modifier.padding(start = 10.dp)) {
             content()

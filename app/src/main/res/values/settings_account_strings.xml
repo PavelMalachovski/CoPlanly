@@ -2,11 +2,11 @@
 <!-- Settings account / navigation / sync card strings. Kept out of strings.xml
      because strings.xml is gitignored in this project (it holds local OAuth values). -->
 <resources>
-    <string name="settings_co_parent_sync">Co-Parent Sync</string>
+    <string name="settings_co_parent_sync">Co-parent sync</string>
     <string name="settings_co_parent_sync_description">Automatically syncs events and child information with your co-parent</string>
     <string name="settings_sync">Sync</string>
-    <string name="settings_google_sync">Google Calendar Sync</string>
-    <string name="settings_gcal_enable_sync">Enable Sync</string>
+    <string name="settings_google_sync">Google Calendar sync</string>
+    <string name="settings_gcal_enable_sync">Enable sync</string>
     <string name="settings_gcal_private_note">Imported events stay on this device. Your Google Calendar is personal, so nothing from it is shared with your co-parent.</string>
     <string name="settings_parent_color">My colour</string>
     <string name="settings_parent_color_desc">How your events, custody days and expenses are marked. Your co-parent picks their own.</string>
@@ -21,13 +21,13 @@
     <string name="settings_account">Account</string>
     <string name="settings_account_description">Sign out of the app completely. This will require you to sign in again to access your account.</string>
     <string name="settings_account_sign_out">Sign out of app</string>
-    <string name="settings_pairing_title">Co-Parent Pairing</string>
+    <string name="settings_pairing_title">Co-parent pairing</string>
     <string name="settings_pairing_description">Invite or manage your co-parent</string>
-    <string name="settings_child_info_title">Child Information</string>
+    <string name="settings_child_info_title">Child information</string>
     <string name="settings_child_info_description">Medications, activities, allergies</string>
     <string name="settings_pets_title">Pets</string>
     <string name="settings_pets_description">Photos, medications, special needs</string>
-    <string name="settings_custody_title">Custody Schedule</string>
+    <string name="settings_custody_title">Custody schedule</string>
     <string name="settings_custody_description">Set up your custody pattern (week-on/week-off, 2-2-3, etc.)</string>
     <string name="settings_about">About CoPlanly</string>
     <string name="settings_about_tagline">Shared calendar for co-parenting</string>

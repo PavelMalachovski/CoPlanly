@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
+import com.coparently.app.presentation.theme.IconSizes
 
 /** Edge of a square thumbnail in the strip. Large enough to recognise what is in it. */
 private val THUMBNAIL_SIZE = 96.dp
@@ -186,7 +187,7 @@ private fun Thumbnail(
                 Icon(
                     imageVector = Icons.Default.Close,
                     contentDescription = stringResource(strings.remove),
-                    modifier = Modifier.size(16.dp)
+                    modifier = Modifier.size(IconSizes.Inline)
                 )
             }
         }

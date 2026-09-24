@@ -146,10 +146,14 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
-        <!-- Default notification channel ID for FCM -->
+        <!-- Default notification channel for FCM. Every push is data-only and worded by
+             PushNotifier, which picks its own channel (PushRouting.channelOf), so this is only
+             the fallback for a notification message FCM would display itself. It names the
+             Family channel because the one channel this used to name, coparently_notifications,
+             is deleted when the four channels are created (docs/AUDIT-2026-10-design.md D-13). -->
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
-            android:value="coparently_notifications" />
+            android:value="coplanly_family" />
 
         <!--
           Default small icon FCM uses when it auto-displays a push from the

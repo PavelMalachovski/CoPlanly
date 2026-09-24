@@ -71,6 +71,7 @@ import com.coparently.app.presentation.pairing.components.CodeEntryField
 import com.coparently.app.presentation.pairing.components.IncomingInviteCard
 import com.coparently.app.presentation.pairing.components.InviteCodeCard
 import com.coparently.app.presentation.pairing.components.PairedPartnerCard
+import com.coparently.app.presentation.theme.IconSizes
 import kotlinx.coroutines.launch
 
 /**
@@ -618,7 +619,7 @@ private fun TrustPanel() {
                     imageVector = Icons.Default.Lock,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.tertiary,
-                    modifier = Modifier.size(18.dp)
+                    modifier = Modifier.size(IconSizes.Small)
                 )
                 Text(
                     text = stringResource(R.string.pairing_trust_title),

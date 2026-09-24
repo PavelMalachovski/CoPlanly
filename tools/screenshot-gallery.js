@@ -34,8 +34,11 @@ const path = require('path');
 const ROOT = path.resolve(__dirname, '..');
 const DEFAULT_DIR = path.join(ROOT, 'app/src/test/screenshots');
 
-/** `de_light_fs150_pinkblue` → its four facets; anything else is kept under "other". */
-const VARIANT = /^([a-z]{2})_(light|dark)_fs(\d+)_([a-z]+)$/;
+/**
+ * `de_light_fs150_pinkblue` → its four facets, and `en_dark_fs100_pinkblue_high` → a fifth, the
+ * contrast level, which a file names only when it is raised; anything else is kept under "other".
+ */
+const VARIANT = /^([a-z]{2})_(light|dark)_fs(\d+)_([a-z]+?)(?:_(medium|high))?$/;
 
 /** The two images Roborazzi derives from a recorded one when it verifies or compares. */
 const DERIVED = /_(compare|actual)\.png$/;
@@ -95,8 +98,9 @@ function describe(entry) {
       theme: match[2],
       scale: (Number(match[3]) / 100).toFixed(1) + 'x',
       palette: match[4],
+      contrast: match[5] || 'standard',
     }
-    : { locale: '', theme: '', scale: '', palette: '' };
+    : { locale: '', theme: '', scale: '', palette: '', contrast: '' };
   return { ...entry, component, name: file, ...facets };
 }
 
@@ -132,11 +136,13 @@ function card(i) {
   const links = [['baseline', i.baseline], ['diff', i.compare], ['new', i.actual]]
     .filter(([, p]) => p)
     .map(([label, p]) => `<a href="${escape(p)}">${label}</a>`);
-  const facets = [i.locale, i.theme, i.scale, i.palette].filter(Boolean).join(' · ') || i.name;
+  const contrast = i.contrast && i.contrast !== 'standard' ? `${i.contrast} contrast` : '';
+  const facets = [i.locale, i.theme, i.scale, i.palette, contrast].filter(Boolean).join(' · ') || i.name;
   const badge = STATUS_LABEL[i.status] ? `<span class="badge">${STATUS_LABEL[i.status]}</span> ` : '';
   return `
       <figure class="${escape(i.status)}" data-locale="${escape(i.locale)}" data-theme="${escape(i.theme)}"
-              data-scale="${escape(i.scale)}" data-palette="${escape(i.palette)}" data-status="${escape(i.status)}">
+              data-scale="${escape(i.scale)}" data-palette="${escape(i.palette)}"
+              data-contrast="${escape(i.contrast)}" data-status="${escape(i.status)}">
         <a href="${escape(shown)}"><img loading="lazy" src="${escape(shown)}" alt="${escape(i.name)}"></a>
         <figcaption>${badge}${escape(facets)}${links.length > 1 ? ' — ' + links.join(' · ') : ''}</figcaption>
       </figure>`;
@@ -199,10 +205,11 @@ function render(images, mode) {
   <label>theme<select id="theme">${options(facet('theme'))}</select></label>
   <label>font scale<select id="scale">${options(facet('scale'))}</select></label>
   <label>palette<select id="palette">${options(facet('palette'))}</select></label>
+  <label>contrast<select id="contrast">${options(facet('contrast'))}</select></label>
 </header>
 ${sections}
 <script>
-  const keys = ['status', 'locale', 'theme', 'scale', 'palette'];
+  const keys = ['status', 'locale', 'theme', 'scale', 'palette', 'contrast'];
   function apply() {
     const component = document.getElementById('component').value;
     const wanted = Object.fromEntries(keys.map((k) => [k, document.getElementById(k).value]));

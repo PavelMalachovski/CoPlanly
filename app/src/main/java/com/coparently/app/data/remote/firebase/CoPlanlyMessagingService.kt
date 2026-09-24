@@ -45,7 +45,7 @@ class CoPlanlyMessagingService : FirebaseMessagingService() {
 
     override fun onCreate() {
         super.onCreate()
-        PushNotifier(this).createChannel()
+        PushNotifier(this).createChannels()
     }
 
     /**

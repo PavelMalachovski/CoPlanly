@@ -13,11 +13,11 @@ import org.junit.Assert.assertTrue
  * Helpers for tests that launch the whole app with the Compose clock paused.
  *
  * The clock has to be paused (`mainClock.autoAdvance = false`) for a test of `MainActivity`: the
- * splash pulses forever until it is dismissed, and the list skeletons shimmer for as long as a
- * screen waits on a Firestore read — which, against the mocked Firestore of `FakeFirebaseModule`,
- * is for ever. With the clock running, every `waitForIdle` would wait on those animations and time
- * out. Paused, the test moves Compose time forward itself, while the app's real work (Room, the
- * view models' coroutines) runs in real time underneath.
+ * list skeletons shimmer for as long as a screen waits on a Firestore read — which, against the
+ * mocked Firestore of `FakeFirebaseModule`, is for ever. With the clock running, every
+ * `waitForIdle` would wait on those animations and time out. Paused, the test moves Compose time
+ * forward itself, while the app's real work (Room, the view models' coroutines) runs in real time
+ * underneath.
  */
 private const val STEP_MILLIS = 100L
 private const val REAL_PAUSE_MILLIS = 20L

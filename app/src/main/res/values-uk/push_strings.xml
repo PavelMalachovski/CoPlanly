@@ -64,8 +64,15 @@
     <string name="push_records_shared_body">%1$s відкрив(ла) вам календар і сімейні записи</string>
 
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
-    <string name="push_channel_name">Сповіщення CoPlanly</string>
-    <string name="push_channel_description">Сповіщення про події, запити й повідомлення від іншого батька</string>
+    <!-- One notification channel per kind of news (D-13): what system Settings lists. -->
+    <string name="push_channel_chat_name">Повідомлення</string>
+    <string name="push_channel_chat_description">Нові повідомлення від іншого з батьків</string>
+    <string name="push_channel_schedule_name">Розклад</string>
+    <string name="push_channel_schedule_description">Події, запити на зміну, графіки опіки та обмін днями</string>
+    <string name="push_channel_money_name">Витрати</string>
+    <string name="push_channel_money_description">Пропозиції та домовленості про поділ спільних витрат</string>
+    <string name="push_channel_family_name">Сімʼя</string>
+    <string name="push_channel_family_description">Звʼязок з іншим з батьків, записи про дітей, спільні записи та доступ фахівців</string>
     <string name="push_professional_access_requested_title">Запит доступу фахівця</string>
     <string name="push_professional_access_requested_body">%1$s прийняв(-ла) запрошення переглядати календар і батьківський план родини. Доступ відкриється лише за згоди обох батьків.</string>
 </resources>

@@ -64,8 +64,15 @@
     <string name="push_records_shared_body">%1$s s vámi sdílí kalendář a rodinné záznamy</string>
 
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
-    <string name="push_channel_name">Oznámení CoPlanly</string>
-    <string name="push_channel_description">Oznámení o událostech, žádostech a zprávách od druhého rodiče</string>
+    <!-- One notification channel per kind of news (D-13): what system Settings lists. -->
+    <string name="push_channel_chat_name">Zprávy</string>
+    <string name="push_channel_chat_description">Nové zprávy od druhého rodiče</string>
+    <string name="push_channel_schedule_name">Rozvrh</string>
+    <string name="push_channel_schedule_description">Události, žádosti o změnu, návrhy rozvrhu péče a výměny dnů</string>
+    <string name="push_channel_money_name">Výdaje</string>
+    <string name="push_channel_money_description">Návrhy a dohody o rozdělení společných výdajů</string>
+    <string name="push_channel_family_name">Rodina</string>
+    <string name="push_channel_family_description">Propojení s druhým rodičem, záznamy dětí, sdílené záznamy a přístup odborníků</string>
     <string name="push_professional_access_requested_title">Žádost o přístup odborníka</string>
     <string name="push_professional_access_requested_body">%1$s přijal/a pozvání číst kalendář a rodičovský plán rodiny. Otevře se až se souhlasem obou rodičů.</string>
 </resources>

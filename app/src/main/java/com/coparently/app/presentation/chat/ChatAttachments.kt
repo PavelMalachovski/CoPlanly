@@ -4,7 +4,6 @@ import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
 import android.text.format.Formatter
-import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -57,6 +56,7 @@ import com.coparently.app.domain.chat.ChatAttachmentCodec
 import com.coparently.app.domain.files.SharedFilePolicy
 import com.coparently.app.domain.model.Message
 import com.coparently.app.domain.model.MessageSendStatus
+import com.coparently.app.presentation.common.LocalAppMessages
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.openSharedFile
 import java.io.File
@@ -80,10 +80,11 @@ fun ChatAttachmentsHost(
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
+    val appMessages = LocalAppMessages.current
     val error by viewModel.error.collectAsState()
     LaunchedEffect(error) {
         error?.let {
-            Toast.makeText(context, it.asString(context), Toast.LENGTH_LONG).show()
+            appMessages?.show(it.asString(context))
             viewModel.errorShown()
         }
     }

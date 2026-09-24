@@ -2,17 +2,17 @@
 <!-- Custody setup screen strings. Kept out of strings.xml because
      strings.xml is gitignored in this project (it holds local OAuth values). -->
 <resources>
-    <string name="custody_title">Custody Schedule</string>
+    <string name="custody_title">Custody schedule</string>
     <string name="custody_back">Back</string>
-    <string name="custody_save_button">Save Custody Schedule</string>
-    <string name="custody_select_schedule_type">Select Schedule Type</string>
-    <string name="custody_pattern_start_date">Pattern Start Date</string>
+    <string name="custody_save_button">Save custody schedule</string>
+    <string name="custody_select_schedule_type">Select schedule type</string>
+    <string name="custody_pattern_start_date">Pattern start date</string>
     <string name="custody_start_date_hint">This is the anchor date - the pattern will repeat from this day</string>
-    <string name="custody_who_starts_first">Who Starts First?</string>
+    <string name="custody_who_starts_first">Who starts first?</string>
     <!-- Replaces custody_mom_starts_first/custody_dad_starts_first: a label the parent's
          name can sit next to without a verb agreeing with it. %1$s is that parent's name. -->
     <string name="custody_starts_first">Starts first: %1$s</string>
-    <string name="custody_custom_pattern">Custom Pattern</string>
+    <string name="custody_custom_pattern">Custom pattern</string>
     <!-- The two names are colour labels, not grammatical objects: "Pink: <name>" so
          nothing has to agree with the name. The old value named Mom and Dad outright
          and, in ru/uk/cs, put them in a governed case. %1$s is slot 1, %2$s is slot 2. -->
@@ -29,10 +29,10 @@
     <string name="custody_ok">OK</string>
     <string name="custody_cancel">Cancel</string>
     <!-- Custody pattern names (UI labels for CustodyModelType). -->
-    <string name="custody_model_week_on_week_off">Week On / Week Off</string>
-    <string name="custody_model_two_two_three">2-2-3 Split</string>
-    <string name="custody_model_three_four_four_three">3-4-4-3 Split</string>
-    <string name="custody_model_custom">Custom Schedule</string>
+    <string name="custody_model_week_on_week_off">Week on / week off</string>
+    <string name="custody_model_two_two_three">2-2-3 split</string>
+    <string name="custody_model_three_four_four_three">3-4-4-3 split</string>
+    <string name="custody_model_custom">Custom schedule</string>
     <string name="custody_model_week_on_week_off_desc">One parent has the child for a full week, then they switch.</string>
     <string name="custody_model_two_two_three_desc">2 days, 2 days, 3 days pattern. More frequent transitions.</string>
     <string name="custody_model_three_four_four_three_desc">3 days, 4 days alternating. Balanced mid-week and weekend time.</string>
@@ -68,7 +68,7 @@
     <!-- MON-6: sole custody with contact every second weekend, the arrangement a large
          share of Czech families have. The switch above the preview asks a different question
          for this pattern than for the alternating ones — see CustodySetupScreen.rolesQuestionFor. -->
-    <string name="custody_model_every_other_weekend">Every Other Weekend</string>
+    <string name="custody_model_every_other_weekend">Every other weekend</string>
     <string name="custody_model_every_other_weekend_desc">The child lives with one parent; the other has every second weekend.</string>
     <string name="custody_preview_every_other_weekend">Every day: %1$s. Every second Sat–Sun: %2$s.</string>
     <string name="custody_who_is_resident">Who does the child live with?</string>

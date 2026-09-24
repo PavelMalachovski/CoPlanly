@@ -84,7 +84,7 @@
     <string name="calendar_operation_failed">Не удалось сохранить изменение. Возможно, оно не дошло до второго родителя.</string>
     <string name="calendar_retry">Повторить</string>
     <!-- UX-8. -->
-    <string name="calendar_agenda_custody_day">день родителя %1$s</string>
+    <string name="calendar_agenda_custody_day">День родителя %1$s</string>
     <string name="calendar_filter_members">Показать для</string>
 
     <!-- MON-6b: a contact window on the grid. -->

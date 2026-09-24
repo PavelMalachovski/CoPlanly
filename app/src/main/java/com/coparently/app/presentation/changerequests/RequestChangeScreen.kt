@@ -43,6 +43,7 @@ import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.common.LocalDatePickerDialog
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.components.TimePickerDialog
+import com.coparently.app.utils.localizedDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
@@ -145,7 +146,7 @@ private fun RequestChangeForm(
     onSubmit: (LocalDateTime, LocalDateTime?, String?) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val dateFormatter = DateTimeFormatter.ofPattern("EEE, MMM d, yyyy")
+    val dateFormatter = localizedDate("yMMMEEEd")
     val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
     var proposedDate by remember { mutableStateOf(event.startDateTime.toLocalDate()) }

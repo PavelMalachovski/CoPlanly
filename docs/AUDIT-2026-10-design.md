@@ -32,8 +32,8 @@ The shell around that work is behind:
 - **The type system has no Cyrillic,** which affects two of the five shipped languages.
 - **The key numbers are truncated.** The amount one parent owes the other is cut off even in
   English at 100% font.
-- **No Material 3 Expressive API is used,** although the BOM that ships it has been in the
-  build since July.
+- **No Material 3 Expressive API is used.** This line said the BOM had shipped it since July;
+  it had not — material3 1.4.0's public API has none of it, and it is still alpha (§1.5).
 
 None of this blocks a closed test. The first two P0 fixes each take about an hour.
 
@@ -78,6 +78,13 @@ of their claims:
 4. **The design-refresh rule "no affordance may promise a feature that doesn't exist" is not
    broken by the Bakaláři row** (Settings → Sync, "Planned"). The row is inert on purpose, and its
    call site documents when it must come out. It is listed under P2 only as a reminder.
+5. **Material 3 Expressive is not in the build.** *(Found in week 4, after this audit was
+   written.)* The verdict and §4 below say the BOM "has shipped it since July". It has not: the
+   BOM's material3 is 1.4.0, and 1.4.0's public API has no `ButtonGroup`, `LoadingIndicator`,
+   `FloatingToolbar`, `MaterialShapes` or `MotionScheme` at all (checked against androidx's
+   `material3/api/1.4.0-beta03.txt`). Expressive lives in the 1.5 line, which on 2026-09-24 was at
+   1.5.0-alpha29. Adopting it means shipping an alpha component library, which is the owner's call,
+   so §4's Expressive row is a decision rather than a fix.
 
 ## 2. Findings, prioritised
 
@@ -357,7 +364,7 @@ Effort: S.
 
 | 2026 expectation | Status | Evidence and what to do |
 | --- | --- | --- |
-| **Material 3 Expressive** (M3 1.4 in the BOM) | ✗ not adopted | There are zero uses of `ButtonGroup`, `LoadingIndicator`, `FloatingToolbar`, `MaterialShapes` or `MotionScheme.expressive()`. Start where it pays:<br>• the calendar's Month/Week/Day picker → connected `ButtonGroup`<br>• list skeleton spinners → `LoadingIndicator`<br>• the Week/Day FAB plus actions → `FloatingToolbar`<br>• a `MotionScheme` set once in `CoPlanlyTheme`, so the spring tokens replace per-call tweens |
+| **Material 3 Expressive** | ✗ not available on stable | Not in material3 1.4.0's public API (§1.5); alpha in 1.5. If the owner accepts an alpha dependency, start where it pays:<br>• the calendar's Month/Week/Day picker → connected `ButtonGroup`<br>• list skeleton spinners → `LoadingIndicator`<br>• the Week/Day FAB plus actions → `FloatingToolbar`<br>• a `MotionScheme` set once in `CoPlanlyTheme`, so the spring tokens replace per-call tweens |
 | **Edge-to-edge** (enforced from targetSdk 35) | ◐ on, insets wrong | D-2 (doubled top) and D-9 (keyboard). The system-bar scrims are fine |
 | **Predictive back** | ◐ system only | `enableOnBackInvokedCallback="true"`. No `PredictiveBackHandler` for sheets or forms (D-11) |
 | **Adaptive layouts** (Android 16 ignores orientation locks at ≥ 600 dp) | ✗ none | Add `NavigationSuiteScaffold` (rail at Medium and wider), `widthIn(max = 640.dp)` on forms and Settings, and list-detail for Chat and Expenses. A family tablet is a real device for this audience |
@@ -365,9 +372,9 @@ Effort: S.
 | **Widgets** (Glance) | ✗ | Add a "Today" widget, whose data the today card already has |
 | **Themed icon** | ✓ | The adaptive icon has a `monochrome` layer |
 | **Per-app language** | ✓ | AppCompat locales in five languages |
-| **Dynamic colour** | — deliberate | Brand colour plus parent colours. Right for this product, but delete the dead `dynamicColor` branch |
-| **Contrast levels** (Android 14+) | ✗ | F-16. Export medium- and high-contrast schemes |
-| **Typography** | ✗ | D-8. A variable font with Cyrillic, plus the emphasised styles of M3 Expressive |
+| **Dynamic colour** | — deliberate | Brand colour plus parent colours. Right for this product. The dead `dynamicColor` branch is deleted (week 4) |
+| **Contrast levels** (Android 14+) | ✓ week 4 | The theme follows the system's contrast setting live. The medium and high schemes are generated from the standard ones (foregrounds to Material's targets, backgrounds unchanged) and held by `ContrastSchemesTest` |
+| **Typography** | ◐ week 2 | D-8 done: Onest covers all five languages. The emphasised styles of M3 Expressive wait with the rest of it (§1.5) |
 
 ## 5. Roadmap
 
@@ -423,10 +430,52 @@ This is ordered for the closed test first. Each step leaves the app shippable.
    - The child and pet forms still lose edits on rotation. Their nested lists belong in the
      ViewModels, which is a refactor of its own.
    - Nothing previews a discard with `PredictiveBackHandler` yet.
-4. **Before public release:**
-   - D-12 Family hub, D-13 push deep links and channels.
-   - The adaptive shell, Expressive components.
-   - Widget and Live Update, D-18 date formatting.
+4. **Week 4, the polish** (the P2s, and D-13):
+   - D-13 push deep links and channels, D-18 dates, D-21 sentence case, D-22 the pairing card,
+     D-23 the switcher's spacing, D-24 the onboarding wait, and D-25's five items.
+
+   Done in week 4's pull request:
+   - **D-13:**
+     - A push opens the screen it is about: the calendar for an event or an outcome, Home for an
+       ask waiting on this parent, the inbox for a change request, Expenses for the split, the
+       children's records, the professionals screen. The destination rides on the launcher intent
+       and is accepted only as one of the app's own screens.
+     - Four channels (Messages, Schedule, Expenses, Family) replace the one, so a parent can
+       silence money without silencing a handover.
+   - **D-18:** every date comes from a locale skeleton (`utils/LocalizedDates.kt`), so Russian
+     reads "1 октября 2026 г.", not "окт. 01, 2026". The swap card says the day in words. An
+     all-day event on Home shows no "12:00 AM".
+   - **D-21:** 101 English labels are in sentence case.
+   - **D-22:** the partner card leads with the name and the date. The address is one line, cut in
+     the middle.
+   - **D-23:** each switcher row is 48 dp tall with a gap after its radio button. The dot and the
+     signal line need a second family with something waiting. The tour seeds none, and
+     `OnScreenFamiliesTest` proves them on the emulators.
+   - **D-24:** onboarding says the parent can go on while the co-parent's records arrive.
+   - **D-25:**
+     - Snackbars, not Toasts.
+     - Icon sizes from five named steps (`IconSizes`).
+     - Dead tokens and the `dynamicColor` branch deleted.
+     - Medium and high contrast (§4).
+     - One splash.
+     - Forms push instead of zooming.
+     - No bouncy spring.
+     - No shimmer when animations are off.
+   - **Found on the way:** `tertiaryContainer` was never set, so an event that belongs to neither
+     parent was tinted Material's baseline pink.
+
+   Not done, and why:
+   - D-12 changes the design refresh's Settings order (item 4), so it waits for the owner.
+   - D-19 spacing tokens and D-20's button hierarchy are week 5's.
+   - Material 3 Expressive is alpha (§1.5), so it waits for the owner too.
+5. **Week 5, the platform:**
+   - The adaptive shell (`NavigationSuiteScaffold`, a width cap on forms and Settings).
+   - D-19 spacing and radius tokens with a detekt rule.
+   - D-20 button hierarchy.
+   - `PredictiveBackHandler` on the forms.
+   - The child and pet forms' state in their ViewModels.
+6. **Week 6, 2026 features:** the "Today" widget, the handover Live Update, and whatever the owner
+   decides on D-4, D-5, D-12 and Expressive.
 
 ## 6. How to repeat this audit
 

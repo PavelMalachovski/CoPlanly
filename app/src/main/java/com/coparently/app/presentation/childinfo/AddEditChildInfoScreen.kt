@@ -23,8 +23,8 @@ import com.coparently.app.presentation.childinfo.components.*
 import com.coparently.app.presentation.common.ConfirmationDialog
 import com.coparently.app.presentation.common.MedicalProfileEditor
 import com.coparently.app.presentation.common.rememberDiscardGuard
+import com.coparently.app.utils.localizedDate
 import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 import java.util.UUID
 
 /**
@@ -277,7 +277,7 @@ fun AddEditChildInfoScreen(
                             text = if (dateOfBirth != null) {
                                 stringResource(
                                     R.string.childinfo_dob_value,
-                                    dateOfBirth!!.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+                                    dateOfBirth!!.format(localizedDate("yMMMd"))
                                 )
                             } else {
                                 stringResource(R.string.childinfo_select_dob)

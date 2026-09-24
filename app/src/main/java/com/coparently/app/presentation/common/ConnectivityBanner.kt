@@ -29,6 +29,7 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.coparently.app.R
+import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Motion
 
 /**
@@ -73,7 +74,7 @@ fun ConnectivityBanner(offline: Boolean, modifier: Modifier = Modifier) {
                 Icon(
                     imageVector = Icons.Default.CloudOff,
                     contentDescription = null,
-                    modifier = Modifier.size(18.dp)
+                    modifier = Modifier.size(IconSizes.Small)
                 )
                 Text(
                     text = stringResource(R.string.connectivity_offline),

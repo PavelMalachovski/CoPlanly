@@ -50,6 +50,7 @@
     <string name="onboarding_coparent_linked_title">Linked with %1$s</string>
     <string name="onboarding_coparent_linked_body">Whatever %1$s has already entered is pulled in for you. Check it on the next steps and add anything missing.</string>
     <string name="onboarding_coparent_fetching">Fetching what %1$s has entered…</string>
+    <string name="onboarding_coparent_fetching_hint">You can go on. Anything still on its way arrives in the background.</string>
     <string name="onboarding_coparent_found_title">Already entered by %1$s</string>
     <string name="onboarding_coparent_found_children">Children</string>
     <string name="onboarding_coparent_found_pets">Pets</string>

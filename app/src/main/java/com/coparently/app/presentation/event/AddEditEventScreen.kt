@@ -1,13 +1,11 @@
 package com.coparently.app.presentation.event
 
 import android.net.Uri
-import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -101,16 +99,20 @@ import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.common.FamilyMemberChips
 import com.coparently.app.presentation.common.FamilyMemberRefListSaver
 import com.coparently.app.presentation.common.FullScreenImageDialog
+import com.coparently.app.presentation.common.LocalAppMessages
 import com.coparently.app.presentation.common.LocalDatePickerDialog
 import com.coparently.app.presentation.common.StickyActionBar
 import com.coparently.app.presentation.common.rememberDiscardGuard
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.common.toggling
 import com.coparently.app.presentation.components.TimePickerDialog
+import com.coparently.app.presentation.theme.IconSizes
+import com.coparently.app.presentation.theme.Motion
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.dimensions
 import com.coparently.app.utils.ValidationResult
 import com.coparently.app.utils.ValidationUtils
+import com.coparently.app.utils.localizedDate
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -270,6 +272,7 @@ fun AddEditEventScreen(
         ActivityResultContracts.PickVisualMedia()
     ) { uri -> if (uri != null) pickedImageUri = uri }
     val snackbarHostState = remember { SnackbarHostState() }
+    val appMessages = LocalAppMessages.current
     var isSaving by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var isDeleting by remember { mutableStateOf(false) }
@@ -580,15 +583,11 @@ fun AddEditEventScreen(
                 // had also failed — long after the event itself was written. The saved event is
                 // its own confirmation once the calendar is back.
                 //
-                // The upload warning still has to reach the user, so it goes out as a Toast,
-                // which survives navigation. This matches AddExpenseScreen, which already
-                // reports its receipt-upload warning the same way.
+                // The upload warning still has to reach the user, so it goes out through the
+                // app's message host, which survives navigation (D-25; it was a Toast). This
+                // matches AddExpenseScreen's receipt-upload warning.
                 if (imageUploadFailed) {
-                    Toast.makeText(
-                        context,
-                        context.getString(R.string.event_form_photo_upload_failed),
-                        Toast.LENGTH_LONG
-                    ).show()
+                    appMessages?.show(context.getString(R.string.event_form_photo_upload_failed))
                 }
                 onSave()
             } catch (e: Exception) {
@@ -832,11 +831,11 @@ fun AddEditEventScreen(
                             ordinalLabel
                         }
                         val isSelected = parentOwner == value
+                        // A short tween, like every other selection in the app: this was the
+                        // one bouncy spring, an overshoot no other control makes (D-25).
                         val scale by animateFloatAsState(
                             targetValue = if (isSelected) 1.05f else 1f,
-                            animationSpec = spring(
-                                dampingRatio = Spring.DampingRatioMediumBouncy
-                            ),
+                            animationSpec = tween(Motion.SHORT_MS),
                             label = "parentOwnerScale"
                         )
 
@@ -918,7 +917,7 @@ fun AddEditEventScreen(
                                         "dad" -> ParentColors.fill("dad")
                                         else -> MaterialTheme.colorScheme.primary
                                     },
-                                    modifier = Modifier.size(dims.iconSize * 1.17f) // ~28dp for compact
+                                    modifier = Modifier.size(IconSizes.Large)
                                 )
                                 Spacer(modifier = Modifier.height(dims.paddingSmall / 2))
                                 Text(
@@ -965,7 +964,7 @@ fun AddEditEventScreen(
                                 Icon(
                                     imageVector = Icons.Default.Check,
                                     contentDescription = stringResource(R.string.event_form_cd_selected_icon),
-                                    modifier = Modifier.size(dims.iconSize * 0.75f) // ~18dp for compact
+                                    modifier = Modifier.size(IconSizes.Small)
                                 )
                             }
                         },
@@ -1002,7 +1001,7 @@ fun AddEditEventScreen(
                         role = Role.Button
                         contentDescription = context.getString(
                             R.string.event_form_cd_select_date,
-                            startDate.format(DateTimeFormatter.ofPattern("EEEE, MMMM dd, yyyy"))
+                            startDate.format(localizedDate("yMMMMEEEEd"))
                         )
                     },
                 onClick = {
@@ -1033,9 +1032,7 @@ fun AddEditEventScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
-                                text = startDate.format(
-                                    DateTimeFormatter.ofPattern("EEEE, MMM dd, yyyy")
-                                ),
+                                text = startDate.format(localizedDate("yMMMEEEEd")),
                                 style = MaterialTheme.typography.bodyLarge
                             )
                         }
@@ -1067,7 +1064,7 @@ fun AddEditEventScreen(
                             imageVector = Icons.Default.Schedule,
                             contentDescription = stringResource(R.string.event_form_cd_error),
                             tint = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.size(24.dp)
+                            modifier = Modifier.size(IconSizes.Standard)
                         )
                         Text(
                             text = timeValidationMessage,
@@ -1110,7 +1107,7 @@ fun AddEditEventScreen(
                             imageVector = Icons.Default.Schedule,
                             contentDescription = stringResource(R.string.event_form_cd_time_picker_icon),
                             tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(dims.iconSize)
+                            modifier = Modifier.size(IconSizes.Standard)
                         )
                         Spacer(modifier = Modifier.height(dims.paddingSmall))
                         Text(
@@ -1152,7 +1149,7 @@ fun AddEditEventScreen(
                             imageVector = Icons.Default.Schedule,
                             contentDescription = stringResource(R.string.event_form_cd_time_picker_icon),
                             tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(dims.iconSize)
+                            modifier = Modifier.size(IconSizes.Standard)
                         )
                         Spacer(modifier = Modifier.height(dims.paddingSmall))
                         Text(
@@ -1199,7 +1196,7 @@ fun AddEditEventScreen(
                                 Icon(
                                     imageVector = Icons.Default.Check,
                                     contentDescription = stringResource(R.string.event_form_cd_selected_icon),
-                                    modifier = Modifier.size(dims.iconSize * 0.75f)
+                                    modifier = Modifier.size(IconSizes.Small)
                                 )
                             }
                         }
@@ -1232,9 +1229,8 @@ fun AddEditEventScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
-                                text = recurrenceEndDate?.format(
-                                    DateTimeFormatter.ofPattern("EEEE, MMM dd, yyyy")
-                                ) ?: stringResource(R.string.event_form_repeat_forever),
+                                text = recurrenceEndDate?.format(localizedDate("yMMMEEEEd"))
+                                    ?: stringResource(R.string.event_form_repeat_forever),
                                 style = MaterialTheme.typography.bodyLarge
                             )
                         }
@@ -1279,7 +1275,7 @@ fun AddEditEventScreen(
                                 Icon(
                                     imageVector = Icons.Default.Check,
                                     contentDescription = stringResource(R.string.event_form_cd_selected_icon),
-                                    modifier = Modifier.size(dims.iconSize * 0.75f)
+                                    modifier = Modifier.size(IconSizes.Small)
                                 )
                             }
                         }

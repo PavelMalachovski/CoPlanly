@@ -16,7 +16,11 @@ import androidx.compose.ui.unit.dp
  * @property paddingLarge Large padding value (e.g., for generous spacing)
  * @property cardElevation Default elevation for cards
  * @property cornerRadius Default corner radius for UI elements
- * @property iconSize Default icon size
+ * @property hourGutterWidth Width of the hour-label gutter in the Week and Day views. The day
+ *   headers, the custody band, the hour grid and the events overlay all measure from it, so they
+ *   line up with the day each block belongs to. It holds a bare hour number ("13"), so it grows
+ *   with the font scale (see `adaptiveDimensions`). Icons do not, which is why this is its own
+ *   value rather than a multiple of an icon size, as it used to be (`IconSizes`).
  * @property buttonHeight Default button height
  */
 data class Dimensions(
@@ -25,7 +29,7 @@ data class Dimensions(
     val paddingLarge: Dp,
     val cardElevation: Dp,
     val cornerRadius: Dp,
-    val iconSize: Dp,
+    val hourGutterWidth: Dp,
     val buttonHeight: Dp
 )
 
@@ -43,7 +47,7 @@ val compactDimensions = Dimensions(
     paddingLarge = 24.dp,
     cardElevation = 4.dp,
     cornerRadius = 12.dp,
-    iconSize = 24.dp,
+    hourGutterWidth = 30.dp,
     buttonHeight = 56.dp
 )
 
@@ -61,7 +65,7 @@ val mediumDimensions = Dimensions(
     paddingLarge = 32.dp,
     cardElevation = 6.dp,
     cornerRadius = 16.dp,
-    iconSize = 28.dp,
+    hourGutterWidth = 35.dp,
     buttonHeight = 64.dp
 )
 
@@ -79,7 +83,7 @@ val expandedDimensions = Dimensions(
     paddingLarge = 40.dp,
     cardElevation = 8.dp,
     cornerRadius = 20.dp,
-    iconSize = 32.dp,
+    hourGutterWidth = 40.dp,
     buttonHeight = 72.dp
 )
 

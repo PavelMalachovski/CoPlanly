@@ -15,6 +15,8 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.coparently.app.R
 import com.coparently.app.domain.chat.ChatUri
+import com.coparently.app.utils.DAY_IN_SENTENCE
+import com.coparently.app.utils.isoDateText
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -59,7 +61,7 @@ class PushNotificationTest {
             InstrumentationRegistry.getInstrumentation().uiAutomation
                 .grantRuntimePermission(appContext.packageName, Manifest.permission.POST_NOTIFICATIONS)
         }
-        PushNotifier(appContext).createChannel()
+        PushNotifier(appContext).createChannels()
         assertTrue("notifications are enabled for the app under test", manager.areNotificationsEnabled())
         clearAll()
     }
@@ -203,7 +205,7 @@ class PushNotificationTest {
     }
 
     @Test
-    fun theTap_carriesTheFamily_andOpensTheApp() {
+    fun theTap_carriesTheFamily_andOpensTheCalendar() {
         val data = payload(PushPayload.EVENT_CREATED)
         val posted = awaitPosted(PushNotifier(appContext).receive(data, SIGNED_IN)!!)
         val tap = tapIntentFor(data)
@@ -211,7 +213,28 @@ class PushNotificationTest {
         val launcher = appContext.packageManager.getLaunchIntentForPackage(appContext.packageName)
         assertEquals(launcher?.component, tap.component)
         assertEquals(FAMILY, tap.getStringExtra(PushPayload.FAMILY_ID))
+        assertEquals(PushDestination.CALENDAR.key, tap.getStringExtra(PushDestination.EXTRA))
         assertIsTheTapOf(posted, data, tap)
+    }
+
+    @Test
+    fun everyWordedType_postsToItsOwnChannel_andNamesItsScreen() {
+        val channels = manager.notificationChannels.map { it.id }.toSet()
+        assertTrue("the four push channels exist: $channels", channels.containsAll(PushChannel.entries.map { it.id }))
+        assertFalse("the channel every push shared is gone", PushChannel.LEGACY_ID in channels)
+        for (type in PushNotifier.PUSH_TEXT.keys) {
+            val data = payload(type)
+            val id = requireNotNull(PushNotifier(appContext).receive(data, SIGNED_IN)) { "$type was posted" }
+            val posted = awaitPosted(id)
+            assertEquals("$type channel", PushRouting.channelOf(type).id, posted.notification.channelId)
+            PushRouting.destinationOf(type)?.let { destination ->
+                assertEquals("$type screen", destination.key, tapIntentFor(data).getStringExtra(PushDestination.EXTRA))
+            }
+            manager.cancel(id)
+            SystemClock.sleep(POST_INTERVAL_MS)
+        }
+        val chat = awaitPosted(PushNotifier(appContext).receive(chatPayload(), SIGNED_IN)!!)
+        assertEquals(PushChannel.CHAT.id, chat.notification.channelId)
     }
 
     @Test
@@ -265,7 +288,10 @@ class PushNotificationTest {
     private fun expectedBody(context: Context, spec: PushNotifier.PushTextSpec): String = when (spec.args) {
         PushNotifier.BodyArgs.ACTOR_AND_SUBJECT -> context.getString(spec.body, ACTOR_NAME, SUBJECT)
         PushNotifier.BodyArgs.ACTOR -> context.getString(spec.body, ACTOR_NAME)
-        PushNotifier.BodyArgs.DATE -> context.getString(spec.body, DATE)
+        PushNotifier.BodyArgs.DATE -> context.getString(
+            spec.body,
+            isoDateText(DATE, DAY_IN_SENTENCE, context.resources.configuration.locales[0])
+        )
         PushNotifier.BodyArgs.DAY_COUNT -> context.resources.getQuantityString(spec.body, DAY_COUNT, DAY_COUNT)
         PushNotifier.BodyArgs.NONE -> context.getString(spec.body)
     }
@@ -276,7 +302,8 @@ class PushNotificationTest {
         val names = when (spec.args) {
             PushNotifier.BodyArgs.ACTOR_AND_SUBJECT -> listOf(ACTOR_NAME, SUBJECT)
             PushNotifier.BodyArgs.ACTOR -> listOf(ACTOR_NAME)
-            PushNotifier.BodyArgs.DATE -> listOf(DATE)
+            // The date is said in the reader's language (D-18), so its day is what every one shows.
+            PushNotifier.BodyArgs.DATE -> listOf(DATE_DAY)
             PushNotifier.BodyArgs.DAY_COUNT -> listOf(DAY_COUNT.toString())
             PushNotifier.BodyArgs.NONE -> emptyList()
         }
@@ -370,6 +397,7 @@ class PushNotificationTest {
         const val ACTOR_NAME = "Jana"
         const val SUBJECT = "Dentist"
         const val DATE = "2026-05-14"
+        const val DATE_DAY = "14"
         const val DAY_COUNT = 3
         const val PREVIEW = "See you at five"
         const val CONVERSATION = "conversation-1"

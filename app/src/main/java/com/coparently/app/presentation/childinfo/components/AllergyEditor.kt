@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import com.coparently.app.R
 import com.coparently.app.presentation.common.animations.sectionEnter
 import com.coparently.app.presentation.common.animations.sectionExit
+import com.coparently.app.presentation.theme.IconSizes
 
 /**
  * Editor for managing a list of allergies.
@@ -59,7 +60,7 @@ fun AllergyEditor(
                             Icon(
                                 imageVector = Icons.Default.Close,
                                 contentDescription = null,
-                                modifier = Modifier.size(16.dp)
+                                modifier = Modifier.size(IconSizes.Small)
                             )
                         },
                         modifier = Modifier.semantics { contentDescription = "$removeLabel $allergy" }

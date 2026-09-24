@@ -50,8 +50,9 @@ fun adaptiveDimensions(): Dimensions {
             paddingMedium = baseDimensions.paddingMedium,
             paddingLarge = baseDimensions.paddingLarge,
 
-            // Scale icons with font scale, but limit the range to prevent extreme sizes
-            iconSize = baseDimensions.iconSize * fontScale.coerceIn(0.8f, 1.5f),
+            // The hour gutter holds a number, so it grows with the text — within a range, so the
+            // seven day columns keep most of the width at the largest font scales.
+            hourGutterWidth = baseDimensions.hourGutterWidth * fontScale.coerceIn(0.8f, 1.5f),
 
             // Scale button height with font scale and increase for accessibility
             // When TalkBack is enabled, use even larger targets for better usability
@@ -67,15 +68,3 @@ fun adaptiveDimensions(): Dimensions {
         )
     }
 }
-
-/**
- * Minimum touch target size for accessibility.
- * WCAG 2.1 AA requires 44x44dp minimum, we use 48dp for better usability.
- */
-const val MIN_TOUCH_TARGET_DP = 48
-
-/**
- * Minimum touch target size when TalkBack is enabled.
- * Larger targets improve usability for screen reader users.
- */
-const val MIN_TOUCH_TARGET_ACCESSIBILITY_DP = 56

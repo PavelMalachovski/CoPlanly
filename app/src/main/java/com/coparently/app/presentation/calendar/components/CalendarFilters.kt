@@ -48,6 +48,7 @@ import com.coparently.app.R
 import com.coparently.app.presentation.calendar.ParentFilter
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.theme.CoPlanlyColors
+import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.LayoutConstants
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.dimensions
@@ -153,7 +154,7 @@ fun EventTypeFilterSheet(
                                 Icon(
                                     imageVector = Icons.Default.Check,
                                     contentDescription = stringResource(R.string.calendar_filter_type_visible),
-                                    modifier = Modifier.size(16.dp)
+                                    modifier = Modifier.size(IconSizes.Small)
                                 )
                             }
                         } else {
@@ -189,7 +190,7 @@ fun EventTypeFilterSheet(
                     Icon(
                         imageVector = Icons.Default.Add,
                         contentDescription = null,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(IconSizes.Small)
                     )
                     Text(stringResource(R.string.calendar_filter_add_button))
                 }

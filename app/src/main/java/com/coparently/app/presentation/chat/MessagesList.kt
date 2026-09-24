@@ -61,6 +61,8 @@ import com.coparently.app.domain.model.MessageSendStatus
 import com.coparently.app.domain.model.MessageType
 import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.theme.Motion
+import com.coparently.app.utils.DAY_WITH_WEEKDAY
+import com.coparently.app.utils.isoDateText
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.Instant
@@ -481,7 +483,16 @@ fun MessageItem(
     // nothing about `ACTIVITY` shows instead, and the fallback this one shows if the payload
     // could not be parsed.
     val bubbleText = activity
-        ?.let { stringResource(ActivityCardText.resourceFor(it.kind), it.title) }
+        ?.let { card ->
+            // A day swap's title is the day itself, as ISO text on the wire (older builds print
+            // it as it is). This build says the day the way the reader's language does (D-18).
+            val subject = if (card.entityType == ActivityEntityType.DAY_SWAP) {
+                isoDateText(card.title, DAY_WITH_WEEKDAY)
+            } else {
+                card.title
+            }
+            stringResource(ActivityCardText.resourceFor(card.kind), subject)
+        }
         ?: message.content
 
     Column(

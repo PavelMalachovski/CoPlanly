@@ -2,7 +2,7 @@
 <!-- Chat feature strings. Kept out of strings.xml because strings.xml is
      gitignored in this project (it holds local OAuth values). -->
 <resources>
-    <string name="chat_new_conversation">New Conversation</string>
+    <string name="chat_new_conversation">New conversation</string>
     <string name="chat_empty_title">No conversations yet</string>
     <string name="chat_empty_description">Start a conversation with your co-parent to coordinate schedules and share updates.</string>
     <string name="chat_no_messages">No messages yet</string>
@@ -54,12 +54,12 @@
     <!-- Message templates (domain/model/MessageTemplate.kt). The body is seeded into the
          composer for the user to edit before sending, so the bracketed hints are translated
          too: they are prompts to the reader, not substitution tokens. -->
-    <string name="chat_templates_sheet_title">Message Templates</string>
+    <string name="chat_templates_sheet_title">Message templates</string>
     <string name="chat_template_category_pickup_drop">Pickup &amp; Drop-off</string>
     <string name="chat_template_category_illness">Illness &amp; Medical</string>
-    <string name="chat_template_category_school_events">School Events</string>
+    <string name="chat_template_category_school_events">School events</string>
     <string name="chat_template_category_holidays">Holidays &amp; Vacation</string>
-    <string name="chat_template_category_conflict_resolution">Conflict Resolution</string>
+    <string name="chat_template_category_conflict_resolution">Conflict resolution</string>
     <string name="chat_template_pickup_delay_title">Running late for handover</string>
     <string name="chat_template_pickup_delay_content">I am running late for the handover of [child]. I should be there in about [number of minutes]. Sorry for the inconvenience.</string>
     <string name="chat_template_pickup_early_title">Arriving earlier</string>
