@@ -37,6 +37,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -87,7 +90,15 @@ fun GroupLabel(
         style = MaterialTheme.typography.labelMedium,
         fontWeight = FontWeight.SemiBold,
         color = MaterialTheme.colorScheme.primary,
-        modifier = modifier.padding(start = 4.dp, end = 4.dp, bottom = 6.dp)
+        modifier = modifier
+            .padding(start = 4.dp, end = 4.dp, bottom = 6.dp)
+            // A heading, so TalkBack can move from group to group instead of row by row, read in
+            // the case it was written: a screen reader may spell an all-caps word out letter by
+            // letter (docs/AUDIT-2026-10-design.md D-17).
+            .semantics {
+                heading()
+                contentDescription = text
+            }
     )
 }
 
