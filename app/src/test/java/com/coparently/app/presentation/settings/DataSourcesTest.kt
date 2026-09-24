@@ -30,6 +30,15 @@ class DataSourcesTest {
 
     @Test
     fun `every link is https`() {
-        assertTrue(DataSources.notices.all { it.url.startsWith("https://") })
+        assertTrue((DataSources.notices + DataSources.typefaceNotices).all { it.url.startsWith("https://") })
+    }
+
+    @Test
+    fun `the bundled typeface is credited, with the licence it is distributed under`() {
+        val typeface = DataSources.typefaceNotices.single()
+
+        assertEquals(R.string.data_sources_onest_title, typeface.titleRes)
+        assertEquals(R.string.data_sources_onest_description, typeface.descriptionRes)
+        assertEquals("https://openfontlicense.org", typeface.url)
     }
 }

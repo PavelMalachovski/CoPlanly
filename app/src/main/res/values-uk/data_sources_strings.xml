@@ -8,4 +8,6 @@
     <string name="data_sources_holidays_title">holidays (бібліотека для Python)</string>
     <string name="data_sources_holidays_description">Свята Словаччини, Німеччини, Австрії та Росії звірено з нею день за днем. © Vacanza Team і учасники проєкту, ліцензія MIT.</string>
     <string name="data_sources_computed_note">Чеські свята та шкільні канікули застосунок обчислює сам.</string>
+    <string name="data_sources_group_typeface">Шрифт</string>
+    <string name="data_sources_onest_description">Шрифт застосунку — для латиниці й кирилиці. © 2021 The Onest Project Authors, ліцензія SIL Open Font License 1.1.</string>
 </resources>

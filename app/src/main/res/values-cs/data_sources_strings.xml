@@ -8,4 +8,6 @@
     <string name="data_sources_holidays_title">holidays (knihovna pro Python)</string>
     <string name="data_sources_holidays_description">Státní svátky pro Slovensko, Německo, Rakousko a Rusko byly s ní porovnány den po dni. © Vacanza Team a přispěvatelé, licence MIT.</string>
     <string name="data_sources_computed_note">České státní svátky a školní prázdniny počítá aplikace sama.</string>
+    <string name="data_sources_group_typeface">Písmo</string>
+    <string name="data_sources_onest_description">Písmo aplikace pro latinku i cyrilici. © 2021 The Onest Project Authors, pod licencí SIL Open Font License 1.1.</string>
 </resources>
