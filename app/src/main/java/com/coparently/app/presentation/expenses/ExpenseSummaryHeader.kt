@@ -43,6 +43,7 @@ import com.coparently.app.presentation.common.NamedParent
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.PillChip
+import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.utils.LightDarkPreviews
 import com.coparently.app.utils.PreviewWrapper
@@ -491,7 +492,7 @@ private fun BalanceStrip(
             imageVector = Icons.Default.AccountBalanceWallet,
             contentDescription = null,
             tint = accent,
-            modifier = Modifier.size(18.dp)
+            modifier = Modifier.size(IconSizes.Small)
         )
         // Wraps instead of ellipsising: the amount comes last in every language, so a one-line
         // cap cut exactly the figure this row exists to show — "Your co-parent owes yo…" in

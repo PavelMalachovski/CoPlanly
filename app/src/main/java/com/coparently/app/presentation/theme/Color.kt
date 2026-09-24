@@ -98,11 +98,6 @@ object CoPlanlyColors {
 
     val FriendTeal = Color(0xFF00796B) // Teal 700 - 4.77:1 on white / 3.36:1 on DarkSurface
     val FriendTealLight = Color(0xFF80CBC4) // Teal 200 - 1.86:1 on white / 9.21:1 on DarkSurface
-    val FriendTealDark = Color(0xFF004D40) // Teal 900 - 9.65:1 on white / 1.78:1 on DarkSurface
-
-    // Neutral colors
-    // UNUSED as of 2026-07-30 — no references in app/src/main.
-    val EventGray = Color(0xFF616161) // Gray 700 - 6.19:1 on white / 2.77:1 on DarkSurface
 
     // Secondary (neutral) tonal family — used by generic Material components such as
     // the selected state of FilterChips. Deliberately an indigo-tinted neutral, NOT
@@ -148,11 +143,6 @@ object CoPlanlyColors {
     // 14.33:1 on DarkBackground, 13.26:1 on DarkSurface - text-grade in dark theme
     val DarkOnSurface = Color(0xFFE4E1E9)
     val DarkOnBackground = Color(0xFFE4E1E9)
-
-    // Custody indicator colors
-    // UNUSED as of 2026-07-30 — no references in app/src/main.
-    val CustodyIndicatorActive = Color(0xFFF59E0B) // Amber 500 - 2.15:1 on white / 7.98:1 on DarkSurface
-    val CustodyIndicatorInactive = Color(0xFF616161) // Gray 700 - 6.19:1 on white / 2.77:1 on DarkSurface
 
     // Weekend background colors - Saturday/Sunday, applied to every cell in the grid as the
     // base a custody, holiday or today tint is then drawn over. Fill-only: never used as text.

@@ -41,6 +41,7 @@ import com.coparently.app.domain.model.BloodType
 import com.coparently.app.domain.model.MedicalProfile
 import com.coparently.app.presentation.common.animations.sectionEnter
 import com.coparently.app.presentation.common.animations.sectionExit
+import com.coparently.app.presentation.theme.IconSizes
 
 /**
  * Edits a [MedicalProfile], or renders one read-only.
@@ -253,7 +254,7 @@ private fun MedicalStringChips(values: List<String>, onRemove: (Int) -> Unit, mo
                     Icon(
                         imageVector = Icons.Default.Close,
                         contentDescription = null,
-                        modifier = Modifier.size(16.dp)
+                        modifier = Modifier.size(IconSizes.Small)
                     )
                 },
                 modifier = Modifier.semantics { contentDescription = "$removeLabel $value" }

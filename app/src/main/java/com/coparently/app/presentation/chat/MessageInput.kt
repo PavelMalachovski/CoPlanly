@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.coparently.app.R
+import com.coparently.app.presentation.theme.IconSizes
 
 /**
  * The message composer: a borderless pill field beside a round filled send button — the
@@ -98,7 +99,7 @@ fun MessageInput(
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.Send,
                 contentDescription = stringResource(R.string.chat_send),
-                modifier = Modifier.size(SEND_ICON_SIZE)
+                modifier = Modifier.size(IconSizes.Standard)
             )
         }
     }
@@ -106,6 +107,3 @@ fun MessageInput(
 
 /** Diameter of the round send button — sized to the pill field's single-line height. */
 private val SEND_BUTTON_SIZE = 48.dp
-
-/** The send glyph inside the button. */
-private val SEND_ICON_SIZE = 22.dp

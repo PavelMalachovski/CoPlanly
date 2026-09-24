@@ -94,6 +94,7 @@ import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.common.rememberToday
 import com.coparently.app.presentation.components.SkeletonBox
+import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.utils.LightDarkPreviews
 import com.coparently.app.utils.PreviewWrapper
@@ -841,7 +842,7 @@ private fun StatTile(
                         imageVector = icon,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(IconSizes.Standard)
                     )
                 }
             } else {
@@ -849,7 +850,7 @@ private fun StatTile(
                     imageVector = icon,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(IconSizes.Standard)
                 )
             }
             // Neither line is capped: the value is money or a count and the caption says who
@@ -938,7 +939,7 @@ internal fun TimelineRow(
                         imageVector = Icons.Default.PriorityHigh,
                         contentDescription = stringResource(R.string.event_important_mark_description),
                         tint = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.size(16.dp)
+                        modifier = Modifier.size(IconSizes.Inline)
                     )
                 }
                 Text(
@@ -995,7 +996,7 @@ private fun ActivityGroup(
                     imageVector = item.kind.icon(),
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(18.dp)
+                    modifier = Modifier.size(IconSizes.Small)
                 )
                 Column(modifier = Modifier.weight(1f)) {
                     Text(

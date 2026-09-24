@@ -107,6 +107,7 @@ import com.coparently.app.presentation.common.rememberDiscardGuard
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.common.toggling
 import com.coparently.app.presentation.components.TimePickerDialog
+import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.dimensions
 import com.coparently.app.utils.ValidationResult
@@ -916,7 +917,7 @@ fun AddEditEventScreen(
                                         "dad" -> ParentColors.fill("dad")
                                         else -> MaterialTheme.colorScheme.primary
                                     },
-                                    modifier = Modifier.size(dims.iconSize * 1.17f) // ~28dp for compact
+                                    modifier = Modifier.size(IconSizes.Large)
                                 )
                                 Spacer(modifier = Modifier.height(dims.paddingSmall / 2))
                                 Text(
@@ -963,7 +964,7 @@ fun AddEditEventScreen(
                                 Icon(
                                     imageVector = Icons.Default.Check,
                                     contentDescription = stringResource(R.string.event_form_cd_selected_icon),
-                                    modifier = Modifier.size(dims.iconSize * 0.75f) // ~18dp for compact
+                                    modifier = Modifier.size(IconSizes.Small)
                                 )
                             }
                         },
@@ -1063,7 +1064,7 @@ fun AddEditEventScreen(
                             imageVector = Icons.Default.Schedule,
                             contentDescription = stringResource(R.string.event_form_cd_error),
                             tint = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.size(24.dp)
+                            modifier = Modifier.size(IconSizes.Standard)
                         )
                         Text(
                             text = timeValidationMessage,
@@ -1106,7 +1107,7 @@ fun AddEditEventScreen(
                             imageVector = Icons.Default.Schedule,
                             contentDescription = stringResource(R.string.event_form_cd_time_picker_icon),
                             tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(dims.iconSize)
+                            modifier = Modifier.size(IconSizes.Standard)
                         )
                         Spacer(modifier = Modifier.height(dims.paddingSmall))
                         Text(
@@ -1148,7 +1149,7 @@ fun AddEditEventScreen(
                             imageVector = Icons.Default.Schedule,
                             contentDescription = stringResource(R.string.event_form_cd_time_picker_icon),
                             tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(dims.iconSize)
+                            modifier = Modifier.size(IconSizes.Standard)
                         )
                         Spacer(modifier = Modifier.height(dims.paddingSmall))
                         Text(
@@ -1195,7 +1196,7 @@ fun AddEditEventScreen(
                                 Icon(
                                     imageVector = Icons.Default.Check,
                                     contentDescription = stringResource(R.string.event_form_cd_selected_icon),
-                                    modifier = Modifier.size(dims.iconSize * 0.75f)
+                                    modifier = Modifier.size(IconSizes.Small)
                                 )
                             }
                         }
@@ -1274,7 +1275,7 @@ fun AddEditEventScreen(
                                 Icon(
                                     imageVector = Icons.Default.Check,
                                     contentDescription = stringResource(R.string.event_form_cd_selected_icon),
-                                    modifier = Modifier.size(dims.iconSize * 0.75f)
+                                    modifier = Modifier.size(IconSizes.Small)
                                 )
                             }
                         }

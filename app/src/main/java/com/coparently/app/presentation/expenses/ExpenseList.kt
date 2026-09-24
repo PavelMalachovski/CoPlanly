@@ -56,6 +56,7 @@ import com.coparently.app.domain.expenses.isTwoWaySplit
 import com.coparently.app.domain.model.Expense
 import com.coparently.app.presentation.common.FullScreenImageDialog
 import com.coparently.app.presentation.common.ParentNames
+import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.utils.localizedDate
 import java.util.Locale
@@ -307,7 +308,7 @@ fun ExpenseItem(
                         imageVector = expense.category.iconVector,
                         contentDescription = null,
                         tint = payerColor,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(IconSizes.Standard)
                     )
                 }
             }

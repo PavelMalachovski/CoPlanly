@@ -41,6 +41,7 @@ import com.coparently.app.R
 import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.components.TimePickerDialog
+import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.dimensions
 import java.time.DayOfWeek
@@ -123,7 +124,7 @@ fun ContactWindowsSection(
             onClick = { showEditor = true },
             modifier = Modifier.padding(vertical = dims.paddingSmall)
         ) {
-            Icon(imageVector = Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+            Icon(imageVector = Icons.Default.Add, contentDescription = null, modifier = Modifier.size(IconSizes.Small))
             Spacer(modifier = Modifier.width(8.dp))
             Text(stringResource(R.string.custody_windows_add))
         }

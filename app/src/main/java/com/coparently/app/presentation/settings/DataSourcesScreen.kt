@@ -35,6 +35,7 @@ import com.coparently.app.R
 import com.coparently.app.presentation.common.GroupLabel
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
+import com.coparently.app.presentation.theme.IconSizes
 
 /**
  * One source the calendar's holiday data was prepared from, as the data-sources screen lists it.
@@ -208,7 +209,7 @@ private fun NoticeRow(notice: DataSourceNotice, onOpen: () -> Unit) {
                 imageVector = Icons.AutoMirrored.Filled.OpenInNew,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(IconSizes.Standard)
             )
         }
     )

@@ -79,6 +79,7 @@ import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.labelRes
 import com.coparently.app.presentation.custody.labelRes
+import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.ParentColorChoice
 import com.coparently.app.presentation.theme.ParentColors
 import java.time.LocalDate
@@ -244,12 +245,20 @@ private fun CoParentStep(state: OnboardingUiState, onOpenPairing: (enterCode: Bo
         CoParentLink.None, CoParentLink.Unknown -> {
             StepHeading(title = R.string.onboarding_coparent_title, body = R.string.onboarding_coparent_body)
             Button(onClick = { onOpenPairing(true) }, modifier = Modifier.fillMaxWidth()) {
-                Icon(imageVector = Icons.Default.Link, contentDescription = null, modifier = Modifier.size(18.dp))
+                Icon(
+                    imageVector = Icons.Default.Link,
+                    contentDescription = null,
+                    modifier = Modifier.size(IconSizes.Small)
+                )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(stringResource(R.string.onboarding_coparent_enter_code))
             }
             OutlinedButton(onClick = { onOpenPairing(false) }, modifier = Modifier.fillMaxWidth()) {
-                Icon(imageVector = Icons.Default.PersonAdd, contentDescription = null, modifier = Modifier.size(18.dp))
+                Icon(
+                    imageVector = Icons.Default.PersonAdd,
+                    contentDescription = null,
+                    modifier = Modifier.size(IconSizes.Small)
+                )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(stringResource(R.string.onboarding_coparent_invite))
             }
@@ -297,7 +306,7 @@ private fun LinkedCoParent(name: String, fetch: CoParentFetch) {
                     imageVector = Icons.Default.Info,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(IconSizes.Small)
                 )
             }
         } else {
@@ -530,7 +539,7 @@ private fun FromCoParentNote(state: OnboardingUiState) {
             imageVector = Icons.Default.Info,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(20.dp)
+            modifier = Modifier.size(IconSizes.Small)
         )
     }
 }
@@ -632,7 +641,7 @@ private fun AddAnotherButton(@StringRes label: Int, onClick: () -> Unit) {
         Icon(
             imageVector = Icons.Default.Add,
             contentDescription = null,
-            modifier = Modifier.size(18.dp)
+            modifier = Modifier.size(IconSizes.Small)
         )
         Spacer(modifier = Modifier.width(8.dp))
         Text(stringResource(label))

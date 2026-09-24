@@ -38,6 +38,7 @@ import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.theme.CoPlanlyColors
+import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.LayoutConstants
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.utils.LightDarkPreviews
@@ -107,7 +108,7 @@ fun ChangeRequestBanner(
             imageVector = Icons.Default.SwapHoriz,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(18.dp)
+            modifier = Modifier.size(IconSizes.Small)
         )
         Column(modifier = Modifier.weight(1f)) {
             Text(
@@ -234,7 +235,7 @@ fun CustodyChangedBanner(byName: String, onDismiss: () -> Unit, modifier: Modifi
                 imageVector = Icons.Default.Close,
                 contentDescription = stringResource(R.string.common_dismiss),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(16.dp)
+                modifier = Modifier.size(IconSizes.Inline)
             )
         }
     }
@@ -354,7 +355,7 @@ fun DayAgendaCard(
                                         R.string.event_important_mark_description
                                     ),
                                     tint = MaterialTheme.colorScheme.error,
-                                    modifier = Modifier.size(16.dp)
+                                    modifier = Modifier.size(IconSizes.Inline)
                                 )
                             }
                             Text(

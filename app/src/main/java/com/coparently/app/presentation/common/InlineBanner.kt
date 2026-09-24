@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import com.coparently.app.presentation.theme.IconSizes
 
 /**
  * A banner inside a screen's content (docs/AUDIT-2026-10-design.md D-15): the app telling the
@@ -65,7 +66,7 @@ fun InlineBanner(
                     imageVector = icon,
                     contentDescription = null,
                     tint = colours.accent,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(IconSizes.Small)
                 )
             }
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {

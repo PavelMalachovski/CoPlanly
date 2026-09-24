@@ -133,6 +133,7 @@ import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.consent.TelemetryConsentViewModel
 import com.coparently.app.presentation.sync.GoogleCalendarSyncState
 import com.coparently.app.presentation.sync.SyncViewModel
+import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Motion
 import com.coparently.app.presentation.theme.ParentColorChoice
 import com.coparently.app.presentation.theme.ParentColors
@@ -996,7 +997,7 @@ fun SettingsScreen(
                                     imageVector = Icons.AutoMirrored.Filled.OpenInNew,
                                     contentDescription = null,
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(20.dp)
+                                    modifier = Modifier.size(IconSizes.Standard)
                                 )
                             }
                         )
@@ -1161,7 +1162,7 @@ private fun DisclosureChevron(expanded: Boolean) {
         ),
         tint = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier
-            .size(20.dp)
+            .size(IconSizes.Standard)
             .rotate(rotation)
     )
 }
@@ -1176,7 +1177,7 @@ private fun Chevron() {
         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
         contentDescription = null,
         tint = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.size(20.dp)
+        modifier = Modifier.size(IconSizes.Standard)
     )
 }
 

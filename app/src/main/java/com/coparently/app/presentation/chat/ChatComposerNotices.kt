@@ -27,11 +27,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.coparently.app.R
 import com.coparently.app.domain.chat.ToneNudge
+import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.utils.LightDarkPreviews
 import com.coparently.app.utils.PreviewWrapper
-
-/** Size of the leading glyph on both composer notices. */
-private val NOTICE_ICON_SIZE = 18.dp
 
 /**
  * A held message (MON-19): "Sending in N s…", what it says, and Undo.
@@ -57,7 +55,7 @@ fun PendingSendNotice(pending: PendingSend, onUndo: () -> Unit, modifier: Modifi
         Icon(
             imageVector = Icons.Default.HourglassTop,
             contentDescription = null,
-            modifier = Modifier.size(NOTICE_ICON_SIZE),
+            modifier = Modifier.size(IconSizes.Small),
             tint = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Column(modifier = Modifier.weight(1f)) {
@@ -107,7 +105,7 @@ fun ToneNudgeHint(nudge: ToneNudge, modifier: Modifier = Modifier) {
         Icon(
             imageVector = Icons.Outlined.Lightbulb,
             contentDescription = null,
-            modifier = Modifier.size(NOTICE_ICON_SIZE),
+            modifier = Modifier.size(IconSizes.Small),
             tint = MaterialTheme.colorScheme.tertiary
         )
         Column {

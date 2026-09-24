@@ -20,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.coparently.app.R
 import com.coparently.app.domain.model.Budget
+import com.coparently.app.presentation.theme.IconSizes
 import kotlin.math.roundToInt
 
 /**
@@ -103,7 +104,7 @@ fun BudgetItem(
                                 imageVector = it,
                                 contentDescription = null,
                                 tint = color,
-                                modifier = Modifier.size(16.dp)
+                                modifier = Modifier.size(IconSizes.Inline)
                             )
                         }
                         Text(

@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import com.coparently.app.R
 import com.coparently.app.presentation.calendar.CalendarViewMode
 import com.coparently.app.presentation.common.rememberToday
+import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.LayoutConstants
 import com.coparently.app.utils.LightDarkPreviews
 import com.coparently.app.utils.PreviewWrapper
@@ -207,7 +208,7 @@ private fun FiltersButton(onClick: () -> Unit, active: Boolean) {
             Icon(
                 imageVector = Icons.Default.FilterList,
                 contentDescription = null,
-                modifier = Modifier.size(16.dp)
+                modifier = Modifier.size(IconSizes.Inline)
             )
         },
         modifier = Modifier.padding(end = 4.dp)

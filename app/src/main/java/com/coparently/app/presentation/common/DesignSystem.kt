@@ -44,6 +44,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.LayoutConstants
 import com.coparently.app.utils.LightDarkPreviews
 import com.coparently.app.utils.PreviewWrapper
@@ -205,7 +206,7 @@ fun SectionRow(
                 imageVector = icon,
                 contentDescription = null,
                 tint = iconTint,
-                modifier = Modifier.size(22.dp)
+                modifier = Modifier.size(IconSizes.Standard)
             )
         }
         Column(modifier = Modifier.weight(1f)) {
@@ -326,7 +327,7 @@ fun PillChip(
                 imageVector = icon,
                 contentDescription = iconDescription,
                 tint = contentColor,
-                modifier = Modifier.size(16.dp)
+                modifier = Modifier.size(IconSizes.Inline)
             )
         }
         Text(
@@ -398,20 +399,7 @@ fun EmptyState(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically)
         ) {
-            Box(
-                modifier = Modifier
-                    .size(EMPTY_STATE_DISC)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primaryContainer),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier = Modifier.size(EMPTY_STATE_ICON)
-                )
-            }
+            HeroIcon(icon)
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleMedium,
@@ -435,11 +423,34 @@ fun EmptyState(
     }
 }
 
-/** Diameter of the tonal disc behind an [EmptyState] icon. */
-private val EMPTY_STATE_DISC = 72.dp
+/**
+ * The icon a whole screen leads with — an [EmptyState], an [ErrorState], the telemetry question a
+ * fresh install opens on — on a tonal disc. One anatomy, so the first thing each of those screens
+ * shows is the same size and weight; the consent screen used to draw a bare 48 dp lock beside
+ * this 36 dp icon on its 72 dp disc.
+ *
+ * @param icon The glyph; decorative, since the screen's title says what it means
+ */
+@Composable
+fun HeroIcon(icon: ImageVector) {
+    Box(
+        modifier = Modifier
+            .size(HERO_DISC)
+            .clip(CircleShape)
+            .background(MaterialTheme.colorScheme.primaryContainer),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+            modifier = Modifier.size(IconSizes.Hero)
+        )
+    }
+}
 
-/** Size of the icon inside the [EmptyState] disc. */
-private val EMPTY_STATE_ICON = 36.dp
+/** Diameter of the tonal disc behind a [HeroIcon]. */
+private val HERO_DISC = 72.dp
 
 @LightDarkPreviews
 @Composable
