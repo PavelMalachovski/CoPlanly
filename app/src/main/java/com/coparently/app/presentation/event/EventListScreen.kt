@@ -296,7 +296,6 @@ private fun EventCardContent(
     }
 }
 
-
 /**
  * How many of this parent's own events the co-parent has not answered.
  *

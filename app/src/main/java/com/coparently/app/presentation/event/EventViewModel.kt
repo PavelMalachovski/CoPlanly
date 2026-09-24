@@ -3,13 +3,10 @@ package com.coparently.app.presentation.event
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.coparently.app.R
-import com.coparently.app.data.analytics.AnalyticsManager
-import com.coparently.app.data.crashlytics.CrashlyticsManager
 import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.domain.error.AppError
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.repository.EventImageStorage
-import com.coparently.app.domain.repository.EventRepository
 import com.coparently.app.presentation.common.FamilyMember
 import com.coparently.app.presentation.common.FamilyMembersSource
 import com.coparently.app.presentation.common.Parents
@@ -34,8 +31,6 @@ import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
-import java.time.format.DateTimeFormatter
-import java.util.UUID
 import javax.inject.Inject
 
 /** Keeps the parents flow warm across brief unsubscriptions (config changes). */
@@ -577,4 +572,3 @@ private fun AppError.toEventText(): UiText = when {
     this is AppError.ValidationError && field == "endDateTime" -> UiText.Res(R.string.event_form_end_before_start)
     else -> toUiText()
 }
-

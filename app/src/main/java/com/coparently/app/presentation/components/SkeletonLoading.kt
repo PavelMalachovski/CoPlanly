@@ -68,4 +68,3 @@ fun SkeletonBox(
             .background(shimmer)
     )
 }
-

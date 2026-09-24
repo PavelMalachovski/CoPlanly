@@ -2,32 +2,6 @@
 <SmellBaseline>
   <ManuallySuppressedIssues></ManuallySuppressedIssues>
   <CurrentIssues>
-    <ID>ArgumentListWrapping:ChildInfoRepositoryImpl.kt$ChildInfoRepositoryImpl$(activitiesJson, Array&lt;com.coparently.app.domain.model.Activity&gt;::class.java)</ID>
-    <ID>ArgumentListWrapping:ChildInfoRepositoryImpl.kt$ChildInfoRepositoryImpl$(emergencyContactsJson, Array&lt;com.coparently.app.domain.model.EmergencyContact&gt;::class.java)</ID>
-    <ID>ArgumentListWrapping:ChildInfoRepositoryImpl.kt$ChildInfoRepositoryImpl$(it, com.coparently.app.domain.model.SchoolInfo::class.java)</ID>
-    <ID>ArgumentListWrapping:ChildInfoRepositoryImpl.kt$ChildInfoRepositoryImpl$(medicationsJson, Array&lt;com.coparently.app.domain.model.Medication&gt;::class.java)</ID>
-    <ID>ArgumentListWrapping:ContactDirectoryTest.kt$ContactDirectoryTest$( "c1", "Mia", contact("Nina", "Grandmother", "+420111"), contact("Nina", "Neighbour", "+420222") )</ID>
-    <ID>ArgumentListWrapping:ContactDirectoryTest.kt$ContactDirectoryTest$( "c1", "Mia", contact("Nina", "Grandmother", phone = "+420111", alternate = "+420999") )</ID>
-    <ID>ArgumentListWrapping:CredentialManagerService.kt$CredentialManagerService$("Google OAuth not configured. Please:\n1. Go to Google Cloud Console\n2. Create OAuth 2.0 Client ID for Web application\n3. Add the Client ID to default_web_client_id in strings.xml\n4. Enable Google Calendar API")</ID>
-    <ID>ArgumentListWrapping:CredentialManagerService.kt$CredentialManagerService$("Web Client ID not configured. Please set up OAuth 2.0 Client ID in Google Cloud Console and update default_web_client_id in strings.xml")</ID>
-    <ID>ArgumentListWrapping:CzechHolidays.kt$CzechHolidays$(LocalDate.of(year, 10, 28), "Independent Czechoslovak State Day", "Den vzniku samostatného československého státu")</ID>
-    <ID>ArgumentListWrapping:CzechHolidays.kt$CzechHolidays$(LocalDate.of(year, 7, 5), "Saints Cyril and Methodius Day", "Den slovanských věrozvěstů Cyrila a Metoděje")</ID>
-    <ID>ArgumentListWrapping:CzechHolidays.kt$CzechHolidays$(year, 10, 28)</ID>
-    <ID>ArgumentListWrapping:CzechHolidays.kt$CzechHolidays$(year, 7, 5)</ID>
-    <ID>ArgumentListWrapping:DatabaseMigrations.kt$DatabaseMigrations.&lt;no name provided&gt;$( "events", "expenses", "budgets", "child_info", "pets", "change_requests" )</ID>
-    <ID>ArgumentListWrapping:FirebaseAuthService.kt$FirebaseAuthService$("FirebaseAuthService", "Firebase config - projectId: $projectId, apiKey: ${apiKey?.take(10)}...")</ID>
-    <ID>ArgumentListWrapping:FirebaseAuthService.kt$FirebaseAuthService$(10)</ID>
-    <ID>ArgumentListWrapping:FirestoreUserDataSource.kt$FirestoreUserDataSource$("FirestoreUserDataSource", "Got invitation from ${if (snapshot.metadata.isFromCache) "cache" else "server"}: $invitationId")</ID>
-    <ID>ArgumentListWrapping:FirestoreUserDataSource.kt$FirestoreUserDataSource$("FirestoreUserDataSource", "Got user from ${if (snapshot.metadata.isFromCache) "cache" else "server"}: $uid")</ID>
-    <ID>ArgumentListWrapping:ParentPalette.kt$ParentColorChoice.BLUE$( "#1976D2", CoPlanlyColors.DadBlue, CoPlanlyColors.DadBlueLight, CoPlanlyColors.DadBlueDark, R.string.parent_color_blue )</ID>
-    <ID>ArgumentListWrapping:ParentPalette.kt$ParentColorChoice.ORANGE$( "#D84315", Color(0xFFD84315), Color(0xFFFFAB91), Color(0xFFBF360C), R.string.parent_color_orange )</ID>
-    <ID>ArgumentListWrapping:ParentPalette.kt$ParentColorChoice.PINK$( "#E91E63", CoPlanlyColors.MomPink, CoPlanlyColors.MomPinkLight, CoPlanlyColors.MomPinkDark, R.string.parent_color_pink )</ID>
-    <ID>ArgumentListWrapping:ParentPalette.kt$ParentColorChoice.PURPLE$( "#7B1FA2", Color(0xFF7B1FA2), Color(0xFFCE93D8), Color(0xFF4A148C), R.string.parent_color_purple )</ID>
-    <ID>ArgumentListWrapping:ParentPaletteTest.kt$ParentPaletteTest$( ParentColorChoice.PURPLE.storedCode, ParentColorChoice.PURPLE.storedCode )</ID>
-    <ID>ArgumentListWrapping:QRCodeService.kt$QRCodeService$(x, y, if (bitMatrix[x, y]) android.graphics.Color.BLACK else android.graphics.Color.WHITE)</ID>
-    <ID>ArgumentListWrapping:UseCaseModule.kt$UseCaseModule$( createEvent, updateEvent, deleteEvent, getEvents )</ID>
-    <ID>ArgumentListWrapping:UseCaseModule.kt$UseCaseModule$( eventRepository, analyticsManager, crashlyticsManager, reminderScheduler )</ID>
-    <ID>ArgumentListWrapping:UseCaseModule.kt$UseCaseModule$( eventRepository, eventValidator, analyticsManager, crashlyticsManager, reminderScheduler )</ID>
     <ID>ComplexCondition:ChangeRequestsScreen.kt$incoming.isEmpty() &amp;&amp; outgoing.isEmpty() &amp;&amp; daySwapGroups.isEmpty() &amp;&amp; eventsAwaitingMe.isEmpty() &amp;&amp; pendingProposal == null</ID>
     <ID>ComplexCondition:DayWeekView.kt$onDragDrop != null &amp;&amp; draggable &amp;&amp; columnWidthPx &gt; 0f &amp;&amp; hourHeightPx &gt; 0f</ID>
     <ID>ComplexCondition:DayWeekView.kt$showTime &amp;&amp; totalMinutes &gt;= 45 || isResizingStart || isResizingEnd</ID>
@@ -50,18 +24,6 @@
     <ID>CyclomaticComplexMethod:SyncService.kt$SyncService$private suspend fun syncChildInfo(userId: String): Int</ID>
     <ID>CyclomaticComplexMethod:SyncService.kt$SyncService$private suspend fun syncEvents(userId: String): Int</ID>
     <ID>Filename:Color.kt$com.coparently.app.presentation.theme.Color.kt</ID>
-    <ID>ImportOrdering:CalendarHeader.kt$import androidx.compose.foundation.clickable import androidx.compose.foundation.layout.Box import androidx.compose.foundation.layout.PaddingValues import androidx.compose.foundation.layout.defaultMinSize import androidx.compose.foundation.layout.Row import androidx.compose.foundation.layout.padding import androidx.compose.foundation.layout.size import androidx.compose.foundation.shape.RoundedCornerShape import androidx.compose.material.icons.Icons import androidx.compose.material.icons.filled.Check import androidx.compose.material.icons.filled.ExpandMore import androidx.compose.material.icons.filled.FilterList import androidx.compose.material.icons.filled.Settings import androidx.compose.material3.DropdownMenu import androidx.compose.material3.DropdownMenuItem import androidx.compose.material3.ExperimentalMaterial3Api import androidx.compose.material3.FilterChip import androidx.compose.material3.HorizontalDivider import androidx.compose.material3.Icon import androidx.compose.material3.IconButton import androidx.compose.material3.MaterialTheme import androidx.compose.material3.OutlinedButton import androidx.compose.material3.Text import androidx.compose.material3.TopAppBar import androidx.compose.runtime.Composable import androidx.compose.runtime.getValue import androidx.compose.runtime.mutableStateOf import androidx.compose.runtime.remember import androidx.compose.runtime.setValue import androidx.compose.ui.Alignment import androidx.compose.ui.Modifier import androidx.compose.ui.draw.clip import androidx.compose.ui.res.stringResource import androidx.compose.ui.semantics.Role import androidx.compose.ui.text.font.FontWeight import androidx.compose.ui.text.style.TextOverflow import androidx.compose.ui.tooling.preview.Preview import androidx.compose.ui.unit.dp import com.coparently.app.R import com.coparently.app.presentation.calendar.CalendarViewMode import com.coparently.app.presentation.theme.LayoutConstants import com.coparently.app.utils.LightDarkPreviews import com.coparently.app.utils.PreviewWrapper import java.time.LocalDate import java.time.YearMonth</ID>
-    <ID>ImportOrdering:CalendarPaging.kt$import com.google.api.services.calendar.model.Event as GoogleCalendarEvent import java.time.LocalDateTime</ID>
-    <ID>ImportOrdering:ChatMappers.kt$import com.coparently.app.data.local.entity.ConversationEntity import com.coparently.app.data.local.entity.MessageEntity import com.coparently.app.domain.model.Conversation import com.coparently.app.domain.model.Message import com.coparently.app.domain.model.MessageSendStatus import com.coparently.app.domain.activity.ActivityAnnouncement import com.coparently.app.domain.model.MessageType import com.google.gson.Gson import com.google.gson.reflect.TypeToken import java.time.LocalDateTime import java.time.ZoneId import java.time.format.DateTimeFormatter</ID>
-    <ID>ImportOrdering:FriendViewModel.kt$import androidx.annotation.StringRes import androidx.lifecycle.ViewModel import androidx.lifecycle.viewModelScope import com.coparently.app.domain.friends.CalendarFriendGrant import com.coparently.app.domain.friends.FriendProfile import com.coparently.app.domain.friends.FriendRole import com.coparently.app.domain.guests.GuestAccessDuration import com.coparently.app.domain.guests.GuestInvite import com.coparently.app.domain.repository.FriendRepository import com.coparently.app.presentation.pairing.pairingMessageRes import dagger.hilt.android.lifecycle.HiltViewModel import kotlinx.coroutines.ExperimentalCoroutinesApi import kotlinx.coroutines.flow.MutableStateFlow import kotlinx.coroutines.flow.flatMapLatest import kotlinx.coroutines.flow.flowOf import kotlinx.coroutines.flow.SharingStarted import kotlinx.coroutines.flow.StateFlow import kotlinx.coroutines.flow.asStateFlow import kotlinx.coroutines.flow.stateIn import kotlinx.coroutines.flow.update import kotlinx.coroutines.launch import java.time.Instant import javax.inject.Inject</ID>
-    <ID>ImportOrdering:GoogleCalendarApi.kt$import com.google.api.client.auth.oauth2.Credential import com.google.api.client.http.javanet.NetHttpTransport import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow import com.google.api.client.googleapis.auth.oauth2.GoogleClientSecrets import com.google.api.client.json.gson.GsonFactory import com.google.api.client.util.DateTime import com.google.api.services.calendar.Calendar import com.google.api.services.calendar.CalendarScopes import com.google.api.services.calendar.model.Event as GoogleCalendarEvent import com.google.api.services.calendar.model.EventDateTime import com.google.api.services.calendar.model.Events import java.io.IOException import java.time.LocalDateTime import java.time.ZoneId import java.time.format.DateTimeFormatter import javax.inject.Inject import javax.inject.Singleton</ID>
-    <ID>ImportOrdering:ListSkeleton.kt$import androidx.compose.foundation.layout.Arrangement import androidx.compose.foundation.layout.Column import androidx.compose.foundation.layout.fillMaxWidth import androidx.compose.foundation.layout.height import androidx.compose.foundation.layout.padding import androidx.compose.foundation.shape.RoundedCornerShape import androidx.compose.runtime.Composable import androidx.compose.ui.Modifier import androidx.compose.ui.draw.clip import androidx.compose.ui.semantics.contentDescription import androidx.compose.ui.semantics.semantics import androidx.compose.ui.unit.Dp import androidx.compose.ui.unit.dp import androidx.compose.ui.res.stringResource import com.coparently.app.R import com.coparently.app.presentation.components.SkeletonBox</ID>
-    <ID>ImportOrdering:ParentsSource.kt$import android.util.Log import com.coparently.app.domain.model.PairingState import com.coparently.app.presentation.theme.ParentPalette import com.coparently.app.domain.repository.PairingRepository import com.coparently.app.domain.repository.UserRepository import kotlinx.coroutines.CoroutineScope import kotlinx.coroutines.Dispatchers import kotlinx.coroutines.SupervisorJob import kotlinx.coroutines.flow.Flow import kotlinx.coroutines.flow.SharingStarted import kotlinx.coroutines.flow.combine import kotlinx.coroutines.flow.distinctUntilChanged import kotlinx.coroutines.flow.shareIn import javax.inject.Inject import javax.inject.Singleton</ID>
-    <ID>ImportOrdering:SettingsViewModel.kt$import androidx.lifecycle.ViewModel import androidx.lifecycle.viewModelScope import com.coparently.app.data.analytics.AnalyticsManager import com.coparently.app.data.remote.firebase.FcmService import com.coparently.app.data.repository.FamilySettingsRepository import com.coparently.app.data.repository.RatioSubmission import com.coparently.app.data.session.AccountDeletionService import com.coparently.app.data.session.SignedInAccountSource import com.coparently.app.domain.expenses.SplitRatio import com.coparently.app.domain.holidays.HolidayCountry import com.coparently.app.domain.model.AccountSummary import com.coparently.app.domain.model.FamilyKind import com.coparently.app.presentation.theme.ParentColorChoice import com.coparently.app.domain.money.SupportedCurrency import com.coparently.app.domain.repository.PreferencesRepository import com.coparently.app.domain.repository.UserRepository import com.coparently.app.presentation.common.FamilyKindSource import com.coparently.app.presentation.common.Parents import com.coparently.app.presentation.common.ParentsSource import com.coparently.app.presentation.common.UiError import com.coparently.app.presentation.common.UiState import dagger.hilt.android.lifecycle.HiltViewModel import kotlinx.coroutines.channels.Channel import kotlinx.coroutines.ExperimentalCoroutinesApi import kotlinx.coroutines.flow.Flow import kotlinx.coroutines.flow.MutableStateFlow import kotlinx.coroutines.flow.SharingStarted import kotlinx.coroutines.flow.StateFlow import kotlinx.coroutines.flow.asStateFlow import kotlinx.coroutines.flow.first import kotlinx.coroutines.flow.map import kotlinx.coroutines.flow.receiveAsFlow import kotlinx.coroutines.flow.flatMapLatest import kotlinx.coroutines.flow.flowOf import kotlinx.coroutines.flow.stateIn import kotlinx.coroutines.launch import java.io.IOException import javax.inject.Inject</ID>
-    <ID>Indentation:AuthScreen.kt$ </ID>
-    <ID>Indentation:ExpenseRepositoryImpl.kt$ExpenseRepositoryImpl$ </ID>
-    <ID>Indentation:MonthView.kt$ </ID>
-    <ID>Indentation:NetworkMonitor.kt$NetworkMonitor$ </ID>
     <ID>LongMethod:ActivityEditor.kt$@Composable private fun ActivityCard( activity: Activity, onEdit: () -&gt; Unit, onDelete: () -&gt; Unit )</ID>
     <ID>LongMethod:ActivityEditor.kt$@Composable private fun ActivityForm( activity: Activity? = null, onSave: (Activity) -&gt; Unit, onCancel: () -&gt; Unit )</ID>
     <ID>LongMethod:AddEditChildInfoScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun AddEditChildInfoScreen( childInfoId: String?, onNavigateBack: () -&gt; Unit, viewModel: ChildInfoViewModel = hiltViewModel() )</ID>
@@ -308,124 +270,17 @@
     <ID>MatchingDeclarationName:Color.kt$CoPlanlyColors</ID>
     <ID>MatchingDeclarationName:WindowSize.kt$Dimensions</ID>
     <ID>MaxLineLength:CalendarScreen.kt$onEventResize</ID>
-    <ID>MaxLineLength:ChildInfoRepositoryImpl.kt$ChildInfoRepositoryImpl$activities = gson.fromJson(activitiesJson, Array&lt;com.coparently.app.domain.model.Activity&gt;::class.java).toList()</ID>
-    <ID>MaxLineLength:ChildInfoRepositoryImpl.kt$ChildInfoRepositoryImpl$emergencyContacts = gson.fromJson(emergencyContactsJson, Array&lt;com.coparently.app.domain.model.EmergencyContact&gt;::class.java).toList()</ID>
-    <ID>MaxLineLength:ChildInfoRepositoryImpl.kt$ChildInfoRepositoryImpl$medications = gson.fromJson(medicationsJson, Array&lt;com.coparently.app.domain.model.Medication&gt;::class.java).toList()</ID>
-    <ID>MaxLineLength:ChildInfoRepositoryImpl.kt$ChildInfoRepositoryImpl$schoolInfo = schoolInfoJson?.let { gson.fromJson(it, com.coparently.app.domain.model.SchoolInfo::class.java) }</ID>
-    <ID>MaxLineLength:CredentialManagerService.kt$CredentialManagerService$throw IllegalStateException("Google OAuth not configured. Please:\n1. Go to Google Cloud Console\n2. Create OAuth 2.0 Client ID for Web application\n3. Add the Client ID to default_web_client_id in strings.xml\n4. Enable Google Calendar API")</ID>
-    <ID>MaxLineLength:CredentialManagerService.kt$CredentialManagerService$throw IllegalStateException("Web Client ID not configured. Please set up OAuth 2.0 Client ID in Google Cloud Console and update default_web_client_id in strings.xml")</ID>
-    <ID>MaxLineLength:CzechHolidays.kt$CzechHolidays$cs(LocalDate.of(year, 10, 28), "Independent Czechoslovak State Day", "Den vzniku samostatného československého státu")</ID>
-    <ID>MaxLineLength:CzechHolidays.kt$CzechHolidays$cs(LocalDate.of(year, 7, 5), "Saints Cyril and Methodius Day", "Den slovanských věrozvěstů Cyrila a Metoděje")</ID>
     <ID>MaxLineLength:DatabaseMigrations.kt$DatabaseMigrations.&lt;no name provided&gt;$"CREATE INDEX IF NOT EXISTS index_events_parentOwner_startDateTime ON events(parentOwner, startDateTime)"</ID>
-    <ID>MaxLineLength:FirebaseAuthService.kt$FirebaseAuthService$android.util.Log.d("FirebaseAuthService", "Firebase config - projectId: $projectId, apiKey: ${apiKey?.take(10)}...")</ID>
-    <ID>MaxLineLength:FirestoreUserDataSource.kt$FirestoreUserDataSource$android.util.Log.d("FirestoreUserDataSource", "Got invitation from ${if (snapshot.metadata.isFromCache) "cache" else "server"}: $invitationId")</ID>
-    <ID>MaxLineLength:FirestoreUserDataSource.kt$FirestoreUserDataSource$android.util.Log.d("FirestoreUserDataSource", "Got user from ${if (snapshot.metadata.isFromCache) "cache" else "server"}: $uid")</ID>
     <ID>MaxLineLength:NavGraph.kt$val conversationId = backStackEntry.arguments?.getString(Screen.Chat.ARG_CONVERSATION_ID) ?: return@composable</ID>
     <ID>MaxLineLength:NavGraph.kt$val eventId = backStackEntry.arguments?.getString(Screen.RequestChange.ARG_EVENT_ID) ?: return@composable</ID>
-    <ID>MaxLineLength:QRCodeService.kt$QRCodeService$bitmap.setPixel(x, y, if (bitMatrix[x, y]) android.graphics.Color.BLACK else android.graphics.Color.WHITE)</ID>
     <ID>MaxLineLength:SyncService.kt$SyncService$"emergencyContacts" to gson.fromJson(localEntity.emergencyContactsJson, List::class.java)</ID>
-    <ID>MaxLineLength:SyncViewModel.kt$SyncViewModel$suspend</ID>
     <ID>MaximumLineLength:CalendarScreen.kt$ </ID>
-    <ID>MaximumLineLength:ChildInfoRepositoryImpl.kt$ChildInfoRepositoryImpl$ </ID>
-    <ID>MaximumLineLength:CredentialManagerService.kt$CredentialManagerService$ </ID>
-    <ID>MaximumLineLength:CzechHolidays.kt$CzechHolidays$ </ID>
     <ID>MaximumLineLength:DatabaseMigrations.kt$DatabaseMigrations.&lt;no name provided&gt;$ </ID>
-    <ID>MaximumLineLength:FirebaseAuthService.kt$FirebaseAuthService$ </ID>
-    <ID>MaximumLineLength:FirestoreUserDataSource.kt$FirestoreUserDataSource$ </ID>
     <ID>MaximumLineLength:NavGraph.kt$ </ID>
-    <ID>MaximumLineLength:QRCodeService.kt$QRCodeService$ </ID>
     <ID>MaximumLineLength:SyncService.kt$SyncService$ </ID>
-    <ID>MaximumLineLength:SyncViewModel.kt$SyncViewModel$ </ID>
     <ID>MayBeConst:GoogleCalendarApi.kt$GoogleCalendarApi.Companion$private val APPLICATION_NAME = "CoPlanly"</ID>
     <ID>MemberNameEqualsClassName:EncryptedPreferences.kt$EncryptedPreferences$private val encryptedPreferences: SharedPreferences = createEncryptedStore(context)</ID>
-    <ID>MultiLineIfElse:AddEditEventScreen.kt$R.string.event_form_cd_not_selected</ID>
-    <ID>MultiLineIfElse:AddEditEventScreen.kt$R.string.event_form_cd_selected</ID>
-    <ID>MultiLineIfElse:AddEditEventScreen.kt$R.string.event_form_pickup_confirm</ID>
-    <ID>MultiLineIfElse:AddEditEventScreen.kt$R.string.event_form_pickup_undo</ID>
-    <ID>MultiLineIfElse:AddEditPetScreen.kt$stringResource(R.string.pet_add_button)</ID>
-    <ID>MultiLineIfElse:AddEditPetScreen.kt$stringResource(R.string.pet_save_changes)</ID>
-    <ID>MultiLineIfElse:AddEditPetScreen.kt$stringResource(R.string.pet_title_add)</ID>
-    <ID>MultiLineIfElse:AddEditPetScreen.kt$stringResource(R.string.pet_title_edit)</ID>
-    <ID>MultiLineIfElse:CalendarFilters.kt$null</ID>
-    <ID>MultiLineIfElse:Extensions.kt$take(maxLength - ellipsis.length) + ellipsis</ID>
-    <ID>MultiLineIfElse:Extensions.kt$this</ID>
-    <ID>MultiLineIfElse:RecurrenceExpander.kt$RecurrenceExpander$emptyList()</ID>
-    <ID>MultiLineIfElse:RecurrenceExpander.kt$RecurrenceExpander$listOf(event)</ID>
     <ID>NestedBlockDepth:SyncService.kt$SyncService$private suspend fun syncEvents(userId: String): Int</ID>
-    <ID>NoBlankLineBeforeRbrace:ChangeRequestHighlightTest.kt$ChangeRequestHighlightTest$ </ID>
-    <ID>NoBlankLineBeforeRbrace:CredentialManagerService.kt$CredentialManagerService$ </ID>
-    <ID>NoBlankLineBeforeRbrace:CredentialProviderImpl.kt$CredentialProviderImpl$ </ID>
-    <ID>NoBlankLineBeforeRbrace:RequestChangeViewModel.kt$RequestChangeViewModel$ </ID>
-    <ID>NoConsecutiveBlankLines:ActivityEditor.kt$ </ID>
-    <ID>NoConsecutiveBlankLines:AllergyEditor.kt$ </ID>
-    <ID>NoConsecutiveBlankLines:AnalyticsManager.kt$ </ID>
-    <ID>NoConsecutiveBlankLines:AuthScreen.kt$ </ID>
-    <ID>NoConsecutiveBlankLines:CalendarSyncRepository.kt$ </ID>
-    <ID>NoConsecutiveBlankLines:ChildInfo.kt$ </ID>
-    <ID>NoConsecutiveBlankLines:ChildInfoDao.kt$ </ID>
-    <ID>NoConsecutiveBlankLines:ChildInfoEntity.kt$ </ID>
-    <ID>NoConsecutiveBlankLines:ChildInfoRepository.kt$ </ID>
-    <ID>NoConsecutiveBlankLines:ChildInfoRepositoryImpl.kt$ </ID>
-    <ID>NoConsecutiveBlankLines:ChildInfoViewModel.kt$ </ID>
-    <ID>NoConsecutiveBlankLines:CoPlanlyApplication.kt$ </ID>
-    <ID>NoConsecutiveBlankLines:CoPlanlyDatabase.kt$ </ID>
-    <ID>NoConsecutiveBlankLines:Color.kt$ </ID>
-    <ID>NoConsecutiveBlankLines:ConflictResolver.kt$ </ID>
-    <ID>NoConsecutiveBlankLines:Constants.kt$ </ID>
-    <ID>NoConsecutiveBlankLines:Converters.kt$ </ID>
-    <ID>NoConsecutiveBlankLines:CrashlyticsManager.kt$ </ID>
-    <ID>NoConsecutiveBlankLines:CredentialManagerService.kt$ </ID>
-    <ID>NoConsecutiveBlankLines:CredentialProviderImpl.kt$ </ID>
-    <ID>NoConsecutiveBlankLines:CustodyScheduleDao.kt$ </ID>
-    <ID>NoConsecutiveBlankLines:CustodyScheduleEntity.kt$ </ID>
-    <ID>NoConsecutiveBlankLines:DateRangeHelper.kt$ </ID>
-    <ID>NoConsecutiveBlankLines:EmergencyContactEditor.kt$ </ID>
-    <ID>NoConsecutiveBlankLines:EncryptedPreferences.kt$ </ID>
-    <ID>NoConsecutiveBlankLines:Event.kt$ </ID>
-    <ID>NoConsecutiveBlankLines:EventEntity.kt$ </ID>
-    <ID>NoConsecutiveBlankLines:EventListScreen.kt$ </ID>
-    <ID>NoConsecutiveBlankLines:EventRepository.kt$ </ID>
-    <ID>NoConsecutiveBlankLines:EventViewModel.kt$ </ID>
-    <ID>NoConsecutiveBlankLines:Extensions.kt$ </ID>
-    <ID>NoConsecutiveBlankLines:FirebaseAuthService.kt$ </ID>
-    <ID>NoConsecutiveBlankLines:FirebaseModule.kt$ </ID>
-    <ID>NoConsecutiveBlankLines:FirestoreChildInfoDataSource.kt$ </ID>
-    <ID>NoConsecutiveBlankLines:FirestoreEventDataSource.kt$ </ID>
-    <ID>NoConsecutiveBlankLines:FirestoreUserDataSource.kt$ </ID>
-    <ID>NoConsecutiveBlankLines:GoogleCalendarApi.kt$ </ID>
-    <ID>NoConsecutiveBlankLines:GoogleModule.kt$ </ID>
-    <ID>NoConsecutiveBlankLines:MedicationEditor.kt$ </ID>
-    <ID>NoConsecutiveBlankLines:MonthView.kt$ </ID>
-    <ID>NoConsecutiveBlankLines:NotificationManager.kt$ </ID>
-    <ID>NoConsecutiveBlankLines:SchoolInfoEditor.kt$ </ID>
-    <ID>NoConsecutiveBlankLines:SettingsViewModel.kt$ </ID>
-    <ID>NoConsecutiveBlankLines:SkeletonLoading.kt$ </ID>
-    <ID>NoConsecutiveBlankLines:SyncService.kt$ </ID>
-    <ID>NoConsecutiveBlankLines:Theme.kt$ </ID>
-    <ID>NoConsecutiveBlankLines:TimePicker.kt$ </ID>
-    <ID>NoConsecutiveBlankLines:Type.kt$ </ID>
-    <ID>NoConsecutiveBlankLines:UiState.kt$ </ID>
-    <ID>NoConsecutiveBlankLines:User.kt$ </ID>
-    <ID>NoConsecutiveBlankLines:UserDao.kt$ </ID>
-    <ID>NoConsecutiveBlankLines:UserEntity.kt$ </ID>
-    <ID>NoConsecutiveBlankLines:UserRepository.kt$ </ID>
-    <ID>NoConsecutiveBlankLines:UserRepositoryImpl.kt$ </ID>
-    <ID>NoConsecutiveBlankLines:ValidationUtils.kt$ </ID>
-    <ID>NoConsecutiveBlankLines:WindowSize.kt$ </ID>
-    <ID>NoUnusedImports:AddEditPetScreen.kt$com.coparently.app.presentation.pets.AddEditPetScreen.kt</ID>
-    <ID>NoUnusedImports:AuthScreen.kt$com.coparently.app.presentation.auth.AuthScreen.kt</ID>
-    <ID>NoUnusedImports:BudgetRepository.kt$com.coparently.app.domain.repository.BudgetRepository.kt</ID>
-    <ID>NoUnusedImports:CalendarScreen.kt$com.coparently.app.presentation.calendar.CalendarScreen.kt</ID>
-    <ID>NoUnusedImports:CalendarSyncRepository.kt$com.coparently.app.data.sync.CalendarSyncRepository.kt</ID>
-    <ID>NoUnusedImports:CredentialManagerService.kt$com.coparently.app.data.remote.google.CredentialManagerService.kt</ID>
-    <ID>NoUnusedImports:CustodySetupScreen.kt$com.coparently.app.presentation.custody.CustodySetupScreen.kt</ID>
-    <ID>NoUnusedImports:DateRangeHelper.kt$com.coparently.app.presentation.calendar.DateRangeHelper.kt</ID>
-    <ID>NoUnusedImports:EventViewModel.kt$com.coparently.app.presentation.event.EventViewModel.kt</ID>
-    <ID>NoUnusedImports:GoogleCalendarApi.kt$com.coparently.app.data.remote.google.GoogleCalendarApi.kt</ID>
-    <ID>NoUnusedImports:GoogleModule.kt$com.coparently.app.di.GoogleModule.kt</ID>
-    <ID>NoUnusedImports:MedicationEditor.kt$com.coparently.app.presentation.childinfo.components.MedicationEditor.kt</ID>
-    <ID>NoUnusedImports:PairingScreen.kt$com.coparently.app.presentation.pairing.PairingScreen.kt</ID>
-    <ID>NoUnusedImports:PairingViewModel.kt$com.coparently.app.presentation.pairing.PairingViewModel.kt</ID>
     <ID>NoWildcardImports:ActivityEditor.kt$import androidx.compose.foundation.layout.*</ID>
     <ID>NoWildcardImports:ActivityEditor.kt$import androidx.compose.material3.*</ID>
     <ID>NoWildcardImports:ActivityEditor.kt$import androidx.compose.runtime.*</ID>
@@ -457,7 +312,6 @@
     <ID>NoWildcardImports:SchoolInfoEditor.kt$import androidx.compose.material3.*</ID>
     <ID>NoWildcardImports:SchoolInfoEditor.kt$import androidx.compose.runtime.*</ID>
     <ID>NoWildcardImports:UseCaseModule.kt$import com.coparently.app.domain.usecase.*</ID>
-    <ID>ParameterListWrapping:SyncViewModel.kt$SyncViewModel$(completedTask: com.google.android.gms.tasks.Task&lt;com.google.android.gms.auth.api.signin.GoogleSignInAccount&gt;)</ID>
     <ID>ReturnCount:ActivityAnnouncement.kt$ActivityAnnouncement.Companion$fun fromMap(map: Map&lt;*, *&gt;?): ActivityAnnouncement?</ID>
     <ID>ReturnCount:CalendarPaging.kt$internal fun &lt;T&gt; collectPages( limit: Int, maxPages: Int, fetch: (pageToken: String?) -&gt; PageOf&lt;T&gt; ): Paged&lt;T&gt;</ID>
     <ID>ReturnCount:CalendarScreen.kt$private fun Set&lt;LocalDate&gt;.toggledForSwap(date: LocalDate): Set&lt;LocalDate&gt;</ID>
@@ -481,11 +335,6 @@
     <ID>ReturnCount:HandoverCalculator.kt$HandoverCalculator$fun nextHandoverFrom( model: CustodyModel, today: LocalDate, overrides: Map&lt;String, DayOverride&gt; = emptyMap() ): HandoverInfo?</ID>
     <ID>ReturnCount:RecurrenceExpander.kt$RecurrenceExpander$private fun firstIndexEndingAtOrAfter( start: LocalDateTime, pattern: String, rangeStart: LocalDateTime, duration: Duration? ): Long</ID>
     <ID>ReturnCount:ReminderWorker.kt$ReminderWorker$override suspend fun doWork(): Result</ID>
-    <ID>SpacingAroundCurly:ChildInfoRepositoryImpl.kt$ChildInfoRepositoryImpl$}</ID>
-    <ID>SpacingBetweenDeclarationsWithAnnotations:ChatMappersWireFormatTest.kt$ChatMappersWireFormatTest$@Suppress("UNCHECKED_CAST") val read = (document as Map&lt;String, Any&gt;).toMessageOrNull()</ID>
-    <ID>SpacingBetweenDeclarationsWithComments:CustodyChangeAnnouncementTest.kt$CustodyChangeAnnouncementTest.Companion$/** Built through the projection so the fixture still reads as a date. */</ID>
-    <ID>SpacingBetweenDeclarationsWithComments:NavGraph.kt$Screen.GuestAccept$/** * Redeeming a guest invitation — a separate route from [Pairing], mirroring the two * separate callables behind them. Nothing about a guest belongs on a screen whose other * outcome is a co-parent link. */</ID>
-    <ID>SpacingBetweenDeclarationsWithComments:NavGraph.kt$Screen.RequestChange$/** * The change-request form. * * It used to carry the conversation it was opened from, because the chat card was posted only * when one was supplied — so a change proposed from the calendar reached the thread not at * all. `ActivityAnnouncer` resolves the pair's thread from the two uids itself, so the * argument had nothing left to do and is gone rather than left as dead weight. */</ID>
     <ID>TooGenericExceptionCaught:AddEditEventScreen.kt$e: Exception</ID>
     <ID>TooGenericExceptionCaught:CalendarSyncRepository.kt$CalendarSyncRepository$e: Exception</ID>
     <ID>TooGenericExceptionCaught:ChildInfoViewModel.kt$ChildInfoViewModel$e: Exception</ID>
@@ -564,13 +413,5 @@
     <ID>WildcardImport:SchoolInfoEditor.kt$import androidx.compose.material3.*</ID>
     <ID>WildcardImport:SchoolInfoEditor.kt$import androidx.compose.runtime.*</ID>
     <ID>WildcardImport:UseCaseModule.kt$import com.coparently.app.domain.usecase.*</ID>
-    <ID>Wrapping:CalendarSyncRepositoryTest.kt$CalendarSyncRepositoryTest$(</ID>
-    <ID>Wrapping:ChildInfoRepositoryImpl.kt$ChildInfoRepositoryImpl$mapOf( "name" to it.name, "address" to it.address, "phone" to it.phone, "teacherName" to it.teacherName, "teacherEmail" to it.teacherEmail, "grade" to it.grade )</ID>
-    <ID>Wrapping:ChildInfoRepositoryImpl.kt$ChildInfoRepositoryImpl$mapOf( "name" to it.name, "dosage" to it.dosage, "frequency" to it.frequency, "notes" to it.notes )</ID>
-    <ID>Wrapping:ChildInfoRepositoryImpl.kt$ChildInfoRepositoryImpl$mapOf( "name" to it.name, "relationship" to it.relationship, "phone" to it.phone, "alternatePhone" to it.alternatePhone )</ID>
-    <ID>Wrapping:ChildInfoRepositoryImpl.kt$ChildInfoRepositoryImpl$mapOf( "name" to it.name, "schedule" to it.schedule, "location" to it.location, "contactPerson" to it.contactPerson, "contactPhone" to it.contactPhone )</ID>
-    <ID>Wrapping:CredentialManagerService.kt$CredentialManagerService$(</ID>
-    <ID>Wrapping:EventDao.kt$EventDao$(</ID>
-    <ID>Wrapping:GoogleCalendarApi.kt$GoogleCalendarApi$(</ID>
   </CurrentIssues>
 </SmellBaseline>

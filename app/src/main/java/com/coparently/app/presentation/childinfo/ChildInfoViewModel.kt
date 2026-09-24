@@ -498,4 +498,3 @@ sealed class ChildInfoUiState {
     /** The list could not be shown; [message] is resolved by the screen (CQ-14). */
     data class Error(val message: UiText) : ChildInfoUiState()
 }
-

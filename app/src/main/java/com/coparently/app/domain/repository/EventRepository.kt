@@ -84,4 +84,3 @@ interface EventRepository {
      */
     suspend fun pullOnce()
 }
-

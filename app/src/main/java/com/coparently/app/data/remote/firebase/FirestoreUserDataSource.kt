@@ -34,7 +34,10 @@ class FirestoreUserDataSource @Inject constructor(
                 .get()
                 .await()
 
-            android.util.Log.d("FirestoreUserDataSource", "Got user from ${if (snapshot.metadata.isFromCache) "cache" else "server"}: $uid")
+            android.util.Log.d(
+                "FirestoreUserDataSource",
+                "Got user from ${if (snapshot.metadata.isFromCache) "cache" else "server"}: $uid"
+            )
             snapshot.data
         } catch (e: Exception) {
             android.util.Log.e("FirestoreUserDataSource", "Failed to get user", e)
@@ -97,7 +100,10 @@ class FirestoreUserDataSource @Inject constructor(
                 .get()
                 .await()
 
-            android.util.Log.d("FirestoreUserDataSource", "Got invitation from ${if (snapshot.metadata.isFromCache) "cache" else "server"}: $invitationId")
+            android.util.Log.d(
+                "FirestoreUserDataSource",
+                "Got invitation from ${if (snapshot.metadata.isFromCache) "cache" else "server"}: $invitationId"
+            )
             snapshot.data
         } catch (e: Exception) {
             android.util.Log.e("FirestoreUserDataSource", "Failed to get an invitation", e)
@@ -135,4 +141,3 @@ class FirestoreUserDataSource @Inject constructor(
         }
     }
 }
-

@@ -44,7 +44,6 @@ import com.coparently.app.presentation.theme.CoPlanlyColors
 import com.coparently.app.presentation.theme.dimensions
 import com.coparently.app.presentation.theme.rememberReducedMotion
 import com.coparently.app.utils.findActivity
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 /**
@@ -410,8 +409,8 @@ fun AuthScreen(
                             .fillMaxWidth()
                             .height(dims.buttonHeight),
                         enabled = !uiState.isLoading &&
-                                  uiState.email.isNotBlank() &&
-                                  uiState.password.isNotBlank(),
+                            uiState.email.isNotBlank() &&
+                            uiState.password.isNotBlank(),
                         // Theme primary, not BrandPrimary: the brand indigo is light-theme-only
                         // (2.73:1 on the dark surface) and under onPrimary's dark text in dark theme.
                         shape = RoundedCornerShape(16.dp)
@@ -469,4 +468,3 @@ fun AuthScreen(
         }
     }
 }
-

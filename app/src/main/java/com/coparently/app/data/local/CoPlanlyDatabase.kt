@@ -124,4 +124,3 @@ abstract class CoPlanlyDatabase : RoomDatabase() {
      */
     abstract fun journalDao(): JournalDao
 }
-

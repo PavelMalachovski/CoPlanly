@@ -2,7 +2,6 @@ package com.coparently.app.domain.repository
 
 import com.coparently.app.domain.model.Budget
 import com.coparently.app.domain.model.BudgetAlert
-import com.coparently.app.domain.model.ExpenseCategory
 import kotlinx.coroutines.flow.Flow
 
 /**

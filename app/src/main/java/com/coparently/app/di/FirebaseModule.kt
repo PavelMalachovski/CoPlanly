@@ -157,4 +157,3 @@ abstract class FirebaseRepositoryModule {
         userRepositoryImpl: UserRepositoryImpl
     ): UserRepository
 }
-

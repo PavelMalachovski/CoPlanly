@@ -67,7 +67,8 @@ class ContactDirectoryTest {
             .of(
                 listOf(
                     child(
-                        "c1", "Mia",
+                        "c1",
+                        "Mia",
                         contact("Nina", "Grandmother", phone = "+420111", alternate = "+420999")
                     )
                 )
@@ -99,7 +100,8 @@ class ContactDirectoryTest {
             .of(
                 listOf(
                     child(
-                        "c1", "Mia",
+                        "c1",
+                        "Mia",
                         contact("Nina", "Grandmother", "+420111"),
                         contact("Nina", "Neighbour", "+420222")
                     )

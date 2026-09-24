@@ -1,7 +1,7 @@
 package com.coparently.app.data.remote.google
 
-import com.google.api.services.calendar.model.Event as GoogleCalendarEvent
 import java.time.LocalDateTime
+import com.google.api.services.calendar.model.Event as GoogleCalendarEvent
 
 /**
  * What one import of a Google calendar actually took, and the two bounds it stopped at.

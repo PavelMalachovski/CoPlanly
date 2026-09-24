@@ -12,7 +12,6 @@ import com.coparently.app.domain.expenses.SplitRatio
 import com.coparently.app.domain.holidays.HolidayCountry
 import com.coparently.app.domain.model.AccountSummary
 import com.coparently.app.domain.model.FamilyKind
-import com.coparently.app.presentation.theme.ParentColorChoice
 import com.coparently.app.domain.money.SupportedCurrency
 import com.coparently.app.domain.repository.PreferencesRepository
 import com.coparently.app.domain.repository.UserRepository
@@ -21,19 +20,20 @@ import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.presentation.common.UiError
 import com.coparently.app.presentation.common.UiState
+import com.coparently.app.presentation.theme.ParentColorChoice
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.io.IOException
@@ -544,4 +544,3 @@ data class SettingsUiState(
      */
     val isDeletingAccount: Boolean = false
 )
-

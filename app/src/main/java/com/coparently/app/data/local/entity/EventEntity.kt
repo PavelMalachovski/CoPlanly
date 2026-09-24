@@ -129,4 +129,3 @@ data class EventEntity(
     val familyId: String? = null,
     val deletedAtMillis: Long? = null
 )
-

@@ -109,7 +109,9 @@ class SyncViewModel @Inject constructor(
      *
      * @param completedTask Task с результатом Google Sign-In
      */
-    suspend fun handleSignInResult(completedTask: com.google.android.gms.tasks.Task<com.google.android.gms.auth.api.signin.GoogleSignInAccount>): GoogleCalendarSyncState {
+    suspend fun handleSignInResult(
+        completedTask: com.google.android.gms.tasks.Task<com.google.android.gms.auth.api.signin.GoogleSignInAccount>
+    ): GoogleCalendarSyncState {
         _syncState.value = GoogleCalendarSyncState.Syncing(UiText.Res(R.string.sync_google_processing_sign_in))
 
         // The service's error text is English and technical; it goes to the log, and the user

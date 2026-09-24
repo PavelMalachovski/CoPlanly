@@ -459,4 +459,3 @@ class EncryptedPreferences @Inject constructor(
         private const val KEY_DEFAULT_CURRENCY = "default_currency"
     }
 }
-

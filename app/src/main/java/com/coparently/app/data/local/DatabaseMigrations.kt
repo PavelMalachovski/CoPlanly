@@ -665,7 +665,12 @@ object DatabaseMigrations {
     val MIGRATION_29_30 = object : Migration(29, 30) {
         override fun migrate(database: SupportSQLiteDatabase) {
             listOf(
-                "events", "expenses", "budgets", "child_info", "pets", "change_requests"
+                "events",
+                "expenses",
+                "budgets",
+                "child_info",
+                "pets",
+                "change_requests"
             ).forEach { table ->
                 database.execSQL("ALTER TABLE $table ADD COLUMN familyId TEXT")
             }

@@ -31,10 +31,18 @@ object CzechHolidays : HolidayProvider {
             cs(easterSunday.plusDays(1), "Easter Monday", "Velikonoční pondělí"),
             cs(LocalDate.of(year, 5, 1), "Labour Day", "Svátek práce"),
             cs(LocalDate.of(year, 5, 8), "Victory Day", "Den vítězství"),
-            cs(LocalDate.of(year, 7, 5), "Saints Cyril and Methodius Day", "Den slovanských věrozvěstů Cyrila a Metoděje"),
+            cs(
+                LocalDate.of(year, 7, 5),
+                "Saints Cyril and Methodius Day",
+                "Den slovanských věrozvěstů Cyrila a Metoděje"
+            ),
             cs(LocalDate.of(year, 7, 6), "Jan Hus Day", "Den upálení mistra Jana Husa"),
             cs(LocalDate.of(year, 9, 28), "Czech Statehood Day", "Den české státnosti"),
-            cs(LocalDate.of(year, 10, 28), "Independent Czechoslovak State Day", "Den vzniku samostatného československého státu"),
+            cs(
+                LocalDate.of(year, 10, 28),
+                "Independent Czechoslovak State Day",
+                "Den vzniku samostatného československého státu"
+            ),
             cs(LocalDate.of(year, 11, 17), "Freedom and Democracy Day", "Den boje za svobodu a demokracii"),
             cs(LocalDate.of(year, 12, 24), "Christmas Eve", "Štědrý den"),
             cs(LocalDate.of(year, 12, 25), "Christmas Day", "1. svátek vánoční"),

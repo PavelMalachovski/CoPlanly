@@ -69,7 +69,10 @@ class FirebaseAuthService @Inject constructor(
             // Log Firebase configuration for debugging
             val projectId = firebaseAuth.app.options.projectId
             val apiKey = firebaseAuth.app.options.apiKey
-            android.util.Log.d("FirebaseAuthService", "Firebase config - projectId: $projectId, apiKey: ${apiKey?.take(10)}...")
+            android.util.Log.d(
+                "FirebaseAuthService",
+                "Firebase config - projectId: $projectId, apiKey: ${apiKey?.take(10)}..."
+            )
 
             val result = firebaseAuth.createUserWithEmailAndPassword(email, password).await()
             Result.success(result.user!!)
@@ -184,4 +187,3 @@ class FirebaseAuthService @Inject constructor(
         return getCurrentUser()
     }
 }
-

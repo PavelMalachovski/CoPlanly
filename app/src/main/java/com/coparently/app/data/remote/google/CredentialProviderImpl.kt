@@ -57,7 +57,4 @@ class CredentialProviderImpl @Inject constructor(
                 // Don't set expiration to allow automatic refresh handling
             }
     }
-
 }
-
-

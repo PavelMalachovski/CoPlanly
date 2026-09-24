@@ -187,4 +187,3 @@ fun SchoolInfoEditor(
         }
     }
 }
-

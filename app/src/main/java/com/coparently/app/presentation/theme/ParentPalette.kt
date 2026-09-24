@@ -47,14 +47,20 @@ enum class ParentColorChoice(
 ) {
     /** Material Pink. The app's original slot-1 colour, kept so nobody's calendar changes. */
     PINK(
-        "#E91E63", CoPlanlyColors.MomPink, CoPlanlyColors.MomPinkLight,
-        CoPlanlyColors.MomPinkDark, R.string.parent_color_pink
+        "#E91E63",
+        CoPlanlyColors.MomPink,
+        CoPlanlyColors.MomPinkLight,
+        CoPlanlyColors.MomPinkDark,
+        R.string.parent_color_pink
     ),
 
     /** Material Blue. The original slot-2 colour, kept for the same reason. */
     BLUE(
-        "#1976D2", CoPlanlyColors.DadBlue, CoPlanlyColors.DadBlueLight,
-        CoPlanlyColors.DadBlueDark, R.string.parent_color_blue
+        "#1976D2",
+        CoPlanlyColors.DadBlue,
+        CoPlanlyColors.DadBlueLight,
+        CoPlanlyColors.DadBlueDark,
+        R.string.parent_color_blue
     ),
 
     /**
@@ -66,13 +72,19 @@ enum class ParentColorChoice(
      * protects.
      */
     PURPLE(
-        "#7B1FA2", Color(0xFF7B1FA2), Color(0xFFCE93D8), Color(0xFF4A148C),
+        "#7B1FA2",
+        Color(0xFF7B1FA2),
+        Color(0xFFCE93D8),
+        Color(0xFF4A148C),
         R.string.parent_color_purple
     ),
 
     /** Material Deep Orange 800 / 200 / 900. */
     ORANGE(
-        "#D84315", Color(0xFFD84315), Color(0xFFFFAB91), Color(0xFFBF360C),
+        "#D84315",
+        Color(0xFFD84315),
+        Color(0xFFFFAB91),
+        Color(0xFFBF360C),
         R.string.parent_color_orange
     );
 

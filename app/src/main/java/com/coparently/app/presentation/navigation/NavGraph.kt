@@ -1389,6 +1389,7 @@ sealed class Screen(val route: String) {
         /** Builds the route that opens on code entry, with nothing pre-filled. */
         fun routeForCodeEntry(): String = "pairing?enter=true"
     }
+
     /**
      * Redeeming a guest invitation — a separate route from [Pairing], mirroring the two
      * separate callables behind them. Nothing about a guest belongs on a screen whose other
@@ -1561,6 +1562,7 @@ sealed class Screen(val route: String) {
         fun createRoute(eventId: String? = null): String =
             "change_requests?eventId=${eventId ?: "null"}"
     }
+
     /**
      * The change-request form.
      *

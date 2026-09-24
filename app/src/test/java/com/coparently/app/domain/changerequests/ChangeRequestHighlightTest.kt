@@ -148,5 +148,4 @@ class ChangeRequestHighlightTest {
             ChangeRequestHighlight.indexInInbox(emptyList(), emptyList(), "nope", precedingItems = 4)
         )
     }
-
 }

@@ -156,7 +156,9 @@ fun EventTypeFilterSheet(
                                     modifier = Modifier.size(16.dp)
                                 )
                             }
-                        } else null
+                        } else {
+                            null
+                        }
                     )
                 }
             }

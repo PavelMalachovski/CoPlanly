@@ -4,7 +4,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import java.time.LocalDate
 import java.time.temporal.WeekFields
-import java.util.Locale
 
 /**
  * Helper object for date range calculations.
@@ -58,4 +57,3 @@ object DateRangeHelper {
         return (0 until daysCount).map { startDate.plusDays(it.toLong()) }
     }
 }
-

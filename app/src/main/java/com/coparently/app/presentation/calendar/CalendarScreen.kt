@@ -85,7 +85,6 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.YearMonth
 import java.time.temporal.ChronoUnit
-import java.util.Locale
 
 /**
  * Months loaded either side of the query anchor in MONTH mode.

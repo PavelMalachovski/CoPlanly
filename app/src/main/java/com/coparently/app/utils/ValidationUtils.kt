@@ -292,4 +292,3 @@ object ValidationUtils {
         return validatePhone(this) is ValidationResult.Success
     }
 }
-
