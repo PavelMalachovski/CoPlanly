@@ -11,6 +11,8 @@ import com.google.firebase.firestore.FirebaseFirestoreSettings
 import com.google.firebase.firestore.MemoryCacheSettings
 import com.google.firebase.functions.FirebaseFunctions
 import com.google.firebase.storage.FirebaseStorage
+import org.json.JSONArray
+import org.json.JSONObject
 import org.junit.Assume.assumeTrue
 import org.junit.rules.TestWatcher
 import org.junit.rules.Timeout
@@ -166,6 +168,69 @@ object EmulatorEnvironment {
 
     /** [host], for code that only runs after [assumeEmulators] has passed. */
     fun requireHost(): String = checkNotNull(host) { "assumeEmulators() was not called" }
+
+    /**
+     * The documents of [collection] whose [field] equals [value], read around the rules like
+     * [documentExists] — for what no client may read back, such as `notification_queue`. Each
+     * document is its fields, decoded from the REST form: strings, integers, booleans, doubles,
+     * nulls, arrays and maps; a timestamp comes back as its RFC 3339 string.
+     */
+    fun queryAsAdmin(collection: String, field: String, value: String): List<Map<String, Any?>> {
+        val url = URL(
+            "http://${requireHost()}:$FIRESTORE_PORT/v1/projects/$PROJECT_ID" +
+                "/databases/(default)/documents:runQuery"
+        )
+        val query = JSONObject().put(
+            "structuredQuery",
+            JSONObject()
+                .put("from", JSONArray().put(JSONObject().put("collectionId", collection)))
+                .put(
+                    "where",
+                    JSONObject().put(
+                        "fieldFilter",
+                        JSONObject()
+                            .put("field", JSONObject().put("fieldPath", field))
+                            .put("op", "EQUAL")
+                            .put("value", JSONObject().put("stringValue", value))
+                    )
+                )
+        )
+        val connection = url.openConnection() as HttpURLConnection
+        return try {
+            connection.connectTimeout = CONNECT_TIMEOUT_MS
+            connection.readTimeout = CONNECT_TIMEOUT_MS
+            connection.requestMethod = "POST"
+            connection.doOutput = true
+            connection.setRequestProperty("Authorization", "Bearer owner")
+            connection.setRequestProperty("Content-Type", "application/json")
+            connection.outputStream.use { it.write(query.toString().toByteArray()) }
+            check(connection.responseCode == HTTP_OK) {
+                "Firestore emulator answered ${connection.responseCode} for a query on $collection"
+            }
+            val rows = JSONArray(connection.inputStream.bufferedReader().readText())
+            (0 until rows.length())
+                .mapNotNull { rows.getJSONObject(it).optJSONObject("document")?.optJSONObject("fields") }
+                .map(::decodeFields)
+        } finally {
+            connection.disconnect()
+        }
+    }
+
+    private fun decodeFields(fields: JSONObject): Map<String, Any?> =
+        fields.keys().asSequence().associateWith { decodeValue(fields.getJSONObject(it)) }
+
+    private fun decodeValue(value: JSONObject): Any? = when {
+        value.has("stringValue") -> value.getString("stringValue")
+        value.has("integerValue") -> value.getString("integerValue").toLong()
+        value.has("doubleValue") -> value.getDouble("doubleValue")
+        value.has("booleanValue") -> value.getBoolean("booleanValue")
+        value.has("timestampValue") -> value.getString("timestampValue")
+        value.has("mapValue") -> decodeFields(value.getJSONObject("mapValue").optJSONObject("fields") ?: JSONObject())
+        value.has("arrayValue") -> value.getJSONObject("arrayValue").optJSONArray("values")
+            ?.let { values -> (0 until values.length()).map { decodeValue(values.getJSONObject(it)) } }
+            .orEmpty()
+        else -> null
+    }
 
     /**
      * Whether `documents/[path]` exists, read **around** the security rules.
