@@ -88,4 +88,11 @@ if [ -n "${STATUS_FILE:-}" ]; then
   echo "$status" > "$STATUS_FILE"
 fi
 
+# STOP_EMULATOR=true (the CI `instrumented` job) stops the emulator here, synchronously, instead of
+# leaving it to the action, whose own shutdown hung for 9–11 minutes a run — see stop-emulator.sh.
+# After the status is written, so nothing it does can change the leg's result.
+if [ "${STOP_EMULATOR:-false}" = "true" ]; then
+  bash "$(dirname "$0")/stop-emulator.sh"
+fi
+
 exit "$status"

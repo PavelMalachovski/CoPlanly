@@ -231,8 +231,11 @@ jobs:
           # A job that died before writing results must not publish a green check.
           require_tests: true
 
+  # Lint and detekt were one job, run in sequence: lint 5:15, detekt 0:52 (PR #102). Neither
+  # needs the other, so they are two jobs now and a detekt finding is reported without waiting
+  # for lint. Lint keeps the `static` id so older links and the report's job list still match.
   static:
-    name: Android — static analysis
+    name: Android — lint
     needs: changes
     if: needs.changes.outputs.android == 'true'
     runs-on: ubuntu-latest
@@ -257,6 +260,38 @@ jobs:
       - name: Android lint
         run: ./gradlew lint
 
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-reports-static
+          path: app/build/reports/
+          if-no-files-found: ignore
+          retention-days: 14
+
+  detekt:
+    name: Android — detekt
+    needs: changes
+    if: needs.changes.outputs.android == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: temurin
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          # Lets setup-gradle save and restore Gradle's configuration cache between runs (it holds
+          # secrets, so it is only stored encrypted). Optional: with the repository secret unset
+          # the cache still works within one job, just not across runs.
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+
       # detekt **gates** again (CQ-12). It did not for a while: its first run against this
       # repository found 194 weighted issues, essentially all pre-existing — `AddEditEventScreen`
       # at 1,246 lines, `AnalyticsManager` with 22 functions, and every screen added since
@@ -273,18 +308,15 @@ jobs:
       # violation into a report nobody reads. Either fix the finding or, if it is genuinely
       # accepted debt, regenerate the baseline through the Regenerate workflow so the acceptance
       # is a visible commit.
-      #
-      # `if: always()` so one push reports lint *and* detekt rather than the first of them.
       - name: detekt
-        if: always()
         run: ./gradlew detekt
 
       - name: Upload reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: android-reports-static
-          path: app/build/reports/
+          name: android-reports-detekt
+          path: app/build/reports/detekt/
           if-no-files-found: ignore
           retention-days: 14
 
@@ -519,7 +551,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.android == 'true'
     runs-on: ubuntu-latest
-    # The emulator step has its own 15-minute limit; this covers setup, a cold AVD and uploads.
+    # The emulator step has its own 10-minute limit; this covers setup, a cold AVD and uploads.
     timeout-minutes: 35
     permissions:
       contents: read
@@ -548,6 +580,11 @@ jobs:
           # secrets, so it is only stored encrypted). Optional: with the repository secret unset
           # the cache still works within one job, just not across runs.
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+
+      # Compiles while the AVD restores and the emulator boots, which used to happen first and
+      # leave the build waiting — the script's first line waits for it (tools/ci-background-build.sh).
+      - name: Start building the APKs in the background
+        run: bash tools/ci-background-build.sh start
 
       # The runner image ships KVM but leaves it owned by a group the runner user is not in,
       # so without this the emulator falls back to software rendering and times out.
@@ -595,17 +632,24 @@ jobs:
       # it either. So this step has its own timeout and `continue-on-error`, the script writes
       # the tests' exit status to a file, and "The instrumented tests finished and passed" fails
       # the job unless that file exists and says 0. A test failure, or a hang before the tests
-      # finish, is still red; a hang after they passed costs 15 minutes and a warning.
+      # finish, is still red; a hang after they passed costs the step's timeout and a warning.
       #
-      # 15 minutes is tight on purpose: the step measured ~11 on API 26 (SDK install and boot ~2,
-      # build and tests ~8). When the tests outgrow it, the next step says so in plain words —
-      # "did not finish" — and the answer is to raise this number, not to split the suite.
+      # The hang was not a one-off: on PR #102 both API 26 and API 30 passed every test and then
+      # sat 9–11 minutes in the action's shutdown, which made them the whole run's critical path.
+      # So the script now stops the emulator itself, synchronously, once the status is written
+      # (STOP_EMULATOR, tools/stop-emulator.sh), and the timeout below is only the backstop.
+      #
+      # 10 minutes: the step measured ~6 on API 26 with the build inside it (boot ~1, build ~3,
+      # tests ~2), and the build now runs in the background before it. When the tests outgrow it,
+      # the next step says so in plain words — "did not finish" — and the answer is to raise this
+      # number, not to split the suite.
       - name: Run instrumented tests
         id: tests
-        timeout-minutes: 15
+        timeout-minutes: 10
         continue-on-error: true
         env:
           STATUS_FILE: ${{ runner.temp }}/instrumented-status
+          STOP_EMULATOR: 'true'
           # Only the legs whose emulator survives screenrecord record (tools/ci-changes.js).
           RECORD_SCREEN: ${{ matrix.record }}
         uses: reactivecircus/android-emulator-runner@v2
@@ -618,10 +662,10 @@ jobs:
           force-avd-creation: false
           disable-animations: true
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          # Records the screen in 170 s segments while the tests run (on legs with `record`) and
-          # pulls the MP4s after; the exit status is the tests', and a recorder that fails never
-          # fails the job.
-          script: bash tools/with-screen-recording.sh ./gradlew connectedDebugAndroidTest ${{ matrix.test-args }}
+          # Waits for the background build, then records the screen in 170 s segments while the
+          # tests run (on legs with `record`) and pulls the MP4s after; the exit status is the
+          # tests', and a recorder that fails never fails the job.
+          script: bash tools/ci-background-build.sh wait && bash tools/with-screen-recording.sh ./gradlew connectedDebugAndroidTest ${{ matrix.test-args }}
 
       - name: The instrumented tests finished and passed
         if: always()
@@ -749,9 +793,28 @@ jobs:
           # the cache still works within one job, just not across runs.
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
-      # Built before the emulator boots, so the boot's minutes are not also spent compiling.
-      - name: Build the app and test APKs
-        run: ./gradlew assembleDebug assembleDebugAndroidTest
+      # Built while the AVD restores and the emulator boots; the script's first line waits for it
+      # (tools/ci-background-build.sh). It used to run first, and the boot waited behind it.
+      - name: Start building the APKs in the background
+        run: bash tools/ci-background-build.sh start
+
+      # The Firestore and Storage emulators are jars the CLI downloads on first use (~20 s a run).
+      # Keyed on the lock file that pins the CLI, so a CLI upgrade fetches the matching jars.
+      - name: Cache the Firebase emulators
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/firebase/emulators
+          key: firebase-emulators-${{ hashFiles('firestore-tests/package-lock.json') }}
+
+      # The API 30 AVD the `instrumented` job caches, snapshot included — restored only, so the
+      # two jobs never race to save it. On a miss the action creates the AVD as it always did.
+      - name: Restore the API 30 AVD
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.android/avd/*
+            ~/.android/adb*
+          key: avd-30-default-x86_64-pixel_2
 
       - name: Enable KVM
         run: |
@@ -770,9 +833,12 @@ jobs:
           target: default
           profile: pixel_2
           ram-size: 4096M
+          force-avd-creation: false
           disable-animations: true
-          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
-          script: bash tools/e2e/run-two-parent-tests.sh
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          # Stops the emulator itself once the tests are done (tools/stop-emulator.sh), since a
+          # snapshot boot is what the `instrumented` job's shutdown hang was seen on.
+          script: bash tools/ci-background-build.sh wait && bash tools/e2e/run-two-parent-tests.sh; status=$?; bash tools/stop-emulator.sh; exit $status
 
       - name: Every two-parent test ran — none skipped
         run: |
@@ -912,6 +978,12 @@ jobs:
           cache: npm
           cache-dependency-path: firestore-tests/package-lock.json
 
+      - name: Cache the Firebase emulators
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/firebase/emulators
+          key: firebase-emulators-${{ hashFiles('firestore-tests/package-lock.json') }}
+
       - run: npm ci
       # `test:ci` is `test` with tools/mocha-ci-reporter.js added, which also writes JUnit XML.
       - name: npm test
@@ -952,7 +1024,7 @@ jobs:
   # `main` there is no pull request: the summary goes to the run's job summary only.
   report:
     name: CI report
-    needs: [changes, build-test, static, release, screenshots, instrumented, e2e, invariants, functions, rules]
+    needs: [changes, build-test, static, detekt, release, screenshots, instrumented, e2e, invariants, functions, rules]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 10
