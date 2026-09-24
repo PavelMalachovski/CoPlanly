@@ -107,6 +107,7 @@ class UiTourCamera(
 ) {
     private val context = InstrumentationRegistry.getInstrumentation().targetContext
     private val variant = UiTourVariant.current()
+
     // The app's internal files dir, streamed out by `run-as` (tools/ui-tour/run-ui-tour.sh): on API 30
     // neither `adb pull` nor `run-as` could read the external app-specific directory.
     private val directory = File(context.filesDir, "ui-tour/${variant.name}").apply { mkdirs() }
