@@ -351,14 +351,9 @@ private fun SwipeToDeleteRow(
     content: @Composable () -> Unit
 ) {
     val dismissState = rememberSwipeToDismissBoxState()
-    // The delete runs once the row has settled off-screen. The callback is remembered so a
-    // recomposition cannot hand SwipeToDismissBox a new lambda and re-run it on a settled row.
+    // The delete runs once the row has settled off-screen. `onDismiss` below captures only this
+    // State, so Compose memoizes it and a recomposition cannot re-run the delete on a settled row.
     val currentOnDelete by rememberUpdatedState(onDelete)
-    val onDismiss: (SwipeToDismissBoxValue) -> Unit = remember {
-        { value ->
-            if (value == SwipeToDismissBoxValue.EndToStart) currentOnDelete()
-        }
-    }
 
     // A swipe is invisible to TalkBack and Switch Access, so the same delete is offered as a
     // custom accessibility action — otherwise those users could not remove an expense at all.
@@ -374,7 +369,7 @@ private fun SwipeToDeleteRow(
             )
         },
         enableDismissFromStartToEnd = false,
-        onDismiss = onDismiss,
+        onDismiss = { value -> if (value == SwipeToDismissBoxValue.EndToStart) currentOnDelete() },
         backgroundContent = {
             Box(
                 modifier = Modifier

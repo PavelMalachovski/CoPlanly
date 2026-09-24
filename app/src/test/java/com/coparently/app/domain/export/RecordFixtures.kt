@@ -49,16 +49,7 @@ internal object RecordFixtures {
             amount = "Amount",
             currency = "Currency"
         ),
-        actions = RecordActions(
-            created = "Created",
-            updated = "Changed",
-            deleted = "Deleted",
-            currentState = "Current state",
-            sent = "Sent",
-            notSent = "Not sent",
-            recorded = "Recorded",
-            serverRecorded = "RECORDED BY THE SERVER"
-        ),
+        actions = actionLabels(),
         notYetOnServer = "Not yet on server",
         noServerTime = "None kept",
         revision = "Revision",
@@ -80,6 +71,18 @@ internal object RecordFixtures {
             written = "Written",
             edited = "Last edited"
         )
+    )
+
+    /** The action words, kept apart from [labels] so that function stays within detekt's length. */
+    fun actionLabels() = RecordActions(
+        created = "Created",
+        updated = "Changed",
+        deleted = "Deleted",
+        currentState = "Current state",
+        sent = "Sent",
+        notSent = "Not sent",
+        recorded = "Recorded",
+        serverRecorded = "RECORDED BY THE SERVER"
     )
 
     /** The parenting plan's section words, short and upper-case so a test can find them. */

@@ -214,20 +214,15 @@ private fun SwipeableEventCard(
     modifier: Modifier = Modifier
 ) {
     val dismissState = rememberSwipeToDismissBoxState()
-    // The delete runs once the row has settled off-screen. The callback is remembered so a
-    // recomposition cannot hand SwipeToDismissBox a new lambda and re-run it on a settled row.
+    // The delete runs once the row has settled off-screen. `onDismiss` below captures only this
+    // State, so Compose memoizes it and a recomposition cannot re-run the delete on a settled row.
     val currentOnDelete by rememberUpdatedState(onDelete)
-    val onDismiss: (SwipeToDismissBoxValue) -> Unit = remember {
-        { value ->
-            if (value == SwipeToDismissBoxValue.EndToStart) currentOnDelete()
-        }
-    }
 
     SwipeToDismissBox(
         state = dismissState,
         modifier = modifier,
         enableDismissFromStartToEnd = false,
-        onDismiss = onDismiss,
+        onDismiss = { value -> if (value == SwipeToDismissBoxValue.EndToStart) currentOnDelete() },
         backgroundContent = {
             Box(
                 modifier = Modifier
