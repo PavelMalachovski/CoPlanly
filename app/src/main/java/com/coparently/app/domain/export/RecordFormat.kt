@@ -45,6 +45,15 @@ object RecordFormat {
         null -> actions.currentState
     }
 
+    /**
+     * The action cell of a revision: what it recorded, and — for one the server recorded because the
+     * editing phone did not — that it was, so nobody reads the name beside it as a phone's claim.
+     */
+    fun revisionAction(revision: RecordRevision, actions: RecordActions): String {
+        val action = action(revision.kind, actions)
+        return if (revision.recordedByServer) "$action — ${actions.serverRecorded}" else action
+    }
+
     /** The server-time cell: the time, "not yet received", or "none kept" for a current state. */
     fun serverTime(revision: RecordRevision, zone: ZoneId, labels: RecordLabels): String = when {
         revision.recordedAtMillis != null -> instant(revision.recordedAtMillis, zone)

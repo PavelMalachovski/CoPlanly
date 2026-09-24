@@ -4,13 +4,10 @@ import com.coparently.app.data.crashlytics.CrashlyticsManager
 import com.coparently.app.data.local.dao.EventDao
 import com.coparently.app.data.local.entity.EventEntity
 import com.coparently.app.data.remote.google.CredentialProvider
-import com.coparently.app.data.remote.google.CredentialProviderImpl
 import com.coparently.app.data.remote.google.GoogleCalendarApi
 import com.coparently.app.domain.events.EventTimestamp
 import com.coparently.app.domain.family.FamilyKey
-import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.repository.UserRepository
-import com.google.api.client.auth.oauth2.Credential
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -18,7 +15,6 @@ import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 import javax.inject.Singleton
 import com.google.api.services.calendar.model.Event as GoogleEvent
@@ -296,4 +292,3 @@ enum class SyncFailure {
 
 /** Ends an import early with a [SyncFailure] the user is shown. */
 internal class SyncFailureException(val failure: SyncFailure) : Exception(failure.name)
-

@@ -57,8 +57,9 @@ internal data class DataSourceNotice(
 /**
  * The third-party data built into the app, and the attribution each one asks for (MON-13).
  *
- * The school-vacation tables for Slovakia, Austria and the German Länder (`SchoolVacation.kt`,
- * `GermanSchoolVacations.kt`) are read from the OpenHolidays dataset, published under the **Open
+ * The school-vacation tables for Slovakia (nationwide and per kraj), Austria and the German Länder
+ * (`SchoolVacation.kt`, `SlovakHolidays.kt`, `SlovakRegion.kt`, `GermanSchoolVacations.kt`) are
+ * read from the OpenHolidays dataset, published under the **Open
  * Database License 1.0**, whose §4.3 asks that a work produced from the database say so, with the
  * licence, wherever a person would expect to find such a notice. That is this screen, reached from
  * Settings → App. The Python `holidays` library (MIT) contributed no code and no data to the app —

@@ -150,14 +150,16 @@ interface EventDao {
     /**
      * Gets events for a specific child with pagination.
      */
-    @Query("""
+    @Query(
+        """
         SELECT * FROM events
         WHERE deletedAtMillis IS NULL
         AND parentOwner = :parentOwner
         AND startDateTime BETWEEN :start AND :end
         ORDER BY startDateTime ASC
         LIMIT :limit OFFSET :offset
-    """)
+    """
+    )
     suspend fun getEventsForParentPaginated(
         parentOwner: String,
         start: LocalDateTime,
@@ -169,12 +171,14 @@ interface EventDao {
     /**
      * Gets count of events for a specific parent in date range.
      */
-    @Query("""
+    @Query(
+        """
         SELECT COUNT(*) FROM events
         WHERE deletedAtMillis IS NULL
         AND parentOwner = :parentOwner
         AND startDateTime BETWEEN :start AND :end
-    """)
+    """
+    )
     suspend fun getEventsCountForParent(
         parentOwner: String,
         start: LocalDateTime,

@@ -158,6 +158,7 @@ class ChatMappersWireFormatTest {
         )
 
         val document = message.toFirestoreMap()
+
         @Suppress("UNCHECKED_CAST")
         val read = (document as Map<String, Any>).toMessageOrNull()
 

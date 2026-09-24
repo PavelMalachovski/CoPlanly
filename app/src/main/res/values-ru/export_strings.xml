@@ -62,6 +62,7 @@
     <string name="export_action_sent">Отправлено</string>
     <string name="export_action_not_sent">Не отправлено</string>
     <string name="export_action_recorded">Записано</string>
+    <string name="export_action_server_recorded">записано сервером по сохранённой записи; телефон, на котором её меняли, это изменение не записал, поэтому время устройства неизвестно, а указан тот, кого называет сама запись</string>
 
     <!-- MON-16: the record id and whether the file can be verified. -->
     <string name="export_verify_explainer">Если сервер доступен, файл регистрируется: сохраняются его идентификатор записи и отпечаток его точного содержимого, поэтому любой, у кого он есть, может проверить, что файл не изменён. С телефона уходит только отпечаток, никогда не сам файл.</string>

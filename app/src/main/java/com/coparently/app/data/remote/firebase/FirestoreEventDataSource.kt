@@ -226,4 +226,3 @@ data class EventDownload(
     val documents: List<Map<String, Any?>>,
     val highestCursor: Timestamp?
 )
-

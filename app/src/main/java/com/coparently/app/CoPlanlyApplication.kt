@@ -131,4 +131,3 @@ class CoPlanlyApplication : Application(), Configuration.Provider {
         override fun onActivityDestroyed(activity: Activity) = Unit
     }
 }
-

@@ -191,7 +191,7 @@ object RecordLayout {
             ) + event.revisions.flatMap { revision ->
                 val title = listOf(
                     "${labels.revision} ${revision.number}",
-                    RecordFormat.action(revision.kind, labels.actions),
+                    RecordFormat.revisionAction(revision, labels.actions),
                     revision.byName
                 ).filter { it.isNotBlank() }.joinToString(" — ")
                 listOf(RecordBlock(title, LineStyle.EMPHASIS, indent = 1, spaceBefore = SMALL_GAP)) +

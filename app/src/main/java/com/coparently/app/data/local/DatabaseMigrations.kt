@@ -665,7 +665,12 @@ object DatabaseMigrations {
     val MIGRATION_29_30 = object : Migration(29, 30) {
         override fun migrate(database: SupportSQLiteDatabase) {
             listOf(
-                "events", "expenses", "budgets", "child_info", "pets", "change_requests"
+                "events",
+                "expenses",
+                "budgets",
+                "child_info",
+                "pets",
+                "change_requests"
             ).forEach { table ->
                 database.execSQL("ALTER TABLE $table ADD COLUMN familyId TEXT")
             }
@@ -946,6 +951,36 @@ object DatabaseMigrations {
     }
 
     /**
+     * v42 -> v43: a cache of the vault index (MON-23).
+     *
+     * A new, empty table and nothing else. It is filled from the next server answer of the vault
+     * listener, so there is nothing to backfill, and it has no `syncedToFirestore` column because
+     * nothing in it is ever uploaded — see `FamilyDocumentCacheEntity`. The column list must match
+     * what Room generates for that entity, which `CoPlanlyDatabaseMigrationTest` checks against
+     * `43.json` once the Regenerate workflow has exported it.
+     */
+    val MIGRATION_42_43 = object : Migration(42, 43) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL(
+                "CREATE TABLE IF NOT EXISTS family_documents_cache (" +
+                    "id TEXT NOT NULL, " +
+                    "familyId TEXT NOT NULL, " +
+                    "createdByFirebaseUid TEXT NOT NULL, " +
+                    "title TEXT NOT NULL, " +
+                    "category TEXT NOT NULL, " +
+                    "fileName TEXT NOT NULL, " +
+                    "storagePath TEXT NOT NULL, " +
+                    "contentType TEXT NOT NULL, " +
+                    "sizeBytes INTEGER NOT NULL, " +
+                    "sha256 TEXT NOT NULL, " +
+                    "createdAtMillis INTEGER NOT NULL, " +
+                    "deletedAtMillis INTEGER, " +
+                    "PRIMARY KEY(id))"
+            )
+        }
+    }
+
+    /**
      * Writes each row's [wallClockToEpochMillis] reading of `updatedAt` into `updatedAtMillis`.
      *
      * Reads every value out first and writes afterwards — nothing iterates a cursor while
@@ -1008,6 +1043,7 @@ object DatabaseMigrations {
         MIGRATION_38_39,
         MIGRATION_39_40,
         MIGRATION_40_41,
-        MIGRATION_41_42
+        MIGRATION_41_42,
+        MIGRATION_42_43
     )
 }

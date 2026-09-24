@@ -64,4 +64,3 @@ class Converters {
         return value?.let { java.time.LocalDate.parse(it, java.time.format.DateTimeFormatter.ISO_LOCAL_DATE) }
     }
 }
-

@@ -201,4 +201,3 @@ sealed class ConflictResolution<out T> {
         val reason: String
     ) : ConflictResolution<T>()
 }
-

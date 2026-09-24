@@ -11,7 +11,9 @@
  *
  * Inputs, all optional so a missing one degrades to "not reported" rather than a failed job:
  *   --artifacts <dir>  downloaded artifacts, one sub-directory per artifact. `junit-*` hold
- *                      JUnit XML; `coverage-report` holds Kover's XML.
+ *                      JUnit XML; `coverage-report` holds Kover's XML; `screenshot-summary`
+ *                      holds tools/screenshot-gallery.js's `--summary` JSON (verify or record,
+ *                      and which images no longer match their committed baselines).
  *   --plan <file>      markdown from tools/manual-test-plan.js
  *   --out <file>       where to write the markdown (default: stdout)
  *   GITHUB_TOKEN, GITHUB_REPOSITORY, GITHUB_RUN_ID, GITHUB_API_URL, GITHUB_SERVER_URL — to list
@@ -26,6 +28,7 @@ const fs = require('fs');
 const path = require('path');
 
 const MAX_FAILURES_LISTED = 25;
+const MAX_SCREENSHOTS_LISTED = 15;
 
 /** @param {string} s XML text @return {string} it with the five entities and numeric refs decoded */
 function decodeXml(s) {
@@ -107,7 +110,8 @@ function suiteLabel(artifact) {
   const name = artifact.replace(/^junit-/, '');
   const inst = /^instrumented-api(\d+)-?(.*)$/.exec(name);
   if (inst) return `Instrumented, API ${inst[1]}${inst[2] && inst[2] !== 'default' ? ` (${inst[2]})` : ''}`;
-  return ({unit: 'Unit (JVM)', functions: 'Cloud Functions', rules: 'Firestore / Storage rules'})[name] ||
+  return ({unit: 'Unit (JVM)', functions: 'Cloud Functions', rules: 'Firestore / Storage rules',
+    screenshots: 'Screenshots (Roborazzi)'})[name] ||
     name;
 }
 
@@ -126,14 +130,65 @@ function xmlFilesIn(dir) {
 }
 
 /**
+ * @param {string} dir the `screenshot-summary` artifact
+ * @return {{mode: string, total: number, changed: string[], added: string[]}|null} the first
+ *   readable summary in it, or null
+ */
+function readScreenshotSummary(dir) {
+  for (const e of fs.readdirSync(dir).filter((f) => f.endsWith('.json')).sort()) {
+    try {
+      const s = JSON.parse(fs.readFileSync(path.join(dir, e), 'utf8'));
+      if (s && typeof s.mode === 'string') {
+        return {mode: s.mode, total: Number(s.total) || 0,
+          changed: Array.isArray(s.changed) ? s.changed : [], added: Array.isArray(s.added) ? s.added : []};
+      }
+    } catch (err) {
+      // An unreadable summary is "not reported", never a failed report.
+    }
+  }
+  return null;
+}
+
+/**
+ * The screenshots section: whether this run compared at all, and which images did not match.
+ * @param {{mode: string, total: number, changed: string[], added: string[]}} s the summary
+ * @return {string[]} markdown lines
+ */
+function screenshotLines(s) {
+  const lines = ['### Screenshots', ''];
+  if (s.mode !== 'verify') {
+    lines.push(`Recorded ${s.total} screenshots and **compared nothing**: no committed baselines ` +
+      '(`app/src/test/screenshots/`) yet. Run the Regenerate workflow to record them.', '');
+    return lines;
+  }
+  const off = s.changed.length + s.added.length;
+  if (off === 0) {
+    lines.push(`All ${s.total} screenshots match their committed baselines.`, '');
+    return lines;
+  }
+  lines.push(`**${s.changed.length} changed, ${s.added.length} without a baseline** (of ${s.total}). ` +
+    'The `screenshot-diffs` artifact holds a `_compare.png` for each; the `screenshots` gallery ' +
+    'filters to them by status. If the change is intended, run the Regenerate workflow on this ' +
+    'branch to accept it as the new baseline.', '');
+  const all = s.changed.map((k) => `- \`${k}\``)
+      .concat(s.added.map((k) => `- \`${k}\` (no baseline)`));
+  lines.push(...all.slice(0, MAX_SCREENSHOTS_LISTED));
+  if (all.length > MAX_SCREENSHOTS_LISTED) lines.push(`- … and ${all.length - MAX_SCREENSHOTS_LISTED} more`);
+  lines.push('');
+  return lines;
+}
+
+/**
  * @param {string} artifactsDir directory holding one sub-directory per downloaded artifact
  * @return {{suites: {label: string, tests: number, failed: number, skipped: number,
- *   failures: {name: string, message: string}[]}[], coverage: object|null}} parsed results
+ *   failures: {name: string, message: string}[]}[], coverage: object|null,
+ *   screenshots: object|null}} parsed results
  */
 function collect(artifactsDir) {
   const suites = [];
   let coverage = null;
-  if (!artifactsDir || !fs.existsSync(artifactsDir)) return {suites, coverage};
+  let screenshots = null;
+  if (!artifactsDir || !fs.existsSync(artifactsDir)) return {suites, coverage, screenshots};
   for (const entry of fs.readdirSync(artifactsDir).sort()) {
     const dir = path.join(artifactsDir, entry);
     if (entry.startsWith('junit-')) {
@@ -150,9 +205,11 @@ function collect(artifactsDir) {
       for (const file of xmlFilesIn(dir)) {
         coverage = parseCoverage(fs.readFileSync(file, 'utf8')) || coverage;
       }
+    } else if (entry === 'screenshot-summary') {
+      screenshots = readScreenshotSummary(dir) || screenshots;
     }
   }
-  return {suites, coverage};
+  return {suites, coverage, screenshots};
 }
 
 /** @param {{status: string, conclusion: string|null}} job a job from the API @return {string} */
@@ -179,7 +236,14 @@ function describeArtifact(name) {
       '(docs/DEVICE-CHECKLIST.md §0-§1).';
   }
   if (name.startsWith('emulator-video-')) return 'Screen recording of the instrumented tests, ' + name.replace('emulator-video-', '');
-  if (/screenshot|roborazzi/i.test(name)) return 'Screenshot tests';
+  if (name === 'screenshot-diffs') {
+    return 'Screenshot diffs: baseline, difference and new image side by side for every screenshot ' +
+      'that no longer matches its committed baseline';
+  }
+  // Read by this script, not downloaded by a person: the summary is the section above, the JUnit
+  // XML is the suite row.
+  if (name === 'screenshot-summary' || name === 'junit-screenshots') return null;
+  if (/screenshot|roborazzi/i.test(name)) return 'Screenshot tests (gallery: unzip, open `index.html`)';
   if (name === 'coverage-report') return 'Unit-test coverage (Kover HTML + XML)';
   if (/^android-reports-/.test(name)) return 'Gradle reports: ' + name.replace('android-reports-', '');
   if (/e2e/i.test(name)) return 'End-to-end tests against the Firebase emulators';
@@ -192,7 +256,7 @@ function describeArtifact(name) {
  * @return {string} markdown
  */
 function render(data) {
-  const {suites = [], coverage = null, jobs = null, artifacts = null, plan = '', runUrl} = data;
+  const {suites = [], coverage = null, screenshots = null, jobs = null, artifacts = null, plan = '', runUrl} = data;
   const failedJobs = (jobs || []).filter((j) => ['failure', 'cancelled', 'timed_out'].includes(jobState(j)));
   const failedTests = suites.reduce((n, s) => n + s.failed, 0);
   const pending = (jobs || []).filter((j) => j.status !== 'completed');
@@ -241,6 +305,8 @@ function render(data) {
     if (failedTests > listed) lines.push(`… and ${failedTests - listed} more; see the check runs.`, '');
   }
 
+  if (screenshots) lines.push(...screenshotLines(screenshots));
+
   if (artifacts) {
     const shown = artifacts.map((a) => ({...a, what: describeArtifact(a.name)})).filter((a) => a.what);
     lines.push('### Artifacts', '');
@@ -265,6 +331,7 @@ function render(data) {
     suites: suites.map(({label, tests, failed, skipped, failures}) =>
       ({label, tests, failed, skipped, failures: failures.slice(0, MAX_FAILURES_LISTED)})),
     coverage,
+    screenshots,
   };
   lines.push(`<!-- ci-report-json ${JSON.stringify(json).replace(/--/g, '-\\u002d')} -->`);
   return lines.join('\n') + '\n';
@@ -300,7 +367,7 @@ async function main() {
   const argv = process.argv.slice(2);
   for (let i = 0; i < argv.length; i += 2) args[argv[i].replace(/^--/, '')] = argv[i + 1];
 
-  const {suites, coverage} = collect(args.artifacts);
+  const {suites, coverage, screenshots} = collect(args.artifacts);
   const env = process.env;
   const api = env.GITHUB_API_URL || 'https://api.github.com';
   const server = env.GITHUB_SERVER_URL || 'https://github.com';
@@ -321,7 +388,7 @@ async function main() {
   }
   const plan = args.plan && fs.existsSync(args.plan) ? fs.readFileSync(args.plan, 'utf8') : '';
   const markdown = render({
-    suites, coverage, jobs, artifacts, plan,
+    suites, coverage, screenshots, jobs, artifacts, plan,
     sha: env.HEAD_SHA || env.GITHUB_SHA,
     runUrl: repo && runId ? `${server}/${repo}/actions/runs/${runId}` : undefined,
   });

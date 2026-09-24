@@ -62,6 +62,7 @@
     <string name="export_action_sent">Надіслано</string>
     <string name="export_action_not_sent">Не надіслано</string>
     <string name="export_action_recorded">Записано</string>
+    <string name="export_action_server_recorded">записано сервером за збереженим записом; телефон, на якому його змінювали, цю зміну не записав, тому час пристрою невідомий, а вказано того, кого називає сам запис</string>
 
     <!-- MON-16: the record id and whether the file can be verified. -->
     <string name="export_verify_explainer">Якщо сервер доступний, файл реєструється: зберігаються його ідентифікатор запису й відбиток його точного вмісту, тож будь-хто, у кого він є, може перевірити, що файл не змінено. З телефона йде лише відбиток, ніколи не сам файл.</string>

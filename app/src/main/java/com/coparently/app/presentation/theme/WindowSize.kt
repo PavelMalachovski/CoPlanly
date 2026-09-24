@@ -126,4 +126,3 @@ fun WindowSizeClass.getDimensions(): Dimensions {
  */
 @Composable
 fun dimensions(): Dimensions = LocalDimensions.current
-

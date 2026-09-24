@@ -12,6 +12,7 @@
     <string name="documents_no_family_title">Спершу зв’яжіться з другим з батьків</string>
     <string name="documents_no_family_description">Документи належать родині: від моменту додавання вони доступні обом батькам.</string>
     <string name="documents_unavailable">Зараз не вдається завантажити документи. Перевірте з’єднання.</string>
+    <string name="documents_possibly_outdated">Сервер недоступний — показано список, який телефон бачив останнім. Він може бути застарілим.</string>
     <string name="documents_category_court_order">Рішення суду</string>
     <string name="documents_category_school">Школа</string>
     <string name="documents_category_medical">Здоров’я</string>

@@ -155,8 +155,14 @@ fun CoPlanlyTheme(
         SideEffect {
             val window = (view.context as Activity).window
 
-            // Set transparent status and navigation bars for edge-to-edge experience
+            // Set transparent status and navigation bars for edge-to-edge experience.
+            // Deprecated at API 35, where they are no-ops; on 26–34 they still override the
+            // scrim `enableEdgeToEdge()` picks from the *system* theme, which would disagree
+            // with an app-level dark/light choice. No replacement covers minSdk 26 without
+            // that change, so the calls stay until the scrim is decided as a design question.
+            @Suppress("DEPRECATION")
             window.statusBarColor = Color.Transparent.toArgb()
+            @Suppress("DEPRECATION")
             window.navigationBarColor = Color.Transparent.toArgb()
 
             // Configure system bar icons based on theme
@@ -183,4 +189,3 @@ fun CoPlanlyTheme(
         )
     }
 }
-

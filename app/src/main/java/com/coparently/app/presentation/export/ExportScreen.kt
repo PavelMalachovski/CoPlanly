@@ -415,7 +415,8 @@ private fun rememberRecordLabels(): RecordLabels = RecordLabels(
         currentState = stringResource(R.string.export_action_current),
         sent = stringResource(R.string.export_action_sent),
         notSent = stringResource(R.string.export_action_not_sent),
-        recorded = stringResource(R.string.export_action_recorded)
+        recorded = stringResource(R.string.export_action_recorded),
+        serverRecorded = stringResource(R.string.export_action_server_recorded)
     ),
     notYetOnServer = stringResource(R.string.export_record_not_on_server),
     noServerTime = stringResource(R.string.export_record_no_server_time),

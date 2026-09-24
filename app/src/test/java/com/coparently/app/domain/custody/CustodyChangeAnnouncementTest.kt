@@ -212,6 +212,7 @@ class CustodyChangeAnnouncementTest {
     private companion object {
         const val MY_UID = "my-uid"
         const val CO_PARENT_UID = "co-parent-uid"
+
         /** Built through the projection so the fixture still reads as a date. */
         val MODIFIED_AT = CustodyTimestamp.fromWire("2026-08-05T12:00:00")
     }

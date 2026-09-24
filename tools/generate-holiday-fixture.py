@@ -36,6 +36,10 @@ Regional choices, each deliberate and each also stated in `GermanState.kt`:
   * **Austria has no regional fixture.** The library returns no regional *public* holiday for any
     of its nine Laender - the patron-saint days are in the `bank` category - so the app offers no
     Austrian region picker and there is nothing to pin.
+  * **Slovakia has no regional fixture either, although it has a region picker.** Its kraje exist
+    for the school calendar (the spring holidays, pinned by `SchoolVacationReferenceTest`); public
+    holidays are national and the library has no Slovak subdivision. `HolidayReferenceTest`
+    checks instead that every kraj draws exactly the nationwide list.
 
 Two deliberate differences from the library's output, both filtered here rather than hidden in
 the test:

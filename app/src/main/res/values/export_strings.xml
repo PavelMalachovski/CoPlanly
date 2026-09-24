@@ -68,6 +68,7 @@
     <string name="export_action_sent">Sent</string>
     <string name="export_action_not_sent">Not sent</string>
     <string name="export_action_recorded">Recorded</string>
+    <string name="export_action_server_recorded">recorded by the server from the saved entry; the editing phone did not record this change, so no device time is known and the person named is the one the entry names</string>
 
     <!-- MON-16: the record id and whether the file can be verified. -->
     <string name="export_verify_explainer">When the server can be reached, the file is registered: its record ID and a fingerprint of its exact contents are kept, so anyone holding it can check that it has not been changed. Only the fingerprint leaves this phone, never the file.</string>

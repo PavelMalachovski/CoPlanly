@@ -15,8 +15,10 @@ package com.coparently.app.domain.holidays
  * cannot claim more than the provider draws:
  * - **Czechia** — public holidays and the nationwide MŠMT school vacations (computed).
  * - **Slovakia and Austria** — public holidays and the *nationwide* school vacations, as published
- *   per school year (a dated table, from 2025/26 to the last published year). What is set per
- *   region is left out: Slovakia's spring holidays, Austria's semester and summer breaks.
+ *   per school year (a dated table, from 2025/26 to the last published year). Slovakia's spring
+ *   holidays are set per kraj and come with a chosen kraj ([regions]); Austria's semester and
+ *   summer breaks are set per Land and are left out — the source has no final dates for them past
+ *   2025/26, so a Land picker would add nothing.
  * - **Germany** — the nine nationwide public holidays, and no school vacations, until the parent
  *   names a Land; then the Land's own public holidays *and* its school vacations (see [regions],
  *   [HolidayLocation] and [coverageIn]). There is no nationwide German school period to draw.
@@ -70,7 +72,7 @@ enum class HolidayCountry(
     /** Public holidays and school vacations, and the default. */
     CZECHIA("CZ", CzechHolidays),
 
-    /** Public holidays (the list changes by year: Acts 530/2023, 261/2025) and nationwide school vacations. */
+    /** Public holidays (Acts 530/2023, 261/2025 change the list by year), school vacations, a kraj's spring week. */
     SLOVAKIA("SK", SlovakHolidays),
 
     /** The nine nationwide public holidays, plus the chosen Land's own and its school vacations. */
@@ -93,9 +95,9 @@ enum class HolidayCountry(
 
     /**
      * The regions whose own public holidays and school vacations this country's calendar can add,
-     * as ISO 3166-2 suffixes — the sixteen Länder for Germany, and empty everywhere else. The
-     * region picker appears only when this is non-empty, so it can never be offered where it
-     * changes nothing.
+     * as ISO 3166-2 suffixes — the sixteen Länder for Germany, the eight kraje for Slovakia, and
+     * empty everywhere else. The region picker appears only when this is non-empty, so it can
+     * never be offered where it changes nothing.
      */
     val regions: List<String> get() = provider?.regions.orEmpty()
 

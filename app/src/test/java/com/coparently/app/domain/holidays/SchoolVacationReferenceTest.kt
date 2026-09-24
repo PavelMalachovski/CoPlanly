@@ -55,9 +55,12 @@ class SchoolVacationReferenceTest {
 
     @Test
     fun `the fixture covers exactly the calendars that draw these tables`() {
-        // Slovakia and Austria nationwide, and every German Land. A Land the app offers with no
-        // fixture would be drawn unverified; a key the app cannot select would be dead data.
-        val expected = setOf("SK", "AT") + GermanHolidays.regions.map { "DE-$it" }
+        // Slovakia and Austria nationwide, every Slovak kraj and every German Land. A region the
+        // app offers with no fixture would be drawn unverified; a key the app cannot select would
+        // be dead data.
+        val expected = setOf("SK", "AT") +
+            SlovakHolidays.regions.map { "SK-$it" } +
+            GermanHolidays.regions.map { "DE-$it" }
 
         assertEquals(expected, schoolVacationReference.keys)
     }
@@ -116,9 +119,47 @@ class SchoolVacationReferenceTest {
     }
 
     @Test
-    fun `regional breaks are not drawn where the app has no region`() {
-        // Slovakia's spring holidays (by kraj) and Austria's semester and summer breaks (by Land)
-        // are left out rather than drawn for the wrong region.
+    fun `a kraj draws its own spring week and no other kraj's`() {
+        // The three groups the ministry staggers the spring holidays across, 2025/26.
+        val bratislava = SlovakHolidays.forRegion("BL")
+        val zilina = SlovakHolidays.forRegion("ZI")
+        val kosice = SlovakHolidays.forRegion("KI")
+        val westWeek = LocalDate.of(2026, 2, 18)
+        val eastWeek = LocalDate.of(2026, 3, 4)
+
+        assertEquals("Jarné prázdniny", bratislava.holidayFor(westWeek)?.nameLocal)
+        assertEquals("sk", bratislava.holidayFor(westWeek)?.localLanguage)
+        assertEquals(true, bratislava.holidayFor(westWeek)?.isSchoolVacation)
+        assertEquals(null, zilina.holidayFor(westWeek))
+        assertEquals(null, kosice.holidayFor(westWeek))
+        assertEquals("Jarné prázdniny", kosice.holidayFor(eastWeek)?.nameLocal)
+        assertEquals(null, bratislava.holidayFor(eastWeek))
+        assertEquals("Spring vacation", zilina.holidayFor(LocalDate.of(2026, 2, 25))?.nameEn)
+    }
+
+    @Test
+    fun `a kraj keeps every nationwide period`() {
+        // A region adds; it never replaces. The fixture proves it period by period too.
+        val nationwide = (2025..2028).flatMap { SlovakHolidays.schoolVacations(it) }.toSet()
+        SlovakHolidays.regions.forEach { region ->
+            val kraj = (2025..2028).flatMap { SlovakHolidays.forRegion(region).schoolVacations(it) }.toSet()
+            assertTrue(kraj.containsAll(nationwide), region)
+            assertEquals(3, (kraj - nationwide).size, "$region: one spring week per school year")
+        }
+    }
+
+    @Test
+    fun `an unknown or missing kraj draws the nationwide calendar`() {
+        // A newer build's region read by an older one, or a German code left behind by a move.
+        assertEquals(SlovakHolidays, SlovakHolidays.forRegion(null))
+        assertEquals(SlovakHolidays, SlovakHolidays.forRegion("BY"))
+        assertEquals(SlovakRegion.NI, SlovakRegion.fromCode(" ni "))
+    }
+
+    @Test
+    fun `regional breaks are not drawn where no region is chosen or modelled`() {
+        // Slovakia's spring holidays (by kraj) are drawn only with a kraj, and Austria's
+        // semester and summer breaks (by Land) are left out rather than drawn for the wrong Land.
         assertEquals(null, SlovakHolidays.holidayFor(LocalDate.of(2026, 2, 18)))
         assertEquals(null, SlovakHolidays.holidayFor(LocalDate.of(2026, 3, 4)))
         assertEquals(null, AustrianHolidays.holidayFor(LocalDate.of(2026, 2, 4)))

@@ -8,6 +8,7 @@ import com.coparently.app.data.files.SharedFileRejectedException
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.domain.documents.DocumentCategory
 import com.coparently.app.domain.documents.FamilyDocument
+import com.coparently.app.domain.documents.VaultListing
 import com.coparently.app.domain.files.SharedFilePolicy
 import com.coparently.app.domain.repository.FamilyDocumentRepository
 import com.coparently.app.presentation.common.Parents
@@ -42,7 +43,7 @@ class FamilyDocumentsViewModelTest {
 
     private val dispatcher = StandardTestDispatcher()
     private val repository = mockk<FamilyDocumentRepository>()
-    private val documents = MutableStateFlow<List<FamilyDocument>?>(emptyList())
+    private val documents = MutableStateFlow<VaultListing?>(VaultListing(emptyList()))
     private val selectedFamilySource = mockk<SelectedFamilySource> {
         coEvery { selected() } returns FamilyOption(FAMILY, "bob")
     }
@@ -66,12 +67,25 @@ class FamilyDocumentsViewModelTest {
 
     @Test
     fun `lists the documents of the family on screen`() = runTest(dispatcher) {
-        documents.value = listOf(DOCUMENT)
+        documents.value = VaultListing(listOf(DOCUMENT))
         val vm = viewModel()
         advanceUntilIdle()
 
         assertEquals(DocumentsList.Loaded(listOf(DOCUMENT)), vm.state.value.list)
         assertEquals("alice", vm.state.value.myUid)
+    }
+
+    @Test
+    fun `a cached list reaches the screen marked as possibly out of date`() = runTest(dispatcher) {
+        documents.value = VaultListing(listOf(DOCUMENT), possiblyOutdated = true)
+        val vm = viewModel()
+        advanceUntilIdle()
+
+        assertEquals(DocumentsList.Loaded(listOf(DOCUMENT), possiblyOutdated = true), vm.state.value.list)
+
+        documents.value = VaultListing(listOf(DOCUMENT))
+        advanceUntilIdle()
+        assertEquals(DocumentsList.Loaded(listOf(DOCUMENT)), vm.state.value.list)
     }
 
     @Test

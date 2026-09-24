@@ -81,4 +81,3 @@ data class ChildInfoEntity(
      */
     val familyId: String? = null
 )
-

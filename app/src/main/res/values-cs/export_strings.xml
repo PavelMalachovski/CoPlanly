@@ -62,6 +62,7 @@
     <string name="export_action_sent">Odesláno</string>
     <string name="export_action_not_sent">Neodesláno</string>
     <string name="export_action_recorded">Zaznamenáno</string>
+    <string name="export_action_server_recorded">zaznamenal server z uloženého záznamu; telefon, na kterém se upravovalo, tuto změnu nezaznamenal, takže čas zařízení není znám a uvedená osoba je ta, kterou jmenuje záznam</string>
 
     <!-- MON-16: the record id and whether the file can be verified. -->
     <string name="export_verify_explainer">Když je server dostupný, soubor se zaregistruje: uloží se jeho ID záznamu a otisk jeho přesného obsahu, takže kdokoli, kdo ho má, může ověřit, že nebyl změněn. Z telefonu odchází jen otisk, nikdy soubor.</string>

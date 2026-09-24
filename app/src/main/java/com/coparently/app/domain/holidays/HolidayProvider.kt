@@ -75,12 +75,13 @@ interface HolidayProvider {
      * ISO 3166-2 suffixes
      * (`"BY"` for `DE-BY`), or empty for a calendar that is the same everywhere in the country.
      *
-     * Empty is the honest answer for every country but Germany today, **Austria included**: its
-     * thirteen public holidays are nationwide, the per-Land patron-saint days the reference
-     * library carries are bank holidays, not days off, and its per-Land school breaks have no
-     * final dates past 2025/26 in the source (see `AustrianHolidays`). A region picker that
-     * changed nothing on the grid would be design rule 8's affordance that promises a feature
-     * (MON-13).
+     * Non-empty for Germany (a Land adds public holidays and school vacations) and Slovakia (a
+     * kraj adds its spring holidays). Empty is the honest answer everywhere else, **Austria
+     * included**: its thirteen public holidays are nationwide, the per-Land patron-saint days the
+     * reference library carries are bank holidays, not days off, and its per-Land school breaks
+     * have no final dates past 2025/26 in the source (see `AustrianHolidays`). A region picker
+     * that changed nothing on the grid would be design rule 8's affordance that promises a
+     * feature (MON-13).
      */
     val regions: List<String> get() = emptyList()
 
@@ -90,7 +91,7 @@ interface HolidayProvider {
      * build's region read by an older one draws the nationwide days rather than nothing.
      */
     // The default is for a nationwide calendar, which has nothing to add whatever the region;
-    // the parameter is the override's (GermanHolidays), not this body's.
+    // the parameter is the overrides' (GermanHolidays, SlovakHolidays), not this body's.
     @Suppress("UnusedParameter")
     fun forRegion(regionCode: String?): HolidayProvider = this
 
@@ -163,7 +164,12 @@ interface HolidayProvider {
  * Orthodox Easter is a *different* computation (Julian reckoning) and does not belong in this
  * function. A provider that needs it should say so in its own file rather than adding a flag
  * here.
+ *
+ * `MagicNumber` is suppressed because the literals *are* the published algorithm (Meeus,
+ * *Astronomical Algorithms*, ch. 8): naming them would only make it harder to check against the
+ * source. `HolidayReferenceTest` pins every Easter from 2020 to 2035.
  */
+@Suppress("MagicNumber")
 fun gregorianEasterSunday(year: Int): LocalDate {
     val a = year % 19
     val b = year / 100

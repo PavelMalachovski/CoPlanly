@@ -65,6 +65,7 @@ class CommunicationRecordSource @Inject constructor(
         val remoteRevisions = fromServer("revisions") { versions.readableBy(myUid) }
         val pending = recorder.undelivered(myUid).mapNotNull { row ->
             EventVersionKind.fromWire(row.kind)?.let { kind ->
+                val snapshot = EventVersionDocument.decodeSnapshot(row.snapshotJson)
                 EventRevisionInput(
                     versionId = row.id,
                     eventId = row.eventId,
@@ -73,9 +74,8 @@ class CommunicationRecordSource @Inject constructor(
                     deviceTimeMillis = row.deviceTimeMillis,
                     recordedAtMillis = null,
                     familyId = row.familyId.orEmpty(),
-                    facts = CommunicationRecordBuilder.factsOf(
-                        EventVersionDocument.decodeSnapshot(row.snapshotJson)
-                    )
+                    facts = CommunicationRecordBuilder.factsOf(snapshot),
+                    writeKey = EventVersionDocument.writeKey(snapshot)
                 )
             }
         }
@@ -152,7 +152,9 @@ class CommunicationRecordSource @Inject constructor(
         deviceTimeMillis = deviceTimeMillis,
         recordedAtMillis = recordedAtMillis,
         familyId = familyId,
-        facts = CommunicationRecordBuilder.factsOf(snapshot)
+        facts = CommunicationRecordBuilder.factsOf(snapshot),
+        recordedByServer = recordedByServer,
+        writeKey = EventVersionDocument.writeKey(snapshot)
     )
 
     private fun Event.toCurrentInput() = CurrentEventInput(

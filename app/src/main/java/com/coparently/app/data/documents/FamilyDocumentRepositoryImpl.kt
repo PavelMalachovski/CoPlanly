@@ -9,16 +9,13 @@ import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.domain.documents.DocumentCategory
 import com.coparently.app.domain.documents.FamilyDocument
 import com.coparently.app.domain.documents.FamilyDocumentPaths
+import com.coparently.app.domain.documents.VaultListing
 import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.repository.FamilyDocumentRepository
-import com.google.firebase.firestore.FirebaseFirestore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.tasks.await
 import java.io.File
 import java.io.IOException
 import java.util.UUID
@@ -28,45 +25,29 @@ import javax.inject.Singleton
 /**
  * Firestore- and Storage-backed [FamilyDocumentRepository] (MON-23).
  *
- * Observed live and never cached in Room, like the calendar-friend list: the vault is read
- * rarely, and a vault table would be a schema version (ROADMAP MON-23 records it as a follow-up).
- * The list query filters on `sharedWith` *and* `familyId`, the two fields the read rule and the
- * create rule key on (CLAUDE.md item 12), so a parent with two families sees the selected one's
- * documents only.
+ * The index lives in Firestore ([FamilyDocumentIndex]), observed live; Room keeps a read-through
+ * cache of the last server answer (schema 43, [FamilyDocumentIndexCache]) that the screen shows,
+ * labelled, while the server cannot be reached. Every write goes to Firestore — the cache is never
+ * written from here and never uploads. The bytes live in Storage and are never reached by a
+ * download URL (CLAUDE.md item 31).
  */
 @Singleton
 class FamilyDocumentRepositoryImpl @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val firestore: FirebaseFirestore,
+    private val index: FamilyDocumentIndex,
     private val authService: FirebaseAuthService,
     private val stager: SharedFileStager,
     private val storage: SharedFileStorage,
     private val cache: SharedFileCache
 ) : FamilyDocumentRepository {
 
-    override fun observe(familyId: String): Flow<List<FamilyDocument>?> {
+    override fun observe(familyId: String): Flow<VaultListing?> {
         val uid = authService.getCurrentUser()?.uid ?: return flowOf(null)
-        if (FamilyKey.membersOf(familyId) == null) return flowOf(emptyList())
-        return callbackFlow {
-            val registration = firestore.collection(COLLECTION)
-                .whereArrayContains("sharedWith", uid)
-                .whereEqualTo("familyId", familyId)
-                .addSnapshotListener { snapshot, error ->
-                    if (error != null) {
-                        // Not closed: a refused or dropped listener must not end the screen's flow.
-                        // Null is "unavailable", which the screen says in words — never an empty
-                        // vault that would read as "nothing was ever filed".
-                        Log.w(TAG, "Vault listener failed", error)
-                        trySend(null)
-                        return@addSnapshotListener
-                    }
-                    val documents = snapshot?.documents.orEmpty()
-                        .mapNotNull { FamilyDocumentMapper.fromFirestore(it.id, it.data) }
-                        .sortedWith(FamilyDocumentMapper.listOrder)
-                    trySend(documents)
-                }
-            awaitClose { registration.remove() }
-        }
+        val members = FamilyKey.membersOf(familyId) ?: return flowOf(VaultListing(emptyList()))
+        // A family this account is not in has nothing to show — not even a cached copy a previous
+        // account left behind.
+        val mine = uid == members.first || uid == members.second
+        return if (mine) index.observe(uid, familyId) else flowOf(null)
     }
 
     override suspend fun add(
@@ -104,12 +85,7 @@ class FamilyDocumentRepositoryImpl @Inject constructor(
 
     override suspend fun delete(document: FamilyDocument): Result<Unit> = guarded("delete") {
         val uid = authService.getCurrentUser()?.uid ?: throw IOException("Not signed in")
-        // `update()`, never `set()` (CLAUDE.md item 14): the tombstone keeps the audience the read
-        // rule is keyed on, so the co-parent's listener sees the document leave rather than lose it.
-        firestore.collection(COLLECTION).document(document.id)
-            .update(FamilyDocumentMapper.tombstone(uid, System.currentTimeMillis()))
-            .await()
-        Unit
+        index.tombstone(document.id, uid, System.currentTimeMillis())
     }
 
     override suspend fun localCopy(document: FamilyDocument): Result<File> = guarded("open") {
@@ -123,9 +99,7 @@ class FamilyDocumentRepositoryImpl @Inject constructor(
      */
     private suspend fun writeIndexOrRemoveFile(document: FamilyDocument) {
         try {
-            firestore.collection(COLLECTION).document(document.id)
-                .set(FamilyDocumentMapper.toFirestoreMap(document))
-                .await()
+            index.write(document)
         } catch (e: CancellationException) {
             throw e
         } catch (
@@ -150,7 +124,6 @@ class FamilyDocumentRepositoryImpl @Inject constructor(
 
     private companion object {
         const val TAG = "FamilyDocuments"
-        const val COLLECTION = "family_documents"
 
         /** Under `cacheDir`: a copy only lives while its upload runs. */
         const val UPLOAD_DIRECTORY = "shared_files/upload"

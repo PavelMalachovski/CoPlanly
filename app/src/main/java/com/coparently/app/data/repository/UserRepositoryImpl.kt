@@ -687,4 +687,3 @@ private fun UserInfo.toProviderIdentity() = ProfileIdentity.ProviderIdentity(
     email = email,
     photoUrl = photoUrl?.toString()
 )
-

@@ -54,12 +54,15 @@ class HolidayReferenceTest {
     }
 
     @Test
-    fun `the regional fixture covers exactly the regions each country offers`() {
+    fun `the regional fixture covers exactly the regions whose public holidays differ`() {
         // A Land the app offers with no fixture would be drawn unverified; a fixture key the
-        // app does not offer would be a region nobody can pick.
-        val offered = HolidayCountry.entries.flatMap { country ->
-            country.regions.map { "${country.code}-$it" }
-        }.toSet()
+        // app does not offer would be a region nobody can pick. Slovakia's kraje are regions for
+        // the school calendar only - the library has no Slovak subdivision - so they are held to
+        // the nationwide list by the next-but-one test instead.
+        val offered = HolidayCountry.entries
+            .filter { it != HolidayCountry.SLOVAKIA }
+            .flatMap { country -> country.regions.map { "${country.code}-$it" } }
+            .toSet()
 
         assertEquals(offered, holidayRegionReference.keys)
     }
@@ -82,6 +85,19 @@ class HolidayReferenceTest {
                     .map { Triple(it.date, it.nameEn, it.nameLocal) }
 
                 assertEquals(expected, actual, "$key $year differs from holidays v$HOLIDAY_REFERENCE_VERSION")
+            }
+        }
+    }
+
+    @Test
+    fun `a Slovak kraj draws exactly the nationwide public holidays`() {
+        // Act 241/1993 is national: a kraj adds its spring holidays (SchoolVacationReferenceTest)
+        // and nothing else, so its public holidays are the nationwide fixture's, every year.
+        assertEquals(8, SlovakHolidays.regions.size)
+        SlovakHolidays.regions.forEach { region ->
+            val kraj = HolidayLocation.of("SK", region).provider!!
+            (HOLIDAY_REFERENCE_FIRST_YEAR..HOLIDAY_REFERENCE_LAST_YEAR).forEach { year ->
+                assertEquals(SlovakHolidays.publicHolidays(year), kraj.publicHolidays(year), "SK-$region $year")
             }
         }
     }

@@ -1,5 +1,6 @@
 package com.coparently.app.data.versions
 
+import com.coparently.app.data.sync.Tombstone
 import com.google.gson.GsonBuilder
 import com.google.gson.ToNumberPolicy
 import com.google.gson.reflect.TypeToken
@@ -37,6 +38,29 @@ object EventVersionDocument {
 
     /** The shape of this document. Bump it, and teach [Parsed] the old one, if it ever changes. */
     const val CURRENT_FORMAT = 1
+
+    /**
+     * Present, as [RECORDED_BY_SERVER], only on a revision the server recorded from the saved event
+     * document because no phone recorded that write (`functions/event-revisions.js`,
+     * `docs/DESIGN-court-record.md` §11). A client never writes it; the rule refuses the key.
+     */
+    const val RECORDED_BY = "recordedBy"
+    const val RECORDED_BY_SERVER = "server"
+
+    /**
+     * Which save of an event a snapshot is, so a phone's revision and the server's revision of the
+     * same write can be recognised as one: `deleted|<deletedAtMillis>` for a tombstone, else
+     * `saved|<updatedAt>`; null when the snapshot carries neither.
+     *
+     * `writeKey` in `functions/event-revisions.js` is the other copy of this definition — the
+     * server decides with it whether a write needs a revision, the export whether a server revision
+     * duplicates a phone's. Change both together.
+     */
+    fun writeKey(snapshot: Map<String, Any?>): String? {
+        val deletedAt = Tombstone.deletedAtMillisIn(snapshot)
+        if (deletedAt != null) return "deleted|$deletedAt"
+        return (snapshot["updatedAt"] as? String)?.takeIf { it.isNotEmpty() }?.let { "saved|$it" }
+    }
 
     /**
      * Numbers come back as `Long` when they are whole, so a snapshot that went through Room and
@@ -96,19 +120,24 @@ object EventVersionDocument {
      * One revision as read back, with the server time already converted to epoch millis.
      *
      * @property versionId The document id.
+     * @property deviceTimeMillis When the editing phone says it saved; null only on a revision the
+     *   server recorded, which no phone reported a time for.
      * @property recordedAtMillis When the server received it, or null for a revision that has not
      *   reached the server — one still in this device's outbox.
      * @property snapshot The event document as it was saved.
+     * @property recordedByServer True for a revision the server recorded from the saved document
+     *   because the editing phone did not — an older build's save.
      */
     data class Parsed(
         val versionId: String,
         val eventId: String,
         val kind: EventVersionKind,
         val editorUid: String,
-        val deviceTimeMillis: Long,
+        val deviceTimeMillis: Long?,
         val recordedAtMillis: Long?,
         val familyId: String,
-        val snapshot: Map<String, Any?>
+        val snapshot: Map<String, Any?>,
+        val recordedByServer: Boolean = false
     ) {
         companion object {
 
@@ -128,11 +157,13 @@ object EventVersionDocument {
                 val kind = EventVersionKind.fromWire(data[KIND] as? String)
                 val editor = data[EDITOR_UID] as? String
                 val deviceTime = (data[DEVICE_TIME_MILLIS] as? Number)?.toLong()
+                val byServer = data[RECORDED_BY] == RECORDED_BY_SERVER
 
                 @Suppress("UNCHECKED_CAST")
                 val snapshot = (data[EVENT] as? Map<String, Any?>)
                 if (eventId == null || kind == null || editor == null) return null
-                if (deviceTime == null || snapshot == null) return null
+                // Only the server may leave the device time out: it has none to report.
+                if ((deviceTime == null && !byServer) || snapshot == null) return null
                 return Parsed(
                     versionId = versionId,
                     eventId = eventId,
@@ -141,7 +172,8 @@ object EventVersionDocument {
                     deviceTimeMillis = deviceTime,
                     recordedAtMillis = recordedAtMillis,
                     familyId = (data[FAMILY_ID] as? String).orEmpty(),
-                    snapshot = snapshot
+                    snapshot = snapshot,
+                    recordedByServer = byServer
                 )
             }
         }

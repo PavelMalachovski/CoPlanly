@@ -53,6 +53,18 @@ data class FamilyDocument(
     val createdAtMillis: Long
 )
 
+/**
+ * The vault's list as the screen shows it.
+ *
+ * @property documents The family's live documents, in list order.
+ * @property possiblyOutdated True when the list is this phone's last copy of a server answer
+ *   (the Room cache, schema 43) rather than the server's answer now — the screen says so.
+ */
+data class VaultListing(
+    val documents: List<FamilyDocument>,
+    val possiblyOutdated: Boolean = false
+)
+
 /** The one place a vault path is spelled; `firestore.rules` rebuilds the same string. */
 object FamilyDocumentPaths {
 

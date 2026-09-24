@@ -128,6 +128,7 @@ import com.coparently.app.presentation.common.familyLabel
 import com.coparently.app.presentation.common.labelRes
 import com.coparently.app.presentation.common.regionLabelRes
 import com.coparently.app.presentation.common.regionName
+import com.coparently.app.presentation.common.regionSummaryRes
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.consent.TelemetryConsentViewModel
 import com.coparently.app.presentation.sync.GoogleCalendarSyncState
@@ -538,15 +539,17 @@ fun SettingsScreen(
                         // theirs — one trailing control, and it says more than a chevron would.
                         trailing = { ValueLabel(stringResource(country.labelRes())) }
                     )
-                    // Only for a country whose holidays vary by region — Germany's Länder. For
-                    // every other country the row would change nothing (design rule 8).
+                    // Only for a country whose holidays vary by region — Germany's Länder,
+                    // Slovakia's kraje. For every other country the row would change nothing
+                    // (design rule 8).
                     val regionLabel = country.regionLabelRes()
-                    if (regionLabel != null && country.regions.isNotEmpty()) {
+                    val regionSummary = country.regionSummaryRes()
+                    if (regionLabel != null && regionSummary != null) {
                         Divider()
                         SectionRow(
                             icon = Icons.Default.Public,
                             title = stringResource(regionLabel),
-                            supporting = stringResource(R.string.holiday_region_settings_summary),
+                            supporting = stringResource(regionSummary),
                             onClick = {
                                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 showRegionPicker = true

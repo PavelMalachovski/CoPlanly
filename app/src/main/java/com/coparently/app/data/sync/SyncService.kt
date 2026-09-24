@@ -928,4 +928,3 @@ sealed class SyncStatus {
      */
     data class Error(val message: String) : SyncStatus()
 }
-

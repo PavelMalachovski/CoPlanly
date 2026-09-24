@@ -2,10 +2,10 @@ package com.coparently.app.data.repository
 
 import com.coparently.app.data.local.entity.ConversationEntity
 import com.coparently.app.data.local.entity.MessageEntity
+import com.coparently.app.domain.activity.ActivityAnnouncement
 import com.coparently.app.domain.model.Conversation
 import com.coparently.app.domain.model.Message
 import com.coparently.app.domain.model.MessageSendStatus
-import com.coparently.app.domain.activity.ActivityAnnouncement
 import com.coparently.app.domain.model.MessageType
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken

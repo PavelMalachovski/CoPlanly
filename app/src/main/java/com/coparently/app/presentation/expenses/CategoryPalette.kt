@@ -95,17 +95,61 @@ object CategoryPalette {
     /** OKLCH chroma per slot, dark surface. Lower than light's: a dark surface needs less. */
     private val DARK_CHROMA = doubleArrayOf(0.13, 0.11)
 
+    // Ottosson's OKLab matrices, one named row each, as published. They are data rather than
+    // inline literals so no coefficient is a magic number; `dot` multiplies and adds in the same
+    // order the inline form did, so every result is bit-identical (CategoryPaletteTest pins it).
+
+    /** Linear sRGB → LMS, row L. */
+    private val SRGB_TO_L = doubleArrayOf(0.4122214708, 0.5363325363, 0.0514459929)
+
+    /** Linear sRGB → LMS, row M. */
+    private val SRGB_TO_M = doubleArrayOf(0.2119034982, 0.6806995451, 0.1073969566)
+
+    /** Linear sRGB → LMS, row S. */
+    private val SRGB_TO_S = doubleArrayOf(0.0883024619, 0.2817188376, 0.6299787005)
+
+    /** LMS′ → OKLab, row a. */
+    private val LMS_TO_A = doubleArrayOf(1.9779984951, -2.4285922050, 0.4505937099)
+
+    /** LMS′ → OKLab, row b. */
+    private val LMS_TO_B = doubleArrayOf(0.0259040371, 0.7827717662, -0.8086757660)
+
+    /** OKLab → LMS′, the a and b coefficients of row L (its L coefficient is 1). */
+    private val LAB_TO_L = doubleArrayOf(0.3963377774, 0.2158037573)
+
+    /** OKLab → LMS′, the a and b coefficients of row M. */
+    private val LAB_TO_M = doubleArrayOf(-0.1055613458, -0.0638541728)
+
+    /** OKLab → LMS′, the a and b coefficients of row S. */
+    private val LAB_TO_S = doubleArrayOf(-0.0894841775, -1.2914855480)
+
+    private const val BYTE_MASK = 0xFF
+    private const val CHANNEL_MAX = 255
+    private const val ALPHA_SHIFT = 24
+    private const val RED_SHIFT = 16
+    private const val GREEN_SHIFT = 8
+    private const val CUBE = 3
+
+    // The sRGB transfer function (IEC 61966-2-1).
+    private const val SRGB_DECODE_THRESHOLD = 0.04045
+    private const val SRGB_ENCODE_THRESHOLD = 0.0031308
+    private const val SRGB_LINEAR_SLOPE = 12.92
+    private const val SRGB_OFFSET = 0.055
+    private const val SRGB_SCALE = 1.055
+    private const val SRGB_GAMMA = 2.4
+
+    private fun dot(row: DoubleArray, x: Double, y: Double, z: Double): Double =
+        row[0] * x + row[1] * y + row[2] * z
+
     /** The OKLCH hue of a packed ARGB colour, in degrees. */
     private fun hueOf(argb: Int): Double {
-        val r = toLinear((argb shr 16 and 0xFF) / 255.0)
-        val g = toLinear((argb shr 8 and 0xFF) / 255.0)
-        val b = toLinear((argb and 0xFF) / 255.0)
-        val l = cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b)
-        val m = cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b)
-        val s = cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b)
-        val a = 1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s
-        val bb = 0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s
-        return Math.toDegrees(atan2(bb, a))
+        val r = toLinear((argb shr RED_SHIFT and BYTE_MASK) / CHANNEL_MAX.toDouble())
+        val g = toLinear((argb shr GREEN_SHIFT and BYTE_MASK) / CHANNEL_MAX.toDouble())
+        val b = toLinear((argb and BYTE_MASK) / CHANNEL_MAX.toDouble())
+        val l = cbrt(dot(SRGB_TO_L, r, g, b))
+        val m = cbrt(dot(SRGB_TO_M, r, g, b))
+        val s = cbrt(dot(SRGB_TO_S, r, g, b))
+        return Math.toDegrees(atan2(dot(LMS_TO_B, l, m, s), dot(LMS_TO_A, l, m, s)))
     }
 
     /** A point in OKLCH as an opaque packed ARGB colour, clamped into sRGB. */
@@ -113,9 +157,9 @@ object CategoryPalette {
         val h = Math.toRadians(hueDegrees)
         val a = chroma * cos(h)
         val b = chroma * sin(h)
-        val lCube = (lightness + 0.3963377774 * a + 0.2158037573 * b).pow(3)
-        val mCube = (lightness - 0.1055613458 * a - 0.0638541728 * b).pow(3)
-        val sCube = (lightness - 0.0894841775 * a - 1.2914855480 * b).pow(3)
+        val lCube = (lightness + LAB_TO_L[0] * a + LAB_TO_L[1] * b).pow(CUBE)
+        val mCube = (lightness + LAB_TO_M[0] * a + LAB_TO_M[1] * b).pow(CUBE)
+        val sCube = (lightness + LAB_TO_S[0] * a + LAB_TO_S[1] * b).pow(CUBE)
         return pack(
             red = 4.0767416621 * lCube - 3.3077115913 * mCube + 0.2309699292 * sCube,
             green = -1.2684380046 * lCube + 2.6097574011 * mCube - 0.3413193965 * sCube,
@@ -124,13 +168,22 @@ object CategoryPalette {
     }
 
     private fun pack(red: Double, green: Double, blue: Double): Int =
-        (0xFF shl 24) or (toByte(red) shl 16) or (toByte(green) shl 8) or toByte(blue)
+        (BYTE_MASK shl ALPHA_SHIFT) or (toByte(red) shl RED_SHIFT) or
+            (toByte(green) shl GREEN_SHIFT) or toByte(blue)
 
     private fun toLinear(channel: Double): Double =
-        if (channel <= 0.04045) channel / 12.92 else ((channel + 0.055) / 1.055).pow(2.4)
+        if (channel <= SRGB_DECODE_THRESHOLD) {
+            channel / SRGB_LINEAR_SLOPE
+        } else {
+            ((channel + SRGB_OFFSET) / SRGB_SCALE).pow(SRGB_GAMMA)
+        }
 
     private fun toByte(linear: Double): Int {
-        val encoded = if (linear <= 0.0031308) 12.92 * linear else 1.055 * linear.pow(1 / 2.4) - 0.055
-        return (encoded * 255).roundToInt().coerceIn(0, 255)
+        val encoded = if (linear <= SRGB_ENCODE_THRESHOLD) {
+            SRGB_LINEAR_SLOPE * linear
+        } else {
+            SRGB_SCALE * linear.pow(1 / SRGB_GAMMA) - SRGB_OFFSET
+        }
+        return (encoded * CHANNEL_MAX).roundToInt().coerceIn(0, CHANNEL_MAX)
     }
 }

@@ -75,4 +75,3 @@ interface CustodyScheduleDao {
     @Query("DELETE FROM custody_schedules WHERE id = :id")
     suspend fun deleteScheduleById(id: String)
 }
-

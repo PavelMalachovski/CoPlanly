@@ -180,4 +180,3 @@ object ScaleConstants {
      */
     const val TODAY_DOT_SCALE = 1.33f
 }
-

@@ -42,6 +42,14 @@ Firebase Cloud Functions для обработки push-уведомлений �
 
 **Триггер:** onUpdate в `child_info/{childInfoId}`
 
+### 5. recordServerEventRevision
+Records an `event_versions` revision (`recordedBy: 'server'`, id `srv_<eventId>_<commit time>`) for
+an event write no phone recorded — an older build's save (MON-4). Skips writes that leave the
+write key unchanged, removed documents and private ones. See `event-revisions.js` and
+`docs/DESIGN-court-record.md` §11.
+
+**Триггер:** onWrite в `events/{eventId}`
+
 ## Установка
 
 ### 1. Установить Firebase CLI

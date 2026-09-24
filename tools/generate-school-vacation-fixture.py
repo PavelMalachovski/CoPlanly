@@ -57,15 +57,19 @@ Each choice is also stated in the provider it affects:
     nothing but a past school year. The Laender's patron-saint days are school-free per Land
     and are also dropped; whether to draw them at all is the product decision ROADMAP MON-13
     records.
-  * **Slovakia, the nationwide periods only.** The spring holidays are set per region (kraj),
-    and the app has no Slovak region, so they are dropped - the same trade `CzechHolidays` makes
-    for the district-dependent spring break. The one-day half-year holiday (polrocne prazdniny)
-    the ministry also publishes is **not in the dataset** and so is not drawn.
+  * **Slovakia, nationwide and per kraj.** The key `SK` is the nationwide calendar (autumn,
+    Christmas, Easter, summer), which is what a Slovak parent who has not named a region sees.
+    The spring holidays (jarne prazdniny) are set per region, in three staggered weeks, so they
+    appear only under `SK-<kraj>` - the eight kraje by their ISO 3166-2 suffix, as the dataset's
+    `sk/subdivisions.csv` names them - on top of the nationwide periods. The one-day half-year
+    holiday (polrocne prazdniny) the ministry also publishes is **not in the dataset** and so is
+    not drawn.
   * **`Provisional` rows are dropped everywhere.**
 
 The script exits rather than guessing when the data holds something these rules did not
 anticipate: an unknown holiday name, a regional Slovak or Austrian row that is not a known
-regional kind, or two periods overlapping in one table.
+regional kind, a Slovak spring row naming a region the app does not know, or two periods
+overlapping in one table.
 
 ## Licence
 
@@ -90,7 +94,7 @@ FIRST_DAY = "2025-09-01"
 GERMAN_STATES = (
     "BB", "BE", "BW", "BY", "HB", "HE", "HH", "MV", "NI", "NW", "RP", "SH", "SL", "SN", "ST", "TH",
 )
-SLOVAK_REGIONS = {"BC", "BL", "KI", "NI", "PV", "TA", "TC", "ZI"}
+SLOVAK_REGIONS = ("BC", "BL", "KI", "NI", "PV", "TA", "TC", "ZI")
 
 # Local name -> (Kotlin enum entry, English name). The English names are this project's, not the
 # dataset's (which varies the casing and wording between Laender for the same break); the local
@@ -126,6 +130,7 @@ NAMES = {
     "Vianočné prázdniny": ("VIANOCNE_PRAZDNINY", "Christmas vacation"),
     "Veľkonočné prázdniny": ("VELKONOCNE_PRAZDNINY", "Easter vacation"),
     "Letné prázdniny": ("LETNE_PRAZDNINY", "Summer vacation"),
+    "Jarné prázdniny": ("JARNE_PRAZDNINY", "Spring vacation"),
 }
 
 # Regional rows that are dropped on purpose, by local name; anything else regional is an error.
@@ -133,7 +138,8 @@ AUSTRIAN_REGIONAL_DROPPED = {
     "Semesterferien", "Sommerferien", "St. Florian", "St. Josef", "St. Leopold", "St. Martin",
     "St. Rupert",
 }
-SLOVAK_REGIONAL_DROPPED = {"Jarné prázdniny"}
+# Slovak regional rows drawn per kraj (and only there); anything else regional is an error.
+SLOVAK_REGIONAL_KINDS = {"Jarné prázdniny"}
 
 MAX_LINE = 120  # detekt MaxLineLength, which analyses test sources too
 
@@ -198,16 +204,21 @@ def austrian(args):
     return rows
 
 
-def slovak(args):
+def slovak(args, region=None):
+    """The nationwide periods, plus `region`'s own spring holidays when a kraj is named."""
     rows = []
     for row in read_csv(args, "sk/holidays/holidays.school.csv"):
         if not wanted(row):
             continue
         regions = {r for r in (row.get("Subdivisions") or "").split(",") if r}
-        if row["RegionalScope"] == "National" or regions == SLOVAK_REGIONS:
+        if row["RegionalScope"] == "National" or regions == set(SLOVAK_REGIONS):
             rows.append(period(row, "SK"))
-        elif local_name(row, "SK") not in SLOVAK_REGIONAL_DROPPED:
+        elif local_name(row, "SK") not in SLOVAK_REGIONAL_KINDS:
             sys.exit(f"{row['Id']}: unexpected regional Slovak row {row['Name']!r}")
+        elif not regions or not regions <= set(SLOVAK_REGIONS):
+            sys.exit(f"{row['Id']}: Slovak spring row names unknown regions {sorted(regions)!r}")
+        elif region in regions:
+            rows.append(period(row, "SK"))
     return rows
 
 
@@ -233,6 +244,8 @@ def main():
     args = parser.parse_args()
 
     tables = {"AT": checked("AT", austrian(args)), "SK": checked("SK", slovak(args))}
+    for region in SLOVAK_REGIONS:
+        tables[f"SK-{region}"] = checked(f"SK-{region}", slovak(args, region))
     for state in GERMAN_STATES:
         tables[f"DE-{state}"] = checked(f"DE-{state}", german(args, state))
 

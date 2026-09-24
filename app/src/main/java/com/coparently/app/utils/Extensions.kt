@@ -212,8 +212,11 @@ fun String.capitalizeFirst(): String =
  * @return Truncated string
  */
 fun String.truncate(maxLength: Int, ellipsis: String = "..."): String {
-    return if (length <= maxLength) this
-    else take(maxLength - ellipsis.length) + ellipsis
+    return if (length <= maxLength) {
+        this
+    } else {
+        take(maxLength - ellipsis.length) + ellipsis
+    }
 }
 
 /**
@@ -299,4 +302,3 @@ fun Context.findActivity(): Activity? {
         }
     }
 }
-

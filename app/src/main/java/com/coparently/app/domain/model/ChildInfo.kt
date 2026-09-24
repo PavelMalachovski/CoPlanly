@@ -123,4 +123,3 @@ data class SchoolInfo(
     val teacherEmail: String? = null,
     val grade: String? = null
 )
-

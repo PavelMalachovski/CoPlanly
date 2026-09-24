@@ -598,7 +598,6 @@ private fun DayWeekPage(
             val hourLabelWidth = dims.hourGutterWidth
             val horizontalPadding = 8.dp
             val daySpacing = 4.dp
-            val headerHeight = dims.buttonHeight * 1.6f // Match header height
 
             Box(
                 modifier = Modifier
@@ -606,7 +605,7 @@ private fun DayWeekPage(
                     .padding(
                         start = horizontalPadding + hourLabelWidth,
                         end = horizontalPadding
-                        // top = headerHeight  <- REMOVED: This was causing the time offset issue!
+                        // No top padding: offsetting by the header height shifted every event.
                     )
                     .clipToBounds() // Prevent events from drawing over the header
             ) {
@@ -1253,7 +1252,7 @@ private fun EventChip(
                                 hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
                             },
                             onDragEnd = {
-                                if (isResizingStart && onResize != null) {
+                                if (isResizingStart) {
                                     val newStartTime =
                                         resizedStart(eventStart, eventEnd, resizeDragAmountStart, hourHeightPx)
                                     if (newStartTime != eventStart) {
@@ -1294,7 +1293,7 @@ private fun EventChip(
                                 hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
                             },
                             onDragEnd = {
-                                if (isResizingEnd && onResize != null) {
+                                if (isResizingEnd) {
                                     val newEndTime =
                                         resizedEnd(eventStart, eventEnd, resizeDragAmountEnd, hourHeightPx)
                                     if (newEndTime != eventEnd) {

@@ -23,4 +23,3 @@ data class CustodyScheduleEntity(
     val startDate: String? = null, // ISO date string
     val endDate: String? = null // ISO date string
 )
-

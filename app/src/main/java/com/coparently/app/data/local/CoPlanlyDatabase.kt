@@ -11,6 +11,7 @@ import com.coparently.app.data.local.dao.CustodyScheduleDao
 import com.coparently.app.data.local.dao.EventDao
 import com.coparently.app.data.local.dao.EventVersionOutboxDao
 import com.coparently.app.data.local.dao.ExpenseDao
+import com.coparently.app.data.local.dao.FamilyDocumentCacheDao
 import com.coparently.app.data.local.dao.JournalDao
 import com.coparently.app.data.local.dao.MessageDao
 import com.coparently.app.data.local.dao.ParentingPlanDao
@@ -25,6 +26,7 @@ import com.coparently.app.data.local.entity.CustodyScheduleEntity
 import com.coparently.app.data.local.entity.EventEntity
 import com.coparently.app.data.local.entity.EventVersionOutboxEntity
 import com.coparently.app.data.local.entity.ExpenseEntity
+import com.coparently.app.data.local.entity.FamilyDocumentCacheEntity
 import com.coparently.app.data.local.entity.JournalEntryEntity
 import com.coparently.app.data.local.entity.MessageEntity
 import com.coparently.app.data.local.entity.ParentingPlanEntryEntity
@@ -52,9 +54,10 @@ import com.coparently.app.data.local.entity.UserEntity
         ChangeRequestEntity::class,
         ParentingPlanEntryEntity::class,
         EventVersionOutboxEntity::class,
-        JournalEntryEntity::class
+        JournalEntryEntity::class,
+        FamilyDocumentCacheEntity::class
     ],
-    version = 42,
+    version = 43,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -123,5 +126,9 @@ abstract class CoPlanlyDatabase : RoomDatabase() {
      * Provides JournalDao — the private journal, which never leaves this phone (MON-22).
      */
     abstract fun journalDao(): JournalDao
-}
 
+    /**
+     * Provides FamilyDocumentCacheDao — the last server answer for the vault index (MON-23).
+     */
+    abstract fun familyDocumentCacheDao(): FamilyDocumentCacheDao
+}

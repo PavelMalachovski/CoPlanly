@@ -61,4 +61,3 @@ interface ChildInfoRepository {
      */
     suspend fun pullOnce()
 }
-

@@ -191,7 +191,8 @@ When touching the UI, keep these invariants:
    `rememberNotificationPermissionRequester()` (push toggle, reminder selection), never on
    cold start.
 8. **Destructive list actions** use M3 `SwipeToDismissBox` with an Undo snackbar
-   (see `EventListScreen`); Undo re-creates the captured event (id is preserved).
+   (see `EventListScreen`; the delete runs from `SwipeToDismissBox`'s `onDismiss`, material3 1.4,
+   not the deprecated `confirmValueChange`); Undo re-creates the captured event (id is preserved).
    Danger actions (e.g. "Sign out of app") live at the bottom of their screen, not
    mid-list.
 9. **User-facing strings** live in tracked, feature-named `res/values/*_strings.xml`
@@ -377,13 +378,24 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   banners, a Settings group, `EmptyState`, the Expenses summary header, a chat thread, the event
   preview body, the consent screen and the family switcher chip — over a variant matrix of theme,
   the five languages, 1.0×/1.5× font scale and the default vs a purple/orange parent palette
-  (`ScreenshotVariants`: nine variants for text-heavy components, four for the rest, 113 images).
+  (`ScreenshotVariants`: nine variants for text-heavy components, four for the rest, 121 images — the count the committed baselines hold).
   **To view:** open the run's `screenshots` artefact, unzip, open `index.html`
   (`tools/screenshot-gallery.js`, no dependencies, filters by component/language/theme/scale/
-  palette). Locally: `./gradlew recordRoborazziDebug`, images in `app/build/outputs/roborazzi/`.
-  Five things to know. **It records and does not compare** — no baselines are committed, because
-  they must be recorded on the CI runner to be pixel-stable; `ci.yml`'s `TODO(screenshots)` lists
-  the three steps to switch to `verifyRoborazziDebug` through the Regenerate workflow. **A
+  palette). Locally: `./gradlew recordRoborazziDebug` writes into `app/src/test/screenshots/` — don't commit what a laptop records (below).
+  Five things to know. **It verifies against committed baselines** in `app/src/test/screenshots/`
+  (`roborazzi { outputDir }`, the one directory record writes and verify reads), and **only the
+  Regenerate workflow records them** — on the same runner image and JDK, because Robolectric's
+  native renderer is pixel-stable per platform and font set, not across them. The job runs
+  `verifyRoborazziDebug` whenever that directory holds an image (falling back to record, with a
+  notice, while it holds none) and fails when a screenshot differs from its baseline or has none.
+  **Changing the UI on purpose — or adding a screenshot test — means running Regenerate on the
+  branch** (touch `.github/regenerate-request`); the new baselines arrive as a bot commit whose PNG
+  diff is the visible acceptance, which is why it stays manual like the detekt baseline. On a
+  mismatch the `screenshot-diffs` artefact holds Roborazzi's `<variant>_compare.png` and
+  `_actual.png` per component, the gallery marks those cards "changed", and the PR comment lists
+  them (`screenshot-summary` → `tools/ci-report.js`). `ScreenshotMatrix.optionsFor` puts the compare
+  output in a folder per component because Roborazzi writes the diff under the bare file name, and
+  every component shares variant names — keep it. **A
   Roborazzi task runs only the screenshot package and `testDebugUnitTest` excludes it**
   (`roborazziRequested` in `app/build.gradle.kts`), so `build-test` stays fast and a rendering
   failure cannot redden it. **Robolectric runs SDK 34, not 36** (`SCREENSHOT_SDK`): 4.16.1
@@ -465,8 +477,10 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   `coverage-report` — Kover (`org.jetbrains.kotlinx.kover` 0.9.9, `app/build.gradle.kts`, Hilt/Room/
   Compose-generated classes filtered out). Coverage is **visibility, not a gate**: there is no
   verification rule, and its step is the one place in `ci.yml` where `continue-on-error` is
-  right, because failing to *report* a number must not turn a green build red. Screenshot and
-  e2e artifacts are described in the comment by name once those jobs upload them.
+  right, because failing to *report* a number must not turn a green build red. `screenshots` (the gallery:
+  unzip, open `index.html`) and, on a failed verify, `screenshot-diffs`; the comment also carries a
+  Screenshots section saying whether the run verified or only recorded, and which images no longer
+  match.
 
 ## Hard project rules
 
@@ -594,7 +608,7 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
 
 ```
 domain/    — models, repository interfaces, use cases, holidays, ReminderScheduler
-data/      — Room (v42 + migrations), Firestore/Google clients, repository impls, sync
+data/      — Room (v43 + migrations), Firestore/Google clients, repository impls, sync
 presentation/ — Compose screens per feature + ViewModels + theme
 di/        — Hilt modules (Database, Firebase, Google, UseCase, Notification, …)
 ```
@@ -629,15 +643,16 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
    nationwide days, plus the chosen Land's own — below), Austria and Russia (statutory art. 112
    days, no annual transfer decree) have tables; **Ukraine deliberately has none** — its holidays are not days off under martial
    law, and the row says so. **School vacations are sourced, never invented** (September 2026):
-   Czechia's are computed (`CzechHolidays`); Slovakia's and Austria's *nationwide* periods and each
-   German **Land's** list are dated tables (`SchoolVacation.kt`, `GermanSchoolVacations.kt`) from
+   Czechia's are computed (`CzechHolidays`); Slovakia's and Austria's *nationwide* periods, each
+   **Slovak kraj's** spring week (`SlovakRegion.kt`) and each German **Land's** list are dated
+   tables (`SchoolVacation.kt`, `SlovakHolidays.kt`, `GermanSchoolVacations.kt`) from
    the OpenHolidays dataset (`github.com/openpotato/openholidaysapi.data`, ODbL 1.0 — the official
    KMK/BMBWF/MŠVVaM sites and the APIs are blocked from cloud sessions, the GitHub data repo is
    not), read at a pinned commit by `tools/generate-school-vacation-fixture.py` and held period by
    period by `SchoolVacationReferenceTest`. From school year 2025/26 to whatever the dataset
-   publishes — no extrapolation. What is set per region the app does not model stays out: Slovak
-   spring holidays (by kraj), Austrian semester and summer breaks (by Land; the dataset's later
-   ones are all `Provisional`), and Germany without a Land draws none. Russia has none. Day view
+   publishes — no extrapolation. What is set per region the app does not model stays out: Austrian
+   semester and summer breaks (by Land; the dataset's later ones are all `Provisional`), and
+   Germany without a Land and Slovakia without a kraj draw no regional breaks. Russia has none. Day view
    labels a school-vacation day and the month grid underlines it; the grid reads
    `HolidayProvider.schoolVacationDaysInRange`, not the `holidaysInRange` map, because that map
    names a public holiday first and would break the line over Christmas. The OpenHolidays data's
@@ -659,13 +674,21 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
    `users.regionCode`, nullable = nationwide). `HolidayProvider.regions`/`forRegion` and
    `HolidayLocation` carry it; the calendar reads `HolidayLocation.provider`, and
    `HolidayCountry.regionOrNull` drops a code that is not the country's, so a parent who moved
-   from Germany to Austria never keeps drawing Bavaria. Only Germany has regions, and a Land adds
-   both its public holidays and its school vacations. Austria's Länder add no *public* holiday in
+   from Germany to Austria never keeps drawing Bavaria. **A region code means nothing
+   without its country** — `NI` is Lower Saxony and Nitra — so the UI names a region by
+   `HolidayCountry.regionNameRes(code)`, never by code alone. Two countries have regions: a German
+   **Land** adds both its public holidays and its school vacations; a Slovak **kraj**
+   (`SlovakRegion`, the dataset's eight codes, named in Slovak and not translated) adds only its
+   spring week (jarné prázdniny) — Slovak public holidays are national, which
+   `HolidayReferenceTest` checks for every kraj, so Slovakia has no `--regions` fixture. The
+   picker's label, summary and note are worded per country (`CountryPicker.kt`'s
+   `RegionWording`), and the row appears for any country whose `regions` is non-empty. Austria's Länder add no *public* holiday in
    the reference data (the patron-saint days are bank holidays) and no *final* school dates past
    2025/26, so it gets no picker — a row that changed nothing is item 8 again. The picker's note
    reads `HolidayCountry.coverageIn(region)`, so "school vacations" appears for Germany only
-   once a Land is chosen. The German
-   states are pinned by a second fixture (`--regions`, only what each state *adds*), and the
+   once a Land is chosen and Slovakia asks for a kraj to add its spring holidays. The German
+   states are pinned by a second fixture (`--regions`, only what each state *adds*), the kraje by
+   `SK-<kraj>` keys in the school-vacation fixture, and the
    library's `catholic` category and the Augsburg pseudo-state are excluded on purpose —
    `GermanState`'s KDoc says why. The Room schema JSON for v36 (which carries this column) is exported by the Regenerate
    workflow, not by hand.
@@ -708,7 +731,7 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     the conversation as `{uid: epochMillis}` maps — one write per event — and the ticks and
     unread badge are derived from them by `ChatReadState`, never stored per message.
     Message times are stored the same way: `Message.sentAtMillis`, epoch millis (Room
-    schema v13, since superseded — the database is at v42), not a naive `LocalDateTime`, so two
+    schema v13, since superseded — the database is at v43), not a naive `LocalDateTime`, so two
     parents in different time zones agree
     on what a mark means and on when a message was sent. The Firestore field keeps its name
     (`timestamp`) and the read path still accepts a legacy ISO string, so a co-parent on an
@@ -1008,9 +1031,18 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     history is the parents' communication record, not the calendar. Done since (schema 39): the
     compared timestamp is `EventEntity.updatedAtMillis` (item 13), so a revision's embedded
     `updatedAt` is UTC text from an upgraded build and a wall clock from an older one — the export
-    keeps labelling `deviceTimeMillis` and `recordedAt` as the clocks. Not done, and recorded in
-    ROADMAP MON-4: the events rule does not *require* a revision beside each write, so an older
-    build's edits go unrecorded.
+    keeps labelling `deviceTimeMillis` and `recordedAt` as the clocks. **An older build's edits are
+    recorded by the server** (September 2026, design §11): `recordServerEventRevision`
+    (`functions/event-revisions.js`) writes `event_versions/srv_<eventId>_<commit time>` with
+    `recordedBy: 'server'`, `deviceTimeMillis: null` and the editor the saved document names, only
+    when no phone's revision matches the write key (`saved|<updatedAt>` / `deleted|<deletedAtMillis>`,
+    defined in `EventVersionDocument.writeKey` and the function alike — change both). It skips a
+    write that leaves the key unchanged (sweeps, backfills, re-uploads), a removed document and a
+    private one. The export drops a server revision when a phone's revision of the same save exists
+    and labels the rest `export_action_server_recorded`. Clients may neither write `recordedBy` nor
+    create a `srv_` id. Do not make the events rule require a revision instead — it would refuse
+    every edit from an older build. A server revision proves that the document changed, not who
+    changed it: `lastModifiedBy` is not pinned.
 
 26. **The export is a communication record, says so on its face, and is made on the phone**
     (MON-3, September 2026; the owner's MON-4 answer). Settings → Family → *Export the record*
@@ -1177,11 +1209,20 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     `domain/files/SharedFilePolicy` holds the cap (under 20 MB) and the types (PDF, JPEG, PNG,
     HEIC/HEIF, WebP) that both rule files repeat — change all three together. Eight things not to
     undo.
-    **No Room table, and none added quietly.** The vault is a Firestore listener
-    (`FamilyDocumentRepositoryImpl`, like the calendar-friend list), and a chat reference rides the
-    `attachments` list `Message` already had, as a `ChatAttachmentCodec` string
-    (`att1|path|type|size|sha256|name`) — never Gson over the data class, and never a new column.
-    A vault cache is a schema version (ROADMAP MON-23).
+    **One Room table, the vault index cache, and nothing else** (schema 43,
+    `family_documents_cache`). The vault is a Firestore listener (`FamilyDocumentIndex`);
+    `FamilyDocumentIndexCache` stores every **server-confirmed** snapshot as the family's whole set
+    of rows (tombstones kept with `deletedAtMillis`, never listed) and lists them, under
+    `documents_possibly_outdated`, only while the listener fails or answers from Firestore's own
+    cache. It is the **index only** — the bytes stay in Storage and `SharedFileCache` — with **no
+    outbox and no upload**: every write goes to Firestore first and reaches the cache only through
+    the next server answer. Every read is scoped to one `familyId`, the repository refuses a family
+    the signed-in uid is not in, and `clearAllTables` wipes it on an account switch. An empty cache
+    is not an empty vault: with nothing stored it says "unavailable" or nothing, never "no
+    documents". Don't add a column that uploads, a second cache for file bytes, or a read that isn't
+    scoped to a family. A chat reference rides the `attachments` list `Message` already had, as a
+    `ChatAttachmentCodec` string (`att1|path|type|size|sha256|name`) — never Gson over the data
+    class, and never a new column.
     **The Storage gate is the path.** `storage.rules`' `isOneOfPair` splits the first segment —
     `FamilyKey.of`, the two uids — so the emulator runs every case
     (`firestore-tests/rules/storage-shared-files.test.js`); the cross-service `firestore.get()`

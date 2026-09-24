@@ -49,15 +49,7 @@ internal object RecordFixtures {
             amount = "Amount",
             currency = "Currency"
         ),
-        actions = RecordActions(
-            created = "Created",
-            updated = "Changed",
-            deleted = "Deleted",
-            currentState = "Current state",
-            sent = "Sent",
-            notSent = "Not sent",
-            recorded = "Recorded"
-        ),
+        actions = actionLabels(),
         notYetOnServer = "Not yet on server",
         noServerTime = "None kept",
         revision = "Revision",
@@ -79,6 +71,18 @@ internal object RecordFixtures {
             written = "Written",
             edited = "Last edited"
         )
+    )
+
+    /** The action words, kept apart from [labels] so that function stays within detekt's length. */
+    fun actionLabels() = RecordActions(
+        created = "Created",
+        updated = "Changed",
+        deleted = "Deleted",
+        currentState = "Current state",
+        sent = "Sent",
+        notSent = "Not sent",
+        recorded = "Recorded",
+        serverRecorded = "RECORDED BY THE SERVER"
     )
 
     /** The parenting plan's section words, short and upper-case so a test can find them. */
@@ -144,10 +148,12 @@ internal object RecordFixtures {
         eventId: String = "e1",
         kind: EventVersionKind = EventVersionKind.UPDATED,
         editor: String = ALICE,
-        deviceTime: Long = MARCH_10_0900,
+        deviceTime: Long? = MARCH_10_0900,
         recordedAt: Long? = MARCH_10_0900 + 2_000,
         familyId: String = FAMILY,
-        facts: EventFacts = facts()
+        facts: EventFacts = facts(),
+        byServer: Boolean = false,
+        writeKey: String? = null
     ) = EventRevisionInput(
         versionId = versionId,
         eventId = eventId,
@@ -156,7 +162,9 @@ internal object RecordFixtures {
         deviceTimeMillis = deviceTime,
         recordedAtMillis = recordedAt,
         familyId = familyId,
-        facts = facts
+        facts = facts,
+        recordedByServer = byServer,
+        writeKey = writeKey
     )
 
     fun expense(id: String, date: LocalDate, familyId: String? = FAMILY, title: String = "School trip") = Expense(

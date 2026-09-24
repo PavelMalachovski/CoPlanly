@@ -832,8 +832,11 @@ fun AddEditEventScreen(
                                         R.string.event_form_cd_assign_to,
                                         label,
                                         context.getString(
-                                            if (isSelected) R.string.event_form_cd_selected
-                                            else R.string.event_form_cd_not_selected
+                                            if (isSelected) {
+                                                R.string.event_form_cd_selected
+                                            } else {
+                                                R.string.event_form_cd_not_selected
+                                            }
                                         )
                                     )
                                 }
@@ -952,8 +955,11 @@ fun AddEditEventScreen(
                                 R.string.event_form_cd_event_type,
                                 label,
                                 context.getString(
-                                    if (eventType == value) R.string.event_form_cd_selected
-                                    else R.string.event_form_cd_not_selected
+                                    if (eventType == value) {
+                                        R.string.event_form_cd_selected
+                                    } else {
+                                        R.string.event_form_cd_not_selected
+                                    }
                                 )
                             )
                         }
@@ -1511,8 +1517,11 @@ fun AddEditEventScreen(
                         ) {
                             Text(
                                 stringResource(
-                                    if (confirmedBy != null) R.string.event_form_pickup_undo
-                                    else R.string.event_form_pickup_confirm
+                                    if (confirmedBy != null) {
+                                        R.string.event_form_pickup_undo
+                                    } else {
+                                        R.string.event_form_pickup_confirm
+                                    }
                                 )
                             )
                         }

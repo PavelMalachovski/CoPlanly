@@ -260,28 +260,29 @@ class ExpenseRepositoryImpl @Inject constructor(
                     // until the document went away.
                     val expense = runCatching {
                         Expense(
-                        id = id,
-                        // A co-parent on a build that predates the reference type still writes
-                        // `childId`, so it is read as a fallback. In practice it converts
-                        // nothing — the field was never populated by any client.
-                        familyId = (data["familyId"] as? String)?.takeIf { it.isNotEmpty() },
-                        forMembers = FamilyMemberRef.parse(data["forMembers"])
-                            .ifEmpty { FamilyMemberRef.fromLegacyChildId(data["childId"] as? String) },
-                        title = data["title"] as String,
-                        amount = (data["amount"] as Number).toDouble(),
-                        currency = data["currency"] as String,
-                        category = ExpenseCategory.valueOf(data["category"] as String),
-                        paidBy = data["paidBy"] as String,
-                        splitBetween = (data["splitBetween"] as? List<String>) ?: emptyList(),
-                        date = LocalDate.parse(data["date"] as String, dateFormatter),
-                        receiptUrl = (data["receiptUrl"] as? String)?.takeIf { it.isNotEmpty() },
-                        notes = (data["notes"] as? String)?.takeIf { it.isNotEmpty() },
-                        createdAt = LocalDateTime.parse(data["createdAt"] as String, dateTimeFormatter),
-                        syncedToFirestore = true,
-                        createdByFirebaseUid =
+                            id = id,
+                            // A co-parent on a build that predates the reference type still writes
+                            // `childId`, so it is read as a fallback. In practice it converts
+                            // nothing — the field was never populated by any client.
+                            familyId = (data["familyId"] as? String)?.takeIf { it.isNotEmpty() },
+                            forMembers = FamilyMemberRef.parse(data["forMembers"])
+                                .ifEmpty { FamilyMemberRef.fromLegacyChildId(data["childId"] as? String) },
+                            title = data["title"] as String,
+                            amount = (data["amount"] as Number).toDouble(),
+                            currency = data["currency"] as String,
+                            category = ExpenseCategory.valueOf(data["category"] as String),
+                            paidBy = data["paidBy"] as String,
+                            splitBetween = (data["splitBetween"] as? List<*>)
+                                ?.filterIsInstance<String>() ?: emptyList(),
+                            date = LocalDate.parse(data["date"] as String, dateFormatter),
+                            receiptUrl = (data["receiptUrl"] as? String)?.takeIf { it.isNotEmpty() },
+                            notes = (data["notes"] as? String)?.takeIf { it.isNotEmpty() },
+                            createdAt = LocalDateTime.parse(data["createdAt"] as String, dateTimeFormatter),
+                            syncedToFirestore = true,
+                            createdByFirebaseUid =
                             (data["createdByFirebaseUid"] as? String)?.takeIf { it.isNotEmpty() },
-                        splitBasisPoints = (data["splitBasisPoints"] as? Number)?.toInt()
-                            ?.takeIf { it >= 0 }
+                            splitBasisPoints = (data["splitBasisPoints"] as? Number)?.toInt()
+                                ?.takeIf { it >= 0 }
                         )
                     }.getOrElse { e ->
                         android.util.Log.w("ExpenseRepo", "Skipping an expense document that does not parse: $id", e)

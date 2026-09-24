@@ -141,4 +141,3 @@ interface UserRepository {
      */
     suspend fun getRemoteUserProfile(uid: String): User?
 }
-

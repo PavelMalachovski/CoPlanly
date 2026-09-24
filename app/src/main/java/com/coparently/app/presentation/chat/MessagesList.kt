@@ -20,10 +20,10 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.Message
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Error
-import androidx.compose.material.icons.filled.Message
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -239,7 +239,7 @@ fun MessagesList(
     ) {
         if (messages.isEmpty()) {
             EmptyState(
-                icon = Icons.Default.Message,
+                icon = Icons.AutoMirrored.Filled.Message,
                 title = stringResource(R.string.chat_messages_empty_title),
                 description = stringResource(R.string.chat_messages_empty_description),
                 modifier = Modifier.fillMaxSize()

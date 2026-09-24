@@ -16,6 +16,8 @@
     <string name="documents_no_family_title">Link your co-parent first</string>
     <string name="documents_no_family_description">Documents belong to a family: they are shared with both parents from the moment they are added.</string>
     <string name="documents_unavailable">Documents can’t be loaded right now. Check your connection.</string>
+    <!-- Above the vault list when it is this phone's last copy (MON-23 cache), not the server's answer now. -->
+    <string name="documents_possibly_outdated">Can’t reach the server — showing the list this phone saw last. It may be out of date.</string>
     <string name="documents_category_court_order">Court orders</string>
     <string name="documents_category_school">School</string>
     <string name="documents_category_medical">Medical</string>

@@ -90,4 +90,3 @@ data class User(
      */
     val regionCode: String? = null
 )
-

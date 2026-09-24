@@ -41,8 +41,24 @@ object FamilyDocumentMapper {
      * The live document stored under [id], or null for a tombstone or a document missing a field
      * the vault needs — skipped, not allowed to fail the whole list.
      */
-    fun fromFirestore(id: String, data: Map<String, Any?>?): FamilyDocument? {
-        val fields = data?.takeIf { it["deletedAtMillis"] == null } ?: return null
+    fun fromFirestore(id: String, data: Map<String, Any?>?): FamilyDocument? =
+        indexEntry(id, data)?.takeIf { it.deletedAtMillis == null }?.document
+
+    /**
+     * Every well-formed document under [id], tombstones included, with the time it was deleted —
+     * what the Room cache of the vault index keeps (schema 43). Null for a document missing a
+     * field the vault needs.
+     */
+    fun indexEntry(id: String, data: Map<String, Any?>?): IndexEntry? {
+        val fields = data ?: return null
+        val document = parse(id, fields) ?: return null
+        // Any value marks a tombstone, as it always has; one that is not a number keeps the row
+        // deleted rather than bringing it back.
+        val deletedAt = fields["deletedAtMillis"]?.let { (it as? Number)?.toLong() ?: 0L }
+        return IndexEntry(document, deletedAt)
+    }
+
+    private fun parse(id: String, fields: Map<String, Any?>): FamilyDocument? {
         val familyId = fields.text("familyId")
         val creator = fields.text("createdByFirebaseUid")
         val storagePath = fields.text("storagePath")
@@ -62,6 +78,13 @@ object FamilyDocumentMapper {
             createdAtMillis = (fields["createdAtMillis"] as? Number)?.toLong() ?: 0L
         )
     }
+
+    /**
+     * One index document as a snapshot delivered it.
+     *
+     * @property deletedAtMillis When it was tombstoned (CLAUDE.md item 14), or null while it is live.
+     */
+    data class IndexEntry(val document: FamilyDocument, val deletedAtMillis: Long?)
 
     private fun Map<String, Any?>.text(key: String): String = (this[key] as? String).orEmpty()
 

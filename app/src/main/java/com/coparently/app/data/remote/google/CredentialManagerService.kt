@@ -3,10 +3,6 @@ package com.coparently.app.data.remote.google
 import android.content.Context
 import android.util.Log
 import androidx.credentials.CredentialManager
-import androidx.credentials.CustomCredential
-import androidx.credentials.GetCredentialRequest
-import androidx.credentials.GetCredentialResponse
-import androidx.credentials.exceptions.GetCredentialException
 import com.coparently.app.R
 import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.remote.firebase.GoogleOAuthFunctions
@@ -17,13 +13,8 @@ import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.common.api.Scope
 import com.google.android.gms.tasks.Task
-import com.google.android.libraries.identity.googleid.GetGoogleIdOption
-import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
-import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
-import com.google.api.client.googleapis.auth.oauth2.GoogleTokenResponse
 import com.google.api.services.calendar.CalendarScopes
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.tasks.await
 import java.io.IOException
 import javax.inject.Inject
@@ -217,7 +208,8 @@ class CredentialManagerService @Inject constructor(
 
             // Проверяем, истек ли токен (с запасом в 5 минут)
             if (storedToken != null && expiryTime != null &&
-                expiryTime > System.currentTimeMillis() + 300000) {
+                expiryTime > System.currentTimeMillis() + 300000
+            ) {
                 Log.d(TAG, "Using stored access token")
                 return Pair(storedToken, null)
             }
@@ -319,14 +311,20 @@ class CredentialManagerService @Inject constructor(
             // Попытка получить из strings.xml
             val clientId = context.getString(R.string.default_web_client_id)
             if (clientId.contains("YOUR_WEB_CLIENT_ID")) {
-                throw IllegalStateException("Web Client ID not configured. Please set up OAuth 2.0 Client ID in Google Cloud Console and update default_web_client_id in strings.xml")
+                throw IllegalStateException(
+                    "Web Client ID not configured. Please set up OAuth 2.0 Client ID in Google Cloud " +
+                        "Console and update default_web_client_id in strings.xml"
+                )
             }
             clientId
         } catch (e: Exception) {
             Log.e(TAG, "Web Client ID not configured: ${e.message}")
-            throw IllegalStateException("Google OAuth not configured. Please:\n1. Go to Google Cloud Console\n2. Create OAuth 2.0 Client ID for Web application\n3. Add the Client ID to default_web_client_id in strings.xml\n4. Enable Google Calendar API")
+            throw IllegalStateException(
+                "Google OAuth not configured. Please:\n1. Go to Google Cloud Console\n" +
+                    "2. Create OAuth 2.0 Client ID for Web application\n" +
+                    "3. Add the Client ID to default_web_client_id in strings.xml\n" +
+                    "4. Enable Google Calendar API"
+            )
         }
     }
-
 }
-

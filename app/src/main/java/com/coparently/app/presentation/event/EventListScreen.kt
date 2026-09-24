@@ -38,6 +38,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -212,21 +213,16 @@ private fun SwipeableEventCard(
     onDelete: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val dismissState = rememberSwipeToDismissBoxState(
-        confirmValueChange = { value ->
-            if (value == SwipeToDismissBoxValue.EndToStart) {
-                onDelete()
-                true
-            } else {
-                false
-            }
-        }
-    )
+    val dismissState = rememberSwipeToDismissBoxState()
+    // The delete runs once the row has settled off-screen. `onDismiss` below captures only this
+    // State, so Compose memoizes it and a recomposition cannot re-run the delete on a settled row.
+    val currentOnDelete by rememberUpdatedState(onDelete)
 
     SwipeToDismissBox(
         state = dismissState,
         modifier = modifier,
         enableDismissFromStartToEnd = false,
+        onDismiss = { value -> if (value == SwipeToDismissBoxValue.EndToStart) currentOnDelete() },
         backgroundContent = {
             Box(
                 modifier = Modifier
@@ -294,7 +290,6 @@ private fun EventCardContent(
         }
     }
 }
-
 
 /**
  * How many of this parent's own events the co-parent has not answered.

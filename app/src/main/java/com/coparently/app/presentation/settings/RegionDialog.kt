@@ -27,8 +27,8 @@ import androidx.compose.ui.unit.dp
 import com.coparently.app.R
 import com.coparently.app.domain.holidays.HolidayCountry
 import com.coparently.app.presentation.common.coverageNote
-import com.coparently.app.presentation.common.holidayRegionLabelRes
 import com.coparently.app.presentation.common.regionLabelRes
+import com.coparently.app.presentation.common.regionNameRes
 
 /**
  * Picks the region whose own public holidays are added to [country]'s (MON-13, regional half).
@@ -36,7 +36,8 @@ import com.coparently.app.presentation.common.regionLabelRes
  * The same anatomy as the country dialog in `SettingsScreen`, and reached only from a row that
  * exists only when the country has regions. "Nationwide only" leads the list because it is a
  * real answer — the one every account had before the field existed — not an unset state.
- * Scrolls, since sixteen Länder and that row do not fit a small screen.
+ * Scrolls, since sixteen Länder and that row do not fit a small screen. Titled in the country's
+ * own word for its regions (a German Land, a Slovak kraj).
  */
 @Composable
 internal fun RegionDialog(
@@ -54,7 +55,7 @@ internal fun RegionDialog(
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 options.forEach { code ->
-                    val label = code?.let { holidayRegionLabelRes(it) }?.let { stringResource(it) }
+                    val label = code?.let { country.regionNameRes(it) }?.let { stringResource(it) }
                         ?: code
                         ?: stringResource(R.string.holiday_region_none)
                     Row(

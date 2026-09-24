@@ -45,7 +45,11 @@ object RecurrenceExpander {
         if (!event.isRecurring || event.recurrencePattern.isNullOrBlank()) {
             return if (event.startDateTime <= rangeEnd &&
                 (event.endDateTime ?: event.startDateTime) >= rangeStart
-            ) listOf(event) else emptyList()
+            ) {
+                listOf(event)
+            } else {
+                emptyList()
+            }
         }
 
         val pattern = event.recurrencePattern

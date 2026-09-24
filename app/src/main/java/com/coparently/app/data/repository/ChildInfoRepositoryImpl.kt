@@ -226,12 +226,26 @@ class ChildInfoRepositoryImpl @Inject constructor(
             id = id,
             childName = childName,
             dateOfBirth = dateOfBirth,
-            medications = gson.fromJson(medicationsJson, Array<com.coparently.app.domain.model.Medication>::class.java).toList(),
-            activities = gson.fromJson(activitiesJson, Array<com.coparently.app.domain.model.Activity>::class.java).toList(),
+            medications = gson.fromJson(
+                medicationsJson,
+                Array<com.coparently.app.domain.model.Medication>::class.java
+            ).toList(),
+            activities = gson.fromJson(
+                activitiesJson,
+                Array<com.coparently.app.domain.model.Activity>::class.java
+            ).toList(),
             allergies = gson.fromJson(allergiesJson, Array<String>::class.java).toList(),
             medicalNotes = medicalNotes,
-            emergencyContacts = gson.fromJson(emergencyContactsJson, Array<com.coparently.app.domain.model.EmergencyContact>::class.java).toList(),
-            schoolInfo = schoolInfoJson?.let { gson.fromJson(it, com.coparently.app.domain.model.SchoolInfo::class.java) },
+            emergencyContacts = gson.fromJson(
+                emergencyContactsJson,
+                Array<com.coparently.app.domain.model.EmergencyContact>::class.java
+            ).toList(),
+            schoolInfo = schoolInfoJson?.let {
+                gson.fromJson(
+                    it,
+                    com.coparently.app.domain.model.SchoolInfo::class.java
+                )
+            },
             medicalProfile = (
                 gson.fromJson(medicalProfileJson, MedicalProfile::class.java) ?: MedicalProfile()
                 ).withSanitizedVaccinationNames(),
@@ -290,35 +304,43 @@ class ChildInfoRepositoryImpl @Inject constructor(
             "id" to id,
             "childName" to childName,
             "dateOfBirth" to dateOfBirth?.format(formatter),
-            "medications" to medications.map { mapOf(
-                "name" to it.name,
-                "dosage" to it.dosage,
-                "frequency" to it.frequency,
-                "notes" to it.notes
-            )},
-            "activities" to activities.map { mapOf(
-                "name" to it.name,
-                "schedule" to it.schedule,
-                "location" to it.location,
-                "contactPerson" to it.contactPerson,
-                "contactPhone" to it.contactPhone
-            )},
+            "medications" to medications.map {
+                mapOf(
+                    "name" to it.name,
+                    "dosage" to it.dosage,
+                    "frequency" to it.frequency,
+                    "notes" to it.notes
+                )
+            },
+            "activities" to activities.map {
+                mapOf(
+                    "name" to it.name,
+                    "schedule" to it.schedule,
+                    "location" to it.location,
+                    "contactPerson" to it.contactPerson,
+                    "contactPhone" to it.contactPhone
+                )
+            },
             "allergies" to allergies,
             "medicalNotes" to medicalNotes,
-            "emergencyContacts" to emergencyContacts.map { mapOf(
-                "name" to it.name,
-                "relationship" to it.relationship,
-                "phone" to it.phone,
-                "alternatePhone" to it.alternatePhone
-            )},
-            "schoolInfo" to schoolInfo?.let { mapOf(
-                "name" to it.name,
-                "address" to it.address,
-                "phone" to it.phone,
-                "teacherName" to it.teacherName,
-                "teacherEmail" to it.teacherEmail,
-                "grade" to it.grade
-            )},
+            "emergencyContacts" to emergencyContacts.map {
+                mapOf(
+                    "name" to it.name,
+                    "relationship" to it.relationship,
+                    "phone" to it.phone,
+                    "alternatePhone" to it.alternatePhone
+                )
+            },
+            "schoolInfo" to schoolInfo?.let {
+                mapOf(
+                    "name" to it.name,
+                    "address" to it.address,
+                    "phone" to it.phone,
+                    "teacherName" to it.teacherName,
+                    "teacherEmail" to it.teacherEmail,
+                    "grade" to it.grade
+                )
+            },
             "medicalProfile" to gson.fromJson(gson.toJson(medicalProfile), Map::class.java),
             "medicalPhotos" to medicalPhotos,
             "guests" to ChildInfoGuests.encode(guests),
@@ -396,4 +418,3 @@ class ChildInfoRepositoryImpl @Inject constructor(
         )
     }
 }
-

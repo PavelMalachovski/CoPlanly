@@ -30,7 +30,11 @@ object UseCaseModule {
         crashlyticsManager: CrashlyticsManager,
         reminderScheduler: com.coparently.app.domain.notification.ReminderScheduler
     ): CreateEventUseCase = CreateEventUseCase(
-        eventRepository, eventValidator, analyticsManager, crashlyticsManager, reminderScheduler
+        eventRepository,
+        eventValidator,
+        analyticsManager,
+        crashlyticsManager,
+        reminderScheduler
     )
 
     @Provides
@@ -42,7 +46,11 @@ object UseCaseModule {
         crashlyticsManager: CrashlyticsManager,
         reminderScheduler: com.coparently.app.domain.notification.ReminderScheduler
     ): UpdateEventUseCase = UpdateEventUseCase(
-        eventRepository, eventValidator, analyticsManager, crashlyticsManager, reminderScheduler
+        eventRepository,
+        eventValidator,
+        analyticsManager,
+        crashlyticsManager,
+        reminderScheduler
     )
 
     @Provides
@@ -53,7 +61,10 @@ object UseCaseModule {
         crashlyticsManager: CrashlyticsManager,
         reminderScheduler: com.coparently.app.domain.notification.ReminderScheduler
     ): DeleteEventUseCase = DeleteEventUseCase(
-        eventRepository, analyticsManager, crashlyticsManager, reminderScheduler
+        eventRepository,
+        analyticsManager,
+        crashlyticsManager,
+        reminderScheduler
     )
 
     @Provides
@@ -73,6 +84,9 @@ object UseCaseModule {
         deleteEvent: DeleteEventUseCase,
         getEvents: GetEventsUseCase
     ): EventUseCases = EventUseCases(
-        createEvent, updateEvent, deleteEvent, getEvents
+        createEvent,
+        updateEvent,
+        deleteEvent,
+        getEvents
     )
 }

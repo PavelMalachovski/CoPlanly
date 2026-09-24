@@ -191,4 +191,3 @@ fun <T, R> UiState<T>.map(transform: (T) -> R): UiState<R> {
         is UiState.Error -> UiState.Error(error, previousData)
     }
 }
-

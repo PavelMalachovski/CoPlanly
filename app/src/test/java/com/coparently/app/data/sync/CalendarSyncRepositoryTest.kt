@@ -160,10 +160,12 @@ class CalendarSyncRepositoryTest {
         every {
             googleCalendarApi.listEvents(any(), any(), any(), any(), any())
         } returns CalendarEvents(
-            events = listOf(GoogleEvent().apply {
-                id = "e1"
-                summary = "Pickup"
-            }),
+            events = listOf(
+                GoogleEvent().apply {
+                    id = "e1"
+                    summary = "Pickup"
+                }
+            ),
             truncated = false,
             from = LocalDateTime.of(2026, 8, 24, 0, 0),
             until = LocalDateTime.of(2027, 8, 24, 0, 0)

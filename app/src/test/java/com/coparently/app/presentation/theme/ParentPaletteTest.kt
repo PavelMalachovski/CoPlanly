@@ -51,10 +51,12 @@ class ParentPaletteTest {
         // an order invented from two independently-syncing documents would pick a different
         // winner on each device — which is two parents seeing the calendar differently.
         val onePhone = ParentPalette.of(
-            ParentColorChoice.PURPLE.storedCode, ParentColorChoice.PURPLE.storedCode
+            ParentColorChoice.PURPLE.storedCode,
+            ParentColorChoice.PURPLE.storedCode
         )
         val theOther = ParentPalette.of(
-            ParentColorChoice.PURPLE.storedCode, ParentColorChoice.PURPLE.storedCode
+            ParentColorChoice.PURPLE.storedCode,
+            ParentColorChoice.PURPLE.storedCode
         )
 
         assertEquals(onePhone, theOther)

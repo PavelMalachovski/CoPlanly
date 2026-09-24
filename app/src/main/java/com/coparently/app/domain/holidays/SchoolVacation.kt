@@ -85,5 +85,8 @@ internal enum class SchoolBreak(val nameEn: String, val nameLocal: String) {
     JESENNE_PRAZDNINY("Autumn vacation", "Jesenné prázdniny"),
     VIANOCNE_PRAZDNINY("Christmas vacation", "Vianočné prázdniny"),
     VELKONOCNE_PRAZDNINY("Easter vacation", "Veľkonočné prázdniny"),
-    LETNE_PRAZDNINY("Summer vacation", "Letné prázdniny")
+    LETNE_PRAZDNINY("Summer vacation", "Letné prázdniny"),
+
+    // Set per kraj, so drawn only in a region's calendar (`SlovakRegion`).
+    JARNE_PRAZDNINY("Spring vacation", "Jarné prázdniny")
 }

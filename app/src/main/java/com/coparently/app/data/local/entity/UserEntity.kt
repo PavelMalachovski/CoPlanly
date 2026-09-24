@@ -96,4 +96,3 @@ data class UserEntity(
      */
     val regionCode: String? = null
 )
-

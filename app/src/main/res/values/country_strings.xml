@@ -13,7 +13,7 @@
     <string name="country_other">Other</string>
 
     <string name="country_holidays_supported">Public holidays and school vacations are shown on the calendar. The spring break is set per district and is not shown.</string>
-    <string name="country_holidays_school_sk">Public holidays and school vacations are shown on the calendar, as the ministry publishes them. The spring holidays are set per region and are not shown.</string>
+    <string name="country_holidays_school_sk">Public holidays and school vacations are shown on the calendar, as the ministry publishes them. The spring holidays are set per region: choose your region to add them.</string>
     <string name="country_holidays_school_at">Public holidays and the school vacations common to all of Austria are shown on the calendar. Semester and summer holidays are set per state and are not shown.</string>
     <string name="country_holidays_unavailable">Public holidays for %1$s are not in the app yet, so none are shown.</string>
     <string name="country_holidays_public_only">Nationwide public holidays are shown on the calendar. School vacations for %1$s are not in the app.</string>
@@ -25,6 +25,16 @@
     <string name="holiday_region_none">Nationwide only</string>
     <string name="country_holidays_pick_region">Nationwide public holidays are shown on the calendar. School vacations are set per state: choose one to add its school vacations and its own public holidays.</string>
     <string name="country_holidays_with_region">Nationwide public holidays, and the public holidays and school vacations of %1$s, are shown on the calendar.</string>
+
+    <!-- MON-13, regional half: Slovakia's kraje, which add their spring holidays. -->
+    <string name="holiday_region_label_sk">Region (kraj)</string>
+    <string name="holiday_region_settings_summary_sk">Adds that region\'s spring holidays</string>
+    <string name="country_holidays_with_region_sk">Public holidays and school vacations are shown on the calendar, with the spring holidays of %1$s.</string>
+
+    <!-- The wording for any other country that gains regions. -->
+    <string name="holiday_region_label">Region</string>
+    <string name="holiday_region_settings_summary_generic">Adds that region\'s own holidays and school vacations</string>
+    <string name="country_holidays_with_region_generic">Nationwide public holidays, and the holidays and school vacations of %1$s, are shown on the calendar.</string>
 
     <string name="region_de_bb">Brandenburg</string>
     <string name="region_de_be">Berlin</string>
@@ -42,4 +52,14 @@
     <string name="region_de_sn">Saxony</string>
     <string name="region_de_st">Saxony-Anhalt</string>
     <string name="region_de_th">Thuringia</string>
+
+    <!-- Proper names, in Slovak: the form a Slovak school letter uses. -->
+    <string name="region_sk_bc" translatable="false">Banskobystrický kraj</string>
+    <string name="region_sk_bl" translatable="false">Bratislavský kraj</string>
+    <string name="region_sk_ki" translatable="false">Košický kraj</string>
+    <string name="region_sk_ni" translatable="false">Nitriansky kraj</string>
+    <string name="region_sk_pv" translatable="false">Prešovský kraj</string>
+    <string name="region_sk_ta" translatable="false">Trnavský kraj</string>
+    <string name="region_sk_tc" translatable="false">Trenčiansky kraj</string>
+    <string name="region_sk_zi" translatable="false">Žilinský kraj</string>
 </resources>

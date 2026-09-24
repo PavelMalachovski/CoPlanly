@@ -168,4 +168,3 @@ interface ChildInfoDao {
     @Query("UPDATE child_info SET familyId = :familyId WHERE familyId IS NULL")
     suspend fun stampFamilyId(familyId: String): Int
 }
-

@@ -23,6 +23,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
@@ -34,7 +35,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -209,8 +209,11 @@ fun AddEditPetScreen(
             TopAppBar(
                 title = {
                     Text(
-                        if (isNewPet) stringResource(R.string.pet_title_add)
-                        else stringResource(R.string.pet_title_edit)
+                        if (isNewPet) {
+                            stringResource(R.string.pet_title_add)
+                        } else {
+                            stringResource(R.string.pet_title_edit)
+                        }
                     )
                 },
                 navigationIcon = {
@@ -390,8 +393,11 @@ fun AddEditPetScreen(
                     Spacer(modifier = Modifier.width(8.dp))
                 }
                 Text(
-                    if (isNewPet) stringResource(R.string.pet_add_button)
-                    else stringResource(R.string.pet_save_changes)
+                    if (isNewPet) {
+                        stringResource(R.string.pet_add_button)
+                    } else {
+                        stringResource(R.string.pet_save_changes)
+                    }
                 )
             }
 
@@ -474,7 +480,7 @@ private fun SpeciesDropdown(
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             modifier = Modifier
                 .fillMaxWidth()
-                .menuAnchor()
+                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled = enabled)
         )
         ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             PetSpecies.entries.forEach { option ->

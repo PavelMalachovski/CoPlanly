@@ -80,6 +80,9 @@ data class RecordEvent(
  * @property delivered False for a revision still waiting on this phone to be uploaded.
  * @property parentName Whose custody day the entry was on, by name — [EventFacts.parentSlot]
  *   resolved through `ParentLabels`, never printed as a slot.
+ * @property recordedByServer True when the server recorded this revision from the saved document
+ *   because the editing phone did not; printed as such, with no device time and the editor the
+ *   document names.
  */
 data class RecordRevision(
     val number: Int,
@@ -89,7 +92,8 @@ data class RecordRevision(
     val recordedAtMillis: Long?,
     val delivered: Boolean,
     val facts: EventFacts,
-    val parentName: String
+    val parentName: String,
+    val recordedByServer: Boolean = false
 )
 
 /**

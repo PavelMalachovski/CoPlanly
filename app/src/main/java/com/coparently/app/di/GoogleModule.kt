@@ -1,10 +1,7 @@
 package com.coparently.app.di
 
-import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.remote.google.CredentialProvider
 import com.coparently.app.data.remote.google.CredentialProviderImpl
-import com.coparently.app.data.remote.google.GoogleCalendarApi
-import com.coparently.app.data.sync.CalendarSyncRepository
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -39,4 +36,3 @@ object GoogleServiceModule {
     // EncryptedPreferences is already @Singleton, so it will be provided automatically
     // CalendarSyncRepository is already @Singleton, so it will be provided automatically
 }
-

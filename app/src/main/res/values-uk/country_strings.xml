@@ -13,7 +13,7 @@
     <string name="country_other">Інша</string>
 
     <string name="country_holidays_supported">У календарі показуються державні свята та шкільні канікули. Весняні канікули залежать від району й не показуються.</string>
-    <string name="country_holidays_school_sk">У календарі показуються державні свята та шкільні канікули в тому вигляді, в якому їх публікує міністерство. Весняні канікули залежать від краю й не показуються.</string>
+    <string name="country_holidays_school_sk">У календарі показуються державні свята та шкільні канікули в тому вигляді, в якому їх публікує міністерство. Весняні канікули залежать від краю: виберіть свій край, щоб додати їх.</string>
     <string name="country_holidays_school_at">У календарі показуються державні свята та шкільні канікули, спільні для всієї Австрії. Семестрові та літні канікули залежать від федеральної землі й не показуються.</string>
     <string name="country_holidays_unavailable">Свят для країни «%1$s» у застосунку ще немає, тому вони не показуються.</string>
     <string name="country_holidays_public_only">У календарі показуються загальнодержавні свята. Шкільних канікул для країни «%1$s» у застосунку немає.</string>
@@ -25,6 +25,16 @@
     <string name="holiday_region_none">Лише загальнодержавні</string>
     <string name="country_holidays_pick_region">У календарі показуються загальнодержавні свята. Шкільні канікули встановлює кожна федеральна земля: виберіть її, щоб додати її канікули та власні свята.</string>
     <string name="country_holidays_with_region">У календарі показуються загальнодержавні свята, а також свята та шкільні канікули землі «%1$s».</string>
+
+    <!-- MON-13, regional half: Slovakia's kraje, which add their spring holidays. -->
+    <string name="holiday_region_label_sk">Край</string>
+    <string name="holiday_region_settings_summary_sk">Додає весняні канікули цього краю</string>
+    <string name="country_holidays_with_region_sk">У календарі показуються державні свята та шкільні канікули, зокрема весняні канікули (%1$s).</string>
+
+    <!-- The wording for any other country that gains regions. -->
+    <string name="holiday_region_label">Регіон</string>
+    <string name="holiday_region_settings_summary_generic">Додає свята та шкільні канікули цього регіону</string>
+    <string name="country_holidays_with_region_generic">У календарі показуються загальнодержавні свята, а також свята та шкільні канікули регіону «%1$s».</string>
 
     <string name="region_de_bb">Бранденбург</string>
     <string name="region_de_be">Берлін</string>

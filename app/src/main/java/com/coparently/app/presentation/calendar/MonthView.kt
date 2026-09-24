@@ -100,7 +100,6 @@ private const val DAYS_PER_WEEK = 7L
 /** Public-holiday tint strength, drawn over the cell's base fill. */
 private const val HOLIDAY_TINT_ALPHA = 0.10f
 
-
 /** Full-hue edge marking the first day of a custody run. */
 
 /**
@@ -836,7 +835,7 @@ private fun DayCell(
                                         parentOwner = event.parentOwner,
                                         isCurrentMonth = isCurrentMonth,
                                         friendParticipates =
-                                            !event.friendParticipates.isNullOrBlank()
+                                        !event.friendParticipates.isNullOrBlank()
                                     ),
                                     shape = CircleShape
                                 )

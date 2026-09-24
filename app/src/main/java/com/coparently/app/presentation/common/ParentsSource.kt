@@ -2,9 +2,9 @@ package com.coparently.app.presentation.common
 
 import android.util.Log
 import com.coparently.app.domain.model.PairingState
-import com.coparently.app.presentation.theme.ParentPalette
 import com.coparently.app.domain.repository.PairingRepository
 import com.coparently.app.domain.repository.UserRepository
+import com.coparently.app.presentation.theme.ParentPalette
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob

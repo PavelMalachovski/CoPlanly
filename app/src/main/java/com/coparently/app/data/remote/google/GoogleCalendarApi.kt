@@ -2,21 +2,17 @@ package com.coparently.app.data.remote.google
 
 import com.google.api.client.auth.oauth2.Credential
 import com.google.api.client.http.javanet.NetHttpTransport
-import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow
-import com.google.api.client.googleapis.auth.oauth2.GoogleClientSecrets
 import com.google.api.client.json.gson.GsonFactory
 import com.google.api.client.util.DateTime
 import com.google.api.services.calendar.Calendar
-import com.google.api.services.calendar.CalendarScopes
-import com.google.api.services.calendar.model.Event as GoogleCalendarEvent
 import com.google.api.services.calendar.model.EventDateTime
 import com.google.api.services.calendar.model.Events
 import java.io.IOException
 import java.time.LocalDateTime
 import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 import javax.inject.Singleton
+import com.google.api.services.calendar.model.Event as GoogleCalendarEvent
 
 /**
  * Google Calendar API wrapper for Android.
@@ -25,8 +21,7 @@ import javax.inject.Singleton
 @Singleton
 class GoogleCalendarApi @Inject constructor() {
     companion object {
-        private val SCOPES = listOf(CalendarScopes.CALENDAR)
-        private val APPLICATION_NAME = "CoPlanly"
+        private const val APPLICATION_NAME = "CoPlanly"
         private val JSON_FACTORY = GsonFactory.getDefaultInstance()
         private val HTTP_TRANSPORT = NetHttpTransport()
 
@@ -136,8 +131,10 @@ class GoogleCalendarApi @Inject constructor() {
 
         val end = EventDateTime()
             .setDateTime(
-                DateTime((endDateTime ?: startDateTime.plusHours(1))
-                    .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli())
+                DateTime(
+                    (endDateTime ?: startDateTime.plusHours(1))
+                        .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+                )
             )
             .setTimeZone(ZoneId.systemDefault().id)
         event.end = end
@@ -174,8 +171,10 @@ class GoogleCalendarApi @Inject constructor() {
 
         val end = EventDateTime()
             .setDateTime(
-                DateTime((endDateTime ?: startDateTime.plusHours(1))
-                    .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli())
+                DateTime(
+                    (endDateTime ?: startDateTime.plusHours(1))
+                        .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+                )
             )
             .setTimeZone(ZoneId.systemDefault().id)
         event.end = end
@@ -214,4 +213,3 @@ interface CredentialProvider {
      */
     suspend fun getCredential(): Credential?
 }
-

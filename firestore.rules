@@ -830,7 +830,12 @@ service cloud.firestore {
       allow read: if isAuthenticated() &&
                     request.auth.uid in resource.data.get('sharedWith', []);
 
+      // `srv_` ids and the `recordedBy` key (outside `hasOnly` below) are the server's: the
+      // `recordServerEventRevision` function records a write no phone recorded under
+      // `srv_<eventId>_<commit time>`, and a client that could take that id first would keep
+      // the server's revision out (docs/DESIGN-court-record.md §11).
       allow create: if isAuthenticated() &&
+                      !versionId.matches('srv_.*') &&
                       request.resource.data.keys().hasOnly(
                         ['eventId', 'kind', 'editorUid', 'deviceTimeMillis', 'recordedAt',
                          'sharedWith', 'familyId', 'event', 'formatVersion']) &&

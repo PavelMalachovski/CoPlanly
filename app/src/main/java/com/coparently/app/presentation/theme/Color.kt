@@ -165,4 +165,3 @@ object CoPlanlyColors {
     val VacationTint = Color(0xFF26A69A) // Teal 400 - 3.00:1 on white / 5.72:1 on DarkSurface (dark theme)
     val VacationTintLight = Color(0xFF00796B) // Teal 700 - 5.32:1 on white / 3.22:1 on DarkSurface (light theme)
 }
-

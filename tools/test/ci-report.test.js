@@ -121,3 +121,42 @@ test('render without API access or results still says something true', () => {
   assert.match(md, /No JUnit results were uploaded/);
   assert.match(md, /not reported/);
 });
+
+test('collect reads the screenshot summary; the suite label names Roborazzi', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-report-'));
+  fs.mkdirSync(path.join(dir, 'screenshot-summary'));
+  fs.writeFileSync(path.join(dir, 'screenshot-summary', 'screenshot-summary.json'),
+      JSON.stringify({mode: 'verify', total: 113, changed: ['a/en_light_fs100_default.png'], added: []}));
+  const {screenshots} = report.collect(dir);
+  assert.deepEqual(screenshots, {mode: 'verify', total: 113, changed: ['a/en_light_fs100_default.png'], added: []});
+  assert.equal(report.suiteLabel('junit-screenshots'), 'Screenshots (Roborazzi)');
+  fs.rmSync(dir, {recursive: true});
+});
+
+test('render: a verify failure lists the images and points at the diffs and at Regenerate', () => {
+  const md = report.render({
+    screenshots: {mode: 'verify', total: 113, changed: ['home/en_light_fs100_default.png'],
+      added: ['new_thing/en_light_fs100_default.png']},
+    artifacts: [{name: 'screenshot-diffs', size_in_bytes: 300000, url: 'https://a/9'},
+      {name: 'screenshot-summary', size_in_bytes: 200, url: 'https://a/10'},
+      {name: 'junit-screenshots', size_in_bytes: 200, url: 'https://a/11'},
+      {name: 'screenshots', size_in_bytes: 4000000, url: 'https://a/12'}],
+  });
+  assert.match(md, /\*\*1 changed, 1 without a baseline\*\* \(of 113\)/);
+  assert.match(md, /- `home\/en_light_fs100_default\.png`/);
+  assert.match(md, /- `new_thing\/en_light_fs100_default\.png` \(no baseline\)/);
+  assert.match(md, /Regenerate workflow/);
+  assert.match(md, /\[screenshot-diffs\]\(https:\/\/a\/9\).*Screenshot diffs/);
+  assert.doesNotMatch(md, /\[screenshot-summary\]/);
+  assert.doesNotMatch(md, /\[junit-screenshots\]/);
+  assert.match(md, /\[screenshots\]\(https:\/\/a\/12\).*open `index\.html`/);
+  const json = JSON.parse(/<!-- ci-report-json (.*) -->/.exec(md)[1]);
+  assert.deepEqual(json.screenshots.changed, ['home/en_light_fs100_default.png']);
+});
+
+test('render: a matching verify run and a record fallback say which one they were', () => {
+  assert.match(report.render({screenshots: {mode: 'verify', total: 113, changed: [], added: []}}),
+      /All 113 screenshots match their committed baselines/);
+  assert.match(report.render({screenshots: {mode: 'record', total: 113, changed: [], added: []}}),
+      /compared nothing/);
+});

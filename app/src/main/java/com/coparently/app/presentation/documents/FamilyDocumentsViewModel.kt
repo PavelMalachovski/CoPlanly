@@ -37,8 +37,16 @@ sealed interface DocumentsList {
     /** The server could not be read — said in words, never drawn as an empty vault. */
     data object Unavailable : DocumentsList
 
-    /** The family's live documents, grouped by the screen. */
-    data class Loaded(val documents: List<FamilyDocument>) : DocumentsList
+    /**
+     * The family's live documents, grouped by the screen.
+     *
+     * @property possiblyOutdated The list is this phone's last copy, not the server's answer now —
+     *   the screen says so above it.
+     */
+    data class Loaded(
+        val documents: List<FamilyDocument>,
+        val possiblyOutdated: Boolean = false
+    ) : DocumentsList
 }
 
 /**
@@ -60,7 +68,8 @@ data class DocumentsUiState(
  *
  * The family is the one on screen when the vault opens (`SelectedFamilySource`, M-8), read fresh
  * rather than from a `WhileSubscribed` value (CLAUDE.md item 17), and every document added goes
- * to it. Nothing is private here and nothing is cached in Room: the list is a Firestore listener.
+ * to it. Nothing is private here. The list is a Firestore listener; while it cannot reach the
+ * server the repository answers from its Room copy of the index, and the state says so.
  */
 @HiltViewModel
 class FamilyDocumentsViewModel @Inject constructor(
@@ -95,10 +104,9 @@ class FamilyDocumentsViewModel @Inject constructor(
                 return@launch
             }
             familyId = family.familyId
-            repository.observe(family.familyId).collect { documents ->
-                _state.update {
-                    it.copy(list = documents?.let(DocumentsList::Loaded) ?: DocumentsList.Unavailable)
-                }
+            repository.observe(family.familyId).collect { listing ->
+                val list = listing?.let { DocumentsList.Loaded(it.documents, it.possiblyOutdated) }
+                _state.update { it.copy(list = list ?: DocumentsList.Unavailable) }
             }
         }
     }

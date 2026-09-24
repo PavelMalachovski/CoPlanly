@@ -47,14 +47,20 @@ enum class ParentColorChoice(
 ) {
     /** Material Pink. The app's original slot-1 colour, kept so nobody's calendar changes. */
     PINK(
-        "#E91E63", CoPlanlyColors.MomPink, CoPlanlyColors.MomPinkLight,
-        CoPlanlyColors.MomPinkDark, R.string.parent_color_pink
+        "#E91E63",
+        CoPlanlyColors.MomPink,
+        CoPlanlyColors.MomPinkLight,
+        CoPlanlyColors.MomPinkDark,
+        R.string.parent_color_pink
     ),
 
     /** Material Blue. The original slot-2 colour, kept for the same reason. */
     BLUE(
-        "#1976D2", CoPlanlyColors.DadBlue, CoPlanlyColors.DadBlueLight,
-        CoPlanlyColors.DadBlueDark, R.string.parent_color_blue
+        "#1976D2",
+        CoPlanlyColors.DadBlue,
+        CoPlanlyColors.DadBlueLight,
+        CoPlanlyColors.DadBlueDark,
+        R.string.parent_color_blue
     ),
 
     /**
@@ -66,13 +72,19 @@ enum class ParentColorChoice(
      * protects.
      */
     PURPLE(
-        "#7B1FA2", Color(0xFF7B1FA2), Color(0xFFCE93D8), Color(0xFF4A148C),
+        "#7B1FA2",
+        PURPLE_700,
+        PURPLE_200,
+        PURPLE_900,
         R.string.parent_color_purple
     ),
 
     /** Material Deep Orange 800 / 200 / 900. */
     ORANGE(
-        "#D84315", Color(0xFFD84315), Color(0xFFFFAB91), Color(0xFFBF360C),
+        "#D84315",
+        DEEP_ORANGE_800,
+        DEEP_ORANGE_200,
+        DEEP_ORANGE_900,
         R.string.parent_color_orange
     );
 
@@ -155,3 +167,12 @@ data class ParentPalette(
         }
     }
 }
+
+// The two hues beyond pink and blue, named after their Material palette steps. Pink and blue live
+// in `CoPlanlyColors` because the theme uses them too; these two exist only as parent choices.
+private val PURPLE_700 = Color(0xFF7B1FA2)
+private val PURPLE_200 = Color(0xFFCE93D8)
+private val PURPLE_900 = Color(0xFF4A148C)
+private val DEEP_ORANGE_800 = Color(0xFFD84315)
+private val DEEP_ORANGE_200 = Color(0xFFFFAB91)
+private val DEEP_ORANGE_900 = Color(0xFFBF360C)

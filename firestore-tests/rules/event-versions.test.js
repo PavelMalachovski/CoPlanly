@@ -186,6 +186,49 @@ describe('event_versions', () => {
         event: eventDoc({deletedAtMillis: 1787000000000, deletedBy: ALICE}),
       })));
     });
+
+    // The server records a revision of a write no phone recorded (`functions/event-revisions.js`)
+    // and marks it as its own. A client that could write that mark could pass its own words off as
+    // the server's reading of the document; one that could take a `srv_` id first could keep the
+    // server's revision out altogether.
+    it('refuses a client revision claiming the server recorded it', async () => {
+      await assertFails(as(ALICE).doc('event_versions/v1').set(versionDoc(ALICE, {
+        recordedBy: 'server',
+      })));
+    });
+
+    it('refuses a client revision under a server revision id', async () => {
+      await assertFails(as(ALICE).doc('event_versions/srv_event-1_1787000000000000000')
+          .set(versionDoc(ALICE, {})));
+    });
+  });
+
+  describe('server-recorded revisions', () => {
+    beforeEach(async () => {
+      await seed(env, {
+        'event_versions/srv_event-1_1787000000000000000': Object.assign(versionDoc(ALICE, {}), {
+          deviceTimeMillis: null,
+          recordedAt: Timestamp.fromMillis(1787000001000),
+          recordedBy: 'server',
+          editorField: 'lastModifiedBy',
+        }),
+      });
+    });
+
+    const SRV = 'event_versions/srv_event-1_1787000000000000000';
+
+    it('are readable by both parents in their audience, and by nobody else', async () => {
+      await assertSucceeds(as(ALICE).doc(SRV).get());
+      await assertSucceeds(as(BOB).doc(SRV).get());
+      await assertFails(as(CAROL).doc(SRV).get());
+    });
+
+    it('cannot be changed or deleted by either parent', async () => {
+      await assertFails(as(ALICE).doc(SRV).update({recordedBy: 'client'}));
+      await assertFails(as(BOB).doc(SRV).update({'event.title': 'Something else'}));
+      await assertFails(as(ALICE).doc(SRV).delete());
+      await assertFails(as(BOB).doc(SRV).delete());
+    });
   });
 
   describe('immutability — the guarantee the export sells', () => {
