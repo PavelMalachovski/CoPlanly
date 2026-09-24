@@ -445,7 +445,10 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   the whole run's critical path. `tools/with-screen-recording.sh` writes the tests' status to
   `$STATUS_FILE`, then (with `STOP_EMULATOR=true`) stops the emulator itself through
   `tools/stop-emulator.sh` — synchronously: `adb emu kill`, wait, SIGKILL the qemu process, wait —
-  where the earlier attempt was a *detached* `pkill` nothing waited for. The step keeps
+  where the earlier attempt was a *detached* `pkill` nothing waited for — and then SIGKILLs the
+  emulator's `crashpad_handler`, which outlives it and holds the output pipe the action reads (on
+  PR #103 the e2e job's emulator stopped at 09:27 and the action waited on that handler until the
+  job's 50-minute limit). The `e2e` job has the same status file and backstop since. The step keeps
   `continue-on-error` and a 10-minute limit as the backstop, and "The instrumented tests finished
   and passed" fails the job unless the status file exists and says 0. When the suite outgrows the
   limit that step says "did not finish" — raise the limit. **The APKs compile while the emulator

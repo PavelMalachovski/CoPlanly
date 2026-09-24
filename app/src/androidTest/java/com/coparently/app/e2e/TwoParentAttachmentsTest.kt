@@ -103,7 +103,8 @@ class TwoParentAttachmentsTest : TwoParentTest() {
         )
 
         val carol = newParent("Carol")
-        assertRefused { carol.sharedFileStorage.download(attachment.storagePath, File.createTempFile("x", ".pdf")) }
+        val target = File.createTempFile("stranger", ".pdf")
+        assertRefused { carol.sharedFileStorage.download(attachment.storagePath, target) }
     }
 
     @Test

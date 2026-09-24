@@ -15,9 +15,17 @@ set -u
 
 gone() { ! pgrep -f 'qemu-system|emulator64-crash-service' >/dev/null 2>&1; }
 
+# The emulator starts a crashpad_handler that outlives it and keeps the output pipe the action
+# reads from open, so the action's own shutdown waited on it for the rest of the job — PR #103's
+# e2e run: emulator stopped 09:27:18, job cancelled at its 50-minute limit, crashpad_handler
+# still alive at cleanup. Nothing else on a runner uses crashpad.
+reap_crash_handler() {
+  pkill -9 -f 'crashpad_handler' >/dev/null 2>&1 || true
+}
+
 adb emu kill >/dev/null 2>&1 || true
 for _ in $(seq 1 15); do
-  gone && { echo "Emulator stopped."; exit 0; }
+  gone && { reap_crash_handler; echo "Emulator stopped."; exit 0; }
   sleep 1
 done
 
@@ -25,8 +33,9 @@ echo "The emulator ignored 'adb emu kill' for 15 s; killing its process."
 pkill -9 -f 'qemu-system' >/dev/null 2>&1 || true
 pkill -9 -f 'emulator64-crash-service' >/dev/null 2>&1 || true
 for _ in $(seq 1 15); do
-  gone && { echo "Emulator killed."; exit 0; }
+  gone && { reap_crash_handler; echo "Emulator killed."; exit 0; }
   sleep 1
 done
+reap_crash_handler
 echo "::warning::The emulator process was still alive after SIGKILL."
 exit 0

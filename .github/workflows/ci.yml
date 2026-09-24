@@ -824,10 +824,18 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
+      # Decided by the status file, not by this step, for the reason the `instrumented` job's
+      # emulator step is: on PR #103 every test had finished at 09:27 and the action's own
+      # shutdown then held the job until its 50-minute limit. The script stops the emulator
+      # itself (tools/stop-emulator.sh); the timeout is the backstop.
       - name: Run the two-parent tests
+        id: e2e-tests
+        timeout-minutes: 15
+        continue-on-error: true
         uses: reactivecircus/android-emulator-runner@v2
         env:
           FIREBASE_JAVA_HOME: ${{ steps.jdk21.outputs.path }}
+          STATUS_FILE: ${{ runner.temp }}/e2e-status
         with:
           api-level: 30
           arch: x86_64
@@ -839,9 +847,29 @@ jobs:
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           # Stops the emulator itself once the tests are done (tools/stop-emulator.sh), since a
           # snapshot boot is what the `instrumented` job's shutdown hang was seen on.
-          script: bash tools/ci-background-build.sh wait && bash tools/e2e/run-two-parent-tests.sh; status=$?; bash tools/stop-emulator.sh; exit $status
+          script: bash tools/ci-background-build.sh wait && bash tools/e2e/run-two-parent-tests.sh; status=$?; echo "$status" > "$STATUS_FILE"; bash tools/stop-emulator.sh; exit $status
+
+      - name: The two-parent tests finished and passed
+        if: always()
+        env:
+          STATUS_FILE: ${{ runner.temp }}/e2e-status
+          STEP_OUTCOME: ${{ steps.e2e-tests.outcome }}
+        run: |
+          if [ ! -f "$STATUS_FILE" ]; then
+            echo "::error::The two-parent tests did not finish: the emulator step died or timed out before they wrote an exit status."
+            exit 1
+          fi
+          status=$(cat "$STATUS_FILE")
+          if [ "$status" != "0" ]; then
+            echo "::error::The two-parent tests exited with status $status."
+            exit 1
+          fi
+          if [ "$STEP_OUTCOME" != "success" ]; then
+            echo "::warning::The tests passed; the emulator step then failed while shutting the emulator down. That is not a test result."
+          fi
 
       - name: Every two-parent test ran — none skipped
+        if: always()
         run: |
           set -euo pipefail
           # The runner names its file "TEST-emulator-5554 - 11-_app-.xml": spaces, so never

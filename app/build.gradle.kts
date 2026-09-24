@@ -408,6 +408,9 @@ dependencies {
     testImplementation("com.google.dagger:hilt-android-testing:2.56.2")
     kspTest("com.google.dagger:hilt-compiler:2.56.2")
     androidTestImplementation("com.google.dagger:hilt-android-testing:2.56.2")
+    // OneParentOnScreenTest: the app's pairing path asks WorkManager for a sync, and
+    // HiltTestApplication is not the Configuration.Provider the manifest expects.
+    androidTestImplementation("androidx.work:work-testing:2.10.5")
     kspAndroidTest("com.google.dagger:hilt-compiler:2.56.2")
 
     // Navigation Testing

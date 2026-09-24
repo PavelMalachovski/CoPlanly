@@ -1,5 +1,6 @@
 package com.coparently.app.e2e
 
+import android.util.Log
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
@@ -13,6 +14,7 @@ import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import androidx.work.testing.WorkManagerTestInitHelper
 import com.coparently.app.R
 import com.coparently.app.data.chat.ChatMirror
 import com.coparently.app.data.local.CoPlanlyDatabase
@@ -122,6 +124,7 @@ class OneParentOnScreenTest {
     @Before
     fun startAliceOnScreenAndBobBesideHer() {
         EmulatorEnvironment.assumeEmulators()
+        initializeWorkManager()
         hiltRule.inject()
         savedConsent = encryptedPreferences.getString(PreferenceKeys.TELEMETRY_CONSENT, null)
         runBlocking {
@@ -211,6 +214,23 @@ class OneParentOnScreenTest {
         }
     }
 
+    /**
+     * WorkManager as the app would have it. The manifest removes WorkManager's own initializer
+     * because `CoPlanlyApplication` is its `Configuration.Provider` — and `HiltTestApplication`
+     * is not, so the first `WorkManager.getInstance` threw. The pairing path reaches it
+     * (`SyncRequester` on the Paired transition), the throw landed in `observePairingState`'s
+     * `catch`, and the flow ended before Alice ever saw herself paired. Nothing here runs the
+     * enqueued work; the test drives `SyncService` itself.
+     */
+    private fun initializeWorkManager() {
+        try {
+            WorkManagerTestInitHelper.initializeTestWorkManager(context)
+        } catch (e: IllegalStateException) {
+            // Already initialised in this process — the state this needs.
+            Log.i(TAG, "WorkManager was already initialised", e)
+        }
+    }
+
     /** Signs Alice up on the app's own Auth and writes her profile the way the app does. */
     private suspend fun signUpAlice(): String {
         firebaseAuth.signOut()
@@ -250,6 +270,7 @@ class OneParentOnScreenTest {
     private fun shortId(): String = UUID.randomUUID().toString().take(SHORT_ID_LENGTH)
 
     private companion object {
+        const val TAG = "OneParentOnScreenTest"
         const val PASSWORD = "e2e-password-1"
         const val HOME_TIMEOUT_MS = 60_000L
         const val CROSS_DEVICE_TIMEOUT_MS = 45_000L
