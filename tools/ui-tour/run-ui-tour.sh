@@ -12,9 +12,11 @@
 #
 #   1. installs the app and test APKs (built beforehand — no Gradle here, so the three runs share
 #      one install and the app's data survives until this script clears it);
-#   2. for each variant `<theme>-<language>-<font scale %>`:
+#   2. for each variant `<theme>-<language>-<font scale %>[-wide]`:
 #        - `pm clear` the app (each run signs up a new Alice; nothing of the last one may show),
-#        - sets the device's night mode and font scale (`cmd uimode night`, `font_scale`),
+#        - sets the device's night mode and font scale (`cmd uimode night`, `font_scale`), and for
+#          a `-wide` variant a 1280 × 800 dp display (`wm size` and `wm density`: a tablet held
+#          sideways, where the navigation rail and the detail screens' width cap show),
 #        - `am instrument`s UiTourTest and UiTourOnboardingTest with `-e coplanlyUiTour true` and
 #          `-e coplanlyUiTourVariant <variant>` (the test switches the app's theme and language),
 #        - streams files/ui-tour/<variant>/ out of the app's data dir with `run-as` — the PNGs
@@ -30,7 +32,8 @@
 # the manifest as skipped, with the reason.
 #
 # Environment:
-#   UI_TOUR_VARIANTS        Space-separated variants. Default: light-en-100 dark-en-100 light-ru-130.
+#   UI_TOUR_VARIANTS        Space-separated variants.
+#                           Default: light-en-100 dark-en-100 light-ru-130 light-en-100-wide.
 #   UI_TOUR_OUT             Output directory. Default: build/ui-tour-site.
 #   COPLANLY_EMULATOR_HOST  The host as the device reaches it. Default 10.0.2.2 (see the e2e script).
 #   FIREBASE_JAVA_HOME      A JDK 21+ for the emulators.
@@ -43,7 +46,9 @@ APP_ID="${APP_ID:-app.coplanly}"
 APP_APK="${APP_APK:-app/build/outputs/apk/debug/app-debug.apk}"
 TEST_APK="${TEST_APK:-app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk}"
 OUT="${UI_TOUR_OUT:-build/ui-tour-site}"
-VARIANTS="${UI_TOUR_VARIANTS:-light-en-100 dark-en-100 light-ru-130}"
+VARIANTS="${UI_TOUR_VARIANTS:-light-en-100 dark-en-100 light-ru-130 light-en-100-wide}"
+WIDE_SIZE="2560x1600"   # pixels; at WIDE_DENSITY, 1280 x 800 dp
+WIDE_DENSITY="320"
 HOST="${COPLANLY_EMULATOR_HOST:-10.0.2.2}"
 CLASSES="com.coparently.app.e2e.UiTourTest,com.coparently.app.e2e.UiTourOnboardingTest"
 REMOTE="files/ui-tour"  # relative to the app's data dir, which is where run-as starts
@@ -88,8 +93,13 @@ instrumentation="$(adb shell pm list instrumentation | tr -d '\r' \
 mkdir -p "$OUT/ui-tour" "$OUT/logs"
 
 for variant in $VARIANTS; do
-  theme="${variant%%-*}"
-  percent="${variant##*-}"
+  base="$variant"
+  wide=no
+  case "$variant" in
+    *-wide) wide=yes; base="${variant%-wide}" ;;
+  esac
+  theme="${base%%-*}"
+  percent="${base##*-}"
   case "$percent" in
     '' | *[!0-9]*) fail "Variant $variant does not end in a font scale percentage" ;;
   esac
@@ -97,10 +107,17 @@ for variant in $VARIANTS; do
   night=no
   [ "$theme" = dark ] && night=yes
 
-  echo "::group::UI tour — $variant (night $night, font scale $scale)"
+  echo "::group::UI tour — $variant (night $night, font scale $scale, wide $wide)"
   adb shell pm clear "$APP_ID" >/dev/null 2>&1 || true
   adb shell cmd uimode night "$night" || true
   adb shell settings put system font_scale "$scale" || true
+  if [ "$wide" = yes ]; then
+    adb shell wm size "$WIDE_SIZE" || true
+    adb shell wm density "$WIDE_DENSITY" || true
+  else
+    adb shell wm size reset || true
+    adb shell wm density reset || true
+  fi
   adb logcat -c || true
   # `|| true`: a crashed run still leaves whatever it captured, and the manifest says how far it got.
   adb shell am instrument -w -r \
@@ -127,6 +144,8 @@ done
 
 adb shell settings put system font_scale 1.0 || true
 adb shell cmd uimode night no || true
+adb shell wm size reset || true
+adb shell wm density reset || true
 
 # shellcheck disable=SC2086 # the variant list is word-split on purpose
 node tools/ui-tour/gallery.js "$OUT" $VARIANTS

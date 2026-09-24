@@ -54,7 +54,7 @@ class UiTourTest : AliceOnScreenTest() {
 
     private val variant by lazy { UiTourVariant.current() }
     private val localized by lazy { variant.localized(context) }
-    private val driver by lazy { UiTourDriver(composeTestRule, bottomBar) }
+    private val driver by lazy { UiTourDriver(composeTestRule, tabBar) }
     private val camera by lazy { UiTourCamera(composeTestRule, SECTION, FIRST_NUMBER) { driver.backToTabs() } }
 
     override val strings: Context
@@ -302,7 +302,7 @@ class UiTourTest : AliceOnScreenTest() {
     /** Settings, from wherever the tour is: Back to it if it is under this screen, else its gear. */
     private fun openSettings() {
         val settings = hasText(string(R.string.settings_title))
-        if (driver.backUntil(settings or bottomBar) && driver.present(settings)) return
+        if (driver.backUntil(settings or tabBar) && driver.present(settings)) return
         val gear = (
             hasContentDescription(string(R.string.nav_settings)) or
                 hasContentDescription(string(R.string.calendar_settings))

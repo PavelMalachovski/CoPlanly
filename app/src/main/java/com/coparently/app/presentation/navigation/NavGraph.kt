@@ -197,7 +197,7 @@ fun NavGraph(
                 }
 
                 // The telemetry consent, asked once before anything else happens.
-                composable(
+                pane(
                     route = Screen.PrivacyConsent.route,
                     enterTransition = { fadeIn() },
                     exitTransition = { fadeOut() }
@@ -216,7 +216,7 @@ fun NavGraph(
                 }
 
                 // The first-run questionnaire, for an account that has not been through it.
-                composable(
+                pane(
                     route = Screen.Onboarding.route,
                     enterTransition = { fadeIn() },
                     exitTransition = { fadeOut() }
@@ -245,7 +245,7 @@ fun NavGraph(
                 }
 
                 // Authentication screen for unauthenticated users
-                composable(
+                pane(
                     route = Screen.Auth.route,
                     enterTransition = { slideInFromRight() },
                     exitTransition = { slideOutToLeft() },
@@ -343,7 +343,7 @@ fun NavGraph(
                     )
                 }
 
-                composable(
+                pane(
                     route = Screen.EventList.route,
                     enterTransition = { slideInFromRight() },
                     exitTransition = { slideOutToLeft() },
@@ -363,7 +363,7 @@ fun NavGraph(
                     )
                 }
 
-                composable(
+                pane(
                     route = Screen.AddEvent.route,
                     arguments = listOf(
                         navArgument(Screen.AddEvent.ARG_DATE) {
@@ -395,7 +395,7 @@ fun NavGraph(
                     )
                 }
 
-                composable(
+                pane(
                     route = Screen.EditEvent.route,
                     arguments = listOf(
                         navArgument(Screen.EditEvent.ARG_EVENT_ID) {
@@ -421,7 +421,7 @@ fun NavGraph(
 
                 // Contacts — the numbers worth finding in a hurry. A detail screen, deliberately
                 // not a tab: it is opened rarely and urgently, not browsed.
-                composable(
+                pane(
                     route = Screen.Contacts.route,
                     enterTransition = { slideInFromRight() },
                     exitTransition = { slideOutToLeft() },
@@ -436,7 +436,7 @@ fun NavGraph(
                 }
 
                 // Event change requests inbox (MVP 2)
-                composable(
+                pane(
                     route = Screen.ChangeRequests.route,
                     arguments = listOf(
                         navArgument(Screen.ChangeRequests.ARG_EVENT_ID) {
@@ -464,7 +464,7 @@ fun NavGraph(
 
                 // Propose a new time for an event (MVP 2). The thread the proposal is announced in
                 // is resolved from the two uids by `ActivityAnnouncer`, not carried in the route.
-                composable(
+                pane(
                     route = Screen.RequestChange.route,
                     arguments = listOf(
                         navArgument(Screen.RequestChange.ARG_EVENT_ID) {
@@ -481,7 +481,7 @@ fun NavGraph(
                     )
                 }
 
-                composable(
+                pane(
                     route = Screen.Settings.route,
                     enterTransition = { slideInFromRight() },
                     exitTransition = { slideOutToLeft() },
@@ -547,7 +547,7 @@ fun NavGraph(
 
                 // A detail screen off Settings, like Custody Setup: it is a document the two parents
                 // fill in over weeks, not something the bottom bar should carry.
-                composable(
+                pane(
                     route = Screen.ParentingPlan.route,
                     enterTransition = { slideInFromRight() },
                     exitTransition = { slideOutToLeft() },
@@ -564,7 +564,7 @@ fun NavGraph(
 
                 // The communication record (MON-3), off Settings beside the parenting plan: both are
                 // documents two parents may hand to a court, and neither is a tab's daily business.
-                composable(
+                pane(
                     route = Screen.Export.route,
                     enterTransition = { slideInFromRight() },
                     exitTransition = { slideOutToLeft() },
@@ -576,7 +576,7 @@ fun NavGraph(
 
                 // The document vault (MON-23), beside the export: the family's papers, shared with both
                 // parents, opened from Settings → Family like the other family records.
-                composable(
+                pane(
                     route = Screen.Documents.route,
                     enterTransition = { slideInFromRight() },
                     exitTransition = { slideOutToLeft() },
@@ -588,7 +588,7 @@ fun NavGraph(
 
                 // The private journal (MON-22), after the vault: this parent's own notes, kept on this
                 // phone only. The list, then the editor as a third level, like Pets.
-                composable(
+                pane(
                     route = Screen.Journal.route,
                     enterTransition = { slideInFromRight() },
                     exitTransition = { slideOutToLeft() },
@@ -604,7 +604,7 @@ fun NavGraph(
                     )
                 }
 
-                composable(
+                pane(
                     route = Screen.JournalEditor.route,
                     arguments = listOf(
                         navArgument(JournalEditorViewModel.ARG_ENTRY_ID) { type = NavType.StringType }
@@ -617,7 +617,7 @@ fun NavGraph(
                     JournalEditorScreen(onNavigateUp = { navController.popBackStack() })
                 }
 
-                composable(
+                pane(
                     route = Screen.ChildInfo.route,
                     enterTransition = { slideInFromRight() },
                     exitTransition = { slideOutToLeft() },
@@ -640,7 +640,7 @@ fun NavGraph(
                 // The child's own record. A third level rather than the two Pets uses: the summary
                 // here carries medical photos, the medical profile and the guest-access group, none
                 // of which belong in a form.
-                composable(
+                pane(
                     route = Screen.ChildDetail.route,
                     arguments = listOf(
                         navArgument(Screen.ChildDetail.ARG_CHILD_INFO_ID) {
@@ -664,7 +664,7 @@ fun NavGraph(
                     )
                 }
 
-                composable(
+                pane(
                     route = Screen.EditChildInfo.route,
                     arguments = listOf(
                         navArgument(Screen.EditChildInfo.ARG_CHILD_INFO_ID) {
@@ -684,7 +684,7 @@ fun NavGraph(
 
                 // Pets: a list screen plus its editor, both detail routes (bottom bar hidden),
                 // mirroring the ChildInfo pair above.
-                composable(
+                pane(
                     route = Screen.Pets.route,
                     enterTransition = { slideInFromRight() },
                     exitTransition = { slideOutToLeft() },
@@ -699,7 +699,7 @@ fun NavGraph(
                     )
                 }
 
-                composable(
+                pane(
                     route = Screen.EditPet.route,
                     arguments = listOf(
                         navArgument(Screen.EditPet.ARG_PET_ID) {
@@ -714,7 +714,7 @@ fun NavGraph(
                     )
                 }
 
-                composable(
+                pane(
                     route = Screen.Pairing.route,
                     arguments = listOf(
                         navArgument(Screen.Pairing.ARG_CODE) {
@@ -746,7 +746,7 @@ fun NavGraph(
                     )
                 }
 
-                composable(
+                pane(
                     route = Screen.GuestAccept.route,
                     arguments = listOf(
                         navArgument(Screen.GuestAccept.ARG_CODE) {
@@ -767,7 +767,7 @@ fun NavGraph(
                     )
                 }
 
-                composable(
+                pane(
                     route = Screen.CustodyConflict.route,
                     enterTransition = { slideInFromRight() },
                     exitTransition = { slideOutToLeft() },
@@ -786,14 +786,14 @@ fun NavGraph(
                 }
 
                 // Read-only calendar links for an iPhone (MON-17). A Settings detail route.
-                composable(route = Screen.CalendarFeed.route) {
+                pane(route = Screen.CalendarFeed.route) {
                     com.coparently.app.presentation.settings.CalendarFeedScreen(
                         onNavigateUp = { navController.popBackStack() }
                     )
                 }
 
                 // Data sources and licences (MON-13's ODbL attribution). A Settings detail route.
-                composable(route = Screen.DataSources.route) {
+                pane(route = Screen.DataSources.route) {
                     com.coparently.app.presentation.settings.DataSourcesScreen(
                         onNavigateUp = { navController.popBackStack() }
                     )
@@ -801,7 +801,7 @@ fun NavGraph(
 
                 // The parents' friend list, and the friend's own profile. Detail routes: the
                 // bottom bar hides and an up-arrow returns, like every other Settings destination.
-                composable(route = Screen.Friends.route) {
+                pane(route = Screen.Friends.route) {
                     com.coparently.app.presentation.friends.FriendsScreen(
                         onNavigateUp = { navController.popBackStack() },
                         onOpenFriend = { uid ->
@@ -811,7 +811,7 @@ fun NavGraph(
                     )
                 }
 
-                composable(
+                pane(
                     route = Screen.FriendDetail.route,
                     arguments = listOf(
                         navArgument(Screen.FriendDetail.ARG_FRIEND_UID) {
@@ -830,7 +830,7 @@ fun NavGraph(
                     )
                 }
 
-                composable(route = Screen.FriendProfile.route) {
+                pane(route = Screen.FriendProfile.route) {
                     com.coparently.app.presentation.friends.FriendProfileScreen(
                         onNavigateUp = { navController.popBackStack() }
                     )
@@ -838,7 +838,7 @@ fun NavGraph(
 
                 // Professional access (MON-18): the parents' list and, on a professional's phone, the
                 // families they read. The two read-only views are detail routes keyed by grant id.
-                composable(route = Screen.Professionals.route) {
+                pane(route = Screen.Professionals.route) {
                     com.coparently.app.presentation.professionals.ProfessionalsScreen(
                         onNavigateUp = { navController.popBackStack() },
                         onOpenCalendar = { grantId ->
@@ -850,7 +850,7 @@ fun NavGraph(
                     )
                 }
 
-                composable(
+                pane(
                     route = Screen.ProfessionalCalendar.route,
                     arguments = listOf(
                         navArgument(Screen.ProfessionalCalendar.ARG_GRANT_ID) { type = NavType.StringType }
@@ -861,7 +861,7 @@ fun NavGraph(
                     )
                 }
 
-                composable(
+                pane(
                     route = Screen.ProfessionalPlan.route,
                     arguments = listOf(
                         navArgument(Screen.ProfessionalPlan.ARG_GRANT_ID) { type = NavType.StringType }
@@ -872,7 +872,7 @@ fun NavGraph(
                     )
                 }
 
-                composable(
+                pane(
                     route = Screen.CustodySetup.route,
                     // Read by `CustodySetupViewModel` and `SeasonalScheduleViewModel` through their
                     // SavedStateHandle; blank opens the editor exactly as it always opened.
@@ -896,7 +896,7 @@ fun NavGraph(
 
                 // Both are detail screens: neither route is in BottomNavDestination.topLevelRoutes,
                 // so the bottom bar hides itself automatically, same as Settings/ChildInfo above.
-                composable(
+                pane(
                     route = Screen.MyProfile.route,
                     enterTransition = { slideInFromRight() },
                     exitTransition = { slideOutToLeft() },
@@ -909,7 +909,7 @@ fun NavGraph(
                     )
                 }
 
-                composable(
+                pane(
                     route = Screen.CoParentProfile.route,
                     enterTransition = { slideInFromRight() },
                     exitTransition = { slideOutToLeft() },
@@ -968,7 +968,7 @@ fun NavGraph(
                     )
                 }
 
-                composable(
+                pane(
                     route = Screen.Chat.route,
                     arguments = listOf(
                         navArgument(Screen.Chat.ARG_CONVERSATION_ID) {
@@ -1041,7 +1041,7 @@ fun NavGraph(
                     )
                 }
 
-                composable(
+                pane(
                     route = Screen.AddExpense.route
                 ) {
                     com.coparently.app.presentation.expenses.AddExpenseScreen(
@@ -1051,7 +1051,7 @@ fun NavGraph(
                     )
                 }
 
-                composable(
+                pane(
                     route = Screen.EditExpense.route,
                     arguments = listOf(
                         navArgument(Screen.EditExpense.ARG_EXPENSE_ID) {
@@ -1069,7 +1069,7 @@ fun NavGraph(
                     )
                 }
 
-                composable(
+                pane(
                     route = Screen.Budgets.route,
                     enterTransition = { slideInFromRight() },
                     exitTransition = { slideOutToLeft() },

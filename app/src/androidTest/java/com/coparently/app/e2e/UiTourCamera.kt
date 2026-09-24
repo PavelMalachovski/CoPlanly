@@ -20,8 +20,10 @@ import java.io.FileOutputStream
 import java.util.Locale
 
 /**
- * One way of looking at the app in the UI tour, named `<theme>-<language>-<font scale %>`:
- * `light-en-100`, `dark-en-100`, `light-ru-130`.
+ * One way of looking at the app in the UI tour, named `<theme>-<language>-<font scale %>[-wide]`:
+ * `light-en-100`, `dark-en-100`, `light-ru-130`, `light-en-100-wide`. A `-wide` variant runs on a
+ * 1280 × 800 dp display, which `tools/ui-tour/run-ui-tour.sh` sets with `wm size` and `wm density`;
+ * like the font scale, the name only records it.
  *
  * The theme and the language are applied by the test ([applyTo]) — the app's own theme preference,
  * and AppCompat's per-app locale, exactly what Settings → Theme and Settings → Language write. The
