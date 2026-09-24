@@ -149,6 +149,30 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     number, don't attach a listener per composable, and don't let it create anything — it only
     reads (ROADMAP M-8).
 
+14. **Insets are applied once, at the NavHost** (October 2026 audit, `docs/AUDIT-2026-10-design.md`
+    D-2 and D-9). The outer `Scaffold` in `NavGraph` owns the system bars and the keyboard: the
+    `NavHost` takes `padding(innerPadding).consumeWindowInsets(innerPadding).imePadding()`, and
+    `MainActivity` is `adjustResize`. Every screen's own `Scaffold` and `TopAppBar` then see those
+    insets as already consumed. Two things not to undo. **Don't add `statusBarsPadding()`,
+    `systemBarsPadding()` or a second `imePadding()` inside a screen**: while the `NavHost` passed
+    its padding on without consuming it, every screen started 24 dp too low (a 64 dp top bar took
+    88 dp) and each tab's FAB sat a navigation bar too high, and a second keyboard inset leaves a
+    keyboard-high gap above the keys. And **don't go back to panning**: without `adjustResize` the
+    window slid up under the keyboard, taking a chat thread's header off the screen and leaving a
+    form's sticky Save behind the keys. The chat thread keeps its newest message in view while the
+    keyboard opens (`FollowNewestWhileKeyboardOpens` in `MessagesList`), and only if it was in view
+    already, so a parent reading older messages is not scrolled away from them.
+15. **Money is never cut off** (October 2026 audit, D-1). No `maxLines`, ellipsis or
+    `softWrap = false` on an amount, a total or the sentence saying who owes whom; a figure that
+    does not fit wraps. Pairs that sit side by side at the default size stack **from font scale
+    1.3**: Home's two stat tiles, the Expenses total and its label, the balance sentence and Settle
+    up, and the event preview's Delete and Edit. Each reads `LocalDensity.current.fontScale` against
+    a `STACK_*_FONT_SCALE` beside it. At 150 % the German label beside a total was squeezed to a
+    word per line and the amount broke mid-number, at a size the screenshot matrix never rendered.
+    That is why the matrix now renders the text-heavy components at 2.0× in German (see the
+    `screenshots` job). A title or a row's meta line may still end in an ellipsis; the amount beside
+    it may not.
+
 ## UX/UI overhaul (July 2026 design review) — implemented, keep consistent
 
 Direction agreed after a live walkthrough and shipped on `feature/ux-overhaul`.
@@ -450,6 +474,26 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   at that moment. Trigger it with `workflow_dispatch` from `main`, or, on a branch that has not
   merged, by touching `.github/regenerate-request`.
 
+  **A third, also not CI: the UI tour** (`.github/workflows/ui-tour.yml`, September 2026) — full
+  device screenshots of every main screen of the real app, for a design review by someone without
+  a phone. `e2e/UiTourTest` and `UiTourOnboardingTest` are `AliceOnScreenTest`s that assert
+  nothing: `UiTourSeed` fills both phones with a realistic family through the production
+  repositories (custody with contact windows and a seasonal layer, Emma, Leo and Max, events,
+  expenses in two currencies, budgets, plan, chat, a vault document, Bob's pending swap and
+  request), `UiTourDriver` walks the app's own navigation by string resource, and `UiTourCamera`
+  saves `UiAutomation.takeScreenshot()` PNGs plus a `manifest.json` in which a screen it could not
+  reach is **skipped with its reason, never a failure**. `tools/ui-tour/run-ui-tour.sh` runs them
+  with `am instrument` (not Gradle, which uninstalls the app and its files) three times on an API
+  30 Pixel 6 emulator — `light-en-100`, `dark-en-100`, `light-ru-130`, the device's font scale set
+  between runs — and `tools/ui-tour/gallery.js` writes the side-by-side `index.html`. The workflow
+  force-pushes one fresh commit to `ui-tour/<branch, "/" → "-">` (and uploads the `ui-tour`
+  artifact); it never writes to the branch it ran for. Trigger it with `workflow_dispatch`, or by
+  touching `.github/ui-tour-request` on any branch — a change to that file, the workflow or
+  `tools/ui-tour/` alone runs no CI job (`tools/ci-changes.js`). Two things to keep: the tour
+  needs `-e coplanlyUiTour true` on top of the emulator host (`EmulatorEnvironment.assumeUiTour`),
+  and `tools/e2e/run-two-parent-tests.sh` excludes its classes by name — skipped, they would fail
+  the `e2e` job's no-skip check. A new screen gets a `camera.shot` in the tour.
+
   Still run the build locally before pushing — CI is a backstop, not a substitute.
   After switching branches, prefer `clean` — stale Hilt/KSP generated sources from another branch cause
   errors like "Could not find class file for '…Application'".
@@ -518,8 +562,10 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   screenshots/` — Home's cards, the month grid with every `DayCellFills` layer, the calendar
   banners, a Settings group, `EmptyState`, the Expenses summary header, a chat thread, the event
   preview body, the consent screen and the family switcher chip — over a variant matrix of theme,
-  the five languages, 1.0×/1.5× font scale and the default vs a purple/orange parent palette
-  (`ScreenshotVariants`: nine variants for text-heavy components, four for the rest, 121 images — the count the committed baselines hold).
+  the five languages, 1.0×/1.5×/2.0× font scale (2.0× in German only, added after the October 2026
+  audit found money cut off at sizes the matrix never rendered) and the default vs a purple/orange
+  parent palette (`ScreenshotVariants`: ten variants for text-heavy components, four for the rest,
+  134 images — the count the committed baselines hold).
   **To view:** open the run's `screenshots` artefact, unzip, open `index.html`
   (`tools/screenshot-gallery.js`, no dependencies, filters by component/language/theme/scale/
   palette). Locally: `./gradlew recordRoborazziDebug` writes into `app/src/test/screenshots/` — don't commit what a laptop records (below).

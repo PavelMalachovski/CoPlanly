@@ -40,8 +40,14 @@ if [ -n "${FIREBASE_JAVA_HOME:-}" ]; then
   export PATH="$FIREBASE_JAVA_HOME/bin:$PATH"
 fi
 
+# The UI tour (tools/ui-tour/) lives in the same package but is not a test of anything: it runs
+# only with `-e coplanlyUiTour true`, and would otherwise report as skipped, which the e2e job
+# counts as a failure. So its classes are excluded by name rather than left to skip.
+ui_tour_classes="com.coparently.app.e2e.UiTourTest,com.coparently.app.e2e.UiTourOnboardingTest"
+
 gradle_command="./gradlew connectedDebugAndroidTest \
 -Pandroid.testInstrumentationRunnerArguments.package=com.coparently.app.e2e \
+-Pandroid.testInstrumentationRunnerArguments.notClass=$ui_tour_classes \
 -Pandroid.testInstrumentationRunnerArguments.coplanlyEmulatorHost=$host ${GRADLE_ARGS:-}"
 
 exec "$firebase" emulators:exec \

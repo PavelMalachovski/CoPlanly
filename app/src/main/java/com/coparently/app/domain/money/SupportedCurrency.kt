@@ -39,6 +39,20 @@ enum class SupportedCurrency(val code: String, val symbol: String) {
  * @return The region's currency, or [SupportedCurrency.DEFAULT] when it is not mapped
  */
 fun defaultCurrencyForRegion(countryCode: String): SupportedCurrency =
+    currencyOfRegion(countryCode) ?: SupportedCurrency.DEFAULT
+
+/**
+ * The currency a region pays in, when the app offers it.
+ *
+ * Unlike [defaultCurrencyForRegion] this does not fall back: a caller replacing one guess with a
+ * better one needs to know when there is no better one. Russia and Ukraine, whose holidays the
+ * calendar draws (MON-13), are the two such regions the app is used in — it offers neither
+ * rouble nor hryvnia.
+ *
+ * @param countryCode ISO 3166-1 alpha-2 country code; case-insensitive, may be empty
+ * @return The region's currency, or null when the app does not offer it
+ */
+fun currencyOfRegion(countryCode: String): SupportedCurrency? =
     when (countryCode.uppercase()) {
         "CZ" -> SupportedCurrency.CZK
         "PL" -> SupportedCurrency.PLN
@@ -51,5 +65,5 @@ fun defaultCurrencyForRegion(countryCode: String): SupportedCurrency =
         "SE" -> SupportedCurrency.SEK
         "DK" -> SupportedCurrency.DKK
         "NO" -> SupportedCurrency.NOK
-        else -> SupportedCurrency.DEFAULT
+        else -> null
     }

@@ -59,6 +59,16 @@ object PreferenceKeys {
     const val CHAT_PAUSE_BEFORE_SENDING = "chat_pause_before_sending"
 
     /**
+     * Whether this person picked the default currency themselves in Settings: `true` when they
+     * did, absent otherwise. Until then the stored default is a guess — the device region's on
+     * first launch — which the country they give for the calendar replaces
+     * (`PreferencesRepository.suggestDefaultCurrency`). A currency stored by a build older than
+     * this key reads as a guess too, since nothing recorded which it was. One person's choice,
+     * like [PUSH_ENABLED], so it is not exempt from `EncryptedPreferences.clear()`.
+     */
+    const val DEFAULT_CURRENCY_CHOSEN = "default_currency_chosen"
+
+    /**
      * Prefix for the per-user events change cursor — the actual key is this prefix plus the
      * Firebase UID, and the value is the highest `serverUpdatedAt` this device has taken in,
      * as decimal epoch millis (CQ-5).

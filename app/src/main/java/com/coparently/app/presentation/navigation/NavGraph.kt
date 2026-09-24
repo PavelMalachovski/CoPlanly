@@ -12,7 +12,9 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -151,7 +153,18 @@ fun NavGraph(
         NavHost(
             navController = navController,
             startDestination = startDestination,
-            modifier = Modifier.padding(innerPadding),
+            // Consumed as well as applied. Every screen below brings its own Scaffold and
+            // TopAppBar, which apply the system bars again unless they are told these are taken:
+            // padding alone gave every top bar a second status-bar inset (88 dp where M3's is 64)
+            // and lifted each tab's FAB by a second navigation-bar inset. And the keyboard is
+            // taken here, once, for every screen: the manifest's adjustResize stops the window
+            // panning — which scrolled the chat header away and left a form's sticky Save under
+            // the keyboard — and this is what then resizes the screen above it
+            // (docs/AUDIT-2026-10-design.md D-2, D-9).
+            modifier = Modifier
+                .padding(innerPadding)
+                .consumeWindowInsets(innerPadding)
+                .imePadding(),
             // The standard push for any route that names no transitions of its own. Without
             // these, such a route got Navigation's own 700 ms crossfade — more than twice as
             // slow as every other screen.

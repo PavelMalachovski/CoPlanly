@@ -140,7 +140,7 @@ fun CoPlanlyTheme(
     // The fallback used to be `compactDimensions`, and **no caller ever passed a size class**:
     // `MainActivity` and `QRScannerActivity` both call `CoPlanlyTheme(darkTheme = …)`. So every
     // device resolved to phone padding — tablets and unfolded folds included — and
-    // `adaptiveDimensions()`, the only code in the project that reads `fontScale` or
+    // `adaptiveDimensions()`, then the only code in the project that read `fontScale` or
     // `isTouchExplorationEnabled`, was never called by anything. Two features were switched off
     // by a default argument.
     //

@@ -5,7 +5,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { decide, format, everything } = require('../ci-changes.js');
+const { decide, format, everything, nothing } = require('../ci-changes.js');
 
 const legs = (decision) => decision.matrix.map((leg) => leg['api-level']);
 
@@ -13,6 +13,18 @@ test('an unknown diff runs everything', () => {
   assert.deepEqual(decide([]), everything());
   assert.deepEqual(decide(['', '  ']), everything());
   assert.deepEqual(legs(everything()), [26, 30, 35]);
+});
+
+test('asking for a UI tour runs no CI job; anything beside it is decided as usual', () => {
+  assert.deepEqual(decide(['.github/ui-tour-request']), nothing());
+  assert.deepEqual(decide(['.github/workflows/ui-tour.yml', 'tools/ui-tour/gallery.js']), nothing());
+  const withCode = decide(['.github/ui-tour-request', 'app/src/main/java/com/coparently/app/data/sync/SyncService.kt']);
+  assert.equal(withCode.android, true);
+  assert.equal(withCode.e2e, true);
+  // The tour's tests compile with the app, so they are Android changes like any other test.
+  assert.equal(decide(['app/src/androidTest/java/com/coparently/app/e2e/UiTourTest.kt']).android, true);
+  // Every other workflow still runs everything.
+  assert.deepEqual(decide(['.github/workflows/ci.yml']), everything());
 });
 
 test('docs only runs no Android job and no e2e', () => {

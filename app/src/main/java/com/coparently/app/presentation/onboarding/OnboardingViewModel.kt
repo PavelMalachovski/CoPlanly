@@ -17,9 +17,11 @@ import com.coparently.app.domain.model.MedicalProfile
 import com.coparently.app.domain.model.PairingState
 import com.coparently.app.domain.model.Pet
 import com.coparently.app.domain.model.PetSpecies
+import com.coparently.app.domain.money.currencyOfRegion
 import com.coparently.app.domain.repository.ChildInfoRepository
 import com.coparently.app.domain.repository.PairingRepository
 import com.coparently.app.domain.repository.PetRepository
+import com.coparently.app.domain.repository.PreferencesRepository
 import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.presentation.theme.ParentColorChoice
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -434,9 +436,11 @@ data class OnboardingUiState(
  * @param pairingRepository Whether there is a co-parent, and who
  * @param custodyModelRepository The active custody pattern; collecting it mirrors the pair's
  * @param syncRequester Asks for the sync that brings a new co-parent's records across
+ * @param preferencesRepository Takes the confirmed country's currency as the default for new
+ *   expenses, unless the parent already chose one
  */
 @HiltViewModel
-// Seven collaborators, all injected: a Hilt graph edge list, not a call signature anybody writes
+// Eight collaborators, all injected: a Hilt graph edge list, not a call signature anybody writes
 // by hand, and a wrapper type would only hide which dependencies this screen actually has.
 @Suppress("LongParameterList", "TooManyFunctions")
 class OnboardingViewModel @Inject constructor(
@@ -446,7 +450,8 @@ class OnboardingViewModel @Inject constructor(
     private val familySettingsRepository: FamilySettingsRepository,
     private val pairingRepository: PairingRepository,
     private val custodyModelRepository: CustodyModelRepository,
-    private val syncRequester: SyncRequester
+    private val syncRequester: SyncRequester,
+    private val preferencesRepository: PreferencesRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
@@ -1067,6 +1072,10 @@ class OnboardingViewModel @Inject constructor(
                 regionCode = state.country.regionOrNull(state.region)
             )
         )
+        // The first default currency came from the device region, which is how a Czech parent
+        // with a phone in English (United States) ended up in dollars. The country confirmed
+        // here is the better guess; a currency picked in Settings is kept.
+        currencyOfRegion(state.country.code)?.let { preferencesRepository.suggestDefaultCurrency(it) }
     }
 
     /**

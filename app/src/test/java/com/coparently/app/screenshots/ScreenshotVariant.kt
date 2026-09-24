@@ -34,7 +34,8 @@ enum class ScreenshotPalette(val palette: ParentPalette, val label: String) {
  *
  * @param locale Language the resources and `Locale.getDefault()` resolve to
  * @param dark Dark theme (and the `night` resource qualifier) when true
- * @param fontScale The system font scale; 1.5 is where clipping and ellipsis show up
+ * @param fontScale The system font scale; 1.5 is where clipping and ellipsis show up, 2.0 is the
+ *   largest Android 14 offers
  * @param palette The family's two parent colours
  */
 data class ScreenshotVariant(
@@ -70,13 +71,14 @@ data class ScreenshotVariant(
 }
 
 /**
- * The two variant sets. The full cross product — 5 languages × 2 themes × 2 font scales × 2
- * palettes — is 40 images per component and ~500 in all, which nobody would page through, so
+ * The two variant sets. The full cross product — 5 languages × 2 themes × 3 font scales × 2
+ * palettes — is 60 images per component and ~700 in all, which nobody would page through, so
  * each set is a deliberate sample instead:
  *
- * - [TEXT_HEAVY] (9): every language at least once and in at least one theme it shares with
+ * - [TEXT_HEAVY] (10): every language at least once and in at least one theme it shares with
  *   English; 1.5× text on the languages with the longest words (German, Ukrainian) and on English
- *   as the reference; both themes; and the chosen palette in both themes.
+ *   as the reference; 2.0×, the largest Android 14 offers, on German alone, where the longest
+ *   words meet the largest text; both themes; and the chosen palette in both themes.
  * - [COLOUR_ONLY] (4): components whose text is a name or a number — the question there is
  *   theme × palette, not translation.
  */
@@ -85,6 +87,13 @@ object ScreenshotVariants {
     private const val NORMAL_TEXT = 1f
     private const val LARGE_TEXT = 1.5f
 
+    /**
+     * Android 14's largest font scale. Added after the October 2026 audit found the amount a
+     * parent owes cut off by an ellipsis at sizes the matrix never rendered (D-1): a component
+     * that survives 1.5× can still break here.
+     */
+    private const val LARGEST_TEXT = 2f
+
     private fun variant(
         locale: ScreenshotLocale,
         dark: Boolean,
@@ -92,13 +101,14 @@ object ScreenshotVariants {
         palette: ScreenshotPalette = ScreenshotPalette.DEFAULT
     ) = ScreenshotVariant(locale, dark, fontScale, palette)
 
-    /** Nine variants for anything that carries translated text. */
+    /** Ten variants for anything that carries translated text. */
     val TEXT_HEAVY: List<ScreenshotVariant> = listOf(
         variant(ScreenshotLocale.EN, dark = false),
         variant(ScreenshotLocale.EN, dark = true),
         variant(ScreenshotLocale.EN, dark = false, fontScale = LARGE_TEXT),
         variant(ScreenshotLocale.CS, dark = false),
         variant(ScreenshotLocale.DE, dark = false, fontScale = LARGE_TEXT),
+        variant(ScreenshotLocale.DE, dark = false, fontScale = LARGEST_TEXT),
         variant(ScreenshotLocale.RU, dark = true),
         variant(ScreenshotLocale.UK, dark = true, fontScale = LARGE_TEXT),
         variant(ScreenshotLocale.EN, dark = false, palette = ScreenshotPalette.CHOSEN),

@@ -79,6 +79,13 @@ class PreferencesRepositoryImpl @Inject constructor(
 
     override suspend fun setDefaultCurrency(currency: SupportedCurrency) {
         encryptedPreferences.putDefaultCurrency(currency.code)
+        encryptedPreferences.putBoolean(PreferenceKeys.DEFAULT_CURRENCY_CHOSEN, true)
+        _defaultCurrencyFlow.value = currency
+    }
+
+    override suspend fun suggestDefaultCurrency(currency: SupportedCurrency) {
+        if (encryptedPreferences.getBoolean(PreferenceKeys.DEFAULT_CURRENCY_CHOSEN, false)) return
+        encryptedPreferences.putDefaultCurrency(currency.code)
         _defaultCurrencyFlow.value = currency
     }
 

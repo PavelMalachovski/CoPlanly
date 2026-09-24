@@ -24,3 +24,8 @@ requested: 2026-09-24 — export schema 40 (child_info/pets.updatedAtMillis, MON
 requested: 2026-09-24 — export schema 41 (journal_entries, MON-22)
 requested: 2026-09-24 — export schema 42 (custody_models.childOverridesJson, FAM-4)
 requested: 2026-09-24 — export schema 43 (family_documents_cache, MON-23)
+requested: 2026-09-24 — screenshot baselines after the October 2026 audit's week-1 fixes (D-1's
+           unclipped money, the stacked layouts from 1.3x) and the new de_light_fs200 variant;
+           no schema change and no detekt finding is expected, so the baseline half should be empty
+requested: 2026-09-24 — again for expenses_summary_header: the settle-up sentence now stacks over
+           its chip from 1.3x (the first regeneration showed "820,0|0 CZK" at 2.0x)

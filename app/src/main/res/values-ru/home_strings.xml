@@ -50,16 +50,19 @@
 
     <string name="home_awaiting_title">Ожидают вашего ответа</string>
     <string name="home_dialog_swap_title">Обмен днями</string>
-    <string name="home_dialog_swap_message">%1$s предлагает изменить, у кого будет ребёнок %2$s.</string>
+    <!-- No full stop after the date: FormatStyle.FULL ends it with "г.", and a sentence ending in
+         an abbreviation takes no second period (it read "2026 г.." — docs/AUDIT-2026-10-design.md
+         D-5). The colon keeps the nominative weekday the formatter produces grammatical. -->
+    <string name="home_dialog_swap_message">%1$s предлагает изменить, у кого будет ребёнок в этот день: %2$s</string>
     <string name="home_dialog_requests_title">Запросы на изменение</string>
     <string name="home_dialog_requests_message">Второй родитель ждёт вашего ответа на запросы.</string>
     <string name="home_dialog_later">Позже</string>
     <string name="home_dialog_review">Посмотреть</string>
     <plurals name="home_dialog_swap_message_days">
-        <item quantity="one">%2$s предлагает изменить, у кого ребёнок, на %1$d день, с %3$s по %4$s.</item>
-        <item quantity="few">%2$s предлагает изменить, у кого ребёнок, на %1$d дня, с %3$s по %4$s.</item>
-        <item quantity="many">%2$s предлагает изменить, у кого ребёнок, на %1$d дней, с %3$s по %4$s.</item>
-        <item quantity="other">%2$s предлагает изменить, у кого ребёнок, на %1$d дней, с %3$s по %4$s.</item>
+        <item quantity="one">%2$s предлагает изменить, у кого ребёнок, на %1$d день: %3$s – %4$s</item>
+        <item quantity="few">%2$s предлагает изменить, у кого ребёнок, на %1$d дня: %3$s – %4$s</item>
+        <item quantity="many">%2$s предлагает изменить, у кого ребёнок, на %1$d дней: %3$s – %4$s</item>
+        <item quantity="other">%2$s предлагает изменить, у кого ребёнок, на %1$d дней: %3$s – %4$s</item>
     </plurals>
 
     <!-- The empty seven-day card's action. -->

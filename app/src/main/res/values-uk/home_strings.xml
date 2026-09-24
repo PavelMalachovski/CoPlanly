@@ -50,16 +50,19 @@
 
     <string name="home_awaiting_title">Чекають на вашу відповідь</string>
     <string name="home_dialog_swap_title">Обмін днями</string>
-    <string name="home_dialog_swap_message">%1$s пропонує змінити, у кого буде дитина %2$s.</string>
+    <!-- No full stop after the date: FormatStyle.FULL ends it with "р.", and a sentence ending in
+         an abbreviation takes no second period (it read "2026 р.." — docs/AUDIT-2026-10-design.md
+         D-5). The colon keeps the nominative weekday the formatter produces grammatical. -->
+    <string name="home_dialog_swap_message">%1$s пропонує змінити, у кого буде дитина в цей день: %2$s</string>
     <string name="home_dialog_requests_title">Запити на зміну</string>
     <string name="home_dialog_requests_message">Другий з батьків чекає на вашу відповідь на запити.</string>
     <string name="home_dialog_later">Пізніше</string>
     <string name="home_dialog_review">Переглянути</string>
     <plurals name="home_dialog_swap_message_days">
-        <item quantity="one">%2$s пропонує змінити, у кого дитина, на %1$d день, з %3$s по %4$s.</item>
-        <item quantity="few">%2$s пропонує змінити, у кого дитина, на %1$d дні, з %3$s по %4$s.</item>
-        <item quantity="many">%2$s пропонує змінити, у кого дитина, на %1$d днів, з %3$s по %4$s.</item>
-        <item quantity="other">%2$s пропонує змінити, у кого дитина, на %1$d днів, з %3$s по %4$s.</item>
+        <item quantity="one">%2$s пропонує змінити, у кого дитина, на %1$d день: %3$s – %4$s</item>
+        <item quantity="few">%2$s пропонує змінити, у кого дитина, на %1$d дні: %3$s – %4$s</item>
+        <item quantity="many">%2$s пропонує змінити, у кого дитина, на %1$d днів: %3$s – %4$s</item>
+        <item quantity="other">%2$s пропонує змінити, у кого дитина, на %1$d днів: %3$s – %4$s</item>
     </plurals>
 
     <!-- The empty seven-day card's action. -->
