@@ -8,7 +8,7 @@ import java.net.URL
 /**
  * Where the Firebase emulators are, and whether this run has any.
  *
- * **The two-parent tests run only when asked to.** They need Auth, Firestore and Functions
+ * **The two-parent tests run only when asked to.** They need Auth, Firestore, Functions and Storage
  * emulators listening on the host, which only the `e2e` CI job (and `tools/e2e/run-two-parent-
  * tests.sh` locally) starts. Everything else — the ordinary `instrumented` job, a developer's
  * `connectedDebugAndroidTest` — passes no [HOST_ARGUMENT], and every test in this package then
@@ -33,6 +33,9 @@ object EmulatorEnvironment {
 
     /** `emulators.functions.port` in `firebase.json`. */
     const val FUNCTIONS_PORT = 5001
+
+    /** `emulators.storage.port` in `firebase.json`. */
+    const val STORAGE_PORT = 9199
 
     /**
      * The instrumentation argument naming the emulator host — `10.0.2.2` from an Android emulator,

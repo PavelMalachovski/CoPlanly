@@ -729,8 +729,9 @@ jobs:
   # far as a runner can take them). `app/src/androidTest/.../e2e` signs up two accounts on the
   # Auth emulator, pairs them through the real `acceptPairingInvitation` on the Functions
   # emulator, and drives the production repositories — events, a private event and a tombstone,
-  # chat across the date line, a shared expense, a second family — against the real
-  # `firestore.rules` on the Firestore emulator. Each parent is a named FirebaseApp with its own
+  # chat across the date line, a shared expense, a second family, a chat attachment and a vault
+  # document — against the real `firestore.rules` and `storage.rules` on the Firestore and Storage
+  # emulators. Each parent is a named FirebaseApp with its own
   # Room database; see `EmulatorParent`.
   #
   # Things that must stay true, each learned from something that did not:
