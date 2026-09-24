@@ -1,7 +1,6 @@
 package com.coparently.app.domain.export
 
 import com.coparently.app.data.versions.EventVersionKind
-import com.coparently.app.domain.journal.JournalEntry
 import com.coparently.app.domain.model.Expense
 import com.coparently.app.domain.model.ExpenseCategory
 import com.coparently.app.domain.parentingplan.ParentingPlanEntry

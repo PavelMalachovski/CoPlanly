@@ -430,14 +430,18 @@ private fun rememberRecordLabels(): RecordLabels = RecordLabels(
         notRegisteredShort = stringResource(R.string.export_verify_not_registered_short)
     ),
     plan = rememberPlanLabels(),
-    journal = JournalLabels(
-        section = stringResource(R.string.journal_title),
-        privateNote = stringResource(R.string.export_journal_private_note),
-        clockNote = stringResource(R.string.export_journal_clock_note),
-        none = stringResource(R.string.export_journal_none),
-        written = stringResource(R.string.export_journal_written),
-        edited = stringResource(R.string.export_journal_edited)
-    )
+    journal = rememberJournalLabels()
+)
+
+/** The private-journal section's words (MON-22). */
+@Composable
+private fun rememberJournalLabels(): JournalLabels = JournalLabels(
+    section = stringResource(R.string.journal_title),
+    privateNote = stringResource(R.string.export_journal_private_note),
+    clockNote = stringResource(R.string.export_journal_clock_note),
+    none = stringResource(R.string.export_journal_none),
+    written = stringResource(R.string.export_journal_written),
+    edited = stringResource(R.string.export_journal_edited)
 )
 
 /** The parenting-plan section's words; the questions are the plan screen's own wording. */

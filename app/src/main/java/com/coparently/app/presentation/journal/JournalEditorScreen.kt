@@ -90,37 +90,53 @@ fun JournalEditorScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = { SaveBar(saving = state.saving, enabled = state.canSave, onSave = viewModel::save) }
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            Text(
-                text = stringResource(R.string.journal_editor_notice),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            SectionGroup {
-                SectionRow(
-                    icon = Icons.Default.DateRange,
-                    title = stringResource(R.string.journal_entry_date),
-                    supporting = UiText.Date(state.entryDate).asString(),
-                    onClick = { picking = true }.takeIf { !state.loading && !state.saving }
-                )
-            }
-            OutlinedTextField(
-                value = state.text,
-                onValueChange = viewModel::setText,
-                label = { Text(stringResource(R.string.journal_entry_text)) },
-                enabled = !state.loading && !state.saving,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = TEXT_MIN_HEIGHT)
+        EditorForm(
+            state = state,
+            onPickDate = { picking = true },
+            onTextChange = viewModel::setText,
+            modifier = Modifier.padding(padding)
+        )
+    }
+}
+
+/** The notice, the day the entry is about, and the text. */
+@Composable
+private fun EditorForm(
+    state: JournalEditorState,
+    onPickDate: () -> Unit,
+    onTextChange: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val editable = !state.loading && !state.saving
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Text(
+            text = stringResource(R.string.journal_editor_notice),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        SectionGroup {
+            SectionRow(
+                icon = Icons.Default.DateRange,
+                title = stringResource(R.string.journal_entry_date),
+                supporting = UiText.Date(state.entryDate).asString(),
+                onClick = onPickDate.takeIf { editable }
             )
         }
+        OutlinedTextField(
+            value = state.text,
+            onValueChange = onTextChange,
+            label = { Text(stringResource(R.string.journal_entry_text)) },
+            enabled = editable,
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = TEXT_MIN_HEIGHT)
+        )
     }
 }
 

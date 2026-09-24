@@ -89,12 +89,10 @@
     <ID>LongMethod:EventListScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun EventListScreen( onEventClick: (String) -&gt; Unit, onAddEventClick: () -&gt; Unit, onNavigateUp: () -&gt; Unit, viewModel: EventViewModel = hiltViewModel() )</ID>
     <ID>LongMethod:ExpenseList.kt$@Composable fun ExpenseItem( expense: Expense, parentNames: ParentNames, payerRole: String? = null, splitKnown: Boolean, onClick: (() -&gt; Unit)? = null, onReceiptClick: (String) -&gt; Unit = {} )</ID>
     <ID>LongMethod:ExpenseSummaryHeader.kt$@Composable @Suppress("LongParameterList") // one card, one parameter per thing it displays fun ExpenseSummaryHeader( balance: ExpenseBalance, currency: String, parentNames: ParentNames, onSettleUp: (String) -&gt; Unit, monthLabel: String = defaultMonthLabel(), modifier: Modifier = Modifier, monthNavigation: MonthNavigation? = null )</ID>
-    <ID>LongMethod:ExportScreen.kt$@Composable private fun rememberRecordLabels(): RecordLabels</ID>
     <ID>LongMethod:FriendDetailScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun FriendDetailScreen( friendUid: String, onNavigateUp: () -&gt; Unit, onRevoked: () -&gt; Unit, viewModel: FriendViewModel = hiltViewModel() )</ID>
     <ID>LongMethod:FriendInviteSheet.kt$@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class) @Composable fun FriendInviteSheet( state: FriendInviteState, onChooseDuration: (GuestAccessDuration) -&gt; Unit, onCreate: () -&gt; Unit, onDismiss: () -&gt; Unit )</ID>
     <ID>LongMethod:FriendProfileScreen.kt$@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class) @Composable fun FriendProfileScreen( onNavigateUp: () -&gt; Unit, viewModel: FriendViewModel = hiltViewModel() )</ID>
     <ID>LongMethod:FriendsScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun FriendsScreen( onNavigateUp: () -&gt; Unit, onOpenFriend: (String) -&gt; Unit, onOpenMyProfile: () -&gt; Unit, viewModel: FriendViewModel = hiltViewModel() )</ID>
-    <ID>LongMethod:JournalEditorScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun JournalEditorScreen( onNavigateUp: () -&gt; Unit, viewModel: JournalEditorViewModel = hiltViewModel() )</ID>
     <ID>LongMethod:MainActivity.kt$MainActivity$override fun onCreate(savedInstanceState: Bundle?)</ID>
     <ID>LongMethod:MedicationEditor.kt$@Composable private fun MedicationForm( medication: Medication? = null, onSave: (Medication) -&gt; Unit, onCancel: () -&gt; Unit )</ID>
     <ID>LongMethod:PairingScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun PairingScreen( onNavigateBack: () -&gt; Unit, onCustodyConflict: () -&gt; Unit, prefilledCode: String? = null, startOnCodeEntry: Boolean = false, viewModel: PairingViewModel = hiltViewModel() )</ID>
@@ -429,7 +427,6 @@
     <ID>NoUnusedImports:MedicationEditor.kt$com.coparently.app.presentation.childinfo.components.MedicationEditor.kt</ID>
     <ID>NoUnusedImports:PairingScreen.kt$com.coparently.app.presentation.pairing.PairingScreen.kt</ID>
     <ID>NoUnusedImports:PairingViewModel.kt$com.coparently.app.presentation.pairing.PairingViewModel.kt</ID>
-    <ID>NoUnusedImports:RecordFixtures.kt$com.coparently.app.domain.export.RecordFixtures.kt</ID>
     <ID>NoWildcardImports:ActivityEditor.kt$import androidx.compose.foundation.layout.*</ID>
     <ID>NoWildcardImports:ActivityEditor.kt$import androidx.compose.material3.*</ID>
     <ID>NoWildcardImports:ActivityEditor.kt$import androidx.compose.runtime.*</ID>
