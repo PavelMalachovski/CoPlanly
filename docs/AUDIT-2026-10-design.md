@@ -366,8 +366,8 @@ Effort: S.
 | --- | --- | --- |
 | **Material 3 Expressive** | ✗ not available on stable | Not in material3 1.4.0's public API (§1.5); alpha in 1.5. If the owner accepts an alpha dependency, start where it pays:<br>• the calendar's Month/Week/Day picker → connected `ButtonGroup`<br>• list skeleton spinners → `LoadingIndicator`<br>• the Week/Day FAB plus actions → `FloatingToolbar`<br>• a `MotionScheme` set once in `CoPlanlyTheme`, so the spring tokens replace per-call tweens |
 | **Edge-to-edge** (enforced from targetSdk 35) | ◐ on, insets wrong | D-2 (doubled top) and D-9 (keyboard). The system-bar scrims are fine |
-| **Predictive back** | ◐ system only | `enableOnBackInvokedCallback="true"`. No `PredictiveBackHandler` for sheets or forms (D-11) |
-| **Adaptive layouts** (Android 16 ignores orientation locks at ≥ 600 dp) | ✗ none | Add `NavigationSuiteScaffold` (rail at Medium and wider), `widthIn(max = 640.dp)` on forms and Settings, and list-detail for Chat and Expenses. A family tablet is a real device for this audience |
+| **Predictive back** | ✓ week 5 | `enableOnBackInvokedCallback="true"`. Navigation 2.9 animates a Back between destinations with the gesture, M3's sheets do their own, and a form with unsaved edits shrinks under the gesture before it asks (`DiscardGuard.backPreview`) |
+| **Adaptive layouts** (Android 16 ignores orientation locks at ≥ 600 dp) | ◐ week 5 | A `NavigationRail` replaces the bar from 600 dp. Still to do: `widthIn(max = 640.dp)` on forms and Settings, and list-detail for Chat and Expenses. A family tablet is a real device for this audience |
 | **Live Updates / progress notifications** (Android 16) | ✗ | Handover day is a natural Live Update: "Leo → Bob at 17:00, school gate" |
 | **Widgets** (Glance) | ✗ | Add a "Today" widget, whose data the today card already has |
 | **Themed icon** | ✓ | The adaptive icon has a `monochrome` layer |
@@ -474,6 +474,36 @@ This is ordered for the closed test first. Each step leaves the app shippable.
    - D-20 button hierarchy.
    - `PredictiveBackHandler` on the forms.
    - The child and pet forms' state in their ViewModels.
+
+   Done in week 5's pull request:
+   - **D-19, corners:** every corner comes from `theme/Shape.kt`: Material's five steps, a 2 dp
+     mark, a 4 dp tag, a pill, and the chat bubble. The off-step radii snapped to the nearest step
+     (6→8, 10→12, 20→24). detekt's `ForbiddenImport` refuses `RoundedCornerShape` outside
+     `presentation/theme/`.
+   - **D-19, spacing:** `theme/Spacing.kt` names the 4 dp grid, and about 480 paddings, gaps and
+     spacers on it use a step (values unchanged). About 100 off-grid values remain as literals
+     (26 × 6 dp, 24 × 14 dp, 15 × 10 dp, 11 × 20 dp and a few more). A later pass decides each
+     rather than snapping them blind.
+   - **Typography:** 43 weight overrides became emphasised roles (`titleMediumEmphasized` and
+     eight siblings, one weight step up), and 18 that repeated the role's own weight are deleted.
+     Seven remain on purpose.
+   - **D-20:**
+     - `AddItemButton` is the filled tonal tier, for adding a row to a list a form holds.
+     - `ConfirmationDialog` answers with text buttons like every other dialog.
+     - The calendar's "jump to a date" goes through the shared picker.
+   - **Adaptive:** a `NavigationRail` replaces the bottom bar from 600 dp wide. It uses
+     material3's own rail, so there is no new dependency.
+   - **D-11, rest:**
+     - A back gesture over unsaved edits shrinks the form before it asks (`PredictiveBackHandler`
+       in the discard guard).
+     - The child and pet forms keep their fields in their ViewModels (`FormDraft`), so a rotation
+       no longer loses them.
+
+   Not done, and why:
+   - **The width cap on forms and Settings** needs each screen's content column capped and
+     centred. That is a pass over a dozen screens, which the tour cannot check (it runs on a
+     phone).
+   - **List-detail for Chat and Expenses** waits for the width cap.
 6. **Week 6, 2026 features:** the "Today" widget, the handover Live Update, and whatever the owner
    decides on D-4, D-5, D-12 and Expressive.
 
