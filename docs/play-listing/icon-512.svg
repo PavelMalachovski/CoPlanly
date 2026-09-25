@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The Play Store icon (512 x 512): the adaptive launcher icon's two layers, generated from
+     app/src/main/res/mipmap/ic_launcher_foreground.xml on the brand colour (#4F46E5,
+     @color/brand_primary), cropped to the 72 x 72 area a launcher mask shows. Full bleed and
+     square: Play applies its own rounded mask. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="18 18 72 72">
+  <rect x="0" y="0" width="108" height="108" fill="#4F46E5"/>
+  <g transform="translate(54.0,56.0) scale(0.667) translate(-54.0,-56.0)">
+    <path fill="#FFFFFF" fill-rule="nonzero" d="M40,28 A3,3 0 0 1 43,31 V39 A3,3 0 0 1 37,39 V31 A3,3 0 0 1 40,28 Z"/>
+    <path fill="#FFFFFF" fill-rule="nonzero" d="M68,28 A3,3 0 0 1 71,31 V39 A3,3 0 0 1 65,39 V31 A3,3 0 0 1 68,28 Z"/>
+    <path fill="#FFFFFF" fill-rule="evenodd" d="M35,34 H73 A9,9 0 0 1 82,43 V75 A9,9 0 0 1 73,84 H35 A9,9 0 0 1 26,75 V43 A9,9 0 0 1 35,34 Z M35,38 H73 A5,5 0 0 1 78,43 V75 A5,5 0 0 1 73,80 H35 A5,5 0 0 1 30,75 V43 A5,5 0 0 1 35,38 Z"/>
+    <path fill="#FFFFFF" fill-rule="nonzero" d="M35,38 H73 A5,5 0 0 1 78,43 V49 H30 V43 A5,5 0 0 1 35,38 Z"/>
+    <path fill="#FFFFFF" fill-rule="nonzero" d="M38.5,54 H41.5 A1.5,1.5 0 0 1 43,55.5 V58.5 A1.5,1.5 0 0 1 41.5,60 H38.5 A1.5,1.5 0 0 1 37,58.5 V55.5 A1.5,1.5 0 0 1 38.5,54 Z"/>
+    <path fill="#FFFFFF" fill-rule="nonzero" d="M52.5,54 H55.5 A1.5,1.5 0 0 1 57,55.5 V58.5 A1.5,1.5 0 0 1 55.5,60 H52.5 A1.5,1.5 0 0 1 51,58.5 V55.5 A1.5,1.5 0 0 1 52.5,54 Z"/>
+    <path fill="#FFFFFF" fill-rule="nonzero" d="M66.5,54 H69.5 A1.5,1.5 0 0 1 71,55.5 V58.5 A1.5,1.5 0 0 1 69.5,60 H66.5 A1.5,1.5 0 0 1 65,58.5 V55.5 A1.5,1.5 0 0 1 66.5,54 Z"/>
+    <path fill="#FFFFFF" fill-rule="nonzero" d="M38.5,63 H41.5 A1.5,1.5 0 0 1 43,64.5 V67.5 A1.5,1.5 0 0 1 41.5,69 H38.5 A1.5,1.5 0 0 1 37,67.5 V64.5 A1.5,1.5 0 0 1 38.5,63 Z"/>
+    <path fill="#FFFFFF" fill-rule="nonzero" d="M52.5,63 H55.5 A1.5,1.5 0 0 1 57,64.5 V67.5 A1.5,1.5 0 0 1 55.5,69 H52.5 A1.5,1.5 0 0 1 51,67.5 V64.5 A1.5,1.5 0 0 1 52.5,63 Z"/>
+    <path fill="#FFFFFF" fill-rule="nonzero" d="M66.5,63 H69.5 A1.5,1.5 0 0 1 71,64.5 V67.5 A1.5,1.5 0 0 1 69.5,69 H66.5 A1.5,1.5 0 0 1 65,67.5 V64.5 A1.5,1.5 0 0 1 66.5,63 Z"/>
+    <path fill="#FFFFFF" fill-rule="nonzero" d="M38.5,72 H41.5 A1.5,1.5 0 0 1 43,73.5 V76.5 A1.5,1.5 0 0 1 41.5,78 H38.5 A1.5,1.5 0 0 1 37,76.5 V73.5 A1.5,1.5 0 0 1 38.5,72 Z"/>
+    <path fill="#FFFFFF" fill-rule="nonzero" d="M52.5,72 H55.5 A1.5,1.5 0 0 1 57,73.5 V76.5 A1.5,1.5 0 0 1 55.5,78 H52.5 A1.5,1.5 0 0 1 51,76.5 V73.5 A1.5,1.5 0 0 1 52.5,72 Z"/>
+    <path fill="#FFFFFF" fill-rule="nonzero" d="M66.5,72 H69.5 A1.5,1.5 0 0 1 71,73.5 V76.5 A1.5,1.5 0 0 1 69.5,78 H66.5 A1.5,1.5 0 0 1 65,76.5 V73.5 A1.5,1.5 0 0 1 66.5,72 Z"/>
+  </g>
+</svg>
