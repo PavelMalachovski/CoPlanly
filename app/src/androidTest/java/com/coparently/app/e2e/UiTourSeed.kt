@@ -78,8 +78,14 @@ class UiTourSeed @Inject constructor(
     private val plans: ParentingPlanRepository
 ) {
 
-    /** Who is who, for the whole seed: the two uids, their slots, the family id and today. */
-    private class Family(val alice: String, val bob: EmulatorParent, val aliceSlot: String, val bobSlot: String) {
+    /** Who is who, for the whole seed: the two uids, their slots, the family id, today, and the words. */
+    private class Family(
+        val alice: String,
+        val bob: EmulatorParent,
+        val aliceSlot: String,
+        val bobSlot: String,
+        val content: UiTourContent
+    ) {
         val id: String = FamilyKey.of(alice, bob.uid)
         val today: LocalDate = LocalDate.now()
     }
@@ -87,10 +93,11 @@ class UiTourSeed @Inject constructor(
     /**
      * Seeds everything that is already settled — custody, children, pet, events, money, the plan,
      * the chat and a document. What waits on Alice (Bob's swap and change request) is [seedPending],
-     * so the tour can photograph Home before and after it arrives if it wants to.
+     * so the tour can photograph Home before and after it arrives if it wants to. What the family
+     * wrote is [content], in the variant's language ([UiTourContent.forLanguage]).
      */
-    suspend fun seedSettled(aliceUid: String, bob: EmulatorParent) {
-        val family = family(aliceUid, bob)
+    suspend fun seedSettled(aliceUid: String, bob: EmulatorParent, content: UiTourContent) {
+        val family = family(aliceUid, bob, content)
         attempt("custody") { seedCustody(family) }
         attempt("children and pet") { seedChildrenAndPet(family) }
         attempt("events") { seedEvents(family) }
@@ -101,8 +108,8 @@ class UiTourSeed @Inject constructor(
     }
 
     /** Bob's day-swap offer and his change request on Alice's dentist appointment. */
-    suspend fun seedPending(aliceUid: String, bob: EmulatorParent) {
-        val family = family(aliceUid, bob)
+    suspend fun seedPending(aliceUid: String, bob: EmulatorParent, content: UiTourContent) {
+        val family = family(aliceUid, bob, content)
         attempt("swap") {
             val agreed = checkNotNull(bob.custodyRepository.getActiveModelSync()) { "Bob has no pattern" }
             val date = family.today.plusDays(SWAP_OFFSET).toString()
@@ -116,7 +123,7 @@ class UiTourSeed @Inject constructor(
             }.getOrThrow()
         }
         attempt("change request") {
-            val dentist = events.getAllEvents().first().first { it.title == DENTIST }
+            val dentist = events.getAllEvents().first().first { it.title == content.events.dentist }
             bob.changeRequestRepository.createChangeRequest(
                 ChangeRequest(
                     id = UUID.randomUUID().toString(),
@@ -128,7 +135,7 @@ class UiTourSeed @Inject constructor(
                     currentEndDateTime = dentist.endDateTime,
                     proposedStartDateTime = dentist.startDateTime.plusDays(1),
                     proposedEndDateTime = dentist.endDateTime?.plusDays(1),
-                    note = "I have a late meeting that day — could we move it to Friday?",
+                    note = content.changeRequestNote,
                     createdAt = LocalDateTime.now(),
                     familyId = family.id
                 )
@@ -157,7 +164,12 @@ class UiTourSeed @Inject constructor(
                 ContactWindow(WEDNESDAY + WEEK, LocalTime.of(16, 0), LocalTime.of(18, 30), family.aliceSlot)
             ),
             seasonalLayers = listOf(
-                SeasonalLayer.allWith(LAYER_ID, LAYER_NAME, autumn..autumn.plusDays(LAYER_DAYS), family.bobSlot)
+                SeasonalLayer.allWith(
+                    LAYER_ID,
+                    family.content.layerName,
+                    autumn..autumn.plusDays(LAYER_DAYS),
+                    family.bobSlot
+                )
             )
         )
         family.bob.custodyRepository.submitPattern(model)
@@ -169,36 +181,41 @@ class UiTourSeed @Inject constructor(
     // ---- children and pet -----------------------------------------------------------------------
 
     private suspend fun seedChildrenAndPet(family: Family) {
+        val emma = family.content.emma
         children.upsertChildInfo(
             child(family, EMMA, LocalDateTime.of(2016, 4, 12, 0, 0)).copy(
-                allergies = listOf("Peanuts", "Penicillin"),
-                medications = listOf(Medication("Salbutamol inhaler", "100 mcg", "before sport")),
-                activities = listOf(Activity("Piano", "Tuesdays 16:00", "ZUŠ Vinohrady", "Mrs Dvořáková")),
+                allergies = emma.allergies,
+                medications = listOf(Medication(emma.medication, emma.dose, emma.medicationWhen)),
+                activities = listOf(
+                    Activity(emma.activity, emma.activitySchedule, "ZUŠ Vinohrady", emma.activityTeacher)
+                ),
                 schoolInfo = SchoolInfo("ZŠ Náměstí Míru", teacherName = "Mgr. Nováková", grade = "4"),
-                medicalNotes = "Mild asthma — inhaler in the blue backpack pocket.",
+                medicalNotes = emma.medicalNotes,
                 medicalProfile = MedicalProfile(
                     bloodType = BloodType.A_POSITIVE,
-                    intolerances = listOf("Lactose"),
+                    intolerances = listOf(emma.intolerance),
                     vaccinations = listOf(Vaccination("MMR", LocalDate.of(2017, 5, 3)))
                 ),
-                emergencyContacts = listOf(EmergencyContact("Jana Svobodová", "Grandmother", "+420 602 123 456"))
+                emergencyContacts = listOf(EmergencyContact("Jana Svobodová", emma.grandmother, "+420 602 123 456"))
             )
         )
+        val leo = family.content.leo
         children.upsertChildInfo(
             child(family, LEO, LocalDateTime.of(2020, 9, 30, 0, 0)).copy(
-                activities = listOf(Activity("Football", "Thursdays 17:00", "Sparta youth pitch")),
-                schoolInfo = SchoolInfo("MŠ Korunní", teacherName = "Ms Petra", grade = "Kindergarten")
+                activities = listOf(Activity(leo.activity, leo.activitySchedule, leo.activityPlace)),
+                schoolInfo = SchoolInfo("MŠ Korunní", teacherName = leo.teacher, grade = leo.grade)
             )
         )
+        val pet = family.content.pet
         val now = LocalDateTime.now()
         pets.upsertPet(
             Pet(
                 id = UUID.randomUUID().toString(),
                 name = MAX,
                 species = PetSpecies.DOG,
-                breed = "Beagle",
-                vaccinations = listOf(Vaccination("Rabies", family.today.minusMonths(PET_VACCINE_MONTHS))),
-                feedingNotes = "Twice a day, no chicken.",
+                breed = pet.breed,
+                vaccinations = listOf(Vaccination(pet.vaccination, family.today.minusMonths(PET_VACCINE_MONTHS))),
+                feedingNotes = pet.feedingNotes,
                 vetName = "Veterinární klinika Vinohrady",
                 vetPhone = "+420 222 555 111",
                 createdAt = now,
@@ -229,30 +246,31 @@ class UiTourSeed @Inject constructor(
     private suspend fun seedEvents(family: Family) {
         val emma = memberNamed(EMMA)
         val leo = memberNamed(LEO)
+        val titles = family.content.events
         fun day(offset: Long, hour: Int, minute: Int = 0) = family.today.plusDays(offset).atTime(hour, minute)
         val alices = listOf(
-            event(family, SCHOOL_PICKUP, day(0, 15, 30), minutes = 30, type = "school", members = emma),
-            event(family, DENTIST, day(1, 10), minutes = 45, type = "medical", members = leo)
-                .copy(description = "Dr. Horáková, Vinohradská 12. Bring the insurance card.", isImportant = true),
-            event(family, "Swimming lesson", day(2, 17), minutes = 60, type = "sports", members = emma).copy(
+            event(family, titles.schoolPickup, day(0, 15, 30), minutes = 30, type = "school", members = emma),
+            event(family, titles.dentist, day(1, 10), minutes = 45, type = "medical", members = leo)
+                .copy(description = titles.dentistNote, isImportant = true),
+            event(family, titles.swimming, day(2, 17), minutes = 60, type = "sports", members = emma).copy(
                 isRecurring = true,
                 recurrencePattern = "weekly",
                 recurrenceEndDate = family.today.plusDays(RECURRENCE_DAYS)
             ),
-            event(family, "Therapy session", day(4, 19), minutes = 50, type = "general").copy(isPrivate = true),
-            event(family, "Grandma Jana's birthday", day(5, 0), minutes = ALL_DAY_MINUTES, type = "birthday"),
-            event(family, "School trip to Krkonoše", day(8, 8), TRIP_MINUTES, type = "school", members = emma),
-            event(family, "Vaccination — Leo", day(12, 9, 30), minutes = 30, type = "medical", members = leo),
-            event(family, "Piano recital", day(15, 18), minutes = 90, type = "school", members = emma),
-            event(family, "Parents' evening", day(-2, 18), minutes = 60, type = "school")
+            event(family, titles.therapy, day(4, 19), minutes = 50, type = "general").copy(isPrivate = true),
+            event(family, titles.grandmaBirthday, day(5, 0), minutes = ALL_DAY_MINUTES, type = "birthday"),
+            event(family, titles.schoolTrip, day(8, 8), TRIP_MINUTES, type = "school", members = emma),
+            event(family, titles.vaccination, day(12, 9, 30), minutes = 30, type = "medical", members = leo),
+            event(family, titles.pianoRecital, day(15, 18), minutes = 90, type = "school", members = emma),
+            event(family, titles.parentsEvening, day(-2, 18), minutes = 60, type = "school")
         )
         alices.forEach { events.insertEvent(it) }
         val bobs = listOf(
-            event(family, "Parent-teacher meeting", day(3, 17, 30), minutes = 45, type = "school", byBob = true),
-            event(family, "Football training", day(6, 17), minutes = 90, type = "sports", members = leo, byBob = true)
+            event(family, titles.parentTeacherMeeting, day(3, 17, 30), minutes = 45, type = "school", byBob = true),
+            event(family, titles.footballTraining, day(6, 17), 90, type = "sports", members = leo, byBob = true)
                 .copy(isRecurring = true, recurrencePattern = "weekly"),
-            event(family, "Handover at school", day(7, 15), minutes = 15, type = "general", byBob = true),
-            event(family, "Emma's birthday party", day(25, 14), minutes = 180, type = "birthday", byBob = true)
+            event(family, titles.handover, day(7, 15), minutes = 15, type = "general", byBob = true),
+            event(family, titles.birthdayParty, day(25, 14), minutes = 180, type = "birthday", byBob = true)
         )
         bobs.forEach { family.bob.eventRepository.insertEvent(it) }
     }
@@ -306,12 +324,13 @@ class UiTourSeed @Inject constructor(
                 splitBasisPoints = SPLIT_BASIS_POINTS,
                 familyId = family.id
             )
+        val titles = family.content.expenses
         listOf(
-            expense("Winter jacket for Emma", 1_890.0, "CZK", ExpenseCategory.CLOTHING, 1),
-            expense("Piano lessons — October", 1_200.0, "CZK", ExpenseCategory.ACTIVITIES, 3),
-            expense("Dentist co-payment", 450.0, "CZK", ExpenseCategory.MEDICAL, 5),
-            expense("School trip deposit", 85.0, "EUR", ExpenseCategory.EDUCATION, 2),
-            expense("Ski rental", 60.0, "EUR", ExpenseCategory.ACTIVITIES, 0)
+            expense(titles.jacket, 1_890.0, "CZK", ExpenseCategory.CLOTHING, 1),
+            expense(titles.piano, 1_200.0, "CZK", ExpenseCategory.ACTIVITIES, 3),
+            expense(titles.dentist, 450.0, "CZK", ExpenseCategory.MEDICAL, 5),
+            expense(titles.trip, 85.0, "EUR", ExpenseCategory.EDUCATION, 2),
+            expense(titles.skis, 60.0, "EUR", ExpenseCategory.ACTIVITIES, 0)
         ).forEach { expenses.addExpense(it) }
         budgets.addBudget(budget(ExpenseCategory.ACTIVITIES, 3_000.0, "CZK"))
         budgets.addBudget(budget(ExpenseCategory.EDUCATION, 100.0, "EUR"))
@@ -329,12 +348,13 @@ class UiTourSeed @Inject constructor(
     /** Both halves of two schedule questions, one agreed word for word, one still apart. */
     private suspend fun seedPlan(family: Family) {
         val now = System.currentTimeMillis()
+        val plan = family.content.plan
         plans.save(
             family.id,
             family.alice,
             ParentingPlanEntry(
-                answers = mapOf(CARE_WEEKDAY to WEEKDAY_ANSWER, HOLIDAYS_SCHOOL to ALICE_HOLIDAYS),
-                agreedTo = mapOf(CARE_WEEKDAY to WEEKDAY_ANSWER),
+                answers = mapOf(CARE_WEEKDAY to plan.weekdayAnswer, HOLIDAYS_SCHOOL to plan.aliceHolidays),
+                agreedTo = mapOf(CARE_WEEKDAY to plan.weekdayAnswer),
                 updatedAtMillis = now
             )
         )
@@ -342,8 +362,8 @@ class UiTourSeed @Inject constructor(
             family.id,
             family.bob.uid,
             ParentingPlanEntry(
-                answers = mapOf(CARE_WEEKDAY to WEEKDAY_ANSWER, HOLIDAYS_SCHOOL to BOB_HOLIDAYS),
-                agreedTo = mapOf(CARE_WEEKDAY to WEEKDAY_ANSWER),
+                answers = mapOf(CARE_WEEKDAY to plan.weekdayAnswer, HOLIDAYS_SCHOOL to plan.bobHolidays),
+                agreedTo = mapOf(CARE_WEEKDAY to plan.weekdayAnswer),
                 updatedAtMillis = now
             )
         )
@@ -352,16 +372,8 @@ class UiTourSeed @Inject constructor(
     /** Eight messages between the two, the last of Bob's carrying a PDF. */
     private suspend fun seedChat(family: Family) {
         val thread = ConversationKey.of(family.alice, family.bob.uid)
-        val lines = listOf(
-            true to "Hi Bob, Emma's school trip is on the 2nd — can you sign the form?",
-            false to "Sure, I'll bring it on Monday at handover.",
-            true to "Thanks. Also, Leo has the dentist tomorrow at 10.",
-            false to "Noted. Does he still need the inhaler for football?",
-            true to "No, that's Emma. Leo is fine.",
-            false to "Ah right, sorry! Pickup moved to 5 pm on Wednesday, ok?",
-            true to "Ok, see you there 👍"
-        )
-        lines.forEach { (fromAlice, text) ->
+        val chat = family.content.chat
+        chat.lines.forEach { (fromAlice, text) ->
             val message = Message(
                 id = UUID.randomUUID().toString(),
                 conversationId = thread,
@@ -375,7 +387,7 @@ class UiTourSeed @Inject constructor(
         val attachment = family.bob.attachmentOutbox.stage(
             thread,
             messageId,
-            fileUri("Trip-consent-form.pdf", "Trip consent form")
+            fileUri(chat.attachmentFileName, "Trip consent form")
         )
         family.bob.messageRepository.sendMessage(
             Message(
@@ -383,26 +395,27 @@ class UiTourSeed @Inject constructor(
                 conversationId = thread,
                 senderId = family.bob.uid,
                 senderName = family.bob.name,
-                content = "Here's the signed consent form.",
+                content = chat.attachmentCaption,
                 attachments = listOf(ChatAttachmentCodec.encode(attachment))
             )
         )
     }
 
     private suspend fun seedDocument(family: Family) {
-        val file = fileUri("Custody-agreement.pdf", "Order")
+        val document = family.content.document
+        val file = fileUri(document.fileName, "Order")
         family.bob.documentRepository
-            .add(family.id, "Custody agreement 2025", DocumentCategory.COURT_ORDER, file)
+            .add(family.id, document.title, DocumentCategory.COURT_ORDER, file)
             .getOrThrow()
     }
 
     // ---- plumbing -------------------------------------------------------------------------------
 
     /** The two slots as the server assigned them at pairing — see `OnScreenAgreementsTest.slots`. */
-    private suspend fun family(aliceUid: String, bob: EmulatorParent): Family {
+    private suspend fun family(aliceUid: String, bob: EmulatorParent, content: UiTourContent): Family {
         val aliceSlot = checkNotNull(bob.userRepository.getRemoteUserProfile(aliceUid)).role
         val bobSlot = checkNotNull(bob.userRepository.getRemoteUserProfile(bob.uid)).role
-        return Family(aliceUid, bob, aliceSlot, bobSlot)
+        return Family(aliceUid, bob, aliceSlot, bobSlot, content)
     }
 
     /** A small, well-formed PDF in the app's cache, as a picker's `file://` URI. */
@@ -435,9 +448,6 @@ class UiTourSeed @Inject constructor(
         const val EMMA = "Emma"
         const val LEO = "Leo"
         const val MAX = "Max"
-        const val SCHOOL_PICKUP = "School pickup"
-        const val DENTIST = "Dentist — Leo"
-        const val LAYER_NAME = "Autumn break"
 
         private const val LAYER_ID = "autumn-break"
         private const val LAYER_START_OFFSET = 21L
@@ -453,10 +463,5 @@ class UiTourSeed @Inject constructor(
         private const val SPLIT_BASIS_POINTS = 6_000
         private const val CARE_WEEKDAY = "care_weekday"
         private const val HOLIDAYS_SCHOOL = "holidays_school"
-        private const val WEEKDAY_ANSWER =
-            "Alternate weeks, Monday to Monday. Handover at school on Monday morning, or at 5 pm at home " +
-                "in the holidays. The other parent has Wednesday afternoon."
-        private const val ALICE_HOLIDAYS = "Summer split into two halves, alternating which half each year."
-        private const val BOB_HOLIDAYS = "Summer: July with Bob, August with Alice, swapping every year."
     }
 }

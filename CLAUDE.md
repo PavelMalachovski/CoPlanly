@@ -649,7 +649,9 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   nothing: `UiTourSeed` fills both phones with a realistic family through the production
   repositories (custody with contact windows and a seasonal layer, Emma, Leo and Max, events,
   expenses in two currencies, budgets, plan, chat, a vault document, Bob's pending swap and
-  request), `UiTourDriver` walks the app's own navigation by string resource, and `UiTourCamera`
+  request) — what the family *wrote* in the variant's language (`UiTourContent`, one table per
+  app language, English for any other; the names Alice, Bob, Emma, Leo and Max never change,
+  because the screenshots double as store images), `UiTourDriver` walks the app's own navigation by string resource, and `UiTourCamera`
   saves `UiAutomation.takeScreenshot()` PNGs plus a `manifest.json` in which a screen it could not
   reach is **skipped with its reason, never a failure**. `tools/ui-tour/run-ui-tour.sh` runs them
   with `am instrument` (not Gradle, which uninstalls the app and its files) once per variant on an API
@@ -2138,10 +2140,14 @@ whatever you were doing; a stale "known issue" costs more than a missing one.
     overwrite the shared schedule without the other being told). Do not resurrect the
     `custody_schedules` block just because the Room table name is still there.
 - `strings.xml` is **no longer gitignored** (older docs/audit §2.1 claim otherwise —
-  stale). No secrets live in resources: the OAuth client secret is injected via
-  BuildConfig (`GOOGLE_CLIENT_SECRET` gradle property / env var). `GEMINI_API_KEY` is gone
-  with the AI subsystem — don't reintroduce a model key in the client. Real secrets belong in
-  `gradle.properties`/env vars only.
+  stale). No secrets live in resources, and none in the APK at all: since SEC-1 the Google
+  OAuth client secret lives only in `functions/.env` (`GOOGLE_OAUTH_CLIENT_ID`,
+  `GOOGLE_OAUTH_CLIENT_SECRET`), and the code exchange and token refresh run server-side
+  (`exchangeGoogleAuthCode`/`refreshGoogleAccessToken`, reached through
+  `GoogleOAuthFunctions` from `CredentialManagerService`). `BuildConfig.GOOGLE_CLIENT_SECRET`
+  is gone — don't bring it back. `GEMINI_API_KEY` is gone with the AI subsystem — don't
+  reintroduce a model key in the client either. Server secrets belong in `functions/.env`,
+  never in a tracked file.
 - **Text a ViewModel or a service produces is a `UiText`, resolved in composition** (CQ-14,
   September 2026). `presentation/common/UiText.kt` holds *which* string — `Res` with arguments,
   `Plural`, `Date` (formatted in the reader's locale at resolution), or `Raw` for what is already

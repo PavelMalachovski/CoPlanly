@@ -339,7 +339,8 @@ What to know before touching it:
 Every function is declared through `regional` (`functions.region(FUNCTIONS_REGION)` at the top of
 `index.js`), so they all run in Frankfurt and a family's data — chat text on its way to a push, a
 child's medical profile, an account being deleted — is processed inside the EEA
-(`docs/legal/LEGAL-REVIEW-2026-09.md`, L-3). Four other places name the region and change with it:
+(`docs/legal/LEGAL-REVIEW-2026-09.md`, L-3). Five places name the region and change together:
+`FUNCTIONS_REGION` in `index.js`, and four outside this directory —
 `FirebaseModule.FUNCTIONS_REGION` in the app, `PRODUCTION_FUNCTIONS_BASE` in `web/verify/`, and the
 emulator paths in `tools/e2e/pairing-smoke.js` and `web-tests/support/emulators.js`. A callable
 asked for in the wrong region answers `NOT_FOUND`, so a mismatch fails loudly in the e2e and web
@@ -438,6 +439,17 @@ decision: before release these are test data, deleted rather than migrated. Run 
 reports zeros. It returns `{objectsDeleted, recordsCleared, perCollection}` — record it in the ops
 log.
 
+### purgeParentHealthFields (L-1, once)
+
+Operator-only on the same `BACKFILL_ADMIN_UIDS` allow-list. Deletes the parent's own health data
+that builds before L-1 wrote to `users/{uid}` — the `medicalProfile` and `allergies` keys, which
+the co-parent could read — from every `users` document that carries one, and touches nothing else.
+A current build no longer writes them and the rules refuse a write that adds or changes them, but a
+parent who never saves their profile again would keep them on the server for ever. Run it once,
+**after the build that stops writing the keys (L-1) has shipped**; it is idempotent, so a second run
+is harmless and purges nothing. It returns `{scanned, purged}` (`users` documents read, documents
+the keys were removed from) — record it in the ops log.
+
 **Run `backfillParentSlots` before step 2** if any pair still shares a slot. Step 2 records the
 slots the two profiles hold and counts how many pairs came out indistinct (`sameSlot`); it does
 not decide who is parent 1, because that needs the invitation. Running them the other way round
@@ -501,18 +513,22 @@ failure the accept-path re-stamp exists to prevent, delivered by this migration 
 
 ## Scheduled sweeps
 
-Five daily jobs, an hour apart so they never contend (all UTC):
+Seven daily jobs, spread so they never contend (all UTC):
 
 | time | function | what it removes |
 | --- | --- | --- |
 | 02:00 | `cleanupOldNotifications` | `notification_queue` entries older than 30 days |
 | 03:00 | `sweepExpiredGuests` | expired guest grants on `child_info` (from `guests` and `sharedWith`) |
-| 04:00 | `sweepDeletedDocuments` | tombstones older than 90 days (do not shorten — CLAUDE.md item 14) |
+| 04:00 | `sweepDeletedDocuments` | tombstones older than 90 days, with their files (do not shorten — CLAUDE.md item 14) |
+| 04:30 | `sweepIdleCalendarFeeds` | `calendar_feeds` links not fetched for 90 days (`FEED_IDLE_EXPIRY_DAYS`, MON-17) |
 | 05:00 | `sweepLapsedCalendarFriends` | `calendar_friends/{uid}` grants whose `expiresAtMillis` has passed |
 | 06:00 | `sweepLapsedProfessionalGrants` | `professional_grants/{familyId}__{proUid}` grants whose `expiresAtMillis` has passed (MON-18) |
+| 07:00 | `sweepRetentionLimits` | a departed parent's retained conversation once its 30 days are up, files included (L-5); export receipts 10 years after registration and reservations never registered after 7 days; invitations never accepted, 30 days after expiry or 90 after creation when undated |
 
-None of them enforces anything: the rules already refuse an expired guest or friend from the
-instant the grant ends. They remove the rows that would otherwise linger in the parents' lists.
+The grant sweeps enforce nothing: the rules already refuse an expired guest or friend from the
+instant the grant ends, and an idle feed link is refused only once it is deleted.
+`sweepRetentionLimits` is what makes the privacy policy's retention periods true (CLAUDE.md, Legal
+item 6); its three steps run independently and the run fails with the first error. They remove the rows that would otherwise linger in the parents' lists.
 Both grant sweeps share `sweepLapsedByExpiry`, which never deletes a grant without a positive numeric `expiresAtMillis` —
 the callable does not write one, and the rule reads a missing expiry as 0 and admits nothing
 through it, so such a row is inert; deciding what it means is left to a person.

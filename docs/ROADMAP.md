@@ -108,7 +108,7 @@ invocation is yours.
 
 | Id | What | What has to be seen |
 | --- | --- | --- |
-| **SEC-1 §1** | Storage rules keyed on Firestore state (cross-service rules — the "this needs the proxy" claim was a factual error) | The **Storage emulator does not resolve cross-service calls**, so `firestore-tests/` cannot cover it. Settle the verification story — a staging bucket against a real project — before writing the rule. |
+| **SEC-1 §1 (superseded by L-4)** | Storage rules keyed on Firestore state were the plan; L-4 (PR #117) made the path the gate instead — every photo prefix is family-keyed and checked by `isOneOfPair`, which the Storage emulator runs (`storage-record-photos.test.js`), so no cross-service rule and no staging bucket are needed | Only the deploy: `firebase deploy --only storage`, then `purgeLegacyPhotoPaths` once, and a photo attached on a device (DEVICE-CHECKLIST). The cost is written down: a path does not narrow at unpair. |
 | **SEC-5 (built, unseen)** | `EncryptedPreferences` seals its own file with the Keystore key; the alpha `security-crypto` only reads the old store once | `EncryptedPreferencesMigrationTest` copies an old store on the emulators; only a phone upgraded over a previous build shows Calendar still connected (DEVICE-CHECKLIST, "SEC-5 upgrade"). |
 | **UX-8** | The second half: two surfaces colour a chip from two different sources | An owner's answer to "what does a chip's colour mean" — the event's owner, or whose day it falls on. |
 | **UX-13** | Light theme is no longer unverifiable: CI's `screenshots` job renders the main screens' pieces in light and dark on every Android PR (night window background and previews done before it) | Whether a dark cold start still flashes: only a device shows the window before Compose's first frame. |
@@ -488,8 +488,10 @@ The item used to read "one Cloud Function proxy closes three holes". Two of the 
 a proxy, and one of them does not need one for a reason that was a **factual error** in the
 original.
 
-1. **Cloud Storage** — every rule is `request.auth != null`. Any signed-in CoPlanly user who learns
-   an object path can **overwrite or delete** it: a receipt, an event photo, a photograph attached
+1. **Cloud Storage** — *superseded (September 2026): L-4 fixed this without a cross-service rule,
+   by making the path the gate — see SEC-6's Cloud Storage line. What follows is the original
+   analysis, kept for the reasoning.* Every rule was `request.auth != null`. Any signed-in
+   CoPlanly user who learns an object path can **overwrite or delete** it: a receipt, an event photo, a photograph attached
    to a child's medical record. Paths are not secrets — they are built from ids a co-parent has
    held, and an ex-partner's local Room copy survives both sign-out and the unpair sweep. Not
    patched with a plain owner check on purpose: **both** parents legitimately manage the same

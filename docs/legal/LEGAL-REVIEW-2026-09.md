@@ -223,16 +223,17 @@ data protection by design. For photographs of a child's medical documents, "ungu
 access control. A breach here would be notifiable (Art. 33) and very likely reportable to the
 families (Art. 34), because the data is health data about children.
 
-**What to do.**
-1. Move all four prefixes to family-keyed paths, gated like `family_documents/`.
-2. Download as the reader rather than through URLs.
-3. Migrate the existing objects.
+**What was to be done, and where it stands.**
+1. Move all four prefixes to family-keyed paths, gated like `family_documents/`. **Done** (PR
+   #117).
+2. Download as the reader rather than through URLs. **Done** (PR #117).
+3. Migrate the existing objects. **Replaced** by owner decision: before release they are test
+   data, so `purgeLegacyPhotoPaths` deletes them instead. **Ops, pending.**
 4. Deploy `storage.rules`. The live bucket still runs its July 2026 rules; see `CLAUDE.md` known
-   issues.
+   issues. **Ops, pending.**
 
-This is the one High finding not fixed in this change, because it rewrites how four features store
-files. **It should block the public release.** It is the next engineering item (`ROADMAP.md`,
-SEC-6).
+The code half is fixed; the finding **still blocks the public release** until the deploy and the
+purge have run (§3, §4).
 
 ### L-5. The chat after one parent deletes their account (High, fixed)
 
