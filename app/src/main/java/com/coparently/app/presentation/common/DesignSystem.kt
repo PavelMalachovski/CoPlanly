@@ -168,6 +168,11 @@ private class SectionGroupScopeImpl : SectionGroupScope {
  * @param titleColor Colour of [title]; override for destructive rows
  * @param onClick Row tap handler, or null to make the row inert
  * @param trailing The single trailing control (value text, switch, chevron, …)
+ * @param stackTrailingAtLargeFont Whether [trailing] moves under the text from
+ *   [STACK_CONTROLS_FONT_SCALE]. For a wide trailing control — a status chip, a "Coming soon"
+ *   pill — which at 150 % squeezed the title and supporting line into a column one or two words
+ *   wide. Still one trailing control; only where it sits changes. Leave it off for a switch or a
+ *   chevron, which are narrow and belong at the row's end.
  */
 @Composable
 @Suppress("LongParameterList") // one row anatomy, expressed as one parameter list
@@ -182,8 +187,10 @@ fun SectionRow(
     titleColor: Color = MaterialTheme.colorScheme.onSurface,
     onClick: (() -> Unit)? = null,
     leading: @Composable (() -> Unit)? = null,
-    trailing: @Composable (() -> Unit)? = null
+    trailing: @Composable (() -> Unit)? = null,
+    stackTrailingAtLargeFont: Boolean = false
 ) {
+    val trailingBelow = stackTrailingAtLargeFont && stacksAtLargeFont()
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -229,8 +236,11 @@ fun SectionRow(
                     )
                 }
             }
+            if (trailingBelow && trailing != null) {
+                Box(modifier = Modifier.padding(top = Spacing.S)) { trailing() }
+            }
         }
-        trailing?.invoke()
+        if (!trailingBelow) trailing?.invoke()
     }
 }
 

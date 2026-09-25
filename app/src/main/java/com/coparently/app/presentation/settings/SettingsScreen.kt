@@ -876,7 +876,10 @@ fun SettingsScreen(
                                 label = stringResource(R.string.settings_edupage_coming_soon),
                                 contentColor = MaterialTheme.colorScheme.onSurfaceVariant
                             )
-                        }
+                        },
+                        // At 150 % the pill took ~40 % of the row and broke the summary
+                        // inside words; from 130 % it sits under the summary.
+                        stackTrailingAtLargeFont = true
                     )
                 }
             }
