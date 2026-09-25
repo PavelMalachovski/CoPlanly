@@ -415,3 +415,117 @@ describe('Part 1d: messages', () => {
         env.authenticatedContext(ALICE).firestore().doc('messages/msg-1').delete());
   });
 });
+
+/**
+ * GDPR review, September 2026: when a parent deletes their account, `deleteAccount` keeps the 1:1
+ * thread for the parent who remains for thirty days — so they can read and export it — marked
+ * with `retainedUntilMillis`, `departedUid` and `departedName`. Bob's profile is gone, so there is
+ * no pairing left; what these pin is that Alice can still read, that nobody can write into it any
+ * more, and that the marks are the server's alone.
+ */
+describe('a thread kept after the co-parent deleted their account', () => {
+  let env;
+  const KEPT = conversationDoc({
+    id: CANONICAL_ID,
+    participants: [ALICE, BOB],
+    retainedUntilMillis: Date.parse('2026-10-25T10:00:00Z'),
+    departedUid: BOB,
+    departedName: 'Bob',
+  });
+
+  before(async () => {
+    env = await testEnv(PROJECT, CURRENT_RULES);
+  });
+
+  beforeEach(async () => {
+    await env.clearFirestore();
+    // Bob's profile is deleted with his account; Alice's no longer names him.
+    await seed(env, {
+      'users/alice-uid': {name: 'Alice', email: 'a@x.test', partnerId: ''},
+      'users/carol-uid': {name: 'Carol', email: 'c@x.test', partnerId: ''},
+      [`conversations/${CANONICAL_ID}`]: KEPT,
+      'messages/msg-1': messageDoc({conversationId: CANONICAL_ID, senderId: BOB, senderName: 'Bob'}),
+      'messages/msg-2': messageDoc({id: 'msg-2', conversationId: CANONICAL_ID}),
+    });
+  });
+
+  it('lets the parent who remains read the thread and its messages', async () => {
+    const db = env.authenticatedContext(ALICE).firestore();
+    await assertSucceeds(db.doc(`conversations/${CANONICAL_ID}`).get());
+    await assertSucceeds(db.doc('messages/msg-1').get());
+    await assertSucceeds(db.collection('messages')
+        .where('conversationId', '==', CANONICAL_ID).get());
+  });
+
+  it('serves the kept-threads query the app runs to find it', async () => {
+    const db = env.authenticatedContext(ALICE).firestore();
+    await assertSucceeds(db.collection('conversations')
+        .where('participants', 'array-contains', ALICE)
+        .where('retainedUntilMillis', '>', 0).get());
+  });
+
+  it('denies a stranger the thread and its messages', async () => {
+    const db = env.authenticatedContext(CAROL).firestore();
+    await assertFails(db.doc(`conversations/${CANONICAL_ID}`).get());
+    await assertFails(db.doc('messages/msg-1').get());
+    await assertFails(db.collection('conversations')
+        .where('participants', 'array-contains', ALICE)
+        .where('retainedUntilMillis', '>', 0).get());
+  });
+
+  it('takes no new message from anybody', async () => {
+    await assertFails(env.authenticatedContext(ALICE).firestore().doc('messages/msg-3')
+        .set(messageDoc({id: 'msg-3', conversationId: CANONICAL_ID})));
+    await assertFails(env.authenticatedContext(BOB).firestore().doc('messages/msg-4')
+        .set(messageDoc({id: 'msg-4', conversationId: CANONICAL_ID, senderId: BOB})));
+  });
+
+  it('refuses a message into a marked thread even while the pairing is still live', async () => {
+    // The marks alone close the thread, whatever `isPartnerOf` answers: a deletion that marked the
+    // thread before its unpair finished must not leave a window in which the thread takes messages.
+    await seed(env, {
+      'users/alice-uid': {name: 'Alice', email: 'a@x.test', partnerId: BOB},
+      'users/bob-uid': {name: 'Bob', email: 'b@x.test', partnerId: ALICE},
+    });
+    await assertFails(env.authenticatedContext(ALICE).firestore().doc('messages/msg-5')
+        .set(messageDoc({id: 'msg-5', conversationId: CANONICAL_ID})));
+  });
+
+  it('still lets the parent who remains mark it read', async () => {
+    const db = env.authenticatedContext(ALICE).firestore();
+    await assertSucceeds(db.doc(`conversations/${CANONICAL_ID}`)
+        .update({[`lastReadAt.${ALICE}`]: Date.parse('2026-09-26T10:00:00Z')}));
+    await assertSucceeds(db.doc('messages/msg-1').update({isRead: true}));
+  });
+
+  it('refuses a client moving, removing or adding any of the three marks', async () => {
+    const db = env.authenticatedContext(ALICE).firestore();
+    const ref = db.doc(`conversations/${CANONICAL_ID}`);
+    await assertFails(ref.update({retainedUntilMillis: Date.parse('2030-01-01T00:00:00Z')}));
+    await assertFails(ref.update({departedUid: ALICE}));
+    await assertFails(ref.update({departedName: 'Somebody else'}));
+    // Removing the marks would turn the thread back into one that takes messages.
+    await assertFails(ref.set({participants: [ALICE, BOB], title: 'Co-parent chat'}));
+  });
+
+  it('refuses the marks on an ordinary thread, and on a new one', async () => {
+    await seed(env, {
+      'users/alice-uid': {name: 'Alice', email: 'a@x.test', partnerId: CAROL},
+      'users/carol-uid': {name: 'Carol', email: 'c@x.test', partnerId: ALICE},
+      'conversations/conv-ac': conversationDoc({id: 'conv-ac', participants: [ALICE, CAROL]}),
+    });
+    const db = env.authenticatedContext(ALICE).firestore();
+    await assertFails(db.doc('conversations/conv-ac')
+        .update({departedUid: CAROL, retainedUntilMillis: Date.parse('2026-10-25T10:00:00Z')}));
+    await assertFails(db.doc('conversations/conv-new').set(conversationDoc({
+      id: 'conv-new',
+      participants: [ALICE, CAROL],
+      retainedUntilMillis: Date.parse('2026-10-25T10:00:00Z'),
+    })));
+    // The control: the same new thread without the mark is created.
+    await assertSucceeds(db.doc('conversations/conv-new').set(conversationDoc({
+      id: 'conv-new',
+      participants: [ALICE, CAROL],
+    })));
+  });
+});

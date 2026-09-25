@@ -299,6 +299,15 @@ service cloud.firestore {
       return data.get(key, {}).keys().hasOnly([request.auth.uid]);
     }
 
+    // The marks `deleteAccount` leaves on a conversation it keeps for the parent who remains
+    // (GDPR review, September 2026): the deadline the daily sweep deletes it at, who left, and
+    // their name. Written by the Cloud Function alone. A client that could write them could keep
+    // a thread past its deadline, cut it short, or banner an ordinary thread as the other
+    // parent's deleted account.
+    function departureMarks() {
+      return ['retainedUntilMillis', 'departedUid', 'departedName'];
+    }
+
     // ---- One-off day swaps (custody_models.dayOverrides) ---------------
     //
     // A swap is an *agreement*, and these two functions are what make it one rather than an
@@ -1832,7 +1841,9 @@ service cloud.firestore {
                       request.auth.uid in resource.data.participants &&
                       request.resource.data.participants == resource.data.participants &&
                       ownMarkOnly(resource.data, request.resource.data, 'lastReadAt') &&
-                      ownMarkOnly(resource.data, request.resource.data, 'lastDeliveredAt');
+                      ownMarkOnly(resource.data, request.resource.data, 'lastDeliveredAt') &&
+                      !request.resource.data.diff(resource.data).affectedKeys()
+                          .hasAny(departureMarks());
 
       // A newly created conversation may not carry a foreign uid in either mark map (see
       // `noForeignMarksOnCreate`) — otherwise the update-time restriction above is moot,
@@ -1843,7 +1854,8 @@ service cloud.firestore {
                       (isPartnerOf(request.resource.data.participants[0]) ||
                        isPartnerOf(request.resource.data.participants[1])) &&
                       noForeignMarksOnCreate(request.resource.data, 'lastReadAt') &&
-                      noForeignMarksOnCreate(request.resource.data, 'lastDeliveredAt');
+                      noForeignMarksOnCreate(request.resource.data, 'lastDeliveredAt') &&
+                      !request.resource.data.keys().hasAny(departureMarks());
 
       allow delete: if false;
     }
@@ -1870,7 +1882,12 @@ service cloud.firestore {
                       (isPartnerOf(get(/databases/$(database)/documents/conversations/$(request.resource.data.conversationId))
                           .data.participants[0]) ||
                        isPartnerOf(get(/databases/$(database)/documents/conversations/$(request.resource.data.conversationId))
-                          .data.participants[1]));
+                          .data.participants[1])) &&
+                      // A thread kept after a co-parent deleted their account takes no new message:
+                      // it is there to be read and exported. The pairing check above already fails
+                      // once the account is gone; this says so outright, whatever `isPartnerOf` does.
+                      get(/databases/$(database)/documents/conversations/$(request.resource.data.conversationId))
+                          .data.get('departedUid', '') == '';
 
       // Participants may flip the read flag, or — as of the legacy-conversation merge
       // (Task 5) — re-point a message to a different conversation and nothing else. The two
