@@ -94,15 +94,22 @@ fun MedicalProfileEditor(
             enabled = enabled
         )
 
-        VaccinationListEditor(
-            vaccinations = profile.vaccinations,
-            onAdd = { vaccination -> onChange(profile.copy(vaccinations = profile.vaccinations + vaccination)) },
-            onRemove = { index ->
-                val updated = profile.vaccinations.toMutableList().apply { removeAt(index) }
-                onChange(profile.copy(vaccinations = updated))
-            },
-            enabled = enabled
-        )
+        Column(verticalArrangement = Arrangement.spacedBy(Spacing.S)) {
+            Text(
+                text = stringResource(R.string.medical_vaccinations_label),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            VaccinationListEditor(
+                vaccinations = profile.vaccinations,
+                onAdd = { vaccination -> onChange(profile.copy(vaccinations = profile.vaccinations + vaccination)) },
+                onRemove = { index ->
+                    val updated = profile.vaccinations.toMutableList().apply { removeAt(index) }
+                    onChange(profile.copy(vaccinations = updated))
+                },
+                enabled = enabled
+            )
+        }
     }
 }
 
