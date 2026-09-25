@@ -23,8 +23,8 @@
         <item quantity="other">%1$d Termine synchronisiert (%2$s – %3$s)</item>
     </plurals>
     <plurals name="sync_google_synced_truncated">
-        <item quantity="one">Der erste %1$d Termin wurde synchronisiert (%2$s – %3$s). In diesem Zeitraum gibt es mehr, als ein Import aufnehmen kann.</item>
-        <item quantity="other">Die ersten %1$d Termine wurden synchronisiert (%2$s – %3$s). In diesem Zeitraum gibt es mehr, als ein Import aufnehmen kann.</item>
+        <item quantity="one">Nur %1$d Termin wurde synchronisiert (%2$s – %3$s). In diesem Zeitraum gibt es mehr, als ein Import aufnehmen kann.</item>
+        <item quantity="other">Nur die ersten %1$d Termine wurden synchronisiert (%2$s – %3$s). In diesem Zeitraum gibt es mehr, als ein Import aufnehmen kann.</item>
     </plurals>
     <string name="sync_google_error_not_connected">Nicht mit Google verbunden. Melde dich mit Google an, um zu synchronisieren.</string>
     <string name="sync_google_error_signed_out">Du bist von CoPlanly abgemeldet. Melde dich an und versuche es erneut.</string>

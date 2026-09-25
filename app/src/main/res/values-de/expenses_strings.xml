@@ -24,7 +24,7 @@
     <string name="budgets_empty_title">Noch keine Budgets</string>
     <string name="budgets_empty_description">Lege pro Kategorie ein monatliches Limit fest, um die gemeinsamen Ausgaben im Blick zu behalten.</string>
     <string name="expenses_empty_title">Noch keine Ausgaben</string>
-    <string name="expenses_empty_description">Erfasse eine gemeinsame Ausgabe — Kita, Kleidung, Arztbesuch — und teile sie mit dem anderen Elternteil.</string>
+    <string name="expenses_empty_description">Erfasse eine gemeinsame Ausgabe – Kita, Kleidung, Arztbesuch – und teile sie mit dem anderen Elternteil.</string>
     <!-- Replaces expenses_mom_paid/expenses_dad_paid. The call site (ExpenseSummaryHeader's
          who-paid row) needs both the payer's name and the amount in one Text; the name serves
          as its own label, so nothing has to agree with it. "von %1$s" was dropped: parentLabel's
@@ -37,8 +37,8 @@
     <string name="expenses_balance_you_owe">Du schuldest dem anderen Elternteil %1$s</string>
     <string name="expenses_balance_settled">Alles ausgeglichen</string>
     <string name="expenses_settle_up">Ausgleichen</string>
-    <string name="expenses_settle_up_message_owed">Ausgleich für %2$s — du schuldest mir %1$s.</string>
-    <string name="expenses_settle_up_message_owing">Ausgleich für %2$s — ich schulde dir %1$s.</string>
+    <string name="expenses_settle_up_message_owed">Ausgleich für %2$s – du schuldest mir %1$s.</string>
+    <string name="expenses_settle_up_message_owing">Ausgleich für %2$s – ich schulde dir %1$s.</string>
     <string name="expenses_this_month">Dieser Monat</string>
     <plurals name="expenses_count">
         <item quantity="one">%1$d Ausgabe</item>
@@ -64,7 +64,7 @@
 
     <!-- Warning shown when saving an expense dated outside the current month -->
     <string name="expense_date_other_month_title">Nicht im aktuellen Monat</string>
-    <string name="expense_date_other_month_message">Diese Ausgabe ist auf %1$s datiert und erscheint daher nicht im aktuellen Monat. Wechseln Sie den Monat im Ausgaben-Bildschirm, um sie zu finden.</string>
+    <string name="expense_date_other_month_message">Diese Ausgabe ist auf %1$s datiert und erscheint daher nicht im aktuellen Monat. Wechsle unter „Ausgaben“ den Monat, um sie zu finden.</string>
     <string name="expense_date_other_month_confirm">Trotzdem speichern</string>
     <string name="expenses_category_education">Bildung</string>
     <string name="expenses_category_medical">Gesundheit</string>
@@ -79,7 +79,7 @@
     <string name="budget_alert_exceeded">Budget überschritten: %1$s</string>
     <string name="budget_alert_percent_spent">Du hast %1$d%% deines Limits ausgegeben.</string>
     <string name="budget_spent_of_limit">%1$s / %2$s</string>
-    <string name="budget_percent_used">%1$d%% genutzt</string>
+    <string name="budget_percent_used">%1$d%% verbraucht</string>
 
     <!-- Summary card: month switcher, total, and the budget chip strip. -->
     <string name="expenses_shared_spend">gemeinsame Ausgaben</string>
@@ -91,15 +91,15 @@
     <string name="expenses_budget_chip">%1$s %2$s / %3$s</string>
     <string name="expenses_budget_add">+ Budget</string>
     <string name="expenses_split_proposal_title">Neue Kostenaufteilung vorgeschlagen</string>
-    <string name="expenses_split_proposal_body">Dein Co-Elternteil schlägt ab jetzt %1$d / %2$d für gemeinsame Ausgaben vor. Bereits erfasste behalten ihre Aufteilung.</string>
+    <string name="expenses_split_proposal_body">Der andere Elternteil schlägt ab jetzt %1$d / %2$d für gemeinsame Ausgaben vor. Bereits erfasste Ausgaben behalten ihre Aufteilung.</string>
     <string name="expenses_split_proposal_confirm">Bestätigen</string>
     <string name="expenses_split_proposal_decline">Ablehnen</string>
     <string name="expenses_split_proposal_later">Später</string>
     <string name="expenses_split_answer_failed">Die Antwort auf die Aufteilung konnte nicht gesendet werden. Prüfe deine Verbindung und versuche es erneut.</string>
-    <string name="expense_split_shared">Mit deinem Co-Elternteil teilen</string>
-    <string name="expense_split_not_shared_hint">Zählt zu deinen Ausgaben, aber niemand schuldet dem anderen etwas dafür.</string>
+    <string name="expense_split_shared">Mit dem anderen Elternteil teilen</string>
+    <string name="expense_split_not_shared_hint">Zählt zu deinen Ausgaben, aber keiner von euch schuldet dem anderen etwas dafür.</string>
     <string name="expense_split_ratio">Aufteilung %1$d / %2$d</string>
-    <string name="expense_split_override_hint">Abweichende Aufteilung nur für diese Ausgabe. Die vereinbarte Aufteilung ändert sich nicht.</string>
+    <string name="expense_split_override_hint">Abweichende Aufteilung nur für diese Ausgabe. Die vereinbarte Aufteilung der Familie ändert sich nicht.</string>
     <!-- Budget status in words (UX-10). -->
     <string name="budget_status_near">Nahe am Limit</string>
     <string name="budget_status_over">Über dem Limit</string>
@@ -109,11 +109,11 @@
     <string name="budget_for_members">Für wen ist dieses Budget?</string>
     <!-- UX-17: the proposer's side of the same conversation. -->
     <string name="expenses_split_proposal_waiting_title">Warten auf eine Antwort</string>
-    <string name="expenses_split_proposal_waiting_body">Sie haben %1$d/%2$d vorgeschlagen. Der andere Elternteil hat noch nicht geantwortet.</string>
+    <string name="expenses_split_proposal_waiting_body">Du hast %1$d/%2$d vorgeschlagen. Der andere Elternteil hat noch nicht geantwortet.</string>
     <string name="expenses_split_proposal_withdraw">Zurückziehen</string>
 
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
     <string name="expense_error_signed_out">Du musst angemeldet sein, um eine Ausgabe hinzuzufügen.</string>
-    <string name="expense_warning_receipt_upload_failed">Beleg-Upload fehlgeschlagen — Ausgabe ohne Beleg gespeichert</string>
-    <string name="expense_warning_new_receipt_upload_failed">Beleg-Upload fehlgeschlagen — Ausgabe ohne den neuen Beleg gespeichert</string>
+    <string name="expense_warning_receipt_upload_failed">Beleg-Upload fehlgeschlagen – Ausgabe ohne Beleg gespeichert</string>
+    <string name="expense_warning_new_receipt_upload_failed">Beleg-Upload fehlgeschlagen – Ausgabe ohne den neuen Beleg gespeichert</string>
 </resources>

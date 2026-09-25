@@ -4,7 +4,7 @@
     <string name="calendar_feed_settings_title">Kalender-Abo für iPhone und andere Kalender</string>
     <string name="calendar_feed_settings_description">Ein schreibgeschützter Link zu eurem Familienkalender</string>
     <string name="calendar_feed_title">Kalender für andere Apps</string>
-    <string name="calendar_feed_intro">Erstelle einen schreibgeschützten Link, den der Kalender auf einem iPhone – oder jede Kalender-App, die eine Webadresse abonnieren kann – aktuell hält. Die andere App aktualisiert ihn etwa einmal pro Stunde.</string>
+    <string name="calendar_feed_intro">Erstelle einen schreibgeschützten Link, den Apple Kalender auf einem iPhone – oder jede Kalender-App, die eine Webadresse abonnieren kann – aktuell hält. Die andere App aktualisiert ihn etwa einmal pro Stunde.</string>
     <string name="calendar_feed_included">Enthalten: Betreuungstage und Umgangszeiten, jeweils mit dem Namen des Elternteils, und die Termine, die du mit dem anderen Elternteil teilst.</string>
     <string name="calendar_feed_excluded">Nicht enthalten: private Termine, Chat, Ausgaben und Angaben zu den Kindern. Im anderen Kalender lässt sich nichts ändern; Änderungen machst du hier in CoPlanly.</string>
     <string name="calendar_feed_warning">Wer den Link hat, kann diesen Kalender sehen. Schick ihn nur an die Person, für die er gedacht ist, und widerrufe ihn hier, falls er weitergegeben wird. Ein Link, den 90 Tage lang kein Kalender geöffnet hat, funktioniert nicht mehr.</string>

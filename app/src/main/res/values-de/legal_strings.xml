@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="auth_legal_notice_age">CoPlanly richtet sich an Eltern und Sorgeberechtigte ab 18 Jahren. Wenn Sie fortfahren, bestätigen Sie, dass Sie mindestens 18 Jahre alt sind.</string>
-    <string name="auth_legal_notice_with_terms">CoPlanly richtet sich an Eltern und Sorgeberechtigte ab 18 Jahren. Wenn Sie fortfahren, bestätigen Sie, dass Sie mindestens 18 Jahre alt sind, und akzeptieren die Nutzungsbedingungen.</string>
+    <string name="auth_legal_notice_age">CoPlanly richtet sich an Eltern und Sorgeberechtigte ab 18 Jahren. Wenn du fortfährst, bestätigst du, dass du mindestens 18 Jahre alt bist.</string>
+    <string name="auth_legal_notice_with_terms">CoPlanly richtet sich an Eltern und Sorgeberechtigte ab 18 Jahren. Wenn du fortfährst, bestätigst du, dass du mindestens 18 Jahre alt bist, und akzeptierst die Nutzungsbedingungen.</string>
     <string name="terms_of_service_title">Nutzungsbedingungen</string>
-    <string name="terms_of_service_description">Was Sie und CoPlanly vereinbaren</string>
+    <string name="terms_of_service_description">Was du und CoPlanly vereinbaren</string>
 </resources>

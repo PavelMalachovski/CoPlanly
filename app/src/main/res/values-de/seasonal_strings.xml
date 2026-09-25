@@ -2,15 +2,15 @@
 <!-- Seasonal custody schedules (MON-14) and holiday fairness (MON-20). -->
 <resources>
     <string name="seasonal_title">Saisonale Pläne</string>
-    <string name="seasonal_hint">Ein saisonaler Plan ersetzt das obige Muster für einen Zeitraum, etwa die Sommerferien oder Weihnachten. Jede Änderung wird einzeln gesendet; die Schaltfläche Speichern unten speichert nur das Muster oben.</string>
-    <string name="seasonal_needs_base_pattern">Speichern Sie zuerst einen Plan. Ein saisonaler Plan wird darübergelegt.</string>
+    <string name="seasonal_hint">Ein saisonaler Plan ersetzt das obige Muster für einen Zeitraum, etwa die Sommerferien oder Weihnachten. Jede Änderung wird einzeln gesendet; „Speichern“ unten speichert nur das Muster oben.</string>
+    <string name="seasonal_needs_base_pattern">Speichere zuerst einen Plan. Ein saisonaler Plan wird darübergelegt.</string>
     <string name="seasonal_add">Saisonalen Plan hinzufügen</string>
-    <string name="seasonal_pending_theirs">%1$s hat eine Planänderung vorgeschlagen. Beantworten Sie sie, bevor Sie eine weitere senden.</string>
-    <string name="seasonal_pending_mine">Ihre letzte Änderung wartet darauf, dass %1$s sie annimmt.</string>
+    <string name="seasonal_pending_theirs">%1$s hat eine Planänderung vorgeschlagen. Beantworte sie, bevor du eine weitere sendest.</string>
+    <string name="seasonal_pending_mine">Deine letzte Änderung wartet darauf, dass %1$s sie annimmt.</string>
     <string name="seasonal_sent_for_approval">Zur Zustimmung an den anderen Elternteil gesendet. Bis zur Annahme ändert sich nichts.</string>
     <string name="seasonal_saved">Saisonaler Plan gespeichert.</string>
-    <string name="seasonal_save_failed">Der saisonale Plan konnte nicht gesendet werden. Bitte erneut versuchen.</string>
-    <string name="seasonal_answer_pending_first">Der Vorschlag des anderen Elternteils wartet auf Ihre Antwort. Beantworten Sie ihn zuerst.</string>
+    <string name="seasonal_save_failed">Der saisonale Plan konnte nicht gesendet werden. Bitte versuche es erneut.</string>
+    <string name="seasonal_answer_pending_first">Der Vorschlag des anderen Elternteils wartet auf deine Antwort. Beantworte ihn zuerst.</string>
     <string name="seasonal_dialog_add_title">Neuer saisonaler Plan</string>
     <string name="seasonal_dialog_edit_title">Saisonalen Plan bearbeiten</string>
     <string name="seasonal_name_label">Name</string>
@@ -29,8 +29,8 @@
     <string name="seasonal_delete">Löschen</string>
     <string name="seasonal_cancel">Abbrechen</string>
     <string name="seasonal_ok">OK</string>
-    <string name="fairness_title">Feiertage im Überblick</string>
-    <string name="fairness_no_schedule">Speichern Sie einen Plan, um zu sehen, wer welche Feiertage hat.</string>
+    <string name="fairness_title">Feiertagsverteilung</string>
+    <string name="fairness_no_schedule">Speichere einen Plan, um zu sehen, wer welche Feiertage hat.</string>
     <string name="fairness_nights">Nächte</string>
     <string name="fairness_christmas_eve">Heiligabend</string>
     <string name="fairness_christmas_day">Erster Weihnachtstag</string>

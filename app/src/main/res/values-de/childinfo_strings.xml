@@ -43,7 +43,7 @@
     <string name="childinfo_detail_contact">Kontakt: %1$s</string>
     <string name="childinfo_detail_phone">Telefon: %1$s</string>
     <string name="childinfo_detail_relationship">Beziehung: %1$s</string>
-    <string name="childinfo_detail_alt_phone">Alt. Telefon: %1$s</string>
+    <string name="childinfo_detail_alt_phone">Weitere Nr.: %1$s</string>
     <string name="childinfo_detail_address">Adresse: %1$s</string>
     <string name="childinfo_detail_teacher">Lehrkraft: %1$s</string>
     <string name="childinfo_detail_email">E-Mail: %1$s</string>
@@ -58,7 +58,7 @@
     <string name="childinfo_dosage_label">Dosierung (z. B. 10 mg)</string>
     <string name="childinfo_frequency_label">Häufigkeit (z. B. 2-mal täglich)</string>
     <string name="childinfo_notes_optional_label">Notizen (optional)</string>
-    <string name="childinfo_medication_summary">%1$s - %2$s</string>
+    <string name="childinfo_medication_summary">%1$s – %2$s</string>
 
     <!-- Child info: activities editor -->
     <string name="childinfo_add_activity">Aktivität hinzufügen</string>
@@ -93,7 +93,7 @@
     <string name="childinfo_contact_alt_phone_marker">📱 %1$s</string>
 
     <!-- Child info: education editor -->
-    <string name="childinfo_add_school_info">Bildungseinrichtung hinzufügen</string>
+    <string name="childinfo_add_school_info">Einrichtung hinzufügen</string>
     <string name="childinfo_school_name_label">Name der Einrichtung</string>
     <string name="childinfo_address_optional_label">Adresse (optional)</string>
     <string name="childinfo_school_phone_optional_label">Telefon der Einrichtung (optional)</string>
@@ -104,7 +104,7 @@
     <string name="childinfo_save_failed">Die Angaben zum Kind konnten nicht gespeichert werden. Bitte versuche es erneut.</string>
     <string name="childinfo_children_group_label">Kinder</string>
     <string name="childinfo_delete_title">%1$s löschen?</string>
-    <string name="childinfo_delete_message">Der Eintrag, Medikamente, Allergien und Fotos werden von diesem Gerät und vom Gerät des Co-Elternteils entfernt.</string>
+    <string name="childinfo_delete_message">Eintrag, Medikamente, Allergien und Fotos werden von diesem Gerät und vom Gerät des anderen Elternteils entfernt.</string>
     <string name="childinfo_delete_confirm">Löschen</string>
     <string name="childinfo_delete_cancel">Behalten</string>
     <string name="childinfo_delete_action">Kind löschen</string>

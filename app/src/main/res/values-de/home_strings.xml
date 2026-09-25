@@ -3,16 +3,16 @@
 <resources>
     <string name="home_title">Start</string>
 
-    <string name="home_pairing_title">Teilen Sie das mit dem anderen Elternteil</string>
-    <string name="home_pairing_prompt">Verbinden Sie sich mit dem anderen Elternteil, um Kalender, Ausgaben und Nachrichten zu teilen.</string>
-    <string name="home_pairing_cta">Mit anderem Elternteil verbinden</string>
+    <string name="home_pairing_title">Teile das mit dem anderen Elternteil</string>
+    <string name="home_pairing_prompt">Verknüpfe dich mit dem anderen Elternteil, um Kalender, Ausgaben und Nachrichten zu teilen.</string>
+    <string name="home_pairing_cta">Jetzt verknüpfen</string>
 
     <string name="home_handover_current">Heute bei %1$s</string>
-    <string name="home_handover_hero_today">Übergabe an %1$s heute</string>
-    <string name="home_handover_hero_tomorrow">Übergabe an %1$s morgen</string>
+    <string name="home_handover_hero_today">Heute Übergabe an %1$s</string>
+    <string name="home_handover_hero_tomorrow">Morgen Übergabe an %1$s</string>
     <plurals name="home_handover_hero_in_days">
-        <item quantity="one">Übergabe an %1$s in %2$d Tag</item>
-        <item quantity="other">Übergabe an %1$s in %2$d Tagen</item>
+        <item quantity="one">In %2$d Tag Übergabe an %1$s</item>
+        <item quantity="other">In %2$d Tagen Übergabe an %1$s</item>
     </plurals>
     <string name="home_handover_review">Prüfen</string>
 
@@ -21,8 +21,8 @@
         <item quantity="other">%1$d ungelesen</item>
     </plurals>
     <string name="home_stat_open_chat">Chat öffnen →</string>
-    <string name="home_stat_owed_to_you">Ihnen werden %1$s geschuldet →</string>
-    <string name="home_stat_you_owe">Sie schulden %1$s →</string>
+    <string name="home_stat_owed_to_you">Du bekommst %1$s →</string>
+    <string name="home_stat_you_owe">Du schuldest %1$s →</string>
     <string name="home_stat_settled">Alles ausgeglichen →</string>
 
     <string name="home_section_this_week">Diese Woche</string>
@@ -36,7 +36,7 @@
 
     <!-- Contacts: item 16's one button, between the changes feed and the spend tile. -->
     <string name="home_contacts">Kontakte</string>
-    <string name="home_contacts_supporting">Großeltern, Ärzte, die Eltern eines Freundes</string>
+    <string name="home_contacts_supporting">Großeltern, Ärzte, Eltern von Freunden</string>
 
     <string name="home_activity_event_created">Hinzugefügt: %1$s</string>
     <string name="home_activity_event_updated">Geändert: %1$s</string>
@@ -48,12 +48,12 @@
     <string name="home_dialog_swap_title">Tagestausch</string>
     <string name="home_dialog_swap_message">%1$s schlägt vor zu ändern, bei wem das Kind am %2$s ist.</string>
     <string name="home_dialog_requests_title">Änderungsanfragen</string>
-    <string name="home_dialog_requests_message">Dein Co-Elternteil wartet auf deine Antwort auf Anfragen.</string>
+    <string name="home_dialog_requests_message">Der andere Elternteil hat Anfragen, die auf deine Antwort warten.</string>
     <string name="home_dialog_later">Später</string>
-    <string name="home_dialog_review">Ansehen</string>
+    <string name="home_dialog_review">Prüfen</string>
     <plurals name="home_dialog_swap_message_days">
-        <item quantity="one">%2$s schlägt vor, an %1$d Tag zu wechseln, wer das Kind hat: %3$s.</item>
-        <item quantity="other">%2$s schlägt vor, an %1$d Tagen zu wechseln, wer das Kind hat: %3$s bis %4$s.</item>
+        <item quantity="one">%2$s schlägt vor, für %1$d Tag zu ändern, bei wem das Kind ist: %3$s.</item>
+        <item quantity="other">%2$s schlägt vor, für %1$d Tage zu ändern, bei wem das Kind ist: %3$s bis %4$s.</item>
     </plurals>
 
     <!-- The empty seven-day card's action. -->

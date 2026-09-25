@@ -24,11 +24,11 @@
     <string name="chat_no_upcoming_events">Keine anstehenden Termine, für die eine Änderung vorgeschlagen werden kann.</string>
     <string name="chat_pick_event_to_reschedule">Wähle den Termin, den du verschieben möchtest:</string>
     <!-- Shown when the co-parent action is used on an account that has no co-parent linked. -->
-    <string name="chat_no_coparent">Du bist noch nicht mit dem anderen Elternteil verbunden.</string>
+    <string name="chat_no_coparent">Du bist noch nicht mit dem anderen Elternteil verknüpft.</string>
     <!-- Snackbar action next to chat_no_coparent; opens the pairing screen. -->
-    <string name="chat_no_coparent_action">Verbinden</string>
+    <string name="chat_no_coparent_action">Verknüpfen</string>
     <!-- Shown when the pairing state has not resolved in time; the action is worth retrying. -->
-    <string name="chat_coparent_link_pending">Die Verbindung zum anderen Elternteil wird noch geprüft. Bitte versuche es gleich noch einmal.</string>
+    <string name="chat_coparent_link_pending">Die Verknüpfung mit dem anderen Elternteil wird noch geprüft. Versuch es gleich noch einmal.</string>
 
     <!-- Screen-reader content description for the unread-message badge on the bottom nav's Chat tab. -->
     <plurals name="chat_unread_messages_badge">
@@ -60,16 +60,16 @@
     <string name="chat_template_category_conflict_resolution">Konfliktlösung</string>
     <string name="chat_template_pickup_delay_title">Verspätung bei der Übergabe</string>
     <string name="chat_template_pickup_delay_content">Ich verspäte mich bei der Übergabe von [Kind]. Ich bin in etwa [Anzahl Minuten] da. Entschuldige die Umstände.</string>
-    <string name="chat_template_pickup_early_title">Frühere Ankunft</string>
+    <string name="chat_template_pickup_early_title">Ich komme früher</string>
     <string name="chat_template_pickup_early_content">Ich komme früher als sonst, ungefähr um [Uhrzeit]. Passt dir das?</string>
     <string name="chat_template_doctor_visit_title">Arztbesuch</string>
-    <string name="chat_template_doctor_visit_content">[Kind] war heute wegen [Beschwerden] beim Arzt. Diagnose: [Diagnose]. Der Arzt empfiehlt [Empfehlung].</string>
+    <string name="chat_template_doctor_visit_content">[Kind] war heute wegen [Beschwerden] beim Arzt. Diagnose: [Diagnose]. Empfehlung: [Empfehlung].</string>
     <string name="chat_template_child_sick_title">Kind ist krank</string>
     <string name="chat_template_child_sick_content">[Kind] fühlt sich nicht wohl. Symptome: [Symptome]. Temperatur: [Temperatur]. Ich bleibe mit dem Kind zu Hause.</string>
     <string name="chat_template_school_event_title">Schulveranstaltung</string>
     <string name="chat_template_school_event_content">In der Schule findet [Veranstaltung] am [Datum] um [Uhrzeit] statt. Kannst du dabei sein?</string>
-    <string name="chat_template_parent_teacher_meeting_title">Elternabend</string>
-    <string name="chat_template_parent_teacher_meeting_content">Der Elternabend ist am [Datum] um [Uhrzeit]. Die Lehrkraft möchte [Thema] besprechen.</string>
+    <string name="chat_template_parent_teacher_meeting_title">Elterngespräch</string>
+    <string name="chat_template_parent_teacher_meeting_content">Das Elterngespräch ist am [Datum] um [Uhrzeit]. Die Lehrkraft möchte über [Thema] sprechen.</string>
     <string name="chat_template_holiday_plan_title">Ferienplanung</string>
     <string name="chat_template_holiday_plan_content">Lass uns die Planung für [Ferien] abstimmen. Mein Vorschlag: [Vorschlag]. Was meinst du?</string>
     <string name="chat_template_schedule_change_title">Änderung des Plans</string>
@@ -83,12 +83,12 @@
     <string name="chat_search_clear">Leeren</string>
     <string name="chat_search_placeholder">Nachrichten durchsuchen</string>
     <string name="chat_search_prompt_title">In dieser Unterhaltung suchen</string>
-    <string name="chat_search_prompt_description">Durchsucht die Nachrichten, die schon auf diesem Telefon sind. Was Sie hier eingeben, verlässt es nicht.</string>
+    <string name="chat_search_prompt_description">Durchsucht die Nachrichten, die bereits auf diesem Telefon sind. Was du hier eingibst, verlässt es nicht.</string>
     <string name="chat_search_no_results_title">Keine passenden Nachrichten</string>
     <string name="chat_search_no_results_description">Nichts in dieser Unterhaltung passt zu „%1$s“.</string>
     <string name="chat_search_failed_title">Die Suche hat nicht funktioniert</string>
-    <string name="chat_search_failed_description">Es wurde nichts durchsucht. Versuchen Sie es gleich noch einmal.</string>
-    <string name="chat_search_truncated">Die %1$d neuesten Treffer werden angezeigt. Mit einem weiteren Wort grenzen Sie sie ein.</string>
+    <string name="chat_search_failed_description">Es wurde nichts durchsucht. Versuch es gleich noch einmal.</string>
+    <string name="chat_search_truncated">Die %1$d neuesten Treffer werden angezeigt. Mit einem weiteren Wort grenzt du sie ein.</string>
     <string name="chat_search_result_meta">%1$s · %2$s</string>
     <string name="chat_search_show_in_thread">In der Unterhaltung zeigen</string>
     <!-- MON-19: pause before sending. A held message, with its countdown in seconds. -->
@@ -97,7 +97,7 @@
     <!-- MON-19: the lexical hint over the composer. Plain observations of what was typed, never a verdict. -->
     <string name="chat_nudge_shouting">Großbuchstaben können wie Schreien wirken.</string>
     <string name="chat_nudge_punctuation">Wiederholte !!! oder ??? können wie eine erhobene Stimme wirken.</string>
-    <string name="chat_nudge_listed_words">Wörter wie %1$s können härter ankommen, als Sie es meinen.</string>
+    <string name="chat_nudge_listed_words">Wörter wie %1$s können härter ankommen, als du es meinst.</string>
     <!-- MON-19: a short, mild list of words that tend to land harder than meant. Matching ignores
          case and accents; an entry ending in * matches every word starting with it, so an
          inflected word is listed once. Keep it short and mild: this is a nudge, not a filter. -->
@@ -114,7 +114,7 @@
         <item>typisch</item>
     </string-array>
     <!-- A thread kept after the co-parent deleted their account (GDPR review, September 2026). %1$s = their name, %2$s = the day the thread is deleted. -->
-    <string name="chat_departed_banner">%1$s hat das eigene Konto gelöscht. Diese Unterhaltung wird am %2$s gelöscht. Exportiere sie vorher.</string>
+    <string name="chat_departed_banner">%1$s hat das Konto gelöscht. Diese Unterhaltung wird am %2$s gelöscht. Exportiere sie vorher.</string>
     <string name="chat_departed_export">Exportieren</string>
     <string name="chat_departed_no_sending">In dieser Unterhaltung können keine Nachrichten mehr gesendet werden.</string>
     <string name="chat_departed_unnamed">Der andere Elternteil</string>

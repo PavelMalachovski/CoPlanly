@@ -1,43 +1,43 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- PairingScreen -->
-    <string name="pairing_screen_title">Mit dem anderen Elternteil verbinden</string>
+    <string name="pairing_screen_title">Mit dem anderen Elternteil verknüpfen</string>
     <string name="pairing_back">Zurück</string>
-    <string name="pairing_unpair_button">Kopplung aufheben</string>
+    <string name="pairing_unpair_button">Verknüpfung aufheben</string>
     <string name="pairing_scan_qr_code">QR-Code scannen</string>
     <string name="pairing_unknown_sender">Unbekannt</string>
     <string name="pairing_accept_button">Annehmen</string>
     <string name="pairing_reject_button">Ablehnen</string>
-    <string name="pairing_qr_code_content_description">QR-Code zur Kopplung</string>
+    <string name="pairing_qr_code_content_description">QR-Code zur Verknüpfung</string>
     <string name="pairing_cancel">Abbrechen</string>
 
     <!-- QrScannerScreen -->
     <string name="pairing_camera_permission_title">Kameraberechtigung erforderlich</string>
-    <string name="pairing_camera_permission_message">Bitte erteilen Sie die Kameraberechtigung, um QR-Codes für Einladungen zu scannen.</string>
-    <string name="pairing_camera_permission_denied_message">Der Kamerazugriff wurde verweigert. Aktivieren Sie ihn in den Systemeinstellungen, um QR-Codes zu scannen.</string>
+    <string name="pairing_camera_permission_message">Bitte erlaube den Kamerazugriff, um QR-Codes für Einladungen zu scannen.</string>
+    <string name="pairing_camera_permission_denied_message">Der Kamerazugriff wurde verweigert. Aktiviere ihn in den Systemeinstellungen, um QR-Codes zu scannen.</string>
     <string name="pairing_open_app_settings">Einstellungen öffnen</string>
     <string name="pairing_grant_permission">Berechtigung erteilen</string>
-    <string name="pairing_qr_hint">Achten Sie darauf, dass der QR-Code gut beleuchtet ist und vollständig in den Rahmen passt.</string>
+    <string name="pairing_qr_hint">Achte darauf, dass der QR-Code gut beleuchtet ist und ganz in den Rahmen passt.</string>
 
     <!-- Pairing errors (Task 6) -->
-    <string name="pairing_error_not_found">Keine Einladung entspricht diesem Code.</string>
-    <string name="pairing_error_expired">Dieser Code ist abgelaufen. Bitten Sie um einen neuen.</string>
+    <string name="pairing_error_not_found">Zu diesem Code gibt es keine Einladung.</string>
+    <string name="pairing_error_expired">Dieser Code ist abgelaufen. Bitte um einen neuen.</string>
     <string name="pairing_error_not_pending">Diese Einladung ist nicht mehr aktiv.</string>
-    <string name="pairing_error_self_pairing">Das ist Ihre eigene Einladung.</string>
-    <string name="pairing_error_already_paired">Eines der Konten hat bereits einen Co-Elternteil.</string>
+    <string name="pairing_error_self_pairing">Das ist deine eigene Einladung.</string>
+    <string name="pairing_error_already_paired">Eines der Konten ist bereits mit einem anderen Elternteil verknüpft.</string>
     <string name="pairing_error_wrong_recipient">Diese Einladung wurde an eine andere E-Mail-Adresse gesendet.</string>
-    <string name="pairing_error_network">Keine Verbindung. Prüfen Sie Ihr Internet und versuchen Sie es erneut.</string>
-    <string name="pairing_error_unknown">Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.</string>
-    <string name="pairing_error_code_incomplete">Geben Sie alle 6 Zeichen des Codes ein.</string>
+    <string name="pairing_error_network">Keine Verbindung. Prüfe dein Internet und versuche es erneut.</string>
+    <string name="pairing_error_unknown">Etwas ist schiefgelaufen. Bitte versuche es erneut.</string>
+    <string name="pairing_error_code_incomplete">Gib alle 6 Zeichen des Codes ein.</string>
 
     <!-- Invite code hero card -->
-    <string name="pairing_your_code_title">Ihr Einladungscode</string>
+    <string name="pairing_your_code_title">Dein Einladungscode</string>
     <string name="pairing_code_copied">Code kopiert</string>
     <string name="pairing_share_invite">Teilen</string>
     <string name="pairing_new_code">Neuer Code</string>
-    <string name="pairing_expires_in_hours">Gültig noch %1$d Std. %2$d Min.</string>
-    <string name="pairing_expires_in_minutes">Gültig noch %1$d Min.</string>
-    <string name="pairing_code_expired_generate">Code abgelaufen — tippen Sie auf „Neuer Code“</string>
+    <string name="pairing_expires_in_hours">Noch %1$d Std. %2$d Min. gültig</string>
+    <string name="pairing_expires_in_minutes">Noch %1$d Min. gültig</string>
+    <string name="pairing_code_expired_generate">Code abgelaufen – tippe auf „Neuer Code“</string>
     <string name="pairing_share_message">%1$s lädt dich zu CoPlanly ein. Code: %2$s · %3$s
 Noch keine App? %4$s</string>
     <!-- Code entry -->
@@ -46,20 +46,20 @@ Noch keine App? %4$s</string>
     <string name="pairing_link_accounts">Konten verknüpfen</string>
     <!-- Email invite -->
     <!-- Paired state -->
-    <string name="pairing_paired_since">Gekoppelt seit %1$s</string>
+    <string name="pairing_paired_since">Verknüpft seit %1$s</string>
     <string name="pairing_partner_email_unknown">E-Mail nicht verfügbar</string>
-    <string name="pairing_unpair_confirm_title">Kopplung mit dem Co-Elternteil aufheben?</string>
-    <string name="pairing_unpair_confirm_message">Sie teilen dann keinen Kalender, Chat und keine Ausgaben mehr mit %1$s. Bereits auf diesem Telefon gespeicherte Daten bleiben erhalten.</string>
-    <string name="pairing_unpair_confirm_action">Trennen</string>
-    <string name="pairing_unpair_final_title">Möchtest du die Betreuung aufgeben?</string>
-    <string name="pairing_unpair_final_message">Wenn du sie aufgibst, verlierst du die in der App hinterlegten Daten deines Kindes: Du hast keinen Zugriff mehr auf Kalender, Termine, wichtige Kontakte und gemeinsame Ausgaben. Die gesamte Betreuung geht an den anderen Elternteil über.</string>
+    <string name="pairing_unpair_confirm_title">Verknüpfung mit dem anderen Elternteil aufheben?</string>
+    <string name="pairing_unpair_confirm_message">Du teilst dann Kalender, Chat und Ausgaben nicht mehr mit %1$s. Daten, die bereits auf diesem Telefon sind, bleiben erhalten.</string>
+    <string name="pairing_unpair_confirm_action">Aufheben</string>
+    <string name="pairing_unpair_final_title">Gemeinsame Planung wirklich beenden?</string>
+    <string name="pairing_unpair_final_message">Wenn du sie beendest, verlierst du die in der App erfassten Daten deines Kindes: Du hast keinen Zugriff mehr auf Kalender, Termine, wichtige Kontakte und gemeinsame Ausgaben. Alles bleibt beim anderen Elternteil.</string>
     <string name="pairing_unpair_final_yes">Ja</string>
     <string name="pairing_unpair_final_no">Nein</string>
     <!-- Deep link confirmation from a bare code (no sender identity known yet) -->
     <string name="pairing_deep_link_confirm_title">Mit diesem Einladungscode verknüpfen?</string>
-    <string name="pairing_deep_link_confirm_message">%1$s — die Person, die Ihnen diesen Code geschickt hat, sieht dann Ihren gemeinsamen Kalender, Chat und Ausgaben.</string>
+    <string name="pairing_deep_link_confirm_message">%1$s – die Person, die dir diesen Code geschickt hat, sieht dann euren gemeinsamen Kalender, Chat und Ausgaben.</string>
     <!-- Fallback conversation title when the co-parent has no display name yet -->
-    <string name="pairing_default_partner_name">Mitelternteil</string>
+    <string name="pairing_default_partner_name">Co-Elternteil</string>
 
     <!-- Two explicit pairing modes, the tap-to-copy code, and the trust panel. -->
     <string name="pairing_mode_share">Meinen Code teilen</string>
@@ -67,12 +67,12 @@ Noch keine App? %4$s</string>
     <string name="pairing_copy_code">Code kopieren</string>
     <string name="pairing_tap_to_copy_and_expiry">Zum Kopieren tippen · %1$s</string>
     <string name="pairing_share_link">Link teilen</string>
-    <string name="pairing_trust_title">Was beim Verbinden geteilt wird</string>
-    <string name="pairing_trust_body">Gemeinsamer Kalender und Betreuungsplan, gemeinsame Ausgaben und Salden sowie der Chat. Private Termine verlassen Ihr Gerät nie. Sie können die Verbindung jederzeit trennen.</string>
+    <string name="pairing_trust_title">Was beim Verknüpfen geteilt wird</string>
+    <string name="pairing_trust_body">Gemeinsamer Kalender und Betreuungsplan, gemeinsame Ausgaben und Salden sowie der Chat. Private Termine verlassen dein Gerät nie. Du kannst die Verknüpfung jederzeit aufheben.</string>
     <string name="pairing_error_friend_invitation">Das ist eine Freundeseinladung. Öffne Einstellungen → Freund mit Kalenderzugriff.</string>
     <string name="pairing_error_not_friend_invitation">Das ist keine Freundeseinladung.</string>
     <!-- Shown after an email invitation is created. Deliberately does not claim the email
          arrived: the app cannot know that, and the code works either way. -->
-    <string name="pairing_add_another_title">Weiteren Elternteil hinzufügen</string>
-    <string name="pairing_add_another_description">Teile einen Code mit jemandem, mit dem du getrennt Kinder betreust. Diese Familie bleibt von dieser hier getrennt.</string>
+    <string name="pairing_add_another_title">Weiteren Co-Elternteil hinzufügen</string>
+    <string name="pairing_add_another_description">Teile einen Code mit jemandem, mit dem du in einer anderen Familie Kinder betreust. Diese Familie bleibt von der hier getrennt.</string>
 </resources>

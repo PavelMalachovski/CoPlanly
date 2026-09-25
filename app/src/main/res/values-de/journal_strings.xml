@@ -2,10 +2,10 @@
 <resources>
     <!-- The private journal (MON-22): kept on this phone only, never synced or shared. -->
     <string name="journal_title">Privates Tagebuch</string>
-    <string name="journal_settings_description">Ihre eigenen Notizen, nur auf diesem Telefon gespeichert</string>
-    <string name="journal_private_notice">Nur Sie können dieses Tagebuch lesen. Die Einträge bleiben auf diesem Telefon: Sie werden nicht synchronisiert, nicht gesichert und nie mit dem anderen Elternteil geteilt. Wenn Sie die App deinstallieren oder sich auf diesem Telefon mit einem anderen Konto anmelden, werden sie gelöscht. Sie können Einträge selbst in einen Export aufnehmen.</string>
+    <string name="journal_settings_description">Deine eigenen Notizen, nur auf diesem Telefon gespeichert</string>
+    <string name="journal_private_notice">Nur du kannst dieses Tagebuch lesen. Die Einträge bleiben auf diesem Telefon: Sie werden nicht synchronisiert, nicht gesichert und nie mit dem anderen Elternteil geteilt. Wenn du die App deinstallierst oder dich auf diesem Telefon mit einem anderen Konto anmeldest, werden sie gelöscht. Du kannst Einträge selbst in einen Export aufnehmen.</string>
     <string name="journal_empty_title">Noch keine Einträge</string>
-    <string name="journal_empty_description">Halten Sie in Ihren eigenen Worten fest, was passiert ist, solange es frisch ist.</string>
+    <string name="journal_empty_description">Halte in deinen eigenen Worten fest, was passiert ist, solange es frisch ist.</string>
     <string name="journal_add">Neuer Eintrag</string>
     <string name="journal_deleted">Eintrag gelöscht</string>
     <string name="journal_undo">Rückgängig</string>
@@ -18,9 +18,9 @@
     <string name="journal_save">Speichern</string>
     <string name="journal_pick_ok">OK</string>
     <string name="journal_pick_cancel">Abbrechen</string>
-    <string name="journal_error_save">Der Eintrag konnte nicht gespeichert werden. Bitte erneut versuchen.</string>
-    <string name="journal_error_delete">Der Eintrag konnte nicht gelöscht werden. Bitte erneut versuchen.</string>
+    <string name="journal_error_save">Der Eintrag konnte nicht gespeichert werden. Bitte versuche es erneut.</string>
+    <string name="journal_error_delete">Der Eintrag konnte nicht gelöscht werden. Bitte versuche es erneut.</string>
     <string name="journal_delete_confirm_title">Diesen Eintrag löschen?</string>
     <string name="journal_delete_confirm_message">Der Eintrag wird von diesem Telefon gelöscht. Das Tagebuch ist nirgendwo sonst gespeichert, daher lässt er sich nicht wiederherstellen.</string>
-    <string name="journal_error_signed_out">Sie sind abgemeldet. Melden Sie sich an, um den Eintrag zu speichern.</string>
+    <string name="journal_error_signed_out">Du bist abgemeldet. Melde dich an, um den Eintrag zu speichern.</string>
 </resources>

@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="auth_cd_logo">CoPlanly-Logo</string>
-    <string name="auth_tagline">Gemeinsamer Kalender für Co-Parenting</string>
+    <string name="auth_tagline">Gemeinsamer Kalender für getrennt erziehende Eltern</string>
     <string name="auth_welcome_back">Willkommen zurück!</string>
     <string name="auth_create_your_account">Konto erstellen</string>
-    <string name="auth_sign_in_subtitle">Melde dich an, um euren Co-Parenting-Plan weiter zu verwalten</string>
-    <string name="auth_sign_up_subtitle">Schließe dich Tausenden von Eltern an, die zusammenarbeiten</string>
+    <string name="auth_sign_in_subtitle">Melde dich an, um euren Betreuungsplan weiter zu verwalten</string>
+    <string name="auth_sign_up_subtitle">Schließ dich Tausenden Eltern an, die an einem Strang ziehen</string>
     <string name="auth_email_label">E-Mail-Adresse</string>
     <string name="auth_email_placeholder">deine@email.de</string>
     <string name="auth_password_label">Passwort</string>
@@ -23,9 +23,9 @@
     <string name="auth_forgot_password_link">Passwort vergessen?</string>
     <string name="auth_saved_password_sign_in">Mit gespeichertem Passwort anmelden</string>
     <string name="auth_error_empty_fields">Bitte fülle beide Felder aus</string>
-    <string name="auth_error_invalid_credentials">Falsche E-Mail oder falsches Passwort</string>
-    <string name="auth_error_email_already_in_use">Für diese E-Mail gibt es bereits ein Konto</string>
-    <string name="auth_error_weak_password">Passwort zu schwach — mindestens 6 Zeichen</string>
+    <string name="auth_error_invalid_credentials">E-Mail-Adresse oder Passwort falsch</string>
+    <string name="auth_error_email_already_in_use">Für diese E-Mail-Adresse gibt es bereits ein Konto</string>
+    <string name="auth_error_weak_password">Passwort zu schwach – mindestens 6 Zeichen</string>
     <string name="auth_error_invalid_email">Das ist keine gültige E-Mail-Adresse</string>
     <string name="auth_error_user_disabled">Dieses Konto wurde deaktiviert</string>
     <string name="auth_error_network">Keine Verbindung. Prüfe dein Netzwerk und versuche es erneut.</string>

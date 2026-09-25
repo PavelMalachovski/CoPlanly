@@ -28,7 +28,7 @@
     <string name="event_form_cd_assign_to">%1$s zuweisen, %2$s</string>
     <string name="event_form_cd_selected">ausgewählt</string>
     <string name="event_form_cd_not_selected">nicht ausgewählt</string>
-    <string name="event_form_cd_label_icon">Symbol %1$s</string>
+    <string name="event_form_cd_label_icon">Symbol: %1$s</string>
     <string name="event_form_event_type">Terminart</string>
     <string name="event_type_general">Allgemein</string>
     <string name="event_type_medical">Gesundheit</string>
@@ -56,8 +56,8 @@
     <string name="event_repeat_biweekly">Alle 2 Wochen</string>
     <string name="event_repeat_monthly">Monatlich</string>
     <string name="event_form_repeat_until">Wiederholen bis</string>
-    <string name="event_form_repeat_forever">Für immer</string>
-    <string name="event_form_clear">Löschen</string>
+    <string name="event_form_repeat_forever">Unbegrenzt</string>
+    <string name="event_form_clear">Entfernen</string>
     <string name="event_form_reminder">Erinnerung</string>
     <string name="event_reminder_none">Keine</string>
     <string name="event_reminder_10_min">10 Min.</string>
@@ -66,9 +66,9 @@
     <string name="event_reminder_2_hours">2 Stunden</string>
     <string name="event_reminder_1_day">1 Tag</string>
     <string name="event_form_important_title">Wichtiger Termin</string>
-    <string name="event_form_important_description">Markieren Sie das, wenn der andere Elternteil erwartet wird</string>
-    <string name="event_form_important_helper">Der andere Elternteil wird erwartet. Das sagt es — es fragt ihn nicht.</string>
-    <string name="event_important_mark_description">Wichtig: der andere Elternteil wird erwartet</string>
+    <string name="event_form_important_description">Markiere das, wenn der andere Elternteil erwartet wird</string>
+    <string name="event_form_important_helper">Der andere Elternteil wird erwartet. Das ist eine Mitteilung, keine Anfrage.</string>
+    <string name="event_important_mark_description">Wichtig: Der andere Elternteil wird erwartet</string>
     <string name="event_form_private_title">Privater Termin</string>
     <string name="event_form_private_description">Nur du kannst diesen Termin sehen</string>
     <string name="event_form_photo">Terminfoto</string>
@@ -82,13 +82,13 @@
     <string name="event_form_pickup_undo">Rückgängig</string>
     <string name="event_form_draft_restored">Entwurf wiederhergestellt</string>
     <string name="event_form_delete_dialog_title">Termin löschen</string>
-    <string name="event_form_delete_dialog_message">Möchtest du diesen Termin wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.</string>
+    <string name="event_form_delete_dialog_message">Möchtest du diesen Termin wirklich löschen? Das lässt sich nicht rückgängig machen.</string>
     <string name="event_form_event_deleted">Termin gelöscht</string>
     <string name="event_form_not_found">Termin nicht gefunden</string>
-    <string name="event_form_delete_failed">Termin konnte nicht gelöscht werden. Bitte versuche es erneut.</string>
-    <string name="event_form_save_failed">Termin konnte nicht gespeichert werden. Bitte versuche es erneut.</string>
-    <string name="event_form_photo_upload_failed">Foto-Upload fehlgeschlagen — Termin ohne neues Foto gespeichert</string>
-    <string name="event_form_owner_unknown">Wir wissen noch nicht, wessen Termin das ist — wähle oben aus, um zu speichern</string>
+    <string name="event_form_delete_failed">Der Termin konnte nicht gelöscht werden. Bitte versuche es erneut.</string>
+    <string name="event_form_save_failed">Der Termin konnte nicht gespeichert werden. Bitte versuche es erneut.</string>
+    <string name="event_form_photo_upload_failed">Foto-Upload fehlgeschlagen – Termin ohne neues Foto gespeichert</string>
+    <string name="event_form_owner_unknown">Wir wissen noch nicht, wessen Termin das ist – wähle oben aus, um zu speichern</string>
     <string name="event_form_for_members">Für wen ist das?</string>
 
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->

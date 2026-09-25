@@ -9,7 +9,7 @@
     <string name="contacts_call">Anrufen</string>
 
     <string name="contacts_empty">Noch keine Kontakte.</string>
-    <string name="contacts_empty_hint">Fügen Sie Großeltern, Ärzte oder die Eltern eines Freundes zu den Angaben des Kindes hinzu — hier sind sie dann einen Tipp entfernt.</string>
+    <string name="contacts_empty_hint">Füge Großeltern, Ärzte oder die Eltern von Freunden zu den Angaben eines Kindes hinzu – hier erreichst du sie dann mit einem Tipp.</string>
 
     <!-- Shown when there is no dialler to open — rare, but a silent no-op looks like a broken
          button. -->
