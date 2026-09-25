@@ -1066,6 +1066,47 @@ online recognizer (`OnDeviceSpeechDictation`'s KDoc says why).
 - **If it fails:** `data/dictation/OnDeviceSpeechDictation.kt`, `presentation/chat/DictationViewModel.kt`,
   `presentation/chat/ChatDictation.kt`, `presentation/common/MicrophonePermission.kt`.
 
+### 3.22 AI reply suggestions and the month in review · 1P, paired account, debug build
+
+Preconditions: a **debug** build (`BuildConfig.AI_ASSIST_ENABLED` is true there, false in release
+unless built with `-PCOPLANLY_AI_ASSIST_ENABLED=true`), the `aiAssist` callable deployed to
+`europe-west3` with its model configured (§0), an account paired with a co-parent, a thread with a
+few messages from both, a custody schedule and a couple of expenses this month. Settings → App →
+**AI drafts and summaries** reads "Off" — if it reads "Turned on", tap **Turn off** first.
+
+- [ ] **Release shows nothing.** On a release build (or `-PCOPLANLY_AI_ASSIST_ENABLED=false`), the
+      templates sheet has no "Suggest a reply" row, Month in review has no Summary group, and
+      Settings → App has no AI row. The month's figures still show.
+- [ ] **The consent comes first.** Chat → **Templates** → **Suggest a reply** (subtitle says the
+      draft is AI-generated and for you to edit). The dialog says exactly what is sent (the last 20
+      messages of this thread, the co-parent's included, and what you typed; a month's figures and
+      both names), to Google Cloud in the EU, that nothing is kept, that nothing reaches the
+      co-parent unless you send it, and where to turn it off. **Cancel**: nothing happens and in
+      the Firebase console `users/<uid>` has no `aiConsent`.
+- [ ] **A draft goes into the composer, never out.** Tap **Suggest a reply** again → **I agree**.
+      The row says it is writing, then the sheet closes and the draft is in the message box with
+      the keyboard up, in the app's language. Nothing is sent: the co-parent's phone shows no new
+      message. `users/<uid>.aiConsent` is `{version: 1, grantedAt: <server time>}`. Edit and send
+      it as an ordinary message.
+- [ ] **The row words each refusal.** In airplane mode tap **Suggest a reply**: the row says the
+      service could not be reached and can be tapped again. In a thread with no messages it says
+      there is nothing to reply to yet.
+- [ ] **Month in review.** Settings → Family → **Month in review**: this month, with days per
+      parent **by name**, handovers, special days, swaps offered and agreed, shared events, and one
+      block per currency with who paid what and the transfer that evens it out (or "Even"). The
+      right arrow is disabled on the current month; the left arrow goes back a month and the
+      figures change. At 200 % font no amount is cut off.
+- [ ] **The summary is marked and checkable.** **Summarise this month**: a few sentences appear
+      above the figures under "Written by AI from the figures below", in the app's language,
+      naming parents, with no blame. Going to another month removes it. A month with no custody
+      schedule offers no summary.
+- [ ] **Turning it off.** Settings → App → AI drafts and summaries → **Turn off** → confirm. A
+      message says it is off; the row reads "Off"; `aiConsent` is gone from `users/<uid>`. The next
+      **Suggest a reply** asks for consent again.
+- **If it fails:** tags `AiAssist`, `AiConsentManager`; `data/ai/FunctionsAiAssistRepository.kt`,
+  `data/ai/AiAssistErrors.kt`, `presentation/ai/`, `presentation/chat/ReplySuggestion*`,
+  `presentation/review/`; server side `firebase functions:log --only aiAssist`.
+
 ---
 
 ## 4. Release-build checks

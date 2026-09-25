@@ -391,7 +391,21 @@ fun ChatScreen(
                 composerSeeds++
                 showTemplates = false
             },
-            onDismiss = { showTemplates = false }
+            onDismiss = { showTemplates = false },
+            header = {
+                // A draft for the parent to edit, like a template: it goes into the composer and
+                // is never sent by itself. Draws nothing while the AI assist is off.
+                ReplySuggestionRow(
+                    conversationId = conversationId,
+                    draftHint = composerText,
+                    onSuggested = { draftText ->
+                        composerText = draftText
+                        viewModel.onDraftChanged(conversationId, draftText)
+                        composerSeeds++
+                        showTemplates = false
+                    }
+                )
+            }
         )
     }
 

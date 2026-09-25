@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ai_reply_suggest_title">Navrhnout odpověď</string>
+    <string name="ai_reply_suggest_subtitle">Koncept napsaný AI podle této konverzace – před odesláním ho upravíte</string>
+    <string name="ai_reply_suggest_working">Píšu koncept…</string>
+
+    <string name="ai_consent_dialog_title">Koncepty a shrnutí psané AI</string>
+    <string name="ai_consent_dialog_message">Aby mohl navrhnout odpověď, pošle CoPlanly posledních 20 zpráv konverzace, včetně zpráv druhého rodiče, a to, co jste už napsali. Pro shrnutí měsíce pošle čísla za daný měsíc a jména obou rodičů. Data míří do Google Cloud v EU, kde text napíše model AI (Claude od společnosti Anthropic). Jakmile je text napsán, nic se tam neuchovává.\n\nKoncept se jen vloží do pole pro zprávu: druhému rodiči nic nepřijde, dokud to sami neodešlete. AI se může mýlit, proto si text nejdřív přečtěte. Vypnout to můžete kdykoli v Nastavení → Aplikace.</string>
+    <string name="ai_consent_agree">Souhlasím</string>
+    <string name="ai_consent_not_saved">Vaši odpověď se nepodařilo uložit. Zkontrolujte připojení a zkuste to znovu.</string>
+
+    <string name="ai_error_disabled">Návrhy teď nejsou k dispozici.</string>
+    <string name="ai_error_rate_limited">V krátké době jste žádali o hodně. Zkuste to o něco později.</string>
+    <string name="ai_error_unavailable">Službu se nepodařilo zastihnout. Zkontrolujte připojení a zkuste to znovu.</string>
+    <string name="ai_error_failed">Něco se pokazilo. Zkuste to znovu.</string>
+    <string name="ai_error_invalid_request">Služba tento požadavek nemohla zpracovat. Aktualizujte aplikaci a zkuste to znovu.</string>
+    <string name="ai_error_empty_thread">V této konverzaci zatím nejsou žádné zprávy, na které by šlo odpovědět.</string>
+    <string name="ai_error_not_participant">Odpověď lze navrhnout jen ve vaší vlastní konverzaci.</string>
+    <string name="ai_error_pairing_not_live">Tato konverzace už není propojená s druhým rodičem, takže odpověď navrhnout nelze.</string>
+
+    <string name="ai_consent_settings_title">Koncepty a shrnutí od AI</string>
+    <string name="ai_consent_settings_given">Zapnuto %1$s</string>
+    <string name="ai_consent_settings_given_now">Zapnuto</string>
+    <string name="ai_consent_settings_not_given">Vypnuto. Zeptáme se, až návrh poprvé použijete.</string>
+    <string name="ai_consent_settings_withdraw">Vypnout</string>
+    <string name="ai_consent_withdraw_title">Vypnout koncepty a shrnutí od AI?</string>
+    <string name="ai_consent_withdraw_message">Dokud znovu nesouhlasíte, nic dalšího se kvůli konceptům ani shrnutím neodešle. Koncept, který už máte v poli pro zprávu, tam zůstane.</string>
+    <string name="ai_consent_withdraw_confirm">Vypnout</string>
+    <string name="ai_consent_withdrawn">Koncepty a shrnutí od AI jsou vypnuté</string>
+    <string name="ai_consent_withdraw_failed">Vypnutí se nezdařilo. Zkontrolujte připojení a zkuste to znovu.</string>
+</resources>

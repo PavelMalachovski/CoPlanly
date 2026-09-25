@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ai_reply_suggest_title">Antwort vorschlagen</string>
+    <string name="ai_reply_suggest_subtitle">KI-Entwurf aus diesem Gespräch, den du vor dem Senden bearbeitest</string>
+    <string name="ai_reply_suggest_working">Entwurf wird geschrieben…</string>
+
+    <string name="ai_consent_dialog_title">Entwürfe und Zusammenfassungen von KI</string>
+    <string name="ai_consent_dialog_message">Für einen Antwortvorschlag sendet CoPlanly die letzten 20 Nachrichten des Gesprächs, auch die des anderen Elternteils, und was du schon eingegeben hast. Für eine Monatszusammenfassung sendet es die Zahlen des Monats und die Namen beider Eltern. Die Daten gehen an Google Cloud in der EU, wo ein KI-Modell (Claude von Anthropic) den Text schreibt. Sobald er geschrieben ist, wird dort nichts aufbewahrt.\n\nEin Entwurf landet nur in deinem Nachrichtenfeld: Beim anderen Elternteil kommt nichts an, solange du es nicht sendest. KI kann sich irren, lies den Text also zuerst. Du kannst das jederzeit unter Einstellungen → App ausschalten.</string>
+    <string name="ai_consent_agree">Ich stimme zu</string>
+    <string name="ai_consent_not_saved">Deine Antwort konnte nicht gespeichert werden. Prüfe die Verbindung und versuche es erneut.</string>
+
+    <string name="ai_error_disabled">Vorschläge sind gerade nicht verfügbar.</string>
+    <string name="ai_error_rate_limited">Du hast in kurzer Zeit viel angefragt. Versuche es etwas später noch einmal.</string>
+    <string name="ai_error_unavailable">Der Dienst ist nicht erreichbar. Prüfe die Verbindung und versuche es erneut.</string>
+    <string name="ai_error_failed">Etwas ist schiefgelaufen. Versuche es erneut.</string>
+    <string name="ai_error_invalid_request">Der Dienst konnte diese Anfrage nicht verarbeiten. Aktualisiere die App und versuche es erneut.</string>
+    <string name="ai_error_empty_thread">In diesem Gespräch gibt es noch keine Nachrichten, auf die man antworten könnte.</string>
+    <string name="ai_error_not_participant">Eine Antwort kann nur in deinem eigenen Gespräch vorgeschlagen werden.</string>
+    <string name="ai_error_pairing_not_live">Dieses Gespräch ist nicht mehr mit dem anderen Elternteil verknüpft, daher kann keine Antwort vorgeschlagen werden.</string>
+
+    <string name="ai_consent_settings_title">KI-Entwürfe und -Zusammenfassungen</string>
+    <string name="ai_consent_settings_given">Eingeschaltet am %1$s</string>
+    <string name="ai_consent_settings_given_now">Eingeschaltet</string>
+    <string name="ai_consent_settings_not_given">Aus. Du wirst gefragt, wenn du zum ersten Mal einen Vorschlag nutzt.</string>
+    <string name="ai_consent_settings_withdraw">Ausschalten</string>
+    <string name="ai_consent_withdraw_title">KI-Entwürfe und -Zusammenfassungen ausschalten?</string>
+    <string name="ai_consent_withdraw_message">Bis du erneut zustimmst, wird für Entwürfe oder Zusammenfassungen nichts mehr gesendet. Ein Entwurf, der schon in deinem Nachrichtenfeld steht, bleibt dort.</string>
+    <string name="ai_consent_withdraw_confirm">Ausschalten</string>
+    <string name="ai_consent_withdrawn">KI-Entwürfe und -Zusammenfassungen sind aus</string>
+    <string name="ai_consent_withdraw_failed">Ausschalten fehlgeschlagen. Prüfe die Verbindung und versuche es erneut.</string>
+</resources>

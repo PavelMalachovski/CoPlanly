@@ -27,11 +27,20 @@ import com.coparently.app.domain.model.DefaultMessageTemplates
 import com.coparently.app.domain.model.MessageTemplate
 import com.coparently.app.presentation.theme.Spacing
 
+/**
+ * The message templates, grouped by category; a tap prepares the message in the composer.
+ *
+ * @param onTemplateSelected Receives the chosen template
+ * @param onDismiss Closes the sheet
+ * @param header Drawn above the templates when given — the "Suggest a reply" row, which draws
+ *   nothing while the AI assist is off
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MessageTemplatesBottomSheet(
     onTemplateSelected: (MessageTemplate) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    header: (@Composable () -> Unit)? = null
 ) {
     val templates by remember {
         mutableStateOf(DefaultMessageTemplates.getAll())
@@ -51,6 +60,8 @@ fun MessageTemplatesBottomSheet(
                 style = MaterialTheme.typography.headlineSmall,
                 modifier = Modifier.padding(bottom = Spacing.L)
             )
+
+            header?.invoke()
 
             LazyColumn {
                 items(templates.groupBy { it.category }.toList()) { (category, categoryTemplates) ->

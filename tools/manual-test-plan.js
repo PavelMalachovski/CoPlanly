@@ -180,6 +180,14 @@ const RULES = [
       'K/presentation/common/MicrophonePermission.kt', 'app/src/main/res/values*/voice_strings.xml'],
   },
   {
+    sections: ['3.22'],
+    why: 'the AI assist (reply suggestions, month summary, its consent) or the month in review',
+    paths: ['K/domain/ai/**', 'K/data/ai/**', 'K/presentation/ai/**', 'K/di/AiModule.kt',
+      'K/presentation/chat/ReplySuggestion*', 'K/presentation/chat/MessageTemplatesBottomSheet.kt',
+      'K/domain/review/**', 'K/presentation/review/**',
+      'app/src/main/res/values*/ai_strings.xml', 'app/src/main/res/values*/month_review_strings.xml'],
+  },
+  {
     sections: ['3.6', '4.2'],
     why: 'strings, locales or the language picker',
     paths: ['app/src/main/res/values*/**', 'app/src/main/res/xml/locales_config.xml',

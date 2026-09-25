@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="month_review_title">Měsíc v číslech</string>
+    <string name="month_review_settings_description">Dny u každého z rodičů, předávání, výměny, události a výdaje po měsících</string>
+    <string name="month_review_previous">Předchozí měsíc</string>
+    <string name="month_review_next">Další měsíc</string>
+
+    <string name="month_review_group_summary">Shrnutí</string>
+    <string name="month_review_summarize">Shrnout tento měsíc</string>
+    <string name="month_review_summarize_subtitle">Pár vět o číslech níže, napsaných AI</string>
+    <string name="month_review_summarizing">Píšu shrnutí…</string>
+    <string name="month_review_summary_label">Napsala AI podle čísel níže. Porovnejte to s nimi.</string>
+
+    <string name="month_review_group_schedule">Rozvrh</string>
+    <string name="month_review_no_schedule">Rozvrh péče není nastaven</string>
+    <plurals name="month_review_days">
+        <item quantity="one">%1$d den</item>
+        <item quantity="few">%1$d dny</item>
+        <item quantity="many">%1$d dne</item>
+        <item quantity="other">%1$d dní</item>
+    </plurals>
+    <string name="month_review_days_without_schedule">Dny bez rozvrhu</string>
+    <string name="month_review_handovers">Předávání</string>
+    <string name="month_review_special_days">Svátky, školní prázdniny a narozeniny</string>
+    <string name="month_review_parent_days">%1$s: %2$s</string>
+
+    <string name="month_review_group_activity">Výměny a události</string>
+    <string name="month_review_swaps_offered">Dny nabídnuté k výměně</string>
+    <string name="month_review_swaps_agreed">Vyměněné dny</string>
+    <string name="month_review_events">Společné události</string>
+
+    <string name="month_review_group_money">Výdaje</string>
+    <string name="month_review_no_expenses">Tento měsíc žádné výdaje</string>
+    <string name="month_review_total">Celkem v %1$s</string>
+    <string name="month_review_paid_by">%1$s: zaplaceno %2$s</string>
+    <string name="month_review_to_even_out">K vyrovnání: %1$s od %2$s pro %3$s</string>
+    <string name="month_review_even">Vyrovnáno</string>
+
+    <string name="month_review_note">Počítáno z toho, co má tento telefon: rozvrh tak, jak ho ukazuje kalendář, včetně dohodnutých výměn; události, které vidíte oba; a výdaje zapsané za tento měsíc.</string>
+</resources>

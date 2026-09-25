@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ai_reply_suggest_title">Запропонувати відповідь</string>
+    <string name="ai_reply_suggest_subtitle">Чернетка від ШІ за цим листуванням — відредагуйте її перед надсиланням</string>
+    <string name="ai_reply_suggest_working">Пишу чернетку…</string>
+
+    <string name="ai_consent_dialog_title">Чернетки й підсумки від ШІ</string>
+    <string name="ai_consent_dialog_message">Щоб запропонувати відповідь, CoPlanly надсилає останні 20 повідомлень листування, зокрема повідомлення другого з батьків, і те, що ви вже набрали. Для підсумку місяця — цифри за цей місяць та імена обох батьків. Дані йдуть до Google Cloud в ЄС, де текст пише модель ШІ (Claude від Anthropic). Щойно текст написано, там нічого не зберігається.\n\nЧернетка лише вставляється в поле повідомлення: другому з батьків нічого не надійде, доки ви самі не надішлете. ШІ може помилятися, тож спершу прочитайте текст. Вимкнути це можна будь-коли в Налаштуваннях → Застосунок.</string>
+    <string name="ai_consent_agree">Я погоджуюся</string>
+    <string name="ai_consent_not_saved">Не вдалося зберегти вашу відповідь. Перевірте зʼєднання та спробуйте ще раз.</string>
+
+    <string name="ai_error_disabled">Пропозиції зараз недоступні.</string>
+    <string name="ai_error_rate_limited">Забагато запитів за короткий час. Спробуйте трохи пізніше.</string>
+    <string name="ai_error_unavailable">Сервіс недоступний. Перевірте зʼєднання та спробуйте ще раз.</string>
+    <string name="ai_error_failed">Щось пішло не так. Спробуйте ще раз.</string>
+    <string name="ai_error_invalid_request">Сервіс не зміг обробити цей запит. Оновіть застосунок і спробуйте ще раз.</string>
+    <string name="ai_error_empty_thread">У цьому листуванні ще немає повідомлень, на які можна відповісти.</string>
+    <string name="ai_error_not_participant">Відповідь можна запропонувати лише у вашому власному листуванні.</string>
+    <string name="ai_error_pairing_not_live">Це листування більше не повʼязане з другим із батьків, тож запропонувати відповідь не можна.</string>
+
+    <string name="ai_consent_settings_title">Чернетки й підсумки від ШІ</string>
+    <string name="ai_consent_settings_given">Увімкнено %1$s</string>
+    <string name="ai_consent_settings_given_now">Увімкнено</string>
+    <string name="ai_consent_settings_not_given">Вимкнено. Ми спитаємо, коли ви вперше скористаєтеся пропозицією.</string>
+    <string name="ai_consent_settings_withdraw">Вимкнути</string>
+    <string name="ai_consent_withdraw_title">Вимкнути чернетки й підсумки від ШІ?</string>
+    <string name="ai_consent_withdraw_message">Доки ви знову не погодитеся, для чернеток і підсумків більше нічого не надсилається. Чернетка, яка вже є в полі повідомлення, там і залишиться.</string>
+    <string name="ai_consent_withdraw_confirm">Вимкнути</string>
+    <string name="ai_consent_withdrawn">Чернетки й підсумки від ШІ вимкнено</string>
+    <string name="ai_consent_withdraw_failed">Не вдалося вимкнути. Перевірте зʼєднання та спробуйте ще раз.</string>
+</resources>

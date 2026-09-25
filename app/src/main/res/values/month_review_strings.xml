@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Settings → Family → Month in review: a month in figures, and an optional AI summary -->
+    <string name="month_review_title">Month in review</string>
+    <string name="month_review_settings_description">Days with each parent, handovers, swaps, events and expenses, month by month</string>
+    <string name="month_review_previous">Previous month</string>
+    <string name="month_review_next">Next month</string>
+
+    <string name="month_review_group_summary">Summary</string>
+    <string name="month_review_summarize">Summarise this month</string>
+    <string name="month_review_summarize_subtitle">A few AI-written sentences about the figures below</string>
+    <string name="month_review_summarizing">Writing a summary…</string>
+    <string name="month_review_summary_label">Written by AI from the figures below. Check it against them.</string>
+
+    <string name="month_review_group_schedule">Schedule</string>
+    <string name="month_review_no_schedule">No custody schedule set up</string>
+    <plurals name="month_review_days">
+        <item quantity="one">%1$d day</item>
+        <item quantity="other">%1$d days</item>
+    </plurals>
+    <string name="month_review_days_without_schedule">Days with no schedule</string>
+    <string name="month_review_handovers">Handovers</string>
+    <string name="month_review_special_days">Holidays, school vacation and birthdays</string>
+    <string name="month_review_parent_days">%1$s: %2$s</string>
+
+    <string name="month_review_group_activity">Swaps and events</string>
+    <string name="month_review_swaps_offered">Days offered to swap</string>
+    <string name="month_review_swaps_agreed">Days swapped</string>
+    <string name="month_review_events">Shared events</string>
+
+    <string name="month_review_group_money">Expenses</string>
+    <string name="month_review_no_expenses">No expenses this month</string>
+    <string name="month_review_total">Total in %1$s</string>
+    <string name="month_review_paid_by">%1$s paid %2$s</string>
+    <string name="month_review_to_even_out">To even out: %1$s from %2$s to %3$s</string>
+    <string name="month_review_even">Even</string>
+
+    <string name="month_review_note">Counted from what this phone holds: the schedule as the calendar shows it, agreed swaps included; events both of you can see; and the expenses recorded for the month.</string>
+</resources>
