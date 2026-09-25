@@ -647,8 +647,9 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   request), `UiTourDriver` walks the app's own navigation by string resource, and `UiTourCamera`
   saves `UiAutomation.takeScreenshot()` PNGs plus a `manifest.json` in which a screen it could not
   reach is **skipped with its reason, never a failure**. `tools/ui-tour/run-ui-tour.sh` runs them
-  with `am instrument` (not Gradle, which uninstalls the app and its files) four times on an API
-  30 Pixel 6 emulator — `light-en-100`, `dark-en-100`, `light-ru-130`, the device's font scale set
+  with `am instrument` (not Gradle, which uninstalls the app and its files) once per variant on an API
+  30 Pixel 6 emulator (a `variants:` line in `.github/ui-tour-request` replaces the default four,
+  e.g. every language for a translation review) — `light-en-100`, `dark-en-100`, `light-ru-130`, the device's font scale set
   between runs, and `light-en-100-wide` on a 1280 × 800 dp display (`wm size`/`wm density`, a
   tablet held sideways: the rail and the detail screens' width cap) — and `tools/ui-tour/gallery.js`
   writes the side-by-side `index.html`. The workflow
