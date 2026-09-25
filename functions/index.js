@@ -17,6 +17,21 @@ const admin = require('firebase-admin');
 const {FieldValue, Timestamp} = require('firebase-admin/firestore');
 const exportReceipts = require('./export-receipts');
 
+/**
+ * Where every function here runs. The European Union, because the payloads are a family's own —
+ * chat text on its way to a push, a child's medical profile changing, an account being deleted —
+ * and keeping them inside the EEA means no transfer to a third country is needed to process them
+ * (GDPR Chapter V; `docs/legal/LEGAL-REVIEW-2026-09.md` L-3). Frankfurt, as the nearest region to
+ * the Czech families the app is written for. 1st-generation triggers are not tied to the
+ * Firestore database's location, so this holds whatever that is.
+ *
+ * The app (`FirebaseModule.FUNCTIONS_REGION`), `web/verify/`, the e2e smoke and the web tests
+ * name the same region; change them together.
+ */
+const FUNCTIONS_REGION = 'europe-west3';
+const regional = functions.region(FUNCTIONS_REGION);
+
+
 // Инициализация Firebase Admin SDK
 admin.initializeApp();
 
@@ -96,7 +111,7 @@ function buildFcmMessage(token, data) {
 
 exports.buildFcmMessage = buildFcmMessage;
 
-exports.sendNotification = functions.firestore
+exports.sendNotification = regional.firestore
     .document('notification_queue/{notificationId}')
     .onCreate(async (snap, context) => {
       const notificationId = context.params.notificationId;
@@ -178,7 +193,7 @@ exports.sendNotification = functions.firestore
  * Запускается каждый день в 2:00 по UTC.
  * Удаляет уведомления старше 30 дней.
  */
-exports.cleanupOldNotifications = functions.pubsub
+exports.cleanupOldNotifications = regional.pubsub
     .schedule('0 2 * * *')
     .timeZone('UTC')
     .onRun(async (context) => {
@@ -235,7 +250,7 @@ exports.cleanupOldNotifications = functions.pubsub
  * Cloud Function для отправки уведомления о новом событии.
  * Триггерится при создании нового события в коллекции events.
  */
-exports.onEventCreated = functions.firestore
+exports.onEventCreated = regional.firestore
     .document('events/{eventId}')
     .onCreate(async (snap, context) => {
       const eventData = snap.data();
@@ -303,7 +318,7 @@ exports.recordServerRevisionImpl = eventRevisions.recordServerRevisionImpl;
  * Never throws: a revision that could not be written is logged, and the event write it describes
  * has already landed — failing here would only make Functions retry into the same error.
  */
-exports.recordServerEventRevision = functions.firestore
+exports.recordServerEventRevision = regional.firestore
     .document('events/{eventId}')
     .onWrite(async (change, context) => {
       const eventId = context.params.eventId;
@@ -327,7 +342,7 @@ exports.recordServerEventRevision = functions.firestore
  * Cloud Function для отправки уведомления об обновлении информации о ребенке.
  * Триггерится при обновлении документа в коллекции child_info.
  */
-exports.onChildInfoUpdated = functions.firestore
+exports.onChildInfoUpdated = regional.firestore
     .document('child_info/{childInfoId}')
     .onUpdate(async (change, context) => {
       const newData = change.after.data();
@@ -603,7 +618,7 @@ exports.acceptPairingInvitationImpl = acceptPairingInvitationImpl;
  * @param {{code?: string, invitationId?: string}} data Exactly one identifier.
  * @return {Promise<{partnerId: string, role: string}>} See [acceptPairingInvitationImpl].
  */
-exports.acceptPairingInvitation = functions.https.onCall(async (data, context) => {
+exports.acceptPairingInvitation = regional.https.onCall(async (data, context) => {
   if (!context.auth) {
     throw new functions.https.HttpsError('unauthenticated', 'Sign in first');
   }
@@ -841,7 +856,7 @@ exports.accepterPhoto = accepterPhoto;
  * @return {Promise<{childInfoId: string, expiresAtMillis: number}>} See
  *   [acceptGuestInvitationImpl].
  */
-exports.acceptGuestInvitation = functions.https.onCall(async (data, context) => {
+exports.acceptGuestInvitation = regional.https.onCall(async (data, context) => {
   if (!context.auth) {
     throw new functions.https.HttpsError('unauthenticated', 'Sign in first');
   }
@@ -1023,7 +1038,7 @@ exports.acceptCalendarFriendInvitationImpl = acceptCalendarFriendInvitationImpl;
  * @return {Promise<{familyParents: !Array<string>, expiresAtMillis: number}>} See
  *   [acceptCalendarFriendInvitationImpl].
  */
-exports.acceptCalendarFriendInvitation = functions.https.onCall(async (data, context) => {
+exports.acceptCalendarFriendInvitation = regional.https.onCall(async (data, context) => {
   if (!context.auth) {
     throw new functions.https.HttpsError('unauthenticated', 'Sign in first');
   }
@@ -1253,7 +1268,7 @@ exports.acceptProfessionalInvitationImpl = acceptProfessionalInvitationImpl;
  * @param {{code?: string, invitationId?: string}} data Exactly one identifier.
  * @return {Promise<Object>} See [acceptProfessionalInvitationImpl].
  */
-exports.acceptProfessionalInvitation = functions.https.onCall(async (data, context) => {
+exports.acceptProfessionalInvitation = regional.https.onCall(async (data, context) => {
   if (!context.auth) {
     throw new functions.https.HttpsError('unauthenticated', 'Sign in first');
   }
@@ -1383,7 +1398,7 @@ exports.sweepExpiredGuestsImpl = sweepExpiredGuestsImpl;
  * ends — this is cleanup, not enforcement. The gap between the two is the only window in
  * which a swept guest still appears in a parent's list, and it is bounded by a day.
  */
-exports.sweepExpiredGuests = functions.pubsub
+exports.sweepExpiredGuests = regional.pubsub
     .schedule('0 3 * * *')
     .timeZone('UTC')
     .onRun(async () => {
@@ -1477,7 +1492,7 @@ exports.sweepLapsedByExpiry = sweepLapsedByExpiry;
  * as the others are. Daily for the reason the guest sweep is: access already ended at the expiry,
  * so the only thing a day's delay costs is a row lingering in a list.
  */
-exports.sweepLapsedCalendarFriends = functions.pubsub
+exports.sweepLapsedCalendarFriends = regional.pubsub
     .schedule('0 5 * * *')
     .timeZone('UTC')
     .onRun(async () => {
@@ -1513,7 +1528,7 @@ exports.sweepLapsedProfessionalGrantsImpl = sweepLapsedProfessionalGrantsImpl;
  * Daily removal of lapsed professional grants, at 06:00 UTC — an hour after the friend sweep, to
  * keep the scheduled jobs an hour apart as the others are.
  */
-exports.sweepLapsedProfessionalGrants = functions.pubsub
+exports.sweepLapsedProfessionalGrants = regional.pubsub
     .schedule('0 6 * * *')
     .timeZone('UTC')
     .onRun(async () => {
@@ -1647,7 +1662,7 @@ exports.sweepDeletedDocumentsImpl = sweepDeletedDocumentsImpl;
  * A tombstone that outlives its window by a day is a document; a tombstone swept a day early
  * is a deletion that was never delivered.
  */
-exports.sweepDeletedDocuments = functions.pubsub
+exports.sweepDeletedDocuments = regional.pubsub
     .schedule('0 4 * * *')
     .timeZone('UTC')
     .onRun(async () => {
@@ -2027,7 +2042,7 @@ async function unpairCoParentImpl(db, callerUid, requestedPartnerId) {
 
 exports.unpairCoParentImpl = unpairCoParentImpl;
 
-exports.unpairCoParent = functions.https.onCall(async (data, context) => {
+exports.unpairCoParent = regional.https.onCall(async (data, context) => {
   if (!context.auth) {
     throw new functions.https.HttpsError('unauthenticated', 'Sign in first');
   }
@@ -2909,7 +2924,7 @@ exports.stampFamilyOnCreateImpl = stampFamilyOnCreateImpl;
  * Best-effort: a failure is logged and not retried (1st-gen triggers do not retry by default), and
  * `backfillRecordFamilyIds` repairs anything it left.
  */
-exports.onFamilyCreated = functions.runWith({timeoutSeconds: 540}).firestore
+exports.onFamilyCreated = regional.runWith({timeoutSeconds: 540}).firestore
     .document('families/{familyId}')
     .onCreate(async (snap, context) => {
       try {
@@ -2993,7 +3008,7 @@ exports.backfillCalendarFriendFamilyIds = backfillCalendarFriendFamilyIds;
  *   number, missingAccount: number, unpaired: number, ambiguous: number,
  *   priorRelationship: number}}>} See [backfillRecordFamilyIdsImpl].
  */
-exports.backfillRecordFamilyIds = functions.runWith({timeoutSeconds: 540}).https.onCall(
+exports.backfillRecordFamilyIds = regional.runWith({timeoutSeconds: 540}).https.onCall(
     async (data, context) => {
       if (!isBackfillOperator(context)) {
         throw new functions.https.HttpsError(
@@ -3018,7 +3033,7 @@ exports.backfillRecordFamilyIds = functions.runWith({timeoutSeconds: 540}).https
  *   failed: number, sameSlot: number, skippedReasons: {missingAccount: number,
  *   notMutual: number, alreadyComplete: number}}>} See [backfillFamilyDocumentsImpl].
  */
-exports.backfillFamilyDocuments = functions.runWith({timeoutSeconds: 540}).https.onCall(
+exports.backfillFamilyDocuments = regional.runWith({timeoutSeconds: 540}).https.onCall(
     async (data, context) => {
       if (!isBackfillOperator(context)) {
         throw new functions.https.HttpsError(
@@ -3058,7 +3073,7 @@ exports.backfillFamilyDocuments = functions.runWith({timeoutSeconds: 540}).https
  *   skippedReasons: {noAccepter: number, missingAccount: number, notPaired: number,
  *   alreadySeparated: number}}>} See [backfillParentSlotsImpl].
  */
-exports.backfillParentSlots = functions.runWith({timeoutSeconds: 540}).https.onCall(
+exports.backfillParentSlots = regional.runWith({timeoutSeconds: 540}).https.onCall(
     async (data, context) => {
       if (!isBackfillOperator(context)) {
         throw new functions.https.HttpsError(
@@ -3202,7 +3217,7 @@ exports.notifyOfChatMessage = notifyOfChatMessage;
  * looking at the thread as it arrives, and a push would be noise. See
  * [notifyOfChatMessage] for the suppression rule and the no-reader guards.
  */
-exports.onChatMessageCreated = functions.firestore
+exports.onChatMessageCreated = regional.firestore
     .document('messages/{messageId}')
     .onCreate(async (snap) => {
       await notifyOfChatMessage(admin.firestore(), snap.data());
@@ -3636,7 +3651,7 @@ exports.deleteAccountDataImpl = deleteAccountDataImpl;
  *
  * @return {Promise<!Object>} What was removed, for the client to log or show.
  */
-exports.deleteAccount = functions.runWith({timeoutSeconds: 540}).https.onCall(
+exports.deleteAccount = regional.runWith({timeoutSeconds: 540}).https.onCall(
     async (data, context) => {
       if (!context.auth) {
         throw new functions.https.HttpsError('unauthenticated', 'Sign in first');
@@ -3878,7 +3893,7 @@ function requireGoogleOAuthConfig() {
 }
 
 /** Redeems an authorization code. See [exchangeGoogleAuthCodeImpl]. */
-exports.exchangeGoogleAuthCode = functions.https.onCall(async (data, context) => {
+exports.exchangeGoogleAuthCode = regional.https.onCall(async (data, context) => {
   if (!context.auth) {
     throw new functions.https.HttpsError('unauthenticated', 'Sign in first');
   }
@@ -3892,7 +3907,7 @@ exports.exchangeGoogleAuthCode = functions.https.onCall(async (data, context) =>
 });
 
 /** Refreshes an access token. See [refreshGoogleAccessTokenImpl]. */
-exports.refreshGoogleAccessToken = functions.https.onCall(async (data, context) => {
+exports.refreshGoogleAccessToken = regional.https.onCall(async (data, context) => {
   if (!context.auth) {
     throw new functions.https.HttpsError('unauthenticated', 'Sign in first');
   }
@@ -3943,7 +3958,7 @@ function calendarFeedBaseUrl() {
       projectId = '';
     }
   }
-  return `https://us-central1-${projectId}.cloudfunctions.net/calendarFeed`;
+  return `https://${FUNCTIONS_REGION}-${projectId}.cloudfunctions.net/calendarFeed`;
 }
 
 exports.calendarFeedBaseUrl = calendarFeedBaseUrl;
@@ -4214,7 +4229,7 @@ const calendarFeedLimiter = calendarFeed.rateLimiter(calendarFeed.RATE_LIMIT, ca
  * `GET /calendarFeed/<token>.ics` — the subscription itself. No sign-in: the token is the
  * authorisation, and it is never logged.
  */
-exports.calendarFeed = functions.https.onRequest(async (req, res) => {
+exports.calendarFeed = regional.https.onRequest(async (req, res) => {
   res.set('X-Content-Type-Options', 'nosniff');
   res.set('Referrer-Policy', 'no-referrer');
   if (req.method !== 'GET' && req.method !== 'HEAD') {
@@ -4249,7 +4264,7 @@ exports.calendarFeed = functions.https.onRequest(async (req, res) => {
 });
 
 /** Creates a feed link. See [createCalendarFeedImpl]. */
-exports.createCalendarFeed = functions.https.onCall(async (data, context) => {
+exports.createCalendarFeed = regional.https.onCall(async (data, context) => {
   if (!context.auth) {
     throw new functions.https.HttpsError('unauthenticated', 'Sign in first');
   }
@@ -4262,7 +4277,7 @@ exports.createCalendarFeed = functions.https.onCall(async (data, context) => {
 });
 
 /** Lists the caller's feed links. See [listCalendarFeedsImpl]. */
-exports.listCalendarFeeds = functions.https.onCall(async (data, context) => {
+exports.listCalendarFeeds = regional.https.onCall(async (data, context) => {
   if (!context.auth) {
     throw new functions.https.HttpsError('unauthenticated', 'Sign in first');
   }
@@ -4270,7 +4285,7 @@ exports.listCalendarFeeds = functions.https.onCall(async (data, context) => {
 });
 
 /** Revokes one of the caller's feed links. See [revokeCalendarFeedImpl]. */
-exports.revokeCalendarFeed = functions.https.onCall(async (data, context) => {
+exports.revokeCalendarFeed = regional.https.onCall(async (data, context) => {
   if (!context.auth) {
     throw new functions.https.HttpsError('unauthenticated', 'Sign in first');
   }
@@ -4278,7 +4293,7 @@ exports.revokeCalendarFeed = functions.https.onCall(async (data, context) => {
 });
 
 /** Deletes idle links daily, after the other sweeps. See [sweepIdleCalendarFeedsImpl]. */
-exports.sweepIdleCalendarFeeds = functions.pubsub
+exports.sweepIdleCalendarFeeds = regional.pubsub
     .schedule('30 4 * * *')
     .timeZone('UTC')
     .onRun(async () => {
@@ -4321,7 +4336,7 @@ async function asCallable(run) {
  * Mints the record id an export prints on its face, before the file is rendered. Signed-in
  * parents only. See `export-receipts.js` for why the id comes first.
  */
-exports.reserveExportRecordId = functions
+exports.reserveExportRecordId = regional
     .runWith({maxInstances: exportReceipts.MAX_INSTANCES})
     .https.onCall(async (data, context) => {
       if (!context.auth) {
@@ -4339,7 +4354,7 @@ exports.reserveExportRecordId = functions
  * Registers the SHA-256 of a rendered export under the id it prints. Create-once; the caller
  * must be the parent who reserved the id.
  */
-exports.registerExportReceipt = functions.https.onCall(async (data, context) => {
+exports.registerExportReceipt = regional.https.onCall(async (data, context) => {
   if (!context.auth) {
     throw new functions.https.HttpsError('unauthenticated', 'Sign in first');
   }
@@ -4352,7 +4367,7 @@ exports.registerExportReceipt = functions.https.onCall(async (data, context) => 
  * **Callable without signing in** — a lawyer has no account — and therefore rate-limited per
  * address and deployed with an instance cap, and answering with nothing that identifies anybody.
  */
-exports.verifyExport = functions
+exports.verifyExport = regional
     .runWith({maxInstances: exportReceipts.MAX_INSTANCES})
     .https.onCall(async (data, context) => {
       if (!verifyLimiter.allow(exportReceipts.clientKey(context), Date.now())) {

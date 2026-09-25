@@ -82,7 +82,9 @@ object FakeFirebaseModule {
     @Provides
     @Singleton
     fun provideFirebaseFunctions(): FirebaseFunctions =
-        EmulatorEnvironment.appUnderTest?.let { FirebaseFunctions.getInstance(it) } ?: mockk(relaxed = true)
+        EmulatorEnvironment.appUnderTest?.let {
+            FirebaseFunctions.getInstance(it, FirebaseModule.FUNCTIONS_REGION)
+        } ?: mockk(relaxed = true)
 
     /**
      * The real service, not a mock: it encodes a bitmap with ZXing and touches no Firebase

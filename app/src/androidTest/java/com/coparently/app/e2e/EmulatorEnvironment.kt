@@ -3,6 +3,7 @@ package com.coparently.app.e2e
 import android.content.Context
 import android.util.Log
 import androidx.test.platform.app.InstrumentationRegistry
+import com.coparently.app.di.FirebaseModule
 import com.google.firebase.FirebaseApp
 import com.google.firebase.FirebaseOptions
 import com.google.firebase.auth.FirebaseAuth
@@ -126,7 +127,8 @@ object EmulatorEnvironment {
                 .setLocalCacheSettings(MemoryCacheSettings.newBuilder().build())
                 .build()
         }
-        FirebaseFunctions.getInstance(app).useEmulator(host, FUNCTIONS_PORT)
+        FirebaseFunctions.getInstance(app, FirebaseModule.FUNCTIONS_REGION)
+            .useEmulator(host, FUNCTIONS_PORT)
         FirebaseStorage.getInstance(app).useEmulator(host, STORAGE_PORT)
         return app
     }
