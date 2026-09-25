@@ -3,10 +3,14 @@ package com.coparently.app.e2e
 import android.graphics.Bitmap
 import android.net.Uri
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.coparently.app.data.chat.DepartedThreadSource
 import com.coparently.app.data.remote.firebase.FirebaseImageStorage
 import com.coparently.app.data.remote.firebase.FirestoreChildInfoDataSource
+import com.coparently.app.data.remote.firebase.FirestoreMessageDataSource
 import com.coparently.app.data.session.AccountDeletionService
+import com.coparently.app.di.FirebaseModule
 import com.coparently.app.domain.chat.ConversationKey
+import com.coparently.app.domain.chat.DepartedThread
 import com.coparently.app.domain.custody.SharedCustodyRead
 import com.coparently.app.domain.export.ExportFingerprint
 import com.coparently.app.domain.export.ExportFormat
@@ -18,6 +22,7 @@ import com.coparently.app.domain.model.ChildInfo
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.model.Expense
 import com.coparently.app.domain.model.ExpenseCategory
+import com.coparently.app.domain.model.Message
 import com.coparently.app.domain.model.PairingState
 import com.coparently.app.domain.parentingplan.ParentingPlanEntry
 import com.coparently.app.domain.professionals.ProfessionalGrant
@@ -49,8 +54,10 @@ import org.junit.runner.RunWith
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.ZoneOffset
 import java.util.UUID
 
 /**
@@ -361,7 +368,7 @@ class TwoParentAccessTest : TwoParentTest() {
 
         EmulatorEnvironment.step("Bob deletes his account")
         AccountDeletionService(
-            functions = FirebaseFunctions.getInstance(bob.app),
+            functions = FirebaseFunctions.getInstance(bob.app, FirebaseModule.FUNCTIONS_REGION),
             database = bob.database,
             encryptedPreferences = bob.encryptedPreferences,
             fcmService = bob.fcmService
@@ -371,6 +378,81 @@ class TwoParentAccessTest : TwoParentTest() {
         assertFalse("Bob's event survived", EmulatorEnvironment.documentExists("events/${event.id}"))
         assertNull("Bob's phone kept his profile row", bob.database.userDao().getUserById(bobUid))
         awaitNotPaired(alice)
+    }
+
+    /**
+     * GDPR review, September 2026: the thread is Alice's record too. Bob's deletion keeps it for
+     * thirty days — readable, exportable, closed to new messages — and tells Alice once, with the
+     * deadline, instead of the generic `pairing_removed`.
+     */
+    @Test
+    fun deletingBobsAccountKeepsTheThreadForAliceToExportAndTellsHerOnce() = runBlocking<Unit> {
+        val bobUid = bob.uid
+        val conversationId = ConversationKey.of(alice.uid, bobUid)
+        bob.messageRepository.ensureConversation(bobUid, alice.uid, alice.name)
+        val message = Message(
+            id = UUID.randomUUID().toString(),
+            conversationId = conversationId,
+            senderId = bobUid,
+            senderName = bob.name,
+            content = "The school trip is on Friday"
+        )
+        bob.messageRepository.sendMessage(message)
+        eventually("Bob's message on the server") {
+            alice.firestore.collection("messages").document(message.id).get().await().takeIf { it.exists() }
+        }
+
+        EmulatorEnvironment.step("Bob deletes his account")
+        val deletedAt = System.currentTimeMillis()
+        AccountDeletionService(
+            functions = FirebaseFunctions.getInstance(bob.app, FirebaseModule.FUNCTIONS_REGION),
+            database = bob.database,
+            encryptedPreferences = bob.encryptedPreferences,
+            fcmService = bob.fcmService
+        ).deleteAccount().getOrThrow()
+        awaitNotPaired(alice)
+
+        // The thread, marked by the server, still readable by Alice with Bob's words in it.
+        val thread = alice.firestore.collection("conversations").document(conversationId).get().await()
+        assertTrue("the thread went with Bob's account", thread.exists())
+        val retainedUntil = requireNotNull(thread.getLong(DepartedThread.RETAINED_UNTIL)) { "no deadline" }
+        assertTrue("the deadline is not about thirty days out", retainedUntil >= deletedAt + RETENTION_MS - SLACK_MS)
+        assertTrue("the deadline is past thirty days", retainedUntil <= System.currentTimeMillis() + RETENTION_MS)
+        assertEquals(bobUid, thread.getString(DepartedThread.DEPARTED_UID))
+        assertEquals(bob.name, thread.getString(DepartedThread.DEPARTED_NAME))
+        val kept = alice.firestore.collection("messages")
+            .whereEqualTo("conversationId", conversationId).get().await()
+        assertTrue("Bob's message went with his account", kept.documents.any { it.id == message.id })
+
+        // Found the way the chat tab and the export find it, with no pairing left to derive it from.
+        val found = DepartedThreadSource(alice.userRepository, FirestoreMessageDataSource(alice.firestore))
+            .current(alice.uid)
+        assertEquals(listOf(DepartedThread(conversationId, bobUid, bob.name, retainedUntil)), found)
+
+        // Closed to new messages.
+        assertRefused("Alice writing into Bob's kept thread") {
+            alice.firestore.collection("messages").document(UUID.randomUUID().toString()).set(
+                mapOf(
+                    "conversationId" to conversationId,
+                    "senderId" to alice.uid,
+                    "senderName" to alice.name,
+                    "content" to "Are you there?",
+                    "timestamp" to System.currentTimeMillis()
+                )
+            ).await()
+        }
+
+        // One push, the specific one, read back from the queue addressed to Alice.
+        val push = EmulatorEnvironment.awaitQueuedPush(alice.uid, COPARENT_ACCOUNT_DELETED)
+        assertEquals(bob.name, push["actorName"])
+        assertEquals(conversationId, push["conversationId"])
+        assertEquals(retainedUntil.toString(), push["retainedUntilMillis"])
+        assertEquals(
+            Instant.ofEpochMilli(retainedUntil).atZone(ZoneOffset.UTC).toLocalDate().toString(),
+            push["date"]
+        )
+        val toAlice = alice.queuedFor(alice.uid).mapNotNull { (it["data"] as? Map<*, *>)?.get("type") }
+        assertFalse("Alice was also sent pairing_removed: $toAlice", PAIRING_REMOVED in toAlice)
     }
 
     // ---- The professional's reads, before and after the second consent ----------------------
@@ -564,13 +646,20 @@ class TwoParentAccessTest : TwoParentTest() {
 
         const val PROFESSIONAL_ACCESS_REQUESTED = "professional_access_requested"
         const val PAIRING_REMOVED = "pairing_removed"
+        const val COPARENT_ACCOUNT_DELETED = "coparent_account_deleted"
+
+        /** `DEPARTED_CHAT_RETENTION_DAYS` in `functions/index.js`. */
+        const val RETENTION_MS = 30L * 24 * 60 * 60 * 1000
+
+        /** Clock skew between this device and the Functions emulator the deadline check allows. */
+        const val SLACK_MS = 60_000L
 
         /** A schedule question (`PlanScheduleLink.SCHEDULE_QUESTIONS`), so the plan has a real id. */
         const val PLAN_QUESTION = "care_weekday"
         const val PLAN_ANSWER = "Alternate weeks, handover on Monday at school"
 
-        /** The region `onCall`/`onRequest` default to, and so the emulator's URL path. */
-        const val REGION = "us-central1"
+        /** The functions' region, and so the emulator's URL path. */
+        const val REGION = FirebaseModule.FUNCTIONS_REGION
         const val HTTP_OK = 200
         const val HTTP_BAD_REQUEST = 400
         const val HTTP_NOT_FOUND = 404

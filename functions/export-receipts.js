@@ -33,6 +33,9 @@
  * No client reads or writes the collection (`firestore.rules`): every path goes through the
  * callables here, which is what lets [verifyImpl] answer a lawyer with no account while
  * disclosing nothing but the receipt itself.
+ *
+ * A registered receipt is kept [RECEIPT_RETENTION_YEARS] from registration and a bare reservation
+ * [RESERVATION_RETENTION_DAYS]; [sweepReceiptsImpl] deletes them after that.
  */
 
 const crypto = require('crypto');
@@ -418,6 +421,117 @@ async function scrubReceipts(db, uid, familyIds) {
 }
 
 /**
+ * How long a registered receipt is kept, in years from its registration (`recordedAt`).
+ *
+ * GDPR's storage limitation (Art. 5(1)(e)) needs an end even for a record whose purpose is to be
+ * there when a court asks. The owner chose ten years to match the Czech objective limitation
+ * period, § 629(2) of the Civil Code (zákon č. 89/2012 Sb.): past it, a claim the file could be
+ * evidence for is time-barred whatever anyone knew, so the hash has nothing left to vouch for.
+ * Counted in calendar years, not in days, so a leap day never shortens it.
+ */
+const RECEIPT_RETENTION_YEARS = 10;
+
+/**
+ * How long a reservation that never received a hash is kept, from `reservedAt`.
+ *
+ * A reservation vouches for no file — [verifyImpl] answers "not found" for it — and [registerImpl]
+ * refuses a hash after [RESERVATION_TTL_MS] anyway, so it is dead an hour after it was made. Seven
+ * days rather than an hour only so that an operator looking into a failed export that week still
+ * finds its trace.
+ */
+const RESERVATION_RETENTION_DAYS = 7;
+
+/** How many receipts of each kind one run of the sweep deletes; the next run takes the rest. */
+const RECEIPT_SWEEP_LIMIT = 500;
+
+/** Firestore caps a batch at 500 writes; stay clear of the edge. */
+const RECEIPT_SWEEP_BATCH = 400;
+
+/**
+ * The instant [years] calendar years before [nowMillis], in UTC.
+ *
+ * @param {number} nowMillis Epoch millis.
+ * @param {number} years Whole years.
+ * @return {number} Epoch millis.
+ */
+function yearsBefore(nowMillis, years) {
+  const d = new Date(nowMillis);
+  d.setUTCFullYear(d.getUTCFullYear() - years);
+  return d.getTime();
+}
+
+/**
+ * Deletes every document [query] returns, in batches.
+ *
+ * @param {FirebaseFirestore.Firestore} db Firestore.
+ * @param {!Object} query The documents.
+ * @param {function(!Object): boolean} keep A last check per document; true leaves it alone.
+ * @return {Promise<number>} How many were deleted.
+ */
+async function deleteInBatches(db, query, keep) {
+  const snap = await query.get();
+  let batch = db.batch();
+  let pending = 0;
+  let deleted = 0;
+  for (const doc of snap.docs) {
+    if (keep(doc.data() || {})) continue;
+    batch.delete(db.collection(RECEIPTS).doc(doc.id));
+    pending++;
+    deleted++;
+    if (pending === RECEIPT_SWEEP_BATCH) {
+      await batch.commit();
+      batch = db.batch();
+      pending = 0;
+    }
+  }
+  if (pending > 0) await batch.commit();
+  return deleted;
+}
+
+/**
+ * The storage-limitation sweep over `export_receipts`: registered receipts past
+ * [RECEIPT_RETENTION_YEARS] from registration, and reservations past
+ * [RESERVATION_RETENTION_DAYS] that never received a hash.
+ *
+ * Two range queries, bounded by [RECEIPT_SWEEP_LIMIT] each and deleted in batches:
+ *
+ * - `recordedAt < now − 10 years`. Only a registered receipt carries `recordedAt`, so the range
+ *   alone selects them (a single-field index); the state is checked again per document.
+ * - `state == 'reserved'` and `reservedAt < now − 7 days` (a composite index in
+ *   `firestore.indexes.json`). A registered receipt also carries `reservedAt`, which is why the
+ *   state is part of the query and not a filter afterwards.
+ *
+ * Both limits are strict: a receipt exactly at its limit is kept one more day. A receipt with a
+ * time that is not a Firestore `Timestamp` is never matched by either range, so it is never
+ * deleted — deciding what it means is a person's call, as with the grant sweeps.
+ *
+ * After this a swept receipt answers "not found" from [verifyImpl], exactly as an unknown id does:
+ * the verifier learns nothing about whether a record ever existed, which is right for a receipt
+ * that has been erased.
+ *
+ * @param {FirebaseFirestore.Firestore} db Firestore.
+ * @param {number} nowMillis The instant to sweep at.
+ * @param {function(number): !Object} toTimestamp Millis to a Firestore `Timestamp`.
+ * @return {Promise<{registered: number, reservations: number}>} What was deleted.
+ */
+async function sweepReceiptsImpl(db, nowMillis, toTimestamp) {
+  const registeredBefore = toTimestamp(yearsBefore(nowMillis, RECEIPT_RETENTION_YEARS));
+  const reservedBefore = toTimestamp(nowMillis - RESERVATION_RETENTION_DAYS * 24 * 60 * 60 * 1000);
+  const registered = await deleteInBatches(db,
+      db.collection(RECEIPTS)
+          .where('recordedAt', '<', registeredBefore)
+          .limit(RECEIPT_SWEEP_LIMIT),
+      (receipt) => receipt.state !== 'registered');
+  const reservations = await deleteInBatches(db,
+      db.collection(RECEIPTS)
+          .where('state', '==', 'reserved')
+          .where('reservedAt', '<', reservedBefore)
+          .limit(RECEIPT_SWEEP_LIMIT),
+      (receipt) => receipt.state !== 'reserved');
+  return {registered, reservations};
+}
+
+/**
  * The caller's address for rate limiting, from the callable's raw request. Best-effort: behind
  * Google's front end `req.ip` is the client, and a missing value falls into one shared bucket
  * rather than an unlimited one.
@@ -452,5 +566,9 @@ module.exports = {
   registerImpl,
   verifyImpl,
   scrubReceipts,
+  RECEIPT_RETENTION_YEARS,
+  RESERVATION_RETENTION_DAYS,
+  yearsBefore,
+  sweepReceiptsImpl,
   clientKey,
 };

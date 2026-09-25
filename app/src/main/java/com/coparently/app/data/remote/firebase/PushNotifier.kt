@@ -15,6 +15,9 @@ import com.coparently.app.domain.chat.ChatUri
 import com.coparently.app.domain.pairing.PairingUri
 import com.coparently.app.utils.DAY_IN_SENTENCE
 import com.coparently.app.utils.isoDateText
+import com.coparently.app.utils.localizedDate
+import java.time.Instant
+import java.time.ZoneId
 
 /**
  * Turns a push's data into the notification a person sees — or into nothing.
@@ -68,9 +71,9 @@ class PushNotifier(private val context: Context) {
 
         val type = data[PushPayload.TYPE]
         val text = compose(type, data) ?: return null
-        // Only meaningful for chat_message (see notifyOfChatMessage in functions/index.js, which
-        // is the only producer that sets it); null for every other type, and tapIntent only
-        // reads it for that one branch.
+        // Only meaningful for chat_message and coparent_account_deleted (notifyOfChatMessage and
+        // deleteAccount in functions/index.js are the only producers that set it); null for every
+        // other type, and tapIntent only reads it for those two.
         val target = NotificationTarget(
             text = text,
             type = type,
@@ -119,6 +122,16 @@ class PushNotifier(private val context: Context) {
         return when (spec.args) {
             BodyArgs.ACTOR_AND_SUBJECT -> context.getString(spec.body, actor, data[PushPayload.SUBJECT].orEmpty())
             BodyArgs.ACTOR -> context.getString(spec.body, actor)
+            // The deadline is an instant; the day it falls on is this phone's (the banner in the
+            // thread says the same day). The UTC day in [PushPayload.DATE] only when it is unreadable.
+            BodyArgs.ACTOR_AND_DEADLINE -> {
+                val locale = context.resources.configuration.locales[0]
+                val day = data[PushPayload.RETAINED_UNTIL]?.toLongOrNull()
+                    ?.let { Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDate() }
+                    ?.format(localizedDate(DAY_IN_SENTENCE, locale))
+                    ?: isoDateText(data[PushPayload.DATE], DAY_IN_SENTENCE, locale)
+                context.getString(spec.body, actor, day)
+            }
             // The date travels as ISO text; the reader's language says it (D-18). An unreadable
             // one is shown as it came rather than dropped.
             BodyArgs.DATE -> context.getString(
@@ -150,7 +163,9 @@ class PushNotifier(private val context: Context) {
         val intent = when (target.type) {
             TYPE_PAIRING_ACCEPTED, TYPE_PAIRING_REMOVED ->
                 Intent(Intent.ACTION_VIEW, Uri.parse(PAIRING_DEEP_LINK)).setPackage(context.packageName)
-            TYPE_CHAT_MESSAGE ->
+            // A departed co-parent's notice opens the thread it is about: the banner there says
+            // the same thing and carries the export action.
+            TYPE_CHAT_MESSAGE, TYPE_COPARENT_ACCOUNT_DELETED ->
                 Intent(Intent.ACTION_VIEW, Uri.parse(ChatUri.build(target.conversationId)))
                     .setPackage(context.packageName)
             else -> context.packageManager.getLaunchIntentForPackage(context.packageName)?.also { launch ->
@@ -235,7 +250,8 @@ class PushNotifier(private val context: Context) {
      * A notification and where tapping it leads.
      *
      * @property conversationId The `data["conversationId"]` read off the message; only
-     *   meaningful (and only ever non-null) for [TYPE_CHAT_MESSAGE].
+     *   meaningful (and only ever non-null) for [TYPE_CHAT_MESSAGE] and
+     *   [TYPE_COPARENT_ACCOUNT_DELETED].
      * @property familyId The family the push belongs to ([PushPayload.FAMILY_ID]), or null for
      *   a payload from an older sender or one that names no family.
      */
@@ -247,7 +263,7 @@ class PushNotifier(private val context: Context) {
     )
 
     /** Which of the payload's names a body string takes, in order. */
-    internal enum class BodyArgs { ACTOR_AND_SUBJECT, ACTOR, DATE, DAY_COUNT, NONE }
+    internal enum class BodyArgs { ACTOR_AND_SUBJECT, ACTOR, ACTOR_AND_DEADLINE, DATE, DAY_COUNT, NONE }
 
     /**
      * A type's wording: the frame, and what fills it.
@@ -266,9 +282,9 @@ class PushNotifier(private val context: Context) {
         /** Log tag; `docs/DEVICE-CHECKLIST.md` §3.7 tells a tester to filter on it. */
         private const val TAG = "CoPlanlyMessaging"
 
-        // The three server-only types, aliased from `PushPayload` rather than re-declared.
-        // They were literals here and in the sending code, in the rules and in
-        // `functions/index.js`; one of those four drifting is a notification that silently
+        // The server-only types with a tap or a tray id of their own, aliased from `PushPayload`
+        // rather than re-declared. They were literals here and in the sending code, in the rules
+        // and in `functions/index.js`; one of those four drifting is a notification that silently
         // stops being recognised, which looks exactly like a push that was never sent.
 
         /** Queued by `acceptPairingInvitation` (`functions/index.js`) for the inviter. */
@@ -279,6 +295,9 @@ class PushNotifier(private val context: Context) {
 
         /** Queued by `onChatMessageCreated` (`functions/index.js`) for the message recipient. */
         private const val TYPE_CHAT_MESSAGE = PushPayload.CHAT_MESSAGE
+
+        /** Queued by `deleteAccount` (`functions/index.js`) for the parent who remains. */
+        private const val TYPE_COPARENT_ACCOUNT_DELETED = PushPayload.COPARENT_ACCOUNT_DELETED
 
         /**
          * Opens the pairing screen with no prefilled code — see
@@ -453,6 +472,11 @@ class PushNotifier(private val context: Context) {
                 R.string.push_professional_access_requested_title,
                 R.string.push_professional_access_requested_body,
                 BodyArgs.ACTOR
+            ),
+            PushPayload.COPARENT_ACCOUNT_DELETED to PushTextSpec(
+                R.string.push_coparent_account_deleted_title,
+                R.string.push_coparent_account_deleted_body,
+                BodyArgs.ACTOR_AND_DEADLINE
             )
         )
     }

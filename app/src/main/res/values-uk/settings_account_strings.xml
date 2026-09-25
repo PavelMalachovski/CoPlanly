@@ -48,7 +48,7 @@
     <string name="settings_account_delete">Видалити акаунт</string>
     <string name="settings_account_delete_description">Стерти цей акаунт і всі його дані</string>
     <string name="settings_account_delete_confirm_title">Видалити цей акаунт?</string>
-    <string name="settings_account_delete_confirm_message">З наших серверів і з цього телефона зникне все, що ви вносили: події, витрати, записи про дитину та все листування. У другого з батьків залишиться те, що створив він сам, а на його телефоні — копії, які вже були завантажені. Скасувати це буде неможливо.</string>
+    <string name="settings_account_delete_confirm_message">З наших серверів і з цього телефона зникне все, що ви вносили: події, витрати та записи про дитину. Листування залишиться у другого з батьків на 30 днів, щоб він міг його експортувати, а потім буде видалене; він отримає про це сповіщення. У другого з батьків залишиться те, що створив він сам, а на його телефоні — копії, які вже були завантажені. Скасувати це буде неможливо.</string>
     <string name="settings_account_delete_final_title">Видалити безповоротно?</string>
     <string name="settings_account_delete_final_message">Шляху назад немає: копій для відновлення ми не зберігаємо. Якщо ви хочете просто вийти на цьому пристрої, скористайтеся виходом з акаунта.</string>
     <string name="settings_account_delete_final_yes">Видалити безповоротно</string>

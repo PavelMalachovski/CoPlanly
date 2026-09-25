@@ -82,15 +82,15 @@
 
 <div class="draft" role="note">
   <p><strong>Draft.</strong> This page has not been reviewed by a lawyer and is not in force.
-    Placeholders still to be filled in: <code>{{COMPANY_ID}}</code>, <code>{{DATE}}</code>, <code>{{DPO_PARAGRAPH_IF_APPOINTED}}</code>, <code>{{FIRESTORE_REGION}}</code>, <code>{{LEGAL_ENTITY_NAME}}</code>, <code>{{PLACEHOLDER}}</code>, <code>{{PRIVACY_CONTACT_EMAIL}}</code>, <code>{{REGISTERED_ADDRESS}}</code>, <code>{{WEB_DELETION_URL}}</code>.</p>
+    Placeholders still to be filled in: <code>{{COMPANY_ID}}</code>, <code>{{DATE}}</code>, <code>{{FIRESTORE_REGION}}</code>, <code>{{LEGAL_ENTITY_NAME}}</code>, <code>{{PLACEHOLDER}}</code>, <code>{{PRIVACY_CONTACT_EMAIL}}</code>, <code>{{REGISTERED_ADDRESS}}</code>, <code>{{WEB_DELETION_URL}}</code>.</p>
 </div>
 
 <h1>CoPlanly — Privacy Policy</h1>
 <blockquote>
-<p><strong>DRAFT. Not yet reviewed by a lawyer, and not yet published.</strong></p>
-<p>Every <code>{{PLACEHOLDER}}</code> must be filled in. More importantly: this app processes <strong>a child&#39;s
-health data</strong>, which is special-category data under GDPR Art. 9, and no template survives
-that unread. Have a lawyer review it before it goes anywhere near a store listing.</p>
+<p><strong>DRAFT, not yet published.</strong> Reviewed against the GDPR, the Czech implementing act and the
+code in <code>LEGAL-REVIEW-2026-09.md</code> (September 2026), which also lists what blocks publication.
+It still needs the company&#39;s Czech counsel to sign it off — this app processes <strong>a child&#39;s
+health data</strong> (GDPR Art. 9) — and every <code>{{PLACEHOLDER}}</code> filled in.</p>
 <p>Written from the actual data model — the Firestore collections, the Storage buckets and the
 third parties the code really talks to — rather than from a template. If the code changes,
 this changes with it. See <code>docs/legal/DATA-SAFETY.md</code> for the same facts in the shape the
@@ -118,18 +118,16 @@ facts only the owner can supply; each is a <code>{{PLACEHOLDER}}</code> in the t
 <td>An address somebody actually reads — it is the only route for a person who has uninstalled the app</td>
 </tr>
 <tr>
-<td><code>{{DPO_PARAGRAPH_IF_APPOINTED}}</code></td>
-<td>Whether a Data Protection Officer is appointed. Large-scale processing of health data can make one mandatory (Art. 37(1)(c)); this is the lawyer&#39;s question. Delete the line if none is</td>
-</tr>
-<tr>
 <td><code>{{FIRESTORE_REGION}}</code></td>
-<td>The Firestore and Cloud Storage location of the production project, from the Firebase console (Firestore → Settings). The functions&#39; region is already stated: they run in <code>us-central1</code>, because <code>functions/index.js</code> names no other</td>
+<td>The Firestore and Cloud Storage location of the production project, from the Firebase console (Firestore → Settings). It must be an EU location — see <code>LEGAL-REVIEW-2026-09.md</code> L-3. The functions&#39; region is already stated (<code>europe-west3</code>)</td>
 </tr>
 <tr>
 <td><code>{{WEB_DELETION_URL}}</code></td>
 <td>Where <code>web/delete-account/</code> is hosted</td>
 </tr>
 </tbody></table></div>
+<p>The controller is a Czech <em>s.r.o.</em> (owner decision, September 2026). No DPO is appointed at
+launch; the reasoning is <code>LEGAL-REVIEW-2026-09.md</code> L-14. Every section below was reviewed there.</p>
 <p>Delete this whole box before publishing; <code>tools/wrap-legal-page.js</code> keeps a draft banner on
 the page until the last placeholder is gone.</p>
 </blockquote>
@@ -139,7 +137,8 @@ the page until the last placeholder is gone.</p>
 <p>CoPlanly (&quot;the app&quot;) is operated by {{LEGAL_ENTITY_NAME}}, {{REGISTERED_ADDRESS}}
 ({{COMPANY_ID}}). We are the <strong>data controller</strong> for the personal data described here.</p>
 <p>Contact for any privacy question, including the rights listed below: {{PRIVACY_CONTACT_EMAIL}}.</p>
-<p>{{DPO_PARAGRAPH_IF_APPOINTED}}</p>
+<p>We have not appointed a Data Protection Officer; the privacy contact above is read by a named
+person at the company, who handles every request.</p>
 <h2>What CoPlanly is for</h2>
 <p>CoPlanly is a shared calendar for parents raising a child in two homes. Two parents each hold
 an account, link them to one another, and share a custody schedule, events, expenses, records
@@ -151,12 +150,19 @@ Where something is <em>not</em> shared, we say so below.</p>
 <h3>Your account</h3>
 <ul>
 <li>Email address and display name; a profile photo if you sign in with Google.</li>
+<li>Optionally, your date of birth and phone number.</li>
 <li>An authentication identifier from Firebase Authentication.</li>
 <li>Which parent slot you occupy in your family, and who your linked co-parent is.</li>
+<li>Your country and, where it matters for holidays, your region.</li>
+<li>If you agreed to it, when you gave consent to entering health details about your child, and
+to which version of the wording (see below).</li>
 </ul>
+<p>We do <strong>not</strong> ask for or keep any health information about you, the parent. (Earlier test
+versions of the app had an optional medical section on a parent&#39;s own profile; it has been
+removed and what was entered in it deleted.)</p>
 <p><strong>Why:</strong> to give you an account, to show your co-parent who they are linked with, and to
 decide what each of you may read. <strong>Legal basis:</strong> performance of our contract with you
-(Art. 6(1)(b)).</p>
+(Art. 6(1)(b)). The consent record is kept to show that you gave consent (Art. 7(1)).</p>
 <h3>What you enter about your family</h3>
 <ul>
 <li><strong>Calendar events</strong> — titles, times, locations, notes, event types, and optional photos.
@@ -185,9 +191,21 @@ export can list the files a message carried by name and fingerprint (the files t
 never put into an export). Files are stored in Cloud Storage under your family, and only the two
 parents of that family can download them; we never create a public link to one.</p>
 <p><strong>Why:</strong> these are the contents of the service. <strong>Legal basis:</strong> performance of our contract
-with you (Art. 6(1)(b)). For the medical profile, which is health data under Art. 9, we rely
-on your <strong>explicit consent</strong> (Art. 9(2)(a)): the medical fields are optional, you choose
-whether to fill them, and you can delete them at any time. The app works without them.</p>
+with you (Art. 6(1)(b)).</p>
+<p><strong>Your child&#39;s health details</strong> are health data (Art. 9 GDPR). We process them only with your
+<strong>explicit consent</strong> (Art. 9(2)(a)), which you give as your child&#39;s parent. The first time you
+open a child&#39;s medical section, the app tells you what it is, who will see it (your co-parent,
+and any guest you let see that child&#39;s record) and that it is optional, and asks you to agree. We
+record when you agreed and to which wording; if the wording changes, we ask again. The app works
+fully without these details.</p>
+<p>You can <strong>withdraw your consent</strong> at any time in Settings. Withdrawing deletes the medical details
+of the children&#39;s records you created. Details your co-parent entered stay: they rest on your
+co-parent&#39;s own consent, and they can withdraw it themselves. Withdrawing does not affect what was
+lawful before (Art. 7(3)).</p>
+<p><strong>People named in records.</strong> When you record your child&#39;s doctor, school, a grandparent or an
+emergency contact, you give us information about someone who does not use CoPlanly. We use it
+only to show it to you and your co-parent. We do not contact these people, and we rely on this
+policy being public to inform them (Art. 14(5)(b)). Enter only what the two of you need.</p>
 <h3>Exports you make</h3>
 <p>You can export the record of what you and your co-parent wrote and recorded as a PDF or CSV
 file. <strong>The file is made on your phone and is not sent to us.</strong> When your phone can reach our
@@ -201,13 +219,18 @@ identifies your account. The verification page fingerprints the file in the chec
 browser and sends us only the fingerprint.</p>
 <p><strong>Why:</strong> so that a lawyer, a mediator or a court can check that an export you handed over has not
 been altered. <strong>Legal basis:</strong> performance of our contract with you (Art. 6(1)(b)) — verification
-is part of the export you asked for.</p>
+is part of the export you asked for. After your account is deleted, the receipt is kept without
+your account or family in it, on the basis of our and the other parent&#39;s legitimate interest in
+an export remaining verifiable (Art. 6(1)(f)); see &quot;How long we keep it&quot;.</p>
 <h3>Data about a child</h3>
 <p>A child does not hold an account and never signs in. What is recorded about them is entered by
 a parent, and only their parents — and anyone a parent explicitly grants access to — can read
-it. In the Czech Republic the digital-consent age is 15 (§ 7 of zákon č. 110/2019 Sb.); we do
-not offer accounts to anyone under 18, and we rely on the parent&#39;s own authority over their
-child&#39;s records rather than on the child&#39;s consent.</p>
+it. CoPlanly is for adults: accounts are for people aged 18 or over, and the sign-in screen says
+so. We rely on the parents&#39; authority to act for their child, not on the child&#39;s own consent.</p>
+<p><strong>The child&#39;s own rights.</strong> The information is about the child, so the rights below are the
+child&#39;s. While the child is a minor, their parents exercise them. A young person who wants to see
+or have deleted what was recorded about them — or an adult who was that child — can write to
+{{PRIVACY_CONTACT_EMAIL}}; we will verify who they are and answer within one month.</p>
 <h3>People you invite</h3>
 <ul>
 <li><strong>Your co-parent</strong>: nothing, until they accept. An invitation is a code you pass on
@@ -221,7 +244,9 @@ let read the family calendar, custody schedule and parenting plan, read-only, fo
 days. They never see your messages, expenses or records about your child. Access starts only
 once each parent has consented in the app, and either parent can end it alone at any time. The
 professional sees the two parents&#39; names; you see theirs and, if they signed in with Google,
-their profile picture.</li>
+their profile picture. What a professional reads becomes part of their own work, under their
+own professional duties (for a lawyer, confidentiality): for that they are a controller in
+their own right, not our processor.</li>
 </ul>
 <p>Every such grant carries an expiry, is visible to both parents, and can be revoked at any time.</p>
 <h3>Calendar links you create</h3>
@@ -238,9 +263,12 @@ a family ends when the co-parents unlink or either account is deleted.</p>
 <li><strong>A push notification token</strong>, so we can notify you about changes your co-parent makes.</li>
 <li><strong>Crash reports</strong> (Firebase Crashlytics) and <strong>usage analytics</strong> (Firebase Analytics) in
 release builds. These carry no message content, no event titles and no records about your
-child. They record which screens are opened and which actions succeed or fail.
+child. They record which screens are opened and which actions succeed or fail, with your
+device model and Android version, under a <strong>random identifier of your installation</strong> — not your
+name, email or account. That makes them pseudonymous, not anonymous, which is why we ask.
 Both are <strong>off until you agree</strong> on the screen shown before sign-in, and you can change your
-answer at any time in Settings → App.</li>
+answer at any time in Settings → App. <strong>Legal basis:</strong> your consent (Art. 6(1)(a)). Analytics
+data is kept for 2 months and crash reports for 90 days.</li>
 <li><strong>The verification page&#39;s rate limit.</strong> When somebody checks an export on the verification
 page, our server uses their IP address to limit how many checks one connection can make. The
 address is held in the server&#39;s memory for at most ten minutes and is never written to our
@@ -298,47 +326,106 @@ not synced, and not visible to your co-parent.</li>
 <td>Because both of you consented</td>
 </tr>
 <tr>
-<td>Google (Firebase)</td>
+<td><strong>Your co-parent, after you delete your account</strong></td>
+<td>The message thread, read-only, for 30 days</td>
+<td>So they keep their own correspondence (see &quot;Deleting your account&quot;)</td>
+</tr>
+<tr>
+<td>Google (Firebase), <strong>our processor</strong></td>
 <td>Account data, all synced content, files, push tokens, crash and usage data</td>
-<td>Our hosting, database, file storage and messaging provider</td>
+<td>Our hosting, database, file storage and messaging provider, acting only on our instructions</td>
 </tr>
 <tr>
 <td>Google (Calendar API)</td>
 <td>Only your calendar, only if you connect it</td>
-<td>The integration you enabled</td>
+<td>The integration you enabled — for your Google Calendar, Google is responsible under its own privacy policy</td>
 </tr>
 </tbody></table></div>
-<p>Google processes data both inside and outside the EU. Transfers outside the EEA rely on the
-European Commission&#39;s Standard Contractual Clauses. Our database and file storage are located
-in {{FIRESTORE_REGION}}. Our server functions — which link co-parents, send notifications,
-renew Google Calendar access and delete accounts — run in Google&#39;s <code>us-central1</code> region in the
-United States, so the data each of them handles is processed there.</p>
+<p><strong>Where your data is processed.</strong> Our database and file storage are located in
+{{FIRESTORE_REGION}}. Our server functions — which link co-parents, send notifications, renew
+Google Calendar access, register exports and delete accounts — run in Google&#39;s <code>europe-west3</code>
+region in Frankfurt, Germany.</p>
+<p>Some Google services we use run on Google&#39;s global infrastructure and may process data outside
+the European Economic Area: delivering push notifications (Firebase Cloud Messaging), signing in
+(Firebase Authentication), and — only if you agreed — usage statistics and crash reports. Google
+LLC is certified under the <strong>EU–US Data Privacy Framework</strong>, for which the European Commission has
+adopted an adequacy decision (Art. 45); Google&#39;s data processing terms also incorporate the
+Commission&#39;s <strong>Standard Contractual Clauses</strong> (Art. 46(2)(c)). Google acts as our processor under
+the Google Cloud Data Processing Addendum.</p>
+<p>A professional both of you admit may work outside the European Economic Area; what they read is
+sent to them because you both asked for it (Art. 49(1)(b)).</p>
 <p>We disclose data to authorities only where the law requires it.</p>
 <h2>How long we keep it</h2>
-<p>We keep what you enter for as long as your account exists. When you delete your account
-(below), it is removed as described there.</p>
-<p>When you delete a single event, expense, child record or pet, the record is marked as deleted
-rather than removed at once, so that your co-parent&#39;s phone learns of the deletion the next time
-it syncs. A daily job removes it for good <strong>90 days</strong> after you deleted it.</p>
-<p>A guest&#39;s access to a child&#39;s record ends on the date set when it was granted, and a daily job
-removes lapsed grants. A calendar friend&#39;s and a professional&#39;s access also end on their expiry
-date, and a daily job removes the lapsed grant. A professional&#39;s access also ends when the two
-parents unlink. Queued
-notifications are deleted after <strong>30 days</strong>.</p>
-<p>An export&#39;s receipt is kept for as long as it can vouch for a file somebody may still rely on,
-which has no natural end: it is kept after your account is deleted too, but without your account
-or your family in it (see below). A record ID reserved for an export that was never registered —
-because the phone lost its connection half-way — is deleted with your account.</p>
+<p>We keep what you enter for as long as your account exists, and delete it as described under
+&quot;Deleting your account&quot; when you close it. Every period below is enforced by a job that runs
+daily on our servers, not by hand.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>What</th>
+<th>How long</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Your account and everything you entered</td>
+<td>Until you delete it, or delete the record</td>
+</tr>
+<tr>
+<td>A single event, expense, child record, pet or family document you delete</td>
+<td>Marked deleted at once, so your co-parent&#39;s phone learns of it; removed for good <strong>90 days</strong> later, with its file</td>
+</tr>
+<tr>
+<td>A guest&#39;s, calendar friend&#39;s or professional&#39;s access</td>
+<td>Until the date set when it was granted, or until either parent ends it; professionals at most <strong>180 days</strong></td>
+</tr>
+<tr>
+<td>An invitation nobody accepted</td>
+<td>Deleted <strong>30 days</strong> after it expired (<strong>90 days</strong> after it was made, if it had no expiry)</td>
+</tr>
+<tr>
+<td>A read-only calendar link</td>
+<td>Until revoked; deleted after <strong>90 days</strong> without use</td>
+</tr>
+<tr>
+<td>Notifications waiting to be delivered</td>
+<td><strong>30 days</strong></td>
+</tr>
+<tr>
+<td>The message thread, after your co-parent deletes their account</td>
+<td><strong>30 days</strong>, so you can export it — see below</td>
+</tr>
+<tr>
+<td>An export&#39;s receipt</td>
+<td><strong>10 years</strong> from registration; a record ID reserved for an export that was never registered, <strong>7 days</strong></td>
+</tr>
+<tr>
+<td>Usage statistics / crash reports (only if you agreed)</td>
+<td><strong>2 months</strong> / <strong>90 days</strong></td>
+</tr>
+<tr>
+<td>Server logs (which account called which function, and errors — never names, messages or files)</td>
+<td><strong>30 days</strong></td>
+</tr>
+<tr>
+<td>Emails you send us about your privacy rights</td>
+<td><strong>3 years</strong> after we close the request</td>
+</tr>
+</tbody></table></div>
+<p>An export&#39;s receipt outlives your account on purpose: a file you or your co-parent already handed
+to a lawyer or a court can still be checked. What stays is only the file&#39;s fingerprint, its period,
+format, size and registration time — nothing that identifies you. Ten years is the longest time
+within which a claim arising from the family&#39;s affairs can generally still be brought in Czech law
+(§ 629(2) of the Civil Code).</p>
 <h2>Deleting your account</h2>
 <p><strong>Settings → Account → Delete account.</strong> This is irreversible and, once confirmed, it:</p>
 <ul>
 <li>deletes your profile, your events and the saved revisions of events you edited, your expenses
 and budgets, the records you entered about your child and pet, your custody schedule and agreed
-expense split, your parenting plan, your invitations, and the whole message thread with your
-co-parent;</li>
+expense split, your parenting plan and your invitations;</li>
 <li>deletes the photographs attached to those records — event photos, receipts, and medical and
-pet photographs — the family documents you added, and every photo and PDF file sent in the
-message thread, whichever of you sent it;</li>
+pet photographs — and the family documents you added;</li>
+<li><strong>keeps the message thread with your co-parent for 30 days, then deletes it</strong> — messages and
+files, whichever of you sent them. See &quot;The message thread&quot; below;</li>
 <li>removes you from the audience of anything your co-parent created, and ends any guest,
 calendar-friend or professional access you granted or held;</li>
 <li>deletes every read-only calendar link into your families, whichever of you created it;</li>
@@ -352,7 +439,17 @@ you. Record IDs reserved for exports that were never registered are deleted;</li
 <li>deletes your authentication account;</li>
 <li>wipes the local copy on the device you did it from.</li>
 </ul>
-<p>It happens at once. We do not keep a copy of a deleted account to restore later.</p>
+<p>It happens at once, apart from the message thread. We do not keep a copy of a deleted account to
+restore later.</p>
+<p><strong>The message thread.</strong> Your messages are also your co-parent&#39;s correspondence: they read them,
+answered them, and may need them — for example in proceedings about your child. Deleting them the
+moment you leave would take that record from them without warning. So when you delete your
+account, your co-parent is notified, can read the thread (but nobody can write to it) and export
+it for <strong>30 days</strong>, and then it is deleted on our servers, with every file sent in it. We keep it
+for those 30 days on the basis of your co-parent&#39;s legitimate interest in their own correspondence
+(Art. 6(1)(f), and Art. 17(3)(e) where a legal claim is in view). If your co-parent deletes their
+own account in the meantime, the thread is deleted at once. You can object to this under
+&quot;Your rights&quot;; we will weigh your reasons against your co-parent&#39;s.</p>
 <p>Two consequences, stated plainly because they surprise people. First: <strong>records your co-parent
 entered remain in their account, and records you entered disappear from it</strong> — including from
 the calendar you shared. Second: <strong>we can only delete what is on our servers and on the phone
@@ -363,18 +460,39 @@ signed in on.</p>
 your account uses and we will delete the account for you within 30 days. The same steps are on
 our account-deletion page: {{WEB_DELETION_URL}}.</p>
 <h2>Your rights</h2>
-<p>Under the GDPR you may: access your data; correct it; delete it; restrict or object to its
-processing; receive it in a portable form; and withdraw a consent you have given, without
-affecting what was done before you withdrew it.</p>
+<p>Under the GDPR you have the right to:</p>
+<ul>
+<li><strong>access</strong> your data and get a copy (Art. 15);</li>
+<li>have it <strong>corrected</strong> (Art. 16);</li>
+<li>have it <strong>deleted</strong> (Art. 17);</li>
+<li><strong>restrict</strong> its processing (Art. 18);</li>
+<li><strong>receive it in a portable form</strong> (Art. 20) — the export in Settings → Family gives you your
+family&#39;s record as CSV or PDF;</li>
+<li><strong>object</strong> to processing we base on our or someone else&#39;s legitimate interests (Art. 21) — the
+90-day deletion markers, the message thread kept for your co-parent, and export receipts. We
+then stop unless our reasons override yours or the data is needed for a legal claim;</li>
+<li><strong>withdraw a consent</strong> at any time — to health details about your child, or to statistics and
+crash reports — in Settings, without affecting what was done before (Art. 7(3)).</li>
+</ul>
 <p>Most of these you can exercise directly in the app — everything you entered is visible and
 editable, and deletion is one screen away. For anything else, write to
-{{PRIVACY_CONTACT_EMAIL}}; we answer within one month.</p>
+{{PRIVACY_CONTACT_EMAIL}}. We answer within one month (Art. 12(3)); we may ask you to confirm the
+request from your account&#39;s email address, so that nobody else can ask for your data.</p>
+<p>Two limits come from the nature of the app and are not a refusal of your rights. <strong>Messages cannot
+be edited or deleted</strong> one by one, by either of you: they are a record of what was written, and
+correcting a record of what someone said would make it untrue. And <strong>records your co-parent
+entered are theirs</strong>: you can ask us about them, but we will weigh their rights too before
+deleting something they wrote.</p>
+<p>We make <strong>no decisions about you by automated means</strong> that have legal or similarly significant
+effects (Art. 22). The app computes things — whose day it is, who owes whom — from what the two of
+you entered, and shows its working; it does not decide anything.</p>
 <p>You may also complain to a supervisory authority. In the Czech Republic that is the Office for
 Personal Data Protection (Úřad pro ochranu osobních údajů), Pplk. Sochora 27, 170 00 Praha 7,
 <a href="https://uoou.gov.cz">uoou.gov.cz</a>.</p>
 <h2>Security</h2>
-<p>Data in transit is encrypted. Access to your family&#39;s data is enforced server-side, so another
-account cannot read it by asking. The app&#39;s own database on your device is encrypted too, with a
+<p>Data in transit is encrypted. Our servers are in the European Union. Access to your family&#39;s data
+is enforced server-side, so another account cannot read it by asking, and our rules are tested
+automatically every time they change. The app&#39;s own database on your device is encrypted too, with a
 key held in the Android Keystore that cannot be copied off the device — so the calendar, messages,
 expenses and any medical details you enter are not readable by someone holding the phone. Two
 things on the device are protected by Android&#39;s own storage encryption rather than by that key:
@@ -384,10 +502,12 @@ Authentication tokens are stored in encrypted storage backed by the same Keystor
 storage cannot be opened, they are held in memory only rather than written unprotected. Device
 backup and device-to-device transfer of the app&#39;s data are switched off.</p>
 <p>No system is perfect. If we discover a breach affecting your rights, we will notify the
-supervisory authority within 72 hours and tell you where the law requires it.</p>
+supervisory authority within 72 hours and tell you without undue delay where it puts you or your
+child at high risk (Art. 33–34).</p>
 <h2>Changes</h2>
 <p>If we change this policy in a way that affects you, we will tell you in the app before the
-change takes effect.</p>
+change takes effect. If a change needs your consent — for example a new use of your child&#39;s health
+details — we will ask for it, not assume it.</p>
 
 <footer>
   <p><a href="../delete-account/">Delete your account</a> · <a href="../privacy/">Privacy policy</a> · <a href="../terms/">Terms of service</a></p>

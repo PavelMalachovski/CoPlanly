@@ -92,7 +92,7 @@ Czech behind a two-button switch, following the browser's language.
   and says so if it is not.
 - **It calls `verifyExport` without the Firebase SDK**, the way the SDK does it: `POST` JSON
   `{"data": {"sha256": "…"}}` (or `{"recordId": "…"}`) to
-  `https://us-central1-<project>.cloudfunctions.net/verifyExport`, answered with `{"result": …}` or
+  `https://europe-west3-<project>.cloudfunctions.net/verifyExport`, answered with `{"result": …}` or
   `{"error": {"status": …}}`. The base URL is the `PRODUCTION_FUNCTIONS_BASE` constant at the top
   of the script — the only line to change if the project or the functions' region does. CORS is
   handled by the callable itself.

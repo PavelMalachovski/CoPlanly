@@ -1,15 +1,18 @@
 package com.coparently.app.presentation.export
 
 import android.util.Log
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.coparently.app.R
+import com.coparently.app.data.chat.DepartedThreadSource
 import com.coparently.app.data.export.CommunicationRecordSource
 import com.coparently.app.data.export.ExportFileWriter
 import com.coparently.app.data.export.ExportReceipts
 import com.coparently.app.data.export.ExportedFile
 import com.coparently.app.data.export.OptionalRecordSections
 import com.coparently.app.domain.chat.ConversationKey
+import com.coparently.app.domain.chat.DepartedThread
 import com.coparently.app.domain.export.CommunicationRecord
 import com.coparently.app.domain.export.CommunicationRecordBuilder
 import com.coparently.app.domain.export.ExportFingerprint
@@ -77,6 +80,39 @@ data class NameFallbacks(val you: String, val coParent: String, val unknown: Str
 data class FinishedExport(val file: ExportedFile, val recordId: String?)
 
 /**
+ * Who the record is with: the co-parent whose thread, names and family it covers.
+ *
+ * @property uid The co-parent's uid, or null for an account exporting with nobody.
+ * @property departed The kept thread when that co-parent has deleted their account — the pairing is
+ *   gone, so the name comes from the thread's marks rather than from a profile that no longer
+ *   exists (GDPR review, September 2026).
+ */
+internal data class ExportCounterpart(val uid: String?, val departed: DepartedThread? = null) {
+
+    /** The rule [ExportViewModel] applies, pure so it can be pinned. */
+    companion object {
+        /**
+         * The thread the parent asked for from its banner, when it is one of [kept]; else the
+         * co-parent on screen, [partnerUid]; else, for a parent with nobody paired, the kept thread
+         * with the soonest deadline — the one account deletion has just left them; else nobody.
+         *
+         * @param requestedThread The conversation id the export was opened for, or null.
+         * @param kept The signed-in parent's kept threads, soonest deadline first.
+         */
+        fun choose(requestedThread: String?, partnerUid: String?, kept: List<DepartedThread>): ExportCounterpart {
+            val asked = kept.firstOrNull { it.conversationId == requestedThread }
+            val left = kept.firstOrNull()
+            return when {
+                asked != null -> ExportCounterpart(asked.departedUid, asked)
+                partnerUid != null -> ExportCounterpart(partnerUid)
+                left != null -> ExportCounterpart(left.departedUid, left)
+                else -> ExportCounterpart(null)
+            }
+        }
+    }
+}
+
+/**
  * Produces a communication record for a date range, as CSV or PDF (MON-3), and registers the
  * file's fingerprint so it can be verified later (MON-16).
  *
@@ -92,16 +128,28 @@ data class FinishedExport(val file: ExportedFile, val recordId: String?)
  * A save path in the sense of CLAUDE.md item 17: everything it needs at the moment of export is
  * read fresh — the signed-in uid, the co-parent, the names — never from a `WhileSubscribed`
  * state's `.value`.
+ *
+ * **A thread kept after the co-parent deleted their account is exportable** (GDPR review,
+ * September 2026). No pairing names that co-parent any more, so the thread is found by the
+ * server's marks ([DepartedThreadSource]) — the one the chat banner opened this screen for
+ * ([ExportCounterpart.choose]), or, for a parent with nobody paired, the one they were left.
  */
 @HiltViewModel
+@Suppress("LongParameterList") // one input per section of the record, plus who it is with
 class ExportViewModel @Inject constructor(
     private val source: CommunicationRecordSource,
     private val sections: OptionalRecordSections,
     private val writer: ExportFileWriter,
     private val receipts: ExportReceipts,
     private val parentsSource: ParentsSource,
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
+    private val departedThreads: DepartedThreadSource,
+    savedStateHandle: SavedStateHandle
 ) : ViewModel() {
+
+    /** The kept thread the chat banner opened this screen for, or null from Settings. */
+    private val requestedThread: String? =
+        savedStateHandle.get<String>(ARG_THREAD)?.takeIf { it.isNotBlank() }
 
     private val zone: ZoneId = ZoneId.systemDefault()
 
@@ -169,10 +217,11 @@ class ExportViewModel @Inject constructor(
         fallbacks: NameFallbacks
     ): FinishedExport? {
         val myUid = userRepository.getCurrentUserId() ?: return null
-        val partnerUid = parentsSource.coParentUid()
+        val counterpart = counterpart(myUid)
+        val partnerUid = counterpart.uid
         // Everything that goes into the file is gathered here, before an id is reserved and the
         // bytes are rendered: nothing may be added between the hash and the save (MON-16).
-        val record = buildRecord(myUid, partnerUid, request, fallbacks)
+        val record = buildRecord(myUid, counterpart, request, fallbacks)
         val family = FamilyKey.orNull(myUid, partnerUid).orEmpty()
         val recordId = receipts.reserve(family, request.from, request.to, format)
         val registered = recordId?.let { registeredBytes(record, labels, format, it) }
@@ -197,19 +246,43 @@ class ExportViewModel @Inject constructor(
         return bytes.takeIf { landed }
     }
 
+    /**
+     * Who this export is with. The kept threads are read only when they can decide it — the banner
+     * named one, or nobody is paired — so an ordinary export costs no extra server read.
+     */
+    private suspend fun counterpart(myUid: String): ExportCounterpart {
+        val partnerUid = parentsSource.coParentUid()
+        val kept = if (requestedThread != null || partnerUid == null) {
+            departedThreads.current(myUid)
+        } else {
+            emptyList()
+        }
+        return ExportCounterpart.choose(requestedThread, partnerUid, kept)
+    }
+
     private suspend fun buildRecord(
         myUid: String,
-        partnerUid: String?,
+        counterpart: ExportCounterpart,
         request: ExportUiState,
         fallbacks: NameFallbacks
     ): CommunicationRecord {
         val from = request.from
         val to = request.to
+        val partnerUid = counterpart.uid
+        val departed = counterpart.departed
         // The pairing half can arrive a moment after the profile half; a record that named the
-        // co-parent "Parent" because it was built in that moment would be a worse document.
-        val parents = withTimeoutOrNull(NAMES_WAIT_MS) {
-            parentsSource.observe().first { partnerUid == null || it.coParent != null }
-        } ?: parentsSource.observe().first()
+        // co-parent "Parent" because it was built in that moment would be a worse document. A
+        // departed co-parent has no pairing half to wait for: their name is the thread's.
+        val observed = if (departed != null) {
+            parentsSource.observe().first()
+        } else {
+            withTimeoutOrNull(NAMES_WAIT_MS) {
+                parentsSource.observe().first { partnerUid == null || it.coParent != null }
+            } ?: parentsSource.observe().first()
+        }
+        // With a departed co-parent the profile side's co-parent — if any — belongs to another
+        // family, and must not be named in this one's record.
+        val parents = if (departed != null) observed.copy(coParent = null) else observed
         val gathered = source.gather(
             myUid = myUid,
             conversationId = partnerUid?.let { ConversationKey.of(myUid, it) },
@@ -229,8 +302,15 @@ class ExportViewModel @Inject constructor(
                 zone = zone,
                 generatedAtMillis = System.currentTimeMillis(),
                 families = setOfNotNull(FamilyKey.orNull(myUid, partnerUid)),
-                parents = listOfNotNull(parents.me, parents.coParent).map { nameForUid(it.uid, parents, fallbacks) },
-                nameForUid = { uid -> nameForUid(uid, parents, fallbacks) },
+                parents = listOfNotNull(parents.me, parents.coParent).map { nameForUid(it.uid, parents, fallbacks) } +
+                    listOfNotNull(departed?.let { departedName(it, fallbacks) }),
+                nameForUid = { uid ->
+                    if (departed != null && uid == departed.departedUid) {
+                        departedName(departed, fallbacks)
+                    } else {
+                        nameForUid(uid, parents, fallbacks)
+                    }
+                },
                 nameForSlot = { slot -> nameForSlot(slot, parents, fallbacks) }
             )
         )
@@ -239,16 +319,24 @@ class ExportViewModel @Inject constructor(
     private fun nameForUid(uid: String, parents: Parents, fallbacks: NameFallbacks): String =
         parentLabelByUid(uid, parents.me, parents.coParent, fallbacks.you, fallbacks.coParent, fallbacks.unknown)
 
+    /** A departed co-parent's name as the thread recorded it, or the co-parent fallback. */
+    private fun departedName(departed: DepartedThread, fallbacks: NameFallbacks): String =
+        departed.departedName.trim().ifBlank { fallbacks.coParent }
+
     private fun nameForSlot(slot: String, parents: Parents, fallbacks: NameFallbacks): String =
         parentLabel(slot, parents.me, parents.coParent, fallbacks.you, fallbacks.coParent, fallbacks.unknown)
 
-    private companion object {
-        const val TAG = "ExportViewModel"
+    /** The navigation argument naming a kept thread. */
+    companion object {
+        /** `Screen.Export`'s optional argument: the conversation id of a kept thread. */
+        const val ARG_THREAD = "thread"
+
+        private const val TAG = "ExportViewModel"
 
         /** The range a parent starts from: the last quarter, which is what a hearing usually asks. */
-        const val DEFAULT_MONTHS = 3L
+        private const val DEFAULT_MONTHS = 3L
 
         /** How long an export waits for the co-parent's name before printing the fallback. */
-        const val NAMES_WAIT_MS = 3_000L
+        private const val NAMES_WAIT_MS = 3_000L
     }
 }

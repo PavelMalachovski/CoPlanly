@@ -102,14 +102,14 @@ class ProfileViewModelTest {
         // Something else changes fields this screen does not own, concurrently with the edit -
         // a role re-stamp and a token refresh are both real background writers.
         meRow.value = meRow.value?.copy(fcmToken = "new-token", role = "dad")
-        viewModel.updateAllergies(listOf("peanuts"))
+        viewModel.updatePhone("+420123456789")
 
         viewModel.save()
         runCurrent()
 
         val saved = slot<User>()
         coVerify { userRepository.updateUser(capture(saved)) }
-        assertEquals(listOf("peanuts"), saved.captured.allergies)
+        assertEquals("+420123456789", saved.captured.phone)
         // The concurrent external change survives, because save() reads a fresh row rather
         // than sending the draft's stale copy of fields it does not own.
         assertEquals("new-token", saved.captured.fcmToken)

@@ -434,6 +434,8 @@ fun AuthScreen(
                             )
                         }
                     }
+
+                    AuthLegalNotice()
                 }
             }
 

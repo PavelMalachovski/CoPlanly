@@ -58,6 +58,7 @@ import com.coparently.app.data.sync.FamilyIdBackfill
 import com.coparently.app.data.sync.SyncRequester
 import com.coparently.app.data.sync.SyncService
 import com.coparently.app.data.versions.EventVersionRecorder
+import com.coparently.app.di.FirebaseModule
 import com.coparently.app.domain.activity.ActivityAnnouncer
 import com.coparently.app.domain.chat.AttachmentUploadGate
 import com.coparently.app.domain.model.Message
@@ -127,7 +128,7 @@ class EmulatorParent private constructor(
 
     val auth: FirebaseAuth = FirebaseAuth.getInstance(app)
     val firestore: FirebaseFirestore = FirebaseFirestore.getInstance(app)
-    private val functions: FirebaseFunctions = FirebaseFunctions.getInstance(app)
+    private val functions: FirebaseFunctions = FirebaseFunctions.getInstance(app, FirebaseModule.FUNCTIONS_REGION)
     val storage: FirebaseStorage = FirebaseStorage.getInstance(app)
 
     /**

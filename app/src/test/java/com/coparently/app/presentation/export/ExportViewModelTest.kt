@@ -1,14 +1,17 @@
 package com.coparently.app.presentation.export
 
 import android.net.Uri
+import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
 import com.coparently.app.R
+import com.coparently.app.data.chat.DepartedThreadSource
 import com.coparently.app.data.export.CommunicationRecordSource
 import com.coparently.app.data.export.ExportFileWriter
 import com.coparently.app.data.export.ExportReceipts
 import com.coparently.app.data.export.ExportedFile
 import com.coparently.app.data.export.OptionalRecordSections
 import com.coparently.app.data.export.ParentingPlanRecordSource
+import com.coparently.app.domain.chat.DepartedThread
 import com.coparently.app.domain.export.CommunicationRecord
 import com.coparently.app.domain.export.ExportFingerprint
 import com.coparently.app.domain.export.ExportFormat
@@ -68,6 +71,7 @@ class ExportViewModelTest {
     private val writer = mockk<ExportFileWriter>()
     private val receipts = mockk<ExportReceipts>()
     private val userRepository = mockk<UserRepository>()
+    private val departedThreads = mockk<DepartedThreadSource>()
     private val fallbacks = NameFallbacks(you = "You", coParent = "Co-parent", unknown = "Parent")
 
     @Before
@@ -86,6 +90,7 @@ class ExportViewModelTest {
         // Offline by default: the tests that are about something else must not depend on a server.
         coEvery { receipts.reserve(any(), any(), any(), any()) } returns null
         coEvery { writer.render(any(), any(), any()) } answers { bytesFor(firstArg()) }
+        coEvery { departedThreads.current(any()) } returns emptyList()
     }
 
     @After
@@ -93,13 +98,18 @@ class ExportViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun viewModel() = ExportViewModel(
+    private fun viewModel(
+        partnerOnScreen: PartnerSummary? = partner,
+        thread: String? = null
+    ) = ExportViewModel(
         source,
         OptionalRecordSections(planSource, journal),
         writer,
         receipts,
-        testParentsSource(me, partner),
-        userRepository
+        testParentsSource(me, partnerOnScreen),
+        userRepository,
+        departedThreads,
+        SavedStateHandle(listOfNotNull(thread?.let { ExportViewModel.ARG_THREAD to it }).toMap())
     )
 
     /** Distinct bytes per verification state, so a test can tell which rendering was saved. */
@@ -349,14 +359,7 @@ class ExportViewModelTest {
     @Test
     fun `an account with no co-parent reserves under a blank family`() = runTest {
         coEvery { writer.save(any(), any(), any()) } returns ExportedFile(mockk<Uri>(), "text/csv")
-        val vm = ExportViewModel(
-            source,
-            OptionalRecordSections(planSource, journal),
-            writer,
-            receipts,
-            testParentsSource(me, null),
-            userRepository
-        )
+        val vm = viewModel(partnerOnScreen = null)
 
         vm.files.test {
             vm.export(ExportFormat.CSV, RecordFixtures.labels(), fallbacks)
@@ -365,6 +368,73 @@ class ExportViewModelTest {
 
         coVerify { receipts.reserve("", any(), any(), ExportFormat.CSV) }
     }
+
+    // ---- a thread kept after the co-parent deleted their account (GDPR review, September 2026) ----
+
+    @Test
+    fun `with nobody paired, the thread the departed co-parent left is the one exported`() = runTest {
+        val record = slot<CommunicationRecord>()
+        coEvery { departedThreads.current("u1") } returns listOf(kept("u1__u9", "u9", "Vera"))
+        coEvery { writer.save(any(), capture(record), any()) } returns ExportedFile(mockk<Uri>(), "text/csv")
+        val vm = viewModel(partnerOnScreen = null)
+
+        vm.files.test {
+            vm.export(ExportFormat.CSV, RecordFixtures.labels(), fallbacks)
+            awaitItem()
+        }
+
+        coVerify { source.gather(myUid = "u1", conversationId = "u1__u9", from = any(), to = any(), zone = any()) }
+        // Reserved under the family the thread belonged to: the receipt vouches for that record.
+        coVerify { receipts.reserve("u1__u9", any(), any(), ExportFormat.CSV) }
+        // The name the thread recorded when the account went, since no profile is left to read.
+        assertEquals(listOf("Alice", "Vera"), record.captured.parents)
+    }
+
+    @Test
+    fun `the banner's thread is exported even while another family is on screen`() = runTest {
+        val record = slot<CommunicationRecord>()
+        coEvery { departedThreads.current("u1") } returns listOf(kept("u1__u9", "u9", ""))
+        coEvery { writer.save(any(), capture(record), any()) } returns ExportedFile(mockk<Uri>(), "text/csv")
+        val vm = viewModel(thread = "u1__u9")
+
+        vm.files.test {
+            vm.export(ExportFormat.CSV, RecordFixtures.labels(), fallbacks)
+            awaitItem()
+        }
+
+        coVerify { source.gather(myUid = "u1", conversationId = "u1__u9", from = any(), to = any(), zone = any()) }
+        // Bob, the co-parent on screen, belongs to another family and is not named in this one.
+        assertEquals(listOf("Alice", "Co-parent"), record.captured.parents)
+    }
+
+    @Test
+    fun `an ordinary export does not read the kept threads at all`() = runTest {
+        coEvery { writer.save(any(), any(), any()) } returns ExportedFile(mockk<Uri>(), "text/csv")
+        val vm = viewModel()
+
+        vm.files.test {
+            vm.export(ExportFormat.CSV, RecordFixtures.labels(), fallbacks)
+            awaitItem()
+        }
+
+        coVerify(exactly = 0) { departedThreads.current(any()) }
+        coVerify { source.gather(myUid = "u1", conversationId = "u1__u2", from = any(), to = any(), zone = any()) }
+    }
+
+    @Test
+    fun `the counterpart rule, pinned`() {
+        val a = kept("u1__u8", "u8", "A")
+        val b = kept("u1__u9", "u9", "B")
+
+        assertEquals(ExportCounterpart("u9", b), ExportCounterpart.choose("u1__u9", "u2", listOf(a, b)))
+        assertEquals(ExportCounterpart("u2"), ExportCounterpart.choose("u1__u7", "u2", listOf(a, b)))
+        assertEquals(ExportCounterpart("u2"), ExportCounterpart.choose(null, "u2", listOf(a)))
+        assertEquals(ExportCounterpart("u8", a), ExportCounterpart.choose(null, null, listOf(a, b)))
+        assertEquals(ExportCounterpart(null), ExportCounterpart.choose(null, null, emptyList()))
+    }
+
+    private fun kept(conversationId: String, departedUid: String, name: String) =
+        DepartedThread(conversationId, departedUid, name, retainedUntilMillis = Long.MAX_VALUE)
 
     private companion object {
         const val RECORD_ID = "7K3Q0ABCDEFGHJKM"

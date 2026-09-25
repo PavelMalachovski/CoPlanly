@@ -78,6 +78,12 @@ val canSignRelease = run {
 val publishedPrivacyPolicyUrl = ""
 
 /**
+ * The published terms of service, `web/terms/` once hosted. Empty until then, and empty hides the
+ * sign-in screen's and Settings' links to it, as with the privacy policy.
+ */
+val publishedTermsUrl = ""
+
+/**
  * The export verification page (MON-16), `web/verify/` once hosted — printed on every exported
  * file beside its record id. Empty until `firebase deploy --only hosting` has run; while it is,
  * a registered file prints its record id without an address rather than one that does not resolve.
@@ -125,6 +131,12 @@ android {
             ?.trim()
             ?: publishedPrivacyPolicyUrl
         buildConfigField("String", "PRIVACY_POLICY_URL", "\"$privacyPolicyUrl\"")
+
+        // The terms of service, same rule: blank until hosted, and blank hides the links.
+        val termsUrl = (project.findProperty("COPLANLY_TERMS_URL") as String?)
+            ?.trim()
+            ?: publishedTermsUrl
+        buildConfigField("String", "TERMS_URL", "\"$termsUrl\"")
 
         // MON-16. Same rule as the policy: blank until hosted, and blank omits the line.
         val exportVerifyUrl = (project.findProperty("COPLANLY_EXPORT_VERIFY_URL") as String?)

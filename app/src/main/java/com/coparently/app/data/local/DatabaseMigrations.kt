@@ -981,6 +981,31 @@ object DatabaseMigrations {
     }
 
     /**
+     * v43 -> v44: the parent's own health data goes, and the child-health consent arrives.
+     *
+     * Two things in one version, because they are one privacy change (GDPR):
+     * - **The adult's allergies and medical profile are erased.** The feature was removed — the
+     *   co-parent could read an adult's diagnoses on `users/{uid}` — and no copy may survive on
+     *   the device. The columns are overwritten with their empty values rather than dropped:
+     *   dropping a SQLite column needs a table rebuild, the trade `ExpenseEntity.childId`
+     *   records, and nothing reads them any more (see `UserEntity.allergiesJson`).
+     * - **Two nullable consent columns** (`HealthConsent`): the wording version this parent agreed
+     *   to before entering a child's health details, and when. Null on every existing row, which
+     *   is "never asked" — the medical sections lock until the parent agrees.
+     *
+     * Both columns are added bare, with no default, matching what Room generates for
+     * `UserEntity`'s nullable `Int?`/`Long?` properties; `CoPlanlyDatabaseMigrationTest` checks the
+     * result against `44.json` once the Regenerate workflow has exported it.
+     */
+    val MIGRATION_43_44 = object : Migration(43, 44) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL("UPDATE users SET allergiesJson = '[]', medicalProfileJson = '{}'")
+            database.execSQL("ALTER TABLE users ADD COLUMN healthConsentVersion INTEGER")
+            database.execSQL("ALTER TABLE users ADD COLUMN healthConsentAtMillis INTEGER")
+        }
+    }
+
+    /**
      * Writes each row's [wallClockToEpochMillis] reading of `updatedAt` into `updatedAtMillis`.
      *
      * Reads every value out first and writes afterwards — nothing iterates a cursor while
@@ -1044,6 +1069,7 @@ object DatabaseMigrations {
         MIGRATION_39_40,
         MIGRATION_40_41,
         MIGRATION_41_42,
-        MIGRATION_42_43
+        MIGRATION_42_43,
+        MIGRATION_43_44
     )
 }

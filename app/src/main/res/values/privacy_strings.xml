@@ -5,16 +5,19 @@
   The wording is load-bearing, not decorative: the body says what is sent, the "never"
   line says what is not, and the third line says the app is identical either way. A
   consent screen that leaves a parent guessing what refusing costs them is not one.
+  Not "anonymous": Analytics and Crashlytics tie their data to a random installation
+  identifier, which makes it pseudonymous personal data, and a consent obtained with a
+  wrong description is not informed (GDPR Art. 4(11); LEGAL-REVIEW-2026-09 L-13).
 -->
 <resources>
     <string name="consent_title">Help improve CoPlanly?</string>
-    <string name="consent_body">CoPlanly can send anonymous usage statistics and crash reports. They tell us which screens are slow and which crashes are real, and nothing else.</string>
-    <string name="consent_never">Never sent: your children\'s names or health details, your messages, your events, your expenses, or your receipts. Those stay on your device and between the two of you.</string>
+    <string name="consent_body">CoPlanly can send usage statistics and crash reports to Google Firebase. They carry a random identifier of this installation, not your name or email, and tell us which screens are slow and which crashes are real — nothing else.</string>
+    <string name="consent_never">Never included: your children\'s names or health details, your messages, your events, your expenses, or your receipts. Those are never part of statistics or crash reports.</string>
     <string name="consent_changeable">You can change this at any time in Settings. The app works exactly the same either way.</string>
     <string name="consent_accept">Yes, send statistics</string>
     <string name="consent_decline">No, send nothing</string>
     <string name="settings_telemetry_title">Usage statistics</string>
-    <string name="settings_telemetry_description">Anonymous statistics and crash reports. Never your family\'s data.</string>
+    <string name="settings_telemetry_description">Statistics and crash reports under a random installation identifier. Never your family\'s data.</string>
     <!-- REL-4. Shown only once BuildConfig.PRIVACY_POLICY_URL is set (PrivacyPolicyLink). -->
     <string name="privacy_policy_title">Privacy policy</string>
     <string name="privacy_policy_description">What CoPlanly stores about your family, and why</string>

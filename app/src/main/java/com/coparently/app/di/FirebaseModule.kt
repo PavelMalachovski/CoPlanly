@@ -117,15 +117,20 @@ object FirebaseModule {
     }
 
     /**
-     * Provides Firebase Functions for the pairing callables.
-     *
-     * The functions are deployed to us-central1, which is the SDK default, so
-     * no explicit region is set here.
+     * The region every Cloud Function runs in: Frankfurt, so a family's data is processed inside
+     * the EEA (`docs/legal/LEGAL-REVIEW-2026-09.md` L-3). It has to match `FUNCTIONS_REGION` in
+     * `functions/index.js`: a callable asked for in another region answers NOT_FOUND.
+     */
+    const val FUNCTIONS_REGION = "europe-west3"
+
+    /**
+     * Provides Firebase Functions for the callables, in [FUNCTIONS_REGION] — not the SDK's
+     * default, which is us-central1.
      */
     @Provides
     @Singleton
     fun provideFirebaseFunctions(): com.google.firebase.functions.FirebaseFunctions {
-        return com.google.firebase.functions.FirebaseFunctions.getInstance()
+        return com.google.firebase.functions.FirebaseFunctions.getInstance(FUNCTIONS_REGION)
     }
 
     /**

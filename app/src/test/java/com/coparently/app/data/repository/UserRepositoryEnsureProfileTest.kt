@@ -6,9 +6,11 @@ import com.coparently.app.data.local.entity.UserEntity
 import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestoreUserDataSource
+import com.coparently.app.domain.consent.HealthConsent
+import com.coparently.app.domain.model.User
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.UserInfo
-import com.google.gson.Gson
+import com.google.firebase.firestore.FieldValue
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -220,11 +222,11 @@ class UserRepositoryEnsureProfileTest {
             "partnerId" to PARTNER,
             "dateOfBirth" to "1988-04-17",
             "phone" to "+420123456789",
+            // What an older build left behind: the parent's own health data, which this build
+            // no longer stores anywhere.
             "allergies" to listOf("peanuts"),
-            "medicalProfile" to mapOf(
-                "bloodType" to "AB_POSITIVE",
-                "vaccinations" to listOf(mapOf("name" to "MMR", "date" to "2020-01-01"))
-            )
+            "medicalProfile" to mapOf("bloodType" to "AB_POSITIVE"),
+            "healthDataConsent" to mapOf("version" to 1L, "atMillis" to 1_787_000_000_000L)
         )
 
         repository.ensureProfile()
@@ -237,19 +239,71 @@ class UserRepositoryEnsureProfileTest {
         // Seeded from the remote document, so `SyncService` and the expense/budget filters
         // do not have to wait for the next download to learn about the pairing.
         assertEquals(PARTNER, row.captured.partnerId)
-        // C2: this fresh-row branch used to leave dateOfBirth/phone/allergies/medicalProfile
-        // at the entity's empty defaults even though the remote document already carried real
+        // C2: this fresh-row branch used to leave dateOfBirth/phone at the entity's empty
+        // defaults even though the remote document already carried real
         // values - so a reinstall created an empty row, and the very next unrelated field edit
         // pushed that emptiness back over Firestore via `updateUser`'s `set(merge)`, permanently
         // erasing data nothing else in the app ever writes on its own.
         assertEquals("1988-04-17", row.captured.dateOfBirth)
         assertEquals("+420123456789", row.captured.phone)
-        assertEquals("""["peanuts"]""", row.captured.allergiesJson)
-        val storedProfile = Gson().fromJson(row.captured.medicalProfileJson, Map::class.java)
-        assertEquals("AB_POSITIVE", storedProfile["bloodType"])
-        val vaccination = (storedProfile["vaccinations"] as List<*>).single() as Map<*, *>
-        assertEquals("MMR", vaccination["name"])
-        assertEquals("2020-01-01", vaccination["date"])
+        // The parent's own health data is never copied onto the device any more.
+        assertEquals("[]", row.captured.allergiesJson)
+        assertEquals("{}", row.captured.medicalProfileJson)
+        // A reinstalled phone knows the parent already agreed to the child-health dialog.
+        assertEquals(1, row.captured.healthConsentVersion)
+        assertEquals(1_787_000_000_000L, row.captured.healthConsentAtMillis)
+    }
+
+    @Test
+    fun `a profile save erases the parent's own health data and leaves the consent alone`() = runTest {
+        signedIn(displayName = "Alice Novak", email = "alice@example.com")
+
+        repository.updateUser(
+            User(
+                id = UID,
+                email = "alice@example.com",
+                name = "Alice Novak",
+                role = "mom",
+                colorCode = "#FF4081",
+                healthConsent = HealthConsent(version = 1, atMillis = 1L)
+            )
+        )
+
+        val patch = capturedRemotePatch()
+        assertEquals(FieldValue.delete().javaClass, patch["allergies"]?.javaClass)
+        assertEquals(FieldValue.delete().javaClass, patch["medicalProfile"]?.javaClass)
+        // Only `setHealthConsent` writes the consent, so a save from a row that has not caught
+        // up with another device cannot withdraw it.
+        assertFalse(patch.containsKey("healthDataConsent"))
+    }
+
+    @Test
+    fun `granting the health consent writes Room and a two-key map to Firestore`() = runTest {
+        signedIn(displayName = "Alice Novak", email = "alice@example.com")
+        coEvery { userDao.setHealthConsent(UID, 1, 1_787_000_000_000L) } returns 1
+
+        repository.setHealthConsent(HealthConsent(version = 1, atMillis = 1_787_000_000_000L))
+
+        coVerify { userDao.setHealthConsent(UID, 1, 1_787_000_000_000L) }
+        assertEquals(
+            // `mapOf<String, Any>`: left to inference, the literal 1 beside a Long is typed Long,
+            // and the Int the repository writes (Firestore's rule wants an int) never equals it.
+            mapOf("healthDataConsent" to mapOf<String, Any>("version" to 1, "atMillis" to 1_787_000_000_000L)),
+            capturedRemotePatch()
+        )
+    }
+
+    @Test
+    fun `withdrawing the health consent clears Room and deletes the Firestore key`() = runTest {
+        signedIn(displayName = "Alice Novak", email = "alice@example.com")
+        coEvery { userDao.setHealthConsent(UID, null, null) } returns 1
+
+        repository.setHealthConsent(null)
+
+        coVerify { userDao.setHealthConsent(UID, null, null) }
+        val patch = capturedRemotePatch()
+        assertEquals(setOf("healthDataConsent"), patch.keys)
+        assertEquals(FieldValue.delete().javaClass, patch["healthDataConsent"]?.javaClass)
     }
 
     @Test

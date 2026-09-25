@@ -995,7 +995,7 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
 
 ```
 domain/    — models, repository interfaces, use cases, holidays, ReminderScheduler
-data/      — Room (v43 + migrations), Firestore/Google clients, repository impls, sync
+data/      — Room (v44 + migrations), Firestore/Google clients, repository impls, sync
 presentation/ — Compose screens per feature + ViewModels + theme
 di/        — Hilt modules (Database, Firebase, Google, UseCase, Notification, …)
 ```
@@ -1148,7 +1148,7 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     the conversation as `{uid: epochMillis}` maps — one write per event — and the ticks and
     unread badge are derived from them by `ChatReadState`, never stored per message.
     Message times are stored the same way: `Message.sentAtMillis`, epoch millis (Room
-    schema v13, since superseded — the database is at v43), not a naive `LocalDateTime`, so two
+    schema v13, since superseded — the database is at v44), not a naive `LocalDateTime`, so two
     parents in different time zones agree
     on what a mark means and on when a message was sent. The Firestore field keeps its name
     (`timestamp`) and the read path still accepts a legacy ISO string, so a co-parent on an
@@ -1762,6 +1762,70 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     expenses, labelled in both formats as one parent's private notes the other never saw, with that
     phone's clock (`domain/export/RecordJournal.kt`). Don't add a sync path, a backup or an outbox
     column.
+
+## Legal and GDPR (September 2026) — keep consistent
+
+`docs/legal/LEGAL-REVIEW-2026-09.md` reviewed the app as a data-protection and consumer lawyer
+would. Its §3 lists what still blocks publication, and §4 is the console checklist. The rules
+below hold what it fixed in place.
+
+1. **The documents change with the code, in the same pull request.** They are written from the
+   code, not from a template: `PRIVACY-POLICY.md`, `RECORDS-OF-PROCESSING.md`, `DATA-SAFETY.md`,
+   and `DPIA.md`'s risk register when a risk moves. Update them whenever you change what is
+   collected, who can read it, where it is processed, or how long it stays. After an edit,
+   regenerate `web/privacy/` and `web/terms/` (`web/README.md`). A policy that says less than the
+   code does is the defect L-1 was.
+2. **Every Cloud Function runs in `europe-west3`.** Declare each one through `regional` in
+   `functions/index.js`, never `functions.` directly.
+   - Five places name the region: `FUNCTIONS_REGION` there, `FirebaseModule.FUNCTIONS_REGION`,
+     `web/verify/`'s `PRODUCTION_FUNCTIONS_BASE`, `tools/e2e/pairing-smoke.js` and
+     `web-tests/support/emulators.js`. Change them together.
+   - `tools/check-e2e-coverage.js` finds callables declared either way.
+3. **The app holds no health data about an adult.** The parent's own allergies and medical profile
+   were removed (L-1).
+   - `UserEntity.allergiesJson`/`medicalProfileJson` are dead columns, cleared by migration 43→44.
+   - `firestore.rules` refuses a `users/{uid}` write that adds or changes `medicalProfile` or
+     `allergies`.
+   - `purgeParentHealthFields` (operator-run) erases what older builds left.
+   - Don't add a health field to a parent's profile. The co-parent reads `users/{uid}`.
+4. **A child's health details sit behind a recorded, explicit consent** (L-2; GDPR Art. 9(2)(a),
+   Art. 7(1)).
+   - `domain/consent/HealthConsent.kt` holds `HEALTH_CONSENT_VERSION`. **Bump it when the dialog's
+     wording changes**: a stored lower version locks the section again.
+   - Only `UserRepository.setHealthConsent` writes `healthDataConsent` (Room first, then a Firestore
+     merge). `updateUser` never sends it, so a stale row cannot grant or withdraw.
+   - Withdrawal (`HealthConsentManager`) clears the medical details of children *this* parent
+     created, and only after every medical photo is deleted, all or nothing. The co-parent's
+     entries rest on the co-parent's own consent.
+   - A new medical field of a child goes behind the same gate.
+5. **A departed parent's thread is kept 30 days for the one who remains** (L-5).
+   - `deleteAccount` marks the conversation with `retainedUntilMillis`/`departedUid`/`departedName`
+     instead of deleting it, when another participant still has a profile.
+   - `sweepRetentionLimits` deletes it, files included, once the deadline passes.
+   - The marks are server-only, and a marked thread takes no new message (`firestore.rules`).
+   - The remaining parent gets `coparent_account_deleted`, **instead of** `pairing_removed`, never
+     both. They read and export the thread through `DepartedThreadSource`, which holds the marks in
+     memory, not in Room. The export route takes the thread as `export?thread=`.
+   - Don't shorten the 30 days without the owner, and don't delete the co-parent's messages at
+     once again: that erased evidence without notice.
+6. **Every retention period is enforced by a sweep, not by a promise.**
+   - Receipts: **10 years** from registration; unregistered reservations **7 days**
+     (`export-receipts.js`).
+   - Invitations never accepted: **30 days** after expiry, **90** after creation if they have no
+     expiry. Accepted co-parent invitations are never swept: `hadAnotherCoParent` and the
+     `familyId` stamping read them.
+   - The table in the privacy policy is the list. A new collection arrives with its period and its
+     sweep.
+7. **What signing in agrees to is on the sign-in screen** (`AuthLegalNotice`).
+   - The age line is always shown. The terms clause and its link appear only while
+     `BuildConfig.TERMS_URL` is set (`TermsOfServiceLink`, like `PrivacyPolicyLink`), and Settings
+     links both.
+   - Telemetry is never described as "anonymous". It carries a pseudonymous installation
+     identifier (L-13).
+8. **L-4 is open and blocks publication**: medical, pet, receipt and event photos are reachable by
+   any signed-in account that knows the path, and their download URLs outlive a revoked grant.
+   Don't add a Storage prefix in that shape. A new one follows MON-23's: a family-keyed path,
+   `isOneOfPair`, downloads as the reader, no download URL.
 
 ## Known issues / do not "fix" silently
 

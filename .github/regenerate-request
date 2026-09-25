@@ -60,3 +60,4 @@ requested: 2026-09-24 — week 6 (the Today widget, the readable column on a wid
 requested: 2026-09-24 — again for week 6: the first run stopped at a compile error in NavGraph
            (a return label left behind by pane()), fixed in the commit before this one
 requested: 2026-09-24 — week 7: the 4 dp grid, the type roles and English's 12-hour times move 118 of 200 images
+requested: 2026-09-25 — GDPR review: Room schema 44 (health consent), the consent screen's and sign-in screen's new wording

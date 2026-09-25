@@ -295,7 +295,7 @@ What to know before touching it:
 - **Only `sha256(token)` is stored** — it is the document id in `calendar_feeds`, which
   `firestore.rules` closes to every client. Never log a request path or a token; the handler logs
   only an error's message.
-- **The URL** defaults to `https://us-central1-<project>.cloudfunctions.net/calendarFeed/<token>.ics`.
+- **The URL** defaults to `https://europe-west3-<project>.cloudfunctions.net/calendarFeed/<token>.ics`.
   Set `CALENDAR_FEED_BASE_URL` in `functions/.env` (no trailing slash) if the functions move region
   or a Hosting rewrite / custom domain fronts them — links already handed out keep the old base.
 - **The cache and rate limit are per instance** (15-minute render cache, 30 requests per token per
@@ -331,8 +331,34 @@ What to know before touching it:
 - **Account deletion scrubs receipts, never deletes a registered one** (`scrubReceipts`):
   `generatorUid` and `familyId` are blanked and the hash is kept, so the other parent's filed
   evidence still verifies. Reservations that never received a hash are deleted.
-- **Region.** The callables run in `us-central1` with every other function here; `web/verify/`
-  hard-codes that base URL (`FUNCTIONS_BASE`) and must change with it.
+- **Region.** The callables run in `europe-west3` with every other function here; `web/verify/`
+  hard-codes that base URL (`PRODUCTION_FUNCTIONS_BASE`) and must change with it.
+
+## Region: europe-west3 (September 2026)
+
+Every function is declared through `regional` (`functions.region(FUNCTIONS_REGION)` at the top of
+`index.js`), so they all run in Frankfurt and a family's data — chat text on its way to a push, a
+child's medical profile, an account being deleted — is processed inside the EEA
+(`docs/legal/LEGAL-REVIEW-2026-09.md`, L-3). Four other places name the region and change with it:
+`FirebaseModule.FUNCTIONS_REGION` in the app, `PRODUCTION_FUNCTIONS_BASE` in `web/verify/`, and the
+emulator paths in `tools/e2e/pairing-smoke.js` and `web-tests/support/emulators.js`. A callable
+asked for in the wrong region answers `NOT_FOUND`, so a mismatch fails loudly in the e2e and web
+jobs.
+
+These are 1st-generation functions, whose Firestore triggers are not tied to the database's
+location, so the move does not depend on where Firestore lives. Where it lives still matters for
+the privacy policy: check Firestore → Settings in the console before release.
+
+**Moving the live project** (once, before the first public release):
+
+1. Delete the old functions first, so no trigger fires twice (a push sent from both regions):
+   `firebase functions:list`, then `firebase functions:delete <name> --region us-central1 --force`
+   for each one listed there.
+2. `firebase deploy --only functions` — creates them in `europe-west3`.
+3. Ship an app build carrying this change. An older build calls `us-central1` and gets
+   `NOT_FOUND` from every callable (pairing, deletion, exports) until it updates.
+4. Calendar-feed links minted before the move name `us-central1` and stop working; the parent
+   creates a new link. Before release there are none worth keeping.
 
 ## Admin operations
 

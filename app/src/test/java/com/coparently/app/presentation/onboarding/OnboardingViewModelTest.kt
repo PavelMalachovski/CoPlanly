@@ -219,7 +219,7 @@ class OnboardingViewModelTest {
         viewModel.updateName("Olya")
         advanceUntilIdle()
 
-        // No date of birth, no phone, no blood type, no allergies - and still advanceable.
+        // No date of birth, no phone - and still advanceable.
         assertTrue(viewModel.uiState.value.canAdvance)
         assertNull(viewModel.uiState.value.dateOfBirth)
     }

@@ -79,6 +79,9 @@ import com.coparently.app.presentation.common.MedicalProfileEditor
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.labelRes
+import com.coparently.app.presentation.consent.HealthConsentDialog
+import com.coparently.app.presentation.consent.HealthConsentViewModel
+import com.coparently.app.presentation.consent.LockedMedicalSection
 import com.coparently.app.presentation.custody.labelRes
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.ParentColorChoice
@@ -111,6 +114,8 @@ import java.time.format.FormatStyle
  * @param onOpenPairing Opens the existing pairing screen — on code entry when the argument is
  *   true, on this account's own code otherwise
  * @param viewModel Wizard state and mutations
+ * @param healthConsentViewModel The child-health consent gate the child step's medical fields sit
+ *   behind (GDPR Art. 9(2)(a)); see [LockedMedicalSection]
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -118,9 +123,18 @@ fun OnboardingScreen(
     onFinished: () -> Unit,
     onOpenCustodySetup: () -> Unit,
     onOpenPairing: (enterCode: Boolean) -> Unit,
-    viewModel: OnboardingViewModel = hiltViewModel()
+    viewModel: OnboardingViewModel = hiltViewModel(),
+    healthConsentViewModel: HealthConsentViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val medicalUnlocked by healthConsentViewModel.unlocked.collectAsState()
+    val askingConsent by healthConsentViewModel.asking.collectAsState()
+    if (askingConsent) {
+        HealthConsentDialog(
+            onAgree = healthConsentViewModel::agree,
+            onNotNow = healthConsentViewModel::notNow
+        )
+    }
 
     LaunchedEffect(uiState.isFinished) {
         if (uiState.isFinished) onFinished()
@@ -163,6 +177,7 @@ fun OnboardingScreen(
         OnboardingBody(
             state = uiState,
             viewModel = viewModel,
+            medical = MedicalGate(unlocked = medicalUnlocked, onAsk = healthConsentViewModel::ask),
             onOpenCustodySetup = onOpenCustodySetup,
             onOpenPairing = onOpenPairing,
             padding = padding
@@ -198,9 +213,11 @@ private fun OnboardingTopBar(state: OnboardingUiState) {
 
 /** The scrolling body, switching on the current step. */
 @Composable
+@Suppress("LongParameterList") // the wizard's state, its two hand-offs, the gate and the insets
 private fun OnboardingBody(
     state: OnboardingUiState,
     viewModel: OnboardingViewModel,
+    medical: MedicalGate,
     onOpenCustodySetup: () -> Unit,
     onOpenPairing: (enterCode: Boolean) -> Unit,
     padding: PaddingValues
@@ -220,7 +237,7 @@ private fun OnboardingBody(
             OnboardingStep.Pet -> PetStep(state, viewModel)
             OnboardingStep.Split -> SplitStep(state, viewModel)
             OnboardingStep.Profile -> ProfileStep(state, viewModel)
-            OnboardingStep.Child -> ChildStep(state, viewModel)
+            OnboardingStep.Child -> ChildStep(state, viewModel, medical)
             OnboardingStep.Relatives -> RelativesStep(state, viewModel)
             OnboardingStep.Custody -> CustodyStep(state, onOpenCustodySetup)
         }
@@ -471,21 +488,6 @@ private fun ProfileStep(state: OnboardingUiState, viewModel: OnboardingViewModel
         modifier = Modifier.fillMaxWidth()
     )
 
-    SectionHeading(title = R.string.profile_allergies_label)
-    AllergyEditor(
-        allergies = state.allergies,
-        onAdd = { viewModel.updateAllergies(state.allergies + it) },
-        onRemove = { index ->
-            viewModel.updateAllergies(state.allergies.toMutableList().apply { removeAt(index) })
-        }
-    )
-
-    MedicalProfileEditor(
-        profile = state.medicalProfile,
-        onChange = viewModel::updateMedicalProfile,
-        enabled = true
-    )
-
     Footnote()
 }
 
@@ -511,7 +513,7 @@ private fun ProfileStep(state: OnboardingUiState, viewModel: OnboardingViewModel
  * been seen once will be abandoned. They stay one tap away in Settings.
  */
 @Composable
-private fun ChildStep(state: OnboardingUiState, viewModel: OnboardingViewModel) {
+private fun ChildStep(state: OnboardingUiState, viewModel: OnboardingViewModel, medical: MedicalGate) {
     StepHeading(title = R.string.onboarding_child_title, body = R.string.onboarding_child_body)
     if (state.childrenFromCoParent) FromCoParentNote(state)
 
@@ -522,7 +524,8 @@ private fun ChildStep(state: OnboardingUiState, viewModel: OnboardingViewModel) 
             // One child is the case this wizard has always served, and it must look exactly as
             // it did: no heading, no remove action, just the form.
             showHeader = state.children.size > 1,
-            viewModel = viewModel
+            viewModel = viewModel,
+            medical = medical
         )
     }
 
@@ -546,13 +549,28 @@ private fun FromCoParentNote(state: OnboardingUiState) {
     }
 }
 
-/** One child's form, with the heading and remove action that only a second child needs. */
+/**
+ * Whether the child step's medical fields are open, and how to ask for the consent that opens
+ * them. One value rather than two parameters, so the forms below stay under detekt's limit.
+ *
+ * @property unlocked Whether the parent has consented to the dialog as worded today
+ * @property onAsk Opens the consent dialog
+ */
+private data class MedicalGate(val unlocked: Boolean, val onAsk: () -> Unit)
+
+/**
+ * One child's form, with the heading and remove action that only a second child needs.
+ *
+ * The allergies and the medical profile sit behind [medical]: until the parent consents they are
+ * one line and an "Add medical details" action, and the name and date of birth work without them.
+ */
 @Composable
 private fun ChildDraftForm(
     draft: ChildDraft,
     index: Int,
     showHeader: Boolean,
-    viewModel: OnboardingViewModel
+    viewModel: OnboardingViewModel,
+    medical: MedicalGate
 ) {
     var confirmRemove by remember(draft.id) { mutableStateOf(false) }
 
@@ -597,24 +615,35 @@ private fun ChildDraftForm(
             onDateChange = { viewModel.updateChildDateOfBirth(draft.id, it) }
         )
 
-        SectionHeading(title = R.string.childinfo_section_allergies)
-        AllergyEditor(
-            allergies = draft.allergies,
-            onAdd = { viewModel.updateChildAllergies(draft.id, draft.allergies + it) },
-            onRemove = { position ->
-                viewModel.updateChildAllergies(
-                    draft.id,
-                    draft.allergies.toMutableList().apply { removeAt(position) }
-                )
-            }
-        )
-
-        MedicalProfileEditor(
-            profile = draft.medicalProfile,
-            onChange = { viewModel.updateChildMedicalProfile(draft.id, it) },
-            enabled = true
-        )
+        if (medical.unlocked) {
+            ChildMedicalFields(draft = draft, viewModel = viewModel)
+        } else {
+            SectionHeading(title = R.string.medical_section_title)
+            LockedMedicalSection(onAddMedicalDetails = medical.onAsk)
+        }
     }
+}
+
+/** A child's allergies and medical profile, once the parent has consented to entering them. */
+@Composable
+private fun ChildMedicalFields(draft: ChildDraft, viewModel: OnboardingViewModel) {
+    SectionHeading(title = R.string.childinfo_section_allergies)
+    AllergyEditor(
+        allergies = draft.allergies,
+        onAdd = { viewModel.updateChildAllergies(draft.id, draft.allergies + it) },
+        onRemove = { position ->
+            viewModel.updateChildAllergies(
+                draft.id,
+                draft.allergies.toMutableList().apply { removeAt(position) }
+            )
+        }
+    )
+
+    MedicalProfileEditor(
+        profile = draft.medicalProfile,
+        onChange = { viewModel.updateChildMedicalProfile(draft.id, it) },
+        enabled = true
+    )
 }
 
 /** The name of a draft in a list of them, and the action that takes it back out. */

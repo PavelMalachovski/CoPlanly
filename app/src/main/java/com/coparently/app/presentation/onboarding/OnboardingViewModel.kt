@@ -193,7 +193,7 @@ sealed interface CoParentFetch {
  * Everything the wizard has collected so far, plus which step is showing it.
  *
  * The parent's fields and the child's are held flat rather than as a `User` and a `ChildInfo`
- * because the wizard owns neither record wholesale: it edits five of the parent's fields and
+ * because the wizard owns neither record wholesale: it edits a few of the parent's fields and
  * four of the child's, and each is written onto a **freshly read** row at save time. Holding
  * the whole objects would invite the mistake `ProfileViewModel` documents at length — a stale
  * `User` carries `partnerId`, and writing it back resurrects a pairing the co-parent has since
@@ -203,8 +203,6 @@ sealed interface CoParentFetch {
  * @property name The parent's own name — the one field that blocks progress
  * @property dateOfBirth The parent's own date of birth, or null while unanswered
  * @property phone The parent's own phone, free text as typed
- * @property allergies The parent's own allergies
- * @property medicalProfile The parent's own emergency medical profile
  * @property children The children being set up, one [ChildDraft] each. Never empty: the step
  *   always has one form to render, and a draft nobody names is never written.
  * @property pets The pets, on the same terms as [children]
@@ -256,8 +254,6 @@ data class OnboardingUiState(
      * country clears it.
      */
     val region: String? = null,
-    val allergies: List<String> = emptyList(),
-    val medicalProfile: MedicalProfile = MedicalProfile(),
     val children: List<ChildDraft> = emptyList(),
     val pets: List<PetDraft> = emptyList(),
     val relativesForId: String? = null,
@@ -409,7 +405,7 @@ data class OnboardingUiState(
  * save: skipping means "I am not answering this", and writing a blank answer over a value the
  * account already had would turn a skip into a deletion.
  *
- * **Each write goes onto a freshly read row.** The parent's five fields are copied onto whatever
+ * **Each write goes onto a freshly read row.** The parent's own fields are copied onto whatever
  * `users/{uid}` holds right now, and the child's four onto whatever `child_info` holds right now,
  * for the reason `ProfileViewModel.save` documents: a held snapshot carries `partnerId`,
  * `createdByFirebaseUid` and sync flags that belong to whoever last wrote them, not to this form.
@@ -517,8 +513,6 @@ class OnboardingViewModel @Inject constructor(
                         // country the parent has just moved away from on this run is dropped.
                         region = state.region ?: country.regionOrNull(user?.regionCode),
                         phone = state.phone.orStored(user?.phone),
-                        allergies = state.allergies.orStored(user?.allergies),
-                        medicalProfile = state.medicalProfile.orStored(user?.medicalProfile),
                         storedCaresFor = user?.caresFor.orEmpty(),
                         splitMyPercent = if (state.splitTouched) state.splitMyPercent else cachedMyPercent
                     )
@@ -746,13 +740,6 @@ class OnboardingViewModel @Inject constructor(
     /** Records the region picked on the profile step, or null for "nationwide only". */
     fun updateRegion(region: String?) =
         _uiState.update { it.copy(region = it.country.regionOrNull(region)) }
-
-    /** Updates the parent's allergies. */
-    fun updateAllergies(allergies: List<String>) = _uiState.update { it.copy(allergies = allergies) }
-
-    /** Updates the parent's medical profile. */
-    fun updateMedicalProfile(profile: MedicalProfile) =
-        _uiState.update { it.copy(medicalProfile = profile) }
 
     /** Updates one child's name. */
     fun updateChildName(id: String, name: String) = updateChild(id) { it.copy(name = name) }
@@ -1051,7 +1038,7 @@ class OnboardingViewModel @Inject constructor(
     }
 
     /**
-     * Copies the five fields this wizard owns onto the parent's current row.
+     * Copies the fields this wizard owns onto the parent's current row.
      *
      * `partnerId`, `fcmToken`, `role` and `colorCode` come from the fresh read, never from
      * [state] — see this class's doc, and `ProfileViewModel.save`, which learned it the hard way.
@@ -1063,8 +1050,6 @@ class OnboardingViewModel @Inject constructor(
                 name = state.name.trim(),
                 dateOfBirth = state.dateOfBirth,
                 phone = state.phone.ifBlank { null },
-                allergies = state.allergies,
-                medicalProfile = state.medicalProfile,
                 // Only when they actually chose. An untouched swatch strip must not overwrite a
                 // colour the parent set in Settings on a previous run through this wizard.
                 colorCode = state.parentColor?.storedCode ?: fresh.colorCode,
@@ -1204,13 +1189,5 @@ class OnboardingViewModel @Inject constructor(
         /** This text unless it is blank, in which case [stored] — but never a blank [stored]. */
         fun String.orStored(stored: String?): String =
             takeIf { it.isNotBlank() } ?: stored?.takeIf { it.isNotBlank() } ?: this
-
-        /** This list unless it is empty, in which case [stored]. */
-        fun <T> List<T>.orStored(stored: List<T>?): List<T> =
-            takeIf { it.isNotEmpty() } ?: stored.orEmpty()
-
-        /** This profile unless nothing has been entered into it, in which case [stored]. */
-        fun MedicalProfile.orStored(stored: MedicalProfile?): MedicalProfile =
-            takeIf { it != MedicalProfile() } ?: stored ?: this
     }
 }

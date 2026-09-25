@@ -59,6 +59,7 @@ import com.coparently.app.presentation.documents.FamilyDocumentsScreen
 import com.coparently.app.presentation.event.AddEditEventScreen
 import com.coparently.app.presentation.event.EventListScreen
 import com.coparently.app.presentation.export.ExportScreen
+import com.coparently.app.presentation.export.ExportViewModel
 import com.coparently.app.presentation.journal.JournalEditorScreen
 import com.coparently.app.presentation.journal.JournalEditorViewModel
 import com.coparently.app.presentation.journal.JournalListScreen
@@ -521,7 +522,7 @@ fun NavGraph(
                             navController.navigate(Screen.ParentingPlan.route)
                         },
                         onNavigateToExport = {
-                            navController.navigate(Screen.Export.route)
+                            navController.navigate(Screen.Export.createRoute())
                         },
                         onNavigateToDocuments = {
                             navController.navigate(Screen.Documents.route)
@@ -566,6 +567,13 @@ fun NavGraph(
                 // documents two parents may hand to a court, and neither is a tab's daily business.
                 pane(
                     route = Screen.Export.route,
+                    arguments = listOf(
+                        navArgument(Screen.Export.ARG_THREAD) {
+                            type = NavType.StringType
+                            nullable = true
+                            defaultValue = null
+                        }
+                    ),
                     enterTransition = { slideInFromRight() },
                     exitTransition = { slideOutToLeft() },
                     popEnterTransition = { slideInFromLeft() },
@@ -964,6 +972,11 @@ fun NavGraph(
                         // entity is a date the event-id argument would misread.
                         onOpenInbox = {
                             navController.navigate(Screen.ChangeRequests.createRoute())
+                        },
+                        // The banner over a thread kept after the co-parent deleted their account:
+                        // the same export screen Settings → Family opens, naming that thread.
+                        onOpenExport = { conversationId ->
+                            navController.navigate(Screen.Export.createRoute(conversationId))
                         }
                     )
                 }
@@ -1004,6 +1017,11 @@ fun NavGraph(
                         // entity is a date the event-id argument would misread.
                         onOpenInbox = {
                             navController.navigate(Screen.ChangeRequests.createRoute())
+                        },
+                        // The banner over a thread kept after the co-parent deleted their account:
+                        // the same export screen Settings → Family opens, naming that thread.
+                        onOpenExport = { conversationId ->
+                            navController.navigate(Screen.Export.createRoute(conversationId))
                         }
                     )
                 }
@@ -1486,7 +1504,19 @@ sealed class Screen(val route: String) {
     data object Settings : Screen("settings")
     data object ChildInfo : Screen("child_info")
     data object ParentingPlan : Screen("parenting_plan")
-    data object Export : Screen("export")
+
+    /**
+     * The communication record (MON-3). [ARG_THREAD] names a thread kept after the co-parent
+     * deleted their account, when the export is opened from that thread's banner; Settings opens
+     * it with none.
+     */
+    data object Export : Screen("export?thread={thread}") {
+        const val ARG_THREAD = ExportViewModel.ARG_THREAD
+
+        /** The route, for the kept thread [conversationId] or, when null, the family on screen. */
+        fun createRoute(conversationId: String? = null): String =
+            if (conversationId.isNullOrBlank()) "export" else "export?thread=${Uri.encode(conversationId)}"
+    }
     data object Documents : Screen("family_documents")
 
     /** The private journal's list (MON-22). */

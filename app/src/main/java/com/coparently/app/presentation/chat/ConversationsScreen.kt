@@ -80,6 +80,9 @@ import com.coparently.app.utils.dateWithTime
  *   two uids, so the card reaches it whether the request was started here or from the calendar
  * @param onOpenChangeRequest Opens the change-request inbox with the request for the given
  *   event id highlighted; forwarded to the inlined [ChatScreen]
+ * @param onOpenInbox Opens the change-request inbox; forwarded to the inlined [ChatScreen]
+ * @param onOpenExport Opens the export screen; forwarded to the inlined [ChatScreen], whose banner
+ *   offers it over a thread kept after the co-parent deleted their account
  * @param viewModel Chat state
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -95,6 +98,7 @@ fun ConversationsScreen(
     onRequestChangeForEvent: (eventId: String) -> Unit = {},
     onOpenChangeRequest: ((String) -> Unit)? = null,
     onOpenInbox: (() -> Unit)? = null,
+    onOpenExport: ((conversationId: String) -> Unit)? = null,
     viewModel: ChatViewModel = hiltViewModel()
 ) {
     val conversationsState by viewModel.conversations.collectAsState()
@@ -138,7 +142,8 @@ fun ConversationsScreen(
             onRequestChangeForEvent = onRequestChangeForEvent,
             onOpenSettings = onOpenSettings,
             onOpenChangeRequest = onOpenChangeRequest,
-            onOpenInbox = onOpenInbox
+            onOpenInbox = onOpenInbox,
+            onOpenExport = onOpenExport
         )
     }
     val twoPane = rememberTwoPane()

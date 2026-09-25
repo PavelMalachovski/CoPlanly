@@ -14,10 +14,12 @@ import javax.inject.Singleton
 /**
  * Data source for managing messages in Firestore.
  *
- * There is no conversation-*list* accessor here any more. The conversation id is a pure
+ * There is no general conversation-*list* accessor here any more. The conversation id is a pure
  * function of the two participants (`ConversationKey`), so a device already knows which
  * document it wants and does not need to query for it — and the list query is what the
- * nested-`collect` sync loop was built on.
+ * nested-`collect` sync loop was built on. The one list query left, [observeDepartedThreads],
+ * finds only threads the server kept after a co-parent deleted their account: once that account
+ * is gone, no pairing names the co-parent any more, so the id cannot be derived from one.
  */
 @Singleton
 class FirestoreMessageDataSource @Inject constructor(
@@ -50,6 +52,42 @@ class FirestoreMessageDataSource @Inject constructor(
 
         awaitClose { subscription.remove() }
     }
+
+    /**
+     * Observes the conversations [uid] is in that the server kept after the other parent deleted
+     * their account — those carrying a numeric `retainedUntilMillis` — each as its fields plus `id`.
+     *
+     * `participants array-contains` is what the conversations read rule keys on, so the query is
+     * provably inside it; the range on `retainedUntilMillis` keeps every ordinary thread out of
+     * the answer (an index in `firestore.indexes.json`). Closes with the listener's error, as
+     * [observeConversation] does.
+     */
+    fun observeDepartedThreads(uid: String): Flow<List<Map<String, Any>>> = callbackFlow {
+        val subscription = departedThreadsQuery(uid)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+                trySend(snapshot?.documents.orEmpty().map { doc -> doc.data.orEmpty() + ("id" to doc.id) })
+            }
+
+        awaitClose { subscription.remove() }
+    }
+
+    /**
+     * The same threads as [observeDepartedThreads], read once — for the export, which must find a
+     * kept thread whether or not a chat screen has been opened.
+     *
+     * @throws com.google.firebase.firestore.FirebaseFirestoreException when the read fails.
+     */
+    suspend fun fetchDepartedThreads(uid: String): List<Map<String, Any>> =
+        departedThreadsQuery(uid).get().await().documents.map { doc -> doc.data.orEmpty() + ("id" to doc.id) }
+
+    private fun departedThreadsQuery(uid: String): Query =
+        conversationsCollection
+            .whereArrayContains("participants", uid)
+            .whereGreaterThan("retainedUntilMillis", 0)
 
     /**
      * Gets the most recent messages of a conversation as a Flow, oldest of them first.

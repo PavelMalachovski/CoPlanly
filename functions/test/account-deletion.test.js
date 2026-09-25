@@ -28,6 +28,10 @@ function fakeDb(collections) {
     const actual = doc[field];
     if (op === '==') return actual === value;
     if (op === 'array-contains') return Array.isArray(actual) && actual.includes(value);
+    // Ranges match numbers only, as Firestore's do across types: that is what keeps a thread
+    // nobody marked out of the retention sweep.
+    if (op === '>') return typeof actual === 'number' && actual > value;
+    if (op === '<=') return typeof actual === 'number' && actual <= value;
     throw new Error(`fakeDb: unsupported operator ${op}`);
   };
 
@@ -67,17 +71,20 @@ function fakeDb(collections) {
 
   const collection = (name) => ({
     where(field, op, value) {
-      const build = (predicates) => ({
+      const build = (predicates, max) => ({
         where(f2, o2, v2) {
-          return build(predicates.concat([[f2, o2, v2]]));
+          return build(predicates.concat([[f2, o2, v2]]), max);
+        },
+        limit(n) {
+          return build(predicates, n);
         },
         async get() {
           const found = docsOf(name).filter((doc) =>
-            predicates.every(([f, o, v]) => matches(doc, f, o, v)));
+            predicates.every(([f, o, v]) => matches(doc, f, o, v))).slice(0, max || Infinity);
           return {docs: found.map((doc) => wrap(name, doc)), size: found.length};
         },
       });
-      return build([[field, op, value]]);
+      return build([[field, op, value]], 0);
     },
     doc(id) {
       return {
@@ -145,6 +152,8 @@ function fakeDb(collections) {
 
 const ALICE = 'alice';
 const BOB = 'bob';
+const NOW = Date.parse('2026-09-25T10:00:00Z');
+const DAY = 24 * 60 * 60 * 1000;
 
 /**
  * A paired family with one document of every shape the erasure has to reason about.
@@ -271,12 +280,94 @@ describe('deleteAccountDataImpl', () => {
     assert.strictEqual(removed.event_versions, 1);
   });
 
-  it('deletes the conversation and every message in it', async () => {
+  // GDPR review, September 2026: the thread is the co-parent's record too. It stays, whole, for
+  // thirty days so they can export it, marked with who left and until when.
+  it('keeps the conversation for the co-parent who remains, marked with its deadline', async () => {
     const db = fakeDb(family());
-    await myFunctions.deleteAccountDataImpl(db, ALICE);
+    const removed = await myFunctions.deleteAccountDataImpl(db, ALICE, null, NOW);
+
+    assert.deepStrictEqual(db._store.conversations, [{
+      id: `${ALICE}__${BOB}`,
+      participants: [ALICE, BOB],
+      retainedUntilMillis: NOW + 30 * DAY,
+      departedUid: ALICE,
+      departedName: 'Alice',
+    }]);
+    assert.deepStrictEqual(db._store.messages.map((m) => m.id), ['m-1', 'm-2'],
+        'the thread was trimmed instead of kept whole');
+    assert.strictEqual(removed.conversations, 0);
+    assert.strictEqual(removed.conversations_retained, 1);
+    assert.strictEqual(myFunctions.DEPARTED_CHAT_RETENTION_DAYS, 30);
+  });
+
+  it('deletes the conversation and every message at once when nobody else remains', async () => {
+    const seed = family();
+    seed.users = seed.users.filter((u) => u.id !== BOB);
+    const db = fakeDb(seed);
+    const bucket = fakeBucket();
+
+    const removed = await myFunctions.deleteAccountDataImpl(db, ALICE, bucket, NOW);
 
     assert.deepStrictEqual(db._store.conversations, []);
     assert.deepStrictEqual(db._store.messages, [], 'half a thread was left behind');
+    assert.ok(bucket.deletedPrefixes.includes(`chat_attachments/${ALICE}__${BOB}/`));
+    assert.strictEqual(removed.conversations, 1);
+    assert.ok(!db._store.notification_queue.some((n) => n.data &&
+        n.data.type === 'coparent_account_deleted'), 'a push went to nobody');
+  });
+
+  it('deletes a kept thread at once when the parent who remained deletes their account too',
+      async () => {
+        const db = fakeDb(family());
+        const bucket = fakeBucket();
+        await myFunctions.deleteAccountDataImpl(db, ALICE, bucket, NOW);
+        assert.strictEqual(db._store.conversations.length, 1);
+
+        await myFunctions.deleteAccountDataImpl(db, BOB, bucket, NOW + DAY);
+
+        assert.deepStrictEqual(db._store.conversations, []);
+        assert.deepStrictEqual(db._store.messages, []);
+        assert.ok(bucket.deletedPrefixes.includes(`chat_attachments/${ALICE}__${BOB}/`));
+      });
+
+  // One departure, one push: the specific one, carrying the deadline and the thread, and not the
+  // generic "co-parent unlinked" beside it.
+  it('tells the co-parent once, with the deadline and the thread, instead of pairing_removed',
+      async () => {
+        const db = fakeDb(family());
+        await myFunctions.deleteAccountDataImpl(db, ALICE, null, NOW);
+
+        const toBob = db._store.notification_queue.filter((n) => n.targetUserId === BOB);
+        assert.strictEqual(toBob.length, 1);
+        assert.deepStrictEqual(toBob[0].data, {
+          type: 'coparent_account_deleted',
+          actorName: 'Alice',
+          date: new Date(NOW + 30 * DAY).toISOString().slice(0, 10),
+          retainedUntilMillis: String(NOW + 30 * DAY),
+          conversationId: `${ALICE}__${BOB}`,
+        });
+      });
+
+  it('still sends pairing_removed to a co-parent with no thread to keep', async () => {
+    const seed = family();
+    seed.conversations = [];
+    seed.messages = [];
+    const db = fakeDb(seed);
+
+    await myFunctions.deleteAccountDataImpl(db, ALICE, null, NOW);
+
+    const toBob = db._store.notification_queue.filter((n) => n.targetUserId === BOB);
+    assert.deepStrictEqual(toBob.map((n) => n.data.type), ['pairing_removed']);
+  });
+
+  it('keeps the deadline and sends no second push when a thread is marked twice', async () => {
+    const db = fakeDb(family());
+    await myFunctions.retainOrDeleteConversations(db, ALICE, 'Alice', null, NOW);
+    await myFunctions.retainOrDeleteConversations(db, ALICE, 'Alice', null, NOW + DAY);
+
+    assert.strictEqual(db._store.conversations[0].retainedUntilMillis, NOW + 30 * DAY);
+    assert.strictEqual(db._store.notification_queue
+        .filter((n) => n.data && n.data.type === 'coparent_account_deleted').length, 1);
   });
 
   it('deletes change requests in both directions', async () => {
@@ -417,12 +508,13 @@ describe('deleteAccountDataImpl', () => {
 
     assert.deepStrictEqual(bucket.deletedObjects.sort(),
         ['event_images/ev-alice.jpg', 'receipts/ex-1.jpg']);
+    // The chat's files stay with the kept thread (see the retention cases above).
     assert.deepStrictEqual(bucket.deletedPrefixes.sort(),
-        [`chat_attachments/${ALICE}__${BOB}/`, 'medical_photos/ch-1/', 'pet_photos/pet-1/']);
+        ['medical_photos/ch-1/', 'pet_photos/pet-1/']);
     assert.ok(!bucket.deletedObjects.includes('event_images/ev-bob.jpg'),
         'the co-parent\'s event photo was deleted');
     assert.strictEqual(result.storage, 4);
-    assert.strictEqual(result.chat_attachments, 1);
+    assert.strictEqual(result.chat_attachments, 0);
   });
 
   // MON-23. The vault's files are the departing parent's uploads, and its documents are authored
@@ -461,14 +553,15 @@ describe('deleteAccountDataImpl', () => {
             'a blank familyId produced a vault-wide prefix');
       });
 
-  it('erases the chat files of every thread with the rest of the chat', async () => {
+  it('keeps the chat files of a thread kept for the co-parent', async () => {
     const db = fakeDb(family());
     const bucket = fakeBucket();
 
-    await myFunctions.deleteAccountDataImpl(db, ALICE, bucket);
+    await myFunctions.deleteAccountDataImpl(db, ALICE, bucket, NOW);
 
-    assert.ok(bucket.deletedPrefixes.includes(`chat_attachments/${ALICE}__${BOB}/`));
-    assert.deepStrictEqual(db._store.messages, []);
+    assert.ok(!bucket.deletedPrefixes.some((p) => p.startsWith('chat_attachments/')),
+        'the co-parent lost the files of a thread they have thirty days to export');
+    assert.strictEqual(db._store.messages.length, 2);
   });
 
   it('keeps the documents when a file cannot be deleted, so a retry finds it', async () => {
@@ -504,6 +597,75 @@ describe('deleteAccountDataImpl', () => {
     assert.deepStrictEqual([byId('R-BOB').generatorUid, byId('R-BOB').familyId], [BOB, '']);
     assert.strictEqual(removed.export_receipts_deleted, 1);
     assert.ok(!JSON.stringify(db._store.export_receipts).includes(ALICE), 'the erased uid survived');
+  });
+});
+
+describe('sweepRetainedConversationsImpl', () => {
+  let myFunctions;
+
+  before(() => {
+    myFunctions = require('../index');
+  });
+
+  /**
+   * Three threads kept for a parent whose co-parent left, around one deadline, and one thread
+   * nobody marked.
+   *
+   * @return {!Object<string, !Array<!Object>>} Seed documents.
+   */
+  function kept() {
+    const thread = (id, retainedUntilMillis, extra) => Object.assign(
+        {id, participants: [ALICE, id], retainedUntilMillis, departedUid: id, departedName: 'X'},
+        extra || {});
+    return {
+      conversations: [
+        thread('lapsed', NOW - DAY),
+        thread('due-now', NOW),
+        thread('running', NOW + 1),
+        {id: 'live', participants: [ALICE, BOB]},
+        thread('unmarked-author', NOW - DAY, {departedUid: ''}),
+      ],
+      messages: [
+        {id: 'm-lapsed', conversationId: 'lapsed'},
+        {id: 'm-due', conversationId: 'due-now'},
+        {id: 'm-running', conversationId: 'running'},
+        {id: 'm-live', conversationId: 'live'},
+      ],
+    };
+  }
+
+  it('deletes only the threads whose thirty days are up, with their messages and files',
+      async () => {
+        const db = fakeDb(kept());
+        const bucket = fakeBucket();
+
+        const removed = await myFunctions.sweepRetainedConversationsImpl(db, NOW, bucket);
+
+        assert.strictEqual(removed, 2);
+        assert.deepStrictEqual(db._store.conversations.map((c) => c.id).sort(),
+            ['live', 'running', 'unmarked-author']);
+        assert.deepStrictEqual(db._store.messages.map((m) => m.id).sort(), ['m-live', 'm-running']);
+        assert.deepStrictEqual(bucket.deletedPrefixes.sort(),
+            ['chat_attachments/due-now/', 'chat_attachments/lapsed/']);
+      });
+
+  it('never touches a thread nobody marked', async () => {
+    const db = fakeDb(kept());
+    await myFunctions.sweepRetainedConversationsImpl(db, NOW + 365 * DAY, null);
+    assert.ok(db._store.conversations.some((c) => c.id === 'live'));
+    assert.ok(db._store.messages.some((m) => m.id === 'm-live'));
+  });
+
+  it('deletes a thread kept by account deletion once its deadline passes', async () => {
+    const db = fakeDb(family());
+    await myFunctions.deleteAccountDataImpl(db, ALICE, null, NOW);
+
+    await myFunctions.sweepRetainedConversationsImpl(db, NOW + 30 * DAY - 1, null);
+    assert.strictEqual(db._store.conversations.length, 1, 'swept a day early');
+
+    await myFunctions.sweepRetainedConversationsImpl(db, NOW + 30 * DAY, null);
+    assert.deepStrictEqual(db._store.conversations, []);
+    assert.deepStrictEqual(db._store.messages, []);
   });
 });
 

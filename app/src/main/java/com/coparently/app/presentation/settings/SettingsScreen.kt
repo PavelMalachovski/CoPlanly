@@ -100,6 +100,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
+import com.coparently.app.data.consent.HealthConsentWithdrawal
 import com.coparently.app.data.repository.RatioSubmission
 import com.coparently.app.data.sync.SyncStatus
 import com.coparently.app.domain.expenses.SplitRatio
@@ -118,6 +119,7 @@ import com.coparently.app.presentation.common.PrivacyPolicyLink
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.SignedInAsRow
+import com.coparently.app.presentation.common.TermsOfServiceLink
 import com.coparently.app.presentation.common.UiState
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.animations.sectionEnter
@@ -130,6 +132,9 @@ import com.coparently.app.presentation.common.regionLabelRes
 import com.coparently.app.presentation.common.regionName
 import com.coparently.app.presentation.common.regionSummaryRes
 import com.coparently.app.presentation.common.rememberParentNames
+import com.coparently.app.presentation.consent.HealthConsentSettingsRow
+import com.coparently.app.presentation.consent.HealthConsentViewModel
+import com.coparently.app.presentation.consent.HealthConsentWithdrawDialog
 import com.coparently.app.presentation.consent.TelemetryConsentViewModel
 import com.coparently.app.presentation.sync.GoogleCalendarSyncState
 import com.coparently.app.presentation.sync.SyncViewModel
@@ -178,6 +183,8 @@ import kotlinx.coroutines.launch
  * @param syncViewModel Sync operations
  * @param settingsViewModel Settings state
  * @param authStateViewModel Firebase auth state, used to sign out
+ * @param telemetryConsentViewModel The analytics and crash-reporting answer (REL-5)
+ * @param healthConsentViewModel The child-health consent, withdrawn from its row in App
  */
 // The complexity is the optional-callback fan-out: each group is only rendered when the route
 // behind it was wired, and every one of those checks is a separate branch.
@@ -205,10 +212,14 @@ fun SettingsScreen(
     syncViewModel: SyncViewModel = hiltViewModel(),
     settingsViewModel: SettingsViewModel = hiltViewModel(),
     authStateViewModel: com.coparently.app.presentation.sync.AuthStateViewModel = hiltViewModel(),
-    telemetryConsentViewModel: TelemetryConsentViewModel = hiltViewModel()
+    telemetryConsentViewModel: TelemetryConsentViewModel = hiltViewModel(),
+    healthConsentViewModel: HealthConsentViewModel = hiltViewModel()
 ) {
     val haptic = LocalHapticFeedback.current
     val telemetryConsent by telemetryConsentViewModel.consent.collectAsState()
+    val healthConsent by healthConsentViewModel.consent.collectAsState()
+    val healthConsentWithdrawing by healthConsentViewModel.withdrawing.collectAsState()
+    var showHealthConsentWithdraw by rememberSaveable { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
@@ -368,6 +379,22 @@ fun SettingsScreen(
                     null -> splitRefused
                 }
             )
+        }
+    }
+
+    // A withdrawal deletes data on both phones, so how it ended is always said out loud.
+    val healthWithdrawn = stringResource(R.string.health_consent_withdrawn)
+    val healthPhotosKept = stringResource(R.string.health_consent_withdraw_photos_failed)
+    val healthWithdrawFailed = stringResource(R.string.health_consent_withdraw_failed)
+    LaunchedEffect(Unit) {
+        healthConsentViewModel.withdrawal.collect { outcome ->
+            val message = when (outcome) {
+                HealthConsentWithdrawal.WITHDRAWN -> healthWithdrawn
+                HealthConsentWithdrawal.PHOTOS_NOT_DELETED -> healthPhotosKept
+                HealthConsentWithdrawal.FAILED -> healthWithdrawFailed
+                HealthConsentWithdrawal.SIGNED_OUT -> null
+            }
+            message?.let { snackbarHostState.showSnackbar(it) }
         }
     }
 
@@ -916,6 +943,15 @@ fun SettingsScreen(
                         }
                     )
                     Divider()
+                    // Beside telemetry, the other consent. It withdraws the child-health consent
+                    // (GDPR Art. 9(2)(a), Art. 7(3)); giving it is asked where the details are
+                    // entered, not here.
+                    HealthConsentSettingsRow(
+                        consent = healthConsent,
+                        withdrawing = healthConsentWithdrawing,
+                        onWithdraw = { showHealthConsentWithdraw = true }
+                    )
+                    Divider()
                     // POST_NOTIFICATIONS is requested here, contextually, not on app start.
                     val notificationPermissionRequester =
                         com.coparently.app.presentation.common.rememberNotificationPermissionRequester()
@@ -1007,6 +1043,25 @@ fun SettingsScreen(
                         )
                         Divider()
                     }
+                    // The contract the sign-in screen pointed to, readable again afterwards (§ 1751
+                    // of the Civil Code). Absent until hosted — see TermsOfServiceLink.
+                    if (TermsOfServiceLink.url != null) {
+                        SectionRow(
+                            icon = Icons.Default.Gavel,
+                            title = stringResource(R.string.terms_of_service_title),
+                            supporting = stringResource(R.string.terms_of_service_description),
+                            onClick = { TermsOfServiceLink.open(uriHandler) },
+                            trailing = {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.OpenInNew,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(IconSizes.Standard)
+                                )
+                            }
+                        )
+                        Divider()
+                    }
                     // Destructive, so it stays at the very bottom of the screen. It reads as
                     // a red text row rather than a filled error button — but a row is easier
                     // to hit by accident than a deliberate button was, so it now confirms.
@@ -1040,6 +1095,17 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(Spacing.S))
         }
+    }
+
+    if (showHealthConsentWithdraw) {
+        HealthConsentWithdrawDialog(
+            onDismiss = { showHealthConsentWithdraw = false },
+            onConfirm = {
+                showHealthConsentWithdraw = false
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                healthConsentViewModel.withdraw()
+            }
+        )
     }
 
     if (showSignOutConfirm) {

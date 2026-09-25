@@ -192,7 +192,7 @@ async function main() {
 
   // The callable protocol: `{data}` in, `{result}` out, the caller's ID token as the bearer.
   const accepted = await call(
-      `http://${functions}/${PROJECT}/us-central1/acceptPairingInvitation`,
+      `http://${functions}/${PROJECT}/europe-west3/acceptPairingInvitation`,
       {method: 'POST', token: bob.token, body: {data: {code}}});
   check(accepted.result && accepted.result.partnerId === alice.uid,
       `acceptPairingInvitation returned ${JSON.stringify(accepted)}`);

@@ -2,10 +2,12 @@ package com.coparently.app.presentation.chat
 
 import app.cash.turbine.test
 import com.coparently.app.data.chat.ChatPartnerSource
+import com.coparently.app.data.chat.DepartedThreadSource
 import com.coparently.app.data.family.FamilyOption
 import com.coparently.app.data.family.SelectedFamilySource
 import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.domain.chat.ConversationKey
+import com.coparently.app.domain.chat.DepartedThread
 import com.coparently.app.domain.model.Conversation
 import com.coparently.app.domain.model.Message
 import com.coparently.app.domain.model.MessageSendStatus
@@ -25,7 +27,9 @@ import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
@@ -65,6 +69,8 @@ class ChatViewModelTest {
     private lateinit var messageRepository: MessageRepository
     private lateinit var userRepository: UserRepository
     private lateinit var pauseBeforeSending: MutableStateFlow<Boolean>
+    private lateinit var departed: MutableStateFlow<List<DepartedThread>>
+    private lateinit var departedRoom: MutableStateFlow<Conversation?>
 
     @Before
     fun setUp() {
@@ -75,9 +81,12 @@ class ChatViewModelTest {
         projectedFamily = MutableStateFlow(null)
         conversationInRoom = MutableStateFlow(null)
         pauseBeforeSending = MutableStateFlow(false)
+        departed = MutableStateFlow(emptyList())
+        departedRoom = MutableStateFlow(null)
 
         messageRepository = mockk(relaxed = true) {
             every { observeConversation(any()) } returns conversationInRoom
+            every { observeConversation(DEPARTED_CONVERSATION) } returns departedRoom
             every { observeMessages(any(), any()) } returns flowOf(emptyList())
             coEvery { ensureConversation(any(), any(), any()) } answers {
                 ConversationKey.of(firstArg(), secondArg())
@@ -641,8 +650,77 @@ class ChatViewModelTest {
         return viewModel
     }
 
+    // ---- a thread kept after the co-parent deleted their account (GDPR review, September 2026) ----
+
+    @Test
+    fun `with nobody paired, the kept thread is the tab's one conversation`() = runTest {
+        pairingState.value = PairingState.NotPaired()
+        departed.value = listOf(keptThread())
+        departedRoom.value = keptConversation()
+        val viewModel = createViewModel()
+
+        viewModel.conversations.test {
+            advanceUntilIdle()
+            assertEquals(Loadable.Loaded(listOf(keptConversation())), expectMostRecentItem())
+        }
+        viewModel.departedThreads.test {
+            advanceUntilIdle()
+            assertEquals(listOf(keptThread()), expectMostRecentItem())
+        }
+    }
+
+    @Test
+    fun `unpaired is not "no conversations" until the kept threads have answered`() = runTest {
+        pairingState.value = PairingState.NotPaired()
+        val unanswered = MutableStateFlow<List<DepartedThread>?>(null)
+        val notYet: Flow<List<DepartedThread>> = flow {
+            unanswered.collect { if (it != null) emit(it) }
+        }
+        val viewModel = createViewModel(departedFlow = notYet)
+
+        viewModel.conversations.test {
+            advanceUntilIdle()
+            assertEquals(Loadable.Loading, expectMostRecentItem())
+
+            departedRoom.value = keptConversation()
+            unanswered.value = listOf(keptThread())
+            advanceUntilIdle()
+            assertEquals(Loadable.Loaded(listOf(keptConversation())), expectMostRecentItem())
+        }
+    }
+
+    @Test
+    fun `a kept thread sits after the family on screen, never in its place`() = runTest {
+        pairingState.value = PairingState.Paired(partner())
+        conversationInRoom.value = existingThread()
+        departed.value = listOf(keptThread())
+        departedRoom.value = keptConversation()
+        val viewModel = createViewModel()
+
+        viewModel.conversations.test {
+            advanceUntilIdle()
+            assertEquals(
+                Loadable.Loaded(listOf(existingThread(), keptConversation())),
+                expectMostRecentItem()
+            )
+        }
+    }
+
+    @Test
+    fun `an unpaired account with nothing kept still reads as no conversations`() = runTest {
+        pairingState.value = PairingState.NotPaired()
+        val viewModel = createViewModel()
+
+        viewModel.conversations.test {
+            advanceUntilIdle()
+            assertEquals(Loadable.Loaded(emptyList<Conversation>()), expectMostRecentItem())
+        }
+        verify(exactly = 0) { messageRepository.observeConversation(DEPARTED_CONVERSATION) }
+    }
+
     private fun createViewModel(
-        preferences: EncryptedPreferences = draftStore()
+        preferences: EncryptedPreferences = draftStore(),
+        departedFlow: Flow<List<DepartedThread>> = departed
     ): ChatViewModel {
         val eventRepository = mockk<EventRepository> {
             every { getEventsByDateRange(any(), any()) } returns flowOf(emptyList())
@@ -662,6 +740,9 @@ class ChatViewModelTest {
             preferences,
             mockk<PreferencesRepository> {
                 every { getPauseBeforeSendingFlow() } returns pauseBeforeSending
+            },
+            mockk<DepartedThreadSource> {
+                every { observe() } returns departedFlow
             }
         )
     }
@@ -697,9 +778,27 @@ class ChatViewModelTest {
         messageType = MessageType.TEXT
     )
 
+    private fun keptThread() = DepartedThread(
+        conversationId = DEPARTED_CONVERSATION,
+        departedUid = DEPARTED,
+        departedName = "Dana",
+        retainedUntilMillis = SENT_AT_MILLIS + 30L * 24 * 60 * 60 * 1000
+    )
+
+    private fun keptConversation() = Conversation(
+        id = DEPARTED_CONVERSATION,
+        participants = listOf(UID, DEPARTED),
+        title = "Dana",
+        createdAt = TIMESTAMP
+    )
+
     private companion object {
         const val UID = "user-a"
         const val PARTNER = "user-b"
+
+        /** A co-parent who deleted their account, and the thread kept for this parent. */
+        const val DEPARTED = "user-d"
+        const val DEPARTED_CONVERSATION = "user-a__user-d"
 
         /** What `ConversationKey.of(UID, PARTNER)` derives; kept literal so the test pins it. */
         const val CONVERSATION = "user-a__user-b"

@@ -341,12 +341,26 @@ is lost, since Room is the source of truth, but it is alarming to watch.
 
 **Where:** ☁️ the drafting and the deletion page; 💻 the review and the hosting.
 
-Drafts are in `docs/legal/`. They are drafts. **Have a lawyer read them before publishing** — this
-app processes a child's health data, which is special-category data under GDPR Art. 9, and no
-template survives that unread.
+Drafts are in `docs/legal/`. **The legal and GDPR review is done** (September 2026,
+`docs/legal/LEGAL-REVIEW-2026-09.md`): 18 findings, the ones in code fixed in the same change, the
+policy and terms rewritten, and a DPIA (`DPIA.md`), an Art. 30 record (`RECORDS-OF-PROCESSING.md`)
+and a breach runbook (`BREACH-PROCEDURE.md`) added. Its §3 is the list of what still blocks
+publication; its §4 is the console checklist. What is left for a lawyer is the Czech counsel's
+sign-off, not a first reading.
+
+- [x] The review (owner answers of 25 September 2026: s.r.o. controller, EU market on Czech law,
+      the parent's own medical profile removed, a departed parent's chat kept 30 days for the
+      co-parent, export receipts 10 years, a consent dialog before a child's health data, Cloud
+      Functions in `europe-west3`).
+- [ ] **L-4 — photos behind rules, not unguessable URLs** (medical, pet, receipt and event photos;
+      SEC-6's Storage line below). Blocks publication.
+- [ ] Confirm the Firestore/Storage location is in the EU; a new EU project if not (L-3).
+- [ ] Counsel's sign-off on the policy, the terms and the DPIA; the director signs the DPIA.
+- [ ] Owner decisions the review left open: an inactive-account rule (L-16), keeping a departed
+      parent's event revisions 30 days like the chat (L-17), a second factor (L-18).
 
 - [x] Fill every placeholder the code can answer (September 2026, release-tails pass). The
-      functions' region is stated (`us-central1`), retention says what the code does (90-day
+      functions' region is stated (`europe-west3` since the September 2026 review), retention says what the code does (90-day
       tombstones, the daily guest sweep, no sweep for lapsed friend grants), the pricing section
       and the invitation paragraph are written, and the terms no longer point at the EU ODR
       platform, which closed in July 2025.
@@ -617,7 +631,11 @@ Open, in the order they matter:
       per-record "which family is this" prompt — not a server heuristic. Count them first:
       `backfillRecordFamilyIds` reports `unresolved`, and today it is expected to be near zero.
 - [ ] Cloud Storage: any signed-in user can still overwrite or delete any object (audit §3.1,
-      SEC-1 §1). The cross-service rule is drafted in the audit report; the emulator cannot
+      SEC-1 §1). **The legal review makes this a release blocker** (`LEGAL-REVIEW-2026-09.md`
+      L-4): `medical_photos/` holds photographs of a child's medical documents, and their download
+      URLs outlive a guest's or an ex-partner's revoked access. The shape to copy is MON-23's —
+      family-keyed paths gated by `isOneOfPair`, downloads as the reader, no download URLs — which
+      needs no cross-service rule. The cross-service rule is drafted in the audit report; the emulator cannot
       evaluate `firestore.get()` from Storage rules, so it needs a staging bucket.
 - [ ] Invite-code redemption has no rate limit and no App Check. Space is 31⁶ and codes expire in
       24 h, so this is a growing risk, not a live one; `enforceAppCheck` needs the client wired

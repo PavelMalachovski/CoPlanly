@@ -337,6 +337,11 @@
       "e2e": [
         "TwoParentAccessTest#unpairingEndsTheLinkOnBothPhonesTellsBobAndNarrowsTheAudience"
       ]
+    },
+    "coparent_account_deleted": {
+      "e2e": [
+        "TwoParentAccessTest#deletingBobsAccountKeepsTheThreadForAliceToExportAndTellsHerOnce"
+      ]
     }
   },
   "functions": {
@@ -356,6 +361,9 @@
     },
     "backfillFamilyDocuments": {
       "exempt": "Operator-only maintenance callable, not a phone-to-phone feature; functions/test covers it."
+    },
+    "purgeParentHealthFields": {
+      "exempt": "Operator-run one-off cleanup of the removed parent health keys, not a phone-to-phone feature; functions/test covers it."
     },
     "backfillParentSlots": {
       "exempt": "Operator-only maintenance callable, not a phone-to-phone feature; functions/test covers it."
@@ -420,7 +428,8 @@
     },
     "deleteAccount": {
       "e2e": [
-        "TwoParentAccessTest#deletingBobsAccountErasesHisRecordsAndUnpairsAlice"
+        "TwoParentAccessTest#deletingBobsAccountErasesHisRecordsAndUnpairsAlice",
+        "TwoParentAccessTest#deletingBobsAccountKeepsTheThreadForAliceToExportAndTellsHerOnce"
       ],
       "checklist": [
         "7"

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="health_consent_dialog_title">Zdravotní údaje vašeho dítěte</string>
+    <string name="health_consent_dialog_message">Alergie, léky, onemocnění, krevní skupina, očkování, zdravotní poznámky a zdravotní fotografie jsou zdravotní údaje o vašem dítěti.\n\n• Druhý rodič je může číst i upravovat. Host, kterému zpřístupníte záznam dítěte, je může číst.\n• Ukládají se na našich serverech.\n• Jsou nepovinné. Aplikace funguje i bez nich.\n• Souhlas můžete kdykoli odvolat v Nastavení. Zdravotní údaje, které jste zadali, se pak smažou.</string>
+    <string name="health_consent_agree">Souhlasím</string>
+    <string name="health_consent_not_now">Teď ne</string>
+    <string name="health_consent_locked">Zdravotní údaje jsou nepovinné a nejdřív k nim potřebujeme váš souhlas.</string>
+    <string name="health_consent_add_action">Přidat zdravotní údaje</string>
+    <string name="health_consent_settings_title">Souhlas se zdravotními údaji</string>
+    <string name="health_consent_settings_given">Udělen %1$s</string>
+    <string name="health_consent_settings_not_given">Neudělen</string>
+    <string name="health_consent_settings_withdraw">Odvolat</string>
+    <string name="health_consent_withdraw_title">Odvolat souhlas?</string>
+    <string name="health_consent_withdraw_message">Zdravotní údaje, které jste zadali do záznamů svých dětí — alergie, léky, zdravotní profil, zdravotní poznámky a zdravotní fotografie — budou smazány, i v telefonu druhého rodiče.\n\nZáznamy, které vytvořil druhý rodič, si své zdravotní údaje ponechají, protože stojí na jeho vlastním souhlasu.</string>
+    <string name="health_consent_withdraw_confirm">Odvolat a smazat</string>
+    <string name="health_consent_withdrawn">Souhlas byl odvolán. Zdravotní údaje, které jste zadali, byly smazány.</string>
+    <string name="health_consent_withdraw_photos_failed">Některé zdravotní fotografie se nepodařilo smazat, proto nebylo nic odvoláno. Zkontrolujte připojení a zkuste to znovu.</string>
+    <string name="health_consent_withdraw_failed">Souhlas se nepodařilo odvolat. Zkuste to znovu.</string>
+</resources>

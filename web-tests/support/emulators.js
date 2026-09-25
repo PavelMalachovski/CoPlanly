@@ -79,10 +79,10 @@ async function functionsHost() {
  * The base URL a callable or HTTPS function is served under on the emulator — what the page's
  * `?functions=` parameter takes.
  *
- * @return {Promise<string>} e.g. `http://127.0.0.1:5001/demo-coplanly/us-central1`.
+ * @return {Promise<string>} e.g. `http://127.0.0.1:5001/demo-coplanly/europe-west3`.
  */
 async function functionsBase() {
-  return `http://${await functionsHost()}/${PROJECT}/us-central1`;
+  return `http://${await functionsHost()}/${PROJECT}/europe-west3`;
 }
 
 /**

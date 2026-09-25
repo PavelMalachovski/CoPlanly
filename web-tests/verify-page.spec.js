@@ -363,7 +363,7 @@ test.describe('against a stubbed endpoint', () => {
         await expect(page.locator('#result')).toContainText('The check could not be completed');
         expect(loopback).toEqual([]);
         expect(production).toEqual([
-          'https://us-central1-coparently-a39c9.cloudfunctions.net/verifyExport',
+          'https://europe-west3-coparently-a39c9.cloudfunctions.net/verifyExport',
         ]);
       });
 
@@ -379,7 +379,7 @@ test.describe('against a stubbed endpoint', () => {
     await expect(page.locator('#result')).toContainText('The check could not be completed');
     expect(attacker).toEqual([]);
     expect(production).toEqual([
-      'https://us-central1-coparently-a39c9.cloudfunctions.net/verifyExport',
+      'https://europe-west3-coparently-a39c9.cloudfunctions.net/verifyExport',
     ]);
   });
 

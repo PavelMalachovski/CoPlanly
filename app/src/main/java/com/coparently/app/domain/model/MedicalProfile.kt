@@ -3,15 +3,16 @@ package com.coparently.app.domain.model
 import java.time.LocalDate
 
 /**
- * The medical facts an emergency needs, for one person.
+ * The medical facts an emergency needs, for one child.
  *
- * Used unchanged for a parent and for a child: the questions a paramedic asks do not differ by
- * age, and one type means one editor rather than two that drift apart.
+ * It was once used for a parent too; the parent's own profile was removed (GDPR data
+ * minimisation: `users/{uid}` is readable by the co-parent) and survives only as a dead Room
+ * column, `UserEntity.medicalProfileJson`. Entering one for a child needs the parent's health
+ * consent (`domain/consent/HealthConsent.kt`).
  *
  * Allergies are deliberately **not** here. `ChildInfo.allergies` is already a first-class field
  * with a live editor (`AllergyEditor`), and folding it in would mean moving values between
- * columns — SQLite cannot drop a column without recreating the table. `User` carries `allergies`
- * beside this instead, so both store it the same way and every schema change stays additive.
+ * columns — SQLite cannot drop a column without recreating the table.
  *
  * @property bloodType Blood group, or null when not recorded
  * @property intolerances Substances tolerated poorly but not allergically — lactose, gluten
