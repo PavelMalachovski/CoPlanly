@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import com.coparently.app.R
 import com.coparently.app.presentation.calendar.ParentFilter
 import com.coparently.app.presentation.common.ParentNames
+import com.coparently.app.presentation.common.eventTypeLabel
 import com.coparently.app.presentation.theme.CoPlanlyColors
 import com.coparently.app.presentation.theme.CoPlanlyCorners
 import com.coparently.app.presentation.theme.IconSizes
@@ -146,7 +147,7 @@ fun EventTypeFilterSheet(
                         selected = isVisible,
                         onClick = { onToggleType(type) },
                         label = {
-                            Text(type.replaceFirstChar { it.uppercase() })
+                            Text(eventTypeLabel(type))
                         },
                         leadingIcon = if (isVisible) {
                             {

@@ -97,12 +97,14 @@ import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.files.RecordPhotoCodec
 import com.coparently.app.domain.files.RecordPhotoKind
 import com.coparently.app.domain.model.Event
+import com.coparently.app.presentation.calendar.CalendarViewModel
 import com.coparently.app.presentation.common.FamilyMemberChips
 import com.coparently.app.presentation.common.FamilyMemberRefListSaver
 import com.coparently.app.presentation.common.FullScreenImageDialog
 import com.coparently.app.presentation.common.LocalAppMessages
 import com.coparently.app.presentation.common.LocalDatePickerDialog
 import com.coparently.app.presentation.common.StickyActionBar
+import com.coparently.app.presentation.common.eventTypeLabel
 import com.coparently.app.presentation.common.rememberDiscardGuard
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.common.rememberRecordPhoto
@@ -953,13 +955,8 @@ fun AddEditEventScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(Spacing.S)
             ) {
-                val allTypes = listOf(
-                    "general" to stringResource(R.string.event_type_general),
-                    "medical" to stringResource(R.string.event_type_medical),
-                    "school" to stringResource(R.string.event_type_school),
-                    "sports" to stringResource(R.string.event_type_sports),
-                    "birthday" to stringResource(R.string.event_type_birthday)
-                ) + customEventTypes.map { it to it.replaceFirstChar { c -> c.uppercase() } }
+                val allTypes = (CalendarViewModel.DEFAULT_EVENT_TYPES + customEventTypes)
+                    .map { it to eventTypeLabel(it) }
 
                 allTypes.forEach { (value, label) ->
                     FilterChip(
