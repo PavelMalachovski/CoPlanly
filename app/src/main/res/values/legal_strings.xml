@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  What signing in agrees to (LEGAL-REVIEW-2026-09 L-12): the age line always, the terms clause
+  only while BuildConfig.TERMS_URL is set, so nobody is asked to accept a text they cannot open.
+-->
+<resources>
+    <string name="auth_legal_notice_age">CoPlanly is for parents and guardians aged 18 or over. By continuing, you confirm you are 18 or older.</string>
+    <string name="auth_legal_notice_with_terms">CoPlanly is for parents and guardians aged 18 or over. By continuing, you confirm you are 18 or older and accept the terms of service.</string>
+    <string name="terms_of_service_title">Terms of service</string>
+</resources>

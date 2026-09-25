@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="auth_legal_notice_age">CoPlanly предназначен для родителей и опекунов от 18 лет. Продолжая, вы подтверждаете, что вам исполнилось 18 лет.</string>
+    <string name="auth_legal_notice_with_terms">CoPlanly предназначен для родителей и опекунов от 18 лет. Продолжая, вы подтверждаете, что вам исполнилось 18 лет, и принимаете условия использования.</string>
+    <string name="terms_of_service_title">Условия использования</string>
+</resources>
