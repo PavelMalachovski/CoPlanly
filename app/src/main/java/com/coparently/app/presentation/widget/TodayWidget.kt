@@ -11,6 +11,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.glance.GlanceId
 import androidx.glance.GlanceTheme
+import androidx.glance.LocalContext
 import androidx.glance.LocalSize
 import androidx.glance.action.Action
 import androidx.glance.action.actionStartActivity
@@ -27,6 +28,7 @@ import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.domain.repository.EventRepository
 import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.presentation.MainActivity
+import com.coparently.app.presentation.common.STACK_CONTROLS_FONT_SCALE
 import com.coparently.app.presentation.theme.DarkColorScheme
 import com.coparently.app.presentation.theme.LightColorScheme
 import dagger.hilt.EntryPoint
@@ -150,7 +152,8 @@ private val WIDGET_COLORS = ColorProviders(light = LightColorScheme, dark = Dark
 
 /**
  * The widget in the app's colours, at the layout its size calls for: [TodayWidgetContentState.tall]
- * from [TODAY_WIDGET_TALL]'s height, [TodayWidgetContentState.compact] below it.
+ * from [TODAY_WIDGET_TALL]'s height, [TodayWidgetContentState.compact] below it — cut to three
+ * lines ([compactAtLargeText]) from [STACK_CONTROLS_FONT_SCALE], where a fourth was clipped.
  *
  * @param onClick Where a tap goes; null for a picture of the widget rather than the widget.
  */
@@ -158,6 +161,13 @@ private val WIDGET_COLORS = ColorProviders(light = LightColorScheme, dark = Dark
 internal fun TodayWidgetRoot(state: TodayWidgetContentState, onClick: Action?) {
     GlanceTheme(colors = WIDGET_COLORS) {
         val tall = LocalSize.current.height >= TODAY_WIDGET_TALL.height
-        TodayWidgetContent(lines = if (tall) state.tall else state.compact, onClick = onClick)
+        // A widget cannot measure its text; the font scale is the one thing it knows about it.
+        val largeText = LocalContext.current.resources.configuration.fontScale >= STACK_CONTROLS_FONT_SCALE
+        val lines = when {
+            tall -> state.tall
+            largeText -> state.compact.compactAtLargeText()
+            else -> state.compact
+        }
+        TodayWidgetContent(lines = lines, onClick = onClick, roomy = tall)
     }
 }

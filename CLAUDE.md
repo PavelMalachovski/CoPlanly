@@ -277,7 +277,9 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
 18. **The "Today" widget is Home's today card on the home screen, never a second opinion**
     (October 2026 audit, week 6; `presentation/widget/`). A Glance 1.1.1 widget: whose day it is,
     the day's contact windows, the next handover and today's events. The compact layout counts the
-    events; the tall one lists four and says how many it left out. Five things not to undo. **One
+    events (from font scale 1.3 it keeps three lines, `compactAtLargeText`, since a widget cannot
+    measure its text); the tall one lists four, lets the handover and a title wrap to two lines,
+    and says how many it left out. Five things not to undo. **One
     computation**: `TodayWidgetModel` calls `HomeWeek.todayOf`, `HandoverCalculator` and
     `CustodyResolver` over the same Room rows Home reads, so swaps, contact windows and private
     events follow Home's rules. Don't give the widget a rule of its own. **One wording**:
