@@ -2,7 +2,9 @@
 
 One script for the first session with a real phone. It covers everything the roadmap, CLAUDE.md
 and `docs/AUDIT-2026-09.md` record as **written but never run on a device**. Written 2026-09-23
-against `main` @ `44f9d66` plus the open integration branch `claude/charming-ritchie-d6uqz8`.
+and brought up to date on 2026-09-25 against `main` @ `8ed7cb1` (PR #117 merged), which carries
+everything this checklist describes: the integration branch `claude/charming-ritchie-d6uqz8` and
+PR #99 are both on `main`, so their old markers are gone.
 
 **How to use it.** Work top to bottom. The order matters: the checks that only work once (an
 upgrade over old data, a first launch) come first, and the one that destroys an account comes
@@ -32,8 +34,7 @@ checklist asks for, and a skipped screen is listed in each variant's `manifest.j
 | **1P** | One phone, one account is enough. |
 | **2P** | Needs two phones signed in to two paired accounts at the same time. A **fallback** is given where one phone can cover part of it. There is no emulator: a fallback means signing out and back in on the same phone. |
 | **3A** | Needs three accounts: you plus two co-parents. |
-| **[branch]** | Only in a build that includes `claude/charming-ritchie-d6uqz8` (merged to `main`, or built from that branch). On `main` @ `44f9d66` the check does not apply yet. |
-| **[#99]** | Lands with PR #99. Check it against the merged PR, because the details may differ. |
+| **iPhone** | Needs an iPhone (or a Mac) with Apple Calendar, as well as the Android phone. |
 | **[CI]** | The `instrumented`, `e2e` or `upgrade` CI job already exercises the mechanism on an emulator (tables below). The phone still confirms it against real data and real services. |
 
 **Warning: switching accounts wipes the phone's local data.** `AccountSwitchGuard` clears Room
@@ -47,7 +48,8 @@ that switches accounts comes after the checks that need local data.
 adb logcat -v time EncryptedDatabase:V DatabaseKey:V SyncService:V SyncWorker:V ChatMirror:V \
   MessageRepo:V ChatViewModel:V CoPlanlyMessaging:V PetsViewModel:V ChildInfoViewModel:V \
   CoPlanlyUpload:V CoPlanlyReceiptScan:V AccountDeletionService:V SelectedFamily:V \
-  CustodyModelRepo:V HomeViewModel:V UserRepository:V AndroidRuntime:E *:S
+  CustodyModelRepo:V HomeViewModel:V UserRepository:V HealthConsentManager:V \
+  HealthConsentViewModel:V DepartedThreadSource:V TermsOfServiceLink:V AndroidRuntime:E *:S
 ```
 
 `AndroidRuntime:E` is where a crash shows up, including a failed Room migration
@@ -129,8 +131,8 @@ them the evening before, from the commit you will build the app from.
         If this is missing, Google sign-in fails with what looks like a generic error.
 - [ ] **REL-3: the multi-family ops sequence, in this order** (`functions/README.md` → "Admin
       operations"):
-  1. [ ] `firebase deploy --only functions`. Deploy from a commit that contains `6e4ec8e`
-         ([branch]), or account deletion will not remove Storage files (§7).
+  1. [ ] `firebase deploy --only functions`. Deploy from current `main` (it contains `6e4ec8e`,
+         without which account deletion does not remove Storage files, §7).
   2. [ ] Invoke `backfillFamilyDocuments`.
   3. [ ] Invoke `backfillRecordFamilyIds`.
   4. [ ] `firebase deploy --only firestore:rules,firestore:indexes`.
@@ -164,7 +166,7 @@ All commands run from Git Bash in the repository root. Keep the resulting files 
 | --- | --- | --- | --- | --- |
 | **A** | Last build **before SQLCipher** (plaintext DB, schema v33) | `f6bab3e` (PR #89 merge, the parent of SEC-2's `2dcc2ae`) | see below | `app-debug-OLD-v33.apk` |
 | **A′** *(optional, stronger)* | Oldest build with the `app.coplanly` id (plaintext DB, schema **v24**) | `02be524` (REL-1) | same as A | `app-debug-OLD-v24.apk` |
-| **B** | Current debug | `main` after the integration PR merges, or `claude/charming-ritchie-d6uqz8` | `./gradlew clean assembleDebug` | `app/build/outputs/apk/debug/app-debug.apk` |
+| **B** | Current debug | `main` | `./gradlew clean assembleDebug` | `app/build/outputs/apk/debug/app-debug.apk` |
 | **C** | Current **release**, signed with the debug key | same as B | see below | `app/build/outputs/apk/release/app-release.apk` |
 | **D** | Current release **AAB** | same as B | see below | `app/build/outputs/bundle/release/app-release.aab` |
 
@@ -311,7 +313,7 @@ Preconditions: `adb uninstall app.coplanly`, set the system to **dark** theme
   - Decline. Later, Settings → App → **Usage statistics** shows the switch off.
   - In a debug build, collection stays off even if you grant consent (`ENABLE_ANALYTICS=false`),
     so the end-to-end check is in §4.1.
-- [ ] **Privacy policy link hidden while the URL is blank** [branch].
+- [ ] **Privacy policy link hidden while the URL is blank.**
   - **Expected:** no "Privacy policy" link on the consent screen, and no such row in
     Settings → Account. `PRIVACY_POLICY_URL` is blank until REL-4 hosts the policy.
   - *(optional)* Build once with `-PCOPLANLY_PRIVACY_POLICY_URL=https://example.com`: both
@@ -327,6 +329,29 @@ Preconditions: `adb uninstall app.coplanly`, set the system to **dark** theme
     `AddEditEventScreen.kt`.
 - [ ] **Onboarding, co-parent first** (CLAUDE.md item 22). The wizard opens on the co-parent
       step. "Next" and "Not now" behave the same, which is a known open item (AUDIT §4.2).
+
+### 2.3 What signing in agrees to (L-12) · 1P
+
+Preconditions: signed out (or the fresh install of §2.2, before signing in). Build B has
+`PRIVACY_POLICY_URL` and `TERMS_URL` blank until REL-4 hosts the documents.
+
+- [ ] **The age line is always there.** On the sign-in screen, in both modes (sign in and create
+      an account), a line under the form says CoPlanly is for parents and guardians aged 18 or
+      over and that continuing confirms it. It names **no** terms of service while `TERMS_URL` is
+      blank, and no link sits under it.
+- [ ] **The terms clause only comes with its link.** Build once with
+      `-PCOPLANLY_TERMS_URL=https://example.com/terms -PCOPLANLY_PRIVACY_POLICY_URL=https://example.com/privacy`.
+      The line now also says continuing accepts the terms of service, and two text buttons sit
+      under it, **Terms of service** and **Privacy policy**; each opens the browser at its
+      address. With only one URL set, only that button appears, and the terms clause only with
+      the terms URL.
+- [ ] **Settings follows the same URLs.** In that build, Settings → Account shows a **Privacy
+      policy** row and a **Terms of service** row, each opening its address. In build B neither
+      row exists.
+- [ ] Check the line in German and Russian at 1.5× text: it wraps, nothing is cut off.
+- **If it fails:** `presentation/auth/AuthLegalNotice.kt`, `presentation/common/TermsOfServiceLink.kt`
+  and `PrivacyPolicyLink.kt` (tags `TermsOfServiceLink`, `PrivacyPolicyLink`), the
+  `publishedTermsUrl`/`publishedPrivacyPolicyUrl` values in `app/build.gradle.kts`.
 
 ---
 
@@ -520,9 +545,8 @@ who does **not** have today.
 - [ ] **Day/Week:** a 15:00–19:00 band in the window parent's tint, with a full-colour edge. On
       a weekend day the grey shows through inside the band.
 - [ ] Add a window naming the parent who **already has** that day. It is **not drawn**.
-- [ ] **Home today card** [branch]: under "whose day it is", a line reads
-      "15:00–19:00 · contact with <name>" in the window parent's colour. Without the branch,
-      Home does not mention windows. **(screenshots)** `home_today_card` and
+- [ ] **Home today card:** under "whose day it is", a line reads
+      "15:00–19:00 · contact with <name>" in the window parent's colour. **(screenshots)** `home_today_card` and
       `calendar_month_grid` show the line and the Month corner from fixed data; on the phone,
       check that a window you *saved* reaches them.
 - [ ] The existing MON-6 midweek toggle still behaves as before (a whole day with overnight).
@@ -538,7 +562,7 @@ who does **not** have today.
       build read this one's pattern and swap writes. The phone still shows the grid each build draws
       and the real timing of two syncs.
 - **If it fails:** `presentation/custody/ContactWindowsSection.kt`, `MonthView.kt`,
-  `DayWeekView.kt`, `CustodyResolver.contactWindowsResolver` [branch]; tag `CustodyModelRepo`.
+  `DayWeekView.kt`, `CustodyResolver.contactWindowsResolver`; tag `CustodyModelRepo`.
 
 ### 3.6 Per-app language picker, debug APK part · 1P [CI]
 
@@ -613,7 +637,7 @@ the tap actually landing on that screen.
 - [ ] **Google Calendar** connect and import. This needs REL-3's OAuth env and a functions
       deploy. It also covers SEC-5 (tokens in `EncryptedPreferences`): relaunch the app and the
       account stays connected.
-- [ ] **SEC-5 upgrade [branch]:** with Google Calendar connected on the *previous* build, install
+- [ ] **SEC-5 upgrade:** with Google Calendar connected on the *previous* build, install
       this one over it (no uninstall). Calendar is still connected, Settings keep their values,
       and the app does not ask the telemetry question again — the old store was copied into
       `no_backup/secure_prefs.bin` on the first launch. **[CI]** runs that copy on the emulators
@@ -700,7 +724,7 @@ base pattern; schema 38 (the Regenerate workflow must have exported `38.json` fo
   `HolidayFairnessCard.kt`, `domain/custody/SeasonalLayer.kt`, `HolidayFairness.kt`,
   `firestore.rules` `seasonalLayersKeptOrDropped`.
 
-### 3.12 From the parenting plan to the schedule (MON-21) · 2P, 1P fallback [branch]
+### 3.12 From the parenting plan to the schedule (MON-21) · 2P, 1P fallback
 
 Settings → Family → **Parenting plan**, then Custody setup. Needs two paired accounts that already
 share a custody schedule, and **`firebase deploy --only firestore:rules`** with the
@@ -754,7 +778,7 @@ plan (their `hasOnly` lists do not name the key), and the repository falls back 
   (`CalendarBanners.kt`), and for the export `RecordFormat.planCitation` and the
   `CUSTODY_PROPOSED` card's `activity.planCitation`.
 
-### 3.13 A child's own schedule (FAM-4) · 1P, proposal check 2P [branch]
+### 3.13 A child's own schedule (FAM-4) · 1P, proposal check 2P
 
 Custody setup with a saved family pattern and **two children** (Settings → Family → children).
 Schema 42 (the Regenerate workflow must have exported `42.json` for CI to be green); the
@@ -797,7 +821,7 @@ family's proposal can carry an override.
   `domain/custody/ChildScheduleOverride.kt`, `ChildCustody.kt`, `firestore.rules`
   `childOverridesKeptOrDropped`.
 
-### 3.14 Contrast levels (Android 14+) · 1P [branch]
+### 3.14 Contrast levels (Android 14+) · 1P
 
 The theme follows the system's contrast setting (October 2026 audit, D-25; CLAUDE.md design item
 17). The schemes' arithmetic is `ContrastSchemesTest`'s job and three components are rendered at
@@ -818,7 +842,7 @@ and every other screen.
 - **If it fails:** `presentation/theme/ContrastLevel.kt` (`rememberSystemContrastLevel`, the
   listener), `ContrastSchemes.kt` (generated by `tools/generate-contrast-schemes.py`), `Theme.kt`.
 
-### 3.15 The "Today" widget · 1P, sync check 2P [branch]
+### 3.15 The "Today" widget · 1P, sync check 2P
 
 The home-screen widget (October 2026 audit, week 6; CLAUDE.md design item 18). The layout and the
 wording are tested (`TodayWidgetTextTest`, `TodayWidgetContentTest`), and the UI tour draws the
@@ -854,7 +878,7 @@ widget's own `RemoteViews` in each variant. What only a phone shows:
   `TodayWidgetRefresher.kt` (Room observer, names, midnight), `TodayWidgetLines.kt` (`TodayWidgetText`, the wording);
   `res/xml/today_widget_info.xml`.
 
-### 3.16 The tour's defects, fixed in week 7 · 1P, "Later" check 2P [branch]
+### 3.16 The tour's defects, fixed in week 7 · 1P, "Later" check 2P
 
 Release audit R-1, R-2, R-5 and R-9 (`docs/AUDIT-2026-10-release.md`). Unit tests hold the logic:
 `PutOffAsksViewModelTest`, `PreferencesRepositoryCurrencyTest` and `TodayWidgetTextTest`'s
@@ -881,7 +905,7 @@ Release audit R-1, R-2, R-5 and R-9 (`docs/AUDIT-2026-10-release.md`). Unit test
   `data/money/CurrencyHints.kt` with `PreferencesRepositoryImpl`, and `utils/LocalizedDates.kt`
   (`shortTime`, `ClockFormat`).
 
-### 3.17 Large screens and the scanner turned sideways · 1P [branch]
+### 3.17 Large screens and the scanner turned sideways · 1P
 
 Release audit R-8 and §3.1, week 8. `TwoPaneTest` measures the panes, and the UI tour's
 `light-en-100-wide` variant draws the tabs at 1280 dp. What only a device shows is a real tablet or
@@ -902,7 +926,7 @@ foldable, a fold and unfold, and a camera turning.
 
 ---
 
-### 3.18 The Bakaláři school import · 1P, sharing check 2P [branch]
+### 3.18 The Bakaláři school import · 1P, sharing check 2P
 
 MON-8. The parsers, the import planner and the token refresh are JVM-tested against the Bakaláři
 API's published sample responses; **no real school account has ever been used**, so this section
@@ -931,6 +955,81 @@ is the first time the import meets a real server. Needs a parent (or student) Ba
 - **If it fails:** `data/school/bakalari/` (parsers, client), `domain/school/SchoolImportPlanner`,
   `presentation/school/`. Capture the failing JSON (with names and ids redacted) and add it to
   `app/src/test/resources/school/bakalari/` with a test.
+
+### 3.19 A child's health details need a consent first (L-2) · 1P, withdrawal check 2P
+
+Preconditions: an account that has **never** agreed (a fresh account, or one that withdrew), with
+at least one child. Settings → Account → **Health details consent** reads "Not given".
+
+- [ ] **The medical section is locked.** Settings → Family → **Child information**, open a child
+      (or add one). Allergies, medications, the medical profile, medical notes and medical photos
+      are replaced by one line — medical details are optional and need your consent first — and an
+      **Add medical details** button. The rest of the form (name, date of birth, activities,
+      contacts, school) works as before and saves.
+- [ ] **The dialog says what it covers.** Tap **Add medical details**. The dialog "Your child's
+      health details" lists what counts as health details, that the co-parent can read and edit
+      them and a guest with access can read them, that they are stored on our servers, that they
+      are optional, and that withdrawing in Settings deletes what you added. **Not now** closes it
+      and the section stays locked; nothing is recorded.
+- [ ] **"I agree" records the consent.** Open it again and tap **I agree**: the medical fields
+      appear at once. Settings → Account → **Health details consent** now reads "Given on <today>".
+      In the Firebase console, `users/<uid>.healthDataConsent` is `{version: 1, atMillis: <now>}`
+      and nothing else. Onboarding's child step uses the same dialog: on a fresh account it asks
+      there too, and one "I agree" unlocks both places.
+- [ ] Add an allergy, a medication and a medical photo to the child, and save.
+- [ ] **Withdrawal, one phone.** Settings → Account → Health details consent → **Withdraw**. The
+      confirmation says the medical details you added are deleted, on the co-parent's phone too,
+      and that records the co-parent created keep theirs. Confirm with **Withdraw and delete**.
+  - **Expected:** a message says the consent was withdrawn and the details you added were
+    deleted; the row reads "Not given"; the child's medical section is locked again and, once
+    unlocked, empty — allergies, medications, the medical profile, notes and photos all gone.
+    Name, activities, contacts and school are untouched. `healthDataConsent` is gone from
+    `users/<uid>`, and the photo's object is gone from `medical_photos/<family>/<childId>/`.
+- [ ] **All or nothing with photos.** Agree again, add a medical photo, save, then turn on airplane
+      mode and withdraw (it gives up after about 20 seconds). **Expected:** "Some medical photos could not be deleted, so nothing was
+      withdrawn"; the row still says "Given on …" and the child's other medical details are still
+      there. Turn the network back on and withdraw again: it succeeds.
+- [ ] **2P: only this parent's children are cleared.** With A and B paired, B (who has agreed)
+      creates a child with an allergy; A agrees and creates another child with an allergy. A
+      withdraws. **Expected:** on **both** phones A's child has no medical details any more, and
+      B's child **keeps** its allergy — B's entries rest on B's own consent. B's Settings row still
+      says "Given on …".
+- **If it fails:** tags `HealthConsentManager`, `HealthConsentViewModel`, `UserRepository`;
+  `domain/consent/HealthConsent.kt`, `data/consent/HealthConsentManager.kt`,
+  `presentation/consent/HealthConsentUi.kt`, `firestore.rules` `healthConsentValid`.
+
+### 3.20 The calendar feed on an iPhone (MON-17) · 1P, paired account, iPhone
+
+Preconditions: functions deployed (§0), A paired with B, a custody schedule with at least one
+contact window, a few shared events and one **private** event. An iPhone signed in to iCloud with
+Apple Calendar. **[CI]** the `web` job already parses the feed the way a calendar app does (see
+"What CI now covers"); what is left is the real app on a real iPhone.
+
+- [ ] Settings → Sync → **Calendar feed for iPhone and other calendars**. The screen says what is
+      included (custody days and contact times, each with the parent's name, and shared events)
+      and what is not (private events, chat, expenses, children's records), and that anyone with
+      the link can see the calendar. Unpaired, it says to link a co-parent first and offers no link.
+- [ ] **Create a link**, then **Share link** and send it to the iPhone (a message or an e-mail to
+      yourself). The screen says the link cannot be shown again, and the list gains one entry,
+      "Not opened by a calendar yet".
+- [ ] **Subscribe.** On the iPhone, tap the link. Apple Calendar offers to subscribe; accept.
+      **Expected:** the custody days appear as all-day entries, one per run of days, reading
+      "With <name>" (a name, never "Mom"/"Dad") and not marking you busy; each contact window at its hours with the parent's name, and the shared
+      events at their times. The **private** event is nowhere. Czech, Cyrillic and emoji in titles
+      read correctly.
+- [ ] Back on the Android phone, the link's entry now says "Last opened by a calendar on <today>".
+- [ ] **Refresh.** Add a shared event on the Android phone and wait for Apple Calendar's next
+      refresh (Settings → Calendar → Accounts → Subscribed Calendars → Fetch sets how often; or
+      pull to refresh in the Calendar app). **Expected:** the new event appears. Delete it on
+      Android: after the next refresh it is gone.
+- [ ] **Revoke.** Settings → Sync → the feed screen → the link → **Revoke link**, and confirm.
+      **Expected:** after the next refresh Apple Calendar stops receiving updates (it keeps what it
+      last fetched or reports that the subscription failed — either is acceptable; it must never
+      show new events). Opening the old address in Safari answers "not found". A link nobody
+      opens for 90 days stops working the same way (the `sweepIdleCalendarFeeds` job).
+- **If it fails:** `presentation/settings/CalendarFeedScreen.kt`, `CalendarFeedViewModel.kt`,
+  `data/repository/CalendarFeedRepositoryImpl.kt`; server side `functions/calendar-feed.js` and
+  `firebase functions:log --only calendarFeed` (it never logs the token).
 
 ---
 
@@ -1036,15 +1135,13 @@ Preconditions: A is paired with **both** B and C (two families). Invite C from S
   - For an account with one co-parent it is absent everywhere.
 - [ ] The chip and the Settings row open the same dialog. Switching families changes Home,
       Calendar and Expenses to that family's records.
-- [ ] **[branch] Chat follows the selected family.** After switching to C's family, the Chat tab
+- [ ] **Chat follows the selected family.** After switching to C's family, the Chat tab
       opens **C's** thread and the badge counts C's unread messages.
   - Switch back to B: B's thread and B's badge.
   - Messages B sent while you were on C's family arrive once you switch back.
-  - Without the branch, chat stays on the first co-parent. That is the documented old
-    behaviour.
 - [ ] A **push** from the family *not* on screen, tapped, switches to that family first and then
       opens the target.
-- [ ] **[branch] The cross-family dot.** With B's family on screen, have **C**:
+- [ ] **The cross-family dot.** With B's family on screen, have **C**:
   - send a chat message — a dot appears on the chip and on C's row in the dialog, whose line
     says "New messages";
   - file a change request on one of C's events — C's row also says "A change request is
@@ -1067,7 +1164,7 @@ Preconditions: A is paired with **both** B and C (two families). Invite C from S
   data, so do it only after §2–§4.
 - **If it fails:** tags `SelectedFamily`, `ChatMirror`, `ChatViewModel`;
   `presentation/common/FamilySwitcher.kt`, `data/chat/ChatPartnerSource.kt`,
-  `data/family/OtherFamiliesSignals.kt` (tag `OtherFamiliesSignals`) [branch].
+  `data/family/OtherFamiliesSignals.kt` (tag `OtherFamiliesSignals`).
 
 ### 5.3 Also worth doing while two phones are paired · 2P
 
@@ -1169,10 +1266,10 @@ the screens, the pickers, the camera, a viewer app and a real network.
 
 ---
 
-## 6. Export (MON-3), landing in PR #99 · 1P [#99]
+## 6. Export (MON-3) · 1P
 
-**Verify against the merged PR; the details may differ.** Expected: event versions, plus a PDF
-and CSV export started from Settings.
+Expected: event versions, plus a PDF and CSV export started from Settings → Family → **Export the
+record**.
 
 **[CI]** `ExportFileWriterTest` writes both files on the emulator from a fixture (two revisions
 with both clocks, a private event, a formula-looking message, an expense) and checks the CSV
@@ -1182,7 +1279,6 @@ read-only grant. Still yours: revisions that came from the server, the share she
 spreadsheet and PDF app.
 
 Preconditions:
-- a build with PR #99 merged;
 - several events, including one **private** event;
 - one shared event **edited twice**, changing the time and then the title.
 
@@ -1222,17 +1318,18 @@ Preconditions:
       and see **Match** with the registration time and the period you exported; open the PDF in a
       viewer, print it to PDF again, and check the re-printed file: **No match**. Type the record ID
       printed in the PDF footer: **Registered**. Once in Safari or Firefox as well as Chrome.
-- **If it fails:** read the PR's own description for the file and tag names; for the page,
-  `web/verify/index.html` and `functions/export-receipts.js`.
+- **If it fails:** `presentation/export/`, `domain/export/`, `data/export/ExportFileWriter.kt`,
+  `data/versions/`; for the page, `web/verify/index.html` and `functions/export-receipts.js`.
 
 ---
 
 ## 7. Last: account deletion · 1P · **destructive**
 
-Use the **throwaway account**, never A or B.
+Use the **throwaway account**, never A or B. If it is paired with A, §7.1 runs at the same time:
+read it before you delete anything.
 
 Preconditions:
-- functions deployed from a commit containing `6e4ec8e` [branch];
+- functions deployed from current `main` (it contains `6e4ec8e`);
 - storage rules deployed;
 - the throwaway account has authored an event with a photo, an expense with a receipt, a child
   with a medical photo and a pet with a photo (§3.10) — and, if it is paired, a vault document
@@ -1250,20 +1347,53 @@ In the Firebase console → Storage, note the folders `event_images/<family>/<ev
 - [ ] **Storage:** all four folders are **gone**, and so is every `solo_<uid>/` folder of the
       throwaway account (L-4). Without `6e4ec8e` deployed, they stay behind,
       which is the defect that commit fixed. So are `family_documents/<familyId>/<docId>/` for
-      the throwaway's own filings (the co-parent's stay) and the whole
-      `chat_attachments/<conversationId>/` folder (MON-23; the chat goes whole).
+      the throwaway's own filings (the co-parent's stay). A conversation is deleted whole, with
+      its `chat_attachments/<conversationId>/` folder, **only when nobody else in it still has an
+      account**; a thread with a co-parent is kept for 30 days instead (L-5, §7.1).
 - [ ] If the throwaway was paired, the co-parent's phone **keeps** records it had already
       downloaded (by design: nothing reconciles by absence). The web deletion page and the
       privacy policy say so.
 - **If it fails:** tag `AccountDeletionService`; `firebase functions:log --only deleteAccount`;
   `deleteAuthoredFiles` and `deleteAccountDataImpl` in `functions/index.js`.
 
+### 7.1 The departed parent's thread is kept for the one who remains (L-5) · 2P · **destructive**
+
+Preconditions: the throwaway account **paired with A**, with a few chat messages both ways and
+one attachment, on a second phone (or the same phone after §7's deletion, signing A back in —
+the check reads A's side). Push notifications on for A.
+
+- [ ] Delete the throwaway account as in §7.
+- [ ] **One push, the specific one.** A's phone gets **one** notification, "Co-parent account
+      deleted", naming the throwaway's name and a date 30 days from today, and saying to export
+      the conversation before then. There is **no** "pairing removed" notification as well. The
+      Firebase console's `notification_queue` holds one `coparent_account_deleted` entry for A and
+      no `pairing_removed` one.
+- [ ] **The thread stays, dated and read-only.** A's Chat tab still shows the thread with every
+      message and the attachment (it still opens). Above it an attention banner reads "<name>
+      deleted their account. This conversation will be deleted on <date>. Export it before
+      then." with an **Export** button, and where the composer was, one line says messages can no
+      longer be sent. The conversation document in the console carries `retainedUntilMillis`,
+      `departedUid` and `departedName`.
+- [ ] **Export it.** Tap **Export** on the banner. The export screen opens for **that** thread
+      (route `export?thread=<conversationId>`), names the departed parent by name, and a CSV or PDF
+      of the period contains the thread's messages under both names.
+- [ ] A is unpaired (Settings → Family names no co-parent), yet the kept thread is still there.
+- [ ] *(optional, operator)* **The sweep.** In the console, set the conversation's
+      `retainedUntilMillis` to a time in the past and wait for the next 07:00 UTC run of
+      `sweepRetentionLimits` (or check back after 30 days). **Expected:** the conversation, its
+      messages and its `chat_attachments/<conversationId>/` folder are gone, and the banner and
+      thread disappear from A's Chat tab.
+- **If it fails:** tags `DepartedThreadSource`, `ChatViewModel`, `CoPlanlyMessaging`;
+  `data/chat/DepartedThreadSource.kt`, `presentation/chat/DepartedThreadNotice.kt`,
+  `retainOrDeleteConversations` and `sweepRetainedConversationsImpl` in `functions/index.js`,
+  `firebase functions:log --only deleteAccount,sweepRetentionLimits`.
+
 ---
 
 ## After the session
 
 - File every failure against its roadmap id (SEC-2, UX-13, REL-7, CQ-18, M-8, MON-6b, UX-15,
-  MON-3), with the logcat lines.
+  MON-3, MON-17), or its legal-review id (L-2, L-5, L-12), with the logcat lines.
 - Tick the boxes this session closes in `docs/ROADMAP.md`: SEC-2's caveat, UX-13, REL-7, CQ-18,
   MON-6b's mixed-version note, M-8's acceptance note, "M-4 (shipped, unseen)".
 - Also correct the matching "never run on a device" lines in CLAUDE.md (items 20 and 24, and the

@@ -111,8 +111,11 @@ None of this is Play, and all of it must be true before a tester installs anythi
 
 1. Set `functions/.env`: `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`. The client secret
    is no longer in the APK (SEC-1 §2), so **Google Calendar sign-in does not work until these are
-   set and the functions deployed.** Also `SENDGRID_API_KEY`, `INVITE_FROM_EMAIL`,
-   `INVITE_FROM_NAME`.
+   set and the functions deployed.** Also `BACKFILL_ADMIN_UIDS`, the operator uids the backfill
+   and purge callables below admit (steps 3 and 4 refuse every caller without it), and optionally
+   `CALENDAR_FEED_BASE_URL` (MON-17's feed links point at the function's own URL without it).
+   There is no email provider to configure: email invitations and their SendGrid client were
+   removed in August 2026. `functions/.env.example` lists every variable the functions read.
 2. `firebase deploy --only functions`
 3. Invoke `backfillFamilyDocuments` — every live pair gets `members`, `slots`, `caresFor`
 4. Invoke `backfillRecordFamilyIds` — every record gets its `familyId`
@@ -248,10 +251,12 @@ evidence anyone in DACH is installing it.
   (none), **financial features** (none until MON-11), **health apps declaration** ⚠︎ — the last is
   worth reading carefully, because a shared calendar that stores a child's allergies and medication
   is closer to that category than it feels.
-- **Consent for analytics.** REL-5. A release build currently collects by default; an EU launch
-  needs a first-run consent gate defaulting to **off**, wired to
-  `setAnalyticsCollectionEnabled` / `setCrashlyticsCollectionEnabled` **at runtime**, not only at
-  injection time.
+- **Consent for analytics.** REL-5, **done in code**: a first-run consent question that defaults
+  to **off** and is reachable again from Settings, applied at runtime through
+  `TelemetryConsentApplier` (the only caller of `setAnalyticsCollectionEnabled` /
+  `setCrashlyticsCollectionEnabled`), with the manifest's collection flags off until it answers.
+  What is left is declaring it: Analytics and Crashlytics are *optional* in the Data Safety form
+  (`docs/legal/DATA-SAFETY.md`).
 
 ### 2.6 Closed testing — the requirement that sets the launch date
 
@@ -301,7 +306,7 @@ August 2026 calendar work — whether the borrowed days at the edges of the mont
 [ ]  6. Legal review of PRIVACY-POLICY.md and TERMS-OF-SERVICE.md                  (REL-4)
 [ ]  7. Both hosted at stable URLs + a web account-deletion page                   (REL-4)
 [ ]  8. Settings rows linked to those URLs, once they resolve                      (REL-4)
-[ ]  9. Analytics consent gate                                                     (REL-5)
+[x]  9. Analytics consent gate — done in code                                     (REL-5)
 [ ] 10. REL-7 on a real device: medical profile survives R8                        (§2.7)
 [ ] 11. Play Console: listing, assets, Data Safety, content rating, declarations   (§2.4–2.5)
 [ ] 12. Closed track, 6 real pairs, 14 days                                        (§2.6)

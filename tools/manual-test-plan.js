@@ -65,6 +65,12 @@ const RULES = [
       'app/src/main/res/values-night/**'],
   },
   {
+    sections: ['2.3'],
+    why: 'what signing in agrees to: the age line, the terms and the policy links (L-12)',
+    paths: ['K/presentation/auth/AuthLegalNotice.kt', 'K/presentation/common/TermsOfServiceLink.kt',
+      'K/presentation/common/PrivacyPolicyLink.kt', 'app/src/main/res/values*/legal_strings.xml'],
+  },
+  {
     sections: ['3.1'],
     why: 'a date picker or the dates it saves',
     paths: ['**/*DatePicker*', 'K/presentation/event/**', 'K/presentation/changerequests/**',
@@ -153,6 +159,20 @@ const RULES = [
       'K/presentation/home/ChildrenToday*', 'K/data/repository/ChildOverrideJson.kt'],
   },
   {
+    sections: ['3.19'],
+    why: 'the child-health consent or what withdrawing it clears (L-2)',
+    paths: ['K/domain/consent/HealthConsent*', 'K/data/consent/**', 'K/presentation/consent/HealthConsent*',
+      'K/presentation/childinfo/AddEditChildInfoScreen.kt',
+      'app/src/main/res/values*/health_consent_strings.xml'],
+  },
+  {
+    sections: ['3.20'],
+    why: 'the calendar feed as an iPhone subscribes to it (MON-17)',
+    paths: ['K/presentation/settings/CalendarFeed*', 'K/data/repository/CalendarFeedRepositoryImpl.kt',
+      'K/domain/feed/**', 'K/domain/repository/CalendarFeedRepository.kt',
+      'app/src/main/res/values*/calendar_feed_strings.xml'],
+  },
+  {
     sections: ['3.6', '4.2'],
     why: 'strings, locales or the language picker',
     paths: ['app/src/main/res/values*/**', 'app/src/main/res/xml/locales_config.xml',
@@ -233,6 +253,12 @@ const RULES = [
     sections: ['7'],
     why: 'account deletion',
     paths: ['**/*AccountDeletion*', 'functions/index.js', 'K/data/session/**'],
+  },
+  {
+    sections: ['7.1'],
+    why: 'the thread kept after a co-parent deleted their account (L-5)',
+    paths: ['**/*AccountDeletion*', 'K/data/chat/DepartedThreadSource.kt', 'K/domain/chat/DepartedThread.kt',
+      'K/presentation/chat/DepartedThread*'],
   },
 ];
 
