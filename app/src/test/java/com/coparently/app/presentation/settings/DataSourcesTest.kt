@@ -29,6 +29,15 @@ class DataSourcesTest {
     }
 
     @Test
+    fun `the printed address breaks only after a slash and keeps every visible character`() {
+        val printed = DataSources.displayAddress(DataSources.ODBL_URL)
+        val zeroWidth = setOf('\u200B', '\u2060')
+
+        assertEquals("opendatacommons.org/licenses/odbl/1-0", printed.filterNot { it in zeroWidth })
+        assertEquals("opendatacommons.org/\u200Blicenses/\u200Bodbl/\u200B1\u2060-\u20600", printed)
+    }
+
+    @Test
     fun `every link is https`() {
         assertTrue((DataSources.notices + DataSources.typefaceNotices).all { it.url.startsWith("https://") })
     }
