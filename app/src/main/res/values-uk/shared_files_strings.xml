@@ -2,20 +2,20 @@
 <!-- Спільні файли (MON-23): сховище документів і вкладення в чаті. -->
 <resources>
     <string name="documents_settings_title">Документи</string>
-    <string name="documents_settings_description">Рішення суду, листи зі школи, копії документів — спільні з другим батьком</string>
+    <string name="documents_settings_description">Рішення суду, листи зі школи, копії документів — їх бачить і другий із батьків</string>
     <string name="documents_title">Документи</string>
-    <string name="documents_shared_notice">Усе тут бачить другий з батьків. Особистих документів немає: усе, що ви додасте, він теж зможе відкрити.</string>
+    <string name="documents_shared_notice">Усе тут бачить другий із батьків. Особистих документів немає: усе, що ви додасте, він теж зможе відкрити.</string>
     <string name="documents_add_file">Додати файл</string>
     <string name="documents_take_photo">Сфотографувати</string>
     <string name="documents_empty_title">Документів поки немає</string>
-    <string name="documents_empty_description">Додайте PDF або фото рішення суду, листа зі школи чи посвідчення особи. Другий з батьків теж його побачить.</string>
-    <string name="documents_no_family_title">Спершу зв’яжіться з другим з батьків</string>
+    <string name="documents_empty_description">Додайте PDF або фото рішення суду, листа зі школи чи посвідчення особи. Другий із батьків теж його побачить.</string>
+    <string name="documents_no_family_title">Спершу зʼєднайтеся з другим із батьків</string>
     <string name="documents_no_family_description">Документи належать родині: від моменту додавання вони доступні обом батькам.</string>
-    <string name="documents_unavailable">Зараз не вдається завантажити документи. Перевірте з’єднання.</string>
+    <string name="documents_unavailable">Зараз не вдається завантажити документи. Перевірте зʼєднання.</string>
     <string name="documents_possibly_outdated">Сервер недоступний — показано список, який телефон бачив останнім. Він може бути застарілим.</string>
     <string name="documents_category_court_order">Рішення суду</string>
     <string name="documents_category_school">Школа</string>
-    <string name="documents_category_medical">Здоров’я</string>
+    <string name="documents_category_medical">Здоровʼя</string>
     <string name="documents_category_identity">Посвідчення особи</string>
     <string name="documents_category_other">Інше</string>
     <string name="documents_add_dialog_title">Додати до документів</string>
@@ -23,7 +23,7 @@
     <string name="documents_add_dialog_category_label">Категорія</string>
     <string name="documents_add_dialog_confirm">Завантажити й поділитися</string>
     <string name="documents_uploading">Завантаження…</string>
-    <string name="documents_row_meta">%1$s · додав(ла) %2$s · %3$s</string>
+    <string name="documents_row_meta">%1$s · додано: %2$s · %3$s</string>
     <string name="documents_delete">Видалити документ</string>
     <string name="documents_delete_confirm_title">Видалити цей документ?</string>
     <string name="documents_delete_confirm_body">Він зникне з документів обох батьків. Сам файл буде видалено з сервера через 90 днів.</string>
@@ -41,7 +41,7 @@
 
     <string name="chat_attach">Прикріпити фото або PDF</string>
     <string name="chat_attach_confirm_title">Надіслати цей файл?</string>
-    <string name="chat_attach_confirm_body">%1$s (%2$s) буде надіслано другому з батьків. Як і будь-яке повідомлення, він залишиться в чаті, і видалити його потім не можна.</string>
+    <string name="chat_attach_confirm_body">%1$s (%2$s) буде надіслано другому з батьків. Як і будь-яке повідомлення, файл залишиться в чаті, і видалити його потім не можна.</string>
     <string name="chat_attach_send">Надіслати</string>
     <string name="chat_attach_uploading">Завантаження…</string>
     <string name="chat_attach_waiting">Ще не завантажено</string>

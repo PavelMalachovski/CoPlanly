@@ -18,7 +18,7 @@
     <string name="calendar_feed_share_message">Наш календар CoPlanly, лише для перегляду. На iPhone торкніться, щоб підписатися:\n%1$s\n\nЯкщо застосунок-календар просить вебадресу, використайте:\n%2$s</string>
     <string name="calendar_feed_links_label">Активні посилання</string>
     <string name="calendar_feed_empty">Посилань ще немає</string>
-    <string name="calendar_feed_no_family">Спершу зв’яжіться з другим із батьків. Посилання показує спільний календар вашої родини.</string>
+    <string name="calendar_feed_no_family">Спершу зʼєднайтеся з другим із батьків. Посилання показує спільний календар вашої родини.</string>
     <string name="calendar_feed_link_title">Створено %1$s</string>
     <string name="calendar_feed_link_used">Востаннє календар відкривав його %1$s</string>
     <string name="calendar_feed_link_unused">Жоден календар його ще не відкривав</string>
@@ -27,8 +27,8 @@
     <string name="calendar_feed_revoke_confirm_text">Календар, підписаний на нього, перестане отримувати оновлення. Це не можна скасувати, але можна створити нове посилання.</string>
     <string name="calendar_feed_revoke_confirm">Відкликати</string>
     <string name="calendar_feed_revoked">Посилання відкликано</string>
-    <string name="calendar_feed_revoke_failed">Не вдалося відкликати посилання. Перевірте з’єднання та спробуйте ще раз.</string>
-    <string name="calendar_feed_create_failed">Не вдалося створити посилання. Перевірте з’єднання та спробуйте ще раз.</string>
+    <string name="calendar_feed_revoke_failed">Не вдалося відкликати посилання. Перевірте зʼєднання та спробуйте ще раз.</string>
+    <string name="calendar_feed_create_failed">Не вдалося створити посилання. Перевірте зʼєднання та спробуйте ще раз.</string>
     <string name="calendar_feed_limit_reached">У вас уже максимальна кількість посилань. Спершу відкличте те, яке більше не потрібне.</string>
     <string name="calendar_feed_load_failed">Не вдалося завантажити ваші посилання.</string>
 </resources>

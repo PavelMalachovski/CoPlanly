@@ -3,7 +3,7 @@
     <string name="change_request_inbox_title">Запити на зміну</string>
     <string name="change_request_back">Назад</string>
     <string name="change_request_empty_title">Поки немає запитів на зміну</string>
-    <string name="change_request_empty_hint">Відкрийте подію та натисніть «Запропонувати зміну», щоб запропонувати іншому з батьків новий час.</string>
+    <string name="change_request_empty_hint">Відкрийте подію та натисніть «Запропонувати зміну», щоб запропонувати другому з батьків новий час.</string>
     <string name="change_request_incoming">Вхідні</string>
     <string name="change_request_outgoing">Вихідні</string>
     <string name="change_request_status_pending">Очікує</string>
@@ -22,7 +22,7 @@
     <string name="change_request_from_time">З %1$s</string>
     <string name="change_request_to_time">До %1$s</string>
     <string name="change_request_to_unset">До —</string>
-    <string name="change_request_note_label">Повідомлення іншому з батьків (необов\'язково)</string>
+    <string name="change_request_note_label">Повідомлення другому з батьків (необовʼязково)</string>
     <string name="change_request_send">Надіслати запит</string>
     <string name="change_request_ok">OK</string>
     <string name="change_request_cancel">Скасувати</string>
@@ -39,7 +39,7 @@
     <string name="change_request_error_proposal_accept_failed">Не вдалося прийняти пропозицію. Спробуйте ще раз.</string>
     <string name="change_request_error_proposal_decline_failed">Не вдалося відхилити пропозицію. Спробуйте ще раз.</string>
     <string name="change_request_error_answer_failed">Не вдалося відповісти. Спробуйте ще раз.</string>
-    <string name="change_request_error_signed_out">Ви вийшли з облікового запису. Увійдіть і спробуйте ще раз.</string>
-    <string name="change_request_error_not_paired">Спершу поєднайтеся з іншим батьком, щоб надсилати запити на зміну.</string>
+    <string name="change_request_error_signed_out">Ви вийшли з акаунта. Увійдіть і спробуйте ще раз.</string>
+    <string name="change_request_error_not_paired">Спершу зʼєднайтеся з другим із батьків, щоб надсилати запити на зміну.</string>
     <string name="change_request_error_send_failed">Не вдалося надіслати запит на зміну. Спробуйте ще раз.</string>
 </resources>

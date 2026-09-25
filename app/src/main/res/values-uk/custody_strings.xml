@@ -5,7 +5,7 @@
     <string name="custody_save_button">Зберегти графік опіки</string>
     <string name="custody_select_schedule_type">Виберіть тип графіка</string>
     <string name="custody_pattern_start_date">Дата початку циклу</string>
-    <string name="custody_start_date_hint">Це опорна дата — цикл повторюватиметься починаючи з цього дня</string>
+    <string name="custody_start_date_hint">Це опорна дата — цикл повторюватиметься, починаючи з цього дня</string>
     <string name="custody_who_starts_first">Хто починає першим?</string>
     <!-- Replaces custody_mom_starts_first/custody_dad_starts_first: dropping "першим/першою"
          removes the adjective that would otherwise have to agree with the name. %1$s is that
@@ -42,7 +42,7 @@
     <string name="custody_preview_week_on_week_off">Перший тиждень: %1$s, далі чергування щотижня.</string>
     <string name="custody_preview_two_two_three">Пн–Вт: %1$s. Ср–Чт: %2$s. Пт–Нд чергуються.</string>
     <string name="custody_preview_three_four_four_three">Пн–Ср (3 дні): %1$s. Чт–Нд (4 дні): %2$s. Потім навпаки.</string>
-    <string name="custody_preview_custom">Власний графік: %1$d з %2$d днів — %3$s.</string>
+    <string name="custody_preview_custom">Власний шаблон: %1$d з %2$d днів — %3$s.</string>
 
     <!-- The pairing conflict screen — noun labels only, never a sentence with a name as subject. -->
     <string name="custody_conflict_title">Два графіки</string>
@@ -52,25 +52,25 @@
     <string name="custody_conflict_keep_local">Залишити графік цього телефона</string>
     <string name="custody_conflict_use_shared">Використати спільний графік</string>
     <string name="custody_conflict_save_failed">Графік не вдалося зберегти. Спробуйте ще раз.</string>
-    <string name="custody_proposal_inbox_title">Запропоновано новий розклад опіки</string>
-    <string name="custody_proposal_inbox_body">%1$s пропонує новий розклад опіки. Ваш календар не зміниться, доки ви не приймете його.</string>
+    <string name="custody_proposal_inbox_title">Запропоновано новий графік опіки</string>
+    <string name="custody_proposal_inbox_body">%1$s пропонує новий графік опіки. Ваш календар не зміниться, доки ви його не приймете.</string>
     <string name="custody_proposal_accept">Прийняти</string>
     <string name="custody_proposal_decline">Відхилити</string>
-    <string name="custody_proposal_waiting">Очікування, поки другий з батьків схвалить новий розклад</string>
-    <string name="custody_proposal_review">%1$s запропонував новий розклад опіки</string>
+    <string name="custody_proposal_waiting">Чекаємо, поки другий із батьків схвалить новий графік</string>
+    <string name="custody_proposal_review">%1$s пропонує новий графік опіки</string>
     <!-- MON-6. -->
     <string name="custody_model_every_other_weekend">Кожні другі вихідні</string>
     <string name="custody_model_every_other_weekend_desc">Дитина живе в одного з батьків, у другого — кожні другі вихідні.</string>
     <string name="custody_preview_every_other_weekend">Усі інші дні: %1$s. Кожні другі сб–нд: %2$s.</string>
     <string name="custody_who_is_resident">З ким живе дитина?</string>
     <string name="custody_is_resident">Живе з: %1$s</string>
-    <string name="custody_midweek_title">Контакт всередині тижня</string>
-    <string name="custody_midweek_enable">Додати день всередині тижня</string>
-    <string name="custody_midweek_overnight_warning">Цей графік розподіляє цілі дні, тож день всередині тижня включає й ніч. Якщо у вашому рішенні йдеться лише про вечір, залиште це вимкненим і додайте нижче період спілкування.</string>
+    <string name="custody_midweek_title">Спілкування посеред тижня</string>
+    <string name="custody_midweek_enable">Додати день посеред тижня</string>
+    <string name="custody_midweek_overnight_warning">Цей графік розподіляє цілі дні, тож день посеред тижня включає й ніч. Якщо у вашому рішенні йдеться лише про другу половину дня, залиште це вимкненим і натомість додайте нижче період спілкування.</string>
     <string name="custody_midweek_every_week">Щотижня</string>
     <string name="custody_midweek_off_week_only">Лише в тиждень без вихідних</string>
-    <string name="custody_preview_every_other_weekend_midweek">Кожен день: %1$s. Кожні другі сб–нд і %3$s: %2$s.</string>
-    <string name="custody_preview_every_other_weekend_midweek_off_week">Кожен день: %1$s. Кожні другі сб–нд, а також %3$s на тижні між ними: %2$s.</string>
+    <string name="custody_preview_every_other_weekend_midweek">Усі інші дні: %1$s. Кожні другі сб–нд і %3$s: %2$s.</string>
+    <string name="custody_preview_every_other_weekend_midweek_off_week">Усі інші дні: %1$s. Кожні другі сб–нд, а також %3$s у тиждень між ними: %2$s.</string>
     <plurals name="custody_diff_days_move">
         <item quantity="one">У найближчі тижні зміниться %1$d день.</item>
         <item quantity="few">У найближчі тижні зміняться %1$d дні.</item>
@@ -84,7 +84,7 @@
 
     <!-- MON-6b: contact windows over the whole-day pattern. -->
     <string name="custody_windows_title">Періоди спілкування</string>
-    <string name="custody_windows_hint">Частина дня з батьком чи матір’ю, у кого цього дня немає, наприклад щосереди 15:00–19:00. Сам день лишається за тим, у кого він є; період спілкування показується поверх.</string>
+    <string name="custody_windows_hint">Частина дня з батьком чи матірʼю, у кого цього дня немає, наприклад щосереди 15:00–19:00. Сам день лишається за тим, у кого він є; період спілкування показується поверх.</string>
     <string name="custody_windows_empty">Періодів спілкування немає.</string>
     <string name="custody_windows_add">Додати період спілкування</string>
     <string name="custody_window_remove">Видалити період спілкування</string>

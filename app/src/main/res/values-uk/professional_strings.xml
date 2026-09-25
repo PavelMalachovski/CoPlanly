@@ -4,13 +4,13 @@
     <string name="professional_section_supporting">Медіатор, юрист або психолог — лише перегляд, за згодою обох батьків</string>
     <string name="professional_empty">Жоден фахівець не бачить цю родину</string>
     <string name="professional_invite_action">Запросити фахівця</string>
-    <string name="professional_invite_explainer">Він побачить календар, графік опіки та батьківський план — і нічого більше: ніколи чат, витрати чи записи про дітей. Доступ почнеться, лише коли погодиться й другий з батьків, і завершиться в обраний день.</string>
+    <string name="professional_invite_explainer">Він побачить календар, графік опіки та батьківський план — і нічого більше: ніколи чат, витрати чи записи про дітей. Доступ почнеться, лише коли погодиться й другий із батьків, і завершиться в обраний день.</string>
     <string name="professional_invite_role_label">Роль</string>
     <string name="professional_invite_duration_label">Доступ на</string>
     <string name="professional_invite_create">Створити код</string>
     <string name="professional_invite_code_label">Код для фахівця</string>
     <string name="professional_invite_share">Поділитися кодом</string>
-    <string name="professional_share_message">Вас запрошено переглядати календар і батьківський план родини в CoPlanly, лише для читання. Відкрийте Налаштування → Фахівці та введіть код %1$s. Застосунок: %2$s</string>
+    <string name="professional_share_message">Вас запрошено переглядати календар і батьківський план родини в CoPlanly, лише для читання. Відкрийте «Налаштування» → «Фахівці» та введіть код %1$s. Застосунок: %2$s</string>
     <string name="professional_role_mediator">Медіатор</string>
     <string name="professional_role_lawyer">Юрист</string>
     <string name="professional_role_guardian_ad_litem">Представник інтересів дитини</string>
@@ -26,7 +26,7 @@
     <string name="professional_status_expired">Доступ завершився %1$s</string>
     <string name="professional_row_supporting">%1$s · %2$s</string>
     <string name="professional_dialog_body">%1$s може до %2$s переглядати календар, графік опіки та батьківський план цієї родини — ніколи чат, витрати чи записи про дітей. Доступ починається лише за згоди обох батьків, і будь-хто з вас може закрити його будь-коли.</string>
-    <string name="professional_revoke_confirm">Закрити доступ для %1$s? Згода другого з батьків не потрібна, і скасувати це не можна — знадобиться нове запрошення.</string>
+    <string name="professional_revoke_confirm">Закрити доступ зараз (%1$s)? Згода другого з батьків не потрібна, і скасувати це не можна — знадобиться нове запрошення.</string>
     <string name="professional_dialog_consent">Я погоджуюся</string>
     <string name="professional_dialog_revoke">Закрити доступ</string>
     <string name="professional_dialog_close">Закрити</string>
@@ -41,18 +41,18 @@
     <string name="professional_open_plan">Батьківський план</string>
     <string name="professional_calendar_title">Календар родини</string>
     <string name="professional_calendar_read_only">Лише перегляд. Приватні події ніколи не передаються.</string>
-    <string name="professional_calendar_custody_with">У: %1$s</string>
+    <string name="professional_calendar_custody_with">З ким: %1$s</string>
     <string name="professional_calendar_no_events">Немає подій</string>
     <string name="professional_calendar_previous">Попередні тижні</string>
     <string name="professional_calendar_next">Наступні тижні</string>
     <string name="professional_calendar_event_supporting">%1$s · %2$s</string>
-    <string name="professional_unavailable">Нічого показати — доступ не активний. Він відкриється, коли погодяться обоє батьків, і завершиться в дату закінчення.</string>
+    <string name="professional_unavailable">Немає чого показати — доступ не активний. Він відкриється, коли погодяться обоє батьків, і завершиться в день закінчення.</string>
     <string name="professional_plan_not_answered">Немає відповіді</string>
     <string name="professional_plan_answer_by">%1$s: %2$s</string>
     <string name="professional_parent_fallback">Один з батьків</string>
-    <string name="professional_error_is_professional_invitation">Це запрошення для фахівця. Використайте його в Налаштування → Фахівці.</string>
+    <string name="professional_error_is_professional_invitation">Це запрошення для фахівця. Відкрийте «Налаштування» → «Фахівці», щоб скористатися ним.</string>
     <string name="professional_error_not_professional_invitation">Це не запрошення для фахівця.</string>
-    <string name="professional_error_inviter_not_paired">Родина з цього запрошення більше не пов’язана.</string>
+    <string name="professional_error_inviter_not_paired">Родину з цього запрошення вже розʼєднано.</string>
     <string name="access_error_grant_ended">Цей доступ уже завершився. Попросіть новий код.</string>
     <string name="access_error_already_in_family">Ви вже один з батьків у цій родині.</string>
 </resources>

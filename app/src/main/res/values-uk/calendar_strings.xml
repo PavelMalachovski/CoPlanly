@@ -35,10 +35,10 @@
     <string name="calendar_day_desc_today">Сьогодні</string>
     <string name="calendar_day_desc_outside_month">Поза поточним місяцем</string>
     <string name="calendar_day_desc_with_parent">З ким: %1$s</string>
-    <string name="calendar_day_desc_handover">Передача від %1$s до %2$s</string>
+    <string name="calendar_day_desc_handover">Передача: %1$s передає, %2$s приймає</string>
     <string name="calendar_day_desc_swap_pending">Обмін днями чекає на відповідь</string>
     <string name="calendar_day_desc_school_vacation">Шкільні канікули</string>
-    <string name="calendar_day_desc_proposal_pending">Запропоновано для %1$s, ще не погоджено</string>
+    <string name="calendar_day_desc_proposal_pending">Запропоновано: %1$s, ще не погоджено</string>
     <plurals name="calendar_day_desc_events">
         <item quantity="one">%1$d подія</item>
         <item quantity="few">%1$d події</item>
@@ -54,11 +54,11 @@
     <string name="calendar_event_resizing_start">Зміна часу початку на %1$s</string>
     <string name="calendar_event_resizing_end">Зміна часу завершення на %1$s</string>
     <string name="calendar_event_long_pressed">Довге натискання, показано кнопку видалення</string>
-    <string name="calendar_event_chip_hint">Натисніть для перегляду, утримуйте для видалення, тягніть за кути для зміни розміру</string>
+    <string name="calendar_event_chip_hint">Натисніть, щоб переглянути, утримуйте, щоб видалити, тягніть за кути, щоб змінити тривалість</string>
     <string name="calendar_event_private">Приватна подія</string>
-    <string name="calendar_event_pickup_confirmed">Забір підтверджено: %1$s</string>
-    <string name="calendar_resize_start_handle">Змінити час початку. Тягніть вгору або вниз (крок 15 хвилин).</string>
-    <string name="calendar_resize_end_handle">Змінити час завершення. Тягніть вгору або вниз (крок 15 хвилин).</string>
+    <string name="calendar_event_pickup_confirmed">Підтвердження, що дитину забрано: %1$s</string>
+    <string name="calendar_resize_start_handle">Змінити час початку. Тягніть угору або вниз (крок 15 хвилин).</string>
+    <string name="calendar_resize_end_handle">Змінити час завершення. Тягніть угору або вниз (крок 15 хвилин).</string>
     <!-- Accessibility actions on an event block in Day and Week view (D-10). -->
     <string name="calendar_action_end_later">Закінчити на 15 хвилин пізніше</string>
     <string name="calendar_action_end_earlier">Закінчити на 15 хвилин раніше</string>
@@ -76,7 +76,7 @@
 
     <!-- Noun phrase, not "X змінив(ла)" — Ukrainian inflects that verb for gender and a name
          cannot agree with one; the software would end up guessing or hedging with "(ла)". -->
-    <string name="calendar_custody_changed_by">Зміна графіка опіки від %1$s</string>
+    <string name="calendar_custody_changed_by">Графік опіки змінено — %1$s</string>
     <string name="calendar_agenda_empty">Нічого не заплановано.</string>
     <string name="calendar_agenda_time_range">%1$s–%2$s</string>
     <!-- Shown when a calendar write or query fails. The calendar used to say nothing at
@@ -84,7 +84,7 @@
     <string name="calendar_operation_failed">Не вдалося зберегти зміну. Можливо, вона не дійшла до другого з батьків.</string>
     <string name="calendar_retry">Повторити</string>
     <!-- UX-8. -->
-    <string name="calendar_agenda_custody_day">День, коли дитина з %1$s</string>
+    <string name="calendar_agenda_custody_day">День опіки: %1$s</string>
     <string name="calendar_filter_members">Показати для</string>
 
     <!-- MON-6b: a contact window on the grid. -->

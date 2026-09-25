@@ -4,7 +4,7 @@
     <string name="medical_photos_title">Фотографії</string>
     <string name="medical_photos_add">Додати фото</string>
     <string name="medical_photos_none">Фотографій поки немає.</string>
-    <string name="medical_photos_hint">Рецепт, висип, щеплювальний сертифікат — видно іншому з батьків.</string>
+    <string name="medical_photos_hint">Рецепт, висип, картка щеплень — усе це бачить другий із батьків.</string>
 
     <!-- Spoken descriptions. %1$d = this photograph's position, %2$d = how many there are. -->
     <string name="medical_photos_thumbnail_description">Медичне фото %1$d з %2$d</string>

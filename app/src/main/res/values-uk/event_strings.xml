@@ -9,14 +9,14 @@
     <string name="event_list_empty_description">Створіть першу подію, щоб почати вести спільний розклад.</string>
     <string name="event_list_empty_action">Додати подію</string>
     <string name="event_list_date">Дата: %1$s</string>
-    <string name="event_list_parent">Хтось із батьків: %1$s</string>
+    <string name="event_list_parent">Хто з батьків: %1$s</string>
     <string name="event_delete">Видалити</string>
 
     <string name="event_form_title_new">Нова подія</string>
     <string name="event_form_title_edit">Змінити подію</string>
     <string name="event_form_cancel">Скасувати</string>
     <string name="event_form_ok">OK</string>
-    <string name="event_form_cd_request_change">Запросити зміну</string>
+    <string name="event_form_cd_request_change">Запропонувати зміну</string>
     <string name="event_form_cd_delete_event">Видалити подію</string>
     <string name="event_form_field_title_label">Назва події</string>
     <string name="event_form_field_title_placeholder">напр., тренування з футболу</string>
@@ -25,10 +25,10 @@
     <string name="event_form_field_description_placeholder">Додайте деталі події…</string>
     <string name="event_form_cd_description_icon">Значок опису події</string>
     <string name="event_form_assigned_to">Призначено</string>
-    <string name="event_form_cd_assign_to">Призначити на %1$s, %2$s</string>
+    <string name="event_form_cd_assign_to">Призначити: %1$s, %2$s</string>
     <string name="event_form_cd_selected">вибрано</string>
     <string name="event_form_cd_not_selected">не вибрано</string>
-    <string name="event_form_cd_label_icon">Значок %1$s</string>
+    <string name="event_form_cd_label_icon">Значок: %1$s</string>
     <string name="event_form_event_type">Тип події</string>
     <string name="event_type_general">Загальне</string>
     <string name="event_type_medical">Здоровʼя</string>
@@ -36,7 +36,7 @@
     <string name="event_type_sports">Спорт</string>
     <string name="event_type_birthday">День народження</string>
     <string name="event_form_cd_selected_icon">Вибрано</string>
-    <string name="event_form_cd_event_type">Тип події %1$s, %2$s</string>
+    <string name="event_form_cd_event_type">Тип події: %1$s, %2$s</string>
     <string name="event_form_date_time">Дата й час</string>
     <string name="event_form_cd_select_date">Виберіть дату, зараз %1$s</string>
     <string name="event_form_cd_calendar_icon">Значок календаря</string>
@@ -66,19 +66,19 @@
     <string name="event_reminder_2_hours">2 години</string>
     <string name="event_reminder_1_day">1 день</string>
     <string name="event_form_important_title">Важлива подія</string>
-    <string name="event_form_important_description">Позначте, якщо очікується інший з батьків</string>
-    <string name="event_form_important_helper">Очікується інший з батьків. Це повідомляє про це — але не запитує його.</string>
-    <string name="event_important_mark_description">Важливо: очікується інший з батьків</string>
+    <string name="event_form_important_description">Позначте, якщо очікується присутність другого з батьків</string>
+    <string name="event_form_important_helper">Очікується присутність другого з батьків. Це лише повідомлення, а не запитання.</string>
+    <string name="event_important_mark_description">Важливо: очікується присутність другого з батьків</string>
     <string name="event_form_private_title">Приватна подія</string>
     <string name="event_form_private_description">Цю подію бачите лише ви</string>
     <string name="event_form_photo">Фото події</string>
     <string name="event_form_attach_photo">Прикріпити фото</string>
     <string name="event_form_change_photo">Змінити фото</string>
     <string name="event_form_cd_remove_photo">Прибрати фото</string>
-    <string name="event_form_pickup">Забір</string>
-    <string name="event_form_pickup_confirmed_by">Підтвердив(ла) %1$s</string>
+    <string name="event_form_pickup">Забирання дитини</string>
+    <string name="event_form_pickup_confirmed_by">Підтверджено: %1$s</string>
     <string name="event_form_pickup_not_confirmed">Ще не підтверджено</string>
-    <string name="event_form_pickup_confirm">Підтвердити забір</string>
+    <string name="event_form_pickup_confirm">Підтвердити забирання</string>
     <string name="event_form_pickup_undo">Скасувати</string>
     <string name="event_form_draft_restored">Чернетку відновлено</string>
     <string name="event_form_delete_dialog_title">Видалити подію</string>
@@ -88,7 +88,7 @@
     <string name="event_form_delete_failed">Не вдалося видалити подію. Спробуйте ще раз.</string>
     <string name="event_form_save_failed">Не вдалося зберегти подію. Спробуйте ще раз.</string>
     <string name="event_form_photo_upload_failed">Не вдалося завантажити фото — подію збережено без нового фото</string>
-    <string name="event_form_owner_unknown">Поки незрозуміло, чия це подія — виберіть вище, щоб зберегти</string>
+    <string name="event_form_owner_unknown">Поки незрозуміло, чия це подія, — виберіть вище, щоб зберегти</string>
     <string name="event_form_for_members">Для кого це?</string>
 
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->

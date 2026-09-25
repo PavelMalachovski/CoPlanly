@@ -29,7 +29,7 @@
     <!-- Fallbacks for parentLabel() (presentation/common/ParentLabels.kt): shown instead of a
          name when the signed-in user, the co-parent, or an event's slot cannot be resolved. -->
     <string name="parent_label_you">Ви</string>
-    <string name="parent_label_coparent">Другий з батьків</string>
+    <string name="parent_label_coparent">Другий із батьків</string>
     <string name="parent_label_unknown">Один із батьків</string>
 
     <!-- Slot-picker fallback captions (AddEditEventScreen's parent-owner cards, via
@@ -40,16 +40,16 @@
          beside "Second parent" for the same event: that mix is not a bug, it says what is known
          and honestly numbers what is not. -->
     <string name="parent_label_slot_first">Перший з батьків</string>
-    <string name="parent_label_slot_second">Другий з батьків</string>
+    <string name="parent_label_slot_second">Другий із батьків</string>
 
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
     <string name="common_error_generic">Щось пішло не так. Спробуйте ще раз.</string>
-    <string name="common_error_offline">Немає підключення до інтернету. Перевірте з’єднання та спробуйте ще раз.</string>
+    <string name="common_error_offline">Немає підключення до інтернету. Перевірте зʼєднання та спробуйте ще раз.</string>
     <string name="common_error_server">Сервер недоступний. Спробуйте пізніше.</string>
     <string name="common_error_permission">У вас немає прав на цю дію.</string>
     <string name="common_error_invalid_input">Деякі дані відсутні або неправильні. Перевірте їх і спробуйте ще раз.</string>
     <!-- Audit leftovers (Sept 2026): required-field marker and the discard-changes dialog. -->
-    <string name="common_required">Обов’язково</string>
+    <string name="common_required">Обовʼязково</string>
     <string name="common_keep_editing">Продовжити редагування</string>
     <string name="common_discard">Не зберігати</string>
     <string name="common_discard_changes_title">Не зберігати зміни?</string>

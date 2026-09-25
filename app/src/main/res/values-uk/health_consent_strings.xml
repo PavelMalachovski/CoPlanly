@@ -1,19 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="health_consent_dialog_title">Дані про здоров\'я вашої дитини</string>
-    <string name="health_consent_dialog_message">Алергії, ліки, захворювання, група крові, щеплення, медичні нотатки та медичні фото — це дані про здоров\'я вашої дитини.\n\n• Інший з батьків може їх читати й редагувати. Гість, якому ви відкриєте картку дитини, може їх читати.\n• Вони зберігаються на наших серверах.\n• Вони необов\'язкові. Застосунок працює і без них.\n• Ви можете будь-коли відкликати згоду в налаштуваннях. Тоді додані вами медичні дані буде видалено.</string>
+    <string name="health_consent_dialog_title">Дані про здоровʼя вашої дитини</string>
+    <string name="health_consent_dialog_message">Алергії, ліки, захворювання, група крові, щеплення, медичні нотатки та медичні фото — це дані про здоровʼя вашої дитини.\n\n• Другий із батьків може їх читати й редагувати. Гість, якому ви відкриєте картку дитини, може їх читати.\n• Вони зберігаються на наших серверах.\n• Вони необовʼязкові. Застосунок працює і без них.\n• Ви можете будь-коли відкликати згоду в налаштуваннях. Тоді додані вами медичні дані буде видалено.</string>
     <string name="health_consent_agree">Я погоджуюся</string>
     <string name="health_consent_not_now">Не зараз</string>
-    <string name="health_consent_locked">Медичні дані необов\'язкові, і для них спершу потрібна ваша згода.</string>
+    <string name="health_consent_locked">Медичні дані необовʼязкові, і для них спершу потрібна ваша згода.</string>
     <string name="health_consent_add_action">Додати медичні дані</string>
-    <string name="health_consent_settings_title">Згода на дані про здоров\'я</string>
+    <string name="health_consent_settings_title">Згода на дані про здоровʼя</string>
     <string name="health_consent_settings_given">Надано %1$s</string>
     <string name="health_consent_settings_not_given">Не надано</string>
     <string name="health_consent_settings_withdraw">Відкликати</string>
     <string name="health_consent_withdraw_title">Відкликати згоду?</string>
-    <string name="health_consent_withdraw_message">Медичні дані, які ви додали до карток своїх дітей, — алергії, ліки, медичний профіль, медичні нотатки та медичні фото — буде видалено, зокрема на телефоні іншого з батьків.\n\nУ картках, які створив інший з батьків, медичні дані залишаться: вони ґрунтуються на його власній згоді.</string>
+    <string name="health_consent_withdraw_message">Медичні дані, які ви додали до карток своїх дітей, — алергії, ліки, медичний профіль, медичні нотатки та медичні фото — буде видалено, зокрема на телефоні другого з батьків.\n\nУ картках, які створив другий із батьків, медичні дані залишаться: вони ґрунтуються на його власній згоді.</string>
     <string name="health_consent_withdraw_confirm">Відкликати й видалити</string>
     <string name="health_consent_withdrawn">Згоду відкликано. Додані вами медичні дані видалено.</string>
-    <string name="health_consent_withdraw_photos_failed">Деякі медичні фото не вдалося видалити, тому нічого не відкликано. Перевірте з\'єднання та спробуйте ще раз.</string>
+    <string name="health_consent_withdraw_photos_failed">Деякі медичні фото не вдалося видалити, тому нічого не відкликано. Перевірте зʼєднання та спробуйте ще раз.</string>
     <string name="health_consent_withdraw_failed">Не вдалося відкликати згоду. Спробуйте ще раз.</string>
 </resources>

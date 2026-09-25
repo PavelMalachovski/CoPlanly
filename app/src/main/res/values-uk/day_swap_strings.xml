@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Ukrainian translations of day_swap_strings.xml. -->
 <resources>
-    <string name="day_swap_sheet_title">Обмінятися цим днем</string>
-    <string name="day_swap_currently_with">Зараз цей день — %1$s</string>
+    <string name="day_swap_sheet_title">Обміняти цей день</string>
+    <string name="day_swap_currently_with">Зараз цей день належить: %1$s</string>
     <string name="day_swap_would_go_to">Ви пропонуєте його: %1$s</string>
-    <string name="day_swap_note_label">Коментар (необов\'язково)</string>
+    <string name="day_swap_note_label">Коментар (необовʼязково)</string>
     <string name="day_swap_offer">Запропонувати обмін</string>
     <string name="day_swap_cancel">Не зараз</string>
-    <string name="day_swap_needs_coparent">Спершу з\'єднайтеся з другим із батьків — обмін ви узгоджуєте вдвох.</string>
+    <string name="day_swap_needs_coparent">Спершу зʼєднайтеся з другим із батьків — обмін ви узгоджуєте вдвох.</string>
     <string name="day_swap_error_refused">Не вдалося запропонувати обмін</string>
-    <string name="day_swap_error_not_ready">Ще з\'ясовуємо, хто другий з батьків, — спробуйте за мить</string>
-    <string name="day_swap_error_partial">Надіслано %1$d із %2$d днів — ці вже чекають відповіді другого з батьків; решту запропонуйте ще раз</string>
+    <string name="day_swap_error_not_ready">Ще зʼясовуємо, хто другий із батьків, — спробуйте за мить</string>
+    <string name="day_swap_error_partial">Запропоновано %1$d із %2$d днів — ці вже чекають відповіді другого з батьків; решту запропонуйте ще раз</string>
     <string name="day_swap_inbox_section">Обмін днями</string>
     <string name="day_swap_inbox_offered_by_you">Ви запропонували цей день: %1$s</string>
     <string name="day_swap_inbox_offered_to_you">%1$s пропонує вам цей день</string>
@@ -27,13 +27,13 @@
         <item quantity="one">%1$d день</item>
         <item quantity="few">%1$d дні</item>
         <item quantity="many">%1$d днів</item>
-        <item quantity="other">%1$d днів</item>
+        <item quantity="other">%1$d дня</item>
     </plurals>
     <plurals name="day_swap_direction">
-        <item quantity="one">%1$d день переходить від %2$s до %3$s</item>
-        <item quantity="few">%1$d дні переходять від %2$s до %3$s</item>
-        <item quantity="many">%1$d днів переходять від %2$s до %3$s</item>
-        <item quantity="other">%1$d днів переходять від %2$s до %3$s</item>
+        <item quantity="one">%1$d день переходить: %2$s → %3$s</item>
+        <item quantity="few">%1$d дні переходять: %2$s → %3$s</item>
+        <item quantity="many">%1$d днів переходять: %2$s → %3$s</item>
+        <item quantity="other">%1$d дня переходять: %2$s → %3$s</item>
     </plurals>
     <plurals name="day_swap_skipped_days">
         <item quantity="one">Для %1$d вибраного дня опіку не задано — він не увійде в обмін.</item>
@@ -42,15 +42,15 @@
         <item quantity="other">Для %1$d вибраних днів опіку не задано — вони не увійдуть в обмін.</item>
     </plurals>
     <plurals name="day_swap_inbox_offered_by_you_days">
-        <item quantity="one">Ви запропонували %2$s %1$d день</item>
-        <item quantity="few">Ви запропонували %2$s %1$d дні</item>
-        <item quantity="many">Ви запропонували %2$s %1$d днів</item>
-        <item quantity="other">Ви запропонували %2$s %1$d днів</item>
+        <item quantity="one">Ви запропонували %1$d день: %2$s</item>
+        <item quantity="few">Ви запропонували %1$d дні: %2$s</item>
+        <item quantity="many">Ви запропонували %1$d днів: %2$s</item>
+        <item quantity="other">Ви запропонували %1$d дня: %2$s</item>
     </plurals>
     <plurals name="day_swap_inbox_offered_to_you_days">
         <item quantity="one">%2$s пропонує вам %1$d день</item>
         <item quantity="few">%2$s пропонує вам %1$d дні</item>
         <item quantity="many">%2$s пропонує вам %1$d днів</item>
-        <item quantity="other">%2$s пропонує вам %1$d днів</item>
+        <item quantity="other">%2$s пропонує вам %1$d дня</item>
     </plurals>
 </resources>

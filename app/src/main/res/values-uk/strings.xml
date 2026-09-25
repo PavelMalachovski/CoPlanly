@@ -25,11 +25,11 @@
 
     <!-- Auth Screen -->
     <string name="auth_sign_in">Увійти</string>
-    <string name="auth_create_account">Створити обліковий запис</string>
+    <string name="auth_create_account">Створити акаунт</string>
     <string name="auth_email">Ел. пошта</string>
     <string name="auth_password">Пароль</string>
-    <string name="auth_sign_up_prompt">Немає облікового запису? Зареєструйтеся</string>
-    <string name="auth_sign_in_prompt">Вже є обліковий запис? Увійдіть</string>
+    <string name="auth_sign_up_prompt">Немає акаунта? Зареєструйтеся</string>
+    <string name="auth_sign_in_prompt">Уже є акаунт? Увійдіть</string>
     <string name="auth_forgot_password">Забули пароль?</string>
     <string name="auth_fill_all_fields">Будь ласка, заповніть усі поля</string>
     <string name="auth_sign_in_failed">Не вдалося увійти</string>
@@ -57,10 +57,10 @@
     <string name="settings_push_notifications_description">Отримувати сповіщення про зміни</string>
 
     <!-- Pairing Screen -->
-    <string name="pairing_title">Зв\'язок батьків</string>
-    <string name="pairing_paired_with">Зв\'язано з</string>
-    <string name="pairing_unpair">Розірвати зв\'язок</string>
-    <string name="pairing_partner_email">Ел. пошта партнера</string>
+    <string name="pairing_title">Звʼязок із другим із батьків</string>
+    <string name="pairing_paired_with">Зʼєднано з</string>
+    <string name="pairing_unpair">Розʼєднати</string>
+    <string name="pairing_partner_email">Ел. пошта другого з батьків</string>
     <string name="pairing_send_invitation">Надіслати запрошення</string>
     <string name="pairing_pending_invitations">Запрошення в очікуванні</string>
     <string name="pairing_accept">Прийняти</string>
@@ -85,14 +85,14 @@
     <string name="common_retry">Повторити</string>
     <string name="common_try_again">Спробувати ще раз</string>
     <string name="common_clear">Очистити</string>
-    <string name="common_optional">необов\'язково</string>
+    <string name="common_optional">необовʼязково</string>
 
     <!-- Child Info Screen -->
     <string name="child_info_title">Інформація про дитину</string>
     <string name="child_info_add">Додати дитину</string>
     <string name="child_info_edit">Редагувати дані дитини</string>
-    <string name="child_info_name">Ім\'я дитини</string>
-    <string name="child_info_name_required">Ім\'я дитини *</string>
+    <string name="child_info_name">Імʼя дитини</string>
+    <string name="child_info_name_required">Імʼя дитини *</string>
     <string name="child_info_medical_notes">Додаткова медична інформація</string>
     <string name="child_info_medical_notes_hint">Будь-яка інша важлива медична інформація…</string>
     <string name="child_info_medications">Ліки</string>
@@ -105,39 +105,39 @@
     <string name="medication_name">Назва ліків</string>
     <string name="medication_dosage">Дозування</string>
     <string name="medication_frequency">Частота прийому</string>
-    <string name="medication_notes">Нотатки (необов\'язково)</string>
+    <string name="medication_notes">Нотатки (необовʼязково)</string>
     <string name="medication_add">Додати ліки</string>
 
     <!-- Activity Editor -->
     <string name="activity_name">Назва заняття</string>
     <string name="activity_schedule">Розклад</string>
-    <string name="activity_location">Місце (необов\'язково)</string>
-    <string name="activity_notes">Нотатки (необов\'язково)</string>
+    <string name="activity_location">Місце (необовʼязково)</string>
+    <string name="activity_notes">Нотатки (необовʼязково)</string>
     <string name="activity_add">Додати заняття</string>
 
     <!-- Allergy Editor -->
     <string name="allergy_name">Назва алергії</string>
     <string name="allergy_severity">Тяжкість</string>
     <string name="allergy_reaction">Реакція</string>
-    <string name="allergy_notes">Нотатки (необов\'язково)</string>
+    <string name="allergy_notes">Нотатки (необовʼязково)</string>
     <string name="allergy_add">Додати алергію</string>
 
     <!-- Emergency Contact Editor -->
     <string name="emergency_contact_add">Додати екстрений контакт</string>
-    <string name="emergency_contact_name">Ім\'я</string>
-    <string name="emergency_contact_relationship">Родинний зв\'язок</string>
-    <string name="emergency_contact_relationship_hint">наприклад, Бабуся, Дядько</string>
+    <string name="emergency_contact_name">Імʼя</string>
+    <string name="emergency_contact_relationship">Ким доводиться</string>
+    <string name="emergency_contact_relationship_hint">напр., бабуся, дядько</string>
     <string name="emergency_contact_phone">Номер телефону</string>
-    <string name="emergency_contact_alternate">Додатковий телефон (необов\'язково)</string>
+    <string name="emergency_contact_alternate">Додатковий телефон (необовʼязково)</string>
 
     <!-- School Info Editor -->
     <string name="school_name">Назва школи</string>
-    <string name="school_address">Адреса (необов\'язково)</string>
-    <string name="school_phone">Телефон школи (необов\'язково)</string>
-    <string name="school_grade">Клас (необов\'язково)</string>
-    <string name="school_grade_hint">наприклад, 3 клас</string>
-    <string name="school_teacher_name">Ім\'я вчителя (необов\'язково)</string>
-    <string name="school_teacher_email">Ел. пошта вчителя (необов\'язково)</string>
+    <string name="school_address">Адреса (необовʼязково)</string>
+    <string name="school_phone">Телефон школи (необовʼязково)</string>
+    <string name="school_grade">Клас (необовʼязково)</string>
+    <string name="school_grade_hint">напр., 3-й клас</string>
+    <string name="school_teacher_name">Імʼя вчителя (необовʼязково)</string>
+    <string name="school_teacher_email">Ел. пошта вчителя (необовʼязково)</string>
 
     <!-- Sync -->
     <string name="sync_sign_in_google">Увійти через Google</string>

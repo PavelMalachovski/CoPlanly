@@ -2,10 +2,10 @@
 <resources>
     <string name="chat_new_conversation">Нова розмова</string>
     <string name="chat_empty_title">Поки немає розмов</string>
-    <string name="chat_empty_description">Почніть розмову з іншим із батьків, щоб узгоджувати розклад і ділитися новинами.</string>
+    <string name="chat_empty_description">Почніть розмову з другим із батьків, щоб узгоджувати розклад і ділитися новинами.</string>
     <string name="chat_no_messages">Поки немає повідомлень</string>
     <string name="chat_messages_empty_title">Поки немає повідомлень</string>
-    <string name="chat_messages_empty_description">Почніть розмову, надіславши повідомлення іншому з батьків.</string>
+    <string name="chat_messages_empty_description">Почніть розмову, надіславши повідомлення другому з батьків.</string>
     <string name="chat_type_message">Введіть повідомлення…</string>
     <string name="chat_send">Надіслати</string>
     <string name="chat_status_sending">Надсилання</string>
@@ -19,16 +19,16 @@
     <string name="chat_failed_to_send">Не вдалося надіслати</string>
     <string name="chat_title_fallback">Чат</string>
     <string name="chat_back">Назад</string>
-    <string name="chat_request_change">Запросити зміну</string>
-    <string name="chat_request_change_title">Запросити зміну</string>
+    <string name="chat_request_change">Запропонувати зміну</string>
+    <string name="chat_request_change_title">Запропонувати зміну</string>
     <string name="chat_no_upcoming_events">Немає майбутніх подій, для яких можна запропонувати зміну.</string>
     <string name="chat_pick_event_to_reschedule">Виберіть подію, яку хочете перенести:</string>
     <!-- Shown when the co-parent action is used on an account that has no co-parent linked. -->
-    <string name="chat_no_coparent">Ви ще не пов’язані з іншим із батьків.</string>
+    <string name="chat_no_coparent">Ви ще не зʼєднані з другим із батьків.</string>
     <!-- Snackbar action next to chat_no_coparent; opens the pairing screen. -->
-    <string name="chat_no_coparent_action">Пов’язати</string>
+    <string name="chat_no_coparent_action">Зʼєднати</string>
     <!-- Shown when the pairing state has not resolved in time; the action is worth retrying. -->
-    <string name="chat_coparent_link_pending">Перевіряємо зв’язок з іншим із батьків. Спробуйте ще раз за мить.</string>
+    <string name="chat_coparent_link_pending">Перевіряємо звʼязок з другим із батьків. Спробуйте ще раз за мить.</string>
 
     <!-- Screen-reader content description for the unread-message badge on the bottom nav's Chat tab. -->
     <plurals name="chat_unread_messages_badge">
@@ -55,13 +55,13 @@
          composer for the user to edit before sending, so the bracketed hints are translated
          too: they are prompts to the reader, not substitution tokens. -->
     <string name="chat_templates_sheet_title">Шаблони повідомлень</string>
-    <string name="chat_template_category_pickup_drop">Передавання дитини</string>
-    <string name="chat_template_category_illness">Хвороба та здоров\'я</string>
+    <string name="chat_template_category_pickup_drop">Передача дитини</string>
+    <string name="chat_template_category_illness">Хвороба та здоровʼя</string>
     <string name="chat_template_category_school_events">Шкільні заходи</string>
     <string name="chat_template_category_holidays">Свята та канікули</string>
     <string name="chat_template_category_conflict_resolution">Вирішення розбіжностей</string>
-    <string name="chat_template_pickup_delay_title">Затримка з передаванням</string>
-    <string name="chat_template_pickup_delay_content">Я затримаюся з передаванням [дитини]. Буду приблизно через [скільки хвилин]. Вибач за незручності.</string>
+    <string name="chat_template_pickup_delay_title">Затримка з передачею</string>
+    <string name="chat_template_pickup_delay_content">Я запізнююся на передачу [дитини]. Буду приблизно через [скільки хвилин]. Вибач за незручності.</string>
     <string name="chat_template_pickup_early_title">Ранній приїзд</string>
     <string name="chat_template_pickup_early_content">Я приїду раніше, ніж зазвичай, приблизно о [час]. Тобі так зручно?</string>
     <string name="chat_template_doctor_visit_title">Візит до лікаря</string>
@@ -85,10 +85,10 @@
     <string name="chat_search_clear">Очистити</string>
     <string name="chat_search_placeholder">Пошук у повідомленнях</string>
     <string name="chat_search_prompt_title">Пошук у цьому листуванні</string>
-    <string name="chat_search_prompt_description">Шукає серед повідомлень, які вже є на цьому телефоні. Ніщо з введеного тут його не залишає.</string>
+    <string name="chat_search_prompt_description">Шукає серед повідомлень, які вже є на цьому телефоні. Те, що ви тут вводите, не залишає телефон.</string>
     <string name="chat_search_no_results_title">Відповідних повідомлень немає</string>
     <string name="chat_search_no_results_description">У цьому листуванні нічого не знайдено за запитом «%1$s».</string>
-    <string name="chat_search_failed_title">Пошук не вдався</string>
+    <string name="chat_search_failed_title">Не вдалося виконати пошук</string>
     <string name="chat_search_failed_description">Пошук не виконано. Спробуйте ще раз трохи згодом.</string>
     <string name="chat_search_truncated">Показано найновіші збіги: %1$d. Додайте слово, щоб звузити пошук.</string>
     <string name="chat_search_result_meta">%1$s · %2$s</string>
@@ -108,14 +108,14 @@
         <item>ніколи</item>
         <item>безглузд*</item>
         <item>дурн*</item>
-        <item>смішн*</item>
+        <item>жалюгідн*</item>
         <item>егоїст*</item>
         <item>безвідповідальн*</item>
         <item>типов*</item>
     </string-array>
     <!-- A thread kept after the co-parent deleted their account (GDPR review, September 2026). %1$s = their name, %2$s = the day the thread is deleted. -->
-    <string name="chat_departed_banner">%1$s видалив(-ла) свій акаунт. Цю розмову буде видалено %2$s. Експортуйте її до того часу.</string>
+    <string name="chat_departed_banner">%1$s: акаунт видалено. Цю розмову буде видалено %2$s. Експортуйте її до того часу.</string>
     <string name="chat_departed_export">Експортувати</string>
     <string name="chat_departed_no_sending">У цю розмову більше не можна надсилати повідомлення.</string>
-    <string name="chat_departed_unnamed">Другий з батьків</string>
+    <string name="chat_departed_unnamed">Другий із батьків</string>
 </resources>
