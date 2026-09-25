@@ -48,6 +48,7 @@
     <string name="childinfo_detail_teacher">Teacher: %1$s</string>
     <string name="childinfo_detail_email">Email: %1$s</string>
     <string name="childinfo_detail_grade">Grade: %1$s</string>
+    <string name="childinfo_school_summary">%1$s · %2$s</string>
     <string name="childinfo_allergy_bullet">• %1$s</string>
 
     <!-- Child info: medications editor -->
@@ -98,7 +99,7 @@
     <string name="childinfo_address_optional_label">Address (optional)</string>
     <string name="childinfo_school_phone_optional_label">Institution phone (optional)</string>
     <string name="childinfo_grade_optional_label">Grade (optional)</string>
-    <string name="childinfo_grade_placeholder">e.g., 3rd Grade</string>
+    <string name="childinfo_grade_placeholder">e.g., 3rd grade</string>
     <string name="childinfo_teacher_name_optional_label">Teacher Name (optional)</string>
     <string name="childinfo_teacher_email_optional_label">Teacher Email (optional)</string>
     <string name="childinfo_save_failed">Could not save the child\'s details. Please try again.</string>

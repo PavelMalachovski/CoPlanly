@@ -48,6 +48,7 @@
     <string name="childinfo_detail_teacher">Вчитель: %1$s</string>
     <string name="childinfo_detail_email">Ел. пошта: %1$s</string>
     <string name="childinfo_detail_grade">Клас: %1$s</string>
+    <string name="childinfo_school_summary">%1$s · %2$s</string>
     <string name="childinfo_allergy_bullet">• %1$s</string>
 
     <!-- Child info: medications editor -->

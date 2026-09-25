@@ -48,6 +48,7 @@
     <string name="childinfo_detail_teacher">Učitel: %1$s</string>
     <string name="childinfo_detail_email">E-mail: %1$s</string>
     <string name="childinfo_detail_grade">Třída: %1$s</string>
+    <string name="childinfo_school_summary">%1$s · %2$s</string>
     <string name="childinfo_allergy_bullet">• %1$s</string>
 
     <!-- Child info: medications editor -->
