@@ -95,6 +95,22 @@ fun dateWithTime(
         .append(shortTime(locale))
         .toFormatter(locale)
 
+/**
+ * [text] — a formatted date — with its spaces made no-break, so a line never ends between a day
+ * and its month ("4 | октября"). A space after a comma stays breakable: the weekday of a full
+ * date ("суббота, 4 октября 2026 г.") may still take a line of its own when the rest does not fit.
+ *
+ * @param text a date as a formatter wrote it
+ * @return the same text, unbreakable between its parts
+ */
+fun unbreakableDate(text: String): String = buildString(text.length) {
+    text.forEachIndexed { index, c ->
+        val afterComma = index > 0 && text[index - 1] == ','
+        append(if (c == ' ' && !afterComma) NO_BREAK_SPACE else c)
+    }
+}
+
+private const val NO_BREAK_SPACE = ' '
 private const val PATTERN_24_HOUR = "HH:mm"
 private const val PATTERN_12_HOUR = "h:mm a"
 
