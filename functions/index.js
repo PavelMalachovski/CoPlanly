@@ -3018,6 +3018,86 @@ exports.backfillRecordFamilyIds = regional.runWith({timeoutSeconds: 540}).https.
     },
 );
 
+/** Firestore caps a batched write at 500 operations; stay clear of the edge. */
+const HEALTH_PURGE_BATCH_LIMIT = 400;
+
+/**
+ * The keys a parent's own health data used to live under on `users/{uid}` (GDPR data
+ * minimisation). The app no longer writes them, `firestore.rules` refuses a write that adds or
+ * changes one, and every profile save from a current build deletes both.
+ */
+const PARENT_HEALTH_KEYS = ['medicalProfile', 'allergies'];
+
+/**
+ * Body of the `purgeParentHealthFields` callable — deletes a parent's own `medicalProfile` and
+ * `allergies` from every `users` document that still holds either.
+ *
+ * The feature was removed because `users/{uid}` is readable by the co-parent, so an adult's
+ * diagnoses reached their ex-partner. A current build erases the keys on its next profile save,
+ * but a parent who never saves again — or never updates — would keep them on the server for
+ * ever; this is the one-off pass that removes them all. Only the two keys are touched, only on
+ * documents that carry one, and `FieldValue.delete()` is idempotent, so it is safe to re-run.
+ *
+ * @param {FirebaseFirestore.Firestore} db Firestore instance.
+ * @return {Promise<{scanned: number, purged: number}>} How many `users` documents were read, and
+ *   how many had the keys removed.
+ */
+async function purgeParentHealthFieldsImpl(db) {
+  const users = await db.collection('users').get();
+
+  let batch = db.batch();
+  let pending = 0;
+  let purged = 0;
+
+  for (const doc of users.docs) {
+    const data = doc.data() || {};
+    if (!PARENT_HEALTH_KEYS.some((key) => key in data)) {
+      continue;
+    }
+    const update = {};
+    PARENT_HEALTH_KEYS.forEach((key) => {
+      update[key] = FieldValue.delete();
+    });
+    batch.update(doc.ref, update);
+    pending++;
+    purged++;
+
+    if (pending === HEALTH_PURGE_BATCH_LIMIT) {
+      await batch.commit();
+      batch = db.batch();
+      pending = 0;
+    }
+  }
+
+  if (pending > 0) {
+    await batch.commit();
+  }
+
+  return {scanned: users.docs.length, purged};
+}
+
+exports.purgeParentHealthFieldsImpl = purgeParentHealthFieldsImpl;
+
+/**
+ * Deletes every parent's own health data from `users/{uid}` — the server half of removing the
+ * feature (see [purgeParentHealthFieldsImpl]).
+ *
+ * Operator-only on the same allow-list as the other backfills, and 540 seconds for the same
+ * reason: one pass over a bounded collection. Run once, after the build that stops writing the
+ * keys has shipped; idempotent, so a second run is harmless.
+ *
+ * @return {Promise<{scanned: number, purged: number}>} See [purgeParentHealthFieldsImpl].
+ */
+exports.purgeParentHealthFields = functions.runWith({timeoutSeconds: 540}).https.onCall(
+    async (data, context) => {
+      if (!isBackfillOperator(context)) {
+        throw new functions.https.HttpsError(
+            'permission-denied', 'Operator access only', {reason: 'not-operator'});
+      }
+      return purgeParentHealthFieldsImpl(admin.firestore());
+    },
+);
+
 /**
  * Creates the `families/{id}` document for pairs that formed before pairing wrote one.
  *

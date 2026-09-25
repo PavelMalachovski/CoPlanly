@@ -5,7 +5,7 @@ import com.coparently.app.data.local.entity.UserEntity
 import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestoreUserDataSource
-import com.coparently.app.domain.model.BloodType
+import com.coparently.app.domain.consent.HealthConsent
 import com.coparently.app.domain.model.MedicalProfile
 import com.coparently.app.domain.model.User
 import com.coparently.app.domain.model.Vaccination
@@ -132,13 +132,7 @@ class UserProfileMappingTest {
             colorCode = "#FF4081",
             dateOfBirth = LocalDate.of(1988, 4, 17),
             phone = "+420123456789",
-            allergies = listOf("peanuts"),
-            medicalProfile = MedicalProfile(
-                bloodType = BloodType.AB_POSITIVE,
-                intolerances = listOf("lactose"),
-                hereditaryConditions = listOf("asthma"),
-                vaccinations = listOf(Vaccination("MMR", LocalDate.of(2020, 1, 1)))
-            )
+            healthConsent = HealthConsent(version = 1, atMillis = 1_787_000_000_000L)
         )
 
         repository.updateUser(filled)
@@ -146,13 +140,15 @@ class UserProfileMappingTest {
         val savedEntity = slot<UserEntity>()
         coVerify { userDao.updateUser(capture(savedEntity)) }
         assertEquals("1988-04-17", savedEntity.captured.dateOfBirth)
+        // The parent's own health data is gone; the dead columns keep their empty values.
+        assertEquals("[]", savedEntity.captured.allergiesJson)
+        assertEquals("{}", savedEntity.captured.medicalProfileJson)
 
         coEvery { userDao.getUserById("user-a") } returns savedEntity.captured
         val restored = repository.getUserById("user-a")
 
         assertEquals(filled.dateOfBirth, restored?.dateOfBirth)
         assertEquals(filled.phone, restored?.phone)
-        assertEquals(filled.allergies, restored?.allergies)
-        assertEquals(filled.medicalProfile, restored?.medicalProfile)
+        assertEquals(filled.healthConsent, restored?.healthConsent)
     }
 }

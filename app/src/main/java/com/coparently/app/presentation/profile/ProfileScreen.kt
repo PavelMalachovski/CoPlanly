@@ -3,8 +3,6 @@ package com.coparently.app.presentation.profile
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -38,21 +36,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
-import com.coparently.app.domain.model.MedicalProfile
 import com.coparently.app.domain.model.User
-import com.coparently.app.presentation.childinfo.components.AllergyEditor
 import com.coparently.app.presentation.childinfo.components.DatePickerDialog
 import com.coparently.app.presentation.common.DatePickerField
 import com.coparently.app.presentation.common.ErrorState
-import com.coparently.app.presentation.common.MedicalProfileEditor
-import com.coparently.app.presentation.common.PillChip
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.StickyActionBar
@@ -64,8 +56,12 @@ import java.time.format.FormatStyle
 /**
  * A parent's profile, used in two modes.
  *
- * `editable = true` shows the signed-in user's own record — name, date of birth, phone,
- * allergies and medical profile — with fields the user can change and a sticky Save button.
+ * `editable = true` shows the signed-in user's own record — name, date of birth and phone —
+ * with fields the user can change and a sticky Save button.
+ *
+ * There is deliberately no health section. A parent's own allergies and medical profile were
+ * removed (GDPR data minimisation): `users/{uid}` is readable by the co-parent, so an adult's
+ * diagnoses reached their ex-partner. Children's medical profiles live on the child record.
  * `editable = false` shows the co-parent's record read-only, with a note explaining why: the
  * co-parent's `users/{uid}` document cannot be written from this device (`firestore.rules`
  * allows only its owner to write it — pinned in `firestore-tests/rules/users-profile.test.js`),
@@ -171,9 +167,7 @@ private fun ProfileContent(
                     person = person,
                     onNameChange = viewModel::updateName,
                     onDateOfBirthChange = viewModel::updateDateOfBirth,
-                    onPhoneChange = viewModel::updatePhone,
-                    onAllergiesChange = viewModel::updateAllergies,
-                    onMedicalProfileChange = viewModel::updateMedicalProfile
+                    onPhoneChange = viewModel::updatePhone
                 )
             }
         } else {
@@ -228,16 +222,13 @@ private fun ProfileLoadFailed(onRetry: () -> Unit, modifier: Modifier = Modifier
     )
 }
 
-/** The signed-in user's own record: editable fields, allergies and the medical profile. */
+/** The signed-in user's own record: name, date of birth and phone. */
 @Composable
-@Suppress("LongParameterList") // one form, one callback per editable field
 private fun MyProfileContent(
     person: User,
     onNameChange: (String) -> Unit,
     onDateOfBirthChange: (LocalDate?) -> Unit,
-    onPhoneChange: (String) -> Unit,
-    onAllergiesChange: (List<String>) -> Unit,
-    onMedicalProfileChange: (MedicalProfile) -> Unit
+    onPhoneChange: (String) -> Unit
 ) {
     var showDatePicker by remember { mutableStateOf(false) }
     val dateFormatter = remember { DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM) }
@@ -274,23 +265,6 @@ private fun MyProfileContent(
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
         modifier = Modifier.fillMaxWidth()
     )
-
-    Column(verticalArrangement = Arrangement.spacedBy(Spacing.S)) {
-        ProfileSectionLabel(stringResource(R.string.profile_allergies_label))
-        AllergyEditor(
-            allergies = person.allergies,
-            onAdd = { entry -> onAllergiesChange(person.allergies + entry) },
-            onRemove = { index ->
-                onAllergiesChange(person.allergies.toMutableList().apply { removeAt(index) })
-            }
-        )
-    }
-
-    MedicalProfileEditor(
-        profile = person.medicalProfile,
-        onChange = onMedicalProfileChange,
-        enabled = true
-    )
 }
 
 /**
@@ -303,8 +277,8 @@ private fun MyProfileContent(
  *   never opened their own profile screen) — [R.string.profile_coparent_empty]. The name is
  *   still shown: it comes from pairing itself, not from the profile questionnaire, so there is
  *   no reason to hide it behind the same empty state.
- * - [coParent] known and has filled in at least one field — the fields, allergies and medical
- *   profile, all rendered with no editing affordance ([MedicalProfileEditor]'s `enabled = false`).
+ * - [coParent] known and has filled in at least one field — those fields, with no editing
+ *   affordance. Never a health section: see [ProfileScreen].
  */
 @Composable
 private fun CoParentProfileContent(coParent: User?) {
@@ -334,15 +308,13 @@ private fun CoParentProfileContent(coParent: User?) {
     }
 
     CoParentDetailRows(coParent)
-    CoParentAllergiesSection(coParent.allergies)
-    MedicalProfileEditor(profile = coParent.medicalProfile, onChange = {}, enabled = false)
 }
 
 /**
  * The date-of-birth and phone rows, one per field the co-parent has actually filled in.
  *
  * There is no approved copy for "not set" in this screen's fixed sixteen-key string set, and a
- * co-parent can easily have filled in one field (say, a medical profile) without the other (a
+ * co-parent can easily have filled in one field (say, a date of birth) without the other (a
  * phone number) — so a field with nothing to show gets no row at all, rather than a placeholder.
  */
 @Composable
@@ -360,42 +332,6 @@ private fun CoParentDetailRows(coParent: User) {
             if (index != detailRows.lastIndex) Divider()
         }
     }
-}
-
-/** The co-parent's allergies, as plain non-interactive chips, or the shared "nothing yet" text. */
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun CoParentAllergiesSection(allergies: List<String>) {
-    Column(verticalArrangement = Arrangement.spacedBy(Spacing.S)) {
-        ProfileSectionLabel(stringResource(R.string.profile_allergies_label))
-        if (allergies.isEmpty()) {
-            Text(
-                text = stringResource(R.string.medical_empty),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        } else {
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(Spacing.S),
-                verticalArrangement = Arrangement.spacedBy(Spacing.S),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                allergies.forEach { allergy -> PillChip(label = allergy) }
-            }
-        }
-    }
-}
-
-/** A field-group label above an editor or a read-only section, e.g. "Allergies". */
-@Composable
-private fun ProfileSectionLabel(text: String, modifier: Modifier = Modifier) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.labelMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        // A heading, so TalkBack can jump between the profile's sections (D-17).
-        modifier = modifier.semantics { heading() }
-    )
 }
 
 /** The trailing value text for a read-only [SectionRow] field. */
@@ -426,6 +362,4 @@ private fun ProfileEmptyState(text: String, modifier: Modifier = Modifier) {
  */
 private fun User.hasProfileData(): Boolean =
     dateOfBirth != null ||
-        !phone.isNullOrBlank() ||
-        allergies.isNotEmpty() ||
-        medicalProfile != MedicalProfile()
+        !phone.isNullOrBlank()

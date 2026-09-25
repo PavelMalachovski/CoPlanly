@@ -1,5 +1,6 @@
 package com.coparently.app.domain.repository
 
+import com.coparently.app.domain.consent.HealthConsent
 import com.coparently.app.domain.model.User
 import kotlinx.coroutines.flow.Flow
 
@@ -96,6 +97,16 @@ interface UserRepository {
     suspend fun updateUser(user: User)
 
     /**
+     * Records the signed-in parent's consent to entering their children's health details, or
+     * clears it when [consent] is null (a withdrawal).
+     *
+     * The only writer of [User.healthConsent] and of `users/{uid}.healthDataConsent`:
+     * [updateUser] sends neither, so an ordinary profile save cannot grant or withdraw consent.
+     * Does nothing while signed out.
+     */
+    suspend fun setHealthConsent(consent: HealthConsent?)
+
+    /**
      * Deletes a user by ID.
      */
     suspend fun deleteUser(id: String)
@@ -129,7 +140,7 @@ interface UserRepository {
      * [getUserById] can never answer "what does the co-parent's record say", the same gap
      * `ParentsSource`'s class doc records for [PartnerSummary][com.coparently.app.domain.model.PartnerSummary].
      * The co-parent's slot-limited summary already exists there; this is the fuller read a
-     * profile screen needs (birth date, phone, allergies, medical profile) without hanging
+     * profile screen needs (birth date, phone) without hanging
      * those fields on `PartnerSummary`, which every screen that only wants a name also loads.
      *
      * `firestore.rules` allows any paired partner to `get` (not list) the other's document —

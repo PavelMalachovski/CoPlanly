@@ -357,6 +357,9 @@
     "backfillFamilyDocuments": {
       "exempt": "Operator-only maintenance callable, not a phone-to-phone feature; functions/test covers it."
     },
+    "purgeParentHealthFields": {
+      "exempt": "Operator-run one-off cleanup of the removed parent health keys, not a phone-to-phone feature; functions/test covers it."
+    },
     "backfillParentSlots": {
       "exempt": "Operator-only maintenance callable, not a phone-to-phone feature; functions/test covers it."
     },

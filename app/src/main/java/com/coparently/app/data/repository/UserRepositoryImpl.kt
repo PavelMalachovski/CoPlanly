@@ -7,14 +7,15 @@ import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestoreFamilyDataSource
 import com.coparently.app.data.remote.firebase.FirestoreUserDataSource
 import com.coparently.app.data.session.ProfileIdentity
+import com.coparently.app.domain.consent.HealthConsent
 import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.holidays.HolidayCountry
 import com.coparently.app.domain.model.FamilyKind
-import com.coparently.app.domain.model.MedicalProfile
 import com.coparently.app.domain.model.User
 import com.coparently.app.domain.repository.UserRepository
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.UserInfo
+import com.google.firebase.firestore.FieldValue
 import com.google.gson.GsonBuilder
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -326,13 +327,13 @@ class UserRepositoryImpl @Inject constructor(
      * Mirrors the same identity into Room, so the local picture agrees with the remote one.
      *
      * An existing row is `copy()`-ed rather than rebuilt, so role, colour, calendar
-     * settings, `partnerId`, the FCM token, and this same fresh-row branch's own
-     * `dateOfBirth`/`phone`/`allergiesJson`/`medicalProfileJson` survive the REPLACE insert.
+     * settings, `partnerId`, the FCM token, the health consent, and this same fresh-row branch's
+     * own `dateOfBirth`/`phone` survive the REPLACE insert.
      * The photo is only overwritten when one was resolved, for the same no-downgrade reason
      * as the remote patch.
      *
-     * The fresh-row branch seeds `dateOfBirth`, `phone`, `allergies` and `medicalProfile` from
-     * [remote] for the same reason it already seeds `partnerId`: a reinstall calls this before
+     * The fresh-row branch seeds `dateOfBirth`, `phone` and the health consent from [remote] for
+     * the same reason it already seeds `partnerId`: a reinstall calls this before
      * anything else has a chance to populate Room, and [toUser] — the mapper that *does* read
      * these fields — is only ever used for [getRemoteUserProfile]'s read-only co-parent view,
      * never to persist. Leaving them at the entity defaults here meant a reinstalled device
@@ -364,13 +365,6 @@ class UserRepositoryImpl @Inject constructor(
             fcmToken = remote?.string("fcmToken"),
             dateOfBirth = remote?.string("dateOfBirth"),
             phone = remote?.string("phone"),
-            allergiesJson = (remote?.get("allergies") as? List<*>)
-                ?.mapNotNull { it as? String }
-                ?.let { gson.toJson(it) }
-                ?: DEFAULT_ALLERGIES_JSON,
-            medicalProfileJson = (remote?.get("medicalProfile") as? Map<*, *>)
-                ?.let { gson.toJson(it) }
-                ?: DEFAULT_MEDICAL_PROFILE_JSON,
             onboardingCompletedAt = remote?.string("onboardingCompletedAt"),
             // No `?: local?.caresForKinds`: this whole constructor is the right-hand side of
             // `local?.copy(…) ?:`, so it runs only when `local` is null and the fallback could
@@ -386,7 +380,10 @@ class UserRepositoryImpl @Inject constructor(
             // Restored for the reason the country is: a reinstall must not quietly drop the
             // Land's holidays. Blank is "none", which is also what an older build's document
             // (no such key) reads as.
-            regionCode = remote?.string("regionCode")?.takeIf { it.isNotBlank() }
+            regionCode = remote?.string("regionCode")?.takeIf { it.isNotBlank() },
+            // Restored so a reinstalled phone does not ask a parent who already agreed again.
+            healthConsentVersion = remote?.healthConsent()?.version,
+            healthConsentAtMillis = remote?.healthConsent()?.atMillis
         )
         if (updated != local) userDao.insertUser(updated)
     }
@@ -443,10 +440,14 @@ class UserRepositoryImpl @Inject constructor(
                     "fcmToken" to (user.fcmToken ?: ""),
                     "dateOfBirth" to (user.dateOfBirth?.toString() ?: ""),
                     "phone" to (user.phone ?: ""),
-                    "allergies" to user.allergies,
-                    "medicalProfile" to gson.fromJson(
-                        gson.toJson(user.medicalProfile), Map::class.java
-                    ),
+                    // The parent's own health data was removed (GDPR data minimisation): the
+                    // co-parent can read this document. Every save erases what an older build
+                    // left behind, and `firestore.rules` refuses a write that adds either key.
+                    // `healthDataConsent` is deliberately absent: only `setHealthConsent` writes
+                    // it, so an ordinary save from a row that has not caught up with another
+                    // device cannot withdraw or grant it.
+                    "allergies" to FieldValue.delete(),
+                    "medicalProfile" to FieldValue.delete(),
                     "onboardingCompletedAt" to (user.onboardingCompletedAt ?: ""),
                     // A string of constant names, not a list: the co-parent reads it to decide
                     // whether to show child records, and the two halves must agree on one shape.
@@ -502,6 +503,27 @@ class UserRepositoryImpl @Inject constructor(
                 e
             )
         }
+    }
+
+    /**
+     * Records or clears this parent's child-health consent, in Room and then in Firestore.
+     *
+     * Room first, through a targeted update, so the medical sections lock or unlock at once.
+     * Firestore second, as a merge of the one key — a map when given, `FieldValue.delete()` when
+     * withdrawn. The remote write is what makes the consent demonstrable and what a second device
+     * reads back; offline, Firestore queues it and every later read on this device already sees
+     * it, so a [pullOnce] in between cannot restore a withdrawn consent. A failure is logged, not
+     * thrown: the local answer stands and the next call retries.
+     */
+    override suspend fun setHealthConsent(consent: HealthConsent?) {
+        val uid = firebaseAuthService.getCurrentUser()?.uid ?: return
+        val changed = userDao.setHealthConsent(uid, consent?.version, consent?.atMillis)
+        if (changed == 0) android.util.Log.w(TAG, "No local profile row to record the health consent on")
+        val value: Any = consent?.let {
+            mapOf(HEALTH_CONSENT_VERSION_KEY to it.version, HEALTH_CONSENT_AT_KEY to it.atMillis)
+        } ?: FieldValue.delete()
+        firestoreUserDataSource.updateUser(uid, mapOf(HEALTH_CONSENT_KEY to value))
+            .onFailure { android.util.Log.e(TAG, "Failed to write the health consent to Firestore", it) }
     }
 
     override suspend fun deleteUser(id: String) {
@@ -574,14 +596,13 @@ class UserRepositoryImpl @Inject constructor(
             fcmToken = fcmToken,
             dateOfBirth = parseProfileDate(dateOfBirth),
             phone = phone,
-            allergies = gson.fromJson(allergiesJson, Array<String>::class.java)?.toList().orEmpty(),
-            medicalProfile = (
-                gson.fromJson(medicalProfileJson, MedicalProfile::class.java) ?: MedicalProfile()
-                ).withSanitizedVaccinationNames(),
             onboardingCompletedAt = onboardingCompletedAt,
             caresFor = FamilyKind.fromStored(caresForKinds),
             countryCode = countryCode,
-            regionCode = regionCode
+            regionCode = regionCode,
+            healthConsent = healthConsentVersion?.let { version ->
+                healthConsentAtMillis?.let { atMillis -> HealthConsent(version, atMillis) }
+            }
         )
     }
 
@@ -603,12 +624,12 @@ class UserRepositoryImpl @Inject constructor(
             fcmToken = fcmToken,
             dateOfBirth = dateOfBirth?.toString(),
             phone = phone,
-            allergiesJson = gson.toJson(allergies),
-            medicalProfileJson = gson.toJson(medicalProfile),
             onboardingCompletedAt = onboardingCompletedAt,
             caresForKinds = FamilyKind.toStored(caresFor),
             countryCode = countryCode,
-            regionCode = regionCode
+            regionCode = regionCode,
+            healthConsentVersion = healthConsent?.version,
+            healthConsentAtMillis = healthConsent?.atMillis
         )
     }
 
@@ -648,15 +669,21 @@ class UserRepositoryImpl @Inject constructor(
             fcmToken = this["fcmToken"] as? String,
             dateOfBirth = parseProfileDate(this["dateOfBirth"] as? String),
             phone = (this["phone"] as? String)?.takeIf { it.isNotBlank() },
-            allergies = (this["allergies"] as? List<*>)?.mapNotNull { it as? String }.orEmpty(),
-            medicalProfile = (
-                (this["medicalProfile"] as? Map<*, *>)?.let {
-                    gson.fromJson(gson.toJson(it), MedicalProfile::class.java)
-                } ?: MedicalProfile()
-                ).withSanitizedVaccinationNames(),
             onboardingCompletedAt = (this["onboardingCompletedAt"] as? String)?.takeIf { it.isNotBlank() },
-            caresFor = FamilyKind.fromStored(this["caresFor"] as? String)
+            caresFor = FamilyKind.fromStored(this["caresFor"] as? String),
+            healthConsent = healthConsent()
         )
+    }
+
+    /**
+     * The `healthDataConsent` map this document carries, or null when it carries none or one of
+     * the wrong shape. Firestore hands integers back as `Long`, hence the `Number` casts.
+     */
+    private fun Map<String, Any?>.healthConsent(): HealthConsent? {
+        val stored = this[HEALTH_CONSENT_KEY] as? Map<*, *>
+        val version = (stored?.get(HEALTH_CONSENT_VERSION_KEY) as? Number)?.toInt()
+        val atMillis = (stored?.get(HEALTH_CONSENT_AT_KEY) as? Number)?.toLong()
+        return if (version != null && atMillis != null) HealthConsent(version, atMillis) else null
     }
 
     private companion object {
@@ -666,9 +693,10 @@ class UserRepositoryImpl @Inject constructor(
         const val DEFAULT_ROLE = "mom"
         const val DEFAULT_COLOR_CODE = "#FF4081"
 
-        /** Same defaults [UserEntity]'s own declaration applies; named here for [writeLocalProfile]. */
-        const val DEFAULT_ALLERGIES_JSON = "[]"
-        const val DEFAULT_MEDICAL_PROFILE_JSON = "{}"
+        /** `users/{uid}.healthDataConsent` and its two keys; `firestore.rules` bounds the shape. */
+        const val HEALTH_CONSENT_KEY = "healthDataConsent"
+        const val HEALTH_CONSENT_VERSION_KEY = "version"
+        const val HEALTH_CONSENT_AT_KEY = "atMillis"
     }
 }
 

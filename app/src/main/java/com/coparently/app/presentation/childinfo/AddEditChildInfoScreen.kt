@@ -25,6 +25,9 @@ import com.coparently.app.presentation.common.DatePickerField
 import com.coparently.app.presentation.common.MedicalProfileEditor
 import com.coparently.app.presentation.common.field
 import com.coparently.app.presentation.common.rememberDiscardGuard
+import com.coparently.app.presentation.consent.HealthConsentDialog
+import com.coparently.app.presentation.consent.HealthConsentViewModel
+import com.coparently.app.presentation.consent.LockedMedicalSection
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.utils.localizedDate
 import java.time.LocalDateTime
@@ -33,6 +36,13 @@ import java.util.UUID
 /**
  * Screen for adding or editing child information.
  * Provides comprehensive form for entering child details, medications, activities, etc.
+ *
+ * The medical part of the form — medications, allergies, the medical profile, medical notes and
+ * medical photos — is locked until this parent has consented to entering a child's health
+ * details (GDPR Art. 9(2)(a), [HealthConsentViewModel]): it shows one line and an "Add medical
+ * details" action that opens the consent dialog. "Not now" leaves it locked and the rest of the
+ * form works as before. Values already on the record are carried through a save untouched while
+ * it is locked, so a locked form can never erase what the co-parent entered.
  *
  * @param childInfoId ID of the child info to edit, or "new" for creating new
  * @param onNavigateBack Navigation callback
@@ -46,6 +56,16 @@ fun AddEditChildInfoScreen(
     viewModel: ChildInfoViewModel = hiltViewModel()
 ) {
     val haptic = LocalHapticFeedback.current
+    // The consent gate is shared with onboarding and Settings, so it is its own ViewModel.
+    val healthConsentViewModel: HealthConsentViewModel = hiltViewModel()
+    val medicalUnlocked by healthConsentViewModel.unlocked.collectAsState()
+    val askingConsent by healthConsentViewModel.asking.collectAsState()
+    if (askingConsent) {
+        HealthConsentDialog(
+            onAgree = healthConsentViewModel::agree,
+            onNotNow = healthConsentViewModel::notNow
+        )
+    }
 
     // The fields live in the ViewModel (FormDraft), so a rotation keeps what was typed (D-11);
     // each `var` below reads the draft and assigns into it.
@@ -254,35 +274,37 @@ fun AddEditChildInfoScreen(
                 }
             }
 
-            // Medications Section
-            Card(
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(
-                    modifier = Modifier.padding(Spacing.L),
-                    verticalArrangement = Arrangement.spacedBy(Spacing.S)
+            // Medications Section — health data, so behind the consent gate like the three below.
+            if (medicalUnlocked) {
+                Card(
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(
-                        text = stringResource(R.string.childinfo_section_medications),
-                        style = MaterialTheme.typography.titleMedium
-                    )
+                    Column(
+                        modifier = Modifier.padding(Spacing.L),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.S)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.childinfo_section_medications),
+                            style = MaterialTheme.typography.titleMedium
+                        )
 
-                    MedicationEditor(
-                        medications = medications,
-                        onAdd = { medication ->
-                            medications = medications + medication
-                        },
-                        onEdit = { index, medication ->
-                            medications = medications.toMutableList().apply {
-                                set(index, medication)
+                        MedicationEditor(
+                            medications = medications,
+                            onAdd = { medication ->
+                                medications = medications + medication
+                            },
+                            onEdit = { index, medication ->
+                                medications = medications.toMutableList().apply {
+                                    set(index, medication)
+                                }
+                            },
+                            onRemove = { index ->
+                                medications = medications.toMutableList().apply {
+                                    removeAt(index)
+                                }
                             }
-                        },
-                        onRemove = { index ->
-                            medications = medications.toMutableList().apply {
-                                removeAt(index)
-                            }
-                        }
-                    )
+                        )
+                    }
                 }
             }
 
@@ -318,97 +340,123 @@ fun AddEditChildInfoScreen(
                 }
             }
 
-            // Allergies Section
-            Card(
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(
-                    modifier = Modifier.padding(Spacing.L),
-                    verticalArrangement = Arrangement.spacedBy(Spacing.S)
-                ) {
-                    Text(
-                        text = stringResource(R.string.childinfo_section_allergies),
-                        style = MaterialTheme.typography.titleMedium
-                    )
+            // Allergies, the medical profile and the medical notes with their photographs; or, until
+            // the parent has consented, one card saying so with the action that asks.
+            if (!medicalUnlocked) {
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Column(
+                        modifier = Modifier.padding(Spacing.L),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.S)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.medical_section_title),
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        LockedMedicalSection(
+                            onAddMedicalDetails = healthConsentViewModel::ask,
+                            enabled = !isSaving
+                        )
+                    }
+                }
+            }
 
-                    AllergyEditor(
-                        allergies = allergies,
-                        onAdd = { allergy ->
-                            allergies = allergies + allergy
-                        },
-                        onRemove = { index ->
-                            allergies = allergies.toMutableList().apply {
-                                removeAt(index)
+            // Allergies Section
+            if (medicalUnlocked) {
+                Card(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(Spacing.L),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.S)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.childinfo_section_allergies),
+                            style = MaterialTheme.typography.titleMedium
+                        )
+
+                        AllergyEditor(
+                            allergies = allergies,
+                            onAdd = { allergy ->
+                                allergies = allergies + allergy
+                            },
+                            onRemove = { index ->
+                                allergies = allergies.toMutableList().apply {
+                                    removeAt(index)
+                                }
                             }
-                        }
-                    )
+                        )
+                    }
                 }
             }
 
             // Medical Profile Section (blood type, intolerances, hereditary conditions, vaccinations)
-            Card(
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(
-                    modifier = Modifier.padding(Spacing.L),
-                    verticalArrangement = Arrangement.spacedBy(Spacing.S)
+            if (medicalUnlocked) {
+                Card(
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(
-                        text = stringResource(R.string.medical_section_title),
-                        style = MaterialTheme.typography.titleMedium
-                    )
+                    Column(
+                        modifier = Modifier.padding(Spacing.L),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.S)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.medical_section_title),
+                            style = MaterialTheme.typography.titleMedium
+                        )
 
-                    MedicalProfileEditor(
-                        profile = medicalProfile,
-                        onChange = { medicalProfile = it },
-                        enabled = !isSaving
-                    )
+                        MedicalProfileEditor(
+                            profile = medicalProfile,
+                            onChange = { medicalProfile = it },
+                            enabled = !isSaving
+                        )
+                    }
                 }
             }
 
             // Medical Notes Section
-            Card(
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(
-                    modifier = Modifier.padding(Spacing.L),
-                    verticalArrangement = Arrangement.spacedBy(Spacing.S)
+            if (medicalUnlocked) {
+                Card(
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(
-                        text = stringResource(R.string.childinfo_section_medical_notes),
-                        style = MaterialTheme.typography.titleMedium
-                    )
+                    Column(
+                        modifier = Modifier.padding(Spacing.L),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.S)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.childinfo_section_medical_notes),
+                            style = MaterialTheme.typography.titleMedium
+                        )
 
-                    OutlinedTextField(
-                        value = medicalNotes,
-                        onValueChange = { medicalNotes = it },
-                        label = { Text(stringResource(R.string.childinfo_medical_notes_label)) },
-                        placeholder = { Text(stringResource(R.string.childinfo_medical_notes_placeholder)) },
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = !isSaving,
-                        minLines = 3,
-                        maxLines = 5
-                    )
+                        OutlinedTextField(
+                            value = medicalNotes,
+                            onValueChange = { medicalNotes = it },
+                            label = { Text(stringResource(R.string.childinfo_medical_notes_label)) },
+                            placeholder = { Text(stringResource(R.string.childinfo_medical_notes_placeholder)) },
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = !isSaving,
+                            minLines = 3,
+                            maxLines = 5
+                        )
 
-                    MedicalPhotoStrip(
-                        photos = storedPhotos.filterNot { it in removedPhotos } + pickedPhotos,
-                        onAdd = {
-                            photoPicker.launch(
-                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                            )
-                        },
-                        onRemove = { photo ->
-                            // A picked photograph is nowhere yet, so forgetting it is the whole
-                            // removal. A stored one is only marked here — the object is deleted
-                            // on save, before its URL leaves the record.
-                            if (photo in pickedPhotos) {
-                                pickedPhotos = pickedPhotos - photo
-                            } else {
-                                removedPhotos = removedPhotos + photo
-                            }
-                        },
-                        enabled = !isSaving
-                    )
+                        MedicalPhotoStrip(
+                            photos = storedPhotos.filterNot { it in removedPhotos } + pickedPhotos,
+                            onAdd = {
+                                photoPicker.launch(
+                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                )
+                            },
+                            onRemove = { photo ->
+                                // A picked photograph is nowhere yet, so forgetting it is the whole
+                                // removal. A stored one is only marked here — the object is deleted
+                                // on save, before its URL leaves the record.
+                                if (photo in pickedPhotos) {
+                                    pickedPhotos = pickedPhotos - photo
+                                } else {
+                                    removedPhotos = removedPhotos + photo
+                                }
+                            },
+                            enabled = !isSaving
+                        )
+                    }
                 }
             }
 

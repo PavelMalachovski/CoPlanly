@@ -43,14 +43,15 @@ import com.coparently.app.presentation.theme.Spacing
  * Edits a [MedicalProfile], or renders one read-only.
  *
  * Stateless: it takes a profile and emits a new one, so the owning ViewModel stays the single
- * source of truth. One composable rather than a parent version and a child version, because a
- * paramedic asks the same questions of both.
+ * source of truth. It edits a **child's** profile only: the parent's own was removed (GDPR data
+ * minimisation — the co-parent could read it), and a child's sits behind the health consent
+ * (`LockedMedicalSection` until the parent agrees).
  *
  * @param profile Current values
  * @param onChange Called with the whole updated profile on every edit
  * @param modifier Modifier for the container
- * @param enabled False renders values with **no** editing affordance at all — used for the
- *   co-parent's profile, where `firestore.rules` refuses the write anyway
+ * @param enabled False renders values with **no** editing affordance at all, e.g. while the
+ *   form saves
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable

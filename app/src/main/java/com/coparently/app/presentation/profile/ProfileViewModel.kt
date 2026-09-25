@@ -3,7 +3,6 @@ package com.coparently.app.presentation.profile
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.coparently.app.domain.model.MedicalProfile
 import com.coparently.app.domain.model.PairingState
 import com.coparently.app.domain.model.User
 import com.coparently.app.domain.repository.PairingRepository
@@ -72,8 +71,8 @@ data class ProfileUiState(
  *   user and, on a device where more than one account has signed in over time, may hold rows
  *   for accounts paired with nobody. Not extended onto
  *   [PartnerSummary][com.coparently.app.domain.model.PartnerSummary]: that model exists to
- *   name a person in a chat header, and hanging seven medical fields on it would load them on
- *   every screen that only wants a name.
+ *   name a person in a chat header, and hanging profile fields on it would load them on every
+ *   screen that only wants a name.
  *
  * @param userRepository Loads and saves the signed-in user's own record, and reads the
  *   co-parent's remote one.
@@ -169,22 +168,16 @@ class ProfileViewModel @Inject constructor(
      */
     fun updatePhone(phone: String) = updateMe { it.copy(phone = phone.ifBlank { null }) }
 
-    /** Updates the draft's allergies. No-op before [me] has loaded. */
-    fun updateAllergies(allergies: List<String>) = updateMe { it.copy(allergies = allergies) }
-
-    /** Updates the draft's medical profile. No-op before [me] has loaded. */
-    fun updateMedicalProfile(profile: MedicalProfile) = updateMe { it.copy(medicalProfile = profile) }
-
     /** Applies [transform] to the current draft, if one has loaded. */
     private fun updateMe(transform: (User) -> User) {
         _uiState.update { state -> state.me?.let { state.copy(me = transform(it)) } ?: state }
     }
 
     /**
-     * Persists the fields this screen owns — name, date of birth, phone, allergies, medical
-     * profile — to Room and, best-effort, to Firestore (see [UserRepository.updateUser]). A
-     * failure is logged and swallowed rather than surfaced: the local write already succeeded,
-     * and there is nothing destructive left to undo.
+     * Persists the fields this screen owns — name, date of birth, phone — to Room and,
+     * best-effort, to Firestore (see [UserRepository.updateUser]). A failure is logged and
+     * swallowed rather than surfaced: the local write already succeeded, and there is nothing
+     * destructive left to undo.
      *
      * Deliberately does **not** send [ProfileUiState.me] itself: that draft was loaded once,
      * on the last identity change, and is as stale as the time the user spent on this form.
@@ -194,7 +187,7 @@ class ProfileViewModel @Inject constructor(
      * the server clears both sides and `SyncWorker` writes `partnerId = null` into A's Room row;
      * A, still on the open screen, edits a field and saves. Sending the stale draft would put
      * `partnerId: "bob"` straight back into Room and Firestore, handing B back read access to
-     * A's phone, date of birth, medical profile, expenses and budgets — undoing an unpair the
+     * A's phone, date of birth, expenses and budgets — undoing an unpair the
      * user never asked to reverse.
      *
      * So this re-reads the user's row immediately before saving and copies only the fields the
@@ -214,9 +207,7 @@ class ProfileViewModel @Inject constructor(
                 val toSave = fresh.copy(
                     name = draft.name,
                     dateOfBirth = draft.dateOfBirth,
-                    phone = draft.phone,
-                    allergies = draft.allergies,
-                    medicalProfile = draft.medicalProfile
+                    phone = draft.phone
                 )
                 userRepository.updateUser(toSave)
                 _uiState.update {

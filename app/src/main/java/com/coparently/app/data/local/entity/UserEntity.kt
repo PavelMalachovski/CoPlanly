@@ -19,9 +19,8 @@ import androidx.room.PrimaryKey
  * @property fcmToken Firebase Cloud Messaging token for push notifications
  * @property dateOfBirth ISO `LocalDate` string, e.g. `1988-04-17`; null until the parent records it
  * @property phone Free-text phone number as the parent typed it; no format is imposed
- * @property allergiesJson JSON array of allergy strings; `[]` when none
- * @property medicalProfileJson JSON object of [com.coparently.app.domain.model.MedicalProfile];
- * `{}` when never filled
+ * @property allergiesJson Dead since schema 44 — always `[]`; see the property
+ * @property medicalProfileJson Dead since schema 44 — always `{}`; see the property
  * @property onboardingCompletedAt ISO date-time at which this user finished (or skipped
  * through) first-run onboarding; null while the wizard has not been completed
  */
@@ -56,9 +55,21 @@ data class UserEntity(
     val dateOfBirth: String? = null,
     /** Free-text phone number as the parent typed it; no format is imposed. */
     val phone: String? = null,
-    /** JSON array of allergy strings; `[]` when none. Mirrors `ChildInfoEntity.allergiesJson`. */
+    /**
+     * **Dead since schema 44.** Held the parent's own allergies as a JSON array.
+     *
+     * The feature was removed (GDPR data minimisation — the co-parent could read an adult's
+     * health data), and the v43→v44 migration overwrote every row with `[]`. Nothing reads or
+     * writes it; it keeps its entity default. The column itself survives because dropping a
+     * SQLite column needs a table rebuild, the same trade `ExpenseEntity.childId` records. Don't
+     * reuse it for something else: an older build would read it back as allergies.
+     */
     val allergiesJson: String = "[]",
-    /** JSON object of [com.coparently.app.domain.model.MedicalProfile]; `{}` when never filled. */
+    /**
+     * **Dead since schema 44**, for the reason [allergiesJson] is: held the parent's own
+     * `MedicalProfile` as JSON, overwritten with `{}` by the v43→v44 migration, and read by
+     * nothing.
+     */
     val medicalProfileJson: String = "{}",
     /**
      * ISO date-time at which this user finished (or skipped through) first-run onboarding.
@@ -94,5 +105,14 @@ data class UserEntity(
      * Nullable with no column default, unlike [countryCode]: "no region" is the honest answer
      * for every row that predates the field, and the v34→v35 migration adds the column bare.
      */
-    val regionCode: String? = null
+    val regionCode: String? = null,
+    /**
+     * The `HEALTH_CONSENT_VERSION` this parent agreed to before entering a child's health details,
+     * or null when never given or withdrawn (schema 44). See
+     * [com.coparently.app.domain.consent.HealthConsent]. Null together with
+     * [healthConsentAtMillis]; the mapper reads a half-set pair as no consent.
+     */
+    val healthConsentVersion: Int? = null,
+    /** When the consent in [healthConsentVersion] was given, epoch millis; null with it. */
+    val healthConsentAtMillis: Long? = null
 )
