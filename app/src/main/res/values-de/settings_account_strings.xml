@@ -81,9 +81,11 @@
     <string name="family_switcher_request_row">Eine Änderungsanfrage wartet</string>
     <string name="family_switcher_schedule_other">In einer anderen Familie wartet ein Vorschlag zum Betreuungsplan</string>
     <string name="family_switcher_schedule_row">Ein Vorschlag zum Betreuungsplan wartet</string>
-    <string name="settings_school_import_title">Import aus Bakaláři und EduPage</string>
-    <string name="settings_school_import_description">Der Stundenplan Ihres Kindes direkt in den Kalender. Diese Funktion gibt es noch nicht.</string>
-    <string name="settings_school_import_planned">Geplant</string>
+    <string name="settings_school_import_title">Import aus Bakaláři</string>
+    <string name="settings_school_import_description">Schulveranstaltungen und Schulzeiten Ihres Kindes direkt im Kalender.</string>
+    <string name="settings_edupage_title">EduPage</string>
+    <string name="settings_edupage_description">Schulveranstaltungen Ihres Kindes aus EduPage.</string>
+    <string name="settings_edupage_coming_soon">Bald verfügbar</string>
     <string name="settings_operation_failed">Das hat nicht geklappt. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.</string>
 
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->

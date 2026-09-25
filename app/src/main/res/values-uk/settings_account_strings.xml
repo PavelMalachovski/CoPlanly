@@ -81,9 +81,11 @@
     <string name="family_switcher_request_row">Чекає запит на зміну</string>
     <string name="family_switcher_schedule_other">В іншій сім\'ї чекає пропозиція щодо розкладу опіки</string>
     <string name="family_switcher_schedule_row">Чекає пропозиція щодо розкладу опіки</string>
-    <string name="settings_school_import_title">Імпорт із Bakaláři та EduPage</string>
-    <string name="settings_school_import_description">Шкільний розклад дитини одразу в календар. Поки не зроблено.</string>
-    <string name="settings_school_import_planned">У планах</string>
+    <string name="settings_school_import_title">Імпорт із Bakaláři</string>
+    <string name="settings_school_import_description">Шкільні заходи й навчальні години дитини одразу в календарі.</string>
+    <string name="settings_edupage_title">EduPage</string>
+    <string name="settings_edupage_description">Шкільні заходи дитини з EduPage.</string>
+    <string name="settings_edupage_coming_soon">Незабаром</string>
     <string name="settings_operation_failed">Не вдалося. Перевірте підключення та спробуйте ще раз.</string>
 
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
