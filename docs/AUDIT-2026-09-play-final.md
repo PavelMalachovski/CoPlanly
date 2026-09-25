@@ -123,6 +123,36 @@ The two manifest/resource edits could not be built here. Both are conservative �
 `tools:node="remove"` on a permission, two `<exclude>` lines in a domain list Android documents —
 and CI's `build-test`, `static` (lint) and `release` jobs are the proof on the pull request.
 
+### 3.1 The final design pass (UI tour, five variants)
+
+The last UI tour (`dark-en-100`, `light-cs-100`, `light-de-150`, `light-ru-130`,
+`light-en-100-wide`; 65–70 shots each, none skipped except the sign-in screens, below) was read
+screen by screen. **No P0**: no blank or broken screen, no amount cut off, no light-only colour in
+the dark theme, nothing under a floating button that can be acted on. Fixed in `373af408`:
+
+- `PillChip` reserves its 48 dp target outside the clip, so an interactive pill is drawn at chip
+  height instead of as a 48 dp blob (Expenses analytics filters, Home's Review).
+- The calendar title's chevron keeps its width at 1.3x; a long month used to measure it at zero.
+- A borrowed month cell no longer shows pending-swap arrows (design item 10).
+- The week custody band grows with its name instead of clipping it at large text.
+- Chat bubbles hyphenate (a German compound broke mid-word).
+- Onboarding colour swatches: a ring only on the chosen one, 48 dp, announced as radio buttons.
+- Copy: sentence case ("Date & time", "Child's name"), an en dash, no-break spaces before the
+  stat tiles' arrows and inside "5 expenses" in every locale, no "thousands of parents" claim on
+  sign-up, Czech swap-dialog grammar.
+
+**Owner decision, open:** Czech school-vacation names are printed in English to a German or
+Russian reader, by the documented rule (local name only when the UI language is the country's).
+Either translate the recurring break kinds into all five languages or keep the rule.
+
+**Polish left for after the first release** (none blocks a closed test): Friends and
+Professionals order the same invite/redeem job differently; the child and pet forms have no
+`StickyActionBar`; Expenses has two horizontal insets; the compact widget ellipsises the handover
+at 1.3x; Czech "(a)" gender brackets; role wording ("the other parent") where a name is known;
+chevrons on tappable child and plan rows. The tour itself could not reach the sign-in screens
+(a main-thread error in the harness) or, on the wide display, Add expense and the bottom of Home —
+check those by hand in `DEVICE-CHECKLIST.md` §2.2.
+
 ## 4. The owner's checklist, from today to production
 
 **CT** = required before the closed test goes out; **Prod** = required before production only.
