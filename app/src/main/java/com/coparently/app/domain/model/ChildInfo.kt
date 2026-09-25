@@ -18,10 +18,11 @@ import java.time.LocalDateTime
  * @property schoolInfo Information about the child's school
  * @property medicalProfile Emergency-relevant medical facts: blood type, intolerances,
  *   hereditary conditions and vaccinations. Defaults to an empty profile, not null.
- * @property medicalPhotos Download URLs of photographs attached to the medical notes — a
- *   prescription, a rash, a vaccination card — in the order they were added. Shared with the
- *   co-parent like the rest of this record. **Not encrypted**, and deliberately so: nothing in
- *   this app is, and a false promise about medical images would be worse than none.
+ * @property medicalPhotos `RecordPhotoCodec` references to photographs attached to the medical
+ *   notes — a prescription, a rash, a vaccination card — in the order they were added (L-4).
+ *   Readable by the two parents only: a guest reads the record without them. **Not encrypted**
+ *   beyond Storage's own at-rest encryption, and deliberately so: a false promise about medical
+ *   images would be worse than none.
  * @property guests People who may read this record without being a parent of the child, keyed
  *   by uid — a grandparent for a weekend. A guest sits beside the two-slot parent model and
  *   never occupies a slot. Being here is what makes them a *guest*; being in the document's

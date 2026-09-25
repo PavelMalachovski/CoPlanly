@@ -20,7 +20,8 @@ import java.time.LocalDateTime
  * @property paidBy Firebase UID of the parent who paid
  * @property splitBetween List of Firebase UIDs to split the expense between
  * @property date Date of the expense
- * @property receiptUrl Optional URL to receipt photo
+ * @property receiptUrl `RecordPhotoCodec` reference to the receipt photo, or null (L-4). The
+ *   name is older than the format; it is never a download URL.
  * @property notes Optional notes about the expense
  * @property createdAt Timestamp when the expense was created
  * @property syncedToFirestore Whether the expense has been synced to Firestore

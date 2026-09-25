@@ -9,13 +9,15 @@ import com.coparently.app.data.analytics.AnalyticsManager
 import com.coparently.app.data.crashlytics.CrashlyticsManager
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.PairingException
+import com.coparently.app.domain.files.RecordPhotoAccess
+import com.coparently.app.domain.files.RecordPhotoKind
 import com.coparently.app.domain.guests.GuestAccessDuration
 import com.coparently.app.domain.guests.GuestInvite
 import com.coparently.app.domain.model.ChildInfo
 import com.coparently.app.domain.model.PairingError
 import com.coparently.app.domain.repository.ChildInfoRepository
 import com.coparently.app.domain.repository.GuestRepository
-import com.coparently.app.domain.repository.MedicalPhotoStorage
+import com.coparently.app.domain.repository.RecordPhotoStorage
 import com.coparently.app.presentation.common.FormDraft
 import com.coparently.app.presentation.common.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -29,7 +31,6 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.time.Instant
-import java.util.UUID
 import javax.inject.Inject
 
 /**
@@ -83,7 +84,7 @@ data class GuestInviteState(
 @HiltViewModel
 class ChildInfoViewModel @Inject constructor(
     private val childInfoRepository: ChildInfoRepository,
-    private val medicalPhotoStorage: MedicalPhotoStorage,
+    private val photoStorage: RecordPhotoStorage,
     private val guestRepository: GuestRepository,
     private val firebaseAuthService: FirebaseAuthService,
     private val analyticsManager: AnalyticsManager,
@@ -360,10 +361,13 @@ class ChildInfoViewModel @Inject constructor(
      * undeletable forever, and medical images at that. Nothing is uploaded until there is a
      * record to hang it on. It is also the flow `AddExpenseScreen` already uses for receipts.
      *
-     * **A removal deletes the object first and keeps the URL if that fails.** A reference dropped
-     * from a record whose object is still in the bucket is an image nobody can see and nobody can
-     * delete, still readable by anyone who kept the link. Failing loudly and leaving the
-     * photograph attached is the recoverable half of that trade.
+     * **A removal deletes the object first and keeps the reference if that fails.** A reference
+     * dropped from a record whose object is still in the bucket is an image nobody can see and
+     * nobody can delete. Failing loudly and leaving the photograph attached is the recoverable
+     * half of that trade.
+     *
+     * A legacy entry — a download URL or flat path from before L-4, never shown — is dropped on
+     * save; `purgeLegacyPhotoPaths` removes the object it named.
      *
      * A failed *upload* is the opposite case and is simply skipped: nothing reached the bucket,
      * so there is nothing to reference and nothing to leak. Both are reported through
@@ -372,7 +376,7 @@ class ChildInfoViewModel @Inject constructor(
      * @param childInfo The record to save, carrying the photographs it already had.
      * @param isNewChild Whether this is an add rather than an edit.
      * @param newPhotoUris Content URIs of photographs picked on this device and not yet uploaded.
-     * @param removedPhotoUrls URLs the user removed, to be deleted from the bucket.
+     * @param removedPhotoUrls References the user removed, to be deleted from the bucket.
      */
     fun upsertChildInfoWithPhotos(
         childInfo: ChildInfo,
@@ -381,10 +385,10 @@ class ChildInfoViewModel @Inject constructor(
         removedPhotoUrls: List<String>
     ) {
         viewModelScope.launch {
-            val kept = childInfo.medicalPhotos.filter { url ->
-                url !in removedPhotoUrls || !deletePhoto(url)
+            val kept = RecordPhotoAccess.storedReferences(childInfo.medicalPhotos).filter { ref ->
+                ref !in removedPhotoUrls || !deletePhoto(ref, childInfo.familyId)
             }
-            val added = newPhotoUris.mapNotNull { uri -> uploadPhoto(childInfo.id, uri) }
+            val added = newPhotoUris.mapNotNull { uri -> uploadPhoto(childInfo.id, childInfo.familyId, uri) }
             val saved = persist(childInfo.copy(medicalPhotos = kept + added), isNewChild)
             _saveOutcome.emit(if (saved) ChildSaveOutcome.SAVED else ChildSaveOutcome.FAILED)
         }
@@ -393,10 +397,10 @@ class ChildInfoViewModel @Inject constructor(
     /**
      * Deletes one photograph's object.
      *
-     * @return true when the object is gone and its URL may be dropped from the record.
+     * @return true when the object is gone and its reference may be dropped from the record.
      */
-    private suspend fun deletePhoto(url: String): Boolean = try {
-        medicalPhotoStorage.deleteMedicalPhoto(url)
+    private suspend fun deletePhoto(reference: String, familyId: String?): Boolean = try {
+        photoStorage.delete(reference, familyId)
         true
     } catch (e: CancellationException) {
         // Not a failure: the screen went away. Swallowing it here would leave the coroutine
@@ -417,17 +421,16 @@ class ChildInfoViewModel @Inject constructor(
     /**
      * Uploads one picked photograph.
      *
-     * The photo id is a fresh UUID, and that is load-bearing rather than merely unique: the
-     * Storage read rule cannot tell one signed-in user from another, so the unguessable path is
-     * what stands in for one. See the `medical_photos` block in `storage.rules`, which says at
-     * length that this is obscurity and not access control.
+     * It goes to the child's folder in the family's path (L-4), which only the two parents may
+     * read — `storage.rules` decides that from the path, not from anybody knowing it.
      *
-     * @return the download URL, or null when the upload failed.
+     * @return the stored reference, or null when the upload failed.
      */
-    private suspend fun uploadPhoto(childInfoId: String, localUri: String): String? = try {
-        medicalPhotoStorage.uploadMedicalPhoto(
-            childInfoId = childInfoId,
-            photoId = UUID.randomUUID().toString(),
+    private suspend fun uploadPhoto(childInfoId: String, familyId: String?, localUri: String): String? = try {
+        photoStorage.upload(
+            kind = RecordPhotoKind.MEDICAL,
+            recordId = childInfoId,
+            recordFamilyId = familyId,
             localUri = localUri
         )
     } catch (e: CancellationException) {

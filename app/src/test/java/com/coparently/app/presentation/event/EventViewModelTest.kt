@@ -95,7 +95,7 @@ class EventViewModelTest {
             errorHandler,
             encryptedPreferences,
             Gson(),
-            eventImageStorage = mockk(relaxed = true),
+            photoStorage = mockk(relaxed = true),
             parentsSource = testParentsSource(me = signedInParent),
             familyMembersSource = testFamilyMembersSource()
         )

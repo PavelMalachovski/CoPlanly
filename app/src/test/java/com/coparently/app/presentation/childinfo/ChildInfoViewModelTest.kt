@@ -6,7 +6,7 @@ import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.domain.model.ChildInfo
 import com.coparently.app.domain.repository.ChildInfoRepository
 import com.coparently.app.domain.repository.GuestRepository
-import com.coparently.app.domain.repository.MedicalPhotoStorage
+import com.coparently.app.domain.repository.RecordPhotoStorage
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
@@ -62,7 +62,7 @@ class ChildInfoViewModelTest {
 
     private fun viewModel() = ChildInfoViewModel(
         childInfoRepository,
-        mockk<MedicalPhotoStorage>(relaxed = true),
+        mockk<RecordPhotoStorage>(relaxed = true),
         mockk<GuestRepository>(relaxed = true),
         mockk<FirebaseAuthService>(relaxed = true),
         mockk<AnalyticsManager>(relaxed = true),

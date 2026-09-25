@@ -5,7 +5,10 @@ import android.app.Application
 import android.os.Bundle
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
+import coil.ImageLoader
+import coil.ImageLoaderFactory
 import com.coparently.app.data.chat.ChatMirror
+import com.coparently.app.data.files.RecordPhotoImageLoader
 import com.coparently.app.data.session.SessionProfileSynchronizer
 import com.coparently.app.data.sync.SyncWorker
 import com.coparently.app.data.telemetry.TelemetryConsentApplier
@@ -21,7 +24,7 @@ import javax.inject.Inject
  * @see HiltAndroidApp
  */
 @HiltAndroidApp
-class CoPlanlyApplication : Application(), Configuration.Provider {
+class CoPlanlyApplication : Application(), Configuration.Provider, ImageLoaderFactory {
 
     @Inject
     lateinit var workerFactory: HiltWorkerFactory
@@ -52,6 +55,16 @@ class CoPlanlyApplication : Application(), Configuration.Provider {
 
     @Inject
     lateinit var todayWidgetRefresher: TodayWidgetRefresher
+
+    /**
+     * Builds Coil's image loader with the record-photo fetcher (L-4), so a stored medical, pet,
+     * receipt or event photograph is fetched as the signed-in parent and never by download URL.
+     */
+    @Inject
+    lateinit var recordPhotoImageLoader: RecordPhotoImageLoader
+
+    /** Coil asks for its loader lazily, after [onCreate] has injected the fields above. */
+    override fun newImageLoader(): ImageLoader = recordPhotoImageLoader.build(this)
 
     /**
      * Provides WorkManager configuration with HiltWorkerFactory.

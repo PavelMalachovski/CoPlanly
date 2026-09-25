@@ -21,7 +21,7 @@ import java.time.LocalDateTime
  * @property feedingNotes What and when to feed, walking routine
  * @property vetName Name of the veterinary clinic or vet
  * @property vetPhone Phone number of the vet
- * @property photosJson JSON array of photograph download URLs; `[]` when none
+ * @property photosJson JSON array of `RecordPhotoCodec` references; `[]` when none
  * @property createdAt Timestamp when the record was created
  * @property updatedAt Wall-clock time, for display, when the record was last updated
  * @property createdByFirebaseUid Firebase UID of the user who created this record

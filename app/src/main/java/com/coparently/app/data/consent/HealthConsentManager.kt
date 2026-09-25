@@ -6,7 +6,7 @@ import com.coparently.app.domain.consent.HealthConsent
 import com.coparently.app.domain.model.ChildInfo
 import com.coparently.app.domain.model.MedicalProfile
 import com.coparently.app.domain.repository.ChildInfoRepository
-import com.coparently.app.domain.repository.MedicalPhotoStorage
+import com.coparently.app.domain.repository.RecordPhotoStorage
 import com.coparently.app.domain.repository.UserRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -35,7 +35,7 @@ enum class HealthConsentWithdrawal {
      * The photographs that *were* deleted are already off their records — their objects are gone,
      * so a reference to them would point at nothing. Everything else, the consent included, is as
      * it was, so the parent can simply try again: withdrawing while keeping an image in the bucket
-     * would break `MedicalPhotoStorage`'s rule that a reference is never dropped before its object.
+     * would break `RecordPhotoStorage`'s rule that a reference is never dropped before its object.
      */
     PHOTOS_NOT_DELETED,
 
@@ -60,13 +60,13 @@ enum class HealthConsentWithdrawal {
  * @param userRepository Holds the consent on the signed-in parent's profile.
  * @param childInfoRepository The child records whose health data a withdrawal clears; its normal
  *   update path is used, so each cleared record syncs to the co-parent like any edit.
- * @param medicalPhotoStorage Deletes the medical photographs a withdrawal removes.
+ * @param photoStorage Deletes the medical photographs a withdrawal removes.
  */
 @Singleton
 class HealthConsentManager @Inject constructor(
     private val userRepository: UserRepository,
     private val childInfoRepository: ChildInfoRepository,
-    private val medicalPhotoStorage: MedicalPhotoStorage
+    private val photoStorage: RecordPhotoStorage
 ) {
 
     /**
@@ -112,7 +112,7 @@ class HealthConsentManager @Inject constructor(
 
         var photosKept = false
         val withoutDeletedPhotos = mine.map { child ->
-            val kept = child.medicalPhotos.filterNot { deletePhoto(it) }
+            val kept = child.medicalPhotos.filterNot { deletePhoto(it, child.familyId) }
             if (kept.isNotEmpty()) photosKept = true
             child to kept
         }
@@ -140,8 +140,8 @@ class HealthConsentManager @Inject constructor(
     }
 
     /** @return true when the photograph's object is gone and its reference may be dropped. */
-    private suspend fun deletePhoto(url: String): Boolean = try {
-        medicalPhotoStorage.deleteMedicalPhoto(url)
+    private suspend fun deletePhoto(reference: String, familyId: String?): Boolean = try {
+        photoStorage.delete(reference, familyId)
         true
     } catch (e: CancellationException) {
         throw e

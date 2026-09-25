@@ -129,7 +129,7 @@
     "pets": {
       "e2e": [
         "TwoParentFamilyRecordsTest#aPetAliceSavesReachesBobAndItsDeletionArrivesAsATombstone",
-        "TwoParentFamilyRecordsTest#aPetPhotoAliceAttachesOpensOnBobsPhone"
+        "TwoParentRecordPhotosTest#eachKindOfRecordPhotoOpensForBobWithItsDigestAndIsRefusedToAStranger"
       ]
     },
     "budgets": {
@@ -175,14 +175,21 @@
     },
     "event_images": {
       "e2e": [
-        "TwoParentRequestsAndEventPushesTest#anEventPhotoAliceUploadsDownloadsOnBobsPhone",
-        "TwoParentRequestsAndEventPushesTest#anEventPhotoIsRefusedSignedOutAndAsAnythingButJpeg"
+        "TwoParentRecordPhotosTest#eachKindOfRecordPhotoOpensForBobWithItsDigestAndIsRefusedToAStranger",
+        "TwoParentRecordPhotosTest#eitherParentDeletesAFamilyPhotoAndNothingIsEverOverwritten",
+        "TwoParentRecordPhotosTest#anUploadMissingItsStampOrOfTheWrongTypeOrUnderAnOldPathIsRefused",
+        "TwoParentRecordPhotosTest#aPhotoTakenBeforePairingMovesIntoTheFamilyWhenThePairForms"
+      ],
+      "checklist": [
+        "3.10"
       ]
     },
     "pet_photos": {
       "e2e": [
-        "TwoParentFamilyRecordsTest#aPetPhotoAliceAttachesOpensOnBobsPhone",
-        "TwoParentFamilyRecordsTest#aPhotoThatIsNotAJpegIsRefused"
+        "TwoParentRecordPhotosTest#eachKindOfRecordPhotoOpensForBobWithItsDigestAndIsRefusedToAStranger",
+        "TwoParentRecordPhotosTest#eitherParentDeletesAFamilyPhotoAndNothingIsEverOverwritten",
+        "TwoParentRecordPhotosTest#anUploadMissingItsStampOrOfTheWrongTypeOrUnderAnOldPathIsRefused",
+        "TwoParentRecordPhotosTest#aPhotoTakenBeforePairingMovesIntoTheFamilyWhenThePairForms"
       ],
       "checklist": [
         "3.10"
@@ -190,8 +197,10 @@
     },
     "medical_photos": {
       "e2e": [
-        "TwoParentFamilyRecordsTest#aMedicalPhotoAliceAttachesOpensOnBobsPhone",
-        "TwoParentFamilyRecordsTest#aPhotoThatIsNotAJpegIsRefused"
+        "TwoParentRecordPhotosTest#eachKindOfRecordPhotoOpensForBobWithItsDigestAndIsRefusedToAStranger",
+        "TwoParentRecordPhotosTest#eitherParentDeletesAFamilyPhotoAndNothingIsEverOverwritten",
+        "TwoParentRecordPhotosTest#anUploadMissingItsStampOrOfTheWrongTypeOrUnderAnOldPathIsRefused",
+        "TwoParentRecordPhotosTest#aPhotoTakenBeforePairingMovesIntoTheFamilyWhenThePairForms"
       ],
       "checklist": [
         "3.10"
@@ -199,7 +208,13 @@
     },
     "receipts": {
       "e2e": [
-        "TwoParentAccessTest#aReceiptPhotoAliceAttachesOpensForBobAndIsRefusedToASignedOutClient"
+        "TwoParentRecordPhotosTest#eachKindOfRecordPhotoOpensForBobWithItsDigestAndIsRefusedToAStranger",
+        "TwoParentRecordPhotosTest#eitherParentDeletesAFamilyPhotoAndNothingIsEverOverwritten",
+        "TwoParentRecordPhotosTest#anUploadMissingItsStampOrOfTheWrongTypeOrUnderAnOldPathIsRefused",
+        "TwoParentRecordPhotosTest#aPhotoTakenBeforePairingMovesIntoTheFamilyWhenThePairForms"
+      ],
+      "checklist": [
+        "3.10"
       ]
     }
   },
@@ -434,6 +449,9 @@
       "checklist": [
         "7"
       ]
+    },
+    "purgeLegacyPhotoPaths": {
+      "exempt": "Operator-run one-off removal of the photo layouts from before L-4, not a phone-to-phone feature; functions/test/record-photos.test.js covers it."
     }
   }
 }

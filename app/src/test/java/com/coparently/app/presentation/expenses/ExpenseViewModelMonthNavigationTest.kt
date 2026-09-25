@@ -7,7 +7,7 @@ import com.coparently.app.domain.money.SupportedCurrency
 import com.coparently.app.domain.receipts.ReceiptTextRecognizer
 import com.coparently.app.domain.repository.ExpenseRepository
 import com.coparently.app.domain.repository.PreferencesRepository
-import com.coparently.app.domain.repository.ReceiptStorage
+import com.coparently.app.domain.repository.RecordPhotoStorage
 import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.presentation.common.testFamilyMembersSource
 import com.coparently.app.presentation.common.testParentsSource
@@ -42,7 +42,7 @@ class ExpenseViewModelMonthNavigationTest {
 
     private lateinit var expenseRepository: ExpenseRepository
     private lateinit var userRepository: UserRepository
-    private lateinit var receiptStorage: ReceiptStorage
+    private lateinit var receiptStorage: RecordPhotoStorage
     private lateinit var preferencesRepository: PreferencesRepository
     private lateinit var receiptTextRecognizer: ReceiptTextRecognizer
     private lateinit var viewModel: ExpenseViewModel

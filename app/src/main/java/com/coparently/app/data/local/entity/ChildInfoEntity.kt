@@ -18,7 +18,7 @@ import java.time.LocalDateTime
  * @property schoolInfoJson JSON string of school information
  * @property medicalProfileJson JSON object of [com.coparently.app.domain.model.MedicalProfile];
  * `{}` when never filled
- * @property medicalPhotosJson JSON array of photograph download URLs; `[]` when none
+ * @property medicalPhotosJson JSON array of `RecordPhotoCodec` references; `[]` when none
  * @property guestsJson JSON object of guest grants keyed by uid; `{}` when none
  * @property createdAt Timestamp when the info was created
  * @property updatedAt Wall-clock time, for display, when the info was last updated
@@ -41,7 +41,8 @@ data class ChildInfoEntity(
     /** JSON object of [com.coparently.app.domain.model.MedicalProfile]; `{}` when never filled. */
     val medicalProfileJson: String = "{}",
     /**
-     * JSON array of photograph download URLs; `[]` when none. Stored as JSON like every other
+     * JSON array of `RecordPhotoCodec` references (L-4; a legacy download URL is never shown);
+     * `[]` when none. Stored as JSON like every other
      * list on this record rather than as a relation — the app never queries by photograph.
      */
     val medicalPhotosJson: String = "[]",

@@ -12,6 +12,7 @@ import com.coparently.app.domain.expenses.SplitRatioProposal
 import com.coparently.app.domain.expenses.breakdownByCurrency
 import com.coparently.app.domain.expenses.calculateExpenseBalancesByCurrency
 import com.coparently.app.domain.family.FamilyMemberRef
+import com.coparently.app.domain.files.RecordPhotoKind
 import com.coparently.app.domain.model.Expense
 import com.coparently.app.domain.model.ExpenseCategory
 import com.coparently.app.domain.model.ExpenseSummary
@@ -21,7 +22,7 @@ import com.coparently.app.domain.receipts.ReceiptScan
 import com.coparently.app.domain.receipts.ReceiptTextRecognizer
 import com.coparently.app.domain.repository.ExpenseRepository
 import com.coparently.app.domain.repository.PreferencesRepository
-import com.coparently.app.domain.repository.ReceiptStorage
+import com.coparently.app.domain.repository.RecordPhotoStorage
 import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.presentation.common.FamilyMember
 import com.coparently.app.presentation.common.FamilyMembersSource
@@ -93,7 +94,7 @@ sealed interface ReceiptScanState {
 class ExpenseViewModel @Inject constructor(
     private val expenseRepository: ExpenseRepository,
     private val userRepository: UserRepository,
-    private val receiptStorage: ReceiptStorage,
+    private val receiptStorage: RecordPhotoStorage,
     private val preferencesRepository: PreferencesRepository,
     private val receiptTextRecognizer: ReceiptTextRecognizer,
     private val familySettingsRepository: FamilySettingsRepository,
@@ -490,9 +491,9 @@ class ExpenseViewModel @Inject constructor(
 
     /**
      * Saves a new expense. When [receiptImageUri] is provided, the photo is uploaded
-     * to remote storage first and its download URL stored on the expense, so the
-     * other parent sees the receipt too. An upload failure does not lose the expense —
-     * it is saved without the receipt and a warning is surfaced via [saveState].
+     * to remote storage first and its reference stored on the expense (L-4), so the
+     * other parent sees the receipt too — and nobody else can. An upload failure does not lose
+     * the expense — it is saved without the receipt and a warning is surfaced via [saveState].
      */
     @Suppress("LongParameterList") // mirrors the Expense domain model fields
     fun addExpense(
@@ -526,7 +527,7 @@ class ExpenseViewModel @Inject constructor(
             var warning: UiText? = null
             if (receiptImageUri != null) {
                 receiptUrl = try {
-                    receiptStorage.uploadReceipt(expenseId, receiptImageUri)
+                    receiptStorage.upload(RecordPhotoKind.RECEIPT, expenseId, null, receiptImageUri)
                 } catch (
                     // Any upload failure (IO, storage, decode) must not lose the expense
                     @Suppress("TooGenericExceptionCaught") e: Exception
@@ -580,9 +581,11 @@ class ExpenseViewModel @Inject constructor(
      * `copy()`-ed, so id, payer, createdAt, split and sync flags survive — rebuilding the expense
      * from scratch would wipe them.
      *
-     * [receiptImageUri] may be the expense's existing remote URL (kept as-is), a new local photo
+     * [receiptImageUri] may be the expense's existing reference (kept as-is), a new local photo
      * URI (uploaded, replacing the old one), or null (receipt removed). An upload failure keeps
-     * the previous receipt and surfaces a warning rather than losing the edit.
+     * the previous receipt and surfaces a warning rather than losing the edit. A replaced or
+     * removed receipt's object is deleted once the edit is saved (best effort): every upload is a
+     * new object since L-4, so nothing overwrites it.
      */
     @Suppress("LongParameterList") // mirrors the Expense domain model fields
     fun updateExpense(
@@ -606,7 +609,7 @@ class ExpenseViewModel @Inject constructor(
                 null -> null
                 original.receiptUrl -> original.receiptUrl // unchanged remote photo, no re-upload
                 else -> try {
-                    receiptStorage.uploadReceipt(original.id, receiptImageUri)
+                    receiptStorage.upload(RecordPhotoKind.RECEIPT, original.id, original.familyId, receiptImageUri)
                 } catch (
                     @Suppress("TooGenericExceptionCaught") e: Exception
                 ) {
@@ -627,6 +630,10 @@ class ExpenseViewModel @Inject constructor(
                 notes = notes
             )
             expenseRepository.updateExpense(updated)
+            val replaced = original.receiptUrl
+            if (replaced != null && replaced != receiptUrl) {
+                runCatching { receiptStorage.delete(replaced, original.familyId) }
+            }
 
             loadSummaryForMonth(date)
             _saveState.value = ExpenseSaveState.Saved(warning)
@@ -707,11 +714,12 @@ class ExpenseViewModel @Inject constructor(
      * Best effort: an orphaned photo is a smaller problem than a failed delete, and the row is
      * already gone either way.
      *
-     * @param expenseId Expense whose receipt should be removed
+     * @param expense Expense whose receipt should be removed
      */
-    fun purgeReceipt(expenseId: String) {
+    fun purgeReceipt(expense: Expense) {
+        val reference = expense.receiptUrl ?: return
         viewModelScope.launch {
-            runCatching { receiptStorage.deleteReceipt(expenseId) }
+            runCatching { receiptStorage.delete(reference, expense.familyId) }
         }
     }
 

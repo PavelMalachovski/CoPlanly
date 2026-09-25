@@ -1,10 +1,7 @@
 package com.coparently.app.e2e
 
-import android.graphics.Bitmap
-import android.net.Uri
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.coparently.app.data.chat.DepartedThreadSource
-import com.coparently.app.data.remote.firebase.FirebaseImageStorage
 import com.coparently.app.data.remote.firebase.FirestoreChildInfoDataSource
 import com.coparently.app.data.remote.firebase.FirestoreMessageDataSource
 import com.coparently.app.data.session.AccountDeletionService
@@ -20,8 +17,6 @@ import com.coparently.app.domain.friends.FriendProfile
 import com.coparently.app.domain.friends.FriendRole
 import com.coparently.app.domain.model.ChildInfo
 import com.coparently.app.domain.model.Event
-import com.coparently.app.domain.model.Expense
-import com.coparently.app.domain.model.ExpenseCategory
 import com.coparently.app.domain.model.Message
 import com.coparently.app.domain.model.PairingState
 import com.coparently.app.domain.parentingplan.ParentingPlanEntry
@@ -31,14 +26,10 @@ import com.coparently.app.domain.professionals.ProfessionalGrantStatus
 import com.coparently.app.domain.professionals.ProfessionalRole
 import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.functions.FirebaseFunctions
-import com.google.firebase.storage.FirebaseStorage
-import com.google.firebase.storage.StorageException
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
@@ -51,7 +42,6 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
 import java.time.Instant
@@ -64,8 +54,8 @@ import java.util.UUID
  * Everyone who is not one of the two parents, and the links that end: a calendar friend, a guest,
  * a professional, a calendar-feed URL and an export receipt — each through the production
  * repository and the real callable on the Functions emulator, against the real `firestore.rules`
- * and `storage.rules` — plus the two ways a pairing ends (unpair, account deletion) and the
- * receipt photo an expense carries.
+ * and `storage.rules` — plus the two ways a pairing ends (unpair, account deletion). The receipt
+ * photo an expense carries is `TwoParentRecordPhotosTest`'s (L-4).
  *
  * What the rules suites prove offline is each rule alone. What this proves is that the grant a
  * callable writes is the one the rule reads: a friend's family-scoped query succeeds while the
@@ -325,43 +315,6 @@ class TwoParentAccessTest : TwoParentTest() {
     }
 
     @Test
-    fun aReceiptPhotoAliceAttachesOpensForBobAndIsRefusedToASignedOutClient() = runBlocking<Unit> {
-        val expenseId = UUID.randomUUID().toString()
-        val receiptUrl = FirebaseImageStorage(context, alice.storage)
-            .uploadReceipt(expenseId, Uri.fromFile(receiptPhoto()).toString())
-        alice.expenseRepository.addExpense(
-            Expense(
-                id = expenseId,
-                title = "Pharmacy",
-                amount = RECEIPT_AMOUNT,
-                currency = "EUR",
-                category = ExpenseCategory.MEDICAL,
-                paidBy = alice.uid,
-                splitBetween = listOf(alice.uid, bob.uid),
-                receiptUrl = receiptUrl
-            )
-        )
-
-        EmulatorEnvironment.step("Bob's phone downloads the expense and opens its receipt")
-        val downloaded = downloadExpenseOnBobsPhone(expenseId)
-        assertEquals(receiptUrl, downloaded.receiptUrl)
-        val path = "receipts/$expenseId.jpg"
-        val photo = bob.storage.reference.child(path).getBytes(MAX_RECEIPT_BYTES).await()
-        assertTrue("Bob's download is not a JPEG", photo.size > 2 && photo[0] == JPEG_0 && photo[1] == JPEG_1)
-
-        EmulatorEnvironment.step("A client with no account is refused")
-        val signedOut = EmulatorEnvironment.startFirebaseApp(context, "e2e-signed-out-${UUID.randomUUID()}")
-        try {
-            val failure = runCatching {
-                FirebaseStorage.getInstance(signedOut).reference.child(path).getBytes(MAX_RECEIPT_BYTES).await()
-            }.exceptionOrNull()
-            assertTrue("a signed-out client read a receipt: $failure", failure is StorageException)
-        } finally {
-            signedOut.delete()
-        }
-    }
-
-    @Test
     fun deletingBobsAccountErasesHisRecordsAndUnpairsAlice() = runBlocking<Unit> {
         val bobUid = bob.uid
         val event = insertEvent(bob, "Bob's football")
@@ -563,29 +516,6 @@ class TwoParentAccessTest : TwoParentTest() {
         }
     }
 
-    /** Runs Bob's expense listener until [expenseId] is in his Room, then stops it. */
-    private suspend fun downloadExpenseOnBobsPhone(expenseId: String): Expense = coroutineScope {
-        val listener = launch { bob.expenseRepository.observeRemote() }
-        try {
-            withTimeout(EmulatorParent.WAIT_MS) {
-                bob.expenseRepository.getAllExpenses()
-                    .first { list -> list.any { it.id == expenseId } }
-                    .single { it.id == expenseId }
-            }
-        } finally {
-            listener.cancel()
-        }
-    }
-
-    /** A small JPEG in the app's cache, as the camera or the picker would hand over. */
-    private fun receiptPhoto(): File {
-        val file = File(context.cacheDir, "e2e-receipt-${UUID.randomUUID()}.jpg")
-        val bitmap = Bitmap.createBitmap(PHOTO_PX, PHOTO_PX, Bitmap.Config.ARGB_8888)
-        file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, it) }
-        bitmap.recycle()
-        return file
-    }
-
     private fun functionUrl(name: String): String =
         "http://${EmulatorEnvironment.requireHost()}:${EmulatorEnvironment.FUNCTIONS_PORT}" +
             "/${EmulatorEnvironment.PROJECT_ID}/$REGION/$name"
@@ -669,12 +599,5 @@ class TwoParentAccessTest : TwoParentTest() {
         const val HTTP_BAD_REQUEST = 400
         const val HTTP_NOT_FOUND = 404
         const val HTTP_TIMEOUT_MS = 10_000
-
-        const val RECEIPT_AMOUNT = 12.5
-        const val MAX_RECEIPT_BYTES = 5L * 1024 * 1024
-        const val PHOTO_PX = 64
-        const val JPEG_QUALITY = 90
-        val JPEG_0: Byte = 0xFF.toByte()
-        val JPEG_1: Byte = 0xD8.toByte()
     }
 }

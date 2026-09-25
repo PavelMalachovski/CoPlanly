@@ -62,6 +62,22 @@ class SharedFileCache @Inject constructor(
         }
     }
 
+    /**
+     * Keeps [bytes] this phone has just uploaded as the verified copy of [sha256]/[fileName], so
+     * the uploader sees their own record photograph (L-4) without downloading it again. The digest
+     * was computed from these bytes before the upload, which is the check a download would make.
+     */
+    suspend fun keep(bytes: ByteArray, fileName: String, sha256: String) {
+        withContext(Dispatchers.IO) {
+            val target = File(File(viewRoot, sha256), fileName)
+            if (target.exists()) return@withContext
+            target.parentFile?.mkdirs()
+            val partial = File(target.parentFile, "$fileName$PARTIAL_SUFFIX")
+            partial.writeBytes(bytes)
+            if (!partial.renameTo(target)) partial.delete()
+        }
+    }
+
     /** The cached copy for [sha256]/[fileName] when one is already here, without downloading. */
     fun cached(fileName: String, sha256: String): File? =
         File(File(viewRoot, sha256), fileName).takeIf { it.exists() }

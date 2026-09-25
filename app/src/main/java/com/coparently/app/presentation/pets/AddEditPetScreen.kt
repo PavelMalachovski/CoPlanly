@@ -50,12 +50,14 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
+import com.coparently.app.domain.files.RecordPhotoKind
 import com.coparently.app.domain.model.Pet
 import com.coparently.app.domain.model.PetSpecies
 import com.coparently.app.presentation.childinfo.components.DatePickerDialog
 import com.coparently.app.presentation.childinfo.components.MedicationEditor
 import com.coparently.app.presentation.common.ConfirmationDialog
 import com.coparently.app.presentation.common.DatePickerField
+import com.coparently.app.presentation.common.PhotoOwner
 import com.coparently.app.presentation.common.PhotoStrip
 import com.coparently.app.presentation.common.PhotoStripStrings
 import com.coparently.app.presentation.common.VaccinationListEditor
@@ -334,6 +336,7 @@ fun AddEditPetScreen(
             SectionCard(title = stringResource(R.string.pet_section_photos)) {
                 PhotoStrip(
                     photos = storedPhotos.filterNot { it in removedPhotos } + pickedPhotos,
+                    owner = PhotoOwner(RecordPhotoKind.PET, currentPet?.id.orEmpty(), currentPet?.familyId),
                     strings = petPhotoStripStrings(),
                     onAdd = {
                         photoPicker.launch(

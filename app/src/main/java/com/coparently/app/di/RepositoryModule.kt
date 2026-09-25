@@ -20,19 +20,16 @@ import com.coparently.app.domain.repository.CalendarFeedRepository
 import com.coparently.app.domain.repository.ChangeRequestRepository
 import com.coparently.app.domain.repository.ChatSearchRepository
 import com.coparently.app.domain.repository.ChildInfoRepository
-import com.coparently.app.domain.repository.EventImageStorage
 import com.coparently.app.domain.repository.EventRepository
 import com.coparently.app.domain.repository.ExpenseRepository
 import com.coparently.app.domain.repository.FriendRepository
 import com.coparently.app.domain.repository.GuestRepository
-import com.coparently.app.domain.repository.MedicalPhotoStorage
 import com.coparently.app.domain.repository.MessageRepository
 import com.coparently.app.domain.repository.PairingRepository
-import com.coparently.app.domain.repository.PetPhotoStorage
 import com.coparently.app.domain.repository.PetRepository
 import com.coparently.app.domain.repository.PreferencesRepository
 import com.coparently.app.domain.repository.ProfessionalRepository
-import com.coparently.app.domain.repository.ReceiptStorage
+import com.coparently.app.domain.repository.RecordPhotoStorage
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -119,35 +116,14 @@ abstract class RepositoryModule {
     ): ChangeRequestRepository
 
     /**
-     * Provides ReceiptStorage implementation (Firebase Cloud Storage).
+     * Provides the record-photo storage (L-4): medical, pet, receipt and event photographs, all
+     * under family-keyed paths and read without download URLs.
      */
     @Binds
     @Singleton
-    abstract fun bindReceiptStorage(
+    abstract fun bindRecordPhotoStorage(
         firebaseImageStorage: FirebaseImageStorage
-    ): ReceiptStorage
-
-    /**
-     * Provides EventImageStorage implementation (Firebase Cloud Storage).
-     */
-    @Binds
-    @Singleton
-    abstract fun bindEventImageStorage(
-        firebaseImageStorage: FirebaseImageStorage
-    ): EventImageStorage
-
-    /**
-     * Provides MedicalPhotoStorage implementation (Firebase Cloud Storage).
-     *
-     * The same class as the two above — one Storage client, three shapes of object — but a
-     * separate binding, because a caller that only ever attaches a photograph to a child should
-     * not be handed the ability to delete receipts.
-     */
-    @Binds
-    @Singleton
-    abstract fun bindMedicalPhotoStorage(
-        firebaseImageStorage: FirebaseImageStorage
-    ): MedicalPhotoStorage
+    ): RecordPhotoStorage
 
     /**
      * Provides FriendRepository implementation — the trusted third person (item 16), bound
@@ -186,16 +162,6 @@ abstract class RepositoryModule {
     abstract fun bindPetRepository(
         petRepositoryImpl: PetRepositoryImpl
     ): PetRepository
-
-    /**
-     * Provides PetPhotoStorage implementation (Firebase Cloud Storage) — a separate binding
-     * for the same reason MedicalPhotoStorage has one.
-     */
-    @Binds
-    @Singleton
-    abstract fun bindPetPhotoStorage(
-        firebaseImageStorage: FirebaseImageStorage
-    ): PetPhotoStorage
 
     /** Binds the Firestore-backed pairing repository. */
     @Binds

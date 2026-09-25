@@ -28,7 +28,7 @@ data class ReceiptScan(
  * On-device optical character recognition over a receipt photo.
  *
  * The image is referenced by a URI string rather than an Android `Uri` so the domain layer
- * stays free of Android types, the same way [com.coparently.app.domain.repository.ReceiptStorage]
+ * stays free of Android types, the same way [com.coparently.app.domain.repository.RecordPhotoStorage]
  * does.
  */
 interface ReceiptTextRecognizer {

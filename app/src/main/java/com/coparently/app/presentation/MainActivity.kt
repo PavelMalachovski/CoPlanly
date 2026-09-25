@@ -27,6 +27,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.rememberNavController
 import com.coparently.app.data.family.SelectedFamilySource
 import com.coparently.app.data.notification.NotificationManager
+import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.PushDestination
 import com.coparently.app.data.remote.firebase.PushPayload
 import com.coparently.app.domain.chat.ChatUri
@@ -34,6 +35,7 @@ import com.coparently.app.domain.guests.GuestInviteUri
 import com.coparently.app.domain.pairing.PairingUri
 import com.coparently.app.domain.repository.PreferencesRepository
 import com.coparently.app.presentation.common.LocalAppMessages
+import com.coparently.app.presentation.common.LocalPhotoViewerUid
 import com.coparently.app.presentation.common.ParentPaletteViewModel
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.rememberAppMessages
@@ -54,6 +56,7 @@ import com.coparently.app.utils.ClockFormat
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -90,6 +93,10 @@ class MainActivity : AppCompatActivity() {
 
     @Inject
     lateinit var selectedFamilySource: SelectedFamilySource
+
+    /** Source of [LocalPhotoViewerUid]: who is signed in decides which record photos draw (L-4). */
+    @Inject
+    lateinit var firebaseAuthService: FirebaseAuthService
 
     @Inject
     lateinit var todayWidgetRefresher: TodayWidgetRefresher
@@ -284,6 +291,12 @@ class MainActivity : AppCompatActivity() {
             // app is in the background.
             val parentPalette by parentPaletteViewModel.palette.collectAsStateWithLifecycle()
 
+            // The signed-in uid, for the record photos only the family's two parents may see
+            // (L-4). Follows sign-in and sign-out, so a photo never draws for the wrong account.
+            val photoViewerUid by remember(firebaseAuthService) {
+                firebaseAuthService.getAuthStateFlow().map { it?.uid }
+            }.collectAsStateWithLifecycle(initialValue = firebaseAuthService.getCurrentUser()?.uid)
+
             // Provide Google Sign-In callback through CompositionLocal
             val googleSignInCallback: (android.content.Intent) -> Unit = remember(googleSignInLauncher) {
                 {
@@ -305,7 +318,8 @@ class MainActivity : AppCompatActivity() {
                     CompositionLocalProvider(
                         LocalGoogleSignInCallback provides googleSignInCallback,
                         LocalParentPalette provides parentPalette,
-                        LocalAppMessages provides appMessages
+                        LocalAppMessages provides appMessages,
+                        LocalPhotoViewerUid provides photoViewerUid
                     ) {
                         NavGraph(
                             navController = navController,

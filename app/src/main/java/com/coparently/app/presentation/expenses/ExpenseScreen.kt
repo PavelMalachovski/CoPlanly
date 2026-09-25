@@ -205,7 +205,7 @@ fun ExpenseScreen(
             if (result == SnackbarResult.ActionPerformed) {
                 viewModel.restoreExpense(expense)
             } else if (expense.receiptUrl != null) {
-                viewModel.purgeReceipt(expense.id)
+                viewModel.purgeReceipt(expense)
             }
         }
     }

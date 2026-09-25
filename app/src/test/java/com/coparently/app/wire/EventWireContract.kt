@@ -121,7 +121,8 @@ internal object EventWireContract : WireContract {
         pickupConfirmedBy = BOB,
         pickupConfirmedAt = LocalDateTime.of(2026, 5, 12, 8, 55),
         reminderMinutes = 30,
-        imageUrl = "https://example.invalid/event.jpg",
+        imageUrl = "ph1|event_images/uidA__uidB/evt-current-1/c83d2e5f.jpg|image/jpeg|48213|" +
+            "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
         acceptance = EventAcceptance.ACCEPTED,
         acceptedBy = BOB,
         acceptedAt = LocalDateTime.of(2026, 5, 3, 7, 0),

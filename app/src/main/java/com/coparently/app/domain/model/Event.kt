@@ -29,7 +29,8 @@ import java.time.LocalDateTime
  * @property pickupConfirmedBy Parent who confirmed the pickup ("mom" or "dad"), null if not confirmed
  * @property pickupConfirmedAt Timestamp when the pickup was confirmed
  * @property reminderMinutes Minutes before start to show a reminder notification (null = no reminder)
- * @property imageUrl Optional download URL of a photo attached to the event (shared with the co-parent)
+ * @property imageUrl `RecordPhotoCodec` reference to a photo attached to the event, or null (L-4).
+ *   Readable by the two parents only; a calendar friend or professional sees the event without it.
  * @property acceptance Whether the other parent still has to agree to this event before it counts.
  * Deliberately not [pickupConfirmedBy], which records a parent collecting the child after the
  * fact; see [com.coparently.app.domain.events.EventAcceptance].

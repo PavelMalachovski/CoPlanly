@@ -18,6 +18,7 @@ import com.coparently.app.data.local.CoPlanlyDatabase
 import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
+import com.coparently.app.data.remote.firebase.FirebaseImageStorage
 import com.coparently.app.data.remote.firebase.FirestoreBudgetDataSource
 import com.coparently.app.data.remote.firebase.FirestoreChangeRequestDataSource
 import com.coparently.app.data.remote.firebase.FirestoreChildInfoDataSource
@@ -151,6 +152,10 @@ class EmulatorParent private constructor(
     val sharedFileStorage = SharedFileStorage(storage)
     val sharedFileCache = SharedFileCache(fileContext, sharedFileStorage)
     private val stager = SharedFileStager(fileContext)
+
+    /** The production record-photo storage (L-4): medical, pet, receipt and event photos. */
+    val photoStorage =
+        FirebaseImageStorage(fileContext, authService, database.userDao(), sharedFileStorage, sharedFileCache)
 
     /** The production chat outbox: stages a file, uploads it, then lets the message be written. */
     val attachmentOutbox = ChatAttachmentOutbox(fileContext, stager, sharedFileStorage, sharedFileCache, authService)

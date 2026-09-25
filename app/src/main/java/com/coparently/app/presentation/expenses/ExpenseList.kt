@@ -51,9 +51,12 @@ import com.coparently.app.R
 import com.coparently.app.domain.expenses.SplitRatio
 import com.coparently.app.domain.expenses.bothSlotsKnown
 import com.coparently.app.domain.expenses.isTwoWaySplit
+import com.coparently.app.domain.files.RecordPhotoKind
+import com.coparently.app.domain.files.ViewablePhoto
 import com.coparently.app.domain.model.Expense
 import com.coparently.app.presentation.common.FullScreenImageDialog
 import com.coparently.app.presentation.common.ParentNames
+import com.coparently.app.presentation.common.rememberRecordPhoto
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
@@ -110,7 +113,7 @@ fun ExpenseList(
     modifier: Modifier = Modifier
 ) {
     // Receipt being viewed full-screen; transient UI state, deliberately local.
-    var viewedReceiptUrl by remember { mutableStateOf<String?>(null) }
+    var viewedReceipt by remember { mutableStateOf<ViewablePhoto?>(null) }
 
     // Whether the two parents can be told apart, which is what decides whether a row may print a
     // ratio at all — the same fact `calculateExpenseBalance` keys the share it charges on. While
@@ -150,7 +153,7 @@ fun ExpenseList(
                     parentNames = parentNames,
                     splitKnown = splitKnown,
                     onClick = onExpenseClick?.takeIf { modifiable }?.let { { it(expense) } },
-                    onReceiptClick = { url -> viewedReceiptUrl = url }
+                    onReceiptClick = { photo -> viewedReceipt = photo }
                 )
             }
             if (onDelete == null || !modifiable) {
@@ -161,14 +164,14 @@ fun ExpenseList(
         }
     }
 
-    viewedReceiptUrl?.let { url ->
+    viewedReceipt?.let { photo ->
         // A receipt is a document, not a snapshot: it is read, not glanced at. The shared
         // viewer pinches, pans and double-taps, and — unlike the fit-to-width dialog it
         // replaces — does not close on the first exploratory tap.
         FullScreenImageDialog(
-            model = url,
+            model = photo,
             contentDescription = stringResource(R.string.expenses_receipt_photo),
-            onDismiss = { viewedReceiptUrl = null }
+            onDismiss = { viewedReceipt = null }
         )
     }
 }
@@ -190,8 +193,11 @@ fun ExpenseList(
  *   not silence, it makes the row assert "split 50/50", and a caller that has not worked the
  *   answer out would be publishing a claim about money by omission.
  * @param onClick Opens the expense editor; null leaves the row inert
- * @param onReceiptClick Opens the full-screen receipt viewer
+ * @param onReceiptClick Opens the full-screen receipt viewer. Only the family's two parents see a
+ *   receipt (L-4); for anybody else, and for a legacy download URL, the row has no thumbnail.
  */
+// Each argument is a distinct input of the row; the body was already this long before L-4.
+@Suppress("LongParameterList", "LongMethod")
 @Composable
 fun ExpenseItem(
     expense: Expense,
@@ -199,8 +205,9 @@ fun ExpenseItem(
     payerRole: String? = null,
     splitKnown: Boolean,
     onClick: (() -> Unit)? = null,
-    onReceiptClick: (String) -> Unit = {}
+    onReceiptClick: (ViewablePhoto) -> Unit = {}
 ) {
+    val receipt = rememberRecordPhoto(expense.receiptUrl, RecordPhotoKind.RECEIPT, expense.id, expense.familyId)
     val dateFormatter = remember(Locale.getDefault()) { localizedDate("MMMd") }
     val format = remember(expense.currency) { currencyFormat(expense.currency) }
 
@@ -252,7 +259,7 @@ fun ExpenseItem(
     }
     // The split moved from its own right-hand column into the subtitle: it is a property of
     // the expense, not a second figure competing with the amount.
-    val meta = if (expense.receiptUrl != null) {
+    val meta = if (receipt != null) {
         stringResource(R.string.expenses_row_meta_with_receipt, subtitle, splitLabel)
     } else {
         stringResource(R.string.expenses_row_meta, subtitle, splitLabel)
@@ -276,17 +283,16 @@ fun ExpenseItem(
             // is a working feature and losing its entry point to match a mockup would be a
             // regression. Without a photo the slot shows a payer-tinted category mark instead.
             // Drawn at 40dp, up from 30dp, and tappable across 48dp.
-            val receiptUrl = expense.receiptUrl
-            if (receiptUrl != null) {
+            if (receipt != null) {
                 AsyncImage(
-                    model = receiptUrl,
+                    model = receipt,
                     contentDescription = stringResource(R.string.expenses_receipt_photo),
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
                         .minimumInteractiveComponentSize()
                         .size(TILE_SIZE)
                         .clip(MaterialTheme.shapes.small)
-                        .clickable(role = Role.Button) { onReceiptClick(receiptUrl) }
+                        .clickable(role = Role.Button) { onReceiptClick(receipt) }
                 )
             } else {
                 Box(

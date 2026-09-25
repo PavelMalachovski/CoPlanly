@@ -22,8 +22,9 @@ import java.time.LocalDateTime
  * @property feedingNotes What and when to feed, walking routine — what a handover needs
  * @property vetName Name of the veterinary clinic or vet, or null
  * @property vetPhone Phone number of the vet, or null
- * @property photos Download URLs of the pet's photographs, in the order they were added.
- *   Shared with the co-parent like the rest of this record.
+ * @property photos `RecordPhotoCodec` references to the pet's photographs, in the order they
+ *   were added (L-4). Readable by the two parents only — never by a guest, and never through a
+ *   download URL.
  * @property createdAt Timestamp when the record was created
  * @property updatedAt Timestamp when the record was last updated
  * @property createdByFirebaseUid Firebase UID of the user who created this record

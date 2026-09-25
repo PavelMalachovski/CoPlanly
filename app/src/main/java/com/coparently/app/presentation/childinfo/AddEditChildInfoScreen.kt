@@ -18,11 +18,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
+import com.coparently.app.domain.files.RecordPhotoKind
 import com.coparently.app.domain.model.*
 import com.coparently.app.presentation.childinfo.components.*
 import com.coparently.app.presentation.common.ConfirmationDialog
 import com.coparently.app.presentation.common.DatePickerField
 import com.coparently.app.presentation.common.MedicalProfileEditor
+import com.coparently.app.presentation.common.PhotoOwner
 import com.coparently.app.presentation.common.field
 import com.coparently.app.presentation.common.rememberDiscardGuard
 import com.coparently.app.presentation.consent.HealthConsentDialog
@@ -439,6 +441,11 @@ fun AddEditChildInfoScreen(
 
                         MedicalPhotoStrip(
                             photos = storedPhotos.filterNot { it in removedPhotos } + pickedPhotos,
+                            owner = PhotoOwner(
+                                kind = RecordPhotoKind.MEDICAL,
+                                recordId = currentChildInfo?.id.orEmpty(),
+                                familyId = currentChildInfo?.familyId
+                            ),
                             onAdd = {
                                 photoPicker.launch(
                                     PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
@@ -447,7 +454,7 @@ fun AddEditChildInfoScreen(
                             onRemove = { photo ->
                                 // A picked photograph is nowhere yet, so forgetting it is the whole
                                 // removal. A stored one is only marked here — the object is deleted
-                                // on save, before its URL leaves the record.
+                                // on save, before its reference leaves the record.
                                 if (photo in pickedPhotos) {
                                     pickedPhotos = pickedPhotos - photo
                                 } else {
