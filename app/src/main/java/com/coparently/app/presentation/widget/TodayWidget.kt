@@ -157,12 +157,18 @@ private val WIDGET_COLORS = ColorProviders(light = LightColorScheme, dark = Dark
  *
  * @param onClick Where a tap goes; null for a picture of the widget rather than the widget.
  */
+/**
+ * The font scale the widget is drawn at. Glance has no `LocalConfiguration`: every update composes
+ * the widget afresh from its context, so there is no recomposition for a stale read to miss.
+ */
+private fun fontScaleOf(context: Context): Float = context.resources.configuration.fontScale
+
 @Composable
 internal fun TodayWidgetRoot(state: TodayWidgetContentState, onClick: Action?) {
     GlanceTheme(colors = WIDGET_COLORS) {
         val tall = LocalSize.current.height >= TODAY_WIDGET_TALL.height
         // A widget cannot measure its text; the font scale is the one thing it knows about it.
-        val largeText = LocalContext.current.resources.configuration.fontScale >= STACK_CONTROLS_FONT_SCALE
+        val largeText = fontScaleOf(LocalContext.current) >= STACK_CONTROLS_FONT_SCALE
         val lines = when {
             tall -> state.tall
             largeText -> state.compact.compactAtLargeText()
