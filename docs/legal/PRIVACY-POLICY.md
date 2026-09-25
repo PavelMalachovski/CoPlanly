@@ -82,6 +82,10 @@ decide what each of you may read. **Legal basis:** performance of our contract w
   version; the versions you saved are removed when you delete your account. Private events
   have no saved versions.
 - **The custody schedule** — the pattern you agree and any one-off day swaps.
+- **Change requests** — a proposed change to an event or a day, with the reason you give, and
+  your co-parent's answer.
+- **The parenting plan** — each parent's written answers to the plan's questions and which of
+  the other parent's answers they marked as agreed. Each of you can change only your own half.
 - **Expenses and budgets** — amounts, currencies, categories, and optional receipt photos.
 - **Records about your child** — name, date of birth, school and activity details, emergency
   contacts, and a medical profile: allergies, medications, conditions, blood group,
@@ -294,6 +298,11 @@ decision about anyone (Art. 22): it drafts words that you read, change and choos
   access the first time you tap the microphone, and you can withdraw it in your phone's settings.
 - **Private events.** An event you mark private never leaves your device. It is not uploaded,
   not synced, and not visible to your co-parent.
+- **Your private journal.** Notes you write in the journal are stored only on your phone, in its
+  encrypted database. They are never uploaded or synced, and your co-parent cannot see them. The
+  only way they leave the phone is if you tick "My private journal" when you export the record
+  and then share that file yourself. Deleting your account or signing in with another account on
+  the phone erases them.
 
 ## Who else sees your data
 
