@@ -115,4 +115,9 @@
         <item>selfish</item>
         <item>irresponsible</item>
     </string-array>
+    <!-- A thread kept after the co-parent deleted their account (GDPR review, September 2026). %1$s = their name, %2$s = the day the thread is deleted. -->
+    <string name="chat_departed_banner">%1$s deleted their account. This conversation will be deleted on %2$s. Export it before then.</string>
+    <string name="chat_departed_export">Export</string>
+    <string name="chat_departed_no_sending">Messages can no longer be sent in this conversation.</string>
+    <string name="chat_departed_unnamed">Your co-parent</string>
 </resources>

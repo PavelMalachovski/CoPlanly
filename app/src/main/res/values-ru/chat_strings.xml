@@ -114,4 +114,9 @@
         <item>безответствен*</item>
         <item>типичн*</item>
     </string-array>
+    <!-- A thread kept after the co-parent deleted their account (GDPR review, September 2026). %1$s = their name, %2$s = the day the thread is deleted. -->
+    <string name="chat_departed_banner">%1$s удалил(а) свой аккаунт. Эта переписка будет удалена %2$s. Экспортируйте её до этого.</string>
+    <string name="chat_departed_export">Экспортировать</string>
+    <string name="chat_departed_no_sending">В эту переписку больше нельзя отправлять сообщения.</string>
+    <string name="chat_departed_unnamed">Второй родитель</string>
 </resources>

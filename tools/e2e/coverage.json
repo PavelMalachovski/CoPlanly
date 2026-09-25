@@ -337,6 +337,11 @@
       "e2e": [
         "TwoParentAccessTest#unpairingEndsTheLinkOnBothPhonesTellsBobAndNarrowsTheAudience"
       ]
+    },
+    "coparent_account_deleted": {
+      "e2e": [
+        "TwoParentAccessTest#deletingBobsAccountKeepsTheThreadForAliceToExportAndTellsHerOnce"
+      ]
     }
   },
   "functions": {
@@ -420,7 +425,8 @@
     },
     "deleteAccount": {
       "e2e": [
-        "TwoParentAccessTest#deletingBobsAccountErasesHisRecordsAndUnpairsAlice"
+        "TwoParentAccessTest#deletingBobsAccountErasesHisRecordsAndUnpairsAlice",
+        "TwoParentAccessTest#deletingBobsAccountKeepsTheThreadForAliceToExportAndTellsHerOnce"
       ],
       "checklist": [
         "7"

@@ -205,6 +205,19 @@ class PushNotificationTest {
     }
 
     @Test
+    fun aDepartedCoParentsNotice_opensTheKeptThread() {
+        val data = payload(PushPayload.COPARENT_ACCOUNT_DELETED) + (PushPayload.CONVERSATION_ID to CONVERSATION)
+        val posted = awaitPosted(PushNotifier(appContext).receive(data, SIGNED_IN)!!)
+        val tap = tapIntentFor(data)
+
+        assertEquals(PushChannel.FAMILY.id, posted.notification.channelId)
+        assertEquals(Intent.ACTION_VIEW, tap.action)
+        assertEquals(ChatUri.build(CONVERSATION), tap.dataString)
+        assertEquals(appContext.packageName, tap.`package`)
+        assertIsTheTapOf(posted, data, tap)
+    }
+
+    @Test
     fun theTap_carriesTheFamily_andOpensTheCalendar() {
         val data = payload(PushPayload.EVENT_CREATED)
         val posted = awaitPosted(PushNotifier(appContext).receive(data, SIGNED_IN)!!)
@@ -288,6 +301,12 @@ class PushNotificationTest {
     private fun expectedBody(context: Context, spec: PushNotifier.PushTextSpec): String = when (spec.args) {
         PushNotifier.BodyArgs.ACTOR_AND_SUBJECT -> context.getString(spec.body, ACTOR_NAME, SUBJECT)
         PushNotifier.BodyArgs.ACTOR -> context.getString(spec.body, ACTOR_NAME)
+        // The payload below carries no deadline millis, so the notifier falls back to the ISO day.
+        PushNotifier.BodyArgs.ACTOR_AND_DEADLINE -> context.getString(
+            spec.body,
+            ACTOR_NAME,
+            isoDateText(DATE, DAY_IN_SENTENCE, context.resources.configuration.locales[0])
+        )
         PushNotifier.BodyArgs.DATE -> context.getString(
             spec.body,
             isoDateText(DATE, DAY_IN_SENTENCE, context.resources.configuration.locales[0])
@@ -302,6 +321,7 @@ class PushNotificationTest {
         val names = when (spec.args) {
             PushNotifier.BodyArgs.ACTOR_AND_SUBJECT -> listOf(ACTOR_NAME, SUBJECT)
             PushNotifier.BodyArgs.ACTOR -> listOf(ACTOR_NAME)
+            PushNotifier.BodyArgs.ACTOR_AND_DEADLINE -> listOf(ACTOR_NAME, DATE_DAY)
             // The date is said in the reader's language (D-18), so its day is what every one shows.
             PushNotifier.BodyArgs.DATE -> listOf(DATE_DAY)
             PushNotifier.BodyArgs.DAY_COUNT -> listOf(DAY_COUNT.toString())

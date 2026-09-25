@@ -31,7 +31,7 @@ package com.coparently.app.data.remote.firebase
  * ## The rule this pairs with
  *
  * `firestore.rules` refuses a client-written payload that carries `title` or `body` at all, and
- * accepts only the types listed in [CLIENT_TYPES]. The three server-only types below are
+ * accepts only the types listed in [CLIENT_TYPES]. The server-only types below are
  * produced by Cloud Functions, which write as admin and bypass rules — so a client cannot forge
  * a pairing notification or a chat message it did not send. Both halves are needed: without the
  * type allow-list a client could send `chat_message` with any sender name; without the
@@ -99,6 +99,14 @@ object PushPayload {
 
     /** The first line or so of a chat message, written by the Cloud Function that saw it. */
     const val PREVIEW = "preview"
+
+    /**
+     * An instant a push's sentence names as a day, epoch millis as a decimal string — the deadline
+     * of a thread kept after a co-parent deleted their account ([COPARENT_ACCOUNT_DELETED]). The
+     * receiving phone turns it into a day in its own zone; [DATE] beside it is the UTC day, for a
+     * payload whose millis cannot be read. Server-written only.
+     */
+    const val RETAINED_UNTIL = "retainedUntilMillis"
 
     // ---- types a client may produce -------------------------------------------
 
@@ -189,9 +197,23 @@ object PushPayload {
     const val PROFESSIONAL_ACCESS_REQUESTED = "professional_access_requested"
 
     /**
+     * Queued by `deleteAccount` for the parent who **remains** when their co-parent deletes their
+     * account (GDPR review, September 2026). The conversation is not deleted with the account: it is
+     * kept for 30 days so this parent can export it, then deleted. The actor is the departed
+     * parent's name, [RETAINED_UNTIL] (and [DATE], its UTC day) when the thread goes, and
+     * [CONVERSATION_ID] the thread — tapping it opens the thread, where the banner and the export
+     * action are.
+     *
+     * Sent **instead of** [PAIRING_REMOVED] to a co-parent who has a thread to keep: one departure,
+     * one push. Server-only, like the pairing types, so no client can announce a deletion that did
+     * not happen.
+     */
+    const val COPARENT_ACCOUNT_DELETED = "coparent_account_deleted"
+
+    /**
      * Every type a client is allowed to enqueue.
      *
-     * Kept as an allow-list rather than a deny-list of the three server-only types, and the
+     * Kept as an allow-list rather than a deny-list of the server-only types, and the
      * asymmetry is deliberate: forgetting to add a new *client* type here makes its push fail
      * to enqueue, which is annoying and obvious, while forgetting to add a new *server* type to
      * a deny-list would let any co-parent forge it, which is neither. `firestore.rules` holds

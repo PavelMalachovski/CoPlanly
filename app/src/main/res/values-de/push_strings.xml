@@ -69,4 +69,7 @@
     <string name="push_channel_family_description">Verbindung mit dem anderen Elternteil, Kinderdaten, geteilte Einträge und Zugang für Fachpersonen</string>
     <string name="push_professional_access_requested_title">Zugang für Fachperson angefragt</string>
     <string name="push_professional_access_requested_body">%1$s hat eine Einladung angenommen, den Familienkalender und den Elternplan zu lesen. Er öffnet sich erst mit der Zustimmung beider Eltern.</string>
+    <!-- A co-parent deleted their account; the thread is kept for 30 days (%1$s = their name, %2$s = the day it goes). -->
+    <string name="push_coparent_account_deleted_title">Konto des anderen Elternteils gelöscht</string>
+    <string name="push_coparent_account_deleted_body">%1$s hat das eigene Konto gelöscht. Eure Unterhaltung wird am %2$s gelöscht – exportiere sie vorher.</string>
 </resources>

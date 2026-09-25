@@ -119,4 +119,9 @@
         <item>nezodpovědn*</item>
         <item>typick*</item>
     </string-array>
+    <!-- A thread kept after the co-parent deleted their account (GDPR review, September 2026). %1$s = their name, %2$s = the day the thread is deleted. -->
+    <string name="chat_departed_banner">%1$s smazal/a svůj účet. Tato konverzace bude smazána %2$s. Do té doby si ji vyexportujte.</string>
+    <string name="chat_departed_export">Exportovat</string>
+    <string name="chat_departed_no_sending">Do této konverzace už nelze posílat zprávy.</string>
+    <string name="chat_departed_unnamed">Druhý rodič</string>
 </resources>

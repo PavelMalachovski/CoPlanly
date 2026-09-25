@@ -81,4 +81,7 @@
     <string name="push_channel_family_description">Pairing with your co-parent, child records, shared records and professional access</string>
     <string name="push_professional_access_requested_title">Professional access requested</string>
     <string name="push_professional_access_requested_body">%1$s redeemed an invitation to read the family calendar and parenting plan. It opens only when both parents consent.</string>
+    <!-- A co-parent deleted their account; the thread is kept for 30 days (%1$s = their name, %2$s = the day it goes). -->
+    <string name="push_coparent_account_deleted_title">Co-parent account deleted</string>
+    <string name="push_coparent_account_deleted_body">%1$s deleted their account. Your conversation will be deleted on %2$s — export it before then.</string>
 </resources>
