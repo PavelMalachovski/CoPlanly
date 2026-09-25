@@ -12,5 +12,5 @@
     <string name="event_acceptance_withdraw">Zurückziehen</string>
     <string name="event_acceptance_waiting_strip">%1$d deiner Termine warten auf den anderen Elternteil</string>
     <string name="event_acceptance_waiting_strip_one">Einer deiner Termine wartet auf den anderen Elternteil</string>
-    <string name="event_acceptance_hidden_note">Er erscheint in keinem der beiden Kalender, bis eine Antwort da ist.</string>
+    <string name="event_acceptance_hidden_note">Der Termin erscheint in keinem der beiden Kalender, bis eine Antwort da ist.</string>
 </resources>

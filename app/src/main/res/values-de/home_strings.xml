@@ -8,11 +8,11 @@
     <string name="home_pairing_cta">Jetzt verknüpfen</string>
 
     <string name="home_handover_current">Heute bei %1$s</string>
-    <string name="home_handover_hero_today">Heute Übergabe an %1$s</string>
-    <string name="home_handover_hero_tomorrow">Morgen Übergabe an %1$s</string>
+    <string name="home_handover_hero_today">Heute Übergabe an\u00A0%1$s</string>
+    <string name="home_handover_hero_tomorrow">Morgen Übergabe an\u00A0%1$s</string>
     <plurals name="home_handover_hero_in_days">
-        <item quantity="one">In %2$d Tag Übergabe an %1$s</item>
-        <item quantity="other">In %2$d Tagen Übergabe an %1$s</item>
+        <item quantity="one">In %2$d Tag Übergabe an\u00A0%1$s</item>
+        <item quantity="other">In %2$d Tagen Übergabe an\u00A0%1$s</item>
     </plurals>
     <string name="home_handover_review">Prüfen</string>
 
@@ -46,14 +46,14 @@
 
     <string name="home_awaiting_title">Warten auf deine Antwort</string>
     <string name="home_dialog_swap_title">Tagestausch</string>
-    <string name="home_dialog_swap_message">%1$s schlägt vor zu ändern, bei wem das Kind am %2$s ist.</string>
+    <string name="home_dialog_swap_message">%1$s schlägt einen Tagestausch für %2$s vor.</string>
     <string name="home_dialog_requests_title">Änderungsanfragen</string>
     <string name="home_dialog_requests_message">Der andere Elternteil hat Anfragen, die auf deine Antwort warten.</string>
     <string name="home_dialog_later">Später</string>
     <string name="home_dialog_review">Prüfen</string>
     <plurals name="home_dialog_swap_message_days">
-        <item quantity="one">%2$s schlägt vor, für %1$d Tag zu ändern, bei wem das Kind ist: %3$s.</item>
-        <item quantity="other">%2$s schlägt vor, für %1$d Tage zu ändern, bei wem das Kind ist: %3$s bis %4$s.</item>
+        <item quantity="one">%2$s schlägt einen Tausch für %1$d Tag vor: %3$s.</item>
+        <item quantity="other">%2$s schlägt einen Tausch für %1$d Tage vor: %3$s bis %4$s.</item>
     </plurals>
 
     <!-- The empty seven-day card's action. -->

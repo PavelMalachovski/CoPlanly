@@ -6,7 +6,7 @@
     <string name="health_consent_not_now">Nicht jetzt</string>
     <string name="health_consent_locked">Medizinische Angaben sind freiwillig und brauchen zuerst deine Einwilligung.</string>
     <string name="health_consent_add_action">Medizinische Angaben hinzufügen</string>
-    <string name="health_consent_settings_title">Einwilligung zu Gesundheitsdaten</string>
+    <string name="health_consent_settings_title">Einwilligung für Gesundheitsdaten</string>
     <string name="health_consent_settings_given">Erteilt am %1$s</string>
     <string name="health_consent_settings_not_given">Nicht erteilt</string>
     <string name="health_consent_settings_withdraw">Widerrufen</string>

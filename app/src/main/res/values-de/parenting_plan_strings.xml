@@ -10,7 +10,7 @@
 <resources>
     <string name="parenting_plan_title">Elternplan</string>
     <string name="parenting_plan_settings_description">Getrennt ausfüllen und sehen, wo ihr euch schon einig seid</string>
-    <string name="parenting_plan_intro">Ihr antwortet jeweils für euch. Niemand sieht eine Antwort, während sie geschrieben wird, und keiner kann die des anderen ändern. Eine Frage gilt als vereinbart, wenn ihr beide die Antwort des anderen abhakt.</string>
+    <string name="parenting_plan_intro">Jeder von euch antwortet für sich. Niemand sieht eine Antwort, während sie geschrieben wird, und keiner kann die Antworten des anderen ändern. Eine Frage gilt als vereinbart, wenn ihr beide die Antwort des anderen abhakt.</string>
     <string name="parenting_plan_disclaimer">Dies ist nicht das Formular des tschechischen Justizministeriums. Es deckt dieselben Bereiche ab, die Gesetz und Formular nennen, in eigenen Worten.</string>
     <string name="parenting_plan_progress_agreed">%1$d von %2$d vereinbart</string>
     <string name="parenting_plan_progress_answered">Du hast %1$d von %2$d beantwortet</string>

@@ -41,10 +41,10 @@
     <string name="expenses_settle_up_message_owing">Ausgleich für %2$s – ich schulde dir %1$s.</string>
     <string name="expenses_this_month">Dieser Monat</string>
     <plurals name="expenses_count">
-        <item quantity="one">%1$d Ausgabe</item>
-        <item quantity="other">%1$d Ausgaben</item>
+        <item quantity="one">%1$d Ausgabe</item>
+        <item quantity="other">%1$d Ausgaben</item>
     </plurals>
-    <string name="expenses_row_subtitle">%1$s · %2$s bezahlt · %3$s</string>
+    <string name="expenses_row_subtitle">%1$s · %2$s bezahlt · %3$s</string>
     <string name="expenses_row_subtitle_unknown_payer">%1$s · %2$s</string>
     <string name="expenses_split_even">50/50 geteilt</string>
     <string name="expenses_split_ratio">%1$s %2$d/%3$d geteilt</string>

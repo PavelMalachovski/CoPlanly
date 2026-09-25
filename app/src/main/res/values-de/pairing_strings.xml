@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- PairingScreen -->
-    <string name="pairing_screen_title">Mit dem anderen Elternteil verknüpfen</string>
+    <string name="pairing_screen_title">Co-Elternteil verknüpfen</string>
     <string name="pairing_back">Zurück</string>
     <string name="pairing_unpair_button">Verknüpfung aufheben</string>
     <string name="pairing_scan_qr_code">QR-Code scannen</string>
