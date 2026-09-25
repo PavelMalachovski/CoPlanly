@@ -56,6 +56,7 @@ import com.coparently.app.domain.model.Expense
 import com.coparently.app.presentation.common.FullScreenImageDialog
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.rememberRecordPhoto
+import com.coparently.app.presentation.common.stacksAtLargeFont
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
@@ -309,6 +310,16 @@ fun ExpenseItem(
                 }
             }
 
+            // From 130 % the amount moves under the title: beside it, it took the width and cut
+            // the title to "Winter jack…" at 150 % in German. Under it, it still never ends in
+            // an ellipsis (design refresh item 15), and the title gets the whole column.
+            val amountBelowTitle = stacksAtLargeFont()
+            val amount: @Composable () -> Unit = {
+                Text(
+                    text = format.format(expense.amount),
+                    style = MaterialTheme.typography.titleSmallEmphasized
+                )
+            }
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = expense.title,
@@ -316,6 +327,7 @@ fun ExpenseItem(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
+                if (amountBelowTitle) amount()
                 // Two lines, not one: the meta line says who paid and how the expense divides,
                 // and in Russian at 130 % one line ended at "заплатил(а)…", before the name
                 // (docs/AUDIT-2026-10-design.md, week 3). The title above may still end in an
@@ -329,10 +341,7 @@ fun ExpenseItem(
                 )
             }
 
-            Text(
-                text = format.format(expense.amount),
-                style = MaterialTheme.typography.titleSmallEmphasized
-            )
+            if (!amountBelowTitle) amount()
         }
     }
 }

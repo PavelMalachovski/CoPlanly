@@ -36,6 +36,7 @@ import com.coparently.app.presentation.common.AccountAvatar
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.PillChip
 import com.coparently.app.presentation.common.SectionGroup
+import com.coparently.app.presentation.common.stacksAtLargeFont
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.bodyMediumEmphasized
@@ -374,24 +375,43 @@ private fun BreakdownRow(slice: CategorySlice, currency: String, amountWidth: Dp
                 .clip(CircleShape)
                 .background(slice.category.sliceColor())
         )
-        Text(
-            text = name,
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.weight(1f)
-        )
-        Text(
-            text = amount,
-            style = MaterialTheme.typography.bodyMedium,
-            textAlign = TextAlign.End,
-            modifier = Modifier.width(amountWidth)
-        )
-        Text(
-            text = share,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.End,
-            modifier = Modifier.width(SHARE_COLUMN_WIDTH)
-        )
+        val figures: @Composable () -> Unit = {
+            Text(
+                text = amount,
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.End,
+                modifier = Modifier.width(amountWidth)
+            )
+            Text(
+                text = share,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.End,
+                modifier = Modifier.width(SHARE_COLUMN_WIDTH)
+            )
+        }
+        if (stacksAtLargeFont()) {
+            // From 130 % the name takes the row's whole width and the figures go under it, in
+            // the same columns as the headings: beside a wide amount at 150 % the name was left
+            // a sliver and German broke it inside the word ("Gesundh|eit").
+            Column(modifier = Modifier.weight(1f)) {
+                Text(text = name, style = MaterialTheme.typography.bodyMedium)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.M, Alignment.End),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    figures()
+                }
+            }
+        } else {
+            Text(
+                text = name,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.weight(1f)
+            )
+            figures()
+        }
     }
 }
 
