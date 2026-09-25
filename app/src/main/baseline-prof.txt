@@ -1,0 +1,29 @@
+# CoPlanly's baseline profile (release audit, week 8): the code a cold start and the first
+# screens run, compiled ahead of time on install instead of interpreted on first use.
+#
+# Written by hand, not recorded: recording one takes a Macrobenchmark module and a device run per
+# release, and this repository's sessions have no Android SDK. The rules are package-level
+# wildcards over the start path — the application, the activity, navigation, the theme, the shared
+# components, the four tabs and their view models, and the Room layer they read — so a renamed
+# class stays covered. AndroidX and Compose ship their own profiles inside their libraries; this
+# file only adds the app's code. `tools/check-baseline-profile.sh` (the release CI job) fails when
+# these rules stop reaching the release build.
+#
+# H = hot, S = run at startup, P = run after startup. `**` matches any class or member.
+
+HSPLcom/coparently/app/CoPlanlyApplication;->**(**)**
+HSPLcom/coparently/app/presentation/MainActivity;->**(**)**
+HSPLcom/coparently/app/presentation/navigation/**;->**(**)**
+HSPLcom/coparently/app/presentation/theme/**;->**(**)**
+HSPLcom/coparently/app/presentation/common/**;->**(**)**
+HSPLcom/coparently/app/presentation/home/**;->**(**)**
+HSPLcom/coparently/app/presentation/calendar/**;->**(**)**
+HSPLcom/coparently/app/presentation/chat/**;->**(**)**
+HSPLcom/coparently/app/presentation/expenses/**;->**(**)**
+HSPLcom/coparently/app/data/local/**;->**(**)**
+HSPLcom/coparently/app/domain/home/**;->**(**)**
+HSPLcom/coparently/app/domain/custody/**;->**(**)**
+HSPLcom/coparently/app/utils/**;->**(**)**
+
+Lcom/coparently/app/presentation/**;
+Lcom/coparently/app/data/local/**;

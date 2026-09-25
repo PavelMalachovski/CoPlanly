@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -88,9 +89,11 @@ import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.PillChip
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
+import com.coparently.app.presentation.common.TwoPanes
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.common.rememberToday
+import com.coparently.app.presentation.common.rememberTwoPane
 import com.coparently.app.presentation.components.SkeletonBox
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.ParentColors
@@ -420,13 +423,11 @@ private fun Dashboard(
     onOpenChat: () -> Unit,
     onAddEvent: () -> Unit
 ) {
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(contentPadding),
-        contentPadding = PaddingValues(Spacing.L),
-        verticalArrangement = Arrangement.spacedBy(Spacing.M)
-    ) {
+    // What the parent acts on now — who to call, what waits on them, the handover, today — and
+    // what they read after: the week, the co-parent's changes, the month's figures. One column
+    // on a phone, in that order; two side by side from 840 dp (release audit R-8), where one
+    // column of cards ran 1200 dp wide beside the rail.
+    val actNow: LazyListScope.() -> Unit = {
         item {
             // First, by owner decision (Aug 2026 walkthrough): the emergency surface — who to
             // call and the child's own record — belongs above the schedule, because the moment
@@ -516,7 +517,8 @@ private fun Dashboard(
                 contactWindows = state.today.contactWindows
             )
         }
-
+    }
+    val readAfter: LazyListScope.() -> Unit = {
         // The week follows the emergency group and the day cards (spec §3 had it lead; the
         // Aug 2026 walkthrough moved the emergency surface above it).
         item { SectionHeader(stringResource(R.string.home_section_this_week)) }
@@ -600,6 +602,32 @@ private fun Dashboard(
             )
         }
     }
+
+    val listModifier = Modifier
+        .fillMaxSize()
+        .padding(contentPadding)
+    if (rememberTwoPane()) {
+        TwoPanes(
+            start = { HomeColumn(listModifier, actNow) },
+            end = { HomeColumn(listModifier, readAfter) }
+        )
+    } else {
+        HomeColumn(listModifier) {
+            actNow()
+            readAfter()
+        }
+    }
+}
+
+/** One of Home's scrolling columns, with the page's padding and rhythm. */
+@Composable
+private fun HomeColumn(modifier: Modifier, content: LazyListScope.() -> Unit) {
+    LazyColumn(
+        modifier = modifier,
+        contentPadding = PaddingValues(Spacing.L),
+        verticalArrangement = Arrangement.spacedBy(Spacing.M),
+        content = content
+    )
 }
 
 /** The trailing chevron every navigation row in the top group carries. */

@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -63,9 +64,11 @@ import com.coparently.app.presentation.common.InlineBanner
 import com.coparently.app.presentation.common.ListSkeleton
 import com.coparently.app.presentation.common.Loadable
 import com.coparently.app.presentation.common.ScrollAwareFab
+import com.coparently.app.presentation.common.TwoPanes
 import com.coparently.app.presentation.common.monthPagingTransition
 import com.coparently.app.presentation.common.rememberFabScrollVisibility
 import com.coparently.app.presentation.common.rememberParentNames
+import com.coparently.app.presentation.common.rememberTwoPane
 import com.coparently.app.presentation.common.valueOrNull
 import com.coparently.app.presentation.theme.Motion
 import com.coparently.app.presentation.theme.Spacing
@@ -208,6 +211,7 @@ fun ExpenseScreen(
     }
 
     val fabVisibility = rememberFabScrollVisibility()
+    val twoPane = rememberTwoPane()
     // A month or a view that replaces the content starts at its top, so the button comes back.
     LaunchedEffect(monthOfExpenses.month, showAnalytics) { fabVisibility.show() }
 
@@ -309,7 +313,7 @@ fun ExpenseScreen(
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .scrollsAsPage(showAnalytics, monthExpenses.isNotEmpty(), pageScroll)
+                            .scrollsAsPage(showAnalytics && !twoPane, monthExpenses.isNotEmpty(), pageScroll)
                     ) {
                         val balancesByCurrency = shownMonth.balances
                         val monthNavigation = MonthNavigation(
@@ -389,7 +393,79 @@ fun ExpenseScreen(
                                 )
                             }
 
-                            if (showAnalytics) {
+                            // The list and its member filter, shared by the one-column page and the
+                            // wide page's second pane.
+                            val memberFilterItem: LazyListScope.() -> Unit = {
+                                // Renders nothing below two members, so a family with one
+                                // child sees the screen they always saw. Nothing selected is
+                                // the whole month, which is how a parent gets back out.
+                                item {
+                                    FamilyMemberFilterStrip(
+                                        members = familyMembers,
+                                        selected = memberFilter,
+                                        onToggle = viewModel::toggleMemberFilter,
+                                        label = R.string.expenses_filter_members,
+                                        modifier = Modifier.padding(
+                                            horizontal = Spacing.L,
+                                            vertical = Spacing.XS
+                                        )
+                                    )
+                                }
+                            }
+                            val expenseList: @Composable (LazyListScope.() -> Unit) -> Unit = { header ->
+                                ExpenseList(
+                                    expenses = monthExpenses,
+                                    roleByUid = roleByUid,
+                                    parentNames = parentNames,
+                                    onDelete = deleteWithUndo,
+                                    onExpenseClick = { onEditExpense(it.id) },
+                                    // Only the creator edits or deletes an expense. A row whose creator
+                                    // was never recorded (pre-schema-23, or written signed-out) stays
+                                    // editable by both — all this device can honestly say about it.
+                                    canModify = { expense ->
+                                        expense.createdByFirebaseUid == null ||
+                                            expense.createdByFirebaseUid == currentUserId
+                                    },
+                                    // The same clearance the analytics branch takes, for the same
+                                    // reason: without it the last expense comes to rest under the
+                                    // Add button and the list will not scroll any further.
+                                    bottomClearance = FAB_CLEARANCE,
+                                    header = header,
+                                    state = listState,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
+                            if (twoPane) {
+                                // From 840 dp (release audit R-8) the month is two panes: its
+                                // summary and where the money went beside its expenses, both
+                                // always on screen, so the List/Analytics switch has nothing to
+                                // switch and the summary never needs to fold into a pinned line.
+                                TwoPanes(
+                                    start = {
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .verticalScroll(rememberScrollState())
+                                        ) {
+                                            summaryCards()
+                                            ExpenseAnalytics(
+                                                breakdown = selectedBreakdown,
+                                                currencies = breakdowns.map { it.currency },
+                                                payers = analyticsPayers,
+                                                selectedPayer = analyticsPayer,
+                                                parentNames = parentNames,
+                                                expenses = monthExpenses,
+                                                roleByUid = roleByUid,
+                                                onSelectCurrency = viewModel::selectAnalyticsCurrency,
+                                                onSelectPayer = viewModel::selectAnalyticsPayer,
+                                                modifier = Modifier.padding(bottom = Spacing.L)
+                                            )
+                                        }
+                                    },
+                                    end = { expenseList(memberFilterItem) },
+                                    modifier = Modifier.weight(1f)
+                                )
+                            } else if (showAnalytics) {
                                 // The month line, not the summary cards (docs/AUDIT-2026-10-design.md
                                 // D-6). With two currencies the cards reached 60% of the screen and
                                 // the chart started below the fold, so the tab looked empty. Who owes
@@ -428,49 +504,15 @@ fun ExpenseScreen(
                                     derivedStateOf { listState.firstVisibleItemIndex > 0 }
                                 }
                                 Box(modifier = Modifier.weight(1f)) {
-                                    ExpenseList(
-                                        expenses = monthExpenses,
-                                        roleByUid = roleByUid,
-                                        parentNames = parentNames,
-                                        onDelete = deleteWithUndo,
-                                        onExpenseClick = { onEditExpense(it.id) },
-                                        // Only the creator edits or deletes an expense. A row whose creator
-                                        // was never recorded (pre-schema-23, or written signed-out) stays
-                                        // editable by both — all this device can honestly say about it.
-                                        canModify = { expense ->
-                                            expense.createdByFirebaseUid == null ||
-                                                expense.createdByFirebaseUid == currentUserId
-                                        },
-                                        // The same clearance the analytics branch takes, for the same
-                                        // reason: without it the last expense comes to rest under the
-                                        // Add button and the list will not scroll any further.
-                                        bottomClearance = FAB_CLEARANCE,
-                                        header = {
-                                            item {
-                                                Column {
-                                                    summaryCards()
-                                                    viewSwitcher()
-                                                }
+                                    expenseList {
+                                        item {
+                                            Column {
+                                                summaryCards()
+                                                viewSwitcher()
                                             }
-                                            // Renders nothing below two members, so a family with one
-                                            // child sees the screen they always saw. Nothing selected is
-                                            // the whole month, which is how a parent gets back out.
-                                            item {
-                                                FamilyMemberFilterStrip(
-                                                    members = familyMembers,
-                                                    selected = memberFilter,
-                                                    onToggle = viewModel::toggleMemberFilter,
-                                                    label = R.string.expenses_filter_members,
-                                                    modifier = Modifier.padding(
-                                                        horizontal = Spacing.L,
-                                                        vertical = Spacing.XS
-                                                    )
-                                                )
-                                            }
-                                        },
-                                        state = listState,
-                                        modifier = Modifier.fillMaxSize()
-                                    )
+                                        }
+                                        memberFilterItem()
+                                    }
                                     // Qualified: this Box sits in a Column, and the bare name would
                                     // resolve to ColumnScope's overload, which cannot be called here.
                                     androidx.compose.animation.AnimatedVisibility(

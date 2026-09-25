@@ -367,6 +367,12 @@ jobs:
       - name: Verify R8 kept the Gson field names
         run: node tools/check-r8-mapping.js
 
+      # Week 8 of the release audit: the app ships a hand-written baseline profile
+      # (app/src/main/baseline-prof.txt). Libraries bring profiles of their own, so this checks
+      # that the app's rules merged and that the APK carries the compiled profile.
+      - name: Verify the baseline profile reached the release build
+        run: tools/check-baseline-profile.sh
+
       - name: Upload reports
         if: always()
         uses: actions/upload-artifact@v4

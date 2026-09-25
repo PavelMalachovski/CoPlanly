@@ -278,6 +278,10 @@ dependencies {
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
     implementation("androidx.activity:activity-compose:1.9.3")
+    // Installs the baseline profile (src/main/baseline-prof.txt) on a device the app did not
+    // reach through Play, which is every closed-test and sideloaded install. Activity already
+    // brings it in; declared so the profile does not depend on a transitive dependency.
+    implementation("androidx.profileinstaller:profileinstaller:1.4.1")
 
     // Compose - BOM 2025.10 (Compose 1.9.x, Material 3 1.4.x / M3 Expressive)
     val composeBom = platform("androidx.compose:compose-bom:2025.10.00")

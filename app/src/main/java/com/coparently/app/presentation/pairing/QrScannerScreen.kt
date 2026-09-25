@@ -32,6 +32,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -68,7 +69,11 @@ import java.util.concurrent.atomic.AtomicReference
 fun QrScannerScreen(onCodeScanned: (String) -> Unit) {
     val context = LocalContext.current
     var hasPermission by remember { mutableStateOf(hasCameraPermission(context)) }
-    var permanentlyDenied by remember { mutableStateOf(false) }
+    // Saved: the scanner turns with the device (release audit §3.1 — Android 16 ignores an
+    // orientation lock on a large screen, so the portrait lock came off everywhere), and a turn
+    // recreates the activity. Forgetting this would offer "Allow" again after "don't ask again",
+    // a button the system then silently refuses.
+    var permanentlyDenied by rememberSaveable { mutableStateOf(false) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()

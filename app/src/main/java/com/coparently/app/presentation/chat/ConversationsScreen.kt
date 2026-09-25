@@ -34,7 +34,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -46,6 +49,9 @@ import com.coparently.app.domain.model.Conversation
 import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.ListSkeleton
 import com.coparently.app.presentation.common.Loadable
+import com.coparently.app.presentation.common.TwoPanes
+import com.coparently.app.presentation.common.WideColumn
+import com.coparently.app.presentation.common.rememberTwoPane
 import com.coparently.app.presentation.common.valueOrNull
 import com.coparently.app.utils.dateWithTime
 
@@ -123,10 +129,9 @@ fun ConversationsScreen(
     // One co-parent means one conversation, so the list would be a single row standing in front
     // of the only thread there is. Compose the thread here instead. Declared after the event
     // collector above so that stays mounted in both shapes.
-    val onlyConversation = conversations.singleOrNull()
-    if (onlyConversation != null) {
+    val thread: @Composable (String) -> Unit = { conversationId ->
         ChatScreen(
-            conversationId = onlyConversation.id,
+            conversationId = conversationId,
             // No back arrow: this *is* the tab, there is nothing above it to return to.
             onBack = null,
             draft = draft,
@@ -135,13 +140,75 @@ fun ConversationsScreen(
             onOpenChangeRequest = onOpenChangeRequest,
             onOpenInbox = onOpenInbox
         )
+    }
+    val twoPane = rememberTwoPane()
+    val onlyConversation = conversations.singleOrNull()
+    if (onlyConversation != null) {
+        // On a wide window the thread is one reading column (release audit R-8): bubbles 1200 dp
+        // apart, one parent's at each edge, read as two separate screens.
+        if (twoPane) WideColumn { thread(onlyConversation.id) } else thread(onlyConversation.id)
         return
     }
 
-    val startChat: () -> Unit = {
-        viewModel.startConversationWithPartner(onOpened = onConversationClick)
+    // From 840 dp the list and the open thread sit side by side, and a tap on the list changes
+    // the thread beside it rather than navigating away from the tab. Saved, so a rotation keeps
+    // the thread that was open; the first conversation until one is chosen.
+    var chosenId by rememberSaveable { mutableStateOf<String?>(null) }
+    val shownId = chosenId?.takeIf { id -> conversations.any { it.id == id } }
+        ?: conversations.firstOrNull()?.id
+    val open: (String) -> Unit = if (twoPane) {
+        { id -> chosenId = id }
+    } else {
+        onConversationClick
     }
+    val startChat: () -> Unit = {
+        viewModel.startConversationWithPartner(onOpened = open)
+    }
+    val list: @Composable () -> Unit = {
+        ConversationList(
+            conversationsState = conversationsState,
+            currentUserId = currentUserId,
+            isOpening = isOpening,
+            snackbarHostState = snackbarHostState,
+            onOpenSettings = onOpenSettings,
+            onStartChat = startChat,
+            onOpen = open
+        )
+    }
+    if (twoPane && shownId != null) {
+        TwoPanes(start = list, end = { thread(shownId) })
+    } else {
+        list()
+    }
+}
 
+/**
+ * The list of conversations with its top bar, the Add button and the empty and loading states.
+ *
+ * @param conversationsState The conversations, or that they are still loading
+ * @param currentUserId Whose read marks decide the unread badge
+ * @param isOpening Whether a new conversation is being opened, for the button's spinner
+ * @param snackbarHostState Where the tab's messages appear
+ * @param onOpenSettings Opens settings from the gear
+ * @param onStartChat Starts, or opens, the conversation with the co-parent
+ * @param onOpen Opens a conversation by id
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+// The tab's state, passed through unchanged from ConversationsScreen, which collects it once for
+// both of its shapes.
+@Suppress("LongParameterList", "LongMethod")
+private fun ConversationList(
+    conversationsState: Loadable<List<Conversation>>,
+    currentUserId: String,
+    isOpening: Boolean,
+    snackbarHostState: SnackbarHostState,
+    onOpenSettings: () -> Unit,
+    onStartChat: () -> Unit,
+    onOpen: (String) -> Unit
+) {
+    val conversations = conversationsState.valueOrNull.orEmpty()
+    val startChat = onStartChat
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
@@ -204,7 +271,7 @@ fun ConversationsScreen(
                     ConversationItem(
                         conversation = conversation,
                         currentUserId = currentUserId,
-                        onClick = { onConversationClick(conversation.id) }
+                        onClick = { onOpen(conversation.id) }
                     )
                     HorizontalDivider()
                 }

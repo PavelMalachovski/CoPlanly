@@ -88,12 +88,15 @@
           within the app. While it was exported, any installed app could launch it and
           collect the scanned invite code from setResult() — an invite code is a bearer
           credential for the whole family's calendar, chat and finances.
+
+          No orientation lock (release audit, week 8): Android 16 ignores one on a large screen,
+          so the scanner has to work sideways anyway, and a lock that held only on phones would
+          leave that path untried everywhere it is easy to try.
         -->
         <activity
             android:name=".presentation.pairing.QRScannerActivity"
             android:exported="false"
-            android:theme="@style/Theme.CoPlanly"
-            android:screenOrientation="portrait" />
+            android:theme="@style/Theme.CoPlanly" />
 
         <!--
           Persists the per-app language chosen via AppCompatDelegate.setApplicationLocales
