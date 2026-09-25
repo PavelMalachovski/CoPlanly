@@ -1,11 +1,17 @@
 package com.coparently.app.data.school
 
 import android.util.Log
+import com.coparently.app.data.analytics.AnalyticsManager
+import com.coparently.app.data.crashlytics.CrashlyticsManager
 import com.coparently.app.data.local.dao.EventDao
+import com.coparently.app.domain.notification.ReminderScheduler
 import com.coparently.app.domain.repository.EventRepository
 import com.coparently.app.domain.school.ExistingImport
 import com.coparently.app.domain.school.SchoolImportPlan
-import com.coparently.app.domain.usecase.EventUseCases
+import com.coparently.app.domain.usecase.CreateEventUseCase
+import com.coparently.app.domain.usecase.DeleteEventUseCase
+import com.coparently.app.domain.usecase.EventValidator
+import com.coparently.app.domain.usecase.UpdateEventUseCase
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -35,13 +41,39 @@ data class SchoolImportCounts(
  * one goes through the ordinary delete path, which writes a tombstone and a revision. The one
  * difference is `announce = false`: an import of thirty events must not post thirty cards to the
  * co-parent's chat.
+ *
+ * The use cases are built here rather than injected: `UseCaseModule` provides them in the
+ * `ViewModelComponent`, and this writer runs from a worker in the singleton graph.
  */
 @Singleton
 class SchoolEventWriter @Inject constructor(
     private val eventDao: EventDao,
     private val eventRepository: EventRepository,
-    private val eventUseCases: EventUseCases
+    analyticsManager: AnalyticsManager,
+    crashlyticsManager: CrashlyticsManager,
+    reminderScheduler: ReminderScheduler
 ) {
+
+    private val createEvent = CreateEventUseCase(
+        eventRepository,
+        EventValidator(),
+        analyticsManager,
+        crashlyticsManager,
+        reminderScheduler
+    )
+    private val updateEvent = UpdateEventUseCase(
+        eventRepository,
+        EventValidator(),
+        analyticsManager,
+        crashlyticsManager,
+        reminderScheduler
+    )
+    private val deleteEvent = DeleteEventUseCase(
+        eventRepository,
+        analyticsManager,
+        crashlyticsManager,
+        reminderScheduler
+    )
 
     /**
      * What Room holds under each of [ids]: a live event, a pending deletion, or nothing (absent
@@ -58,18 +90,18 @@ class SchoolEventWriter @Inject constructor(
     suspend fun apply(plan: SchoolImportPlan): SchoolImportCounts {
         val failed = mutableSetOf<String>()
         plan.creates.forEach { event ->
-            eventUseCases.createEvent(event, announce = false).onFailure { cause ->
+            createEvent(event, announce = false).onFailure { cause ->
                 Log.w(TAG, "An imported school event could not be created", cause)
                 failed += event.id
             }
         }
         val updated = plan.updates.count { event ->
-            eventUseCases.updateEvent(event, announce = false).onFailure { cause ->
+            updateEvent(event, announce = false).onFailure { cause ->
                 Log.w(TAG, "An imported school event could not be updated", cause)
             }.isSuccess
         }
         val deleted = plan.deletes.count { event ->
-            eventUseCases.deleteEvent(event, announce = false).onFailure { cause ->
+            deleteEvent(event, announce = false).onFailure { cause ->
                 Log.w(TAG, "A school-hours event could not be deleted", cause)
             }.isSuccess
         }
