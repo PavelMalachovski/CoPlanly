@@ -2,6 +2,7 @@ package com.coparently.app.presentation.export
 
 import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.viewModelScope
 import app.cash.turbine.test
 import com.coparently.app.R
 import com.coparently.app.data.chat.DepartedThreadSource
@@ -31,8 +32,10 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -74,6 +77,9 @@ class ExportViewModelTest {
     private val departedThreads = mockk<DepartedThreadSource>()
     private val fallbacks = NameFallbacks(you = "You", coParent = "Co-parent", unknown = "Parent")
 
+    /** Every ViewModel a test made, so tear-down can stop what it left running. */
+    private val viewModels = mutableListOf<ExportViewModel>()
+
     @Before
     fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
@@ -95,6 +101,13 @@ class ExportViewModelTest {
 
     @After
     fun tearDown() {
+        // Nothing calls onCleared in a test, so an export still suspended when its test returns
+        // would outlive it. `ParentsSource` shares on the real Dispatchers.Default, so such an
+        // export can be resumed from that thread at any moment — and once `resetMain` has run,
+        // that resumption dispatches to the absent Android main looper and throws, reported by
+        // the *next* `runTest` as UncaughtExceptionsBeforeTest. Cancel while Main is still the
+        // test dispatcher, so the cancellation completes here and a late resume is a no-op.
+        viewModels.forEach { it.viewModelScope.cancel() }
         Dispatchers.resetMain()
     }
 
@@ -110,7 +123,7 @@ class ExportViewModelTest {
         userRepository,
         departedThreads,
         SavedStateHandle(listOfNotNull(thread?.let { ExportViewModel.ARG_THREAD to it }).toMap())
-    )
+    ).also { viewModels += it }
 
     /** Distinct bytes per verification state, so a test can tell which rendering was saved. */
     private fun bytesFor(record: CommunicationRecord): ByteArray = when (val v = record.verification) {
@@ -205,13 +218,18 @@ class ExportViewModelTest {
 
     @Test
     fun `a second tap while one export runs does not start another`() = runTest {
+        val saving = CompletableDeferred<Unit>()
         coEvery { writer.save(any(), any(), any()) } coAnswers {
+            saving.complete(Unit)
             kotlinx.coroutines.awaitCancellation()
         }
         val vm = viewModel()
 
         vm.export(ExportFormat.CSV, RecordFixtures.labels(), fallbacks)
-        vm.state.first { it.working == ExportFormat.CSV }
+        // `working` is set before the export's coroutine starts, so waiting on it alone let this
+        // test finish while the export still waited for the parents' names on another thread.
+        // Wait until it is really running — parked in the save — before the second tap.
+        saving.await()
         vm.export(ExportFormat.PDF, RecordFixtures.labels(), fallbacks)
 
         assertEquals(ExportFormat.CSV, vm.state.value.working)
