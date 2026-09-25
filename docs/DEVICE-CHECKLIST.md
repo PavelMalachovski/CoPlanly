@@ -117,6 +117,9 @@ so.
 
 ## 0. Before the session: owner ops
 
+> These steps are also in the release order of `docs/AUDIT-2026-09-play-final.md` §4 (phase B
+> and C-5), which says which of them the closed test needs.
+
 Without these, several checks below fail for reasons that have nothing to do with the app. Do
 them the evening before, from the commit you will build the app from.
 

@@ -439,6 +439,10 @@ Everything else in §2 is fixed in this change or is a decision that does not bl
 
 ## 4. Operations checklist (console and deploy)
 
+> The ordered version of this list, merged with the Play and device steps and marked closed test
+> or production, is `docs/AUDIT-2026-09-play-final.md` §4. The items below are kept as the
+> legal reasons for those steps.
+
 - [ ] Firestore → Settings: record the location. If it is in the US, see L-3.
 - [ ] Accept the **Google Cloud Data Processing Addendum** in the Google Cloud console, and the
       **Firebase Data Processing and Security Terms** in Firebase → Project settings → Privacy. Add
