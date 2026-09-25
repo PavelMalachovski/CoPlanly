@@ -30,7 +30,7 @@
     <string name="custody_model_three_four_four_three">Схема 3-4-4-3</string>
     <string name="custody_model_custom">Власний графік</string>
     <string name="custody_model_week_on_week_off_desc">Дитина цілий тиждень в одного з батьків, потім батьки міняються.</string>
-    <string name="custody_model_two_two_three_desc">Схема 2 дні, 2 дні, 3 дні. Частіші переходи.</string>
+    <string name="custody_model_two_two_three_desc">Схема 2 дні, 2 дні, 3 дні. Частіші передачі.</string>
     <string name="custody_model_three_four_four_three_desc">Чергування 3 і 4 днів. Збалансований час у будні та вихідні.</string>
     <string name="custody_model_custom_desc">Створіть власний шаблон графіка.</string>
     <!-- Preview sentences for the custody Preview card. These replace a hardcoded

@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Ukrainian translations of settings_account_strings.xml. -->
 <resources>
-    <string name="settings_co_parent_sync">Синхронізація з другим із батьків</string>
+    <string name="settings_co_parent_sync">Синхронізація родини</string>
     <string name="settings_co_parent_sync_description">Автоматично синхронізує події та інформацію про дитину з другим із батьків</string>
     <string name="settings_sync">Синхронізувати</string>
-    <string name="settings_google_sync">Синхронізація з Google Календарем</string>
+    <string name="settings_google_sync">Google Календар</string>
     <string name="settings_gcal_enable_sync">Увімкнути синхронізацію</string>
     <string name="settings_gcal_private_note">Імпортовані події залишаються на цьому пристрої. Google Календар — особистий, тому другому з батьків із нього нічого не передається.</string>
     <string name="settings_parent_color">Мій колір</string>

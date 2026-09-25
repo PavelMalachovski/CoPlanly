@@ -24,7 +24,7 @@
     <string name="parenting_plan_status_unanswered">Не начато</string>
     <string name="parenting_plan_status_only_yours">Ждём: %1$s</string>
     <string name="parenting_plan_status_only_theirs">Ваша очередь</string>
-    <string name="parenting_plan_status_open">Ещё не согласовано</string>
+    <string name="parenting_plan_status_open">Не согласовано</string>
     <string name="parenting_plan_status_agreed">Согласовано</string>
     <string name="parenting_plan_agree">Я принимаю этот ответ</string>
     <string name="parenting_plan_agree_hint">Если кто-то из вас изменит ответ, согласие снимается и нужно отметить снова.</string>

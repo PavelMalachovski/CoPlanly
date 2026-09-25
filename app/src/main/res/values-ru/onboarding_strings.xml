@@ -45,7 +45,7 @@
     <string name="onboarding_coparent_invite">Пригласить второго родителя</string>
     <string name="onboarding_coparent_later">Не сейчас</string>
     <string name="onboarding_coparent_linked_title">Подключено: %1$s</string>
-    <string name="onboarding_coparent_linked_body">Всё, что уже внесено (%1$s), подтянется к вам. Проверьте это на следующих шагах и дополните недостающее.</string>
+    <string name="onboarding_coparent_linked_body">Всё, что второй родитель (%1$s) уже внёс, подтянется к вам. Проверьте это на следующих шагах и дополните недостающее.</string>
     <string name="onboarding_coparent_fetching">Получаем данные: %1$s…</string>
     <string name="onboarding_coparent_fetching_hint">Можно продолжать: всё, что ещё не пришло, загрузится в фоне.</string>
     <string name="onboarding_coparent_found_title">Уже внесено: %1$s</string>
@@ -55,7 +55,7 @@
     <string name="onboarding_coparent_found_split">Деление расходов</string>
     <string name="onboarding_coparent_found_set">Настроено</string>
     <string name="onboarding_coparent_nothing_yet">Пока ничего не пришло. Данные придут, когда телефон второго родителя (%1$s) будет в сети, — можно продолжать, а всё внесённое появится позже.</string>
-    <string name="onboarding_from_coparent">Внесено: %1$s. Проверьте данные и дополните недостающее.</string>
+    <string name="onboarding_from_coparent">Это внёс второй родитель (%1$s). Проверьте данные и дополните недостающее.</string>
     <string name="onboarding_split_value_named">Вы %1$d / %2$s %3$d</string>
     <string name="onboarding_split_body_linked">Пополам, если не договоритесь иначе. Это станет общим делением для вас и второго родителя (%1$s); изменить его потом можно будет только с его подтверждения — а уже внесённые расходы сохранят своё деление.</string>
     <string name="onboarding_split_agreed_body">Уже согласовано со вторым родителем (%1$s). Сдвиньте ползунок, чтобы предложить другое деление, — его попросят подтвердить.</string>

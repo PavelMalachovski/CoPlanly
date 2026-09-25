@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- MON-17: read-only calendar links for an iPhone or any other calendar app. -->
-    <string name="calendar_feed_settings_title">Подписка на календарь для iPhone и других приложений</string>
-    <string name="calendar_feed_settings_description">Ссылка на семейный календарь только для чтения</string>
-    <string name="calendar_feed_title">Календарь для других приложений</string>
+    <string name="calendar_feed_settings_title">Подписка на календарь</string>
+    <string name="calendar_feed_settings_description">Семейный календарь для iPhone и других приложений, только для чтения</string>
+    <string name="calendar_feed_title">Подписка на календарь</string>
     <string name="calendar_feed_intro">Создайте ссылку только для чтения: по ней Календарь на iPhone — или любое приложение-календарь, которое умеет подписываться на веб-адрес, — будет получать актуальные данные. Приложение обновляет их примерно раз в час.</string>
     <string name="calendar_feed_included">Входят: дни опеки и время общения с именем родителя, а также события, которыми вы делитесь со вторым родителем.</string>
     <string name="calendar_feed_excluded">Не входит: личные события, чат, расходы и записи о детях. В другом календаре ничего нельзя изменить; изменения вносятся здесь, в CoPlanly.</string>

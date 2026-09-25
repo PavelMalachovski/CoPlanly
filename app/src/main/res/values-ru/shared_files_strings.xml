@@ -6,7 +6,7 @@
     <string name="documents_title">Документы</string>
     <string name="documents_shared_notice">Всё здесь видно второму родителю. Личных документов нет: всё, что вы добавите, он тоже сможет открыть.</string>
     <string name="documents_add_file">Добавить файл</string>
-    <string name="documents_take_photo">Сфотографировать</string>
+    <string name="documents_take_photo">Сделать фото</string>
     <string name="documents_empty_title">Документов пока нет</string>
     <string name="documents_empty_description">Добавьте PDF или фото решения суда, письма из школы или удостоверения личности. Второй родитель тоже его увидит.</string>
     <string name="documents_no_family_title">Сначала подключите второго родителя</string>

@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Russian translations of settings_account_strings.xml. -->
 <resources>
-    <string name="settings_co_parent_sync">Синхронизация со вторым родителем</string>
+    <string name="settings_co_parent_sync">Синхронизация семьи</string>
     <string name="settings_co_parent_sync_description">Автоматически синхронизирует события и информацию о ребёнке со вторым родителем</string>
     <string name="settings_sync">Синхронизировать</string>
-    <string name="settings_google_sync">Синхронизация с Google Calendar</string>
+    <string name="settings_google_sync">Google Календарь</string>
     <string name="settings_gcal_enable_sync">Включить синхронизацию</string>
     <string name="settings_gcal_private_note">Импортированные события остаются на этом устройстве. Google Calendar — ваш личный календарь, поэтому второму родителю из него ничего не передаётся.</string>
     <string name="settings_parent_color">Мой цвет</string>

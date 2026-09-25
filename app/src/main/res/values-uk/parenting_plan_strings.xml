@@ -49,7 +49,7 @@
     <string name="parenting_plan_q_health_doctor">У яких лікарів дитина спостерігатиметься і як ви інформуватимете одне одного?</string>
     <string name="parenting_plan_q_health_decisions">Як ви ухвалите рішення про лікування, яке можна відкласти?</string>
     <string name="parenting_plan_q_money_maintenance">Які аліменти сплачуватимуться, ким і якого числа місяця?</string>
-    <string name="parenting_plan_q_money_extraordinary">Як ви поділите разові витрати — окуляри, шкільну поїздку, ноутбук?</string>
+    <string name="parenting_plan_q_money_extraordinary">Як ви поділите разові витрати\u00A0— окуляри, шкільну поїздку, ноутбук?</string>
     <string name="parenting_plan_q_communication_between_parents">Як ви передаватимете одне одному інформацію про дитину і як швидко чекаєте відповіді?</string>
     <string name="parenting_plan_q_communication_disagreement">Що ви зробите, якщо не зможете домовитися?</string>
 
