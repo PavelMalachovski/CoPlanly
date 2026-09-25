@@ -22,6 +22,20 @@
     <uses-permission
         android:name="com.google.android.gms.permission.AD_ID"
         tools:node="remove" />
+    <!--
+      The same SDK (play-services-measurement-api) also merges in the two Privacy Sandbox
+      permissions, which exist to read the Android advertising id through AdServices and to
+      register ad attribution. Neither is used here, and leaving them in the merged manifest
+      contradicts the "no advertising id, no tracking" the Data Safety form and the privacy
+      policy state (docs/AUDIT-2026-09-play-final.md, F-3). Removing them only stops the SDK from
+      calling AdServices; Analytics itself, behind its consent gate, is unaffected.
+    -->
+    <uses-permission
+        android:name="android.permission.ACCESS_ADSERVICES_AD_ID"
+        tools:node="remove" />
+    <uses-permission
+        android:name="android.permission.ACCESS_ADSERVICES_ATTRIBUTION"
+        tools:node="remove" />
 
     <!-- Camera is used for QR pairing only; keep it optional so devices without a
          camera (e.g. some ChromeOS/tablets) can still install the app. -->
