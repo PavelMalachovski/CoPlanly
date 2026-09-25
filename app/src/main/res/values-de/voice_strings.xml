@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Diktieren im Chat-Eingabefeld: wird auf diesem Telefon erkannt, nie aufgenommen oder gesendet. -->
+    <string name="voice_start">Per Sprache eingeben</string>
+    <string name="voice_stop">Spracheingabe beenden</string>
+    <string name="voice_listening">Hört zu…</string>
+    <string name="voice_open_settings">Einstellungen öffnen</string>
+    <string name="voice_permission_rationale">Erlauben Sie das Mikrofon, um per Sprache einzugeben. Ihre Worte werden auf diesem Telefon in Text umgewandelt; der Ton wird weder aufgenommen noch gesendet.</string>
+    <string name="voice_error_nothing_heard">Nichts verstanden. Tippen Sie auf das Mikrofon und versuchen Sie es erneut.</string>
+    <string name="voice_error_language">Die Spracheingabe für diese Sprache ist auf diesem Telefon nicht installiert.</string>
+    <string name="voice_error_busy">Die Spracheingabe wird gerade von einer anderen App verwendet. Versuchen Sie es gleich noch einmal.</string>
+    <string name="voice_error_unavailable">Die Spracheingabe ist auf diesem Telefon gerade nicht verfügbar.</string>
+    <string name="voice_error_other">Die Spracheingabe wurde beendet. Versuchen Sie es erneut.</string>
+</resources>

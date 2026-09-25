@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Voice dictation in the chat composer: recognised on this phone, never recorded or sent. -->
+    <string name="voice_start">Type by voice</string>
+    <string name="voice_stop">Stop voice typing</string>
+    <string name="voice_listening">Listening…</string>
+    <string name="voice_open_settings">Open settings</string>
+    <string name="voice_permission_rationale">To type by voice, allow the microphone. Your words are turned into text on this phone; the audio is not recorded or sent.</string>
+    <string name="voice_error_nothing_heard">Didn\'t catch that. Tap the microphone and try again.</string>
+    <string name="voice_error_language">Voice typing in this language isn\'t installed on this phone.</string>
+    <string name="voice_error_busy">Voice typing is busy in another app. Try again in a moment.</string>
+    <string name="voice_error_unavailable">Voice typing on this phone isn\'t available right now.</string>
+    <string name="voice_error_other">Voice typing stopped. Try again.</string>
+</resources>

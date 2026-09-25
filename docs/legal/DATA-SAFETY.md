@@ -7,7 +7,7 @@
 >
 > Sources: `firestore.rules`, `storage.rules`, `data/local/entity/`, `di/FirebaseModule.kt`,
 > `data/analytics/AnalyticsManager.kt`, `data/crashlytics/CrashlyticsManager.kt`,
-> `data/mlkit/`, `functions/index.js`.
+> `data/mlkit/`, `data/dictation/`, `functions/index.js`.
 >
 > ### Owner must fill
 >
@@ -51,7 +51,8 @@ our processor are declared.
 | App interactions | Yes | No | **Yes** | Analytics — consent-gated since REL-5 |
 | Crash logs | Yes | No | **Yes** | Diagnostics — consent-gated since REL-5 |
 | Diagnostics | Yes | No | **Yes** | Diagnostics — consent-gated since REL-5 |
-| Approximate/precise location | **No** | — | — | Re-checked: the manifest declares only INTERNET, ACCESS_NETWORK_STATE, POST_NOTIFICATIONS and CAMERA, and no location API is called |
+| Approximate/precise location | **No** | — | — | Re-checked: the manifest declares only INTERNET, ACCESS_NETWORK_STATE, POST_NOTIFICATIONS, CAMERA and RECORD_AUDIO, and no location API is called |
+| Voice or sound recordings | **No** | — | — | RECORD_AUDIO serves chat voice dictation only, through the phone's **on-device** recognizer (`data/dictation/OnDeviceSpeechDictation`); the audio is not recorded, stored or sent, and only text the parent chooses to send leaves the phone, as an ordinary message. See the note below |
 | Contacts | **No** | — | — | Re-checked: `ContactsContract` appears nowhere; an emergency contact is typed by hand |
 | Payment info | **No** | — | — | No billing exists yet — **revisit when it does** |
 
@@ -85,6 +86,16 @@ not declare the school login as collected: nothing about it reaches us.
 **Receipt OCR is on-device.** ML Kit's bundled model recognises receipt text without the
 photograph or the text leaving the device. Nothing about it is collected or shared, and it is
 worth saying so in the listing — it is a genuine differentiator in this category.
+
+**Voice dictation in chat is on-device** (September 2026). The composer's microphone turns
+speech into text through Android's on-device speech recognizer
+(`SpeechRecognizer.createOnDeviceSpeechRecognizer`), shown only on Android 13 and later where the
+phone reports one (`isOnDeviceRecognitionAvailable`); there is no fallback to the network
+recognizer. The app never reads the audio buffers, writes no audio file and sends no audio
+anywhere; the recognised text sits in the composer until the parent edits and sends it, and is
+then an ordinary *Message*, already declared. Play's guidance treats data processed only on the
+device as not collected, so *Audio → Voice or sound recordings* is **not** declared. The
+RECORD_AUDIO permission is requested on the first tap of the microphone, never at start.
 
 **Private events never leave the device.** Events marked private are excluded from every sync
 path. They are not collected in Play's sense.

@@ -247,6 +247,12 @@ processing of your child's data in Bakaláři is the school's, under its own pri
 - **Receipt scanning.** When you photograph a receipt, the text is recognised **entirely on
   your device**. The photograph and the recognised text are not sent to any text-recognition
   or AI service.
+- **Voice typing in chat.** If you use the microphone in the chat composer, your phone's own
+  speech recognition turns what you say into text **on the device**. The app offers the
+  microphone only on phones that can do this on the device, and never uses an online speech
+  service instead. The audio is not recorded, stored or sent to us or anyone else; only the text,
+  once you choose to send it, becomes an ordinary chat message. The app asks for microphone
+  access the first time you tap the microphone, and you can withdraw it in your phone's settings.
 - **Private events.** An event you mark private never leaves your device. It is not uploaded,
   not synced, and not visible to your co-parent.
 

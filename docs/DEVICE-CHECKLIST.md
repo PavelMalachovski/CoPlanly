@@ -1031,6 +1031,41 @@ Apple Calendar. **[CI]** the `web` job already parses the feed the way a calenda
   `data/repository/CalendarFeedRepositoryImpl.kt`; server side `functions/calendar-feed.js` and
   `firebase functions:log --only calendarFeed` (it never logs the token).
 
+### 3.21 Voice dictation in chat, on-device only · 1P
+
+Preconditions: a paired account with a chat thread. One phone on **Android 13 or later** whose
+system reports on-device speech recognition (a Pixel 6 or later does; install the language pack
+in the phone's speech settings if asked) and, if you have one, a phone on Android 12 or older. The
+app's microphone appears **only** where recognition runs on the phone — there is no fallback to an
+online recognizer (`OnDeviceSpeechDictation`'s KDoc says why).
+
+- [ ] **Which phones.** On the Android 12 (or older) phone, and on any phone without on-device
+      recognition, the composer has **no microphone** at all — the pill is the field alone. On the
+      Android 13+ phone a microphone sits at the end of the pill, the send button beside it
+      unchanged. TalkBack reads it "Type by voice".
+- [ ] **Permission, in context.** On a fresh install nothing asks for the microphone at start or
+      on opening chat. The first tap of the microphone asks. Deny: a short line under the chips says
+      why the microphone is needed and that the audio is not recorded or sent, with **Open
+      settings**, which opens this app's page in the phone's settings. Allow there and come back:
+      the next tap starts listening without asking.
+- [ ] **Dictate.** Tap the microphone and speak a sentence. The glyph becomes a stop square
+      ("Stop voice typing"), the empty field says "Listening…", and the words appear in the field
+      **as you speak**. It stops by itself when you pause, or tap stop. Edit the text, then send it:
+      it arrives as an ordinary message on the co-parent's phone.
+- [ ] **Appends, never replaces.** Type "Hi." first, then dictate: the result is "Hi. <your
+      words>". Type while it listens: listening stops and what was heard stays.
+- [ ] **Airplane mode.** Switch airplane mode on and dictate again. It still works — the proof that
+      the audio does not leave the phone. (If the phone lacks the language pack offline, the line
+      says the language is not installed; it must never fall back to working only online.)
+- [ ] **Language.** Settings → App → Language → Čeština (or Deutsch/Русский/Українська). Dictate in
+      that language: it is recognised in that language, not in the phone's.
+- [ ] **Reduced motion.** With Remove animations on (Accessibility), the stop glyph stands still;
+      with it off, it breathes slowly.
+- [ ] **Leaving.** While listening, press Home, or switch tab: listening stops (the system's
+      microphone indicator goes off).
+- **If it fails:** `data/dictation/OnDeviceSpeechDictation.kt`, `presentation/chat/DictationViewModel.kt`,
+  `presentation/chat/ChatDictation.kt`, `presentation/common/MicrophonePermission.kt`.
+
 ---
 
 ## 4. Release-build checks

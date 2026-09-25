@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Diktování v poli zprávy chatu: rozpoznává se v tomto telefonu, nikdy se nenahrává ani neodesílá. -->
+    <string name="voice_start">Psát hlasem</string>
+    <string name="voice_stop">Zastavit psaní hlasem</string>
+    <string name="voice_listening">Poslouchám…</string>
+    <string name="voice_open_settings">Otevřít nastavení</string>
+    <string name="voice_permission_rationale">Chcete-li psát hlasem, povolte mikrofon. Vaše slova se převádějí na text v tomto telefonu; zvuk se nenahrává ani neodesílá.</string>
+    <string name="voice_error_nothing_heard">Nepodařilo se rozpoznat. Klepněte na mikrofon a zkuste to znovu.</string>
+    <string name="voice_error_language">Psaní hlasem v tomto jazyce není v tomto telefonu nainstalováno.</string>
+    <string name="voice_error_busy">Psaní hlasem právě používá jiná aplikace. Zkuste to za chvíli.</string>
+    <string name="voice_error_unavailable">Psaní hlasem teď v tomto telefonu není k dispozici.</string>
+    <string name="voice_error_other">Psaní hlasem se zastavilo. Zkuste to znovu.</string>
+</resources>

@@ -53,6 +53,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.coparently.app.R
 import com.coparently.app.domain.chat.ToneCheck
 import com.coparently.app.domain.chat.ToneNudge
@@ -60,6 +63,7 @@ import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.model.Message
 import com.coparently.app.domain.model.MessageSendStatus
 import com.coparently.app.presentation.common.PillChip
+import com.coparently.app.presentation.common.rememberMicrophonePermissionRequester
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.common.valueOrNull
 import com.coparently.app.presentation.theme.Motion
@@ -93,6 +97,8 @@ import kotlinx.coroutines.delay
  *   kept after the co-parent deleted their account ([DepartedThreadBanner]), and by nothing else
  * @param viewModel Chat state
  * @param searchViewModel Search inside this thread (MON-15) — local, this conversation only
+ * @param dictationViewModel Voice dictation into the composer — on the phone only, and drawn only
+ *   where the phone can recognise speech on the device (see `OnDeviceSpeechDictation`)
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -110,7 +116,8 @@ fun ChatScreen(
     onOpenInbox: (() -> Unit)? = null,
     onOpenExport: ((conversationId: String) -> Unit)? = null,
     viewModel: ChatViewModel = hiltViewModel(),
-    searchViewModel: ChatSearchViewModel = hiltViewModel()
+    searchViewModel: ChatSearchViewModel = hiltViewModel(),
+    dictationViewModel: DictationViewModel = hiltViewModel()
 ) {
     val messages by viewModel.messages.collectAsState()
     val currentUserId by viewModel.currentUserId.collectAsState()
@@ -145,6 +152,31 @@ fun ChatScreen(
     }
     val composerFocus = remember { FocusRequester() }
 
+    // Voice dictation: the words land in the composer as they are heard, appended to the draft.
+    // The draft is persisted when a session ends, not on every partial result.
+    val dictation by dictationViewModel.state.collectAsState()
+    val dictationLanguage = rememberDictationLanguageTag()
+    val microphone = rememberMicrophonePermissionRequester(onDenied = dictationViewModel::onPermissionDenied)
+    LaunchedEffect(dictationViewModel, conversationId) {
+        dictationViewModel.text.collect { dictated ->
+            composerText = dictated.text
+            if (dictated.final) viewModel.onDraftChanged(conversationId, dictated.text)
+        }
+    }
+    // The microphone never outlives what the parent sees: leaving the thread, or the app going to
+    // the background, ends the session.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, conversationId) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP) dictationViewModel.cancel()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            dictationViewModel.cancel()
+        }
+    }
+
     // Bumped only when something *seeds* the composer, so the refocus below fires on that and on
     // nothing else — keying the effect on the text itself refocused on every keystroke. Plain
     // `remember`, not `rememberSaveable`: a rotation (or process-death restore) is not a new seed,
@@ -178,6 +210,11 @@ fun ChatScreen(
             delay(Motion.HIGHLIGHT_HOLD_MS.toLong())
             revealTarget = null
         }
+    }
+
+    // The composer gives way to search, and so does its microphone.
+    LaunchedEffect(searching) {
+        if (searching) dictationViewModel.cancel()
     }
 
     // Back closes search first, and only then leaves the thread.
@@ -288,6 +325,7 @@ fun ChatScreen(
                 }
 
                 if (!nudge.isEmpty) ToneNudgeHint(nudge)
+                dictation.failure?.let { DictationFailureNotice(it) }
 
                 // The attach button beside the field, not inside `MessageInput`: it is its own flow
                 // (picker, confirmation, outbox) and the composer stays a text field and a send.
@@ -301,13 +339,38 @@ fun ChatScreen(
                         onValueChange = {
                             composerText = it
                             viewModel.onDraftChanged(conversationId, it)
+                            // Typing takes over from the voice; the words heard so far stay.
+                            dictationViewModel.cancel()
+                            dictationViewModel.dismissFailure()
                         },
                         onSendMessage = { content ->
+                            dictationViewModel.cancel()
                             viewModel.sendMessage(content)
                             composerText = ""
                         },
                         modifier = Modifier.weight(1f),
-                        focusRequester = composerFocus
+                        focusRequester = composerFocus,
+                        placeholder = stringResource(
+                            if (dictation.listening) R.string.voice_listening else R.string.chat_type_message
+                        ),
+                        trailingIcon = if (dictation.available) {
+                            {
+                                DictationMicButton(
+                                    listening = dictation.listening,
+                                    onClick = {
+                                        if (dictation.listening) {
+                                            dictationViewModel.stop()
+                                        } else {
+                                            microphone.request {
+                                                dictationViewModel.start(composerText, dictationLanguage)
+                                            }
+                                        }
+                                    }
+                                )
+                            }
+                        } else {
+                            null
+                        }
                     )
                 }
             }

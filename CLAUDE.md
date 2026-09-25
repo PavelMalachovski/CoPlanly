@@ -1590,6 +1590,18 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     a held message back to the draft store if the ViewModel is cleared rather than sending it. The
     hint (`ToneCheck`) is three string tests computed while rendering: it never disables Send, is
     never stored, logged or sent, and never calls itself "AI" — a tone model is MON-12.
+    **Voice dictation is on-device only, and free** (September 2026, owner decision: the audio must
+    not leave the phone). The composer's microphone (`ChatDictation.kt`, the pill's trailing icon,
+    so the send button keeps its place) goes through `domain/dictation/SpeechDictation`, bound to
+    `data/dictation/OnDeviceSpeechDictation`: `SpeechRecognizer.createOnDeviceSpeechRecognizer`,
+    shown only on API 33+ where `isOnDeviceRecognitionAvailable` says so — below that, or without
+    one, there is **no button**, because `createSpeechRecognizer` binds whatever service the phone
+    chose (usually Google's, which may send audio) and `EXTRA_PREFER_OFFLINE` is only a preference.
+    Never switch it to the network recognizer or a cloud speech API without an owner decision, and
+    update the privacy policy and `DATA-SAFETY.md` if that is ever decided. RECORD_AUDIO is asked on
+    the first tap (`rememberMicrophonePermissionRequester`), dictated words are *appended* to the
+    draft (`DictationText.merge`), audio buffers are never read, and the session ends when the
+    parent types, sends, leaves or the app stops (`DictationViewModel`, device check §3.21).
 
 29. **A professional reads one family, with both parents' consent, until a date, and never the
     chat** (MON-18, September 2026). A mediator, lawyer, guardian ad litem or therapist holds
