@@ -12,7 +12,8 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * The bytes of vault documents and chat attachments in Cloud Storage (MON-23).
+ * The bytes of vault documents, chat attachments (MON-23) and record photographs (L-4) in Cloud
+ * Storage.
  *
  * Addressed by path only. **No download URL is ever requested**: a token URL bypasses
  * `storage.rules` for whoever holds it, and the whole point of the MON-23 blocks is that the
@@ -56,6 +57,28 @@ class SharedFileStorage @Inject constructor(
             }
         }
         task.await()
+    }
+
+    /**
+     * Uploads [bytes] to [path], stamped like [upload] — for a record photograph, which is
+     * re-encoded in memory rather than staged as a file (L-4). Same idempotence across a lost
+     * response, and the same refusal of an overwrite by the rule.
+     */
+    suspend fun uploadBytes(
+        path: String,
+        bytes: ByteArray,
+        contentType: String,
+        sha256: String,
+        uploaderUid: String
+    ) {
+        val ref = storage.reference.child(path)
+        if (storedDigest(ref) == sha256) return
+        val metadata = storageMetadata {
+            setContentType(contentType)
+            setCustomMetadata(META_UPLOADER, uploaderUid)
+            setCustomMetadata(META_SHA256, sha256)
+        }
+        ref.putBytes(bytes, metadata).await()
     }
 
     /** True when an object carrying [sha256] is stored at [path]. */

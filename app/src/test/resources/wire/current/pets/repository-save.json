@@ -19,7 +19,7 @@
     ],
     "name": "Rex",
     "photos": [
-      "pet_photos/uidA/pet-current-1/1.jpg"
+      "ph1|pet_photos/uidA__uidB/pet-current-1/5e2f7d31.jpg|image/jpeg|48213|9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
     ],
     "sharedWith": [
       "uidA",
@@ -44,7 +44,7 @@
     "id": "pet-current-1",
     "name": "Rex",
     "photos": [
-      "pet_photos/uidA/pet-current-1/1.jpg"
+      "ph1|pet_photos/uidA__uidB/pet-current-1/5e2f7d31.jpg|image/jpeg|48213|9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
     ],
     "species": "DOG",
     "updatedAtMillis": 1777747510000,

@@ -61,8 +61,8 @@ private const val UNZOOMED_EPSILON = 1.01f
  * receipt closed it. Once zoomed, [onTap] is not called at all: the way out is the close control
  * or a double tap back to fit.
  *
- * @param model What Coil should load — a download URL, a content URI, anything `AsyncImage`
- *   accepts.
+ * @param model What Coil should load — a stored record photo (`ViewablePhoto`), a content URI,
+ *   anything `AsyncImage` accepts.
  * @param contentDescription Read by a screen reader; null when a caller has already described
  *   this image on the way in.
  * @param modifier Modifier applied to the gesture surface.

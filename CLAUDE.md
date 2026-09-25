@@ -410,7 +410,8 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   is how a broken `expenses` delete rule shipped once already. `firestore-tests/` runs the
   rules offline against the Firestore emulator; add a case there first. See its README —
   it needs a JDK 21+ on `PATH`, not just in `JAVA_HOME`. It covers **`storage.rules` too**
-  as of the September 2026 pass (`rules/storage.test.js`, Storage emulator on 9199), which
+  as of the September 2026 pass (`rules/storage-record-photos.test.js` and
+  `rules/storage-shared-files.test.js`, Storage emulator on 9199), which
   had no coverage at all before — the directory name is older than its contents. Those tests
   prove the ruleset *in this repository*; only a deploy settles what the live bucket enforces,
   which is exactly the gap the `pet_photos` entry below describes.
@@ -538,7 +539,10 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   **files** (`TwoParentAttachmentsTest`, Storage emulator and the real `storage.rules`): a chat
   attachment stays off the server while its upload fails and arrives after the outbox retry, the
   co-parent's download matches its bytes, a stranger's is refused, and a vault document opens for
-  the co-parent, who cannot delete it, while the uploader's delete is a tombstone. Each
+  the co-parent, who cannot delete it, while the uploader's delete is a tombstone. And **record
+  photos** (`TwoParentRecordPhotosTest`, L-4): all four kinds under the family's path, the
+  co-parent's digest-checked download, a stranger refused, either parent deleting, no overwrite,
+  and a photo taken before pairing moved into the family by the real `onFamilyCreated`. Each
   `EmulatorParent` has `files`, `cache`, `no_backup` and preference names of its own
   (`PhoneDirectories`) — shared, Bob would "open" Alice's file from her leftover copy, and two
   `EncryptedPreferences` over one file overwrite each other (SEC-5). And **one parent on screen**
@@ -1694,6 +1698,9 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     (`AUTHORED_FILES.family_documents`, keyed on the stored `familyId`, never a blank prefix), and
     every conversation's `chat_attachments/{id}/` with the thread.
     None of it works live until `firebase deploy --only storage` — the known issue below.
+    **Record photos follow the same shape since L-4** (Legal item 8): the same `SharedFileStorage`
+    and `SharedFileCache`, a `ph1|` reference instead of `att1|`, and `solo_{uid}` folders before a
+    family exists.
 
 32. **The parenting plan never becomes a schedule by itself; a proposal cites it and never parses
     it** (MON-21, September 2026, owner decision). `domain/parentingplan/PlanScheduleLink.kt`
@@ -1865,10 +1872,47 @@ below hold what it fixed in place.
      links both.
    - Telemetry is never described as "anonymous". It carries a pseudonymous installation
      identifier (L-13).
-8. **L-4 is open and blocks publication**: medical, pet, receipt and event photos are reachable by
-   any signed-in account that knows the path, and their download URLs outlive a revoked grant.
-   Don't add a Storage prefix in that shape. A new one follows MON-23's: a family-keyed path,
-   `isOneOfPair`, downloads as the reader, no download URL.
+8. **A record's photo is stored under its family's path, read only by the family's two parents,
+   and never reached by a download URL** (L-4, September 2026; MON-23's shape, item 31). Medical,
+   pet, receipt and event photos live at `{prefix}/{owner}/{recordId}/{random}.jpg`
+   (`domain/files/RecordPhotoPaths`), `{owner}` the record's family id, or `solo_{uid}` while the
+   uploader has no co-parent. One interface, `RecordPhotoStorage` (`FirebaseImageStorage`), for
+   all four. Seven things not to undo.
+   - **The gate is the path.** `storage.rules` lets the two uids of a family id read, create and
+     delete (`isOneOfPair`), and the uploader alone a `solo_` path. **Both parents may delete** a
+     family photo (either may edit the record); nothing may be overwritten (`resource == null`); a
+     create stamps `uploader` and `sha256`, is an image and is under 10 MB (`RecordPhotoPolicy`,
+     pinned by `RecordPhotoTest`). The flat layouts from before L-4 match no block.
+   - **No download URL, ever.** The record's existing field (`imageUrl`, `receiptUrl`, the entries
+     of `medicalPhotos`/`photos` — names kept, no schema bump) holds a `RecordPhotoCodec` string,
+     `ph1|path|contentType|size|sha256`, never Gson. A screen draws it through Coil's
+     `RecordPhotoFetcher` (registered by `CoPlanlyApplication` as `ImageLoaderFactory`), which
+     downloads as the signed-in user into `SharedFileCache` and keeps a copy only when the digest
+     matches.
+   - **Only the two parents see a photo** (owner decision). `RecordPhotoAccess.viewable` answers null
+     for anybody the path does not name — a guest, a calendar friend, a professional — and for a
+     reference filed under another record or family; the screen then draws the record without the
+     photo, no placeholder. The viewer is `LocalPhotoViewerUid` (provided by `MainActivity`; its
+     default, null, draws nothing).
+   - **A legacy value is never fetched.** A download URL or flat path from an older build decodes to
+     null, is not shown, and is dropped on the next save; `purgeLegacyPhotoPaths` (operator-run)
+     deletes those objects and clears those fields server-side. Pre-release test data, by owner
+     decision — don't add a migration.
+   - **A `solo_` photo moves when the pair forms, and only then.** `movePhotosToFamily`
+     (`functions/record-photos.js`) runs from `onFamilyCreated` and `backfillRecordFamilyIds`, only
+     for a family `stampOwnBlankFamilyIds` resolved (item 22), only on the uploader's own records
+     naming it: copy, rewrite the reference, then delete. The client resolves a `solo_` reference
+     on a family's record to the family path itself (`RecordPhotoPaths.candidatesFor`), so a phone
+     that writes its stale reference back does not hide the photo from the co-parent.
+   - **Replacing is upload-then-delete.** Every upload is a new random name; the old object is
+     deleted after the save (medical and pet photos: delete first and keep the reference if that
+     fails, as before).
+   - **Files go with records.** `sweepDeletedDocuments` removes a record's photo folders with its
+     tombstone (`FILES_SWEPT_WITH_TOMBSTONE`), account deletion those of the departing parent's
+     records plus their `solo_` folders (`AUTHORED_FILES`); a photo they added to the co-parent's
+     record stays with that record.
+   The cost is MON-23's: a path does not narrow at unpair. A new Storage prefix follows this shape.
+   None of it is live until `firebase deploy --only storage`, then `purgeLegacyPhotoPaths` once.
 
 ## Known issues / do not "fix" silently
 
@@ -1910,16 +1954,18 @@ whatever you were doing; a stale "known issue" costs more than a missing one.
   the entry gave still holds: never route the first agreement through `propose`.
 
 - **`storage.rules` has never been deployed past its July 2026 state, and that is why attaching a
-  photo to a pet fails** — and why the MON-23 vault and chat attachments (item 31) cannot upload
-  anything live yet. The file in this repo covers `receipts/`, `event_images/`,
-  `medical_photos/`, `pet_photos/`, `family_documents/` and `chat_attachments/`; the live bucket, on the evidence, still covers only the
-  first two, so `pet_photos/**` falls through to `match /{allPaths=**} { allow read, write: if
-  false; }` and every pet — and, silently, every medical — photo upload is refused. The client
+  photo to a pet fails** — and why the MON-23 vault and chat attachments (item 31) and every
+  record photo since L-4 (Legal item 8) cannot upload anything live yet. The file in this repo
+  covers `receipts/`, `event_images/`, `medical_photos/` and `pet_photos/` under family-keyed
+  paths, plus `family_documents/` and `chat_attachments/`; the live bucket, on the evidence, still
+  covers only flat `receipts/` and `event_images/`, so `pet_photos/**` falls through to
+  `match /{allPaths=**} { allow read, write: if false; }` and every pet — and, silently, every
+  medical — photo upload is refused. The client
   path is sound and was ruled out end to end. **The fix is an ops action nobody has taken:
   `firebase deploy --only storage`**, which also closes the still-unchecked box at
   `docs/REVIEW-2026-07-23.md:65`. Nothing caught this for a long time: `firebase.json` configured a
   Firestore emulator only, and Storage rules had no test coverage at all. They do now
-  (`firestore-tests/rules/storage.test.js`, September 2026) — and the suite passes, which is
+  (`firestore-tests/rules/storage-record-photos.test.js`, September 2026) — and the suite passes, which is
   the point worth understanding rather than a contradiction. It exercises the ruleset **in
   this repository**, where `pet_photos/**` is present and correct; the failure is that the
   bucket enforces an older deploy. A test can prove the file is right and still not tell you

@@ -44,10 +44,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.coparently.app.R
+import com.coparently.app.domain.files.RecordPhotoKind
 import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.common.FamilyMember
 import com.coparently.app.presentation.common.FullScreenImageDialog
 import com.coparently.app.presentation.common.ParentNames
+import com.coparently.app.presentation.common.rememberRecordPhoto
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
@@ -208,12 +210,15 @@ internal fun EventPreviewContent(
             }
         }
 
-        event.imageUrl?.let { url ->
+        // Only the family's two parents see an event's photo (L-4): a calendar friend or a
+        // professional previews the same event without it, and a legacy download URL is never
+        // fetched — `rememberRecordPhoto` answers null for all three, and nothing is drawn.
+        rememberRecordPhoto(event.imageUrl, RecordPhotoKind.EVENT, event.id, event.familyId)?.let { photo ->
             // Cropped to 180dp here, so the photo is a hint at what is attached rather than
             // the thing itself; tapping opens the zoomable viewer that shows all of it.
             var viewingPhoto by rememberSaveable { mutableStateOf(false) }
             AsyncImage(
-                model = url,
+                model = photo,
                 contentDescription = stringResource(R.string.image_viewer_open),
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
@@ -224,7 +229,7 @@ internal fun EventPreviewContent(
             )
             if (viewingPhoto) {
                 FullScreenImageDialog(
-                    model = url,
+                    model = photo,
                     contentDescription = stringResource(R.string.event_preview_photo),
                     onDismiss = { viewingPhoto = false }
                 )

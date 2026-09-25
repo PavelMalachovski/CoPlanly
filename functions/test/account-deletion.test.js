@@ -498,24 +498,42 @@ describe('deleteAccountDataImpl', () => {
   // The documents were erased and the files they named were not: a child's medical photographs
   // stayed in the bucket under ids nothing could look up any more. The files have to go first,
   // while the documents still say which files exist.
-  it('deletes the files of authored records, and only those', async () => {
-    const seed = family();
-    seed.pets = [{id: 'pet-1', createdByFirebaseUid: ALICE, sharedWith: [ALICE, BOB]}];
-    const db = fakeDb(seed);
-    const bucket = fakeBucket();
+  // L-4: a record's photos are in its family's folder and, for one taken before the uploader had
+  // a family, in their personal `solo_` folder. Both go with the record; the departing parent's
+  // own `solo_` folders go whole.
+  it('deletes the photo folders of authored records and the parent\'s own, and only those',
+      async () => {
+        const seed = family();
+        const fam = `${ALICE}__${BOB}`;
+        seed.events.forEach((e) => Object.assign(e, {familyId: fam}));
+        seed.pets = [{id: 'pet-1', createdByFirebaseUid: ALICE, sharedWith: [ALICE, BOB], familyId: fam}];
+        const db = fakeDb(seed);
+        const bucket = fakeBucket();
 
-    const result = await myFunctions.deleteAccountDataImpl(db, ALICE, bucket);
+        const result = await myFunctions.deleteAccountDataImpl(db, ALICE, bucket);
 
-    assert.deepStrictEqual(bucket.deletedObjects.sort(),
-        ['event_images/ev-alice.jpg', 'receipts/ex-1.jpg']);
-    // The chat's files stay with the kept thread (see the retention cases above).
-    assert.deepStrictEqual(bucket.deletedPrefixes.sort(),
-        ['medical_photos/ch-1/', 'pet_photos/pet-1/']);
-    assert.ok(!bucket.deletedObjects.includes('event_images/ev-bob.jpg'),
-        'the co-parent\'s event photo was deleted');
-    assert.strictEqual(result.storage, 4);
-    assert.strictEqual(result.chat_attachments, 0);
-  });
+        assert.deepStrictEqual(bucket.deletedObjects, []);
+        // The chat's files stay with the kept thread (see the retention cases above).
+        assert.deepStrictEqual(bucket.deletedPrefixes.sort(), [
+          `event_images/${fam}/ev-alice/`,
+          `event_images/solo_${ALICE}/`,
+          `event_images/solo_${ALICE}/ev-alice/`,
+          `medical_photos/solo_${ALICE}/`,
+          `medical_photos/solo_${ALICE}/ch-1/`,
+          `pet_photos/${fam}/pet-1/`,
+          `pet_photos/solo_${ALICE}/`,
+          `pet_photos/solo_${ALICE}/pet-1/`,
+          `receipts/solo_${ALICE}/`,
+          `receipts/solo_${ALICE}/ex-1/`,
+        ].sort());
+        assert.ok(!bucket.deletedPrefixes.some((p) => p.includes('ev-bob')),
+            'the co-parent\'s event photo was deleted');
+        assert.ok(!bucket.deletedPrefixes.includes(`event_images/solo_${BOB}/`),
+            'the co-parent\'s own folder was deleted');
+        // Four personal folders, and the folders of four records.
+        assert.strictEqual(result.storage, 8);
+        assert.strictEqual(result.chat_attachments, 0);
+      });
 
   // MON-23. The vault's files are the departing parent's uploads, and its documents are authored
   // records like any other; the co-parent's own filings stay, with the departing uid scrubbed.
@@ -566,7 +584,7 @@ describe('deleteAccountDataImpl', () => {
 
   it('keeps the documents when a file cannot be deleted, so a retry finds it', async () => {
     const db = fakeDb(family());
-    const bucket = fakeBucket({failOn: 'receipts/ex-1.jpg'});
+    const bucket = fakeBucket({failOn: `receipts/solo_${ALICE}/ex-1/`});
 
     await assert.rejects(myFunctions.deleteAccountDataImpl(db, ALICE, bucket));
 
@@ -692,6 +710,7 @@ function fakeBucket(options) {
       };
     },
     async deleteFiles(opts) {
+      if (opts.prefix === failOn) throw new Error(`storage unavailable for ${opts.prefix}`);
       deletedPrefixes.push(opts.prefix);
     },
   };

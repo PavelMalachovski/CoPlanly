@@ -16,6 +16,7 @@ const admin = require('firebase-admin');
 // (`tools/e2e/pairing-smoke.js`). Production never saw it, because production has no proxy.
 const {FieldValue, Timestamp} = require('firebase-admin/firestore');
 const exportReceipts = require('./export-receipts');
+const recordPhotos = require('./record-photos');
 
 /**
  * Where every function here runs. The European Union, because the payloads are a family's own —
@@ -1696,8 +1697,8 @@ exports.sweepRetentionLimits = regional.runWith({timeoutSeconds: 540}).pubsub
  * A collection listed here without a client that writes tombstones sweeps nothing; a client that
  * writes tombstones into a collection *not* listed here keeps them for ever. Add to both halves.
  *
- * `family_documents` joined with the vault (MON-23). It is the one collection whose sweep also
- * removes a file — see [FILES_SWEPT_WITH_TOMBSTONE].
+ * `family_documents` joined with the vault (MON-23). Every collection here also loses its files
+ * with the document — see [FILES_SWEPT_WITH_TOMBSTONE].
  */
 const TOMBSTONED_COLLECTIONS = ['events', 'expenses', 'child_info', 'pets', 'family_documents'];
 
@@ -1712,11 +1713,13 @@ exports.TOMBSTONED_COLLECTIONS = TOMBSTONED_COLLECTIONS;
  * bucket for good. The file is removed **before** the document, for the reason
  * [deleteAuthoredFiles] gives: the document is the only record of where the file is.
  *
- * The older collections are deliberately not listed. Their photos are addressed by download URL
- * from the record, and whether a tombstoned event's photo should outlive the sweep has never
- * been decided; listing them here would decide it silently.
+ * The four record collections joined with L-4 (owner decision): a deleted event's photo, a deleted
+ * expense's receipt and a deleted child's or pet's photos go with the tombstone, 90 days after the
+ * deletion. Their photos live in the record's own folders (`recordPhotoFolders` — the family's and
+ * the creator's personal one), which no client may list, so once the tombstone is gone nothing
+ * could ever name them again.
  */
-const FILES_SWEPT_WITH_TOMBSTONE = ['family_documents'];
+const FILES_SWEPT_WITH_TOMBSTONE = ['events', 'expenses', 'child_info', 'pets', 'family_documents'];
 
 exports.FILES_SWEPT_WITH_TOMBSTONE = FILES_SWEPT_WITH_TOMBSTONE;
 
@@ -2955,14 +2958,20 @@ exports.stampOwnBlankFamilyIds = stampOwnBlankFamilyIds;
  * are in here rather than in a callable of their own so the ops runbook keeps four steps: a fifth
  * one is a step somebody skips.
  *
+ * It also moves each resolved author's personal photos into the family's folder (L-4,
+ * [recordPhotos.movePhotosToFamily]) when a bucket is given — the backstop for a photo whose
+ * record reached the server after `onFamilyCreated` had run.
+ *
  * @param {FirebaseFirestore.Firestore} db Firestore instance.
+ * @param {?Object=} bucket The Storage bucket; without it no photo is moved.
  * @return {Promise<{users: number, stamped: number, skipped: number, failed: number,
  *   unresolved: number, perCollection: !Object<string, number>, skippedReasons: {notMutual:
  *   number, missingAccount: number, unpaired: number, ambiguous: number,
  *   priorRelationship: number}, calendarFriends: {stamped: number, skipped: number,
- *   alreadyStamped: number}}>} What the migration did.
+ *   alreadyStamped: number}, photos: {moved: number, rewritten: number, missing: number}}>}
+ *   What the migration did.
  */
-async function backfillRecordFamilyIdsImpl(db) {
+async function backfillRecordFamilyIdsImpl(db, bucket) {
   const summary = {
     users: 0,
     stamped: 0,
@@ -2974,6 +2983,7 @@ async function backfillRecordFamilyIdsImpl(db) {
       notMutual: 0, missingAccount: 0, unpaired: 0, ambiguous: 0, priorRelationship: 0,
     },
     calendarFriends: {stamped: 0, skipped: 0, alreadyStamped: 0},
+    photos: {moved: 0, rewritten: 0, missing: 0},
   };
   FAMILY_SCOPED_COLLECTIONS.forEach(({name}) => {
     summary.perCollection[name] = 0;
@@ -2996,6 +3006,12 @@ async function backfillRecordFamilyIdsImpl(db) {
       Object.keys(outcome.perCollection).forEach((name) => {
         summary.perCollection[name] += outcome.perCollection[name];
       });
+      if (bucket) {
+        const photos = await recordPhotos.movePhotosToFamily(db, bucket, uid, outcome.familyId);
+        Object.keys(summary.photos).forEach((key) => {
+          summary.photos[key] += photos[key];
+        });
+      }
     } catch (err) {
       console.error(`backfillRecordFamilyIds failed for ${uid}`, err);
       summary.failed++;
@@ -3025,13 +3041,21 @@ exports.backfillRecordFamilyIdsImpl = backfillRecordFamilyIdsImpl;
  * unpaired and re-paired elsewhere by the time it runs, nothing is stamped with a family that is
  * no longer theirs.
  *
+ * **It also moves the photos each member took alone** (L-4, [recordPhotos.movePhotosToFamily]):
+ * for a member whose family was resolved — never for one skipped — the photos on their own records
+ * that now name this family are copied from their `solo_` folder into the family's, the references
+ * rewritten, and the personal copies deleted.
+ *
  * @param {FirebaseFirestore.Firestore} db Firestore instance.
  * @param {string} familyId The id of the family document that was created.
  * @param {?Object} family Its data.
+ * @param {?Object=} bucket The Storage bucket; without it no photo is moved (tests of the stamping
+ *     alone).
  * @return {Promise<!Object<string, {reason: string, stamped: number, unresolved: number}>>} The
- *   outcome per member uid; empty when the document does not describe a pair.
+ *   outcome per member uid, with `photos` (moved, rewritten, missing) when a bucket was given;
+ *   empty when the document does not describe a pair.
  */
-async function stampFamilyOnCreateImpl(db, familyId, family) {
+async function stampFamilyOnCreateImpl(db, familyId, family, bucket) {
   const members = family && Array.isArray(family.members) ? family.members : [];
   const outcomes = {};
   if (members.length !== 2 || members[0] === members[1] ||
@@ -3048,6 +3072,10 @@ async function stampFamilyOnCreateImpl(db, familyId, family) {
     outcomes[uid] = {
       reason: outcome.reason, stamped: outcome.stamped, unresolved: outcome.unresolved,
     };
+    if (bucket && outcome.reason === '') {
+      outcomes[uid].photos =
+          await recordPhotos.movePhotosToFamily(db, bucket, uid, outcome.familyId);
+    }
   }
   return outcomes;
 }
@@ -3078,7 +3106,7 @@ exports.onFamilyCreated = regional.runWith({timeoutSeconds: 540}).firestore
     .onCreate(async (snap, context) => {
       try {
         const outcomes = await stampFamilyOnCreateImpl(
-            admin.firestore(), context.params.familyId, snap.data());
+            admin.firestore(), context.params.familyId, snap.data(), admin.storage().bucket());
         console.log(`Family ${context.params.familyId} stamped: ${JSON.stringify(outcomes)}`);
       } catch (err) {
         console.error(`onFamilyCreated failed for ${context.params.familyId}`, err);
@@ -3163,7 +3191,34 @@ exports.backfillRecordFamilyIds = regional.runWith({timeoutSeconds: 540}).https.
         throw new functions.https.HttpsError(
             'permission-denied', 'Operator access only', {reason: 'not-operator'});
       }
-      return backfillRecordFamilyIdsImpl(admin.firestore());
+      return backfillRecordFamilyIdsImpl(admin.firestore(), admin.storage().bucket());
+    },
+);
+
+exports.purgeLegacyPhotoPathsImpl = recordPhotos.purgeLegacyPhotoPathsImpl;
+exports.movePhotosToFamily = recordPhotos.movePhotosToFamily;
+
+/**
+ * Deletes what the record-photo layouts from before L-4 left behind — every object under the flat
+ * `receipts/{id}.jpg`, `event_images/{id}.jpg`, `medical_photos/{childId}/{photoId}.jpg` and
+ * `pet_photos/{petId}/{photoId}.jpg` paths, and every download URL or flat path the records still
+ * carry. See [recordPhotos.purgeLegacyPhotoPathsImpl].
+ *
+ * Operator-only on the same allow-list as the other backfills. Run once, after `storage.rules`
+ * with the L-4 blocks is deployed (from then on no client can reach those objects anyway);
+ * idempotent, so a second run is harmless. An owner decision: before release these are test data,
+ * so they are deleted rather than migrated.
+ *
+ * @return {Promise<{objectsDeleted: number, recordsCleared: number,
+ *   perCollection: !Object<string, number>}>} What was removed.
+ */
+exports.purgeLegacyPhotoPaths = regional.runWith({timeoutSeconds: 540}).https.onCall(
+    async (data, context) => {
+      if (!isBackfillOperator(context)) {
+        throw new functions.https.HttpsError(
+            'permission-denied', 'Operator access only', {reason: 'not-operator'});
+      }
+      return recordPhotos.purgeLegacyPhotoPathsImpl(admin.firestore(), admin.storage().bucket());
     },
 );
 
@@ -3472,16 +3527,19 @@ exports.AUTHORED_COLLECTIONS = AUTHORED_COLLECTIONS;
 /**
  * Where each authored collection keeps its files in Cloud Storage, keyed by the document id.
  *
- * Mirrors `FirebaseImageStorage` on the client, which derives every path from the id of the
- * record the file belongs to: one object per event photo and per receipt, and a folder of
- * UUID-named objects per child's medical notes and per pet. `budgets` has no files. A layout
- * added on the client without an entry here is a file an erased account leaves behind.
+ * Mirrors `FirebaseImageStorage` on the client (L-4): a record's photos are in its own folder under
+ * its family — `{prefix}/{familyId}/{recordId}/` — or, for a photo taken before the uploader had a
+ * family, under their personal `{prefix}/solo_{uid}/{recordId}/`; both are deleted
+ * (`recordPhotoFolders`). A photo the departing parent added to the co-parent's record stays with
+ * that record, the way a vault document belongs to whoever filed it: the record is what it is a
+ * photo *of*. `budgets` has no files. A layout added on the client without an entry here is a file
+ * an erased account leaves behind.
  */
 const AUTHORED_FILES = {
-  events: {object: (id) => `event_images/${id}.jpg`},
-  expenses: {object: (id) => `receipts/${id}.jpg`},
-  child_info: {prefix: (id) => `medical_photos/${id}/`},
-  pets: {prefix: (id) => `pet_photos/${id}/`},
+  events: {folders: (id, data) => recordPhotos.recordPhotoFolders('events', id, data)},
+  expenses: {folders: (id, data) => recordPhotos.recordPhotoFolders('expenses', id, data)},
+  child_info: {folders: (id, data) => recordPhotos.recordPhotoFolders('child_info', id, data)},
+  pets: {folders: (id, data) => recordPhotos.recordPhotoFolders('pets', id, data)},
   // The vault (MON-23) keys its folder by family as well as by document, so the layout reads the
   // stored `familyId`. A document without one cannot exist under the create rule; the guard in
   // [deleteFilesOf] is for a hand-edited one, which must not become a prefix of the whole vault.
@@ -3508,6 +3566,12 @@ exports.AUTHORED_FILES = AUTHORED_FILES;
 async function deleteAuthoredFiles(db, bucket, uid) {
   if (!bucket) return 0;
   let deleted = 0;
+  // The departing parent's personal photo folders, whole: photos taken before they had a family,
+  // on records that may since have gone or never saved (L-4).
+  for (const folder of recordPhotos.soloPhotoFolders(uid)) {
+    await bucket.deleteFiles({prefix: folder, force: true});
+    deleted++;
+  }
   for (const collection of Object.keys(AUTHORED_FILES)) {
     const snap = await db.collection(collection)
         .where('createdByFirebaseUid', '==', uid)
@@ -3534,9 +3598,12 @@ exports.deleteAuthoredFiles = deleteAuthoredFiles;
 async function deleteFilesOf(bucket, collection, id, data) {
   const layout = AUTHORED_FILES[collection];
   if (!layout) return false;
-  if (layout.object) {
-    await bucket.file(layout.object(id, data || {})).delete({ignoreNotFound: true});
-    return true;
+  if (layout.folders) {
+    const folders = layout.folders(id, data || {});
+    for (const folder of folders) {
+      await bucket.deleteFiles({prefix: folder, force: true});
+    }
+    return folders.length > 0;
   }
   if (collection === 'family_documents' && !(data && data.familyId)) return false;
   await bucket.deleteFiles({prefix: layout.prefix(id, data || {}), force: true});

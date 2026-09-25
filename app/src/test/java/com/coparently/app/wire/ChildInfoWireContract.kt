@@ -70,7 +70,10 @@ internal object ChildInfoWireContract : WireContract {
         medicalNotes = "Asthma",
         schoolInfo = SchoolInfo(name = "ZS Vinohrady", grade = "2"),
         medicalProfile = MedicalProfile(intolerances = listOf("lactose")),
-        medicalPhotos = listOf("medical_photos/uidA/child-current-1/1.jpg"),
+        medicalPhotos = listOf(
+            "ph1|medical_photos/uidA__uidB/child-current-1/0b6c4a9e.jpg|image/jpeg|48213|" +
+                "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
+        ),
         guests = mapOf(
             "guest-1" to GuestGrant(
                 uid = "guest-1",

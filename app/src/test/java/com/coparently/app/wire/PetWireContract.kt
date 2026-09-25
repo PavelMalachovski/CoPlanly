@@ -64,7 +64,10 @@ internal object PetWireContract : WireContract {
         medications = listOf(Medication(name = "Wormer", dosage = "1 tablet", frequency = "quarterly")),
         vaccinations = listOf(Vaccination(name = "Rabies", date = LocalDate.of(2026, 2, 1))),
         vetName = "Dr. Novak",
-        photos = listOf("pet_photos/uidA/pet-current-1/1.jpg"),
+        photos = listOf(
+            "ph1|pet_photos/uidA__uidB/pet-current-1/5e2f7d31.jpg|image/jpeg|48213|" +
+                "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
+        ),
         createdAt = LocalDateTime.of(2026, 5, 1, 8, 0),
         updatedAt = LocalDateTime.of(2026, 5, 2, 18, 45, 10),
         createdByFirebaseUid = "uidA",

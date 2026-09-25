@@ -76,6 +76,8 @@ import com.coparently.app.R
 import com.coparently.app.domain.expenses.SplitRatio
 import com.coparently.app.domain.expenses.WHOLE_PERCENT
 import com.coparently.app.domain.family.FamilyMemberRef
+import com.coparently.app.domain.files.RecordPhotoCodec
+import com.coparently.app.domain.files.RecordPhotoKind
 import com.coparently.app.domain.model.Expense
 import com.coparently.app.domain.model.ExpenseCategory
 import com.coparently.app.domain.money.SupportedCurrency
@@ -89,6 +91,7 @@ import com.coparently.app.presentation.common.LocalDatePickerDialog
 import com.coparently.app.presentation.common.StickyActionBar
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.rememberDiscardGuard
+import com.coparently.app.presentation.common.rememberRecordPhoto
 import com.coparently.app.presentation.common.toggling
 import com.coparently.app.presentation.theme.CoPlanlyShapes
 import com.coparently.app.presentation.theme.Spacing
@@ -152,7 +155,11 @@ fun AddExpenseScreen(
                     date = expense.date
                     currency = SupportedCurrency.fromCode(expense.currency)
                     forMembers = expense.forMembers
-                    expense.receiptUrl?.let { receiptUri = Uri.parse(it) }
+                    // A legacy download URL (before L-4) is not a receipt this build shows; the
+                    // form opens without one, and saving drops it.
+                    expense.receiptUrl
+                        ?.takeIf { RecordPhotoCodec.isReference(it) }
+                        ?.let { receiptUri = Uri.parse(it) }
                     prefilled = true
                 }
             }
@@ -386,9 +393,19 @@ fun AddExpenseScreen(
                 minLines = 3
             )
 
+            // The stored receipt is drawn through the photo loader, as the signed-in parent
+            // (L-4); a photo picked here is drawn from its content URI.
+            val storedReceipt = rememberRecordPhoto(
+                reference = editedExpense?.receiptUrl,
+                kind = RecordPhotoKind.RECEIPT,
+                recordId = editedExpense?.id.orEmpty(),
+                recordFamilyId = editedExpense?.familyId
+            )
             ReceiptSection(
                 pickerState = ReceiptPickerState(
-                    receiptUri = receiptUri,
+                    receipt = receiptUri?.let { uri ->
+                        if (uri.toString() == editedExpense?.receiptUrl) storedReceipt else uri
+                    },
                     enabled = !isSaving,
                     hasCamera = hasCamera
                 ),
@@ -765,7 +782,7 @@ internal fun ReceiptScanEffect(
  * class so the composable does not take an ever-growing list of parameters.
  */
 private data class ReceiptPickerState(
-    val receiptUri: Uri?,
+    val receipt: Any?,
     val enabled: Boolean,
     val hasCamera: Boolean
 )
@@ -812,8 +829,8 @@ private fun ReceiptPicker(
     onPickPhoto: () -> Unit,
     onRemovePhoto: () -> Unit
 ) {
-    val (receiptUri, enabled, hasCamera) = state
-    if (receiptUri == null) {
+    val (receipt, enabled, hasCamera) = state
+    if (receipt == null) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(Spacing.S)
@@ -846,7 +863,7 @@ private fun ReceiptPicker(
         var viewingFullScreen by rememberSaveable { mutableStateOf(false) }
         Box(modifier = Modifier.fillMaxWidth()) {
             AsyncImage(
-                model = receiptUri,
+                model = receipt,
                 contentDescription = stringResource(R.string.image_viewer_open),
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
@@ -867,7 +884,7 @@ private fun ReceiptPicker(
         }
         if (viewingFullScreen) {
             FullScreenImageDialog(
-                model = receiptUri,
+                model = receipt,
                 contentDescription = stringResource(R.string.expenses_receipt_photo),
                 onDismiss = { viewingFullScreen = false }
             )
@@ -1011,7 +1028,7 @@ private data class ExpenseFields(
             date = expense.date,
             currency = SupportedCurrency.fromCode(expense.currency),
             forMembers = expense.forMembers,
-            receipt = expense.receiptUrl
+            receipt = expense.receiptUrl?.takeIf { RecordPhotoCodec.isReference(it) }
         )
     }
 }

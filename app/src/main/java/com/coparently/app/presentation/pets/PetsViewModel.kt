@@ -7,9 +7,11 @@ import com.coparently.app.R
 import com.coparently.app.data.analytics.AnalyticsManager
 import com.coparently.app.data.crashlytics.CrashlyticsManager
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
+import com.coparently.app.domain.files.RecordPhotoAccess
+import com.coparently.app.domain.files.RecordPhotoKind
 import com.coparently.app.domain.model.Pet
-import com.coparently.app.domain.repository.PetPhotoStorage
 import com.coparently.app.domain.repository.PetRepository
+import com.coparently.app.domain.repository.RecordPhotoStorage
 import com.coparently.app.presentation.common.FormDraft
 import com.coparently.app.presentation.common.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -21,7 +23,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import java.util.UUID
 import javax.inject.Inject
 
 /**
@@ -72,7 +73,7 @@ enum class PetSaveOutcome {
 @HiltViewModel
 class PetsViewModel @Inject constructor(
     private val petRepository: PetRepository,
-    private val petPhotoStorage: PetPhotoStorage,
+    private val photoStorage: RecordPhotoStorage,
     private val firebaseAuthService: FirebaseAuthService,
     private val analyticsManager: AnalyticsManager,
     private val crashlyticsManager: CrashlyticsManager
@@ -210,13 +211,14 @@ class PetsViewModel @Inject constructor(
      *
      * Photographs are uploaded **on save**, never on pick — a user who backs out of the form
      * must leave nothing behind in the bucket. A removal deletes the object first and keeps
-     * the URL if that fails. Same contract as the child record's medical photos; see
-     * `ChildInfoViewModel.upsertChildInfoWithPhotos` for the full reasoning.
+     * the reference if that fails, and a legacy entry from before L-4 is dropped. Same contract
+     * as the child record's medical photos; see `ChildInfoViewModel.upsertChildInfoWithPhotos`
+     * for the full reasoning.
      *
      * @param pet The pet to save, carrying the photographs it already had.
      * @param isNewPet Whether this is an add rather than an edit.
      * @param newPhotoUris Content URIs of photographs picked on this device, not yet uploaded.
-     * @param removedPhotoUrls URLs the user removed, to be deleted from the bucket.
+     * @param removedPhotoUrls References the user removed, to be deleted from the bucket.
      */
     fun upsertPetWithPhotos(
         pet: Pet,
@@ -225,10 +227,10 @@ class PetsViewModel @Inject constructor(
         removedPhotoUrls: List<String>
     ) {
         viewModelScope.launch {
-            val kept = pet.photos.filter { url ->
-                url !in removedPhotoUrls || !deletePhoto(url)
+            val kept = RecordPhotoAccess.storedReferences(pet.photos).filter { ref ->
+                ref !in removedPhotoUrls || !deletePhoto(ref, pet.familyId)
             }
-            val added = newPhotoUris.mapNotNull { uri -> uploadPhoto(pet.id, uri) }
+            val added = newPhotoUris.mapNotNull { uri -> uploadPhoto(pet.id, pet.familyId, uri) }
             val saved = persist(pet.copy(photos = kept + added), isNewPet)
             _saveOutcome.emit(if (saved) PetSaveOutcome.SAVED else PetSaveOutcome.FAILED)
         }
@@ -237,10 +239,10 @@ class PetsViewModel @Inject constructor(
     /**
      * Deletes one photograph's object.
      *
-     * @return true when the object is gone and its URL may be dropped from the record.
+     * @return true when the object is gone and its reference may be dropped from the record.
      */
-    private suspend fun deletePhoto(url: String): Boolean = try {
-        petPhotoStorage.deletePetPhoto(url)
+    private suspend fun deletePhoto(reference: String, familyId: String?): Boolean = try {
+        photoStorage.delete(reference, familyId)
         true
     } catch (e: CancellationException) {
         throw e
@@ -254,15 +256,16 @@ class PetsViewModel @Inject constructor(
     }
 
     /**
-     * Uploads one picked photograph. The photo id is a fresh UUID and unguessable on
-     * purpose — the Storage path is standing in for a read rule; see `storage.rules`.
+     * Uploads one picked photograph to the pet's folder in the family's path (L-4), which only
+     * the two parents may read.
      *
-     * @return the download URL, or null when the upload failed.
+     * @return the stored reference, or null when the upload failed.
      */
-    private suspend fun uploadPhoto(petId: String, localUri: String): String? = try {
-        petPhotoStorage.uploadPetPhoto(
-            petId = petId,
-            photoId = UUID.randomUUID().toString(),
+    private suspend fun uploadPhoto(petId: String, familyId: String?, localUri: String): String? = try {
+        photoStorage.upload(
+            kind = RecordPhotoKind.PET,
+            recordId = petId,
+            recordFamilyId = familyId,
             localUri = localUri
         )
     } catch (e: CancellationException) {

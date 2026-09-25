@@ -94,6 +94,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.coparently.app.R
 import com.coparently.app.domain.family.FamilyMemberRef
+import com.coparently.app.domain.files.RecordPhotoCodec
+import com.coparently.app.domain.files.RecordPhotoKind
 import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.common.FamilyMemberChips
 import com.coparently.app.presentation.common.FamilyMemberRefListSaver
@@ -103,6 +105,7 @@ import com.coparently.app.presentation.common.LocalDatePickerDialog
 import com.coparently.app.presentation.common.StickyActionBar
 import com.coparently.app.presentation.common.rememberDiscardGuard
 import com.coparently.app.presentation.common.rememberParentNames
+import com.coparently.app.presentation.common.rememberRecordPhoto
 import com.coparently.app.presentation.common.toggling
 import com.coparently.app.presentation.components.TimePickerDialog
 import com.coparently.app.presentation.theme.IconSizes
@@ -516,26 +519,29 @@ fun AddEditEventScreen(
                 // the same event id before the event is persisted.
                 val resolvedId = base?.id ?: eventId ?: UUID.randomUUID().toString()
 
-                // Resolve the final image URL: a freshly picked image is uploaded (best
+                // Resolve the final image reference: a freshly picked image is uploaded (best
                 // effort — a failure keeps the previous image and still saves the event);
-                // clearing the image removes it from storage.
+                // clearing or replacing the image removes the old object from storage, since
+                // every upload is a new object (L-4). A legacy download URL is dropped here: it
+                // was never shown, and `purgeLegacyPhotoPaths` removes its object.
                 val originalImageUrl = base?.imageUrl
+                val keptImage = existingImageUrl?.takeIf { RecordPhotoCodec.isReference(it) }
                 var imageUploadFailed = false
                 val finalImageUrl = if (pickedImageUri != null) {
                     try {
-                        viewModel.uploadEventImage(resolvedId, pickedImageUri.toString())
+                        viewModel.uploadEventImage(resolvedId, base?.familyId, pickedImageUri.toString())
                     } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
                         // Log the cause: this failure used to be swallowed silently, which left
                         // "Photo upload failed" as the only evidence anywhere in the system.
                         android.util.Log.e("CoPlanlyUpload", "Event image upload failed", e)
                         imageUploadFailed = true
-                        existingImageUrl
+                        keptImage
                     }
                 } else {
-                    existingImageUrl
+                    keptImage
                 }
-                if (originalImageUrl != null && finalImageUrl == null) {
-                    viewModel.deleteEventImage(resolvedId)
+                if (originalImageUrl != null && finalImageUrl != originalImageUrl) {
+                    viewModel.deleteEventImage(originalImageUrl, base?.familyId)
                 }
 
                 val event = (
@@ -1448,8 +1454,16 @@ fun AddEditEventScreen(
             }
 
             // Event Photo Section
+            // A stored photo is drawn only for the family's two parents (L-4); a legacy
+            // download URL is not drawn at all, so the section offers to attach one instead.
+            val storedPhoto = rememberRecordPhoto(
+                reference = existingImageUrl,
+                kind = RecordPhotoKind.EVENT,
+                recordId = existingEvent?.id ?: eventId.orEmpty(),
+                recordFamilyId = existingEvent?.familyId
+            )
             EventPhotoSection(
-                displayImage = pickedImageUri ?: existingImageUrl,
+                displayImage = pickedImageUri ?: storedPhoto,
                 enabled = !isSaving && !isDeleting,
                 onPickPhoto = {
                     photoPicker.launch(
@@ -1711,8 +1725,9 @@ private data class EventFields(
 
 /**
  * Event photo picker/preview. [displayImage] may be a [Uri] (freshly picked) or a
- * String download URL (already attached) — Coil renders both. Shows an attach button
- * when empty, or a preview with change/remove controls when a photo is present.
+ * `ViewablePhoto` (already attached, fetched as the signed-in parent) — Coil renders both.
+ * Shows an attach button when empty, or a preview with change/remove controls when a photo is
+ * present.
  */
 @Composable
 private fun EventPhotoSection(

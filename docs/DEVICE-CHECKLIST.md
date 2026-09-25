@@ -103,8 +103,9 @@ so.
 | `TwoParentChatTest`, `OneParentOnScreenTest` | Chat across the date line to unread, DELIVERED, READ; one parent's real screens (§5.1) | Two screens at once, displayed times, the push |
 | `TwoParentAttachmentsTest` | Chat attachments and the vault, bytes and digests, a stranger refused (§5.5) | A viewer app opening the file |
 | `TwoParentExpensesTest`, `TwoParentAgreementsTest` | A shared expense on the other parent's balance; the split ratio agreed, proposed, accepted, declined, withdrawn; the parenting plan's agreement lapsing on a reword, the other half unwritable | The Expenses and plan screens, the banners |
-| `TwoParentFamilyRecordsTest` | Children, pets and budgets both ways with tombstones; records made before pairing shared and announced once; pet and medical photos (§3.10) | The forms, and the photo in the live bucket before `firebase deploy --only storage` |
-| `TwoParentRequestsAndEventPushesTest` | Change requests accepted, declined, cancelled; `event_created`; event revisions immutable, none for a private event; event photos | The request screens |
+| `TwoParentFamilyRecordsTest` | Children, pets and budgets both ways with tombstones; records made before pairing shared and announced once | The forms |
+| `TwoParentRecordPhotosTest` | Medical, pet, receipt and event photos (L-4): uploaded under the family's path, the co-parent's download matching its digest, a stranger refused, either parent deleting, no overwrite, the old flat paths closed; a photo taken before pairing moved into the family by `onFamilyCreated` and still opening for the co-parent after the uploader's phone writes its stale reference back (§3.10) | The thumbnails as drawn, a guest's screen without them, and the live bucket before `firebase deploy --only storage` |
+| `TwoParentRequestsAndEventPushesTest` | Change requests accepted, declined, cancelled; `event_created`; event revisions immutable, none for a private event | The request screens |
 | `TwoParentCustodyTest` | A pattern proposed, accepted, declined in two zones; single-day and group swaps; a self-accepted swap refused | The grid's band, markers and banners |
 | `OnScreenAgreementsTest` | A's **real app** answering B on screen: B's change request raises the calendar's inline banner, A opens the inbox from it and accepts, B holds it accepted and the event moved; B's custody proposal pops up on A's Home naming B, accepted then (a second one) declined; B's day swaps pop up on Home, one accepted, one declined; a seasonal layer A accepts makes today's month cell say "With B" (§3.11) | Two screens at once, the push that makes A look, the band's colours and motion, the plan citation line (§3.12), a child's own band (§3.13) |
 | `OnScreenFamiliesTest` | A paired with B and C, B's family on screen: C's message puts the dot on Home's switcher chip, named "New messages in another family"; C's row in the dialog says so; switching there brings C's thread onto the Chat tab, and A's reply reaches C (§5.2) | The push from the other family switching on tap, the chip on Expenses, TalkBack, change-request and schedule dots |
@@ -136,11 +137,13 @@ them the evening before, from the commit you will build the app from.
 
   If you run step 4 before step 3, each co-parent's expenses look empty on the other phone
   until step 3 has run.
-- [ ] **REL-3 storage:** `firebase deploy --only storage`. Until this runs, **every pet and
-      medical photo upload is refused**, because the bucket still enforces the July rules. That
-      is a known failure, not a finding (§3.10). The same deploy is what lets the document vault
-      and chat attachments upload at all (§5.5): they live under `family_documents/` and
-      `chat_attachments/`, which the July rules refuse.
+- [ ] **REL-3 storage:** `firebase deploy --only storage`. Until this runs, **every photo upload
+      is refused**, because the bucket still enforces the July rules, which know neither the
+      family-keyed photo paths of L-4 nor `pet_photos/`/`medical_photos/` at all. That is a known
+      failure, not a finding (§3.10). The same deploy is what lets the document vault and chat
+      attachments upload at all (§5.5): they live under `family_documents/` and
+      `chat_attachments/`, which the July rules refuse. Then run `purgeLegacyPhotoPaths` once
+      (L-4; `functions/README.md`).
 - [ ] **REL-3 accounts:** set `GOOGLE_OAUTH_CLIENT_ID` and `GOOGLE_OAUTH_CLIENT_SECRET` in
       `functions/.env` before the functions deploy. Without them, connecting Google Calendar
       cannot work.
@@ -618,19 +621,37 @@ the tap actually landing on that screen.
       build wrote — refresh token, settings, telemetry answer — across `adb install -r`; only a
       phone has a store an older, pre-SEC-5 build wrote under a hardware-backed Keystore.
 
-### 3.10 Pet and medical photo upload · 1P
+### 3.10 Record photos: medical, pet, receipt and event (L-4) · 2P, guest check 3 accounts
 
-> **[CI e2e]** `TwoParentFamilyRecordsTest` uploads both kinds through the production `FirebaseImageStorage` to the Storage emulator under the repository's `storage.rules`, and the co-parent opens them. That proves the client and the file agree; it cannot prove the live bucket has the deploy, which is what the first box below is about.
+> **[CI e2e]** `TwoParentRecordPhotosTest` runs the mechanism for all four kinds through the production `FirebaseImageStorage` and `SharedFileCache` on the emulators under the repository's `storage.rules`: the family path, the co-parent's digest-checked download, a stranger refused, either parent deleting, the move of a photo taken before pairing. It cannot prove the live bucket has the deploy (first box), nor what a screen draws.
 
-- [ ] Pets → a pet → add a photo. Child → medical → add a photo.
-  - **Before** `firebase deploy --only storage`: **expected to fail**. The logcat shows
-    `PetsViewModel: Uploading a pet photo to pet_photos/<id> failed` or
-    `ChildInfoViewModel: Uploading a medical photo to medical_photos/<id> failed` with a
-    permission error. That confirms the diagnosis; it is not a new bug.
-  - **After** the deploy: both succeed, and the files appear in the console under
-    `pet_photos/<petId>/` and `medical_photos/<childId>/`.
-- [ ] While here, attach a **receipt photo** to an expense and a **photo to an event** (tag
-      `CoPlanlyUpload`). §7 needs the same four kinds of file on the throwaway account.
+- [ ] **Before** `firebase deploy --only storage`: every photo upload fails. The logcat shows
+      `PetsViewModel: Uploading a pet photo …`, `ChildInfoViewModel: Uploading a medical photo …`
+      or `CoPlanlyUpload: … upload failed` with a permission error. That confirms the diagnosis;
+      it is not a new bug.
+- [ ] **After** the deploy, on A (paired with B): Pets → a pet → add a photo; Child → medical → add
+      a photo; an expense with a receipt photo; an event with a photo. Each thumbnail appears on
+      A **without a network round trip** (the upload keeps its own copy). In the console the
+      files are under `pet_photos/<A__B>/<petId>/`, `medical_photos/<A__B>/<childId>/`,
+      `receipts/<A__B>/<expenseId>/` and `event_images/<A__B>/<eventId>/`, each with custom
+      metadata `uploader` and `sha256`. **No** file has a download token (Storage → the file →
+      "Create new access token" is the only token, none pre-existing).
+- [ ] On B after a sync: the four thumbnails appear; each opens full-screen and zooms. Airplane
+      mode after one view: the same photo still opens (verified cache).
+- [ ] B removes the pet photo and saves: it disappears on both phones, and the object is gone from
+      the console. A replaces the receipt photo: the old object is gone, the new one shown on B.
+- [ ] **Guest check (3 accounts):** A invites a guest (C) to the child's record. On C the record
+      shows its medical notes **without** the photo strip — no empty frame, no broken image. A
+      calendar friend of the family sees the event preview **without** the photo.
+- [ ] **Before pairing:** a fresh account D, unpaired, adds a pet with a photo — the thumbnail
+      shows on D, and the console has it under `pet_photos/solo_<D>/<petId>/`. D pairs with E.
+      Within a minute the console shows the photo under `pet_photos/<D__E>/<petId>/`, the `solo_`
+      folder is empty, and E sees the photo after a sync.
+- [ ] **Legacy photos:** on a phone that still holds a record from a build before L-4, the record
+      opens without its old photo (no broken image). After `purgeLegacyPhotoPaths`, the console
+      holds nothing under the flat `receipts/<id>.jpg`, `event_images/<id>.jpg`,
+      `medical_photos/<childId>/…` or `pet_photos/<petId>/…` paths.
+- [ ] §7 needs the same four kinds of photo on the throwaway account.
 
 ### 3.11 Seasonal schedules and holiday fairness (MON-14, MON-20) · 1P, proposal check 2P
 
@@ -1216,15 +1237,17 @@ Preconditions:
   with a medical photo and a pet with a photo (§3.10) — and, if it is paired, a vault document
   and a chat attachment (§5.5).
 
-In the Firebase console → Storage, note the paths `event_images/<eventId>.jpg`,
-`receipts/<expenseId>.jpg`, `medical_photos/<childId>/` and `pet_photos/<petId>/`.
+In the Firebase console → Storage, note the folders `event_images/<family>/<eventId>/`,
+`receipts/<family>/<expenseId>/`, `medical_photos/<family>/<childId>/` and
+`pet_photos/<family>/<petId>/` (`<family>` is `solo_<uid>` for an unpaired throwaway account).
 
 - [ ] Settings → Account → **Delete account**, and confirm. It is a red confirming row, not a
       filled button.
 - [ ] The app returns to sign-in, and the local data is wiped.
 - [ ] In the Firebase console, the account's documents are gone from `events`, `expenses`,
       `child_info`, `pets` and `budgets`, and the Auth user is gone.
-- [ ] **Storage:** all four paths are **gone**. Without `6e4ec8e` deployed, they stay behind,
+- [ ] **Storage:** all four folders are **gone**, and so is every `solo_<uid>/` folder of the
+      throwaway account (L-4). Without `6e4ec8e` deployed, they stay behind,
       which is the defect that commit fixed. So are `family_documents/<familyId>/<docId>/` for
       the throwaway's own filings (the co-parent's stay) and the whole
       `chat_attachments/<conversationId>/` folder (MON-23; the chat goes whole).

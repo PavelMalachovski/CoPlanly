@@ -1,11 +1,6 @@
 package com.coparently.app.e2e
 
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import android.graphics.Color
-import android.net.Uri
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.coparently.app.data.remote.firebase.FirebaseImageStorage
 import com.coparently.app.data.remote.firebase.FirestoreEventVersionDataSource
 import com.coparently.app.data.remote.firebase.PushPayload
 import com.coparently.app.data.versions.EventVersionDocument
@@ -15,8 +10,6 @@ import com.coparently.app.domain.model.ChangeRequest
 import com.coparently.app.domain.model.ChangeRequestStatus
 import com.coparently.app.domain.model.Event
 import com.google.firebase.firestore.FirebaseFirestoreException
-import com.google.firebase.storage.StorageException
-import com.google.firebase.storage.storageMetadata
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
@@ -30,7 +23,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.io.File
 import java.time.LocalDateTime
 import java.util.UUID
 
@@ -57,11 +49,7 @@ import java.util.UUID
  * (`FirestoreEventVersionDataSource.readableBy`); neither parent can change or delete one; a
  * private event leaves none.
  *
- * **Event photos.** `FirebaseImageStorage.uploadEventImage` — the upload the event form makes —
- * stores Alice's photo at `event_images/{eventId}.jpg`; Bob downloads it as himself. What the
- * rules refuse is a signed-out read and a non-JPEG upload. They do **not** refuse a signed-in
- * stranger: `storage.rules` admits any authenticated user on `event_images`, a limit that file
- * documents at length, so no test here claims otherwise.
+ * **Event photos** are `TwoParentRecordPhotosTest`'s (L-4).
  *
  * What this cannot cover: the pushes' delivery (FCM has no emulator) and anything drawn on screen.
  */
@@ -177,37 +165,6 @@ class TwoParentRequestsAndEventPushesTest : TwoParentTest() {
         )
     }
 
-    @Test
-    fun anEventPhotoAliceUploadsDownloadsOnBobsPhone() = runBlocking<Unit> {
-        val eventId = UUID.randomUUID().toString()
-        val url = FirebaseImageStorage(context, alice.storage).uploadEventImage(eventId, jpegUri())
-        alice.eventRepository.insertEvent(newEvent("Class photo").copy(id = eventId, imageUrl = url))
-
-        assertEquals(url, bob.eventRepository.fetchRemoteEvent(eventId)?.imageUrl)
-        val path = "event_images/$eventId.jpg"
-        val bytes = bob.storage.reference.child(path).getBytes(MAX_IMAGE_BYTES).await()
-        val bitmap = checkNotNull(BitmapFactory.decodeByteArray(bytes, 0, bytes.size)) { "not an image" }
-        assertEquals(IMAGE_WIDTH, bitmap.width)
-        assertEquals(IMAGE_HEIGHT, bitmap.height)
-    }
-
-    @Test
-    fun anEventPhotoIsRefusedSignedOutAndAsAnythingButJpeg() = runBlocking<Unit> {
-        val eventId = UUID.randomUUID().toString()
-        FirebaseImageStorage(context, alice.storage).uploadEventImage(eventId, jpegUri())
-        val path = "event_images/$eventId.jpg"
-
-        assertStorageRefused {
-            alice.storage.reference.child(path)
-                .putBytes("not a photo".toByteArray(), storageMetadata { contentType = "text/plain" })
-                .await()
-        }
-
-        val signedOut = newParent("Mallory")
-        signedOut.auth.signOut()
-        assertStorageRefused { signedOut.storage.reference.child(path).getBytes(MAX_IMAGE_BYTES).await() }
-    }
-
     /** A shared event of Alice's, saved through her repository and therefore already uploaded. */
     private suspend fun insertSharedEvent(title: String): Event {
         val event = newEvent(title)
@@ -287,17 +244,6 @@ class TwoParentRequestsAndEventPushesTest : TwoParentTest() {
     ): List<EventVersionDocument.Parsed> =
         versions.readableBy(bob.uid).filter { it.eventId == eventId && !it.recordedByServer }
 
-    /** A small JPEG on this phone, as the photo picker would hand one over. */
-    private fun jpegUri(): String {
-        val bitmap = Bitmap.createBitmap(IMAGE_WIDTH, IMAGE_HEIGHT, Bitmap.Config.ARGB_8888)
-        bitmap.eraseColor(Color.BLUE)
-        val dir = File(context.cacheDir, "e2e-picked/${UUID.randomUUID()}").apply { mkdirs() }
-        val file = File(dir, "photo.jpg")
-        file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, it) }
-        bitmap.recycle()
-        return Uri.fromFile(file).toString()
-    }
-
     private suspend fun newEvent(title: String, isPrivate: Boolean = false): Event {
         val start = LocalDateTime.now().plusDays(1).withHour(START_HOUR).withMinute(0)
             .withSecond(0).withNano(0)
@@ -325,26 +271,8 @@ class TwoParentRequestsAndEventPushesTest : TwoParentTest() {
         }
     }
 
-    /** Fails unless [block] is refused by `storage.rules`. */
-    private suspend fun assertStorageRefused(block: suspend () -> Unit) {
-        try {
-            block()
-            fail("A request the Storage rules forbid was allowed")
-        } catch (e: StorageException) {
-            assertTrue(
-                "unexpected Storage error ${e.errorCode}",
-                e.errorCode == StorageException.ERROR_NOT_AUTHORIZED ||
-                    e.errorCode == StorageException.ERROR_NOT_AUTHENTICATED
-            )
-        }
-    }
-
     private companion object {
         const val START_HOUR = 10
         const val POLL_MS = 250L
-        const val IMAGE_WIDTH = 64
-        const val IMAGE_HEIGHT = 48
-        const val JPEG_QUALITY = 90
-        const val MAX_IMAGE_BYTES = 5L * 1024 * 1024
     }
 }

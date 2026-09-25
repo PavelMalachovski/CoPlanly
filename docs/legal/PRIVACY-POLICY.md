@@ -100,6 +100,14 @@ export can list the files a message carried by name and fingerprint (the files t
 never put into an export). Files are stored in Cloud Storage under your family, and only the two
 parents of that family can download them; we never create a public link to one.
 
+**Photographs attached to a record** — an event's photo, a receipt, and the photographs on a
+child's medical notes or a pet's record — are stored the same way: in Cloud Storage under your
+family, with their size, type and SHA-256 fingerprint, downloadable by the two parents of that
+family only, and never through a public link. **A guest, a calendar friend or a professional
+never sees them**, even where they can read the record itself. A photograph you add before you
+have linked a co-parent is stored in a folder only you can read; when you link, our server moves
+it into your family's folder so your co-parent can see it too.
+
 **Why:** these are the contents of the service. **Legal basis:** performance of our contract
 with you (Art. 6(1)(b)).
 
@@ -157,7 +165,7 @@ or have deleted what was recorded about them — or an adult who was that child 
   yourself; it carries your name and email address so that the person redeeming it can see who
   invited them, and we never ask for theirs.
 - **A guest** (for example a grandparent) whom you grant time-limited access to one child's
-  record.
+  record — without its photographs.
 - **A calendar friend** whom you grant time-limited read access to the family calendar.
 - **A professional** — a mediator, lawyer, guardian ad litem or therapist — whom **both** parents
   let read the family calendar, custody schedule and parenting plan, read-only, for at most 180
@@ -249,7 +257,7 @@ We do not sell personal data, and we do not use it for advertising.
 | Recipient | What they process | Why |
 | --- | --- | --- |
 | **Your co-parent** | Everything you share — which is most of it | The purpose of the service |
-| **Guests and calendar friends you invite** | Only the record or calendar you granted, until the grant expires | Because you granted it |
+| **Guests and calendar friends you invite** | Only the record or calendar you granted, until the grant expires — never its photographs | Because you granted it |
 | **Whoever holds a calendar link you created** | Custody days and shared events, read-only, until you revoke the link | Because you created and shared it |
 | **Anyone holding an export you made, or its record ID** | Whether it was registered, when, the period, the format and the size — never who made it | So the export can be verified |
 | **A professional both parents admit** | The calendar, custody schedule and parenting plan of that one family, read-only, until the grant expires | Because both of you consented |
@@ -284,7 +292,8 @@ daily on our servers, not by hand.
 | What | How long |
 | --- | --- |
 | Your account and everything you entered | Until you delete it, or delete the record |
-| A single event, expense, child record, pet or family document you delete | Marked deleted at once, so your co-parent's phone learns of it; removed for good **90 days** later, with its file |
+| A single event, expense, child record, pet or family document you delete | Marked deleted at once, so your co-parent's phone learns of it; removed for good **90 days** later, with its file or photographs |
+| A photograph you remove or replace | Deleted from our servers when you save the change |
 | A guest's, calendar friend's or professional's access | Until the date set when it was granted, or until either parent ends it; professionals at most **180 days** |
 | An invitation nobody accepted | Deleted **30 days** after it expired (**90 days** after it was made, if it had no expiry) |
 | A read-only calendar link | Until revoked; deleted after **90 days** without use |
@@ -309,7 +318,9 @@ within which a claim arising from the family's affairs can generally still be br
   and budgets, the records you entered about your child and pet, your custody schedule and agreed
   expense split, your parenting plan and your invitations;
 - deletes the photographs attached to those records — event photos, receipts, and medical and
-  pet photographs — and the family documents you added;
+  pet photographs — any photograph you added before you linked a co-parent, and the family
+  documents you added. A photograph you added to a record your co-parent created stays with that
+  record;
 - **keeps the message thread with your co-parent for 30 days, then deletes it** — messages and
   files, whichever of you sent them. See "The message thread" below;
 - removes you from the audience of anything your co-parent created, and ends any guest,

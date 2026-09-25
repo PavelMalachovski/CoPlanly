@@ -3,9 +3,10 @@ package com.coparently.app.presentation.pets
 import com.coparently.app.R
 import com.coparently.app.data.analytics.AnalyticsManager
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
+import com.coparently.app.domain.files.RecordPhotoKind
 import com.coparently.app.domain.model.Pet
-import com.coparently.app.domain.repository.PetPhotoStorage
 import com.coparently.app.domain.repository.PetRepository
+import com.coparently.app.domain.repository.RecordPhotoStorage
 import com.coparently.app.presentation.common.UiText
 import com.google.firebase.auth.FirebaseUser
 import io.mockk.coEvery
@@ -33,7 +34,8 @@ import kotlin.test.assertEquals
 
 /**
  * Saving a pet: the one-shot outcome the editor navigates on, who a save is stamped with, and the
- * photograph contract (uploaded on save, a failed delete keeps its URL).
+ * photograph contract (uploaded on save, a failed delete keeps its reference, a legacy download
+ * URL from before L-4 is dropped).
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class PetsViewModelTest {
@@ -43,16 +45,16 @@ class PetsViewModelTest {
     private val petRepository = mockk<PetRepository>(relaxed = true) {
         every { getAllPets() } returns flowOf(emptyList())
     }
-    private val photoStorage = mockk<PetPhotoStorage>()
+    private val photoStorage = mockk<RecordPhotoStorage>()
     private val authService = mockk<FirebaseAuthService>()
     private val analytics = mockk<AnalyticsManager>(relaxed = true)
     private val signedIn = mockk<FirebaseUser> { every { uid } returns "u1" }
 
-    private val rex = Pet(id = "p1", name = "Rex", createdAt = now, updatedAt = now)
+    private val rex = Pet(id = "p1", name = "Rex", createdAt = now, updatedAt = now, familyId = FAMILY)
 
     private fun viewModel() = PetsViewModel(
         petRepository = petRepository,
-        petPhotoStorage = photoStorage,
+        photoStorage = photoStorage,
         firebaseAuthService = authService,
         analyticsManager = analytics,
         crashlyticsManager = mockk(relaxed = true)
@@ -117,23 +119,23 @@ class PetsViewModelTest {
     @Test
     fun `a photo whose delete failed stays on the record`() = runTest(dispatcher) {
         every { authService.getCurrentUser() } returns signedIn
-        coEvery { photoStorage.deletePetPhoto("https://a") } returns Unit
-        coEvery { photoStorage.deletePetPhoto("https://b") } throws IllegalStateException("denied")
+        coEvery { photoStorage.delete(REF_A, FAMILY) } returns Unit
+        coEvery { photoStorage.delete(REF_B, FAMILY) } throws IllegalStateException("denied")
         val saved = slot<Pet>()
         coEvery { petRepository.upsertPet(capture(saved)) } returns Unit
         val vm = viewModel()
         val outcomes = outcomesOf(vm)
 
         vm.upsertPetWithPhotos(
-            rex.copy(photos = listOf("https://a", "https://b")),
+            rex.copy(photos = listOf(REF_A, REF_B)),
             isNewPet = false,
             newPhotoUris = emptyList(),
-            removedPhotoUrls = listOf("https://a", "https://b")
+            removedPhotoUrls = listOf(REF_A, REF_B)
         )
         advanceUntilIdle()
 
         // Dropping the reference anyway would leave an object in the bucket nobody can delete.
-        assertEquals(listOf("https://b"), saved.captured.photos)
+        assertEquals(listOf(REF_B), saved.captured.photos)
         assertEquals(PetPhotoError.DELETE_FAILED, vm.photoError.value)
         assertEquals(listOf(PetSaveOutcome.SAVED), outcomes)
     }
@@ -141,8 +143,10 @@ class PetsViewModelTest {
     @Test
     fun `a failed upload is reported and the pet is still saved without it`() = runTest(dispatcher) {
         every { authService.getCurrentUser() } returns signedIn
-        coEvery { photoStorage.uploadPetPhoto("p1", any(), "content://one") } returns "https://one"
-        coEvery { photoStorage.uploadPetPhoto("p1", any(), "content://two") } throws IllegalStateException("rules")
+        coEvery { photoStorage.upload(RecordPhotoKind.PET, "p1", FAMILY, "content://one") } returns REF_A
+        coEvery {
+            photoStorage.upload(RecordPhotoKind.PET, "p1", FAMILY, "content://two")
+        } throws IllegalStateException("rules")
         val saved = slot<Pet>()
         coEvery { petRepository.upsertPet(capture(saved)) } returns Unit
         val vm = viewModel()
@@ -156,9 +160,28 @@ class PetsViewModelTest {
         )
         advanceUntilIdle()
 
-        assertEquals(listOf("https://one"), saved.captured.photos)
+        assertEquals(listOf(REF_A), saved.captured.photos)
         assertEquals(PetPhotoError.UPLOAD_FAILED, vm.photoError.value)
         assertEquals(listOf(PetSaveOutcome.SAVED), outcomes)
+    }
+
+    @Test
+    fun `a legacy download URL is dropped on save and never deleted from the client`() = runTest(dispatcher) {
+        every { authService.getCurrentUser() } returns signedIn
+        val saved = slot<Pet>()
+        coEvery { petRepository.upsertPet(capture(saved)) } returns Unit
+        val vm = viewModel()
+
+        vm.upsertPetWithPhotos(
+            rex.copy(photos = listOf("https://firebasestorage.googleapis.com/v0/b/x/o/pet?token=t", REF_B)),
+            isNewPet = false,
+            newPhotoUris = emptyList(),
+            removedPhotoUrls = emptyList()
+        )
+        advanceUntilIdle()
+
+        assertEquals(listOf(REF_B), saved.captured.photos)
+        coVerify(exactly = 0) { photoStorage.delete(any(), any()) }
     }
 
     @Test
@@ -171,5 +194,11 @@ class PetsViewModelTest {
         advanceUntilIdle()
 
         assertEquals(PetsUiState.Error(UiText.Res(R.string.pets_delete_failed)), vm.uiState.value)
+    }
+
+    private companion object {
+        const val FAMILY = "u1__u2"
+        val REF_A = "ph1|pet_photos/u1__u2/p1/a.jpg|image/jpeg|100|" + "a".repeat(64)
+        val REF_B = "ph1|pet_photos/u1__u2/p1/b.jpg|image/jpeg|100|" + "b".repeat(64)
     }
 }

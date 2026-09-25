@@ -8,7 +8,7 @@ import com.coparently.app.domain.model.EmergencyContact
 import com.coparently.app.domain.model.MedicalProfile
 import com.coparently.app.domain.model.Medication
 import com.coparently.app.domain.repository.ChildInfoRepository
-import com.coparently.app.domain.repository.MedicalPhotoStorage
+import com.coparently.app.domain.repository.RecordPhotoStorage
 import com.coparently.app.domain.repository.UserRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -32,7 +32,7 @@ class HealthConsentManagerTest {
 
     private val userRepository = mockk<UserRepository>(relaxed = true)
     private val childInfoRepository = mockk<ChildInfoRepository>(relaxed = true)
-    private val photoStorage = mockk<MedicalPhotoStorage>(relaxed = true)
+    private val photoStorage = mockk<RecordPhotoStorage>(relaxed = true)
     private val manager = HealthConsentManager(userRepository, childInfoRepository, photoStorage)
 
     @Test
@@ -61,7 +61,7 @@ class HealthConsentManagerTest {
 
         assertEquals(HealthConsentWithdrawal.WITHDRAWN, outcome)
         coVerify(exactly = 1) { userRepository.setHealthConsent(null) }
-        coVerify(exactly = 1) { photoStorage.deleteMedicalPhoto(PHOTO) }
+        coVerify(exactly = 1) { photoStorage.delete(PHOTO, FAMILY) }
 
         val saved = mutableListOf<ChildInfo>()
         coVerify { childInfoRepository.upsertChildInfo(capture(saved)) }
@@ -84,7 +84,7 @@ class HealthConsentManagerTest {
         coEvery { userRepository.getCurrentUserId() } returns ME
         val mine = child("mine", createdBy = ME, photos = listOf(PHOTO, OTHER_PHOTO))
         every { childInfoRepository.getAllChildInfo() } returns flowOf(listOf(mine))
-        coEvery { photoStorage.deleteMedicalPhoto(OTHER_PHOTO) } throws IllegalStateException("offline")
+        coEvery { photoStorage.delete(OTHER_PHOTO, FAMILY) } throws IllegalStateException("offline")
 
         val outcome = manager.withdraw()
 
@@ -122,14 +122,16 @@ class HealthConsentManagerTest {
         updatedAt = CREATED,
         createdByFirebaseUid = createdBy,
         lastModifiedBy = createdBy,
-        syncedToFirestore = true
+        syncedToFirestore = true,
+        familyId = FAMILY
     )
 
     private companion object {
         const val ME = "alice"
         const val CO_PARENT = "bob"
-        const val PHOTO = "https://storage.example/medical_photos/mine/1.jpg"
-        const val OTHER_PHOTO = "https://storage.example/medical_photos/mine/2.jpg"
+        const val FAMILY = "alice__bob"
+        val PHOTO = "ph1|medical_photos/alice__bob/mine/1.jpg|image/jpeg|100|" + "1".repeat(64)
+        val OTHER_PHOTO = "ph1|medical_photos/alice__bob/mine/2.jpg|image/jpeg|100|" + "2".repeat(64)
         val CREATED: LocalDateTime = LocalDateTime.of(2026, 5, 1, 9, 0)
     }
 }

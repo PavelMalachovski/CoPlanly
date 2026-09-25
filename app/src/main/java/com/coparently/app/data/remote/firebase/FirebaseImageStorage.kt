@@ -5,119 +5,77 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
-import com.coparently.app.domain.repository.EventImageStorage
-import com.coparently.app.domain.repository.MedicalPhotoStorage
-import com.coparently.app.domain.repository.PetPhotoStorage
-import com.coparently.app.domain.repository.ReceiptStorage
-import com.google.firebase.storage.FirebaseStorage
-import com.google.firebase.storage.StorageException
-import com.google.firebase.storage.storageMetadata
+import com.coparently.app.data.files.SharedFileCache
+import com.coparently.app.data.files.SharedFileStorage
+import com.coparently.app.data.local.dao.UserDao
+import com.coparently.app.domain.family.FamilyKey
+import com.coparently.app.domain.files.RecordPhoto
+import com.coparently.app.domain.files.RecordPhotoCodec
+import com.coparently.app.domain.files.RecordPhotoKind
+import com.coparently.app.domain.files.RecordPhotoPaths
+import com.coparently.app.domain.files.toHex
+import com.coparently.app.domain.repository.RecordPhotoStorage
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.io.InputStream
+import java.security.MessageDigest
+import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * [ReceiptStorage], [EventImageStorage], [MedicalPhotoStorage] and [PetPhotoStorage] backed
- * by Firebase Cloud Storage.
+ * [RecordPhotoStorage] backed by Firebase Cloud Storage (L-4).
  *
- * Images are downscaled and recompressed to JPEG before upload to keep uploads fast
- * and storage usage low; the resulting download URL (with access token) is what gets
- * stored in Firestore, so the other parent can load the photo directly.
+ * Images are downscaled and recompressed to JPEG before upload to keep uploads fast and storage
+ * usage low. The object goes to `{prefix}/{familyId}/{recordId}/{random}.jpg` — or, while the
+ * uploader has no co-parent, `{prefix}/solo_{uid}/{recordId}/{random}.jpg` — stamped with its
+ * uploader and SHA-256, which `storage.rules` requires. **No download URL is ever requested**:
+ * what the record stores is a `RecordPhotoCodec` reference, and a reader downloads through the
+ * SDK as themselves (`RecordPhotoFetcher`), so the rule decides who sees a photograph for as long
+ * as it exists.
+ *
+ * The bytes are also kept in [SharedFileCache] under their digest, so the uploader's own screen
+ * shows the photograph without fetching it back.
  */
 @Singleton
 class FirebaseImageStorage @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val storage: FirebaseStorage
-) : ReceiptStorage, EventImageStorage, MedicalPhotoStorage, PetPhotoStorage {
+    private val authService: FirebaseAuthService,
+    private val userDao: UserDao,
+    private val storage: SharedFileStorage,
+    private val cache: SharedFileCache
+) : RecordPhotoStorage {
 
-    override suspend fun uploadReceipt(expenseId: String, localUri: String): String =
-        upload(receiptPath(expenseId), localUri)
-
-    override suspend fun deleteReceipt(expenseId: String) = delete(receiptPath(expenseId))
-
-    override suspend fun uploadEventImage(eventId: String, localUri: String): String =
-        upload(eventImagePath(eventId), localUri)
-
-    override suspend fun deleteEventImage(eventId: String) = delete(eventImagePath(eventId))
-
-    override suspend fun uploadMedicalPhoto(
-        childInfoId: String,
-        photoId: String,
+    override suspend fun upload(
+        kind: RecordPhotoKind,
+        recordId: String,
+        recordFamilyId: String?,
         localUri: String
-    ): String = upload(medicalPhotoPath(childInfoId, photoId), localUri)
-
-    /**
-     * Resolves the object from its download URL rather than rebuilding the path from ids.
-     *
-     * A photograph uploaded by a build that laid its paths out differently is still deletable
-     * this way, and the record stores the URL rather than the pair of ids — so rebuilding would
-     * mean parsing the URL to get the ids back in order to construct the path the URL already
-     * names.
-     */
-    override suspend fun deleteMedicalPhoto(downloadUrl: String) = deleteByUrl(downloadUrl)
-
-    override suspend fun uploadPetPhoto(
-        petId: String,
-        photoId: String,
-        localUri: String
-    ): String = upload(petPhotoPath(petId, photoId), localUri)
-
-    override suspend fun deletePetPhoto(downloadUrl: String) = deleteByUrl(downloadUrl)
-
-    private suspend fun deleteByUrl(downloadUrl: String) {
-        val ref = try {
-            storage.getReferenceFromUrl(downloadUrl)
-        } catch (e: IllegalArgumentException) {
-            // Not a URL from this bucket. This must fail rather than quietly succeed: the caller
-            // drops the reference only once the object is gone, and reporting success here would
-            // remove the reference while leaving whatever the URL points at exactly where it is.
-            throw IOException("Not a Firebase Storage URL: $downloadUrl", e)
-        }
-        try {
-            ref.delete().await()
-        } catch (e: StorageException) {
-            if (e.errorCode != StorageException.ERROR_OBJECT_NOT_FOUND) throw e
-        }
-    }
-
-    private suspend fun upload(path: String, localUri: String): String {
+    ): String {
+        val uid = authService.getCurrentUser()?.uid ?: throw IOException("Not signed in")
+        // The same family the repositories stamp a new record with (`familyId ?: FamilyKey.orNull(
+        // uid, partnerId)`), so the photograph and its record name one family.
+        val familyId = recordFamilyId?.takeIf { it.isNotBlank() }
+            ?: FamilyKey.orNull(uid, userDao.getUserById(uid)?.partnerId)
         val bytes = withContext(Dispatchers.IO) { compressImage(Uri.parse(localUri)) }
-        val ref = storage.reference.child(path)
-        val metadata = storageMetadata { contentType = "image/jpeg" }
-        ref.putBytes(bytes, metadata).await()
-        return ref.downloadUrl.await().toString()
+        val sha256 = MessageDigest.getInstance("SHA-256").digest(bytes).toHex()
+        val objectName = "${UUID.randomUUID()}.$EXTENSION"
+        val path = RecordPhotoPaths.build(kind, familyId, uid, recordId, objectName)
+        storage.uploadBytes(path, bytes, CONTENT_TYPE, sha256, uid)
+        cache.keep(bytes, objectName, sha256)
+        return RecordPhotoCodec.encode(RecordPhoto(path, CONTENT_TYPE, bytes.size.toLong(), sha256))
     }
 
-    private suspend fun delete(path: String) {
-        try {
-            storage.reference.child(path).delete().await()
-        } catch (e: StorageException) {
-            if (e.errorCode != StorageException.ERROR_OBJECT_NOT_FOUND) throw e
-        }
+    override suspend fun delete(reference: String, recordFamilyId: String?) {
+        val photo = RecordPhotoCodec.decode(reference) ?: return
+        val parsed = RecordPhotoPaths.parse(photo.storagePath) ?: return
+        val uid = authService.getCurrentUser()?.uid ?: throw IOException("Not signed in")
+        RecordPhotoPaths.candidatesFor(photo, parsed.kind, parsed.recordId, recordFamilyId, uid)
+            .forEach { path -> storage.delete(path) }
     }
-
-    private fun receiptPath(expenseId: String) = "receipts/$expenseId.jpg"
-
-    private fun eventImagePath(eventId: String) = "event_images/$eventId.jpg"
-
-    /**
-     * One object per photograph, under the child that owns it.
-     *
-     * [photoId] is a UUID the caller generates, and it is load-bearing rather than decorative —
-     * see the `medical_photos` block in `storage.rules`.
-     */
-    private fun medicalPhotoPath(childInfoId: String, photoId: String) =
-        "medical_photos/$childInfoId/$photoId.jpg"
-
-    /** One object per photograph, under the pet that owns it. Same UUID rule as above. */
-    private fun petPhotoPath(petId: String, photoId: String) =
-        "pet_photos/$petId/$photoId.jpg"
 
     /**
      * Decodes the picked image with subsampling so full-resolution camera photos
@@ -165,5 +123,7 @@ class FirebaseImageStorage @Inject constructor(
     private companion object {
         const val MAX_DIMENSION_PX = 1600
         const val JPEG_QUALITY = 85
+        const val CONTENT_TYPE = "image/jpeg"
+        const val EXTENSION = "jpg"
     }
 }

@@ -77,8 +77,8 @@ code today.
 | # | Risk to the people concerned | L | S | Risk | Measures | Residual |
 | --- | --- | --- | --- | --- | --- | --- |
 | R1 | **An ex-partner keeps reading after separation.** Unpair must end access. | 3 | 3 | 9 | The audience narrows at unpair (`SHARED_AUDIENCE_COLLECTIONS`). The rules require a live pairing for the co-parent branch. Grants are deleted at unpair. Calendar feeds end. The chat is deliberately kept (both parents wrote it). | Low |
-| R2 | **Photographs of a child's medical documents are reachable without authorisation**: any account for a known path; a lapsed guest or ex-partner through a kept URL. | 3 | 4 | 12 | Today only unguessable file names protect them. **Fix L-4:** family-keyed paths, rules, no download URLs. | **High until L-4** → Low |
-| R3 | **A server-side breach of health data** (misconfigured rules, compromised admin credential). | 2 | 4 | 8 | Rules tested offline on every change (`firestore-tests/`, 692 cases). No client can list other families' data. Admin access limited to the owner's Google account. Google's encryption at rest. EU region. Breach procedure. | Medium |
+| R2 | **Photographs of a child's medical documents are reachable without authorisation**: any account for a known path; a lapsed guest or ex-partner through a kept URL. | 3 | 4 | 12 | **L-4, fixed in code:** every photo sits under its family's path (`{prefix}/{familyId}/{recordId}/…`) and `storage.rules` admits only that family's two parents — never a guest, friend or professional; a photo taken before pairing is readable by its uploader alone until the server moves it into the family. No download URL is minted; a reader downloads as themselves and the bytes are checked against a stored SHA-256. No overwrite; tested offline on every change (`storage-record-photos.test.js`) and between two phones (`TwoParentRecordPhotosTest`). Remaining: an ex-partner keeps the paths they already hold (the gate does not move at unpair, as for the chat), and a URL copied from an older build works until `purgeLegacyPhotoPaths` deletes its object. | **Low** once `storage.rules` is deployed and `purgeLegacyPhotoPaths` has run; high on the live bucket until then |
+| R3 | **A server-side breach of health data** (misconfigured rules, compromised admin credential). | 2 | 4 | 8 | Rules tested offline on every change (`firestore-tests/`, 768 cases, Storage rules included). No client can list other families' data. Admin access limited to the owner's Google account. Google's encryption at rest. EU region. Breach procedure. | Medium |
 | R4 | **A lost or shared phone exposes the family's records.** | 3 | 3 | 9 | The database is encrypted with SQLCipher under a Keystore key. Backup and device transfer are off. Tokens are held in encrypted storage. The Firebase cache and image cache rely on Android file-based encryption (disclosed). | Low |
 | R5 | **Coercive control**: one parent uses the app to monitor or harass the other. | 3 | 3 | 9 | No location is collected. No read receipts beyond "delivered/read". A tone hint before sending. Messages are immutable, so harassment is recorded, not erased. Acceptable-use terms with suspension. A notice-and-action route (DSA Art. 16). **No block function**: the export and the terms are the remedy, by design, because blocking a co-parent breaks the shared schedule. | Medium (inherent) |
 | R6 | **A record used in court is misrepresented or altered.** | 2 | 4 | 8 | Messages and revisions cannot be edited or deleted by clients. Revisions carry the server's clock. The export states it records what was written, not what happened. SHA-256 receipts let a court check a file is unaltered. | Low |
@@ -131,7 +131,9 @@ Record the answers here before the public release.
 With **L-4 fixed** and **the Firestore location confirmed in the EU**, no residual risk is high.
 Prior consultation of the ÚOOÚ under Art. 36 is then **not required**.
 
-Until L-4 is fixed, **R2 remains high** and the processing should not be offered to the public.
+L-4 is fixed in the code (September 2026). **Until `storage.rules` is deployed and
+`purgeLegacyPhotoPaths` has run, R2 remains high on the live bucket** and the processing should
+not be offered to the public.
 
 The two medium residual risks, R5 (coercive control, inherent in the use case) and R11 (account
 takeover), are accepted, with the second factor planned (L-18).
@@ -140,7 +142,8 @@ takeover), are accepted, with the second factor planned (L-18).
 
 | Action | Risk | Owner | Due |
 | --- | --- | --- | --- |
-| Photos behind family-keyed rules, no download URLs; deploy `storage.rules` | R2 | Engineering | Before public release |
+| Photos behind family-keyed rules, no download URLs (L-4) | R2 | Engineering | **Done** (code, September 2026) |
+| Deploy `storage.rules` and the functions; run `purgeLegacyPhotoPaths` once | R2 | Ops | Before public release |
 | Confirm the Firestore location; new EU project if it is in the US | R3, R8 | Ops | Before public release |
 | Run `purgeParentHealthFields` after the L-1 build ships | L-1 | Ops | At release |
 | Second factor | R11 | Engineering | Within 6 months of release |

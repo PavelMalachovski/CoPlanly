@@ -1,10 +1,6 @@
 package com.coparently.app.e2e
 
-import android.graphics.Bitmap
-import android.graphics.Color
-import android.net.Uri
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.coparently.app.data.remote.firebase.FirebaseImageStorage
 import com.coparently.app.data.remote.firebase.PushPayload
 import com.coparently.app.data.sync.Tombstone
 import com.coparently.app.domain.family.FamilyKey
@@ -18,8 +14,6 @@ import com.coparently.app.domain.model.PetSpecies
 import com.coparently.app.domain.model.SchoolInfo
 import com.coparently.app.domain.model.Vaccination
 import com.google.firebase.firestore.FirebaseFirestoreException
-import com.google.firebase.storage.StorageException
-import com.google.firebase.storage.storageMetadata
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
@@ -27,7 +21,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeout
-import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -35,18 +28,14 @@ import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.io.File
-import java.net.HttpURLConnection
-import java.net.URL
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
 import java.util.UUID
 
 /**
- * The family's own records between two phones: children, pets and budgets, the photographs on a
- * child's medical notes and on a pet, and the two pushes the child record and the pairing backfill
- * produce.
+ * The family's own records between two phones: children, pets and budgets, and the two pushes the
+ * child record and the pairing backfill produce.
  *
  * Alice writes through the production repositories, stamped as `ChildInfoViewModel` and
  * `PetsViewModel` stamp a save (`createdByFirebaseUid`, `lastModifiedBy`); Bob reads through his
@@ -61,13 +50,7 @@ import java.util.UUID
  * pairing backfill sends (item 22): records a parent made before pairing are re-uploaded for the
  * new co-parent silently, and announced once.
  *
- * Photographs go through `FirebaseImageStorage`, the class the ViewModels upload with, into the
- * Storage emulator under the real `storage.rules`; Bob reads them by path as himself and through
- * the download URL the record carries, which is what `AsyncImage` loads. **What this cannot
- * assert:** that a stranger is refused. The `pet_photos` and `medical_photos` blocks admit any
- * signed-in reader and writer — the unguessable photo id is obscurity, documented as such in
- * `storage.rules` — so a refusal test would fail, and a test that a stranger *can* read would pin
- * the weakness. The one refusal those blocks do make, a file that is not a JPEG, is asserted.
+ * The photographs on a child's medical notes and on a pet are `TwoParentRecordPhotosTest`'s (L-4).
  */
 @RunWith(AndroidJUnit4::class)
 class TwoParentFamilyRecordsTest : TwoParentTest() {
@@ -242,86 +225,6 @@ class TwoParentFamilyRecordsTest : TwoParentTest() {
         assertEquals(1, again)
     }
 
-    @Test
-    fun aPetPhotoAliceAttachesOpensOnBobsPhone() = runBlocking<Unit> {
-        val pet = newPet(alice, "Luna")
-        val photoId = UUID.randomUUID().toString()
-        val url = imageStorage(alice).uploadPetPhoto(pet.id, photoId, pictureUri())
-        alice.petRepository.upsertPet(pet.copy(photos = listOf(url)))
-
-        bob.petRepository.pullOnce()
-        val onBobsPhone = checkNotNull(bob.petRepository.getPetById(pet.id))
-        assertEquals(listOf(url), onBobsPhone.photos)
-        assertPhotoOpensForBob("pet_photos/${pet.id}/$photoId.jpg", onBobsPhone.photos.single())
-    }
-
-    @Test
-    fun aMedicalPhotoAliceAttachesOpensOnBobsPhone() = runBlocking<Unit> {
-        val child = newChild(alice, "Ella")
-        val photoId = UUID.randomUUID().toString()
-        val url = imageStorage(alice).uploadMedicalPhoto(child.id, photoId, pictureUri())
-        alice.childInfoRepository.upsertChildInfo(child.copy(medicalPhotos = listOf(url)))
-
-        bob.childInfoRepository.pullOnce()
-        val onBobsPhone = checkNotNull(bob.childInfoRepository.getChildInfoById(child.id))
-        assertEquals(listOf(url), onBobsPhone.medicalPhotos)
-        assertPhotoOpensForBob("medical_photos/${child.id}/$photoId.jpg", onBobsPhone.medicalPhotos.single())
-    }
-
-    @Test
-    fun aPhotoThatIsNotAJpegIsRefused() = runBlocking<Unit> {
-        val png = storageMetadata { contentType = "image/png" }
-        for (path in listOf("pet_photos", "medical_photos")) {
-            val ref = alice.storage.reference.child("$path/${UUID.randomUUID()}/${UUID.randomUUID()}.jpg")
-            try {
-                ref.putBytes(byteArrayOf(1, 2, 3), png).await()
-                fail("$path accepted a file that is not a JPEG")
-            } catch (e: StorageException) {
-                assertEquals(StorageException.ERROR_NOT_AUTHORIZED, e.errorCode)
-            }
-        }
-    }
-
-    /**
-     * Bob opens the photograph at [path] twice: through Storage as himself, and through [url],
-     * the download URL on the record, which is what `AsyncImage` loads. Both must be the bytes
-     * Alice stored, as the JPEG the upload re-encodes to.
-     */
-    private suspend fun assertPhotoOpensForBob(path: String, url: String) {
-        val stored = alice.storage.reference.child(path).getBytes(MAX_PHOTO_BYTES).await()
-        val bobsRef = bob.storage.reference.child(path)
-        assertEquals("image/jpeg", bobsRef.metadata.await().contentType)
-        assertArrayEquals(stored, bobsRef.getBytes(MAX_PHOTO_BYTES).await())
-        assertArrayEquals(stored, httpGet(url))
-    }
-
-    /** The upload class the ViewModels use, over [parent]'s Storage client. */
-    private fun imageStorage(parent: EmulatorParent) = FirebaseImageStorage(context, parent.storage)
-
-    /** A small picture as the photo picker hands one over: a URI the content resolver can open. */
-    private fun pictureUri(): String {
-        val bitmap = Bitmap.createBitmap(PICTURE_PX, PICTURE_PX, Bitmap.Config.ARGB_8888)
-        bitmap.eraseColor(Color.rgb(PICTURE_RED, PICTURE_GREEN, PICTURE_BLUE))
-        val dir = File(context.cacheDir, "e2e-picked/${UUID.randomUUID()}").apply { mkdirs() }
-        val file = File(dir, "photo.png")
-        file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, PNG_QUALITY, it) }
-        bitmap.recycle()
-        return Uri.fromFile(file).toString()
-    }
-
-    /** Fetches [url] the way an image loader does: a plain GET, the token in the URL. */
-    private fun httpGet(url: String): ByteArray {
-        val connection = URL(url).openConnection() as HttpURLConnection
-        return try {
-            connection.connectTimeout = HTTP_TIMEOUT_MS
-            connection.readTimeout = HTTP_TIMEOUT_MS
-            assertEquals("GET $url", HttpURLConnection.HTTP_OK, connection.responseCode)
-            connection.inputStream.use { it.readBytes() }
-        } finally {
-            connection.disconnect()
-        }
-    }
-
     /** Runs [parent]'s budget listener until [budgetId] is in their Room and satisfies [condition]. */
     private suspend fun awaitBudget(
         parent: EmulatorParent,
@@ -413,13 +316,6 @@ class TwoParentFamilyRecordsTest : TwoParentTest() {
         const val RAISED_LIMIT = 250.0
         const val DELTA = 0.001
         const val POLL_MS = 500L
-        const val HTTP_TIMEOUT_MS = 10_000
-        const val MAX_PHOTO_BYTES = 5L * 1024 * 1024
-        const val PICTURE_PX = 64
-        const val PICTURE_RED = 200
-        const val PICTURE_GREEN = 120
-        const val PICTURE_BLUE = 40
-        const val PNG_QUALITY = 100
         const val BIRTH_YEAR = 2019
         const val BIRTH_MONTH = 5
         const val BIRTH_DAY = 4

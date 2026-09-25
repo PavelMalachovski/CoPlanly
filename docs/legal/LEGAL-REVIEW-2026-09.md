@@ -66,7 +66,7 @@ Severity is the lawyer's view of exposure, not of engineering effort:
 | L-1 | Critical | The adult parent's own medical profile was shared with the ex-partner and never disclosed | **Fixed**: feature removed |
 | L-2 | High | A child's health data had no demonstrable explicit consent | **Fixed**: consent dialog, record, withdrawal |
 | L-3 | High | Every Cloud Function ran in the USA | **Fixed**: `europe-west3`. Firestore's own region: **Ops** |
-| L-4 | High | Medical, pet, receipt and event photos: any signed-in account may read, overwrite or delete them, and download URLs outlive revocation | **Open**: see §3 |
+| L-4 | High | Medical, pet, receipt and event photos: any signed-in account may read, overwrite or delete them, and download URLs outlive revocation | **Fixed** in code: family-keyed paths, no download URLs. **Ops**: deploy `storage.rules`, run `purgeLegacyPhotoPaths` (§4) |
 | L-5 | High | Deleting an account erased the other parent's own messages at once | **Fixed**: 30-day window with notice |
 | L-6 | Medium | Export receipts were kept forever | **Fixed**: 10 years; unregistered reservations 7 days |
 | L-7 | Medium | Invitations that were never accepted were never deleted | **Fixed**: swept |
@@ -176,22 +176,47 @@ Some transfers remain even so and are disclosed:
 
 Google operates these globally under the DPF and SCCs.
 
-### L-4. Photos behind unguessable URLs, not behind rules (High, open)
+### L-4. Photos behind unguessable URLs, not behind rules (High, fixed in code; deploy pending)
 
-**What the app does.** `storage.rules` lets **any signed-in account** read and write:
+**What the app did.** `storage.rules` let **any signed-in account** read and write:
 - `medical_photos/{childInfoId}/{fileName}`;
 - `pet_photos/…`;
 - `receipts/…`;
 - `event_images/…`.
 
-The app stores each photo's **download URL**, which carries a token that bypasses the rules
+The app stored each photo's **download URL**, which carries a token that bypasses the rules
 entirely. As a result:
 - a guest whose access expired keeps every medical photo URL they ever loaded;
 - an ex-partner keeps the URLs after unpairing;
 - any account that learns a path can overwrite or delete the file.
 
-MON-23's vault and chat attachments already show the right shape: the path names the family, the
-rules check the reader is one of that family's parents, and no download URL is ever minted.
+MON-23's vault and chat attachments already showed the right shape: the path names the family,
+the rules check the reader is one of that family's parents, and no download URL is ever minted.
+
+**What the app does now** (September 2026, the MON-23 shape applied to the four prefixes):
+- Every photo is stored at `{prefix}/{familyId}/{recordId}/{random name}`. `storage.rules` lets
+  exactly the two uids the family id names read, create and delete it (`isOneOfPair`), and nobody
+  else — **a guest, a calendar friend or a professional never reads a photo** (owner decision);
+  the app shows them the record without it.
+- A photo taken before its uploader had a co-parent goes to `{prefix}/solo_{uid}/…`, readable and
+  deletable by the uploader alone. When the pair forms, `onFamilyCreated` moves it into the
+  family's folder and rewrites the reference — only for a family the server resolved without
+  guessing, as for the `familyId` stamping.
+- A create must name the caller as uploader, carry the file's SHA-256, be an image under 10 MB and
+  never overwrite an existing object. Replacing a photo is a new object plus a delete.
+- **No download URL is requested any more.** A record stores `ph1|path|type|size|sha256`; a phone
+  downloads as the signed-in user and shows the photo only once the bytes match the digest.
+- The old flat paths match no rule and are closed to every client. Owner decision: before release
+  they are test data, so `purgeLegacyPhotoPaths` deletes the objects and clears the references
+  rather than migrating them. A download URL an older build stored is never fetched by this build.
+- A deleted record's photos go with its tombstone after 90 days; account deletion removes the
+  photo folders of the departing parent's records and their personal `solo_` folders.
+
+**What remains.** The path names the pair for ever, so the gate does not move at unpair: an
+ex-partner who kept a path can still fetch that photo, as with the chat history (and the app no
+longer shows them the record). A download URL somebody already copied from an older build keeps
+working until `purgeLegacyPhotoPaths` deletes the object it names. Both are recorded in
+`DPIA.md` R2. **The fix is live only once `firebase deploy --only storage` has run.**
 
 **Why it matters.** Art. 32(1) requires security appropriate to the risk, and Art. 25(1) requires
 data protection by design. For photographs of a child's medical documents, "unguessable" is not
@@ -268,7 +293,8 @@ Art. 35(1) requires one where processing is likely to result in a high risk. The
 
 Two criteria are normally enough, and this app meets four. `DPIA.md` is the assessment. Its
 conclusion is that, with L-4 fixed, the residual risk is acceptable and no prior consultation
-(Art. 36) is needed. **Without L-4 fixed, that conclusion does not hold.**
+(Art. 36) is needed. **L-4 is fixed in code; until the rules are deployed and the legacy objects
+purged, that conclusion does not hold for the live bucket.**
 
 ### L-9. Record of processing activities (Medium, written)
 
@@ -395,7 +421,8 @@ TOTP and SMS multi-factor on the Identity Platform tier. Recommended before grow
 
 ## 3. What blocks a public release, legally
 
-1. **L-4**: photos behind rules, not URLs, and `storage.rules` deployed.
+1. **L-4**: fixed in code (photos behind rules, not URLs). Still needed: `storage.rules`
+   deployed and `purgeLegacyPhotoPaths` run (§4).
 2. **L-3 Ops**: Firestore location confirmed in the EU, or a new EU project.
 3. **The controller's identity** filled in the policy and terms: the s.r.o.'s name, registered
    office, IČO and a monitored privacy address. Google Play also shows the developer's address
@@ -425,7 +452,16 @@ Everything else in §2 is fixed in this change or is a decision that does not bl
 - [ ] Cloud Logging: keep the default 30-day `_Default` bucket, and do not route logs to a longer
       sink. Functions log uids, not names or emails; keep it that way.
 - [ ] Move the functions to `europe-west3` (`functions/README.md`, "Region").
-- [ ] `firebase deploy --only storage`, after L-4.
+- [ ] `firebase deploy --only storage` (L-4: the family-keyed photo blocks; also what lets the
+      vault and chat attachments upload at all).
+- [ ] Deploy the functions carrying L-4 (`onFamilyCreated` moves pre-pairing photos), then run
+      `purgeLegacyPhotoPaths` once, as an operator (the allow-list in `backfillAdminUids`), after
+      the storage deploy. It deletes every object under the flat layouts from before L-4
+      (`receipts/{id}.jpg`, `event_images/{id}.jpg`, `medical_photos/{childId}/…`,
+      `pet_photos/{petId}/…`) and clears the download URLs and paths the records still carry.
+      Idempotent; its summary (`objectsDeleted`, `recordsCleared`) goes in the ops log.
+- [ ] Then run `backfillRecordFamilyIds` once more: it moves any pre-pairing photo whose record
+      reached the server after its family was created.
 - [ ] Run `purgeParentHealthFields` once after the app build carrying L-1 is out (L-1).
 - [ ] Host `web/privacy/`, `web/terms/`, `web/delete-account/` and `web/verify/`, then set the URLs
       in `app/build.gradle.kts`.

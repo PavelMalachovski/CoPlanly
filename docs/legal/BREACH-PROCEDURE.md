@@ -38,7 +38,9 @@
 Answer, in the register (§6):
 
 - **What data?** Especially: children's health data (`child_info.medicalProfile`,
-  `medical_photos/`), messages, documents in the vault, exports.
+  `medical_photos/{familyId}/…`), messages, documents in the vault, exports. Since L-4 a photo is
+  readable only by the two uids its path names, so a leaked photo points at one family's parents
+  or at a leaked credential, not at "any signed-in account".
 - **Whose?** How many families; whether children are among the data subjects (almost always).
 - **What happened to it?** Read, copied, altered, deleted, made unavailable.
 - **By whom?** An outsider, another user, an ex-partner, Google, us.

@@ -190,6 +190,13 @@ contents, so that the app can check a downloaded file is the one that was shared
 export can list the files a message carried by name and fingerprint (the files themselves are
 never put into an export). Files are stored in Cloud Storage under your family, and only the two
 parents of that family can download them; we never create a public link to one.</p>
+<p><strong>Photographs attached to a record</strong> — an event&#39;s photo, a receipt, and the photographs on a
+child&#39;s medical notes or a pet&#39;s record — are stored the same way: in Cloud Storage under your
+family, with their size, type and SHA-256 fingerprint, downloadable by the two parents of that
+family only, and never through a public link. <strong>A guest, a calendar friend or a professional
+never sees them</strong>, even where they can read the record itself. A photograph you add before you
+have linked a co-parent is stored in a folder only you can read; when you link, our server moves
+it into your family&#39;s folder so your co-parent can see it too.</p>
 <p><strong>Why:</strong> these are the contents of the service. <strong>Legal basis:</strong> performance of our contract
 with you (Art. 6(1)(b)).</p>
 <p><strong>Your child&#39;s health details</strong> are health data (Art. 9 GDPR). We process them only with your
@@ -237,7 +244,7 @@ or have deleted what was recorded about them — or an adult who was that child 
 yourself; it carries your name and email address so that the person redeeming it can see who
 invited them, and we never ask for theirs.</li>
 <li><strong>A guest</strong> (for example a grandparent) whom you grant time-limited access to one child&#39;s
-record.</li>
+record — without its photographs.</li>
 <li><strong>A calendar friend</strong> whom you grant time-limited read access to the family calendar.</li>
 <li><strong>A professional</strong> — a mediator, lawyer, guardian ad litem or therapist — whom <strong>both</strong> parents
 let read the family calendar, custody schedule and parenting plan, read-only, for at most 180
@@ -332,7 +339,7 @@ not synced, and not visible to your co-parent.</li>
 </tr>
 <tr>
 <td><strong>Guests and calendar friends you invite</strong></td>
-<td>Only the record or calendar you granted, until the grant expires</td>
+<td>Only the record or calendar you granted, until the grant expires — never its photographs</td>
 <td>Because you granted it</td>
 </tr>
 <tr>
@@ -397,7 +404,11 @@ daily on our servers, not by hand.</p>
 </tr>
 <tr>
 <td>A single event, expense, child record, pet or family document you delete</td>
-<td>Marked deleted at once, so your co-parent&#39;s phone learns of it; removed for good <strong>90 days</strong> later, with its file</td>
+<td>Marked deleted at once, so your co-parent&#39;s phone learns of it; removed for good <strong>90 days</strong> later, with its file or photographs</td>
+</tr>
+<tr>
+<td>A photograph you remove or replace</td>
+<td>Deleted from our servers when you save the change</td>
 </tr>
 <tr>
 <td>A guest&#39;s, calendar friend&#39;s or professional&#39;s access</td>
@@ -448,7 +459,9 @@ within which a claim arising from the family&#39;s affairs can generally still b
 and budgets, the records you entered about your child and pet, your custody schedule and agreed
 expense split, your parenting plan and your invitations;</li>
 <li>deletes the photographs attached to those records — event photos, receipts, and medical and
-pet photographs — and the family documents you added;</li>
+pet photographs — any photograph you added before you linked a co-parent, and the family
+documents you added. A photograph you added to a record your co-parent created stays with that
+record;</li>
 <li><strong>keeps the message thread with your co-parent for 30 days, then deletes it</strong> — messages and
 files, whichever of you sent them. See &quot;The message thread&quot; below;</li>
 <li>removes you from the audience of anything your co-parent created, and ends any guest,

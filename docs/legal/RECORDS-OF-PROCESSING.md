@@ -55,7 +55,7 @@ only what is specific to it.
 | Legal basis | Art. 6(1)(b) |
 | Recipients | The co-parent; a calendar friend (calendar only, time-limited); a professional with both parents' consent (calendar, custody, plan; ≤ 180 days); whoever holds a calendar-feed link a parent created |
 | Retention | Life of the account. An individual deletion is a tombstone for **90 days** (so the other phone learns of it), then swept |
-| Where | `events`, `custody_models`, `expenses`, `budgets`, `parenting_plans`, `change_requests`, `family_settings`; Storage `event_images/`, `receipts/` |
+| Where | `events`, `custody_models`, `expenses`, `budgets`, `parenting_plans`, `change_requests`, `family_settings`; Storage `event_images/{familyId}/…`, `receipts/{familyId}/…` (photos: the two parents only — not calendar friends or professionals; `solo_{uid}/…` for the uploader alone before pairing) |
 
 ### P3. Event revision history
 
@@ -78,8 +78,8 @@ only what is specific to it.
 | Legal basis | Art. 6(1)(b) for the record; **Art. 9(2)(a) explicit consent** of the parent, as the child's legal representative, for the medical profile — recorded with version and time (P1) |
 | Recipients | The co-parent; a guest the parent admits to that one child's record, until the grant expires |
 | Retention | Life of the record; tombstone 90 days after deletion; on consent withdrawal the medical profile of records this parent created is cleared |
-| Where | `child_info`, `pets`; Storage `medical_photos/`, `pet_photos/` |
-| Note | Photos currently protected by unguessable paths only — LEGAL-REVIEW L-4, to be fixed before public release |
+| Where | `child_info`, `pets`; Storage `medical_photos/{familyId}/…`, `pet_photos/{familyId}/…` (`solo_{uid}/…` before pairing) |
+| Note | Photos: readable by the family's two parents only, never by a guest; no download URL is minted; digest-checked; swept with the record's tombstone after 90 days (LEGAL-REVIEW L-4, fixed September 2026). Photos stored before L-4 are deleted by the operator-run `purgeLegacyPhotoPaths` |
 
 ### P5. Chat and files
 

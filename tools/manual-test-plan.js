@@ -178,9 +178,10 @@ const RULES = [
   },
   {
     sections: ['3.10'],
-    why: 'photo upload or Storage rules',
+    why: 'record photos (L-4), photo upload or Storage rules',
     paths: ['storage.rules', 'K/presentation/pets/**', 'K/presentation/childinfo/**',
-      '**/*Upload*'],
+      '**/*Upload*', 'K/**/*Photo*', 'K/domain/files/**', 'K/data/files/**',
+      'functions/record-photos.js'],
   },
   {
     sections: ['4.1'],

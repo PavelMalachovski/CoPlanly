@@ -72,7 +72,9 @@ all three do.** The one most likely to drift is the list of collections: the cal
 `expenses`, `budgets`, `change_requests`, `conversations`, `messages`, `custody_models`,
 `family_settings`, `parenting_plans`, `calendar_friends`, `calendar_feeds`, `friend_profiles`, `google_oauth`,
 `invitations`, `notification_queue` and `users`, plus the Storage files `AUTHORED_FILES` maps
-(`event_images/`, `receipts/`, `medical_photos/`, `pet_photos/`), and adding a collection or a
+(the record photo folders under `event_images/`, `receipts/`, `medical_photos/` and `pet_photos/`
+— the family's folder of each authored record and the departing parent's own `solo_` folders),
+and adding a collection or a
 file layout to the app without adding it there leaves data behind that the page promises is gone.
 One collection is **scrubbed rather than deleted**, and all three documents say so:
 `export_receipts` (MON-16) keeps the hash of an export already handed to a court, with the

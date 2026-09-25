@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
+import com.coparently.app.domain.files.RecordPhotoAccess
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Spacing
 
@@ -62,6 +63,9 @@ data class PhotoStripStrings(
     @StringRes val close: Int
 )
 
+/** One entry the strip draws: the stored or picked string, and what the image loader is given. */
+private data class ShownPhoto(val entry: String, val model: Any)
+
 /**
  * Photographs attached to a record: a scrolling strip of thumbnails, each tapping open
  * full-screen.
@@ -75,24 +79,34 @@ data class PhotoStripStrings(
  * deletes the object *before* dropping the URL from the record. A strip that deleted on tap
  * would have to either block on the network or lie about having done it.
  *
- * @param photos What to show: download URLs already on the record, and content URIs picked
- *   on this device and not yet uploaded. Coil loads both.
+ * **Only the two parents see a stored photograph** (L-4). An entry this viewer may not read — a
+ * guest, a calendar friend — and a legacy download URL from before L-4 are left out, not drawn as
+ * broken images; a read-only strip with nothing left renders nothing at all.
+ *
+ * @param photos What to show: `RecordPhotoCodec` references already on the record, and content
+ *   URIs picked on this device and not yet uploaded.
+ * @param owner The record the photographs belong to, which decides who may see them.
  * @param strings The string resources to render with.
  * @param modifier Modifier applied to the strip.
  * @param onAdd Opens the picker, or null for a read-only strip.
  * @param onRemove Asks for a photograph to be removed, or null for a read-only strip.
  * @param enabled Whether the controls accept input; ignored when read-only.
  */
+// Each parameter is one independent input of the strip; a holder would only rename them.
+@Suppress("LongParameterList")
 @Composable
 fun PhotoStrip(
     photos: List<String>,
+    owner: PhotoOwner,
     strings: PhotoStripStrings,
     modifier: Modifier = Modifier,
     onAdd: (() -> Unit)? = null,
     onRemove: ((String) -> Unit)? = null,
     enabled: Boolean = true
 ) {
-    var opened by remember { mutableStateOf<String?>(null) }
+    val shown = rememberShownPhotos(photos, owner)
+    if (onAdd == null && shown.isEmpty()) return
+    var opened by remember { mutableStateOf<ShownPhoto?>(null) }
 
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -103,7 +117,7 @@ fun PhotoStrip(
             style = MaterialTheme.typography.titleSmall
         )
 
-        if (photos.isEmpty()) {
+        if (shown.isEmpty()) {
             Text(
                 text = stringResource(strings.empty),
                 style = MaterialTheme.typography.bodySmall,
@@ -116,11 +130,11 @@ fun PhotoStrip(
                     .horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(Spacing.S)
             ) {
-                photos.forEachIndexed { index, photo ->
+                shown.forEachIndexed { index, photo ->
                     Thumbnail(
                         photo = photo,
                         position = index + 1,
-                        total = photos.size,
+                        total = shown.size,
                         strings = strings,
                         onOpen = { opened = photo },
                         onRemove = onRemove?.takeIf { enabled }
@@ -136,10 +150,7 @@ fun PhotoStrip(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Icon(Icons.Default.AddAPhoto, contentDescription = null)
-                Text(
-                    text = stringResource(strings.add),
-                    modifier = Modifier.padding(start = Spacing.S)
-                )
+                Text(text = stringResource(strings.add), modifier = Modifier.padding(start = Spacing.S))
             }
             Text(
                 text = stringResource(strings.hint),
@@ -150,14 +161,27 @@ fun PhotoStrip(
     }
 
     opened?.let { photo ->
-        FullScreenPhoto(photo = photo, strings = strings, onClose = { opened = null })
+        FullScreenPhoto(model = photo.model, strings = strings, onClose = { opened = null })
+    }
+}
+
+/** The entries of [photos] this viewer may see, each with the model the image loader is given. */
+@Composable
+private fun rememberShownPhotos(photos: List<String>, owner: PhotoOwner): List<ShownPhoto> {
+    val viewer = LocalPhotoViewerUid.current
+    return remember(photos, owner, viewer) {
+        photos.mapNotNull { entry ->
+            RecordPhotoAccess.modelFor(entry, owner.kind, owner.recordId, owner.familyId, viewer)
+                ?.let { model -> ShownPhoto(entry, model) }
+        }
     }
 }
 
 /** One thumbnail, with its remove button when the strip is an editor. */
+@Suppress("LongParameterList") // one call site, each argument distinct
 @Composable
 private fun Thumbnail(
-    photo: String,
+    photo: ShownPhoto,
     position: Int,
     total: Int,
     strings: PhotoStripStrings,
@@ -166,7 +190,7 @@ private fun Thumbnail(
 ) {
     Box(modifier = Modifier.size(THUMBNAIL_SIZE)) {
         AsyncImage(
-            model = photo,
+            model = photo.model,
             contentDescription = stringResource(strings.thumbnailDescription, position, total),
             contentScale = ContentScale.Crop,
             modifier = Modifier
@@ -179,7 +203,7 @@ private fun Thumbnail(
         )
         if (onRemove != null) {
             FilledTonalIconButton(
-                onClick = { onRemove(photo) },
+                onClick = { onRemove(photo.entry) },
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(Spacing.XS)
@@ -203,7 +227,7 @@ private fun Thumbnail(
  */
 @Composable
 private fun FullScreenPhoto(
-    photo: String,
+    model: Any,
     strings: PhotoStripStrings,
     onClose: () -> Unit
 ) {
@@ -219,7 +243,7 @@ private fun FullScreenPhoto(
             // Zoomable: a prescription or a vaccination card is read, not glanced at, and the
             // fit-to-screen render this replaced made small print unreadable on a phone.
             ZoomableImage(
-                model = photo,
+                model = model,
                 // The strip's thumbnail already described this one; repeating it here would
                 // have a screen reader announce the same photograph twice on the way in.
                 contentDescription = null,

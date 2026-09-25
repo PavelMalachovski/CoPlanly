@@ -151,7 +151,7 @@ describe('sweepDeletedDocuments', () => {
 
   // MON-23. The vault document is only an index; once it is swept nothing names the file, and no
   // client may delete a file the co-parent uploaded, so the sweep takes the file with it.
-  it('sweeps a vault tombstone together with its file, and no other collection\'s', async () => {
+  it('sweeps a vault tombstone together with its file', async () => {
     const vault = Object.assign(tombstonedDaysAgo('vd-old', 120), {familyId: 'a__b'});
     const db = fakeDb({
       events: [tombstonedDaysAgo('e-old', 120)],
@@ -175,6 +175,50 @@ describe('sweepDeletedDocuments', () => {
       {id: 'e-old', collection: 'events'},
       {id: 'vd-old', collection: 'family_documents'},
     ]);
+  });
+
+  // L-4 (owner decision): a deleted record's photos go with its tombstone — the record's folder in
+  // its family, and its creator's personal folder for a photo taken before there was a family.
+  it('sweeps a record\'s photo folders with its tombstone, and a live record\'s never', async () => {
+    const fam = 'alice-uid__bob-uid';
+    const owned = (doc) => Object.assign(doc, {familyId: fam, createdByFirebaseUid: 'alice-uid'});
+    const db = fakeDb({
+      events: [owned(tombstonedDaysAgo('e-old', 120)), owned({id: 'e-live'})],
+      expenses: [owned(tombstonedDaysAgo('x-old', 120))],
+      child_info: [owned(tombstonedDaysAgo('c-new', 3))],
+      pets: [Object.assign(tombstonedDaysAgo('p-old', 120), {familyId: '', createdByFirebaseUid: 'alice-uid'})],
+    });
+    const prefixes = [];
+    const bucket = {
+      async deleteFiles(opts) {
+        prefixes.push(opts.prefix);
+      },
+    };
+
+    const removed = await index.sweepDeletedDocumentsImpl(db, NOW, undefined, bucket);
+
+    assert.strictEqual(removed, 3);
+    assert.deepStrictEqual(prefixes.sort(), [
+      `event_images/${fam}/e-old/`,
+      'event_images/solo_alice-uid/e-old/',
+      'pet_photos/solo_alice-uid/p-old/',
+      `receipts/${fam}/x-old/`,
+      'receipts/solo_alice-uid/x-old/',
+    ].sort());
+  });
+
+  it('keeps a record whose photos cannot be deleted, so the next sweep finds them', async () => {
+    const db = fakeDb({
+      events: [Object.assign(tombstonedDaysAgo('e-old', 120), {familyId: 'a__b'})],
+    });
+    const bucket = {
+      async deleteFiles() {
+        throw new Error('storage unavailable');
+      },
+    };
+
+    await assert.rejects(index.sweepDeletedDocumentsImpl(db, NOW, undefined, bucket));
+    assert.deepStrictEqual(db._deleted, []);
   });
 
   it('keeps the vault document when its file cannot be deleted', async () => {

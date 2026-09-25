@@ -16,6 +16,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
+import com.coparently.app.domain.files.RecordPhotoKind
 import com.coparently.app.domain.guests.GuestGrant
 import com.coparently.app.domain.guests.GuestGrantPolicy
 import com.coparently.app.domain.model.Activity
@@ -31,6 +32,7 @@ import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.ErrorState
 import com.coparently.app.presentation.common.GroupLabel
 import com.coparently.app.presentation.common.ListSkeleton
+import com.coparently.app.presentation.common.PhotoOwner
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionGroupScope
 import com.coparently.app.presentation.common.SectionRow
@@ -244,8 +246,15 @@ internal fun ChildInfoContent(
         if (childInfo.medicalPhotos.isNotEmpty()) {
             // Beside the notes, because that is what they are: what the doctor said, in the form
             // a parent could actually capture it in. Read-only here — the strip becomes an editor
-            // only when the same composable is given add and remove callbacks.
-            item { MedicalPhotoStrip(photos = childInfo.medicalPhotos) }
+            // only when the same composable is given add and remove callbacks. A guest reads the
+            // record without them (L-4): the strip renders nothing for a viewer who is not one of
+            // the family's two parents.
+            item {
+                MedicalPhotoStrip(
+                    photos = childInfo.medicalPhotos,
+                    owner = PhotoOwner(RecordPhotoKind.MEDICAL, childInfo.id, childInfo.familyId)
+                )
+            }
         }
         if (childInfo.emergencyContacts.isNotEmpty()) {
             item {

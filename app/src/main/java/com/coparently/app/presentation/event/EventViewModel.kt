@@ -5,8 +5,9 @@ import androidx.lifecycle.viewModelScope
 import com.coparently.app.R
 import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.domain.error.AppError
+import com.coparently.app.domain.files.RecordPhotoKind
 import com.coparently.app.domain.model.Event
-import com.coparently.app.domain.repository.EventImageStorage
+import com.coparently.app.domain.repository.RecordPhotoStorage
 import com.coparently.app.presentation.common.FamilyMember
 import com.coparently.app.presentation.common.FamilyMembersSource
 import com.coparently.app.presentation.common.Parents
@@ -73,7 +74,7 @@ class EventViewModel @Inject constructor(
     private val errorHandler: com.coparently.app.domain.error.ErrorHandler,
     private val encryptedPreferences: EncryptedPreferences,
     private val gson: Gson,
-    private val eventImageStorage: EventImageStorage,
+    private val photoStorage: RecordPhotoStorage,
     private val parentsSource: ParentsSource,
     familyMembersSource: FamilyMembersSource
 ) : ViewModel() {
@@ -173,18 +174,23 @@ class EventViewModel @Inject constructor(
     }
 
     /**
-     * Uploads a picked image as the photo for [eventId] and returns its download URL.
-     * Callers should upload before saving the event so the URL can be stored on it.
+     * Uploads a picked image as a photo of [eventId] and returns the reference to store on it
+     * (L-4). Callers upload before saving the event so the reference can be stored on it.
+     *
+     * @param familyId The event's stored `familyId`, or null for a new event.
      */
-    suspend fun uploadEventImage(eventId: String, localUri: String): String =
-        eventImageStorage.uploadEventImage(eventId, localUri)
+    suspend fun uploadEventImage(eventId: String, familyId: String?, localUri: String): String =
+        photoStorage.upload(RecordPhotoKind.EVENT, eventId, familyId, localUri)
 
     /**
      * Best-effort deletion of an event's remote photo; failures are swallowed so an
      * orphaned image never blocks the event save/delete.
+     *
+     * @param reference The reference the event stored.
+     * @param familyId The event's stored `familyId`, or null.
      */
-    suspend fun deleteEventImage(eventId: String) {
-        runCatching { eventImageStorage.deleteEventImage(eventId) }
+    suspend fun deleteEventImage(reference: String, familyId: String?) {
+        runCatching { photoStorage.delete(reference, familyId) }
     }
 
     /**
@@ -229,7 +235,7 @@ class EventViewModel @Inject constructor(
         viewModelScope.launch {
             val result = eventUseCases.deleteEvent(event)
             result.onSuccess {
-                if (event.imageUrl != null) deleteEventImage(event.id)
+                event.imageUrl?.let { reference -> deleteEventImage(reference, event.familyId) }
                 _uiState.value = EventUiState.OperationSuccess(EventOperation.DELETED)
                 kotlinx.coroutines.delay(2000)
                 _uiState.value = EventUiState.Success(events.value)

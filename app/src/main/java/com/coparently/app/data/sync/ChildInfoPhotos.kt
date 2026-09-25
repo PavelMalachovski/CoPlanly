@@ -14,7 +14,8 @@ package com.coparently.app.data.sync
 object ChildInfoPhotos {
 
     /**
-     * The download URLs on a document, in the order they were added.
+     * The photo references on a document, in the order they were added. Every string is kept —
+     * a legacy download URL too; the screens decide what is a reference (`RecordPhotoCodec`).
      *
      * Never throws and never returns null. Three cases arrive here and all three are ordinary:
      *
