@@ -1,0 +1,310 @@
+{
+  "variant": "light-en-100-wide",
+  "dark": false,
+  "language": "en",
+  "fontScale": 1,
+  "device": {
+    "model": "sdk_gphone_x86_64",
+    "sdk": 30,
+    "widthPx": 2160,
+    "heightPx": 1504,
+    "densityDpi": 320
+  },
+  "sections": {
+    "main": {
+      "captured": [
+        {
+          "file": "01_home_dialog_swap.png",
+          "screen": "home_dialog_swap"
+        },
+        {
+          "file": "02_home_dialog_requests.png",
+          "screen": "home_dialog_requests"
+        },
+        {
+          "file": "03_change_requests_inbox.png",
+          "screen": "change_requests_inbox"
+        },
+        {
+          "file": "04_home_top.png",
+          "screen": "home_top"
+        },
+        {
+          "file": "06_home_bottom.png",
+          "screen": "home_bottom"
+        },
+        {
+          "file": "07_event_preview_sheet.png",
+          "screen": "event_preview_sheet"
+        },
+        {
+          "file": "08_event_edit_form.png",
+          "screen": "event_edit_form"
+        },
+        {
+          "file": "09_widget_today_compact.png",
+          "screen": "widget_today_compact"
+        },
+        {
+          "file": "10_widget_today_tall.png",
+          "screen": "widget_today_tall"
+        },
+        {
+          "file": "11_calendar_month.png",
+          "screen": "calendar_month"
+        },
+        {
+          "file": "12_calendar_week.png",
+          "screen": "calendar_week"
+        },
+        {
+          "file": "13_calendar_day.png",
+          "screen": "calendar_day"
+        },
+        {
+          "file": "14_calendar_filters.png",
+          "screen": "calendar_filters"
+        },
+        {
+          "file": "15_calendar_next_month.png",
+          "screen": "calendar_next_month"
+        },
+        {
+          "file": "16_event_add_empty.png",
+          "screen": "event_add_empty"
+        },
+        {
+          "file": "17_event_add_keyboard.png",
+          "screen": "event_add_keyboard"
+        },
+        {
+          "file": "18_event_add_scrolled.png",
+          "screen": "event_add_scrolled"
+        },
+        {
+          "file": "19_chat_thread.png",
+          "screen": "chat_thread"
+        },
+        {
+          "file": "20_chat_composer_keyboard.png",
+          "screen": "chat_composer_keyboard"
+        },
+        {
+          "file": "21_chat_search.png",
+          "screen": "chat_search"
+        },
+        {
+          "file": "22_expenses_list.png",
+          "screen": "expenses_list"
+        },
+        {
+          "file": "23_expenses_scrolled.png",
+          "screen": "expenses_scrolled"
+        },
+        {
+          "file": "26_settings_top.png",
+          "screen": "settings_top"
+        },
+        {
+          "file": "27_settings_scrolled_1.png",
+          "screen": "settings_scrolled_1"
+        },
+        {
+          "file": "28_settings_scrolled_2.png",
+          "screen": "settings_scrolled_2"
+        },
+        {
+          "file": "29_settings_scrolled_3.png",
+          "screen": "settings_scrolled_3"
+        },
+        {
+          "file": "30_settings_scrolled_4.png",
+          "screen": "settings_scrolled_4"
+        },
+        {
+          "file": "31_settings_theme_picker.png",
+          "screen": "settings_theme_picker"
+        },
+        {
+          "file": "32_settings_language_picker.png",
+          "screen": "settings_language_picker"
+        },
+        {
+          "file": "33_child_info_list.png",
+          "screen": "child_info_list"
+        },
+        {
+          "file": "34_child_detail.png",
+          "screen": "child_detail"
+        },
+        {
+          "file": "35_child_detail_scrolled_1.png",
+          "screen": "child_detail_scrolled_1"
+        },
+        {
+          "file": "37_pets_list.png",
+          "screen": "pets_list"
+        },
+        {
+          "file": "38_pet_edit.png",
+          "screen": "pet_edit"
+        },
+        {
+          "file": "39_custody_setup.png",
+          "screen": "custody_setup"
+        },
+        {
+          "file": "40_custody_setup_scrolled_1.png",
+          "screen": "custody_setup_scrolled_1"
+        },
+        {
+          "file": "41_custody_setup_scrolled_2.png",
+          "screen": "custody_setup_scrolled_2"
+        },
+        {
+          "file": "42_custody_setup_scrolled_3.png",
+          "screen": "custody_setup_scrolled_3"
+        },
+        {
+          "file": "43_parenting_plan.png",
+          "screen": "parenting_plan"
+        },
+        {
+          "file": "44_parenting_plan_scrolled_1.png",
+          "screen": "parenting_plan_scrolled_1"
+        },
+        {
+          "file": "45_parenting_plan_scrolled_2.png",
+          "screen": "parenting_plan_scrolled_2"
+        },
+        {
+          "file": "46_pairing.png",
+          "screen": "pairing"
+        },
+        {
+          "file": "47_friends.png",
+          "screen": "friends"
+        },
+        {
+          "file": "48_professionals.png",
+          "screen": "professionals"
+        },
+        {
+          "file": "49_export.png",
+          "screen": "export"
+        },
+        {
+          "file": "50_export_scrolled_1.png",
+          "screen": "export_scrolled_1"
+        },
+        {
+          "file": "51_documents_vault.png",
+          "screen": "documents_vault"
+        },
+        {
+          "file": "52_journal.png",
+          "screen": "journal"
+        },
+        {
+          "file": "53_calendar_feed.png",
+          "screen": "calendar_feed"
+        },
+        {
+          "file": "54_school_import.png",
+          "screen": "school_import"
+        },
+        {
+          "file": "55_school_connect.png",
+          "screen": "school_connect"
+        },
+        {
+          "file": "56_my_profile.png",
+          "screen": "my_profile"
+        },
+        {
+          "file": "57_coparent_profile.png",
+          "screen": "coparent_profile"
+        },
+        {
+          "file": "58_data_sources.png",
+          "screen": "data_sources"
+        },
+        {
+          "file": "59_home_with_family_switcher.png",
+          "screen": "home_with_family_switcher"
+        },
+        {
+          "file": "60_family_switcher_dialog.png",
+          "screen": "family_switcher_dialog"
+        },
+        {
+          "file": "61_sign_out_confirm.png",
+          "screen": "sign_out_confirm"
+        }
+      ],
+      "skipped": [
+        {
+          "screen": "home_scrolled",
+          "reason": "java.lang.IllegalStateException: Home does not scroll"
+        },
+        {
+          "screen": "expenses_analytics",
+          "reason": "java.lang.AssertionError: Timed out waiting for Analytics"
+        },
+        {
+          "screen": "expense_add",
+          "reason": "java.lang.AssertionError: Timed out waiting for Add expense"
+        },
+        {
+          "screen": "child_detail_scrolled_2",
+          "reason": "the screen ends before this"
+        },
+        {
+          "screen": "auth_sign_in",
+          "reason": "java.lang.IllegalStateException: Method setCurrentState must be called on the main thread"
+        },
+        {
+          "screen": "auth_sign_up",
+          "reason": "java.lang.AssertionError: Timed out waiting for Sign up"
+        }
+      ]
+    },
+    "onboarding": {
+      "captured": [
+        {
+          "file": "80_onboarding_step_1.png",
+          "screen": "onboarding_step_1"
+        },
+        {
+          "file": "81_onboarding_step_2.png",
+          "screen": "onboarding_step_2"
+        },
+        {
+          "file": "82_onboarding_step_3.png",
+          "screen": "onboarding_step_3"
+        },
+        {
+          "file": "83_onboarding_step_4.png",
+          "screen": "onboarding_step_4"
+        },
+        {
+          "file": "84_onboarding_step_5.png",
+          "screen": "onboarding_step_5"
+        },
+        {
+          "file": "85_onboarding_step_6.png",
+          "screen": "onboarding_step_6"
+        },
+        {
+          "file": "86_onboarding_step_7.png",
+          "screen": "onboarding_step_7"
+        },
+        {
+          "file": "87_onboarding_step_8.png",
+          "screen": "onboarding_step_8"
+        }
+      ],
+      "skipped": []
+    }
+  }
+}
