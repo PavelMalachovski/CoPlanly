@@ -880,6 +880,38 @@ foldable, a fold and unfold, and a camera turning.
 
 ---
 
+### 3.18 The Bakaláři school import · 1P, sharing check 2P [branch]
+
+MON-8. The parsers, the import planner and the token refresh are JVM-tested against the Bakaláři
+API's published sample responses; **no real school account has ever been used**, so this section
+is the first time the import meets a real server. Needs a parent (or student) Bakaláři login.
+
+- [ ] Settings → Sync → the Bakaláři row → Connect a school. Type your town: the school appears.
+      Pick it (or enter its address by hand, e.g. `https://skola.bakalari.cz`).
+- [ ] Sign in with a **wrong** password: a plain "wrong username or password", nothing stored.
+      Then the right one: the screen names the child and class as Bakaláři knows them.
+- [ ] Choose the child (and, with two families, the family). Confirm. Within a minute the calendar
+      shows, on each school day of the next four weeks, one event from the first lesson's start to
+      the last lesson's end — **compare three days with the Bakaláři app**, including one with a
+      substitution or a cancelled lesson.
+- [ ] School events for the child's class appear on their days; another class's do not.
+      A day off (ředitelské volno) appears as an all-day event; a public holiday or the
+      Christmas/Easter/summer vacation is **not** duplicated (the calendar already draws it).
+- [ ] Update now twice: no duplicates. Delete one imported event, Update now: it does not come
+      back.
+- [ ] On the co-parent's phone: the imported events are there, tagged with the child.
+- [ ] Settings → Sync → the row: "last updated" shows today. Turn airplane mode on, Update now:
+      an error line, nothing lost.
+- [ ] Disconnect: the connection goes, the imported events stay. Sign out and back in: no school
+      connection is remembered.
+- [ ] Two children at the same school: connect each with its own Bakaláři login (Bakaláři issues
+      one per child); each child's events carry that child.
+- **If it fails:** `data/school/bakalari/` (parsers, client), `domain/school/SchoolImportPlanner`,
+  `presentation/school/`. Capture the failing JSON (with names and ids redacted) and add it to
+  `app/src/test/resources/school/bakalari/` with a test.
+
+---
+
 ## 4. Release-build checks
 
 ### 4.1 REL-7: R8 and Gson on a device · 2P, fallback 1P

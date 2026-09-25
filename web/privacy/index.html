@@ -282,6 +282,31 @@ the refresh token pass through our server (a Google Cloud Function), which forwa
 Google and does not keep them. The server keeps only a one-way fingerprint (a SHA-256 hash) of
 your refresh token, linked to your account, so that a token stolen from somebody else cannot be
 renewed through our service. Disconnecting in Settings deletes the tokens from your device.</p>
+<h3>Your child&#39;s school system (Bakaláři), if you connect it</h3>
+<p>You can connect your child&#39;s <strong>Bakaláři</strong> account (Settings → Sync) so that the school&#39;s events
+and the times your child is at school appear in the family calendar. It works like this:</p>
+<ul>
+<li><strong>You sign in on your phone, and your phone talks to the school&#39;s Bakaláři server directly.</strong>
+Your Bakaláři username and password never reach us. The password is used once, to sign in, and
+is <strong>not stored anywhere</strong> — not on our servers and not on your phone.</li>
+<li>What your phone keeps, <strong>encrypted and on the device only</strong>, is the sign-in token Bakaláři
+issues, the school&#39;s address, your username, and your child&#39;s name and class as Bakaláři shows
+them, so that it can refresh the calendar once a day. When the token expires you are asked for
+the password again. Signing out, disconnecting the school or deleting your account removes all
+of it from the phone.</li>
+<li>From the school&#39;s server the app reads <strong>only</strong> your child&#39;s timetable for the next four weeks
+and the school&#39;s events. It keeps, for each school day, the time the first lesson starts and the
+last one ends, days without lessons, and the events for your child&#39;s class or for the whole
+school. It does <strong>not</strong> read or keep grades, homework, absences, messages or individual lessons.</li>
+<li>What it imports becomes <strong>ordinary events in the family you chose</strong>, about the child you chose
+— visible to your co-parent like any event you enter yourself, and kept and deleted like them.</li>
+<li>To help you find your school, the app asks Bakaláři&#39;s public school list
+(<code>sluzby.bakalari.cz</code>) for the schools in the town you type. That request carries only the
+town&#39;s name.</li>
+</ul>
+<p><strong>Why:</strong> so both parents see the school&#39;s calendar without retyping it. <strong>Legal basis:</strong>
+performance of our contract with you (Art. 6(1)(b)) — you asked for the import; the school&#39;s own
+processing of your child&#39;s data in Bakaláři is the school&#39;s, under its own privacy notice.</p>
 <h2>What happens on your device and goes nowhere</h2>
 <ul>
 <li><strong>Receipt scanning.</strong> When you photograph a receipt, the text is recognised <strong>entirely on
