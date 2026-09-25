@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- MON-17: read-only calendar links for an iPhone or any other calendar app. -->
-    <string name="calendar_feed_settings_title">Kalendář pro iPhone a jiné kalendáře</string>
+    <string name="calendar_feed_settings_title">Kalendář pro jiné aplikace</string>
     <string name="calendar_feed_settings_description">Odkaz na rodinný kalendář jen pro čtení</string>
     <string name="calendar_feed_title">Kalendář pro jiné aplikace</string>
     <string name="calendar_feed_intro">Vytvořte odkaz jen pro čtení, který bude Kalendář na iPhonu – nebo jakákoli aplikace, jež umí odebírat kalendář z webové adresy – průběžně aktualizovat. Druhá aplikace ho obnovuje zhruba jednou za hodinu.</string>

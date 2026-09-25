@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Czech translations of settings_account_strings.xml. -->
 <resources>
-    <string name="settings_co_parent_sync">Synchronizace s druhým rodičem</string>
+    <string name="settings_co_parent_sync">Sdílení s druhým rodičem</string>
     <string name="settings_co_parent_sync_description">Automaticky synchronizuje události a informace o dítěti s druhým rodičem</string>
     <string name="settings_sync">Synchronizovat</string>
-    <string name="settings_google_sync">Synchronizace s Kalendářem Google</string>
+    <string name="settings_google_sync">Kalendář Google</string>
     <string name="settings_gcal_enable_sync">Zapnout synchronizaci</string>
     <string name="settings_gcal_private_note">Importované události zůstanou v tomto zařízení. Váš Kalendář Google je osobní, takže se z něj s druhým rodičem nic nesdílí.</string>
     <string name="settings_parent_color">Moje barva</string>
@@ -19,7 +19,7 @@
     <string name="settings_calendar_sign_out">Odhlásit se ze synchronizace kalendáře</string>
     <string name="settings_account">Účet</string>
     <string name="settings_account_description">Úplné odhlášení z aplikace. Pro přístup k účtu se budete muset znovu přihlásit.</string>
-    <string name="settings_account_sign_out">Odhlásit se z aplikace</string>
+    <string name="settings_account_sign_out">Odhlásit se</string>
     <string name="settings_pairing_title">Propojení s druhým rodičem</string>
     <string name="settings_pairing_description">Pozvěte nebo spravujte druhého rodiče</string>
     <string name="settings_child_info_title">Informace o dítěti</string>

@@ -25,8 +25,8 @@
         <item quantity="other">%1$d nepřečtených</item>
     </plurals>
     <string name="home_stat_open_chat">Otevřít chat →</string>
-    <string name="home_stat_owed_to_you">Dluží vám %1$s →</string>
-    <string name="home_stat_you_owe">Dlužíte %1$s →</string>
+    <string name="home_stat_owed_to_you">Dluží vám %1$s\u00A0→</string>
+    <string name="home_stat_you_owe">Dlužíte %1$s →</string>
     <string name="home_stat_settled">Vyrovnáno →</string>
 
     <string name="home_section_this_week">Tento týden</string>

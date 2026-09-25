@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- PairingScreen -->
-    <string name="pairing_screen_title">Propojit s druhým rodičem</string>
+    <string name="pairing_screen_title">Propojení s druhým rodičem</string>
     <string name="pairing_back">Zpět</string>
     <string name="pairing_unpair_button">Odpojit</string>
     <string name="pairing_scan_qr_code">Naskenovat QR kód</string>

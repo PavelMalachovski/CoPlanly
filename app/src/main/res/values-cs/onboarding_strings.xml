@@ -18,7 +18,7 @@
     <string name="onboarding_relatives_body">Babička, dědeček, teta, strýc – kdokoli, kdo může dítě vyzvednout nebo komu se zavolá v nouzi.</string>
     <string name="onboarding_relatives_needs_child">Tyto kontakty se ukládají k dítěti, takže nejdřív přidejte dítě – vraťte se o krok zpět, nebo je doplňte později v nastavení.</string>
     <string name="onboarding_custody_title">Rozvrh péče</string>
-    <string name="onboarding_custody_body">Určete, které dny je dítě u koho z vás. Kdykoli to můžete změnit a druhý rodič bude muset se změnou souhlasit.</string>
+    <string name="onboarding_custody_body">Určete, které dny je dítě u koho z vás. Kdykoli to můžete změnit a druhý rodič bude muset změnu schválit.</string>
     <string name="onboarding_custody_open">Sestavit rozvrh</string>
     <string name="onboarding_family_title">Koho vychováváte společně?</string>
     <string name="onboarding_family_body">Pokud máte obojí, vyberte obě možnosti. Později to změníte v Nastavení.</string>
@@ -57,7 +57,7 @@
     <string name="onboarding_coparent_nothing_yet">Zatím nic nedorazilo. Údaje přijdou, až bude telefon, který používá %1$s, online – můžete pokračovat a vše zadané se objeví později.</string>
     <string name="onboarding_from_coparent">Zadal(a) %1$s. Zkontrolujte údaje a doplňte, co chybí.</string>
     <string name="onboarding_split_value_named">Vy %1$d / %2$s %3$d</string>
-    <string name="onboarding_split_body_linked">Napůl, pokud se nedohodnete jinak. Tohle bude vaše společné rozdělení; pozdější změnu musí potvrdit %1$s – a již zadané výdaje si ponechají své rozdělení.</string>
+    <string name="onboarding_split_body_linked">Napůl, pokud se nedohodnete jinak. Toto bude vaše společné rozdělení; pozdější změnu musí potvrdit %1$s – a již zadané výdaje si ponechají své rozdělení.</string>
     <string name="onboarding_split_agreed_body">Rozdělení už je dohodnuté (%1$s). Posunutím jezdce navrhnete jiné – druhý rodič ho bude muset potvrdit.</string>
     <string name="onboarding_custody_set_body">Rozvrh už je nastavený: %1$s. Zkontrolujte ho, nebo nastavení dokončete a rozvrh změňte později v Nastavení.</string>
     <string name="onboarding_custody_review">Zkontrolovat rozvrh</string>
