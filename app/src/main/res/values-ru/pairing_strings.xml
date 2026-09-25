@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- PairingScreen -->
-    <string name="pairing_screen_title">Связаться со вторым родителем</string>
+    <string name="pairing_screen_title">Подключить второго родителя</string>
     <string name="pairing_back">Назад</string>
-    <string name="pairing_unpair_button">Разорвать пару</string>
+    <string name="pairing_unpair_button">Разорвать связь</string>
     <string name="pairing_scan_qr_code">Сканировать QR-код</string>
     <string name="pairing_unknown_sender">Неизвестно</string>
     <string name="pairing_accept_button">Принять</string>
@@ -12,7 +12,7 @@
     <string name="pairing_cancel">Отмена</string>
 
     <!-- QrScannerScreen -->
-    <string name="pairing_camera_permission_title">Требуется разрешение на использование камеры</string>
+    <string name="pairing_camera_permission_title">Нужен доступ к камере</string>
     <string name="pairing_camera_permission_message">Разрешите доступ к камере, чтобы сканировать QR-коды приглашений.</string>
     <string name="pairing_camera_permission_denied_message">Доступ к камере запрещён. Включите его в настройках системы, чтобы сканировать QR-коды.</string>
     <string name="pairing_open_app_settings">Открыть настройки</string>
@@ -47,16 +47,16 @@
     <!-- Email invite -->
     <!-- Paired state -->
     <string name="pairing_paired_since">Связаны с %1$s</string>
-    <string name="pairing_partner_email_unknown">Email недоступен</string>
-    <string name="pairing_unpair_confirm_title">Разорвать связь?</string>
-    <string name="pairing_unpair_confirm_message">Вы перестанете делиться календарём, чатом и расходами с %1$s. Данные на этом телефоне сохранятся.</string>
-    <string name="pairing_unpair_confirm_action">Отвязаться</string>
-    <string name="pairing_unpair_final_title">Вы хотите отказаться от опеки?</string>
-    <string name="pairing_unpair_final_message">При отказе от опеки вы теряете данные о своём ребёнке, занесённые в приложение: у вас не будет доступа к календарю, событиям, важным контактам и общим расходам. Вся опека перейдёт ко второму родителю.</string>
+    <string name="pairing_partner_email_unknown">Эл. почта неизвестна</string>
+    <string name="pairing_unpair_confirm_title">Разорвать связь со вторым родителем?</string>
+    <string name="pairing_unpair_confirm_message">Вы перестанете делиться календарём, чатом и расходами со вторым родителем (%1$s). Данные на этом телефоне сохранятся.</string>
+    <string name="pairing_unpair_confirm_action">Разорвать</string>
+    <string name="pairing_unpair_final_title">Отказаться от общего графика опеки?</string>
+    <string name="pairing_unpair_final_message">Тогда вы потеряете доступ к данным о ребёнке, внесённым в приложение: к календарю, событиям, важным контактам и общим расходам. Все эти данные останутся у второго родителя.</string>
     <string name="pairing_unpair_final_yes">Да</string>
     <string name="pairing_unpair_final_no">Нет</string>
     <!-- Deep link confirmation from a bare code (no sender identity known yet) -->
-    <string name="pairing_deep_link_confirm_title">Связать аккаунты по этому коду?</string>
+    <string name="pairing_deep_link_confirm_title">Подключиться по этому коду?</string>
     <string name="pairing_deep_link_confirm_message">%1$s — человек, приславший вам этот код, увидит ваш общий календарь, чат и расходы.</string>
     <!-- Fallback conversation title when the co-parent has no display name yet -->
     <string name="pairing_default_partner_name">Второй родитель</string>
@@ -73,6 +73,6 @@
     <string name="pairing_error_not_friend_invitation">Это не приглашение для друга.</string>
     <!-- Shown after an email invitation is created. Deliberately does not claim the email
          arrived: the app cannot know that, and the code works either way. -->
-    <string name="pairing_add_another_title">Добавить ещё одного со-родителя</string>
-    <string name="pairing_add_another_description">Поделитесь кодом с тем, с кем вы воспитываете детей отдельно. Та семья останется отделённой от этой.</string>
+    <string name="pairing_add_another_title">Добавить другую семью</string>
+    <string name="pairing_add_another_description">Поделитесь кодом с другим родителем, с которым вы воспитываете ребёнка отдельно. Его семья будет отдельной от этой.</string>
 </resources>

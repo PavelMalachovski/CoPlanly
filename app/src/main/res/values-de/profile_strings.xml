@@ -9,11 +9,11 @@
     <string name="profile_save">Speichern</string>
     <string name="profile_saved">Gespeichert</string>
     <string name="profile_readonly_note">Nur %1$s kann diese Angaben ändern</string>
-    <string name="profile_coparent_empty">Dein Co-Elternteil hat das noch nicht ausgefüllt</string>
-    <string name="profile_not_paired">Verknüpfe einen Co-Elternteil, um seine Angaben zu sehen</string>
+    <string name="profile_coparent_empty">Der andere Elternteil hat das noch nicht ausgefüllt</string>
+    <string name="profile_not_paired">Verknüpfe den anderen Elternteil, um seine Angaben zu sehen</string>
     <string name="profile_load_failed">Dein Profil konnte nicht geladen werden</string>
     <string name="settings_my_profile_title">Meine Angaben</string>
     <string name="settings_my_profile_description">Dein Name und deine Kontaktdaten</string>
     <string name="settings_coparent_profile_title">Angaben des Co-Elternteils</string>
-    <string name="settings_coparent_profile_description">Was dein Co-Elternteil geteilt hat</string>
+    <string name="settings_coparent_profile_description">Was der andere Elternteil geteilt hat</string>
 </resources>

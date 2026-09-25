@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="friend_section_title">Freund mit Kalenderzugriff</string>
-    <string name="friend_section_supporting">Eine Betreuungsperson, ein Freund oder eine Großmutter, die den Kalender sieht</string>
+    <string name="friend_section_supporting">Betreuungsperson, Freund oder Großeltern, die den Kalender sehen können</string>
     <string name="friend_invite_action">Freund einladen</string>
-    <string name="friend_invite_code_label">Gib ihnen diesen Code</string>
+    <string name="friend_invite_code_label">Gib diesen Code weiter</string>
     <string name="friend_access_until">Zugriff bis %1$s</string>
     <string name="friend_revoke">Zugriff entziehen</string>
     <string name="friend_revoke_confirm_title">Zugriff für %1$s entziehen?</string>
-    <string name="friend_revoke_confirm_message">Sie sehen den Familienkalender dann nicht mehr. Du kannst sie jederzeit erneut einladen.</string>
+    <string name="friend_revoke_confirm_message">Diese Person sieht den Familienkalender dann nicht mehr. Du kannst sie jederzeit erneut einladen.</string>
     <string name="friend_role_guardian">Betreuungsperson</string>
     <string name="friend_role_friend">Freund</string>
-    <string name="friend_role_grandparent">Großelternteil</string>
+    <string name="friend_role_grandparent">Oma/Opa</string>
     <string name="friend_detail_title">Freund</string>
     <string name="friend_profile_title">Mein Profil</string>
     <string name="friend_profile_name">Name</string>

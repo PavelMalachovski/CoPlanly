@@ -3,7 +3,7 @@
     <string name="change_request_inbox_title">Запросы на изменение</string>
     <string name="change_request_back">Назад</string>
     <string name="change_request_empty_title">Пока нет запросов на изменение</string>
-    <string name="change_request_empty_hint">Откройте событие и нажмите «Запросить изменение», чтобы предложить другому родителю новое время.</string>
+    <string name="change_request_empty_hint">Откройте событие и нажмите «Запросить изменение», чтобы предложить второму родителю новое время.</string>
     <string name="change_request_incoming">Входящие</string>
     <string name="change_request_outgoing">Исходящие</string>
     <string name="change_request_status_pending">Ожидает</string>
@@ -22,7 +22,7 @@
     <string name="change_request_from_time">С %1$s</string>
     <string name="change_request_to_time">До %1$s</string>
     <string name="change_request_to_unset">До —</string>
-    <string name="change_request_note_label">Сообщение другому родителю (необязательно)</string>
+    <string name="change_request_note_label">Сообщение второму родителю (необязательно)</string>
     <string name="change_request_send">Отправить запрос</string>
     <string name="change_request_ok">OK</string>
     <string name="change_request_cancel">Отмена</string>
@@ -40,6 +40,6 @@
     <string name="change_request_error_proposal_decline_failed">Не удалось отклонить предложение. Попробуйте ещё раз.</string>
     <string name="change_request_error_answer_failed">Не удалось ответить. Попробуйте ещё раз.</string>
     <string name="change_request_error_signed_out">Вы вышли из аккаунта. Войдите и попробуйте ещё раз.</string>
-    <string name="change_request_error_not_paired">Сначала свяжитесь со вторым родителем, чтобы отправлять запросы на изменение.</string>
+    <string name="change_request_error_not_paired">Чтобы отправлять запросы на изменение, сначала подключите второго родителя.</string>
     <string name="change_request_error_send_failed">Не удалось отправить запрос на изменение. Попробуйте ещё раз.</string>
 </resources>

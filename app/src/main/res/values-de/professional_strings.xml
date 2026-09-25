@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="professional_section_title">Fachleute</string>
-    <string name="professional_section_supporting">Mediator, Anwältin oder Therapeut — nur lesend, mit Zustimmung beider Eltern</string>
-    <string name="professional_empty">Keine Fachperson kann diese Familie lesen</string>
+    <string name="professional_section_supporting">Mediator, Anwältin oder Therapeut – nur lesend, mit Zustimmung beider Eltern</string>
+    <string name="professional_empty">Keine Fachperson hat Lesezugriff auf diese Familie</string>
     <string name="professional_invite_action">Fachperson einladen</string>
-    <string name="professional_invite_explainer">Sie sieht den Kalender, den Betreuungsplan und den Elternplan — sonst nichts: nie den Chat, Ausgaben oder Kinderdaten. Der Zugang beginnt erst, wenn auch der andere Elternteil zustimmt, und endet am gewählten Tag.</string>
+    <string name="professional_invite_explainer">Die Fachperson sieht den Kalender, den Betreuungsplan und den Elternplan – sonst nichts: nie den Chat, Ausgaben oder Kinderdaten. Der Zugang beginnt erst, wenn auch der andere Elternteil zustimmt, und endet an dem Tag, den du wählst.</string>
     <string name="professional_invite_role_label">Rolle</string>
     <string name="professional_invite_duration_label">Zugang für</string>
     <string name="professional_invite_create">Code erstellen</string>
@@ -15,27 +15,27 @@
     <string name="professional_role_lawyer">Anwalt/Anwältin</string>
     <string name="professional_role_guardian_ad_litem">Verfahrensbeistand</string>
     <string name="professional_role_therapist">Therapeut/in</string>
-    <string name="professional_role_other">Andere</string>
+    <string name="professional_role_other">Sonstige</string>
     <string name="professional_duration_month">30 Tage</string>
     <string name="professional_duration_quarter">90 Tage</string>
     <string name="professional_duration_half_year">6 Monate</string>
-    <string name="professional_status_waiting_for_you">Wartet auf Ihre Zustimmung</string>
+    <string name="professional_status_waiting_for_you">Wartet auf deine Zustimmung</string>
     <string name="professional_status_waiting_for_co_parent">Wartet auf die Zustimmung des anderen Elternteils</string>
     <string name="professional_status_waiting_for_parents">Wartet auf die Zustimmung beider Eltern</string>
-    <string name="professional_status_active_until">Kann bis %1$s lesen</string>
+    <string name="professional_status_active_until">Lesezugriff bis %1$s</string>
     <string name="professional_status_expired">Zugang endete am %1$s</string>
     <string name="professional_row_supporting">%1$s · %2$s</string>
-    <string name="professional_dialog_body">%1$s kann bis %2$s den Kalender, den Betreuungsplan und den Elternplan dieser Familie lesen — nie den Chat, Ausgaben oder Kinderdaten. Der Zugang beginnt erst mit der Zustimmung beider Eltern, und jeder von Ihnen kann ihn jederzeit beenden.</string>
-    <string name="professional_revoke_confirm">Zugang für %1$s jetzt beenden? Der andere Elternteil muss nicht zustimmen, und es lässt sich nicht rückgängig machen — dafür wäre eine neue Einladung nötig.</string>
+    <string name="professional_dialog_body">%1$s kann bis %2$s den Kalender, den Betreuungsplan und den Elternplan dieser Familie lesen – nie den Chat, Ausgaben oder Kinderdaten. Der Zugang beginnt erst mit der Zustimmung beider Eltern, und jeder von euch kann ihn jederzeit beenden.</string>
+    <string name="professional_revoke_confirm">Zugang für %1$s jetzt beenden? Der andere Elternteil muss nicht zustimmen, und es lässt sich nicht rückgängig machen – dafür wäre eine neue Einladung nötig.</string>
     <string name="professional_dialog_consent">Ich stimme zu</string>
     <string name="professional_dialog_revoke">Zugang beenden</string>
     <string name="professional_dialog_close">Schließen</string>
-    <string name="professional_action_failed">Das hat nicht geklappt. Bitte versuchen Sie es erneut.</string>
+    <string name="professional_action_failed">Das hat nicht geklappt. Bitte versuche es erneut.</string>
     <string name="professional_redeem_title">Ich habe einen Code für Fachleute</string>
     <string name="professional_redeem_label">Code</string>
     <string name="professional_redeem_action">Code annehmen</string>
-    <string name="professional_redeem_done">Code angenommen. Sie können lesen, sobald beide Eltern zugestimmt haben.</string>
-    <string name="professional_my_access_title">Familien, die ich lesen kann</string>
+    <string name="professional_redeem_done">Code angenommen. Du kannst lesen, sobald beide Eltern zugestimmt haben.</string>
+    <string name="professional_my_access_title">Familien mit Lesezugriff</string>
     <string name="professional_family_label">%1$s und %2$s</string>
     <string name="professional_open_calendar">Kalender</string>
     <string name="professional_open_plan">Elternplan</string>
@@ -46,13 +46,13 @@
     <string name="professional_calendar_previous">Frühere Wochen</string>
     <string name="professional_calendar_next">Spätere Wochen</string>
     <string name="professional_calendar_event_supporting">%1$s · %2$s</string>
-    <string name="professional_unavailable">Nichts anzuzeigen — der Zugang ist nicht aktiv. Er öffnet sich, wenn beide Eltern zugestimmt haben, und endet an seinem Enddatum.</string>
+    <string name="professional_unavailable">Nichts anzuzeigen – der Zugang ist nicht aktiv. Er öffnet sich, wenn beide Eltern zugestimmt haben, und endet an seinem Enddatum.</string>
     <string name="professional_plan_not_answered">Nicht beantwortet</string>
     <string name="professional_plan_answer_by">%1$s: %2$s</string>
     <string name="professional_parent_fallback">Ein Elternteil</string>
-    <string name="professional_error_is_professional_invitation">Das ist eine Einladung für Fachleute. Verwenden Sie sie unter Einstellungen → Fachleute.</string>
+    <string name="professional_error_is_professional_invitation">Das ist eine Einladung für Fachleute. Verwende sie unter Einstellungen → Fachleute.</string>
     <string name="professional_error_not_professional_invitation">Das ist keine Einladung für Fachleute.</string>
     <string name="professional_error_inviter_not_paired">Die Familie in dieser Einladung ist nicht mehr verknüpft.</string>
-    <string name="access_error_grant_ended">Dieser Zugang ist bereits beendet. Bitten Sie um einen neuen Code.</string>
-    <string name="access_error_already_in_family">Sie sind in dieser Familie bereits ein Elternteil.</string>
+    <string name="access_error_grant_ended">Dieser Zugang ist bereits beendet. Bitte um einen neuen Code.</string>
+    <string name="access_error_already_in_family">Du bist in dieser Familie bereits ein Elternteil.</string>
 </resources>

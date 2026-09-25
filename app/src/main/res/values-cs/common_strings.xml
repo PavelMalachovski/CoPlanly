@@ -6,7 +6,7 @@
     <string name="common_dialog_ok">OK</string>
     <string name="common_dismiss">Zavřít</string>
     <string name="common_error_title">Chyba</string>
-    <string name="common_action_retry">Opakovat</string>
+    <string name="common_action_retry">Zkusit znovu</string>
     <string name="common_error_network_title">Chyba sítě</string>
     <string name="common_error_auth_title">Chyba přihlášení</string>
     <string name="common_error_permission_title">Přístup odepřen</string>
@@ -15,10 +15,10 @@
     <string name="common_error_server_title">Chyba serveru</string>
     <string name="common_loading_events">Načítání událostí…</string>
     <string name="common_no_data_title">Žádná data</string>
-    <string name="common_no_data_description">Zatím tu není nic k zobrazení</string>
+    <string name="common_no_data_description">Zatím tu není nic k zobrazení</string>
     <string name="common_quick_actions_title">Rychlé akce</string>
     <string name="common_quick_action_new_event">Nová událost</string>
-    <string name="common_quick_action_new_event_subtitle">Vytvořit novou událost v kalendáři</string>
+    <string name="common_quick_action_new_event_subtitle">Vytvořit novou událost v kalendáři</string>
     <string name="common_quick_action_today">Přejít na dnešek</string>
     <string name="common_quick_action_today_subtitle">Přejít na aktuální datum</string>
     <string name="common_quick_action_settings">Nastavení</string>
@@ -44,14 +44,14 @@
 
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
     <string name="common_error_generic">Něco se pokazilo. Zkuste to prosím znovu.</string>
-    <string name="common_error_offline">Nejste připojeni k internetu. Zkontrolujte připojení a zkuste to znovu.</string>
+    <string name="common_error_offline">Nejste připojeni k internetu. Zkontrolujte připojení a zkuste to znovu.</string>
     <string name="common_error_server">Server není dostupný. Zkuste to prosím později.</string>
-    <string name="common_error_permission">K této akci nemáte oprávnění.</string>
-    <string name="common_error_invalid_input">Některé údaje chybí nebo nejsou platné. Zkontrolujte je a zkuste to znovu.</string>
+    <string name="common_error_permission">K této akci nemáte oprávnění.</string>
+    <string name="common_error_invalid_input">Některé údaje chybí nebo nejsou platné. Zkontrolujte je a zkuste to znovu.</string>
     <!-- Audit leftovers (Sept 2026): required-field marker and the discard-changes dialog. -->
     <string name="common_required">Povinné</string>
-    <string name="common_keep_editing">Pokračovat v úpravách</string>
+    <string name="common_keep_editing">Upravovat dál</string>
     <string name="common_discard">Zahodit</string>
     <string name="common_discard_changes_title">Zahodit změny?</string>
-    <string name="common_discard_changes_message">Změny tady ještě nejsou uložené. Když teď odejdete, přijdete o ně.</string>
+    <string name="common_discard_changes_message">Změny tady ještě nejsou uložené. Když teď odejdete, přijdete o ně.</string>
 </resources>

@@ -9,7 +9,7 @@
     <string name="contacts_call">Зателефонувати</string>
 
     <string name="contacts_empty">Контактів поки немає.</string>
-    <string name="contacts_empty_hint">Додайте бабусь і дідусів, лікарів або батьків друга до даних дитини — і тут до них буде один дотик.</string>
+    <string name="contacts_empty_hint">Додайте бабусь і дідусів, лікарів або батьків друзів дитини до її даних — і тут їм можна буде зателефонувати одним дотиком.</string>
 
     <!-- Shown when there is no dialler to open — rare, but a silent no-op looks like a broken
          button. -->

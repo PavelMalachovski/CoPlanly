@@ -9,7 +9,7 @@
     <string name="childinfo_save">Зберегти</string>
     <string name="childinfo_cancel">Скасувати</string>
     <string name="childinfo_clear">Очистити</string>
-    <string name="childinfo_ok">ОК</string>
+    <string name="childinfo_ok">OK</string>
     <string name="childinfo_sync">Синхронізувати</string>
 
     <!-- Child info: titles and sections -->
@@ -27,7 +27,7 @@
     <string name="childinfo_section_teacher">Інформація про вчителя</string>
 
     <!-- Child info: basic form -->
-    <string name="childinfo_child_name_label">Ім\'я дитини *</string>
+    <string name="childinfo_child_name_label">Імʼя дитини *</string>
     <string name="childinfo_dob_value">Дата народження: %1$s</string>
     <string name="childinfo_add_child_button">Додати дитину</string>
     <string name="childinfo_save_changes">Зберегти зміни</string>
@@ -57,7 +57,7 @@
     <string name="childinfo_medication_name_label">Назва ліків</string>
     <string name="childinfo_dosage_label">Дозування (напр., 10 мг)</string>
     <string name="childinfo_frequency_label">Частота (напр., 2 рази на день)</string>
-    <string name="childinfo_notes_optional_label">Нотатки (необов\'язково)</string>
+    <string name="childinfo_notes_optional_label">Нотатки (необовʼязково)</string>
     <string name="childinfo_medication_summary">%1$s - %2$s</string>
 
     <!-- Child info: activities editor -->
@@ -68,9 +68,9 @@
     <string name="childinfo_activity_name_placeholder">напр., футбол, уроки фортепіано</string>
     <string name="childinfo_schedule_label">Розклад</string>
     <string name="childinfo_schedule_placeholder">напр., пн і ср, 16:00–17:00</string>
-    <string name="childinfo_location_optional_label">Місце (необов\'язково)</string>
-    <string name="childinfo_contact_person_optional_label">Контактна особа (необов\'язково)</string>
-    <string name="childinfo_contact_phone_optional_label">Контактний телефон (необов\'язково)</string>
+    <string name="childinfo_location_optional_label">Місце (необовʼязково)</string>
+    <string name="childinfo_contact_person_optional_label">Контактна особа (необовʼязково)</string>
+    <string name="childinfo_contact_phone_optional_label">Контактний телефон (необовʼязково)</string>
     <string name="childinfo_activity_location_marker">📍 %1$s</string>
     <string name="childinfo_activity_contact_marker">👤 %1$s</string>
     <string name="childinfo_activity_contact_phone_marker">👤 %1$s • %2$s</string>
@@ -84,23 +84,23 @@
     <string name="childinfo_add_emergency_contact">Додати екстрений контакт</string>
     <string name="childinfo_new_emergency_contact">Новий екстрений контакт</string>
     <string name="childinfo_edit_emergency_contact">Редагувати екстрений контакт</string>
-    <string name="childinfo_name_label">Ім\'я</string>
+    <string name="childinfo_name_label">Імʼя</string>
     <string name="childinfo_relationship_label">Ким доводиться</string>
     <string name="childinfo_relationship_placeholder">напр., бабуся, дядько</string>
     <string name="childinfo_phone_number_label">Номер телефону</string>
-    <string name="childinfo_alternate_phone_optional_label">Додатковий телефон (необов\'язково)</string>
+    <string name="childinfo_alternate_phone_optional_label">Додатковий телефон (необовʼязково)</string>
     <string name="childinfo_contact_phone_marker">📞 %1$s</string>
     <string name="childinfo_contact_alt_phone_marker">📱 %1$s</string>
 
     <!-- Child info: education editor -->
     <string name="childinfo_add_school_info">Додати навчальний заклад</string>
     <string name="childinfo_school_name_label">Назва навчального закладу</string>
-    <string name="childinfo_address_optional_label">Адреса (необов\'язково)</string>
-    <string name="childinfo_school_phone_optional_label">Телефон закладу (необов\'язково)</string>
-    <string name="childinfo_grade_optional_label">Клас (необов\'язково)</string>
+    <string name="childinfo_address_optional_label">Адреса (необовʼязково)</string>
+    <string name="childinfo_school_phone_optional_label">Телефон закладу (необовʼязково)</string>
+    <string name="childinfo_grade_optional_label">Клас (необовʼязково)</string>
     <string name="childinfo_grade_placeholder">напр., 3-й клас</string>
-    <string name="childinfo_teacher_name_optional_label">Ім\'я вчителя (необов\'язково)</string>
-    <string name="childinfo_teacher_email_optional_label">Ел. пошта вчителя (необов\'язково)</string>
+    <string name="childinfo_teacher_name_optional_label">Імʼя вчителя (необовʼязково)</string>
+    <string name="childinfo_teacher_email_optional_label">Ел. пошта вчителя (необовʼязково)</string>
     <string name="childinfo_save_failed">Не вдалося зберегти дані дитини. Спробуйте ще раз.</string>
     <string name="childinfo_children_group_label">Діти</string>
     <string name="childinfo_delete_title">Видалити %1$s?</string>
@@ -118,5 +118,5 @@
     <string name="childinfo_school_clear_title">Очистити дані про школу?</string>
     <string name="childinfo_school_clear_message">Поля школи, вчителя та контактів буде очищено.</string>
     <string name="childinfo_record_gone_title">Цей запис більше не існує</string>
-    <string name="childinfo_record_gone_description">Його видалили на цьому телефоні або на телефоні іншого з батьків.</string>
+    <string name="childinfo_record_gone_description">Його видалили на цьому телефоні або на телефоні другого з батьків.</string>
 </resources>

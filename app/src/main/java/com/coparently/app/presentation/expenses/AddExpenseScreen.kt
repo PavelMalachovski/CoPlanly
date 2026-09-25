@@ -88,6 +88,7 @@ import com.coparently.app.presentation.common.FamilyMemberRefListSaver
 import com.coparently.app.presentation.common.FullScreenImageDialog
 import com.coparently.app.presentation.common.LocalAppMessages
 import com.coparently.app.presentation.common.LocalDatePickerDialog
+import com.coparently.app.presentation.common.SideBySideOrStacked
 import com.coparently.app.presentation.common.StickyActionBar
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.rememberDiscardGuard
@@ -831,31 +832,23 @@ private fun ReceiptPicker(
 ) {
     val (receipt, enabled, hasCamera) = state
     if (receipt == null) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.S)
-        ) {
-            if (hasCamera) {
-                OutlinedButton(
-                    onClick = onTakePhoto,
-                    enabled = enabled,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Icon(Icons.Default.PhotoCamera, contentDescription = null)
-                    Spacer(modifier = Modifier.size(8.dp))
-                    Text(stringResource(R.string.receipt_take_photo))
-                }
+        // Side by side, or stacked from 130 %: at 150 % each half grew tall around a German
+        // label broken inside a word.
+        val takePhoto: @Composable (Modifier) -> Unit = { modifier ->
+            OutlinedButton(onClick = onTakePhoto, enabled = enabled, modifier = modifier) {
+                Icon(Icons.Default.PhotoCamera, contentDescription = null)
+                Spacer(modifier = Modifier.size(8.dp))
+                Text(stringResource(R.string.receipt_take_photo))
             }
-            OutlinedButton(
-                onClick = onPickPhoto,
-                enabled = enabled,
-                modifier = Modifier.weight(1f)
-            ) {
+        }
+        val pickPhoto: @Composable (Modifier) -> Unit = { modifier ->
+            OutlinedButton(onClick = onPickPhoto, enabled = enabled, modifier = modifier) {
                 Icon(Icons.Default.AddAPhoto, contentDescription = null)
                 Spacer(modifier = Modifier.size(8.dp))
                 Text(stringResource(R.string.receipt_pick_photo))
             }
         }
+        SideBySideOrStacked(controls = if (hasCamera) listOf(takePhoto, pickPhoto) else listOf(pickPhoto))
     } else {
         // Tapping a row opens this editor, so this 180dp crop is the receipt most parents
         // actually reach — and a crop of a portrait receipt hides most of it. It is now the

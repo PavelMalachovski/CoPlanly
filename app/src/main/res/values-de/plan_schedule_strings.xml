@@ -7,11 +7,11 @@
 -->
 <resources>
     <string name="parenting_plan_propose_schedule">Als Betreuungsplan vorschlagen</string>
-    <string name="parenting_plan_propose_hint">Öffnet den Plan-Editor mit dieser Antwort als Zitat. Was Sie dort einstellen, geht als Vorschlag hinaus.</string>
-    <string name="parenting_plan_propose_blocked">Ein Vorschlag von %1$s wartet auf Ihre Antwort. Beantworten Sie ihn zuerst, dann schlagen Sie diesen vor.</string>
-    <string name="plan_reference_title">Aus Ihrem Elternplan</string>
-    <string name="plan_reference_both_agreed">Sie haben sich beide geeinigt</string>
-    <string name="plan_reference_note">Die App liest diesen Text nicht für Sie: Stellen Sie den beschriebenen Plan unten ein. Beim Speichern erhält %1$s ihn als Vorschlag, der diese Antwort nennt.</string>
+    <string name="parenting_plan_propose_hint">Öffnet den Plan-Editor mit dieser Antwort als Zitat. Was du dort einstellst, geht als Vorschlag hinaus.</string>
+    <string name="parenting_plan_propose_blocked">Ein Vorschlag von %1$s wartet auf deine Antwort. Beantworte ihn zuerst, dann schlag diesen vor.</string>
+    <string name="plan_reference_title">Aus eurem Elternplan</string>
+    <string name="plan_reference_both_agreed">Ihr seid euch beide einig</string>
+    <string name="plan_reference_note">Die App wertet diesen Text nicht für dich aus: Stell den beschriebenen Plan unten ein. Beim Speichern erhält %1$s ihn als Vorschlag, der diese Antwort nennt.</string>
     <string name="plan_citation_current">Aus dem Elternplan: %1$s</string>
     <string name="plan_citation_changed">Beruht auf der Antwort im Elternplan zu „%1$s“, die sich seit dem Vorschlag geändert hat.</string>
     <string name="plan_citation_changed_short">Antwort im Plan seit dem Vorschlag geändert: %1$s</string>

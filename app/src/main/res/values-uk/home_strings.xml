@@ -3,18 +3,18 @@
 <resources>
     <string name="home_title">Головна</string>
 
-    <string name="home_pairing_title">Розділіть це з іншим із батьків</string>
-    <string name="home_pairing_prompt">З’єднайтеся з іншим із батьків, щоб ділити календар, витрати та повідомлення.</string>
-    <string name="home_pairing_cta">З’єднатися з іншим із батьків</string>
+    <string name="home_pairing_title">Поділіться з другим із батьків</string>
+    <string name="home_pairing_prompt">Зʼєднайтеся з другим із батьків, щоб ділити календар, витрати та повідомлення.</string>
+    <string name="home_pairing_cta">Зʼєднатися з другим із батьків</string>
 
     <string name="home_handover_current">Сьогодні з: %1$s</string>
-    <string name="home_handover_hero_today">Передача (%1$s) сьогодні</string>
-    <string name="home_handover_hero_tomorrow">Передача (%1$s) завтра</string>
+    <string name="home_handover_hero_today">Передача сьогодні, далі — %1$s</string>
+    <string name="home_handover_hero_tomorrow">Передача завтра, далі — %1$s</string>
     <plurals name="home_handover_hero_in_days">
-        <item quantity="one">Передача (%1$s) через %2$d день</item>
-        <item quantity="few">Передача (%1$s) через %2$d дні</item>
-        <item quantity="many">Передача (%1$s) через %2$d днів</item>
-        <item quantity="other">Передача (%1$s) через %2$d дня</item>
+        <item quantity="one">Передача через %2$d день, далі — %1$s</item>
+        <item quantity="few">Передача через %2$d дні, далі — %1$s</item>
+        <item quantity="many">Передача через %2$d днів, далі — %1$s</item>
+        <item quantity="other">Передача через %2$d дня, далі — %1$s</item>
     </plurals>
     <string name="home_handover_review">Переглянути</string>
 
@@ -22,21 +22,21 @@
         <item quantity="one">%1$d непрочитане</item>
         <item quantity="few">%1$d непрочитаних</item>
         <item quantity="many">%1$d непрочитаних</item>
-        <item quantity="other">%1$d непрочитаних</item>
+        <item quantity="other">%1$d непрочитаного</item>
     </plurals>
     <string name="home_stat_open_chat">Відкрити чат →</string>
     <string name="home_stat_owed_to_you">Вам винні %1$s →</string>
     <string name="home_stat_you_owe">Ви винні %1$s →</string>
-    <string name="home_stat_settled">Усе врегульовано →</string>
+    <string name="home_stat_settled">Боргів немає →</string>
 
     <string name="home_section_this_week">Цього тижня</string>
     <string name="home_week_empty">У найближчі сім днів нічого немає.</string>
     <string name="home_section_recent_changes">Останні зміни</string>
     <string name="home_section_partner_changed">Зміни: %1$s</string>
 
-    <string name="home_timeline_meta">%1$s · день, коли дитина з %2$s</string>
+    <string name="home_timeline_meta">%1$s · день опіки: %2$s</string>
 
-    <string name="home_recent_empty_paired">Поки нічого нового від іншого з батьків. Їхні зміни з’являться тут.</string>
+    <string name="home_recent_empty_paired">Від другого з батьків поки нічого нового. Щойно щось зміниться, це зʼявиться тут.</string>
 
     <!-- Contacts: item 16's one button, between the changes feed and the spend tile. -->
     <string name="home_contacts">Контакти</string>
@@ -53,9 +53,9 @@
     <!-- No full stop after the date: FormatStyle.FULL ends it with "р.", and a sentence ending in
          an abbreviation takes no second period (it read "2026 р.." — docs/AUDIT-2026-10-design.md
          D-5). The colon keeps the nominative weekday the formatter produces grammatical. -->
-    <string name="home_dialog_swap_message">%1$s пропонує змінити, у кого буде дитина в цей день: %2$s</string>
+    <string name="home_dialog_swap_message">%1$s пропонує змінити, у кого буде дитина цього дня: %2$s</string>
     <string name="home_dialog_requests_title">Запити на зміну</string>
-    <string name="home_dialog_requests_message">Другий з батьків чекає на вашу відповідь на запити.</string>
+    <string name="home_dialog_requests_message">Другий із батьків чекає на вашу відповідь на запити.</string>
     <string name="home_dialog_later">Пізніше</string>
     <string name="home_dialog_review">Переглянути</string>
     <plurals name="home_dialog_swap_message_days">

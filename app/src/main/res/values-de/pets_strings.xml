@@ -50,7 +50,7 @@
     <string name="pet_photos_title">Fotos</string>
     <string name="pet_photos_none">Noch keine Fotos</string>
     <string name="pet_photos_add">Foto hinzufügen</string>
-    <string name="pet_photos_hint">Fotos werden mit deinem Co-Elternteil geteilt.</string>
+    <string name="pet_photos_hint">Fotos werden mit dem anderen Elternteil geteilt.</string>
     <string name="pet_photos_thumbnail_description">Foto %1$d von %2$d</string>
     <string name="pet_photos_open">Foto öffnen</string>
     <string name="pet_photos_remove">Foto entfernen</string>

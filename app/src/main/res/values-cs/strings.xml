@@ -29,7 +29,7 @@
     <string name="auth_email">E-mail</string>
     <string name="auth_password">Heslo</string>
     <string name="auth_sign_up_prompt">Nemáte účet? Zaregistrujte se</string>
-    <string name="auth_sign_in_prompt">Již máte účet? Přihlaste se</string>
+    <string name="auth_sign_in_prompt">Už máte účet? Přihlaste se</string>
     <string name="auth_forgot_password">Zapomenuté heslo?</string>
     <string name="auth_fill_all_fields">Vyplňte prosím všechna pole</string>
     <string name="auth_sign_in_failed">Přihlášení selhalo</string>
@@ -40,11 +40,11 @@
     <!-- Settings Screen -->
     <string name="settings_title">Nastavení</string>
     <string name="settings_back">Zpět</string>
-    <string name="settings_google_calendar_sync">Synchronizace s Google kalendářem</string>
-    <string name="settings_enable_sync">Povolit synchronizaci</string>
-    <string name="settings_signed_in_google">Přihlášeno k Google</string>
+    <string name="settings_google_calendar_sync">Synchronizace s Kalendářem Google</string>
+    <string name="settings_enable_sync">Zapnout synchronizaci</string>
+    <string name="settings_signed_in_google">Přihlášeno ke Googlu</string>
     <string name="settings_not_signed_in">Nepřihlášeno</string>
-    <string name="settings_sync_from_google">Synchronizovat z Google kalendáře</string>
+    <string name="settings_sync_from_google">Synchronizovat z Kalendáře Google</string>
     <string name="settings_sign_out">Odhlásit se</string>
     <string name="settings_syncing">Synchronizace…</string>
     <string name="settings_theme">Téma</string>
@@ -54,13 +54,13 @@
     <string name="settings_theme_description">Vyberte preferované téma</string>
     <string name="settings_notifications">Oznámení</string>
     <string name="settings_push_notifications">Push oznámení</string>
-    <string name="settings_push_notifications_description">Dostávat oznámení o změnách</string>
+    <string name="settings_push_notifications_description">Dostávat oznámení o změnách</string>
 
     <!-- Pairing Screen -->
-    <string name="pairing_title">Párování spolurodičů</string>
-    <string name="pairing_paired_with">Spárováno s</string>
-    <string name="pairing_unpair">Zrušit párování</string>
-    <string name="pairing_partner_email">E-mail partnera</string>
+    <string name="pairing_title">Propojení s druhým rodičem</string>
+    <string name="pairing_paired_with">Propojeno s</string>
+    <string name="pairing_unpair">Odpojit</string>
+    <string name="pairing_partner_email">E-mail druhého rodiče</string>
     <string name="pairing_send_invitation">Odeslat pozvánku</string>
     <string name="pairing_pending_invitations">Čekající pozvánky</string>
     <string name="pairing_accept">Přijmout</string>
@@ -82,19 +82,19 @@
     <string name="common_delete">Smazat</string>
     <string name="common_edit">Upravit</string>
     <string name="common_add">Přidat</string>
-    <string name="common_retry">Opakovat</string>
+    <string name="common_retry">Zkusit znovu</string>
     <string name="common_try_again">Zkusit znovu</string>
     <string name="common_clear">Vymazat</string>
-    <string name="common_optional">volitelné</string>
+    <string name="common_optional">nepovinné</string>
 
     <!-- Child Info Screen -->
-    <string name="child_info_title">Informace o dítěti</string>
+    <string name="child_info_title">Informace o dítěti</string>
     <string name="child_info_add">Přidat dítě</string>
-    <string name="child_info_edit">Upravit informace o dítěti</string>
+    <string name="child_info_edit">Upravit dítě</string>
     <string name="child_info_name">Jméno dítěte</string>
     <string name="child_info_name_required">Jméno dítěte *</string>
-    <string name="child_info_medical_notes">Další lékařské informace</string>
-    <string name="child_info_medical_notes_hint">Další důležité lékařské informace…</string>
+    <string name="child_info_medical_notes">Další zdravotní informace</string>
+    <string name="child_info_medical_notes_hint">Další důležité zdravotní informace…</string>
     <string name="child_info_medications">Léky</string>
     <string name="child_info_activities">Aktivity</string>
     <string name="child_info_allergies">Alergie</string>
@@ -105,43 +105,43 @@
     <string name="medication_name">Název léku</string>
     <string name="medication_dosage">Dávkování</string>
     <string name="medication_frequency">Frekvence</string>
-    <string name="medication_notes">Poznámky (volitelné)</string>
+    <string name="medication_notes">Poznámky (nepovinné)</string>
     <string name="medication_add">Přidat lék</string>
 
     <!-- Activity Editor -->
     <string name="activity_name">Název aktivity</string>
     <string name="activity_schedule">Rozvrh</string>
-    <string name="activity_location">Místo (volitelné)</string>
-    <string name="activity_notes">Poznámky (volitelné)</string>
+    <string name="activity_location">Místo (nepovinné)</string>
+    <string name="activity_notes">Poznámky (nepovinné)</string>
     <string name="activity_add">Přidat aktivitu</string>
 
     <!-- Allergy Editor -->
     <string name="allergy_name">Název alergie</string>
     <string name="allergy_severity">Závažnost</string>
     <string name="allergy_reaction">Reakce</string>
-    <string name="allergy_notes">Poznámky (volitelné)</string>
+    <string name="allergy_notes">Poznámky (nepovinné)</string>
     <string name="allergy_add">Přidat alergii</string>
 
     <!-- Emergency Contact Editor -->
     <string name="emergency_contact_add">Přidat nouzový kontakt</string>
     <string name="emergency_contact_name">Jméno</string>
     <string name="emergency_contact_relationship">Vztah</string>
-    <string name="emergency_contact_relationship_hint">např. Babička, Strýc</string>
+    <string name="emergency_contact_relationship_hint">např. babička, strýc</string>
     <string name="emergency_contact_phone">Telefonní číslo</string>
-    <string name="emergency_contact_alternate">Alternativní telefon (volitelné)</string>
+    <string name="emergency_contact_alternate">Další telefon (nepovinné)</string>
 
     <!-- School Info Editor -->
     <string name="school_name">Název školy</string>
-    <string name="school_address">Adresa (volitelné)</string>
-    <string name="school_phone">Telefon školy (volitelné)</string>
-    <string name="school_grade">Třída (volitelné)</string>
+    <string name="school_address">Adresa (nepovinné)</string>
+    <string name="school_phone">Telefon školy (nepovinné)</string>
+    <string name="school_grade">Třída (nepovinné)</string>
     <string name="school_grade_hint">např. 3. třída</string>
-    <string name="school_teacher_name">Jméno učitele (volitelné)</string>
-    <string name="school_teacher_email">Email učitele (volitelné)</string>
+    <string name="school_teacher_name">Jméno učitele (nepovinné)</string>
+    <string name="school_teacher_email">E-mail učitele (nepovinné)</string>
 
     <!-- Sync -->
     <string name="sync_sign_in_google">Přihlásit se přes Google</string>
-    <string name="sync_syncing_from_google">Synchronizovat z Google kalendáře</string>
+    <string name="sync_syncing_from_google">Synchronizovat z Kalendáře Google</string>
     <string name="sync_google_sign_in_cancelled">Přihlášení přes Google bylo zrušeno</string>
     <string name="sync_google_sign_in_failed">Přihlášení přes Google se nezdařilo. Zkuste to prosím znovu.</string>
 </resources>

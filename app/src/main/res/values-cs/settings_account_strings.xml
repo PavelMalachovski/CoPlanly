@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Czech translations of settings_account_strings.xml. -->
 <resources>
-    <string name="settings_co_parent_sync">Synchronizace s druhým rodičem</string>
-    <string name="settings_co_parent_sync_description">Automaticky synchronizuje události a informace o dítěti s druhým rodičem</string>
+    <string name="settings_co_parent_sync">Sdílení s druhým rodičem</string>
+    <string name="settings_co_parent_sync_description">Automaticky synchronizuje události a informace o dítěti s druhým rodičem</string>
     <string name="settings_sync">Synchronizovat</string>
-    <string name="settings_google_sync">Synchronizace s Kalendářem Google</string>
+    <string name="settings_google_sync">Kalendář Google</string>
     <string name="settings_gcal_enable_sync">Zapnout synchronizaci</string>
-    <string name="settings_gcal_private_note">Importované události zůstanou v tomto zařízení. Váš Google kalendář je osobní, takže se z něj s druhým rodičem nic nesdílí.</string>
+    <string name="settings_gcal_private_note">Importované události zůstanou v tomto zařízení. Váš Kalendář Google je osobní, takže se z něj s druhým rodičem nic nesdílí.</string>
     <string name="settings_parent_color">Moje barva</string>
-    <string name="settings_parent_color_desc">Jak se označují vaše události, dny v péči a výdaje. Druhý rodič si vybírá svou.</string>
+    <string name="settings_parent_color_desc">Jak se označují vaše události, dny v péči a výdaje. Druhý rodič si vybírá svou.</string>
     <string name="parent_color_pink">Růžová</string>
     <string name="parent_color_blue">Modrá</string>
     <string name="parent_color_purple">Fialová</string>
@@ -18,18 +18,18 @@
     <string name="settings_unknown">Neznámé</string>
     <string name="settings_calendar_sign_out">Odhlásit se ze synchronizace kalendáře</string>
     <string name="settings_account">Účet</string>
-    <string name="settings_account_description">Úplné odhlášení z aplikace. Pro přístup k účtu se budete muset znovu přihlásit.</string>
-    <string name="settings_account_sign_out">Odhlásit se z aplikace</string>
-    <string name="settings_pairing_title">Propojení s druhým rodičem</string>
+    <string name="settings_account_description">Úplné odhlášení z aplikace. Pro přístup k účtu se budete muset znovu přihlásit.</string>
+    <string name="settings_account_sign_out">Odhlásit se</string>
+    <string name="settings_pairing_title">Propojení s druhým rodičem</string>
     <string name="settings_pairing_description">Pozvěte nebo spravujte druhého rodiče</string>
-    <string name="settings_child_info_title">Informace o dítěti</string>
+    <string name="settings_child_info_title">Informace o dítěti</string>
     <string name="settings_child_info_description">Léky, kroužky, alergie</string>
     <string name="settings_pets_title">Mazlíčci</string>
     <string name="settings_pets_description">Fotografie, léky, zvláštní potřeby</string>
     <string name="settings_custody_title">Rozvrh péče</string>
-    <string name="settings_custody_description">Nastavte schéma střídavé péče (týden po týdnu, 2-2-3 apod.)</string>
-    <string name="settings_about">O aplikaci CoPlanly</string>
-    <string name="settings_about_tagline">Sdílený kalendář pro střídavou péči</string>
+    <string name="settings_custody_description">Nastavte, jak se péče střídá (po týdnu, 2-2-3 apod.)</string>
+    <string name="settings_about">O aplikaci CoPlanly</string>
+    <string name="settings_about_tagline">Sdílený kalendář pro společné rodičovství</string>
     <string name="settings_version">Verze %1$s</string>
     <string name="settings_navigate">Otevřít</string>
 
@@ -41,33 +41,33 @@
 
     <!-- Co-parent sync status line. %1$s = time of the last successful sync. -->
     <string name="settings_sync_idle">Aktuální</string>
-    <string name="settings_sync_last">Synchronizováno v %1$s</string>
+    <string name="settings_sync_last">Synchronizováno v %1$s</string>
 
     <!-- Account deletion. Irreversible: the server erases the account and everything it
          holds, and the device is wiped. The second dialog is deliberate, matching unpair. -->
     <string name="settings_account_delete">Smazat účet</string>
-    <string name="settings_account_delete_description">Vymazat tento účet i všechna jeho data</string>
+    <string name="settings_account_delete_description">Vymazat tento účet i všechna jeho data</string>
     <string name="settings_account_delete_confirm_title">Smazat tento účet?</string>
-    <string name="settings_account_delete_confirm_message">Z našich serverů i z tohoto telefonu zmizí vše, co jste zadali: události, výdaje a záznamy o dítěti. Chat zůstane druhému rodiči 30 dní, aby si ho mohl vyexportovat, a pak se smaže; dostane o tom zprávu. Druhému rodiči zůstane to, co vytvořil sám, a v jeho telefonu i kopie, které si už stáhl. Tento krok nelze vrátit.</string>
+    <string name="settings_account_delete_confirm_message">Z našich serverů i z tohoto telefonu zmizí vše, co jste zadali: události, výdaje a záznamy o dítěti. Chat zůstane druhému rodiči 30 dní, aby si ho mohl vyexportovat, a pak se smaže; dostane o tom zprávu. Druhému rodiči zůstane to, co vytvořil sám, a v jeho telefonu i kopie, které si už stáhl. Tento krok nelze vrátit.</string>
     <string name="settings_account_delete_final_title">Smazat nenávratně?</string>
-    <string name="settings_account_delete_final_message">Není cesty zpět: žádnou kopii pro obnovení neuchováváme. Pokud se chcete jen odhlásit z tohoto zařízení, použijte odhlášení.</string>
+    <string name="settings_account_delete_final_message">Není cesty zpět: žádnou kopii pro obnovení neuchováváme. Pokud se chcete jen odhlásit z tohoto zařízení, použijte odhlášení.</string>
     <string name="settings_account_delete_final_yes">Smazat nenávratně</string>
     <string name="settings_account_delete_cancel">Ponechat účet</string>
     <string name="settings_account_delete_progress">Mažeme váš účet…</string>
     <string name="settings_account_delete_failed">Účet se nepodařilo smazat. Zkuste to prosím znovu.</string>
     <string name="settings_family_kind_title">Co vychováváte společně</string>
-    <string name="settings_family_kind_both">Děti a mazlíčci</string>
+    <string name="settings_family_kind_both">Děti a mazlíčci</string>
     <string name="settings_family_kind_save">Uložit</string>
     <string name="settings_family_kind_cancel">Zrušit</string>
     <string name="settings_family_kind_kept_by_co_parent">Uloženo. Sekce, kterou jste odebrali, zůstává viditelná, protože ji druhý rodič má dál.</string>
-    <string name="settings_family_kind_records_kept">Odebráno. Záznamy zůstávají v zařízení — sekci sem můžete kdykoli vrátit.</string>
-    <string name="settings_family_kind_not_saved">Nepodařilo se uložit — váš profil se ještě nenačetl. Zkuste to za chvíli znovu.</string>
+    <string name="settings_family_kind_records_kept">Odebráno. Záznamy zůstávají v zařízení – sekci tady můžete znovu zapnout a uvidíte je.</string>
+    <string name="settings_family_kind_not_saved">Nepodařilo se uložit – váš profil se ještě nenačetl. Zkuste to za chvíli znovu.</string>
     <string name="settings_split_ratio_title">Rozdělení výdajů</string>
     <string name="settings_split_ratio_value">%1$d / %2$d</string>
     <string name="settings_split_ratio_value_named">%1$s %2$d / %3$s %4$d</string>
     <string name="settings_split_ratio_hint">Platí pro výdaje zadané od této chvíle. Již zadané si ponechají rozdělení, se kterým byly pořízeny.</string>
     <string name="settings_split_ratio_applied">Rozdělení uloženo</string>
-    <string name="settings_split_ratio_proposed">Odesláno druhému rodiči k potvrzení</string>
+    <string name="settings_split_ratio_proposed">Odesláno druhému rodiči k potvrzení</string>
     <string name="settings_split_ratio_refused">Toto rozdělení se nepodařilo navrhnout</string>
     <!-- Disclosure chevron content descriptions (UX-11). -->
     <string name="settings_expand">Zobrazit možnosti</string>
@@ -75,23 +75,23 @@
     <string name="settings_family_shown">Zobrazená rodina</string>
     <string name="settings_family_switch">Přepnout rodinu</string>
     <string name="settings_family_unnamed">Zatím bez jména</string>
-    <string name="family_switcher_unread_other">Nové zprávy v jiné rodině</string>
+    <string name="family_switcher_unread_other">Nové zprávy v jiné rodině</string>
     <string name="family_switcher_unread_row">Nové zprávy</string>
-    <string name="family_switcher_request_other">V jiné rodině čeká žádost o změnu</string>
-    <string name="family_switcher_request_row">Čeká žádost o změnu</string>
-    <string name="family_switcher_schedule_other">V jiné rodině čeká návrh rozvrhu péče</string>
+    <string name="family_switcher_request_other">V jiné rodině čeká žádost o změnu</string>
+    <string name="family_switcher_request_row">Čeká žádost o změnu</string>
+    <string name="family_switcher_schedule_other">V jiné rodině čeká návrh rozvrhu péče</string>
     <string name="family_switcher_schedule_row">Čeká návrh rozvrhu péče</string>
-    <string name="settings_school_import_title">Import z Bakalářů</string>
-    <string name="settings_school_import_description">Školní akce a vyučování vašeho dítěte rovnou v kalendáři.</string>
+    <string name="settings_school_import_title">Import z Bakalářů</string>
+    <string name="settings_school_import_description">Školní akce a vyučování vašeho dítěte rovnou v kalendáři.</string>
     <string name="settings_edupage_title">EduPage</string>
-    <string name="settings_edupage_description">Školní akce vašeho dítěte z EduPage.</string>
+    <string name="settings_edupage_description">Školní akce vašeho dítěte z EduPage.</string>
     <string name="settings_edupage_coming_soon">Již brzy</string>
-    <string name="settings_operation_failed">Nepodařilo se to. Zkontrolujte připojení a zkuste to znovu.</string>
+    <string name="settings_operation_failed">Nepodařilo se to. Zkontrolujte připojení a zkuste to znovu.</string>
 
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
-    <string name="settings_sync_failed">Poslední synchronizace se nezdařila</string>
+    <string name="settings_sync_failed">Synchronizace selhala</string>
 
     <!-- MON-19: Settings → App. The argument is the pause, in seconds. -->
     <string name="settings_pause_before_sending_title">Pauza před odesláním</string>
-    <string name="settings_pause_before_sending_description">Každou zprávu v chatu podrží %1$d sekund s možností Zpět a při psaní upozorní na velká písmena, !!! a ostrá slova. Kontroluje se jen v tomto telefonu.</string>
+    <string name="settings_pause_before_sending_description">Každou zprávu v chatu podrží %1$d sekund s možností ji vrátit a při psaní upozorní na velká písmena, !!! a ostrá slova. Kontroluje se jen v tomto telefonu.</string>
 </resources>

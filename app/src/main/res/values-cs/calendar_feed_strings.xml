@@ -1,21 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- MON-17: read-only calendar links for an iPhone or any other calendar app. -->
-    <string name="calendar_feed_settings_title">Kalendář pro iPhone a jiné kalendáře</string>
+    <string name="calendar_feed_settings_title">Kalendář pro jiné aplikace</string>
     <string name="calendar_feed_settings_description">Odkaz na rodinný kalendář jen pro čtení</string>
     <string name="calendar_feed_title">Kalendář pro jiné aplikace</string>
-    <string name="calendar_feed_intro">Vytvořte odkaz jen pro čtení, který bude Kalendář na iPhonu – nebo jakákoli aplikace, jež umí odebírat kalendář z webové adresy – průběžně aktualizovat. Druhá aplikace ho obnovuje zhruba jednou za hodinu.</string>
-    <string name="calendar_feed_included">Obsahuje: dny péče a časy styku, vždy se jménem rodiče, a události, které sdílíte s druhým rodičem.</string>
-    <string name="calendar_feed_excluded">Neobsahuje: soukromé události, chat, výdaje ani záznamy o dětech. V druhém kalendáři nelze nic měnit; změny se dělají tady, v CoPlanly.</string>
-    <string name="calendar_feed_warning">Kdo má odkaz, vidí tento kalendář. Pošlete ho jen tomu, komu je určen, a pokud se dostane dál, tady ho zrušte. Odkaz, který žádný kalendář 90 dní neotevřel, přestane fungovat.</string>
+    <string name="calendar_feed_intro">Vytvořte odkaz jen pro čtení, který bude Kalendář na iPhonu – nebo jakákoli aplikace, jež umí odebírat kalendář z webové adresy – průběžně aktualizovat. Druhá aplikace ho obnovuje zhruba jednou za hodinu.</string>
+    <string name="calendar_feed_included">Obsahuje: dny péče a časy styku, vždy se jménem rodiče, a události, které sdílíte s druhým rodičem.</string>
+    <string name="calendar_feed_excluded">Neobsahuje: soukromé události, chat, výdaje ani záznamy o dětech. V druhém kalendáři nelze nic měnit; změny se dělají tady, v CoPlanly.</string>
+    <string name="calendar_feed_warning">Kdo má odkaz, vidí tento kalendář. Pošlete ho jen tomu, komu je určen, a pokud se dostane dál, tady ho zrušte. Odkaz, který žádný kalendář 90 dní neotevřel, přestane fungovat.</string>
     <string name="calendar_feed_create">Vytvořit odkaz</string>
-    <string name="calendar_feed_created_title">Nový odkaz je připraven</string>
-    <string name="calendar_feed_created_supporting">Sdílejte ho nebo zkopírujte hned teď. Z bezpečnostních důvodů ho už nelze znovu zobrazit.</string>
+    <string name="calendar_feed_created_title">Odkaz je připraven</string>
+    <string name="calendar_feed_created_supporting">Sdílejte ho nebo zkopírujte hned teď. Z bezpečnostních důvodů ho už nelze znovu zobrazit.</string>
     <string name="calendar_feed_share">Sdílet odkaz</string>
     <string name="calendar_feed_copy">Kopírovat odkaz</string>
     <string name="calendar_feed_done">Hotovo</string>
     <string name="calendar_feed_share_chooser">Sdílet odkaz na kalendář</string>
-    <string name="calendar_feed_share_message">Náš kalendář CoPlanly, jen pro čtení. Na iPhonu klepněte a přihlaste se k odběru:\n%1$s\n\nPokud aplikace kalendáře chce webovou adresu, použijte:\n%2$s</string>
+    <string name="calendar_feed_share_message">Náš kalendář CoPlanly, jen pro čtení. Na iPhonu klepněte a přihlaste se k odběru:\n%1$s\n\nPokud aplikace kalendáře chce webovou adresu, použijte:\n%2$s</string>
     <string name="calendar_feed_links_label">Aktivní odkazy</string>
     <string name="calendar_feed_empty">Zatím žádné odkazy</string>
     <string name="calendar_feed_no_family">Nejdřív propojte druhého rodiče. Odkaz ukazuje sdílený kalendář vaší rodiny.</string>
@@ -27,8 +27,8 @@
     <string name="calendar_feed_revoke_confirm_text">Kalendář, který ho odebírá, přestane dostávat aktualizace. Nelze to vrátit, ale můžete vytvořit nový odkaz.</string>
     <string name="calendar_feed_revoke_confirm">Zrušit</string>
     <string name="calendar_feed_revoked">Odkaz zrušen</string>
-    <string name="calendar_feed_revoke_failed">Odkaz se nepodařilo zrušit. Zkontrolujte připojení a zkuste to znovu.</string>
-    <string name="calendar_feed_create_failed">Odkaz se nepodařilo vytvořit. Zkontrolujte připojení a zkuste to znovu.</string>
+    <string name="calendar_feed_revoke_failed">Odkaz se nepodařilo zrušit. Zkontrolujte připojení a zkuste to znovu.</string>
+    <string name="calendar_feed_create_failed">Odkaz se nepodařilo vytvořit. Zkontrolujte připojení a zkuste to znovu.</string>
     <string name="calendar_feed_limit_reached">Už máte nejvyšší povolený počet odkazů. Nejdřív zrušte některý, který nepotřebujete.</string>
     <string name="calendar_feed_load_failed">Odkazy se nepodařilo načíst.</string>
 </resources>

@@ -30,8 +30,8 @@
     <string name="custody_model_three_four_four_three">Схема 3-4-4-3</string>
     <string name="custody_model_custom">Свой график</string>
     <string name="custody_model_week_on_week_off_desc">Ребёнок целую неделю у одного родителя, затем родители меняются.</string>
-    <string name="custody_model_two_two_three_desc">Схема 2 дня, 2 дня, 3 дня. Более частые переходы.</string>
-    <string name="custody_model_three_four_four_three_desc">Чередование 3 и 4 дней. Сбалансированное время в будни и выходные.</string>
+    <string name="custody_model_two_two_three_desc">Схема «2 дня, 2 дня, 3 дня». Передачи чаще.</string>
+    <string name="custody_model_three_four_four_three_desc">Чередование 3 и 4 дней. Будни и выходные делятся сбалансированно.</string>
     <string name="custody_model_custom_desc">Создайте собственный шаблон графика.</string>
     <!-- Preview sentences for the custody Preview card. These replace a hardcoded
          English string built in CustodySetupViewModel that named Mom and Dad outright.
@@ -52,25 +52,25 @@
     <string name="custody_conflict_keep_local">Оставить график этого телефона</string>
     <string name="custody_conflict_use_shared">Использовать общий график</string>
     <string name="custody_conflict_save_failed">График не удалось сохранить. Попробуйте ещё раз.</string>
-    <string name="custody_proposal_inbox_title">Предложено новое расписание опеки</string>
-    <string name="custody_proposal_inbox_body">%1$s предлагает новое расписание опеки. Ваш календарь не изменится, пока вы не примете его.</string>
+    <string name="custody_proposal_inbox_title">Предложен новый график опеки</string>
+    <string name="custody_proposal_inbox_body">%1$s предлагает новый график опеки. Ваш календарь не изменится, пока вы его не примете.</string>
     <string name="custody_proposal_accept">Принять</string>
     <string name="custody_proposal_decline">Отклонить</string>
-    <string name="custody_proposal_waiting">Ожидание, пока второй родитель одобрит новое расписание</string>
-    <string name="custody_proposal_review">%1$s предлагает новое расписание опеки</string>
+    <string name="custody_proposal_waiting">Ждём, когда второй родитель одобрит новый график</string>
+    <string name="custody_proposal_review">%1$s предлагает новый график опеки</string>
     <!-- MON-6. -->
     <string name="custody_model_every_other_weekend">Каждые вторые выходные</string>
     <string name="custody_model_every_other_weekend_desc">Ребёнок живёт у одного родителя, у второго — каждые вторые выходные.</string>
     <string name="custody_preview_every_other_weekend">Все остальные дни: %1$s. Каждые вторые сб–вс: %2$s.</string>
     <string name="custody_who_is_resident">С кем живёт ребёнок?</string>
     <string name="custody_is_resident">Живёт с: %1$s</string>
-    <string name="custody_midweek_title">Контакт в середине недели</string>
+    <string name="custody_midweek_title">Общение в середине недели</string>
     <string name="custody_midweek_enable">Добавить день в середине недели</string>
-    <string name="custody_midweek_overnight_warning">Этот график распределяет целые дни, поэтому день в середине недели включает и ночь. Если в вашем решении указан только вечер, оставьте это выключенным и добавьте ниже период общения.</string>
+    <string name="custody_midweek_overnight_warning">Этот график распределяет целые дни, поэтому день в середине недели включает и ночь. Если в решении суда указана только вторая половина дня, не включайте это, а добавьте ниже период общения.</string>
     <string name="custody_midweek_every_week">Каждую неделю</string>
     <string name="custody_midweek_off_week_only">Только в неделю без выходных</string>
-    <string name="custody_preview_every_other_weekend_midweek">Каждый день: %1$s. Каждые вторые сб–вс и %3$s: %2$s.</string>
-    <string name="custody_preview_every_other_weekend_midweek_off_week">Каждый день: %1$s. Каждые вторые сб–вс, а также %3$s на неделе между ними: %2$s.</string>
+    <string name="custody_preview_every_other_weekend_midweek">Все остальные дни: %1$s. Каждые вторые сб–вс и %3$s: %2$s.</string>
+    <string name="custody_preview_every_other_weekend_midweek_off_week">Все остальные дни: %1$s. Каждые вторые сб–вс, а также %3$s в промежуточную неделю: %2$s.</string>
     <plurals name="custody_diff_days_move">
         <item quantity="one">В ближайшие недели изменится %1$d день.</item>
         <item quantity="few">В ближайшие недели изменятся %1$d дня.</item>

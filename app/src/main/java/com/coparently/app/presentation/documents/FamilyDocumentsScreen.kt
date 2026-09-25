@@ -6,10 +6,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -45,6 +42,7 @@ import com.coparently.app.domain.documents.FamilyDocument
 import com.coparently.app.domain.files.SharedFilePolicy
 import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.LocalAppMessages
+import com.coparently.app.presentation.common.SideBySideOrStacked
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.newSharedFileCaptureUri
 import com.coparently.app.presentation.common.openSharedFile
@@ -200,23 +198,31 @@ private fun rememberDocumentPickers(onPicked: (Uri) -> Unit): DocumentPickers {
     }
 }
 
-/** The two add actions, pinned under the list. */
+/**
+ * The two add actions, pinned under the list: side by side, or one above the other from
+ * [com.coparently.app.presentation.common.STACK_CONTROLS_FONT_SCALE], where half the width broke
+ * German labels inside a word ("hinzufüge|n").
+ */
 @Composable
 private fun AddActions(enabled: Boolean, onPickFile: () -> Unit, onTakePhoto: () -> Unit) {
-    Row(
+    SideBySideOrStacked(
+        controls = listOf<@Composable (Modifier) -> Unit>(
+            { modifier ->
+                Button(onClick = onPickFile, enabled = enabled, modifier = modifier) {
+                    Icon(Icons.Default.AttachFile, contentDescription = null)
+                    Text(stringResource(R.string.documents_add_file), modifier = Modifier.padding(start = Spacing.S))
+                }
+            },
+            { modifier ->
+                OutlinedButton(onClick = onTakePhoto, enabled = enabled, modifier = modifier) {
+                    Icon(Icons.Default.PhotoCamera, contentDescription = null)
+                    Text(stringResource(R.string.documents_take_photo), modifier = Modifier.padding(start = Spacing.S))
+                }
+            }
+        ),
         modifier = Modifier
-            .fillMaxWidth()
             .navigationBarsPadding()
             .padding(horizontal = Spacing.L, vertical = Spacing.M),
-        horizontalArrangement = Arrangement.spacedBy(Spacing.M)
-    ) {
-        Button(onClick = onPickFile, enabled = enabled, modifier = Modifier.weight(1f)) {
-            Icon(Icons.Default.AttachFile, contentDescription = null)
-            Text(stringResource(R.string.documents_add_file), modifier = Modifier.padding(start = Spacing.S))
-        }
-        OutlinedButton(onClick = onTakePhoto, enabled = enabled, modifier = Modifier.weight(1f)) {
-            Icon(Icons.Default.PhotoCamera, contentDescription = null)
-            Text(stringResource(R.string.documents_take_photo), modifier = Modifier.padding(start = Spacing.S))
-        }
-    }
+        spacing = Spacing.M
+    )
 }

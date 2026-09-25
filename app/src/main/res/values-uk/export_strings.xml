@@ -5,10 +5,10 @@
     <string name="export_settings_description">Повідомлення, історія календаря, витрати та батьківський план у PDF або CSV</string>
     <string name="export_title">Експорт запису</string>
     <string name="export_back">Назад</string>
-    <string name="export_intro">Створіть файл із тим, що ви та інший з батьків записали й написали одне одному в CoPlanly, — для адвоката, медіатора чи суду. Він створюється на цьому телефоні й потрапляє лише туди, куди ви його надішлете.</string>
+    <string name="export_intro">Створіть файл із тим, що ви та другий із батьків записали й написали одне одному в CoPlanly, — для адвоката, медіатора чи суду. Він створюється на цьому телефоні й потрапляє лише туди, куди ви його надішлете.</string>
     <string name="export_range_label">Період</string>
     <string name="export_from">З</string>
-    <string name="export_to">По</string>
+    <string name="export_to">До</string>
     <string name="export_pick_ok">OK</string>
     <string name="export_pick_cancel">Скасувати</string>
     <string name="export_what_it_says">Що файл повідомляє про себе</string>
@@ -73,8 +73,8 @@
     <string name="export_verify_not_registered">Не зареєстровано — перевірка недоступна. Під час створення цього файлу сервер був недоступний, тому його відбиток не зареєстровано і ніхто не зможе перевірити його на зміни.</string>
     <string name="export_verify_not_registered_short">Не зареєстровано — перевірка недоступна</string>
     <string name="export_unregistered_title">Не зареєстровано — перевірка недоступна</string>
-    <string name="export_unregistered_body">Сервер був недоступний, тому цей файл не зареєстровано і ніхто не зможе перевірити його на зміни. Файл каже про це на початку. Можна все одно поділитися ним або експортувати знову, коли з\'явиться мережа.</string>
-    <string name="export_unregistered_share">Все одно поділитися</string>
+    <string name="export_unregistered_body">Сервер був недоступний, тому цей файл не зареєстровано і ніхто не зможе перевірити його на зміни. Файл каже про це на початку. Можна все одно поділитися ним або експортувати знову, коли зʼявиться мережа.</string>
+    <string name="export_unregistered_share">Усе одно поділитися</string>
     <string name="export_unregistered_not_now">Не зараз</string>
 
     <!-- The parenting plan in the record (MON-5 in MON-3): printed as it stands, not for a period. -->
@@ -82,7 +82,7 @@
     <string name="export_include_plan">Батьківський план</string>
     <string name="export_include_plan_supporting">Відповіді обох батьків і в чому ви згодні — у тому вигляді, у якому план є сьогодні, незалежно від періоду</string>
     <string name="export_plan_current_state">Не обмежено періодом вище: таким план був у момент створення цього запису. Кожен із батьків відповідає окремо; питання вважається узгодженим, лише якщо кожен позначив відповідь іншого в її теперішньому формулюванні.</string>
-    <string name="export_plan_not_from_server">Батьківський план не вдалося прочитати із сервера. Нижче — копія з цього телефона, яка може не збігатися з тим, що бачить інший із батьків.</string>
+    <string name="export_plan_not_from_server">Батьківський план не вдалося прочитати із сервера. Нижче — копія з цього телефона, яка може не збігатися з тим, що бачить другий із батьків.</string>
     <string name="export_plan_unsent_here">Зміни, зроблені на цьому телефоні, які ще не дійшли до сервера, тут не показано.</string>
     <string name="export_plan_none">Батьківський план не заповнено.</string>
     <string name="export_plan_last_changed">Остання зміна</string>
@@ -93,7 +93,7 @@
     <!-- The private journal as an optional section (MON-22). -->
     <string name="export_include_journal">Мій особистий щоденник</string>
     <string name="export_include_journal_supporting">Ваші власні записи про дні цього періоду, позначені у файлі як ваші особисті нотатки. Вимкнено, доки ви не позначите.</string>
-    <string name="export_journal_private_note">Це особисті нотатки одного з батьків, що зберігаються на його телефоні. Через застосунок їх ніколи не надсилали іншому з батьків, і інший із батьків їх не бачив. Їх включено, бо цей із батьків вирішив їх включити.</string>
+    <string name="export_journal_private_note">Це особисті нотатки одного з батьків, що зберігаються на його телефоні. Через застосунок їх ніколи не надсилали другому з батьків, і він їх не бачив. Їх включено, бо так вирішив автор нотаток.</string>
     <string name="export_journal_clock_note">Кожен запис датовано днем, якого він стосується. Коли його написано й востаннє змінено — за годинником того телефона; жоден сервер цих записів не отримував.</string>
     <string name="export_journal_none">Немає записів щоденника про дні цього періоду.</string>
     <string name="export_journal_written">Написано</string>

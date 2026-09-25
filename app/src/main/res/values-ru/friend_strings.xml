@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="friend_section_title">Друг с доступом к календарю</string>
-    <string name="friend_section_supporting">Опекун, друг или бабушка, кто видит календарь</string>
+    <string name="friend_section_supporting">Опекун, друг, бабушка или дедушка, которые видят календарь</string>
     <string name="friend_invite_action">Пригласить друга</string>
     <string name="friend_invite_code_label">Передайте этот код</string>
     <string name="friend_access_until">Доступ до %1$s</string>

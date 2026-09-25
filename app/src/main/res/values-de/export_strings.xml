@@ -5,7 +5,7 @@
     <string name="export_settings_description">Nachrichten, Kalenderverlauf, Ausgaben und der Elternplan als PDF oder CSV</string>
     <string name="export_title">Protokoll exportieren</string>
     <string name="export_back">Zurück</string>
-    <string name="export_intro">Erstellen Sie eine Datei mit dem, was Sie und der andere Elternteil in CoPlanly festgehalten und einander geschrieben haben — für eine Anwältin, einen Mediator oder ein Gericht. Sie entsteht auf diesem Telefon und geht nur dorthin, wohin Sie sie teilen.</string>
+    <string name="export_intro">Erstelle eine Datei mit dem, was du und der andere Elternteil in CoPlanly festgehalten und einander geschrieben habt – für eine Anwältin, einen Mediator oder ein Gericht. Sie entsteht auf diesem Telefon und geht nur dorthin, wohin du sie teilst.</string>
     <string name="export_range_label">Zeitraum</string>
     <string name="export_from">Von</string>
     <string name="export_to">Bis</string>
@@ -18,12 +18,12 @@
     <string name="export_pdf_supporting">Ein druckbares A4-Dokument</string>
     <string name="export_working">Wird vorbereitet…</string>
     <string name="export_share_title">Protokoll teilen</string>
-    <string name="export_error_failed">Das Protokoll konnte nicht exportiert werden. Bitte erneut versuchen.</string>
-    <string name="export_error_signed_out">Melden Sie sich an, um das Protokoll zu exportieren.</string>
+    <string name="export_error_failed">Das Protokoll konnte nicht exportiert werden. Bitte versuche es erneut.</string>
+    <string name="export_error_signed_out">Melde dich an, um das Protokoll zu exportieren.</string>
 
     <string name="export_record_title">CoPlanly-Kommunikationsprotokoll</string>
     <string name="export_statement_what">Dies ist ein Protokoll dessen, was die Eltern in CoPlanly festgehalten und einander geschrieben haben, und wann. Es ist kein Protokoll dessen, was geschehen ist, und es sagt nicht, ob etwas hier Geschriebenes wahr ist.</string>
-    <string name="export_statement_messages">Gesendete Nachrichten kann kein Elternteil bearbeiten oder löschen. Die Zeit einer Nachricht stammt von der Uhr des Geräts des Absenders.</string>
+    <string name="export_statement_messages">Gesendete Nachrichten kann kein Elternteil bearbeiten oder löschen. Die Zeit einer Nachricht ist die Uhrzeit des Geräts, von dem sie gesendet wurde.</string>
     <string name="export_statement_revisions">Jede gespeicherte Version eines Kalendereintrags wird vollständig aufbewahrt und kann nachträglich nicht geändert werden. Jede zeigt zwei Zeiten: wann das Gerät des bearbeitenden Elternteils sie festhielt und wann der Server sie empfing.</string>
     <string name="export_statement_limits">Die Zeiten der Einträge sind die Uhrzeiten, die die Eltern eingegeben haben, ohne Zeitzone. Ausgaben werden so gezeigt, wie sie heute sind. Einträge, die vor Beginn des Versionsverlaufs gespeichert wurden, zeigen nur ihren aktuellen Stand. Private Einträge und medizinische Angaben zu Kindern sind nie enthalten.</string>
     <string name="export_record_period">Zeitraum</string>
@@ -65,34 +65,34 @@
     <string name="export_action_server_recorded">vom Server aus dem gespeicherten Eintrag festgehalten; das bearbeitende Telefon hat diese Änderung nicht festgehalten, daher ist keine Gerätezeit bekannt, und genannt ist die Person, die der Eintrag nennt</string>
 
     <!-- MON-16: the record id and whether the file can be verified. -->
-    <string name="export_verify_explainer">Wenn der Server erreichbar ist, wird die Datei registriert: Ihre Protokoll-ID und ein Fingerabdruck ihres genauen Inhalts werden gespeichert, sodass jeder, der sie hat, prüfen kann, dass sie nicht verändert wurde. Nur der Fingerabdruck verlässt dieses Telefon, nie die Datei.</string>
+    <string name="export_verify_explainer">Wenn der Server erreichbar ist, wird die Datei registriert: ihre Protokoll-ID und ein Fingerabdruck ihres genauen Inhalts werden gespeichert, sodass jeder, der die Datei hat, prüfen kann, dass sie nicht verändert wurde. Nur der Fingerabdruck verlässt dieses Telefon, nie die Datei.</string>
     <string name="export_verify_record_id">Protokoll-ID</string>
     <string name="export_verify_at">Prüfen unter</string>
-    <string name="export_verify_instruction">Um zu prüfen, dass diese Datei nicht verändert wurde, öffnen Sie die Adresse oben und wählen Sie die Datei aus. Schon ein einziges geändertes Zeichen lässt die Prüfung scheitern.</string>
+    <string name="export_verify_instruction">Um zu prüfen, dass diese Datei nicht verändert wurde, öffne die Adresse oben und wähle die Datei aus. Schon ein einziges geändertes Zeichen lässt die Prüfung scheitern.</string>
     <string name="export_verify_instruction_no_url">Ein Fingerabdruck dieser Datei wurde bei ihrer Erstellung unter dieser Protokoll-ID bei CoPlanly registriert.</string>
-    <string name="export_verify_not_registered">Nicht registriert — keine Prüfung möglich. Der Server war bei der Erstellung dieser Datei nicht erreichbar, daher wurde kein Fingerabdruck registriert und niemand kann sie auf Änderungen prüfen.</string>
-    <string name="export_verify_not_registered_short">Nicht registriert — keine Prüfung möglich</string>
-    <string name="export_unregistered_title">Nicht registriert — keine Prüfung möglich</string>
-    <string name="export_unregistered_body">Der Server war nicht erreichbar, daher wurde diese Datei nicht registriert und niemand wird sie auf Änderungen prüfen können. Die Datei sagt das am Anfang. Sie können sie trotzdem teilen oder erneut exportieren, wenn Sie online sind.</string>
+    <string name="export_verify_not_registered">Nicht registriert – keine Prüfung möglich. Der Server war bei der Erstellung dieser Datei nicht erreichbar, daher wurde kein Fingerabdruck registriert und niemand kann sie auf Änderungen prüfen.</string>
+    <string name="export_verify_not_registered_short">Nicht registriert – keine Prüfung möglich</string>
+    <string name="export_unregistered_title">Nicht registriert – keine Prüfung möglich</string>
+    <string name="export_unregistered_body">Der Server war nicht erreichbar, daher wurde diese Datei nicht registriert und niemand wird sie auf Änderungen prüfen können. Das steht auch am Anfang der Datei. Du kannst sie trotzdem teilen oder erneut exportieren, wenn du online bist.</string>
     <string name="export_unregistered_share">Trotzdem teilen</string>
     <string name="export_unregistered_not_now">Nicht jetzt</string>
 
     <!-- The parenting plan in the record (MON-5 in MON-3): printed as it stands, not for a period. -->
-    <string name="export_include_label">Außerdem enthalten</string>
+    <string name="export_include_label">Zusätzlich aufnehmen</string>
     <string name="export_include_plan">Der Elternplan</string>
-    <string name="export_include_plan_supporting">Die Antworten beider Eltern und wo Sie sich einig sind, wie der Plan heute steht — unabhängig vom Zeitraum</string>
-    <string name="export_plan_current_state">Nicht auf den obigen Zeitraum beschränkt: So stand der Plan, als dieses Protokoll erstellt wurde. Jeder Elternteil antwortet für sich; eine Frage gilt nur dann als geeinigt, wenn jeder die Antwort des anderen in ihrem jetzigen Wortlaut abgehakt hat.</string>
+    <string name="export_include_plan_supporting">Die Antworten beider Eltern und wo ihr euch einig seid, wie der Plan heute steht – unabhängig vom Zeitraum</string>
+    <string name="export_plan_current_state">Nicht auf den obigen Zeitraum beschränkt: So stand der Plan, als dieses Protokoll erstellt wurde. Jeder Elternteil antwortet für sich; eine Frage gilt nur dann als vereinbart, wenn jeder die Antwort des anderen in ihrem jetzigen Wortlaut abgehakt hat.</string>
     <string name="export_plan_not_from_server">Der Elternplan konnte nicht vom Server gelesen werden. Es folgt die Kopie dieses Telefons, die von dem abweichen kann, was der andere Elternteil sieht.</string>
     <string name="export_plan_unsent_here">Änderungen auf diesem Telefon, die den Server noch nicht erreicht haben, sind nicht enthalten.</string>
     <string name="export_plan_none">Kein Elternplan erfasst.</string>
     <string name="export_plan_last_changed">Zuletzt geändert</string>
-    <string name="export_plan_not_agreed">Nicht geeinigt</string>
+    <string name="export_plan_not_agreed">Nicht vereinbart</string>
     <string name="export_plan_retired">Antworten auf Fragen, die der Plan nicht mehr stellt (aufbewahrt, nicht gelöscht)</string>
     <string name="export_plan_cited">Vorgeschlagen nach der Antwort im Elternplan auf die Frage</string>
 
     <!-- The private journal as an optional section (MON-22). -->
     <string name="export_include_journal">Mein privates Tagebuch</string>
-    <string name="export_include_journal_supporting">Ihre eigenen Einträge zu Tagen in diesem Zeitraum, in der Datei als Ihre privaten Notizen gekennzeichnet. Aus, solange Sie es nicht ankreuzen.</string>
+    <string name="export_include_journal_supporting">Deine eigenen Einträge zu Tagen in diesem Zeitraum, in der Datei als deine privaten Notizen gekennzeichnet. Nur enthalten, wenn du es ankreuzt.</string>
     <string name="export_journal_private_note">Dies sind die privaten Notizen eines Elternteils, gespeichert auf dessen Telefon. Sie wurden über die App nie mit dem anderen Elternteil geteilt, und der andere Elternteil hat sie nicht gesehen. Sie sind enthalten, weil dieser Elternteil sie aufnehmen wollte.</string>
     <string name="export_journal_clock_note">Jeder Eintrag ist nach dem Tag datiert, um den es geht. Wann er geschrieben und zuletzt bearbeitet wurde, stammt von der Uhr dieses Telefons; kein Server hat diese Einträge je erhalten.</string>
     <string name="export_journal_none">Keine Tagebucheinträge zu Tagen in diesem Zeitraum.</string>

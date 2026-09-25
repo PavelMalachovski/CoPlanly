@@ -113,7 +113,6 @@ import java.time.LocalDateTime
 import java.time.LocalTime
 import java.util.Currency
 import java.util.Locale
-import kotlin.math.abs
 
 /** A date in the locale's order for [skeleton], then the locale's short time (D-18). */
 private fun LocalDateTime.dateAndTime(skeleton: String): String =
@@ -130,9 +129,6 @@ private fun looksAllDay(event: Event): Boolean =
 
 /** Strength of the parent-hue wash behind the handover hero. */
 private const val HERO_TINT_ALPHA = 0.16f
-
-/** Below this a balance is settled — matches the Expenses screen, so the two never disagree. */
-private const val SETTLED_EPSILON = 0.01
 
 /**
  * From this font scale the two stat tiles stack instead of sharing a row. Side by side each has
@@ -813,31 +809,26 @@ internal fun StatTiles(
 }
 
 /**
- * The settle-up line under the spend figure: "You are owed 29.85", "You owe 29.85", or
- * "All settled".
+ * The settle-up line under the spend figure: "You are owed 1 416,00 CZK, 58,00 €", "You owe
+ * 29.85", or "All settled".
  *
- * Only balances whose split could be worked out are reported — while unpaired there is one
- * parent on record and a debt figure would be invented.
- *
- * A month mixing currencies can owe in one direction in CZK and the other in USD, and the app
- * does no FX conversion, so there is no honest single sentence for that. Rather than joining
- * amounts under whichever direction happened to come first, this reports the **largest** single
- * balance and lets the Expenses screen — one tap away, and where this tile links — lay out the
- * per-currency detail.
+ * Every currency with an open balance is named ([SettleUpPosition]); the app does no FX
+ * conversion, so they are listed, never summed. A month that owes one way in one currency and
+ * the other way in another gets both sentences, one per line — there is no honest single one.
  */
 @Composable
 private fun balanceCaption(balances: List<CurrencyBalance>): String {
-    val largest = balances
-        .filter { it.balance.splitKnown && abs(it.balance.netForCurrentUser) >= SETTLED_EPSILON }
-        .maxByOrNull { abs(it.balance.netForCurrentUser) }
-        ?: return stringResource(R.string.home_stat_settled)
-
-    val amount = formatMoney(abs(largest.balance.netForCurrentUser), largest.currency)
-    return if (largest.balance.netForCurrentUser > 0) {
-        stringResource(R.string.home_stat_owed_to_you, amount)
-    } else {
-        stringResource(R.string.home_stat_you_owe, amount)
+    val position = SettleUpPosition.of(balances)
+    if (position.settled) return stringResource(R.string.home_stat_settled)
+    val amounts: (List<CurrencyAmount>) -> String = { list ->
+        list.joinToString(", ") { formatMoney(it.amount, it.currency) }
     }
+    return listOfNotNull(
+        position.owedToYou.takeIf { it.isNotEmpty() }
+            ?.let { stringResource(R.string.home_stat_owed_to_you, amounts(it)) },
+        position.youOwe.takeIf { it.isNotEmpty() }
+            ?.let { stringResource(R.string.home_stat_you_owe, amounts(it)) }
+    ).joinToString("\n")
 }
 
 @Composable

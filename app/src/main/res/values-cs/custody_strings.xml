@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="custody_title">Plán péče</string>
+    <string name="custody_title">Rozvrh péče</string>
     <string name="custody_back">Zpět</string>
-    <string name="custody_save_button">Uložit plán péče</string>
+    <string name="custody_save_button">Uložit rozvrh péče</string>
     <string name="custody_select_schedule_type">Vyberte typ rozvrhu</string>
     <string name="custody_pattern_start_date">Datum začátku vzoru</string>
     <string name="custody_start_date_hint">Toto je výchozí datum – vzor se bude opakovat od tohoto dne</string>
@@ -31,7 +31,7 @@
     <string name="custody_model_custom">Vlastní rozvrh</string>
     <string name="custody_model_week_on_week_off_desc">Jeden rodič má dítě celý týden, pak se vystřídají.</string>
     <string name="custody_model_two_two_three_desc">Vzor 2 dny, 2 dny, 3 dny. Častější střídání.</string>
-    <string name="custody_model_three_four_four_three_desc">Střídání 3 a 4 dnů. Vyvážený čas ve všední dny i o víkendu.</string>
+    <string name="custody_model_three_four_four_three_desc">Střídání 3 a 4 dnů. Vyvážený čas ve všední dny i o víkendu.</string>
     <string name="custody_model_custom_desc">Vytvořte si vlastní vzor rozvrhu.</string>
     <!-- Preview sentences for the custody Preview card. These replace a hardcoded
          English string built in CustodySetupViewModel that named Mom and Dad outright.
@@ -42,14 +42,14 @@
     <string name="custody_preview_week_on_week_off">První týden: %1$s, poté se to každý týden střídá.</string>
     <string name="custody_preview_two_two_three">Po–Út: %1$s. St–Čt: %2$s. Pá–Ne se střídají.</string>
     <string name="custody_preview_three_four_four_three">Po–St (3 dny): %1$s. Čt–Ne (4 dny): %2$s. Poté opačně.</string>
-    <string name="custody_preview_custom">Vlastní vzor: %1$d z %2$d dnů — %3$s.</string>
+    <string name="custody_preview_custom">Vlastní vzor: %1$d z %2$d dnů – %3$s.</string>
 
     <!-- The pairing conflict screen — noun labels only, never a sentence with a name as subject. -->
     <string name="custody_conflict_title">Dva rozvrhy</string>
-    <string name="custody_conflict_body">V tomto telefonu a ve sdíleném kalendáři jsou různé vzory péče. Vyberte ten platný. Druhý zůstane uložený, ale neaktivní.</string>
-    <string name="custody_conflict_local_label">V tomto telefonu</string>
+    <string name="custody_conflict_body">V tomto telefonu a ve sdíleném kalendáři jsou různé rozvrhy péče. Vyberte ten platný. Druhý zůstane uložený, ale nebude aktivní.</string>
+    <string name="custody_conflict_local_label">V tomto telefonu</string>
     <string name="custody_conflict_shared_label">Sdílený rozvrh</string>
-    <string name="custody_conflict_keep_local">Ponechat rozvrh z tohoto telefonu</string>
+    <string name="custody_conflict_keep_local">Ponechat rozvrh z tohoto telefonu</string>
     <string name="custody_conflict_use_shared">Použít sdílený rozvrh</string>
     <string name="custody_conflict_save_failed">Rozvrh se nepodařilo uložit. Zkuste to znovu.</string>
     <string name="custody_proposal_inbox_title">Navržen nový rozvrh péče</string>
@@ -57,34 +57,34 @@
     <string name="custody_proposal_accept">Přijmout</string>
     <string name="custody_proposal_decline">Odmítnout</string>
     <string name="custody_proposal_waiting">Čeká se, až druhý rodič schválí nový rozvrh</string>
-    <string name="custody_proposal_review">%1$s navrhl nový rozvrh péče</string>
+    <string name="custody_proposal_review">%1$s navrhuje nový rozvrh péče</string>
     <!-- MON-6. -->
-    <string name="custody_model_every_other_weekend">Výhradní péče se stykem</string>
-    <string name="custody_model_every_other_weekend_desc">Dítě žije u jednoho rodiče, druhý má každý druhý víkend.</string>
-    <string name="custody_preview_every_other_weekend">Všední i ostatní dny: %1$s. Každou druhou So–Ne: %2$s.</string>
-    <string name="custody_who_is_resident">U koho dítě žije?</string>
+    <string name="custody_model_every_other_weekend">Každý druhý víkend</string>
+    <string name="custody_model_every_other_weekend_desc">Dítě žije u jednoho rodiče, druhý má každý druhý víkend.</string>
+    <string name="custody_preview_every_other_weekend">Ostatní dny: %1$s. Každou druhou so–ne: %2$s.</string>
+    <string name="custody_who_is_resident">U koho dítě žije?</string>
     <string name="custody_is_resident">Žije u: %1$s</string>
     <string name="custody_midweek_title">Kontakt uprostřed týdne</string>
     <string name="custody_midweek_enable">Přidat den uprostřed týdne</string>
-    <string name="custody_midweek_overnight_warning">Tento rozvrh přiděluje celé dny, takže den uprostřed týdne zahrnuje i noc. Pokud vaše rozhodnutí mluví jen o odpoledni, nechte tuto volbu vypnutou a níže místo toho přidejte čas styku.</string>
+    <string name="custody_midweek_overnight_warning">Tento rozvrh přiděluje celé dny, takže den uprostřed týdne zahrnuje i noc. Pokud vaše rozhodnutí mluví jen o odpoledni, nechte tuto volbu vypnutou a níže místo toho přidejte čas styku.</string>
     <string name="custody_midweek_every_week">Každý týden</string>
-    <string name="custody_midweek_off_week_only">Jen v týdnu bez víkendu</string>
-    <string name="custody_preview_every_other_weekend_midweek">Každý den: %1$s. Každou druhou so–ne a každou %3$s: %2$s.</string>
-    <string name="custody_preview_every_other_weekend_midweek_off_week">Každý den: %1$s. Každou druhou so–ne a navíc %3$s v týdnu mezi tím: %2$s.</string>
+    <string name="custody_midweek_off_week_only">Jen v týdnu bez víkendu</string>
+    <string name="custody_preview_every_other_weekend_midweek">Ostatní dny: %1$s. Každou druhou so–ne a každý týden (%3$s): %2$s.</string>
+    <string name="custody_preview_every_other_weekend_midweek_off_week">Ostatní dny: %1$s. Každou druhou so–ne a v týdnu mezi nimi navíc (%3$s): %2$s.</string>
     <plurals name="custody_diff_days_move">
-        <item quantity="one">V nadcházejících týdnech by se přesunul %1$d den.</item>
-        <item quantity="few">V nadcházejících týdnech by se přesunuly %1$d dny.</item>
-        <item quantity="many">V nadcházejících týdnech by se přesunulo %1$d dne.</item>
-        <item quantity="other">V nadcházejících týdnech by se přesunulo %1$d dní.</item>
+        <item quantity="one">V nadcházejících týdnech by se přesunul %1$d den.</item>
+        <item quantity="few">V nadcházejících týdnech by se přesunuly %1$d dny.</item>
+        <item quantity="many">V nadcházejících týdnech by se přesunulo %1$d dne.</item>
+        <item quantity="other">V nadcházejících týdnech by se přesunulo %1$d dní.</item>
     </plurals>
-    <string name="custody_diff_none">V kalendáři by se nic nezměnilo.</string>
+    <string name="custody_diff_none">V kalendáři by se nic nezměnilo.</string>
 
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
     <string name="custody_setup_save_failed">Rozvrh se nepodařilo uložit. Zkuste to znovu.</string>
 
     <!-- MON-6b: contact windows over the whole-day pattern. -->
     <string name="custody_windows_title">Časy styku</string>
-    <string name="custody_windows_hint">Část dne s rodičem, který ten den nemá, například každou středu 15:00–19:00. Den sám zůstává tomu, kdo ho má; čas styku se zobrazí navíc.</string>
+    <string name="custody_windows_hint">Část dne s rodičem, který ten den nemá, například každou středu 15:00–19:00. Den sám zůstává tomu, kdo ho má; čas styku se zobrazí navíc.</string>
     <string name="custody_windows_empty">Žádné časy styku.</string>
     <string name="custody_windows_add">Přidat čas styku</string>
     <string name="custody_window_remove">Odebrat čas styku</string>
@@ -97,9 +97,9 @@
     <string name="custody_window_week_n">%1$d. týden</string>
     <string name="custody_window_from">Od %1$s</string>
     <string name="custody_window_to">Do %1$s</string>
-    <string name="custody_window_with">S kým</string>
-    <string name="custody_window_invalid">Čas styku musí skončit až po svém začátku, a to týž den.</string>
+    <string name="custody_window_with">S kým</string>
+    <string name="custody_window_invalid">Čas styku musí skončit později, než začíná, a to týž den.</string>
     <string name="custody_window_add_confirm">Přidat</string>
     <string name="custody_diff_windows_only">Změnily by se jen časy styku.</string>
-    <string name="custody_diff_windows_too">Mění se i časy styku.</string>
+    <string name="custody_diff_windows_too">Mění se i časy styku.</string>
 </resources>

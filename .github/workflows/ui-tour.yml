@@ -27,6 +27,11 @@
 #   * touching `.github/ui-tour-request` — works on any branch, merged or not: commit any change to
 #     that file and the tour runs on that branch.
 #
+# **Which variants.** The default four above. A line `variants: <v1> <v2> …` in
+# `.github/ui-tour-request` (the last such line wins) replaces them — for example
+# `variants: light-cs-100 light-de-100 light-de-150 light-ru-100 light-uk-100` for a language
+# review. Each variant takes about ten minutes, so the step's limit grows with the count.
+#
 # It cannot loop: its own push goes to `ui-tour/**`, which is excluded below, touches only tour
 # files, and is made with the workflow's token, which starts no workflow anyway.
 name: UI tour
@@ -48,11 +53,25 @@ concurrency:
 
 jobs:
   tour:
-    name: UI tour (four variants)
+    name: UI tour
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
+
+      - name: Choose the variants
+        id: variants
+        run: |
+          requested="$(grep -E '^variants:' .github/ui-tour-request 2>/dev/null | tail -1 | sed -E 's/^variants:[[:space:]]*//' || true)"
+          variants="${requested:-light-en-100 dark-en-100 light-ru-130 light-en-100-wide}"
+          for v in $variants; do
+            if ! [[ "$v" =~ ^(light|dark)-[a-z]{2}-[0-9]{2,3}(-wide)?$ ]]; then
+              echo "::error::Not a tour variant: $v"
+              exit 1
+            fi
+          done
+          echo "list=$variants" >> "$GITHUB_OUTPUT"
+          echo "Tour variants: $variants"
 
       - name: Set up JDK 21 (Firebase emulators)
         id: jdk21
@@ -107,10 +126,11 @@ jobs:
       # itself (tools/stop-emulator.sh) so the action's own shutdown has nothing to hang on.
       - name: Take the tour
         id: tour
-        timeout-minutes: 45
+        timeout-minutes: 100
         continue-on-error: true
         uses: reactivecircus/android-emulator-runner@v2
         env:
+          UI_TOUR_VARIANTS: ${{ steps.variants.outputs.list }}
           FIREBASE_JAVA_HOME: ${{ steps.jdk21.outputs.path }}
           STATUS_FILE: ${{ runner.temp }}/ui-tour-status
           UI_TOUR_OUT: build/ui-tour-site
@@ -143,6 +163,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           SOURCE_REF: ${{ github.ref_name }}
           SOURCE_SHA: ${{ github.sha }}
+          UI_TOUR_VARIANTS: ${{ steps.variants.outputs.list }}
         run: |
           set -euo pipefail
           site=build/ui-tour-site
@@ -153,7 +174,8 @@ jobs:
           branch="ui-tour/${SOURCE_REF//\//-}"
           short="${SOURCE_SHA:0:7}"
           export UI_TOUR_SOURCE="$SOURCE_REF @ $short"
-          node tools/ui-tour/gallery.js "$site" light-en-100 dark-en-100 light-ru-130 light-en-100-wide
+          # shellcheck disable=SC2086 # one argument per variant
+          node tools/ui-tour/gallery.js "$site" $UI_TOUR_VARIANTS
           publish="$RUNNER_TEMP/ui-tour-publish"
           rm -rf "$publish"
           mkdir -p "$publish"

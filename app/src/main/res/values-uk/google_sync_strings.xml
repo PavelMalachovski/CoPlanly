@@ -35,10 +35,10 @@
     <string name="sync_google_error_not_connected">Немає підключення до Google. Увійдіть через Google, щоб синхронізувати.</string>
     <string name="sync_google_error_signed_out">Ви вийшли з CoPlanly. Увійдіть і спробуйте ще раз.</string>
     <string name="sync_google_error_authentication">Термін входу в Google минув. Підключіть Google Календар знову.</string>
-    <string name="sync_google_error_access_denied">CoPlanly не має доступу до вашого Google Календаря. Перевірте дозвіл в обліковому записі Google.</string>
+    <string name="sync_google_error_access_denied">CoPlanly не має доступу до вашого Google Календаря. Перевірте дозвіл в акаунті Google.</string>
     <string name="sync_google_error_calendar_not_found">Ваш Google Календар не знайдено.</string>
     <string name="sync_google_error_rate_limited">Google Календар зараз перевантажений. Спробуйте за кілька хвилин.</string>
     <string name="sync_google_error_unavailable">Google Календар зараз недоступний. Спробуйте пізніше.</string>
-    <string name="sync_google_error_network">Не вдалося зв’язатися з Google Календарем. Перевірте підключення до інтернету.</string>
+    <string name="sync_google_error_network">Не вдалося звʼязатися з Google Календарем. Перевірте підключення до інтернету.</string>
     <string name="sync_google_error_unknown">Не вдалося синхронізувати Google Календар. Спробуйте ще раз.</string>
 </resources>

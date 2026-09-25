@@ -21,14 +21,14 @@
     <string name="change_request_proposed_new_time">Vorgeschlagene neue Zeit</string>
     <string name="change_request_from_time">Von %1$s</string>
     <string name="change_request_to_time">Bis %1$s</string>
-    <string name="change_request_to_unset">Bis —</string>
+    <string name="change_request_to_unset">Bis –</string>
     <string name="change_request_note_label">Nachricht an den anderen Elternteil (optional)</string>
     <string name="change_request_send">Anfrage senden</string>
     <string name="change_request_ok">OK</string>
     <string name="change_request_cancel">Abbrechen</string>
     <string name="change_request_link_missing">Diese Anfrage ist nicht mehr offen.</string>
     <!-- CQ-20: this device has a write that has not reached Firestore yet. -->
-    <string name="change_request_status_queued">In der Warteschlange</string>
+    <string name="change_request_status_queued">Wartet</string>
     <string name="change_request_status_queued_desc">Noch nicht gesendet – wartet auf eine Verbindung</string>
 
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
@@ -40,6 +40,6 @@
     <string name="change_request_error_proposal_decline_failed">Der Vorschlag konnte nicht abgelehnt werden. Bitte versuche es erneut.</string>
     <string name="change_request_error_answer_failed">Die Antwort konnte nicht gespeichert werden. Bitte versuche es erneut.</string>
     <string name="change_request_error_signed_out">Du bist abgemeldet. Melde dich an und versuche es erneut.</string>
-    <string name="change_request_error_not_paired">Verbinde dich zuerst mit dem anderen Elternteil, um Änderungsanfragen zu senden.</string>
+    <string name="change_request_error_not_paired">Verknüpfe dich zuerst mit dem anderen Elternteil, um Änderungsanfragen zu senden.</string>
     <string name="change_request_error_send_failed">Die Änderungsanfrage konnte nicht gesendet werden. Bitte versuche es erneut.</string>
 </resources>

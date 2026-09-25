@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Ukrainian translations of settings_account_strings.xml. -->
 <resources>
-    <string name="settings_co_parent_sync">Синхронізація з другим із батьків</string>
+    <string name="settings_co_parent_sync">Синхронізація родини</string>
     <string name="settings_co_parent_sync_description">Автоматично синхронізує події та інформацію про дитину з другим із батьків</string>
     <string name="settings_sync">Синхронізувати</string>
-    <string name="settings_google_sync">Синхронізація з Google Календарем</string>
+    <string name="settings_google_sync">Google Календар</string>
     <string name="settings_gcal_enable_sync">Увімкнути синхронізацію</string>
-    <string name="settings_gcal_private_note">Імпортовані події залишаються на цьому пристрої. Google Календар — особистий, тому співбатькові з нього нічого не передається.</string>
+    <string name="settings_gcal_private_note">Імпортовані події залишаються на цьому пристрої. Google Календар — особистий, тому другому з батьків із нього нічого не передається.</string>
     <string name="settings_parent_color">Мій колір</string>
-    <string name="settings_parent_color_desc">Як позначаються ваші події, дні опіки та витрати. Співбатько обирає свій.</string>
+    <string name="settings_parent_color_desc">Як позначаються ваші події, дні опіки та витрати. Другий із батьків обирає свій колір.</string>
     <string name="parent_color_pink">Рожевий</string>
     <string name="parent_color_blue">Синій</string>
     <string name="parent_color_purple">Фіолетовий</string>
@@ -18,10 +18,10 @@
     <string name="settings_unknown">Невідомо</string>
     <string name="settings_calendar_sign_out">Вийти із синхронізації календаря</string>
     <string name="settings_account">Обліковий запис</string>
-    <string name="settings_account_description">Повний вихід із застосунку. Щоб отримати доступ до облікового запису, потрібно буде ввійти знову.</string>
+    <string name="settings_account_description">Повний вихід із застосунку. Щоб отримати доступ до акаунта, потрібно буде ввійти знову.</string>
     <string name="settings_account_sign_out">Вийти із застосунку</string>
-    <string name="settings_pairing_title">Зв’язок із другим із батьків</string>
-    <string name="settings_pairing_description">Запросіть другого з батьків або керуйте зв’язком</string>
+    <string name="settings_pairing_title">Звʼязок із другим із батьків</string>
+    <string name="settings_pairing_description">Запросіть другого з батьків або керуйте звʼязком</string>
     <string name="settings_child_info_title">Інформація про дитину</string>
     <string name="settings_child_info_description">Ліки, заняття, алергії</string>
     <string name="settings_pets_title">Улюбленці</string>
@@ -29,12 +29,12 @@
     <string name="settings_custody_title">Графік опіки</string>
     <string name="settings_custody_description">Налаштуйте схему опіки (тиждень через тиждень, 2-2-3 тощо)</string>
     <string name="settings_about">Про CoPlanly</string>
-    <string name="settings_about_tagline">Спільний календар для спільного батьківства</string>
+    <string name="settings_about_tagline">Спільний календар для спільного виховання дітей</string>
     <string name="settings_version">Версія %1$s</string>
     <string name="settings_navigate">Відкрити</string>
 
     <!-- Group headers for the four settings sections. -->
-    <string name="settings_group_family">СІМ’Я</string>
+    <string name="settings_group_family">РОДИНА</string>
     <string name="settings_group_sync">СИНХРОНІЗАЦІЯ</string>
     <string name="settings_group_app">ЗАСТОСУНОК</string>
     <string name="settings_group_account">АКАУНТ</string>
@@ -55,11 +55,11 @@
     <string name="settings_account_delete_cancel">Залишити акаунт</string>
     <string name="settings_account_delete_progress">Видаляємо ваш акаунт…</string>
     <string name="settings_account_delete_failed">Акаунт не видалено. Спробуйте ще раз.</string>
-    <string name="settings_family_kind_title">Кого ви виховуєте разом</string>
+    <string name="settings_family_kind_title">Про кого ви дбаєте разом</string>
     <string name="settings_family_kind_both">Діти й улюбленці</string>
     <string name="settings_family_kind_save">Зберегти</string>
     <string name="settings_family_kind_cancel">Скасувати</string>
-    <string name="settings_family_kind_kept_by_co_parent">Збережено. Розділ, який ви прибрали, залишається видимим, бо його зберігає другий з батьків.</string>
+    <string name="settings_family_kind_kept_by_co_parent">Збережено. Розділ, який ви прибрали, залишається видимим, бо його зберігає другий із батьків.</string>
     <string name="settings_family_kind_records_kept">Прибрано. Записи залишаються на пристрої — увімкніть розділ тут знову, щоб їх побачити.</string>
     <string name="settings_family_kind_not_saved">Не вдалося зберегти — профіль ще не завантажився. Спробуйте за мить.</string>
     <string name="settings_split_ratio_title">Поділ витрат</string>
@@ -70,17 +70,17 @@
     <string name="settings_split_ratio_proposed">Надіслано другому з батьків на підтвердження</string>
     <string name="settings_split_ratio_refused">Не вдалося запропонувати цей поділ</string>
     <!-- Disclosure chevron content descriptions (UX-11). -->
-    <string name="settings_expand">Показати налаштування</string>
-    <string name="settings_collapse">Сховати налаштування</string>
-    <string name="settings_family_shown">Показана сім\'я</string>
-    <string name="settings_family_switch">Перемкнути сім\'ю</string>
-    <string name="settings_family_unnamed">Поки без імені</string>
-    <string name="family_switcher_unread_other">Нові повідомлення в іншій сім\'ї</string>
+    <string name="settings_expand">Показати параметри</string>
+    <string name="settings_collapse">Сховати параметри</string>
+    <string name="settings_family_shown">Показана родина</string>
+    <string name="settings_family_switch">Перемкнути родину</string>
+    <string name="settings_family_unnamed">Поки без назви</string>
+    <string name="family_switcher_unread_other">Нові повідомлення в іншій родині</string>
     <string name="family_switcher_unread_row">Нові повідомлення</string>
-    <string name="family_switcher_request_other">В іншій сім\'ї чекає запит на зміну</string>
+    <string name="family_switcher_request_other">В іншій родині чекає запит на зміну</string>
     <string name="family_switcher_request_row">Чекає запит на зміну</string>
-    <string name="family_switcher_schedule_other">В іншій сім\'ї чекає пропозиція щодо розкладу опіки</string>
-    <string name="family_switcher_schedule_row">Чекає пропозиція щодо розкладу опіки</string>
+    <string name="family_switcher_schedule_other">В іншій родині чекає пропозиція щодо графіка опіки</string>
+    <string name="family_switcher_schedule_row">Чекає пропозиція щодо графіка опіки</string>
     <string name="settings_school_import_title">Імпорт із Bakaláři</string>
     <string name="settings_school_import_description">Шкільні заходи й навчальні години дитини одразу в календарі.</string>
     <string name="settings_edupage_title">EduPage</string>
@@ -93,5 +93,5 @@
 
     <!-- MON-19: Settings → App. The argument is the pause, in seconds. -->
     <string name="settings_pause_before_sending_title">Пауза перед надсиланням</string>
-    <string name="settings_pause_before_sending_description">Затримує кожне повідомлення в чаті на %1$d секунд із можливістю скасування й під час набору підказує про великі літери, !!! та різкі слова. Перевірка — лише на цьому телефоні.</string>
+    <string name="settings_pause_before_sending_description">Затримує кожне повідомлення в чаті на %1$d с із можливістю скасувати й під час набору підказує про великі літери, !!! та різкі слова. Перевірка — лише на цьому телефоні.</string>
 </resources>

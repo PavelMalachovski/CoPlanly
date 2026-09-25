@@ -17,11 +17,11 @@
     <string name="onboarding_relatives_title">Кто может помочь</string>
     <string name="onboarding_relatives_body">Бабушка, дедушка, тётя, дядя — любой, кто может забрать ребёнка или кому позвонят в экстренном случае.</string>
     <string name="onboarding_relatives_needs_child">Эти контакты сохраняются вместе с ребёнком, поэтому сначала добавьте ребёнка — вернитесь на шаг назад или добавьте позже в настройках.</string>
-    <string name="onboarding_custody_title">Расписание опеки</string>
+    <string name="onboarding_custody_title">График опеки</string>
     <string name="onboarding_custody_body">Укажите, в какие дни ребёнок с кем из вас. Это можно изменить в любой момент, и второй родитель должен будет согласиться с изменением.</string>
-    <string name="onboarding_custody_open">Составить расписание</string>
+    <string name="onboarding_custody_open">Составить график</string>
     <string name="onboarding_family_title">Кого вы воспитываете вместе?</string>
-    <string name="onboarding_family_body">Отметьте оба варианта, если это про вашу семью. Позже это можно изменить в Настройках.</string>
+    <string name="onboarding_family_body">Отметьте оба варианта, если это про вашу семью. Позже это можно изменить в настройках.</string>
     <string name="onboarding_family_children">Дети</string>
     <string name="onboarding_family_children_hint">Карточки детей, контакты и данные о школе</string>
     <string name="onboarding_family_pets">Питомцы</string>
@@ -39,31 +39,31 @@
 
     <!-- The co-parent link, which comes first (September 2026): the link, what it brought back, and
          the wording the split and custody steps use once there is a co-parent to name. -->
-    <string name="onboarding_coparent_title">Свяжитесь со вторым родителем</string>
-    <string name="onboarding_coparent_body">Если второй родитель уже пользуется CoPlanly, введите код: дети, питомцы, расписание опеки и деление расходов подтянутся сами — ничего не придётся вводить дважды. Если ещё нет — отправьте приглашение: второй родитель увидит всё, что вы здесь заполните.</string>
+    <string name="onboarding_coparent_title">Подключите второго родителя</string>
+    <string name="onboarding_coparent_body">Если второй родитель уже пользуется CoPlanly, введите его код: дети, питомцы, график опеки и деление расходов подтянутся сами — ничего не придётся вводить дважды. Если ещё нет — отправьте приглашение: второй родитель увидит всё, что вы здесь заполните.</string>
     <string name="onboarding_coparent_enter_code">У меня есть код</string>
     <string name="onboarding_coparent_invite">Пригласить второго родителя</string>
     <string name="onboarding_coparent_later">Не сейчас</string>
-    <string name="onboarding_coparent_linked_title">Связь с %1$s установлена</string>
-    <string name="onboarding_coparent_linked_body">Всё, что уже есть у %1$s, подтянется к вам. Проверьте это на следующих шагах и дополните, чего не хватает.</string>
-    <string name="onboarding_coparent_fetching">Получаем данные от %1$s…</string>
+    <string name="onboarding_coparent_linked_title">Подключено: %1$s</string>
+    <string name="onboarding_coparent_linked_body">Всё, что второй родитель (%1$s) уже внёс, подтянется к вам. Проверьте это на следующих шагах и дополните недостающее.</string>
+    <string name="onboarding_coparent_fetching">Получаем данные: %1$s…</string>
     <string name="onboarding_coparent_fetching_hint">Можно продолжать: всё, что ещё не пришло, загрузится в фоне.</string>
-    <string name="onboarding_coparent_found_title">Уже внесено — %1$s</string>
+    <string name="onboarding_coparent_found_title">Уже внесено: %1$s</string>
     <string name="onboarding_coparent_found_children">Дети</string>
     <string name="onboarding_coparent_found_pets">Питомцы</string>
-    <string name="onboarding_coparent_found_custody">Расписание опеки</string>
+    <string name="onboarding_coparent_found_custody">График опеки</string>
     <string name="onboarding_coparent_found_split">Деление расходов</string>
     <string name="onboarding_coparent_found_set">Настроено</string>
-    <string name="onboarding_coparent_nothing_yet">Пока ничего не пришло. Данные придут, как только телефон %1$s окажется в сети — можно продолжать, а всё внесённое появится позже.</string>
-    <string name="onboarding_from_coparent">От %1$s: проверьте данные и дополните, чего не хватает.</string>
+    <string name="onboarding_coparent_nothing_yet">Пока ничего не пришло. Данные придут, когда телефон второго родителя (%1$s) будет в сети, — можно продолжать, а всё внесённое появится позже.</string>
+    <string name="onboarding_from_coparent">Это внёс второй родитель (%1$s). Проверьте данные и дополните недостающее.</string>
     <string name="onboarding_split_value_named">Вы %1$d / %2$s %3$d</string>
-    <string name="onboarding_split_body_linked">Пополам, если не договоритесь иначе. Это станет вашим общим делением с %1$s; изменение позже нужно будет подтверждать второй стороне — а уже внесённые расходы сохранят своё деление.</string>
-    <string name="onboarding_split_agreed_body">Уже согласовано с %1$s. Сдвиньте ползунок, чтобы предложить другое деление — вторую сторону попросят подтвердить.</string>
-    <string name="onboarding_custody_set_body">Расписание уже настроено: %1$s. Проверьте его или завершите настройку и измените позже в настройках.</string>
-    <string name="onboarding_custody_review">Посмотреть расписание</string>
+    <string name="onboarding_split_body_linked">Пополам, если не договоритесь иначе. Это станет общим делением для вас и второго родителя (%1$s); изменить его потом можно будет только с его подтверждения — а уже внесённые расходы сохранят своё деление.</string>
+    <string name="onboarding_split_agreed_body">Уже согласовано со вторым родителем (%1$s). Сдвиньте ползунок, чтобы предложить другое деление, — его попросят подтвердить.</string>
+    <string name="onboarding_custody_set_body">График уже настроен: %1$s. Проверьте его или завершите настройку и измените его позже в настройках.</string>
+    <string name="onboarding_custody_review">Посмотреть график</string>
 
     <!-- Asked when Skip would leave something typed on this step unsaved. -->
     <string name="onboarding_skip_unsaved_title">Пропустить без сохранения?</string>
     <string name="onboarding_skip_unsaved_message">Введённое на этом шаге ещё не сохранено. «Пропустить» перейдёт дальше без него, «Далее» сохранит.</string>
-    <string name="onboarding_split_footnote">Видно второму родителю и применяется к каждой трате, которую вы запишете с этого момента.</string>
+    <string name="onboarding_split_footnote">Видно второму родителю и применяется к каждому расходу, который вы запишете с этого момента.</string>
 </resources>

@@ -20,7 +20,7 @@
 
     <!-- Snackbar shown after drag-and-drop rescheduling / deleting -->
     <string name="calendar_event_moved">Událost přesunuta</string>
-    <string name="calendar_undo">Vrátit zpět</string>
+    <string name="calendar_undo">Vrátit</string>
 
     <!-- FAB actions -->
     <string name="calendar_delete_event">Smazat událost</string>
@@ -30,24 +30,24 @@
     <string name="calendar_dialog_cancel">Zrušit</string>
 
     <!-- Top bar action icons -->
-    <string name="calendar_change_requests">Žádosti o změnu</string>
+    <string name="calendar_change_requests">Žádosti o změnu</string>
 
     <!-- Filters sheet: event types, custom type creation, holiday switch -->
     <string name="calendar_filter_event_types">Typy událostí</string>
-    <string name="calendar_filter_hidden_types_hint">Skryté typy se v kalendáři nezobrazují</string>
+    <string name="calendar_filter_hidden_types_hint">Skryté typy se v kalendáři nezobrazují</string>
     <string name="calendar_filter_type_visible">Viditelné</string>
     <string name="calendar_filter_new_type_label">Nový typ události</string>
     <string name="calendar_filter_new_type_placeholder">např. Hudební kroužek</string>
     <string name="calendar_filter_add_button">Přidat</string>
     <string name="calendar_filter_holidays_title">Svátky</string>
-    <string name="calendar_filter_holidays_subtitle">Státní svátky a školní prázdniny</string>
+    <string name="calendar_filter_holidays_subtitle">Státní svátky a školní prázdniny</string>
 
     <!-- Month grid accessibility -->
-    <string name="calendar_weekday_header_description">Záhlaví dnů v týdnu</string>
+    <string name="calendar_weekday_header_description">Záhlaví dnů v týdnu</string>
     <string name="calendar_day_desc_today">Dnes</string>
     <string name="calendar_day_desc_outside_month">Mimo aktuální měsíc</string>
-    <string name="calendar_day_desc_with_parent">V péči: %1$s</string>
-    <string name="calendar_day_desc_handover">Předání od %1$s k %2$s</string>
+    <string name="calendar_day_desc_with_parent">V péči: %1$s</string>
+    <string name="calendar_day_desc_handover">Předání: předává %1$s, přebírá %2$s</string>
     <string name="calendar_day_desc_swap_pending">Výměna dne čeká na odpověď</string>
     <string name="calendar_day_desc_school_vacation">Školní prázdniny</string>
     <string name="calendar_day_desc_proposal_pending">Navrženo pro %1$s, zatím neodsouhlaseno</string>
@@ -73,15 +73,15 @@
     <string name="calendar_resize_start_handle">Změna času začátku. Táhněte nahoru nebo dolů (po 15 minutách).</string>
     <string name="calendar_resize_end_handle">Změna času konce. Táhněte nahoru nebo dolů (po 15 minutách).</string>
     <!-- Accessibility actions on an event block in Day and Week view (D-10). -->
-    <string name="calendar_action_end_later">Skončit o 15 minut později</string>
-    <string name="calendar_action_end_earlier">Skončit o 15 minut dříve</string>
+    <string name="calendar_action_end_later">Skončit o 15 minut později</string>
+    <string name="calendar_action_end_earlier">Skončit o 15 minut dříve</string>
 
     <!-- Inline change-request banner, view-mode menu and the day agenda card. -->
     <plurals name="calendar_change_requests_banner">
-        <item quantity="one">%1$d žádost o změnu</item>
-        <item quantity="few">%1$d žádosti o změnu</item>
-        <item quantity="many">%1$d žádostí o změnu</item>
-        <item quantity="other">%1$d žádostí o změnu</item>
+        <item quantity="one">%1$d žádost o změnu</item>
+        <item quantity="few">%1$d žádosti o změnu</item>
+        <item quantity="many">%1$d žádostí o změnu</item>
+        <item quantity="other">%1$d žádostí o změnu</item>
     </plurals>
     <string name="calendar_change_requests_review">Zkontrolovat</string>
     <string name="calendar_change_view_mode">Změnit zobrazení nebo přejít na datum</string>
@@ -89,7 +89,7 @@
 
     <!-- Noun phrase, not "X změnil(a)" — Czech inflects that verb for gender and a name cannot
          agree with one; the software would end up guessing or hedging with "(a)". -->
-    <string name="calendar_custody_changed_by">Změna rozvrhu péče od %1$s</string>
+    <string name="calendar_custody_changed_by">Změna rozvrhu péče: %1$s</string>
     <string name="calendar_agenda_empty">Nic naplánováno.</string>
     <string name="calendar_agenda_time_range">%1$s–%2$s</string>
     <!-- Shown when a calendar write or query fails. The calendar used to say nothing at
@@ -101,6 +101,6 @@
     <string name="calendar_filter_members">Zobrazit pro</string>
 
     <!-- MON-6b: a contact window on the grid. -->
-    <string name="calendar_contact_window_desc">Styk s: %1$s, %2$s–%3$s</string>
-    <string name="calendar_agenda_contact_window">%1$s–%2$s · styk s: %3$s</string>
+    <string name="calendar_contact_window_desc">Styk: %1$s, %2$s–%3$s</string>
+    <string name="calendar_agenda_contact_window">%1$s–%2$s · styk: %3$s</string>
 </resources>

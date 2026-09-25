@@ -58,9 +58,13 @@ private val MARK_HEIGHT = 16.dp
  *
  * @param lines What to draw.
  * @param onClick Where a tap goes; the whole widget is one target. Null draws it inert.
+ * @param roomy Whether the widget is the tall one, whose empty space below the lines lets the
+ *   handover and an event's title take a second line rather than end in an ellipsis
+ *   ("In 3 Tagen Übergabe a…", "School pi…" at 150 %).
  */
 @Composable
-internal fun TodayWidgetContent(lines: TodayWidgetLines, onClick: Action? = null) {
+internal fun TodayWidgetContent(lines: TodayWidgetLines, onClick: Action? = null, roomy: Boolean = false) {
+    val wrapLines = if (roomy) 2 else 1
     val colors = GlanceTheme.colors
     val surface = GlanceModifier
         .fillMaxSize()
@@ -92,12 +96,12 @@ internal fun TodayWidgetContent(lines: TodayWidgetLines, onClick: Action? = null
             Text(
                 text = line.text,
                 style = role(AppTypography.bodyMedium, textColor(line.parent, colors.onSurface)),
-                maxLines = 1
+                maxLines = wrapLines
             )
         }
         if (lines.events.isNotEmpty()) {
             Spacer(modifier = GlanceModifier.height(Spacing.S))
-            lines.events.forEach { EventRow(it) }
+            lines.events.forEach { EventRow(it, titleLines = wrapLines) }
         }
         lines.footer?.let { footer ->
             Text(
@@ -109,9 +113,9 @@ internal fun TodayWidgetContent(lines: TodayWidgetLines, onClick: Action? = null
     }
 }
 
-/** One event: the owner's mark, the time, the title. */
+/** One event: the owner's mark, the time, the title in at most [titleLines] lines. */
 @Composable
-private fun EventRow(line: WidgetEventLine) {
+private fun EventRow(line: WidgetEventLine, titleLines: Int) {
     val colors = GlanceTheme.colors
     Row(
         modifier = GlanceModifier.fillMaxWidth().padding(vertical = Spacing.XXS),
@@ -134,7 +138,7 @@ private fun EventRow(line: WidgetEventLine) {
             text = line.title,
             modifier = GlanceModifier.defaultWeight(),
             style = role(AppTypography.bodyMediumEmphasized, colors.onSurface),
-            maxLines = 1
+            maxLines = titleLines
         )
     }
 }

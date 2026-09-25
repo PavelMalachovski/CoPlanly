@@ -19,13 +19,13 @@
     <string name="event_form_cd_request_change">Запросить изменение</string>
     <string name="event_form_cd_delete_event">Удалить событие</string>
     <string name="event_form_field_title_label">Название события</string>
-    <string name="event_form_field_title_placeholder">напр., тренировка по футболу</string>
+    <string name="event_form_field_title_placeholder">Например, тренировка по футболу</string>
     <string name="event_form_cd_title_icon">Значок названия события</string>
     <string name="event_form_field_description_label">Описание (необязательно)</string>
     <string name="event_form_field_description_placeholder">Добавьте детали события…</string>
     <string name="event_form_cd_description_icon">Значок описания события</string>
-    <string name="event_form_assigned_to">Назначено</string>
-    <string name="event_form_cd_assign_to">Назначить на %1$s, %2$s</string>
+    <string name="event_form_assigned_to">Кому назначено</string>
+    <string name="event_form_cd_assign_to">Назначить: %1$s, %2$s</string>
     <string name="event_form_cd_selected">выбрано</string>
     <string name="event_form_cd_not_selected">не выбрано</string>
     <string name="event_form_cd_label_icon">Значок %1$s</string>
@@ -56,7 +56,7 @@
     <string name="event_repeat_biweekly">Каждые 2 недели</string>
     <string name="event_repeat_monthly">Ежемесячно</string>
     <string name="event_form_repeat_until">Повторять до</string>
-    <string name="event_form_repeat_forever">Всегда</string>
+    <string name="event_form_repeat_forever">Бессрочно</string>
     <string name="event_form_clear">Очистить</string>
     <string name="event_form_reminder">Напоминание</string>
     <string name="event_reminder_none">Нет</string>
@@ -67,7 +67,7 @@
     <string name="event_reminder_1_day">1 день</string>
     <string name="event_form_important_title">Важное событие</string>
     <string name="event_form_important_description">Отметьте, если ожидается второй родитель</string>
-    <string name="event_form_important_helper">Ожидается второй родитель. Это сообщает об этом — но не спрашивает его.</string>
+    <string name="event_form_important_helper">Ожидается второй родитель. Это уведомление, а не вопрос к нему.</string>
     <string name="event_important_mark_description">Важно: ожидается второй родитель</string>
     <string name="event_form_private_title">Личное событие</string>
     <string name="event_form_private_description">Это событие видите только вы</string>
@@ -75,10 +75,10 @@
     <string name="event_form_attach_photo">Прикрепить фото</string>
     <string name="event_form_change_photo">Изменить фото</string>
     <string name="event_form_cd_remove_photo">Убрать фото</string>
-    <string name="event_form_pickup">Забор</string>
-    <string name="event_form_pickup_confirmed_by">Подтвердил(а) %1$s</string>
+    <string name="event_form_pickup">Забрать ребёнка</string>
+    <string name="event_form_pickup_confirmed_by">Подтверждено: %1$s</string>
     <string name="event_form_pickup_not_confirmed">Ещё не подтверждено</string>
-    <string name="event_form_pickup_confirm">Подтвердить забор</string>
+    <string name="event_form_pickup_confirm">Подтвердить, что забрали</string>
     <string name="event_form_pickup_undo">Отменить</string>
     <string name="event_form_draft_restored">Черновик восстановлен</string>
     <string name="event_form_delete_dialog_title">Удалить событие</string>
@@ -88,7 +88,7 @@
     <string name="event_form_delete_failed">Не удалось удалить событие. Попробуйте ещё раз.</string>
     <string name="event_form_save_failed">Не удалось сохранить событие. Попробуйте ещё раз.</string>
     <string name="event_form_photo_upload_failed">Не удалось загрузить фото — событие сохранено без нового фото</string>
-    <string name="event_form_owner_unknown">Пока не понятно, чьё это событие — выберите выше, чтобы сохранить</string>
+    <string name="event_form_owner_unknown">Пока неясно, чьё это событие, — выберите выше, чтобы сохранить</string>
     <string name="event_form_for_members">Для кого это?</string>
 
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->

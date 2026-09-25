@@ -68,6 +68,24 @@ data class TodayWidgetContentState(val compact: TodayWidgetLines, val tall: Toda
 }
 
 /**
+ * The compact widget's lines at a large font scale: the date, whose day it is, and **one** more
+ * line — the handover, else the first contact window, else the footer.
+ *
+ * A widget cannot measure its text, and at 150 % the compact size holds three lines: the fourth
+ * was clipped through the middle ("1 Termin heute" cut in half under the handover). Dropping the
+ * lowest-priority lines says less, but everything it says can be read. A tap opens Home, which
+ * says the rest.
+ */
+fun TodayWidgetLines.compactAtLargeText(): TodayWidgetLines {
+    val third = handover ?: windows.firstOrNull()
+    return copy(
+        windows = if (handover == null) windows.take(1) else emptyList(),
+        events = emptyList(),
+        footer = footer.takeIf { third == null }
+    )
+}
+
+/**
  * Words a [TodayWidgetModel] with the app's own strings.
  *
  * Every line the widget shares with the app is worded with the app's string for it — "Today with

@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Czech translations of event_acceptance_strings.xml. -->
 <resources>
-    <string name="event_acceptance_section">Události čekající na vaši odpověď</string>
+    <string name="event_acceptance_section">Čekají na vaši odpověď</string>
     <string name="event_acceptance_offered_to_you">%1$s přidal(a) tuto událost do vašich dnů</string>
-    <string name="event_acceptance_offered_by_you">Přidali jste to do dnů: %1$s</string>
+    <string name="event_acceptance_offered_by_you">Přidali jste ji do dnů: %1$s</string>
     <string name="event_acceptance_waiting">Čeká na odpověď</string>
     <string name="event_acceptance_accepted">Domluveno</string>
     <string name="event_acceptance_declined">Odmítnuto</string>

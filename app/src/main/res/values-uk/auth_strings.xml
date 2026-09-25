@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="auth_cd_logo">Логотип CoPlanly</string>
-    <string name="auth_tagline">Спільний календар для співбатьківства</string>
+    <string name="auth_tagline">Спільний календар для спільного виховання дітей</string>
     <string name="auth_welcome_back">З поверненням!</string>
     <string name="auth_create_your_account">Створіть акаунт</string>
-    <string name="auth_sign_in_subtitle">Увійдіть, щоб продовжити вести спільний розклад</string>
-    <string name="auth_sign_up_subtitle">Приєднуйтесь до тисяч батьків, які діють спільно</string>
+    <string name="auth_sign_in_subtitle">Увійдіть, щоб і далі вести спільний розклад</string>
+    <string name="auth_sign_up_subtitle">Приєднуйтеся до тисяч батьків, які діють разом</string>
     <string name="auth_email_label">Електронна пошта</string>
     <string name="auth_email_placeholder">your@email.com</string>
     <string name="auth_password_label">Пароль</string>
@@ -21,7 +21,7 @@
     <string name="auth_no_account_question">Немає акаунта?</string>
     <string name="auth_have_account_question">Уже маєте акаунт?</string>
     <string name="auth_forgot_password_link">Забули пароль?</string>
-    <string name="auth_saved_password_sign_in">Увійти збереженим паролем</string>
+    <string name="auth_saved_password_sign_in">Увійти зі збереженим паролем</string>
     <string name="auth_error_empty_fields">Заповніть обидва поля</string>
     <string name="auth_error_invalid_credentials">Неправильна пошта або пароль</string>
     <string name="auth_error_email_already_in_use">На цю пошту вже є акаунт</string>

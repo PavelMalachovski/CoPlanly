@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- German translations of settings_account_strings.xml. -->
 <resources>
-    <string name="settings_co_parent_sync">Synchronisierung mit Co-Elternteil</string>
+    <string name="settings_co_parent_sync">Sync mit Co-Elternteil</string>
     <string name="settings_co_parent_sync_description">Synchronisiert Termine und Informationen zum Kind automatisch mit dem anderen Elternteil</string>
     <string name="settings_sync">Synchronisieren</string>
-    <string name="settings_google_sync">Google Kalender-Synchronisierung</string>
+    <string name="settings_google_sync">Google-Kalender-Sync</string>
     <string name="settings_gcal_enable_sync">Synchronisierung aktivieren</string>
     <string name="settings_gcal_private_note">Importierte Termine bleiben auf diesem Gerät. Dein Google Kalender ist privat, es wird also nichts davon mit dem anderen Elternteil geteilt.</string>
     <string name="settings_parent_color">Meine Farbe</string>
@@ -16,12 +16,12 @@
     <string name="settings_signed_in_as">Angemeldet als: %1$s</string>
     <string name="settings_gcal_not_signed_in">Nicht angemeldet</string>
     <string name="settings_unknown">Unbekannt</string>
-    <string name="settings_calendar_sign_out">Von der Kalender-Synchronisierung abmelden</string>
+    <string name="settings_calendar_sign_out">Vom Kalender-Sync abmelden</string>
     <string name="settings_account">Konto</string>
-    <string name="settings_account_description">Vollständig von der App abmelden. Für den Zugriff auf Ihr Konto müssen Sie sich erneut anmelden.</string>
-    <string name="settings_account_sign_out">Von der App abmelden</string>
-    <string name="settings_pairing_title">Verknüpfung mit Co-Elternteil</string>
-    <string name="settings_pairing_description">Co-Elternteil einladen oder verwalten</string>
+    <string name="settings_account_description">Vollständig von der App abmelden. Danach musst du dich erneut anmelden, um auf dein Konto zuzugreifen.</string>
+    <string name="settings_account_sign_out">Abmelden</string>
+    <string name="settings_pairing_title">Co-Elternteil verknüpfen</string>
+    <string name="settings_pairing_description">Einladen oder Verknüpfung verwalten</string>
     <string name="settings_child_info_title">Informationen zum Kind</string>
     <string name="settings_child_info_description">Medikamente, Aktivitäten, Allergien</string>
     <string name="settings_pets_title">Haustiere</string>
@@ -48,26 +48,26 @@
     <string name="settings_account_delete">Konto löschen</string>
     <string name="settings_account_delete_description">Dieses Konto und alle Daten löschen</string>
     <string name="settings_account_delete_confirm_title">Dieses Konto löschen?</string>
-    <string name="settings_account_delete_confirm_message">Alles, was Sie eingetragen haben, wird von unseren Servern und von diesem Telefon gelöscht: Termine, Ausgaben und die Daten Ihres Kindes. Der Chat bleibt dem anderen Elternteil 30 Tage lang erhalten, damit er ihn exportieren kann, und wird dann gelöscht; er wird darüber informiert. Dem anderen Elternteil bleibt, was er selbst erstellt hat, und auf seinem Telefon bleiben die Kopien, die es bereits geladen hat. Das lässt sich nicht rückgängig machen.</string>
+    <string name="settings_account_delete_confirm_message">Alles, was du eingetragen hast, wird von unseren Servern und von diesem Telefon gelöscht: deine Termine, Ausgaben und die Angaben zu deinem Kind. Dein Chat bleibt für den anderen Elternteil 30 Tage lang erhalten, damit er ihn exportieren kann, und wird dann gelöscht; er wird darüber informiert. Der andere Elternteil behält, was er selbst erstellt hat, und sein Telefon behält die Kopien, die es bereits geladen hat. Das lässt sich nicht rückgängig machen.</string>
     <string name="settings_account_delete_final_title">Endgültig löschen?</string>
-    <string name="settings_account_delete_final_message">Es gibt keinen Weg zurück: Wir bewahren keine Kopie zur Wiederherstellung auf. Wenn Sie sich nur von diesem Gerät abmelden möchten, nutzen Sie stattdessen die Abmeldung.</string>
+    <string name="settings_account_delete_final_message">Es gibt keinen Weg zurück: Wir bewahren keine Kopie zur Wiederherstellung auf. Wenn du dich nur von diesem Gerät abmelden möchtest, melde dich stattdessen ab.</string>
     <string name="settings_account_delete_final_yes">Endgültig löschen</string>
     <string name="settings_account_delete_cancel">Konto behalten</string>
     <string name="settings_account_delete_progress">Konto wird gelöscht…</string>
-    <string name="settings_account_delete_failed">Das Konto wurde nicht gelöscht. Bitte versuchen Sie es erneut.</string>
+    <string name="settings_account_delete_failed">Dein Konto wurde nicht gelöscht. Bitte versuche es erneut.</string>
     <string name="settings_family_kind_title">Was ihr gemeinsam betreut</string>
     <string name="settings_family_kind_both">Kinder und Haustiere</string>
     <string name="settings_family_kind_save">Speichern</string>
     <string name="settings_family_kind_cancel">Abbrechen</string>
-    <string name="settings_family_kind_kept_by_co_parent">Gespeichert. Ein von Ihnen entfernter Bereich bleibt sichtbar, weil der andere Elternteil ihn weiterhin führt.</string>
-    <string name="settings_family_kind_records_kept">Entfernt. Die Einträge bleiben auf deinem Gerät — schalte den Bereich hier wieder ein, um sie zu sehen.</string>
-    <string name="settings_family_kind_not_saved">Konnte nicht gespeichert werden – Ihr Profil ist noch nicht geladen. Versuchen Sie es gleich noch einmal.</string>
+    <string name="settings_family_kind_kept_by_co_parent">Gespeichert. Ein Bereich, den du entfernt hast, bleibt sichtbar, weil der andere Elternteil ihn weiterhin nutzt.</string>
+    <string name="settings_family_kind_records_kept">Entfernt. Die Einträge bleiben auf deinem Gerät – schalte den Bereich hier wieder ein, um sie zu sehen.</string>
+    <string name="settings_family_kind_not_saved">Konnte nicht gespeichert werden – dein Profil ist noch nicht geladen. Versuch es gleich noch einmal.</string>
     <string name="settings_split_ratio_title">Kostenaufteilung</string>
     <string name="settings_split_ratio_value">%1$d / %2$d</string>
     <string name="settings_split_ratio_value_named">%1$s %2$d / %3$s %4$d</string>
     <string name="settings_split_ratio_hint">Gilt für ab jetzt erfasste Ausgaben. Bereits erfasste behalten die Aufteilung, mit der sie eingetragen wurden.</string>
     <string name="settings_split_ratio_applied">Aufteilung gespeichert</string>
-    <string name="settings_split_ratio_proposed">Zur Bestätigung an dein Co-Elternteil gesendet</string>
+    <string name="settings_split_ratio_proposed">Zur Bestätigung an den anderen Elternteil gesendet</string>
     <string name="settings_split_ratio_refused">Diese Aufteilung konnte nicht vorgeschlagen werden</string>
     <!-- Disclosure chevron content descriptions (UX-11). -->
     <string name="settings_expand">Optionen anzeigen</string>
@@ -82,16 +82,16 @@
     <string name="family_switcher_schedule_other">In einer anderen Familie wartet ein Vorschlag zum Betreuungsplan</string>
     <string name="family_switcher_schedule_row">Ein Vorschlag zum Betreuungsplan wartet</string>
     <string name="settings_school_import_title">Import aus Bakaláři</string>
-    <string name="settings_school_import_description">Schulveranstaltungen und Schulzeiten Ihres Kindes direkt im Kalender.</string>
+    <string name="settings_school_import_description">Schultermine und Schulzeiten deines Kindes direkt im Kalender.</string>
     <string name="settings_edupage_title">EduPage</string>
-    <string name="settings_edupage_description">Schulveranstaltungen Ihres Kindes aus EduPage.</string>
+    <string name="settings_edupage_description">Schultermine deines Kindes aus EduPage.</string>
     <string name="settings_edupage_coming_soon">Bald verfügbar</string>
-    <string name="settings_operation_failed">Das hat nicht geklappt. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.</string>
+    <string name="settings_operation_failed">Das hat nicht geklappt. Prüfe deine Verbindung und versuche es erneut.</string>
 
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
     <string name="settings_sync_failed">Letzte Synchronisierung fehlgeschlagen</string>
 
     <!-- MON-19: Settings → App. The argument is the pause, in seconds. -->
     <string name="settings_pause_before_sending_title">Pause vor dem Senden</string>
-    <string name="settings_pause_before_sending_description">Hält jede Chatnachricht %1$d Sekunden mit „Rückgängig“ zurück und weist beim Tippen auf Großbuchstaben, !!! und scharfe Wörter hin. Geprüft wird nur auf diesem Telefon.</string>
+    <string name="settings_pause_before_sending_description">Hält jede Chatnachricht %1$d Sekunden mit „Rückgängig“ zurück und weist beim Schreiben auf Großbuchstaben, !!! und scharfe Wörter hin. Geprüft wird nur auf diesem Telefon.</string>
 </resources>

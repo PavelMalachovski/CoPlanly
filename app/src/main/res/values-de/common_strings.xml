@@ -29,7 +29,7 @@
     <!-- Fallbacks for parentLabel() (presentation/common/ParentLabels.kt): shown instead of a
          name when the signed-in user, the co-parent, or an event's slot cannot be resolved. -->
     <string name="parent_label_you">Du</string>
-    <string name="parent_label_coparent">Mitelternteil</string>
+    <string name="parent_label_coparent">Co-Elternteil</string>
     <string name="parent_label_unknown">Elternteil</string>
 
     <!-- Slot-picker fallback captions (AddEditEventScreen's parent-owner cards, via

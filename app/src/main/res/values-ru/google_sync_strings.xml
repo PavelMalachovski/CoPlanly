@@ -11,14 +11,14 @@
     <string name="sync_google_sign_in_unavailable">Вход через Google недоступен в этой версии приложения.</string>
     <string name="sync_google_processing_sign_in">Выполняется вход…</string>
     <string name="sync_google_signed_in_as">Подключено: %1$s</string>
-    <string name="sync_google_no_calendar_access">Вход выполнен, но доступ к Google Календарю не предоставлен. Попробуйте подключиться ещё раз.</string>
-    <string name="sync_google_progress_starting">Начинается синхронизация с Google Календарём…</string>
-    <string name="sync_google_progress_fetching">Загрузка событий из Google Календаря…</string>
+    <string name="sync_google_no_calendar_access">Вход выполнен, но доступ к Google Calendar не предоставлен. Попробуйте подключиться ещё раз.</string>
+    <string name="sync_google_progress_starting">Начинается синхронизация с Google Calendar…</string>
+    <string name="sync_google_progress_fetching">Загрузка событий из Google Calendar…</string>
     <plurals name="sync_google_progress_found">
-        <item quantity="one">Найдено %1$d событие в Google Календаре</item>
-        <item quantity="few">Найдено %1$d события в Google Календаре</item>
-        <item quantity="many">Найдено %1$d событий в Google Календаре</item>
-        <item quantity="other">Найдено %1$d событий в Google Календаре</item>
+        <item quantity="one">Найдено %1$d событие в Google Calendar</item>
+        <item quantity="few">Найдено %1$d события в Google Calendar</item>
+        <item quantity="many">Найдено %1$d событий в Google Calendar</item>
+        <item quantity="other">Найдено %1$d событий в Google Calendar</item>
     </plurals>
     <plurals name="sync_google_synced">
         <item quantity="one">Синхронизировано %1$d событие (%2$s – %3$s)</item>
@@ -34,11 +34,11 @@
     </plurals>
     <string name="sync_google_error_not_connected">Нет подключения к Google. Войдите через Google, чтобы синхронизировать.</string>
     <string name="sync_google_error_signed_out">Вы вышли из CoPlanly. Войдите и попробуйте ещё раз.</string>
-    <string name="sync_google_error_authentication">Срок входа в Google истёк. Подключите Google Календарь заново.</string>
-    <string name="sync_google_error_access_denied">У CoPlanly нет доступа к вашему Google Календарю. Проверьте разрешение в аккаунте Google.</string>
-    <string name="sync_google_error_calendar_not_found">Ваш Google Календарь не найден.</string>
-    <string name="sync_google_error_rate_limited">Google Календарь сейчас перегружен. Попробуйте через несколько минут.</string>
-    <string name="sync_google_error_unavailable">Google Календарь сейчас недоступен. Попробуйте позже.</string>
-    <string name="sync_google_error_network">Не удалось связаться с Google Календарём. Проверьте подключение к интернету.</string>
-    <string name="sync_google_error_unknown">Не удалось синхронизировать Google Календарь. Попробуйте ещё раз.</string>
+    <string name="sync_google_error_authentication">Срок входа в Google истёк. Подключите Google Calendar заново.</string>
+    <string name="sync_google_error_access_denied">У CoPlanly нет доступа к вашему Google Calendar. Проверьте разрешение в аккаунте Google.</string>
+    <string name="sync_google_error_calendar_not_found">Ваш Google Calendar не найден.</string>
+    <string name="sync_google_error_rate_limited">Google Calendar сейчас перегружен. Попробуйте через несколько минут.</string>
+    <string name="sync_google_error_unavailable">Google Calendar сейчас недоступен. Попробуйте позже.</string>
+    <string name="sync_google_error_network">Не удалось связаться с Google Calendar. Проверьте подключение к интернету.</string>
+    <string name="sync_google_error_unknown">Не удалось синхронизировать Google Calendar. Попробуйте ещё раз.</string>
 </resources>

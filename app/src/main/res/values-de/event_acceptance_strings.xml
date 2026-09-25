@@ -2,15 +2,15 @@
 <!-- German translations of event_acceptance_strings.xml. -->
 <resources>
     <string name="event_acceptance_section">Termine, die auf dich warten</string>
-    <string name="event_acceptance_offered_to_you">%1$s hat das zu deinen Tagen hinzugefügt</string>
-    <string name="event_acceptance_offered_by_you">Du hast das zu den Tagen von %1$s hinzugefügt</string>
+    <string name="event_acceptance_offered_to_you">%1$s hat das in deine Tage eingetragen</string>
+    <string name="event_acceptance_offered_by_you">Du hast das in die Tage von %1$s eingetragen</string>
     <string name="event_acceptance_waiting">Wartet auf eine Antwort</string>
     <string name="event_acceptance_accepted">Vereinbart</string>
     <string name="event_acceptance_declined">Abgelehnt</string>
     <string name="event_acceptance_accept">Annehmen</string>
     <string name="event_acceptance_decline">Ablehnen</string>
     <string name="event_acceptance_withdraw">Zurückziehen</string>
-    <string name="event_acceptance_waiting_strip">%1$d deiner Termine warten auf deinen Co-Elternteil</string>
-    <string name="event_acceptance_waiting_strip_one">Einer deiner Termine wartet auf deinen Co-Elternteil</string>
-    <string name="event_acceptance_hidden_note">Er taucht in keinem Kalender auf, bis geantwortet wurde.</string>
+    <string name="event_acceptance_waiting_strip">%1$d deiner Termine warten auf den anderen Elternteil</string>
+    <string name="event_acceptance_waiting_strip_one">Einer deiner Termine wartet auf den anderen Elternteil</string>
+    <string name="event_acceptance_hidden_note">Der Termin erscheint in keinem der beiden Kalender, bis eine Antwort da ist.</string>
 </resources>

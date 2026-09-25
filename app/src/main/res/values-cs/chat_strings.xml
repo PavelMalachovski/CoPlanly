@@ -2,7 +2,7 @@
 <resources>
     <string name="chat_new_conversation">Nová konverzace</string>
     <string name="chat_empty_title">Zatím žádné konverzace</string>
-    <string name="chat_empty_description">Začněte konverzaci s druhým rodičem, abyste sladili plány a sdíleli novinky.</string>
+    <string name="chat_empty_description">Začněte konverzaci s druhým rodičem, abyste sladili plány a sdíleli novinky.</string>
     <string name="chat_no_messages">Zatím žádné zprávy</string>
     <string name="chat_messages_empty_title">Zatím žádné zprávy</string>
     <string name="chat_messages_empty_description">Začněte konverzaci odesláním zprávy druhému rodiči.</string>
@@ -19,16 +19,16 @@
     <string name="chat_failed_to_send">Nepodařilo se odeslat</string>
     <string name="chat_title_fallback">Chat</string>
     <string name="chat_back">Zpět</string>
-    <string name="chat_request_change">Požádat o změnu</string>
-    <string name="chat_request_change_title">Požádat o změnu</string>
-    <string name="chat_no_upcoming_events">Žádné nadcházející události, u kterých lze navrhnout změnu.</string>
+    <string name="chat_request_change">Požádat o změnu</string>
+    <string name="chat_request_change_title">Požádat o změnu</string>
+    <string name="chat_no_upcoming_events">Žádné nadcházející události, u kterých lze navrhnout změnu.</string>
     <string name="chat_pick_event_to_reschedule">Vyberte událost, kterou chcete přeložit:</string>
     <!-- Shown when the co-parent action is used on an account that has no co-parent linked. -->
-    <string name="chat_no_coparent">Zatím nejste propojeni s druhým rodičem.</string>
+    <string name="chat_no_coparent">Zatím nejste propojeni s druhým rodičem.</string>
     <!-- Snackbar action next to chat_no_coparent; opens the pairing screen. -->
     <string name="chat_no_coparent_action">Propojit</string>
     <!-- Shown when the pairing state has not resolved in time; the action is worth retrying. -->
-    <string name="chat_coparent_link_pending">Stále ověřujeme propojení s druhým rodičem. Zkuste to prosím za chvíli znovu.</string>
+    <string name="chat_coparent_link_pending">Stále ověřujeme propojení s druhým rodičem. Zkuste to prosím za chvíli znovu.</string>
 
     <!-- Screen-reader content description for the unread-message badge on the bottom nav's Chat tab. -->
     <plurals name="chat_unread_messages_badge">
@@ -53,53 +53,53 @@
     <string name="chat_header_synced">Aktuální</string>
 
     <!-- Accessibility label for the change-request card's clickable bubble. -->
-    <string name="chat_open_change_request">Otevřít žádost o změnu</string>
+    <string name="chat_open_change_request">Otevřít žádost o změnu</string>
 
     <!-- Message templates (domain/model/MessageTemplate.kt). The body is seeded into the
          composer for the user to edit before sending, so the bracketed hints are translated
          too: they are prompts to the reader, not substitution tokens. -->
     <string name="chat_templates_sheet_title">Šablony zpráv</string>
-    <string name="chat_template_category_pickup_drop">Vyzvednutí a předání</string>
-    <string name="chat_template_category_illness">Nemoc a zdraví</string>
+    <string name="chat_template_category_pickup_drop">Vyzvednutí a předání</string>
+    <string name="chat_template_category_illness">Nemoc a zdraví</string>
     <string name="chat_template_category_school_events">Školní akce</string>
-    <string name="chat_template_category_holidays">Svátky a prázdniny</string>
+    <string name="chat_template_category_holidays">Svátky a prázdniny</string>
     <string name="chat_template_category_conflict_resolution">Řešení neshod</string>
     <string name="chat_template_pickup_delay_title">Zpoždění při předání</string>
     <string name="chat_template_pickup_delay_content">Při předávání [dítěte] se opozdím. Dorazím přibližně za [počet minut]. Omlouvám se za komplikace.</string>
     <string name="chat_template_pickup_early_title">Dřívější příjezd</string>
-    <string name="chat_template_pickup_early_content">Přijedu dříve než obvykle, přibližně v [čas]. Vyhovuje ti to?</string>
+    <string name="chat_template_pickup_early_content">Přijedu dříve než obvykle, přibližně v [čas]. Vyhovuje ti to?</string>
     <string name="chat_template_doctor_visit_title">Návštěva lékaře</string>
-    <string name="chat_template_doctor_visit_content">[Dítě] bylo dnes u lékaře kvůli [potíže]. Diagnóza: [diagnóza]. Lékař doporučuje [doporučení].</string>
+    <string name="chat_template_doctor_visit_content">[Dítě] bylo dnes u lékaře kvůli [potíže]. Diagnóza: [diagnóza]. Lékař doporučuje [doporučení].</string>
     <string name="chat_template_child_sick_title">Dítě je nemocné</string>
-    <string name="chat_template_child_sick_content">[Dítě] se necítí dobře. Příznaky: [příznaky]. Teplota: [teplota]. Zůstávám s dítětem doma.</string>
+    <string name="chat_template_child_sick_content">[Dítě] se necítí dobře. Příznaky: [příznaky]. Teplota: [teplota]. Zůstávám s dítětem doma.</string>
     <string name="chat_template_school_event_title">Školní akce</string>
-    <string name="chat_template_school_event_content">Ve škole se koná [akce] dne [datum] v [čas]. Budeš se moci zúčastnit?</string>
+    <string name="chat_template_school_event_content">Ve škole se koná [akce] dne [datum] v [čas]. Budeš se moci zúčastnit?</string>
     <string name="chat_template_parent_teacher_meeting_title">Třídní schůzka</string>
-    <string name="chat_template_parent_teacher_meeting_content">Třídní schůzka je [datum] v [čas]. Učitel chce probrat [téma].</string>
+    <string name="chat_template_parent_teacher_meeting_content">Třídní schůzka je [datum] v [čas]. Učitel chce probrat [téma].</string>
     <string name="chat_template_holiday_plan_title">Plán na prázdniny</string>
-    <string name="chat_template_holiday_plan_content">Domluvme se na plánu na [prázdniny]. Navrhuji [návrh]. Co si o tom myslíš?</string>
-    <string name="chat_template_schedule_change_title">Změna rozpisu</string>
-    <string name="chat_template_schedule_change_content">Potřebuji změnit rozpis na [datum]. Mohli bychom si termíny vyměnit? Nabízím [náhradní datum].</string>
-    <string name="chat_failed_to_send_retry">Neodesláno — klepnutím zkusíte znovu</string>
+    <string name="chat_template_holiday_plan_content">Domluvme se na plánu na [prázdniny]. Navrhuji [návrh]. Co si o tom myslíš?</string>
+    <string name="chat_template_schedule_change_title">Změna rozvrhu</string>
+    <string name="chat_template_schedule_change_content">Potřebuji změnit rozvrh na [datum]. Mohli bychom si termíny vyměnit? Nabízím [náhradní datum].</string>
+    <string name="chat_failed_to_send_retry">Neodesláno – klepnutím zkusíte znovu</string>
     <string name="chat_load_earlier">Načíst starší zprávy</string>
 
     <!-- MON-15: search inside the open conversation. Local to this phone; never a server. -->
-    <string name="chat_search">Hledat v konverzaci</string>
+    <string name="chat_search">Hledat v konverzaci</string>
     <string name="chat_search_close">Zavřít hledání</string>
     <string name="chat_search_clear">Vymazat</string>
     <string name="chat_search_placeholder">Hledat ve zprávách</string>
-    <string name="chat_search_prompt_title">Hledat v této konverzaci</string>
-    <string name="chat_search_prompt_description">Prohledává zprávy, které už jsou v tomto telefonu. Nic, co sem napíšete, jej neopustí.</string>
+    <string name="chat_search_prompt_title">Hledat v této konverzaci</string>
+    <string name="chat_search_prompt_description">Prohledává zprávy, které už jsou v tomto telefonu. Nic, co sem napíšete, jej neopustí.</string>
     <string name="chat_search_no_results_title">Žádné odpovídající zprávy</string>
-    <string name="chat_search_no_results_description">V této konverzaci nic neodpovídá „%1$s“.</string>
+    <string name="chat_search_no_results_description">V této konverzaci nic neodpovídá „%1$s“.</string>
     <string name="chat_search_failed_title">Hledání se nepovedlo</string>
     <string name="chat_search_failed_description">Nic nebylo prohledáno. Zkuste to za chvíli znovu.</string>
-    <string name="chat_search_truncated">Zobrazeno %1$d nejnovějších výsledků. Dalším slovem je zúžíte.</string>
+    <string name="chat_search_truncated">Zobrazeno %1$d nejnovějších výsledků. Přidáním dalšího slova je zúžíte.</string>
     <string name="chat_search_result_meta">%1$s · %2$s</string>
-    <string name="chat_search_show_in_thread">Zobrazit v konverzaci</string>
+    <string name="chat_search_show_in_thread">Zobrazit v konverzaci</string>
     <!-- MON-19: pause before sending. A held message, with its countdown in seconds. -->
     <string name="chat_pending_send">Odeslání za %1$d s…</string>
-    <string name="chat_pending_send_undo">Zpět</string>
+    <string name="chat_pending_send_undo">Vrátit</string>
     <!-- MON-19: the lexical hint over the composer. Plain observations of what was typed, never a verdict. -->
     <string name="chat_nudge_shouting">Velká písmena mohou působit jako křik.</string>
     <string name="chat_nudge_punctuation">Opakované !!! nebo ??? mohou působit jako zvýšený hlas.</string>
@@ -108,19 +108,19 @@
          case and accents; an entry ending in * matches every word starting with it, so an
          inflected word is listed once. Keep it short and mild: this is a nudge, not a filter. -->
     <string-array name="chat_nudge_words">
-        <item>vždy</item>
-        <item>vždycky</item>
-        <item>nikdy</item>
-        <item>směšn*</item>
-        <item>hloup*</item>
-        <item>trapn*</item>
-        <item>neschopn*</item>
-        <item>sobeck*</item>
-        <item>nezodpovědn*</item>
-        <item>typick*</item>
-    </string-array>
-    <!-- A thread kept after the co-parent deleted their account (GDPR review, September 2026). %1$s = their name, %2$s = the day the thread is deleted. -->
-    <string name="chat_departed_banner">%1$s smazal/a svůj účet. Tato konverzace bude smazána %2$s. Do té doby si ji vyexportujte.</string>
+    <item>vždy</item>
+    <item>vždycky</item>
+    <item>nikdy</item>
+    <item>směšn*</item>
+    <item>hloup*</item>
+    <item>trapn*</item>
+    <item>neschopn*</item>
+    <item>sobeck*</item>
+    <item>nezodpovědn*</item>
+    <item>typick*</item>
+  </string-array>
+  <!-- A thread kept after the co-parent deleted their account (GDPR review, September 2026). %1$s = their name, %2$s = the day the thread is deleted. -->
+  <string name="chat_departed_banner">%1$s smazal(a) svůj účet. Tato konverzace bude smazána %2$s. Do té doby si ji vyexportujte.</string>
     <string name="chat_departed_export">Exportovat</string>
     <string name="chat_departed_no_sending">Do této konverzace už nelze posílat zprávy.</string>
     <string name="chat_departed_unnamed">Druhý rodič</string>

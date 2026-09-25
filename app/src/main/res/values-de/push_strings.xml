@@ -8,7 +8,7 @@
     <string name="push_event_deleted_title">Termin abgesagt</string>
     <string name="push_event_deleted_body">%1$s hat „%2$s“ abgesagt</string>
     <string name="push_child_info_updated_title">Kinderdaten aktualisiert</string>
-    <string name="push_child_info_updated_body">%1$s hat die Daten von %2$s aktualisiert</string>
+    <string name="push_child_info_updated_body">%1$s hat die Angaben zu %2$s aktualisiert</string>
     <string name="push_change_request_created_title">Änderung angefragt</string>
     <string name="push_change_request_created_body">%1$s möchte „%2$s“ ändern</string>
     <string name="push_change_request_accepted_title">Änderung angenommen</string>
@@ -30,46 +30,46 @@
     <string name="push_day_swap_declined_title">Tagestausch abgelehnt</string>
     <string name="push_day_swap_declined_body">Der andere Elternteil lehnt den Tausch am %1$s ab</string>
     <string name="push_pairing_accepted_title">Einladung angenommen</string>
-    <string name="push_pairing_accepted_body">%1$s ist jetzt Ihr Mit-Elternteil in CoPlanly</string>
+    <string name="push_pairing_accepted_body">%1$s ist jetzt in CoPlanly mit dir verknüpft</string>
     <string name="push_pairing_removed_title">Verknüpfung aufgehoben</string>
     <string name="push_pairing_removed_body">%1$s hat die Verknüpfung beendet</string>
     <string name="push_actor_fallback">Der andere Elternteil</string>
     <plurals name="push_day_swap_group_offered_body">
-        <item quantity="one">Dein Co-Elternteil schlägt vor, %1$d Tag zu tauschen</item>
-        <item quantity="other">Dein Co-Elternteil schlägt vor, %1$d Tage zu tauschen</item>
+        <item quantity="one">Der andere Elternteil schlägt vor, %1$d Tag zu tauschen</item>
+        <item quantity="other">Der andere Elternteil schlägt vor, %1$d Tage zu tauschen</item>
     </plurals>
     <plurals name="push_day_swap_group_accepted_body">
-        <item quantity="one">Dein Co-Elternteil hat dem Tausch von %1$d Tag zugestimmt</item>
-        <item quantity="other">Dein Co-Elternteil hat dem Tausch von %1$d Tagen zugestimmt</item>
+        <item quantity="one">Der andere Elternteil hat dem Tausch von %1$d Tag zugestimmt</item>
+        <item quantity="other">Der andere Elternteil hat dem Tausch von %1$d Tagen zugestimmt</item>
     </plurals>
     <plurals name="push_day_swap_group_declined_body">
-        <item quantity="one">Dein Co-Elternteil hat den Tausch von %1$d Tag abgelehnt</item>
-        <item quantity="other">Dein Co-Elternteil hat den Tausch von %1$d Tagen abgelehnt</item>
+        <item quantity="one">Der andere Elternteil hat den Tausch von %1$d Tag abgelehnt</item>
+        <item quantity="other">Der andere Elternteil hat den Tausch von %1$d Tagen abgelehnt</item>
     </plurals>
     <string name="push_split_ratio_proposed_title">Neue Kostenaufteilung vorgeschlagen</string>
-    <string name="push_split_ratio_proposed_body">Dein Co-Elternteil schlägt eine andere Aufteilung vor. Öffne die App zum Bestätigen oder Ablehnen.</string>
+    <string name="push_split_ratio_proposed_body">Der andere Elternteil schlägt eine andere Aufteilung vor. Öffne die App, um sie zu bestätigen oder abzulehnen.</string>
     <string name="push_split_ratio_accepted_title">Kostenaufteilung vereinbart</string>
-    <string name="push_split_ratio_accepted_body">Dein Co-Elternteil hat der neuen Aufteilung zugestimmt. Sie gilt ab jetzt.</string>
+    <string name="push_split_ratio_accepted_body">Der andere Elternteil hat der neuen Aufteilung zugestimmt. Sie gilt ab jetzt für neue Ausgaben.</string>
     <string name="push_split_ratio_declined_title">Kostenaufteilung abgelehnt</string>
-    <string name="push_split_ratio_declined_body">Dein Co-Elternteil hat die neue Aufteilung abgelehnt. Es hat sich nichts geändert.</string>
+    <string name="push_split_ratio_declined_body">Der andere Elternteil hat die neue Aufteilung abgelehnt. Es hat sich nichts geändert.</string>
     <string name="push_split_ratio_agreed_title">Kostenaufteilung vereinbart</string>
-    <string name="push_split_ratio_agreed_body">Die Aufteilung wurde festgelegt, bevor Sie verbunden waren. Öffnen Sie die Einstellungen.</string>
-    <string name="push_records_shared_title">Freigegebene Einträge</string>
+    <string name="push_split_ratio_agreed_body">Eure Aufteilung wurde festgelegt, bevor ihr verknüpft wart. Öffne die Einstellungen, um sie zu sehen.</string>
+    <string name="push_records_shared_title">Einträge mit dir geteilt</string>
     <string name="push_records_shared_body">%1$s hat den Kalender und die Familieneinträge mit dir geteilt</string>
 
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
     <!-- One notification channel per kind of news (D-13): what system Settings lists. -->
     <string name="push_channel_chat_name">Nachrichten</string>
     <string name="push_channel_chat_description">Neue Nachrichten vom anderen Elternteil</string>
-    <string name="push_channel_schedule_name">Zeitplan</string>
-    <string name="push_channel_schedule_description">Termine, Änderungsanfragen, Betreuungspläne und Tagestausche</string>
+    <string name="push_channel_schedule_name">Kalender</string>
+    <string name="push_channel_schedule_description">Termine, Änderungsanfragen, Vorschläge zum Betreuungsplan und Tagestausche</string>
     <string name="push_channel_money_name">Ausgaben</string>
     <string name="push_channel_money_description">Vorschläge und Einigungen zur Aufteilung gemeinsamer Ausgaben</string>
     <string name="push_channel_family_name">Familie</string>
-    <string name="push_channel_family_description">Verbindung mit dem anderen Elternteil, Kinderdaten, geteilte Einträge und Zugang für Fachpersonen</string>
+    <string name="push_channel_family_description">Verknüpfung mit dem anderen Elternteil, Kinderdaten, geteilte Einträge und Zugang für Fachpersonen</string>
     <string name="push_professional_access_requested_title">Zugang für Fachperson angefragt</string>
-    <string name="push_professional_access_requested_body">%1$s hat eine Einladung angenommen, den Familienkalender und den Elternplan zu lesen. Er öffnet sich erst mit der Zustimmung beider Eltern.</string>
+    <string name="push_professional_access_requested_body">%1$s hat eine Einladung angenommen, den Familienkalender und den Elternplan zu lesen. Der Zugang beginnt erst mit der Zustimmung beider Eltern.</string>
     <!-- A co-parent deleted their account; the thread is kept for 30 days (%1$s = their name, %2$s = the day it goes). -->
     <string name="push_coparent_account_deleted_title">Konto des anderen Elternteils gelöscht</string>
-    <string name="push_coparent_account_deleted_body">%1$s hat das eigene Konto gelöscht. Eure Unterhaltung wird am %2$s gelöscht – exportiere sie vorher.</string>
+    <string name="push_coparent_account_deleted_body">%1$s hat das Konto gelöscht. Eure Unterhaltung wird am %2$s gelöscht – exportiere sie vorher.</string>
 </resources>

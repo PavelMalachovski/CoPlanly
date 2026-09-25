@@ -861,7 +861,8 @@ Release audit R-1, R-2, R-5 and R-9 (`docs/AUDIT-2026-10-release.md`). Unit test
 12-hour case. What only a phone shows is the gesture, the device setting and a relaunch.
 
 - [ ] **The Add button (R-1).** Open Expenses on a month with more expenses than fit on screen.
-      Scroll down: the "+" leaves, and no amount sits under it. Scroll up a little, and it
+      Before any scroll, no amount sits under the "+" (list and Analytics alike): the content
+      ends above it. Scroll down: the "+" leaves, and no amount sits under it. Scroll up a little, and it
       returns. Scroll to the very end: it returns, and the last row's amount is clear of it.
       With TalkBack on, the button stays where it is.
 - [ ] **"Later" holds (R-2), 2P.** Have the co-parent offer a day swap. On Home, press **Later**.

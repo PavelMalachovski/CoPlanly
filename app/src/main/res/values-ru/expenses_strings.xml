@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="expenses_add">Добавить расход</string>
-    <string name="expenses_summary_this_month">Сводка (этот месяц)</string>
+    <string name="expenses_summary_this_month">Сводка за месяц</string>
     <string name="expenses_summary_total">Итого</string>
     <string name="expenses_receipt_photo">Фото чека</string>
     <string name="expense_add_title">Добавить расход</string>
-    <string name="expense_edit_title">Редактировать расход</string>
+    <string name="expense_edit_title">Изменить расход</string>
     <string name="expense_field_title">Название</string>
     <string name="expense_field_amount">Сумма</string>
     <string name="expense_field_category">Категория</string>
@@ -32,10 +32,10 @@
     <string name="expenses_paid_by">%1$s: %2$s</string>
     <string name="expenses_balance_owed_to_you">Второй родитель должен вам %1$s</string>
     <string name="expenses_balance_you_owe">Вы должны второму родителю %1$s</string>
-    <string name="expenses_balance_settled">Всё улажено</string>
+    <string name="expenses_balance_settled">Вы в расчёте</string>
     <string name="expenses_settle_up">Рассчитаться</string>
-    <string name="expenses_settle_up_message_owed">Расчёт за %2$s — ты должен(на) мне %1$s.</string>
-    <string name="expenses_settle_up_message_owing">Расчёт за %2$s — я должен(на) тебе %1$s.</string>
+    <string name="expenses_settle_up_message_owed">Расчёт за %2$s: за тобой %1$s.</string>
+    <string name="expenses_settle_up_message_owing">Расчёт за %2$s: за мной %1$s.</string>
     <string name="expenses_this_month">Этот месяц</string>
     <plurals name="expenses_count">
         <item quantity="one">%1$d расход</item>
@@ -43,7 +43,7 @@
         <item quantity="many">%1$d расходов</item>
         <item quantity="other">%1$d расхода</item>
     </plurals>
-    <string name="expenses_row_subtitle">%1$s · заплатил(а) %2$s · %3$s</string>
+    <string name="expenses_row_subtitle">%1$s · оплата: %2$s · %3$s</string>
     <string name="expenses_row_subtitle_unknown_payer">%1$s · %2$s</string>
     <string name="expenses_split_even">разделено 50/50</string>
     <string name="expenses_split_ratio">разделено %1$s %2$d/%3$d</string>
@@ -63,7 +63,7 @@
 
     <!-- Warning shown when saving an expense dated outside the current month -->
     <string name="expense_date_other_month_title">Не в текущем месяце</string>
-    <string name="expense_date_other_month_message">Этот расход датирован %1$s, поэтому он не появится в текущем месяце. Чтобы найти его, переключите месяц на экране расходов.</string>
+    <string name="expense_date_other_month_message">Дата этого расхода — %1$s, поэтому в текущем месяце он не появится. Чтобы найти его, переключите месяц на экране расходов.</string>
     <string name="expense_date_other_month_confirm">Всё равно сохранить</string>
     <string name="expenses_category_education">Образование</string>
     <string name="expenses_category_medical">Здоровье</string>
@@ -90,18 +90,18 @@
     <string name="expenses_budget_chip">%1$s %2$s / %3$s</string>
     <string name="expenses_budget_add">+ Бюджет</string>
     <string name="expenses_split_proposal_title">Предложено новое деление расходов</string>
-    <string name="expenses_split_proposal_body">Второй родитель предлагает делить общие расходы %1$d / %2$d начиная с этого момента. Уже внесённые расходы сохранят своё деление.</string>
+    <string name="expenses_split_proposal_body">Второй родитель предлагает с этого момента делить общие расходы в пропорции %1$d / %2$d. Уже внесённые расходы сохранят своё деление.</string>
     <string name="expenses_split_proposal_confirm">Подтвердить</string>
     <string name="expenses_split_proposal_decline">Отклонить</string>
     <string name="expenses_split_proposal_later">Позже</string>
-    <string name="expenses_split_answer_failed">Не удалось ответить на предложение о разделении. Проверьте соединение и попробуйте ещё раз.</string>
+    <string name="expenses_split_answer_failed">Не удалось ответить на предложение о делении. Проверьте подключение и попробуйте ещё раз.</string>
     <string name="expense_split_shared">Делить со вторым родителем</string>
     <string name="expense_split_not_shared_hint">Учитывается в ваших тратах, но никто никому за него не должен.</string>
     <string name="expense_split_ratio">Деление %1$d / %2$d</string>
     <string name="expense_split_override_hint">Другое деление только для этого расхода. Согласованное деление семьи не меняется.</string>
     <!-- Budget status in words (UX-10). -->
     <string name="budget_status_near">Близко к лимиту</string>
-    <string name="budget_status_over">Превышен</string>
+    <string name="budget_status_over">Сверх лимита</string>
     <string name="expenses_budget_chip_status">%1$s · %2$s</string>
     <string name="expense_for_members">Для кого это?</string>
     <string name="expenses_filter_members">Показать для</string>

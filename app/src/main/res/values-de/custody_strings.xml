@@ -6,11 +6,11 @@
     <string name="custody_select_schedule_type">Planart auswählen</string>
     <string name="custody_pattern_start_date">Startdatum des Musters</string>
     <string name="custody_start_date_hint">Dies ist das Ankerdatum – das Muster wiederholt sich ab diesem Tag</string>
-    <string name="custody_who_starts_first">Wer beginnt zuerst?</string>
+    <string name="custody_who_starts_first">Wer beginnt?</string>
     <!-- Replaces custody_mom_starts_first/custody_dad_starts_first. "Beginnt" (3rd person
          singular) and the adverb "zuerst" never inflect for gender, so the label stays safe
          next to any name. %1$s is that parent's name. -->
-    <string name="custody_starts_first">Beginnt zuerst: %1$s</string>
+    <string name="custody_starts_first">Beginnt: %1$s</string>
     <string name="custody_custom_pattern">Eigenes Muster</string>
     <!-- The two names are colour labels, not grammatical objects: "Pink: <name>" so
          nothing has to agree with the name. The old value named Mom and Dad outright
@@ -42,35 +42,35 @@
     <string name="custody_preview_week_on_week_off">Erste Woche: %1$s, danach wird wöchentlich gewechselt.</string>
     <string name="custody_preview_two_two_three">Mo–Di: %1$s. Mi–Do: %2$s. Fr–So wechseln sich ab.</string>
     <string name="custody_preview_three_four_four_three">Mo–Mi (3 Tage): %1$s. Do–So (4 Tage): %2$s. Danach umgekehrt.</string>
-    <string name="custody_preview_custom">Eigenes Muster: %1$d von %2$d Tagen — %3$s.</string>
+    <string name="custody_preview_custom">Eigenes Muster: %1$d von %2$d Tagen – %3$s.</string>
 
     <!-- The pairing conflict screen — noun labels only, never a sentence with a name as subject. -->
-    <string name="custody_conflict_title">Zwei Zeitpläne</string>
-    <string name="custody_conflict_body">Auf diesem Telefon und im geteilten Kalender liegen unterschiedliche Betreuungsmuster. Wählen Sie das gültige aus. Das andere bleibt gespeichert, aber inaktiv.</string>
+    <string name="custody_conflict_title">Zwei Betreuungspläne</string>
+    <string name="custody_conflict_body">Auf diesem Telefon und im gemeinsamen Kalender sind unterschiedliche Betreuungspläne gespeichert. Wähle den gültigen aus. Der andere bleibt gespeichert, aber inaktiv.</string>
     <string name="custody_conflict_local_label">Auf diesem Telefon</string>
-    <string name="custody_conflict_shared_label">Geteilter Zeitplan</string>
-    <string name="custody_conflict_keep_local">Zeitplan dieses Telefons behalten</string>
-    <string name="custody_conflict_use_shared">Geteilten Zeitplan verwenden</string>
-    <string name="custody_conflict_save_failed">Der Zeitplan konnte nicht gespeichert werden. Versuchen Sie es erneut.</string>
+    <string name="custody_conflict_shared_label">Gemeinsamer Plan</string>
+    <string name="custody_conflict_keep_local">Plan dieses Telefons behalten</string>
+    <string name="custody_conflict_use_shared">Gemeinsamen Plan verwenden</string>
+    <string name="custody_conflict_save_failed">Der Plan konnte nicht gespeichert werden. Versuch es erneut.</string>
     <string name="custody_proposal_inbox_title">Neuer Betreuungsplan vorgeschlagen</string>
     <string name="custody_proposal_inbox_body">%1$s schlägt einen neuen Betreuungsplan vor. Dein Kalender ändert sich erst, wenn du ihn annimmst.</string>
     <string name="custody_proposal_accept">Annehmen</string>
     <string name="custody_proposal_decline">Ablehnen</string>
-    <string name="custody_proposal_waiting">Warten auf die Zustimmung des Co-Elternteils zum neuen Plan</string>
+    <string name="custody_proposal_waiting">Warten auf die Zustimmung des anderen Elternteils zum neuen Plan</string>
     <string name="custody_proposal_review">%1$s hat einen neuen Betreuungsplan vorgeschlagen</string>
     <!-- MON-6. -->
     <string name="custody_model_every_other_weekend">Jedes zweite Wochenende</string>
     <string name="custody_model_every_other_weekend_desc">Das Kind lebt bei einem Elternteil; der andere hat jedes zweite Wochenende.</string>
-    <string name="custody_preview_every_other_weekend">Alle übrigen Tage: %1$s. Jeden zweiten Sa–So: %2$s.</string>
+    <string name="custody_preview_every_other_weekend">Alle übrigen Tage: %1$s. Jedes zweite Sa–So: %2$s.</string>
     <string name="custody_who_is_resident">Bei wem lebt das Kind?</string>
     <string name="custody_is_resident">Lebt bei: %1$s</string>
-    <string name="custody_midweek_title">Kontakt unter der Woche</string>
+    <string name="custody_midweek_title">Umgang unter der Woche</string>
     <string name="custody_midweek_enable">Einen Tag unter der Woche hinzufügen</string>
-    <string name="custody_midweek_overnight_warning">Dieser Plan vergibt ganze Tage, ein Tag unter der Woche schließt also die Übernachtung ein. Wenn eure Regelung nur den Nachmittag vorsieht, lasst dies aus und fügt stattdessen unten eine Umgangszeit hinzu.</string>
+    <string name="custody_midweek_overnight_warning">Dieser Plan vergibt ganze Tage, ein Tag unter der Woche schließt also die Übernachtung ein. Wenn eure Regelung nur den Nachmittag vorsieht, lass dies aus und füge stattdessen unten eine Umgangszeit hinzu.</string>
     <string name="custody_midweek_every_week">Jede Woche</string>
     <string name="custody_midweek_off_week_only">Nur in der Woche ohne Wochenende</string>
-    <string name="custody_preview_every_other_weekend_midweek">Jeden Tag: %1$s. Jedes zweite Sa–So und jeden %3$s: %2$s.</string>
-    <string name="custody_preview_every_other_weekend_midweek_off_week">Jeden Tag: %1$s. Jedes zweite Sa–So, dazu %3$s in der Woche dazwischen: %2$s.</string>
+    <string name="custody_preview_every_other_weekend_midweek">Alle übrigen Tage: %1$s. Jedes zweite Sa–So und jeden %3$s: %2$s.</string>
+    <string name="custody_preview_every_other_weekend_midweek_off_week">Alle übrigen Tage: %1$s. Jedes zweite Sa–So, dazu %3$s in der Woche dazwischen: %2$s.</string>
     <plurals name="custody_diff_days_move">
         <item quantity="one">In den kommenden Wochen würde sich %1$d Tag verschieben.</item>
         <item quantity="other">In den kommenden Wochen würden sich %1$d Tage verschieben.</item>
@@ -78,7 +78,7 @@
     <string name="custody_diff_none">Im Kalender würde sich nichts ändern.</string>
 
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
-    <string name="custody_setup_save_failed">Der Zeitplan konnte nicht gespeichert werden. Versuchen Sie es erneut.</string>
+    <string name="custody_setup_save_failed">Der Plan konnte nicht gespeichert werden. Versuch es erneut.</string>
 
     <!-- MON-6b: contact windows over the whole-day pattern. -->
     <string name="custody_windows_title">Umgangszeiten</string>
@@ -96,7 +96,7 @@
     <string name="custody_window_from">Von %1$s</string>
     <string name="custody_window_to">Bis %1$s</string>
     <string name="custody_window_with">Bei</string>
-    <string name="custody_window_invalid">Die Umgangszeit muss nach ihrem Beginn enden, am selben Tag.</string>
+    <string name="custody_window_invalid">Die Umgangszeit muss am selben Tag enden, nach ihrem Beginn.</string>
     <string name="custody_window_add_confirm">Hinzufügen</string>
     <string name="custody_diff_windows_only">Nur die Umgangszeiten würden sich ändern.</string>
     <string name="custody_diff_windows_too">Auch die Umgangszeiten ändern sich.</string>

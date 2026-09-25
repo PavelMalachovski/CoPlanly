@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="health_consent_dialog_title">Gesundheitsdaten deines Kindes</string>
-    <string name="health_consent_dialog_message">Allergien, Medikamente, Erkrankungen, Blutgruppe, Impfungen, medizinische Notizen und medizinische Fotos sind Gesundheitsdaten über dein Kind.\n\n• Der andere Elternteil kann sie lesen und bearbeiten. Gäste, denen du Zugriff auf den Eintrag deines Kindes gibst, können sie lesen.\n• Sie werden auf unseren Servern gespeichert.\n• Sie sind freiwillig. Die App funktioniert auch ohne sie.\n• Du kannst deine Einwilligung jederzeit in den Einstellungen widerrufen. Die medizinischen Angaben, die du hinzugefügt hast, werden dann gelöscht.</string>
+    <string name="health_consent_dialog_message">Allergien, Medikamente, Erkrankungen, Blutgruppe, Impfungen, medizinische Notizen und medizinische Fotos sind Gesundheitsdaten über dein Kind.\n\n• Der andere Elternteil kann sie lesen und bearbeiten. Gäste, denen du Zugriff auf die Angaben deines Kindes gibst, können sie lesen.\n• Sie werden auf unseren Servern gespeichert.\n• Sie sind freiwillig. Die App funktioniert auch ohne sie.\n• Du kannst deine Einwilligung jederzeit in den Einstellungen widerrufen. Die medizinischen Angaben, die du hinzugefügt hast, werden dann gelöscht.</string>
     <string name="health_consent_agree">Ich stimme zu</string>
     <string name="health_consent_not_now">Nicht jetzt</string>
     <string name="health_consent_locked">Medizinische Angaben sind freiwillig und brauchen zuerst deine Einwilligung.</string>
     <string name="health_consent_add_action">Medizinische Angaben hinzufügen</string>
-    <string name="health_consent_settings_title">Einwilligung zu Gesundheitsdaten</string>
+    <string name="health_consent_settings_title">Einwilligung für Gesundheitsdaten</string>
     <string name="health_consent_settings_given">Erteilt am %1$s</string>
     <string name="health_consent_settings_not_given">Nicht erteilt</string>
     <string name="health_consent_settings_withdraw">Widerrufen</string>
     <string name="health_consent_withdraw_title">Einwilligung widerrufen?</string>
-    <string name="health_consent_withdraw_message">Die medizinischen Angaben, die du zu den Einträgen deiner Kinder hinzugefügt hast — Allergien, Medikamente, das medizinische Profil, medizinische Notizen und medizinische Fotos —, werden gelöscht, auch auf dem Telefon des anderen Elternteils.\n\nEinträge, die der andere Elternteil angelegt hat, behalten ihre medizinischen Angaben, denn sie beruhen auf seiner eigenen Einwilligung.</string>
+    <string name="health_consent_withdraw_message">Die medizinischen Angaben, die du zu den Einträgen deiner Kinder hinzugefügt hast – Allergien, Medikamente, das medizinische Profil, medizinische Notizen und medizinische Fotos –, werden gelöscht, auch auf dem Telefon des anderen Elternteils.\n\nEinträge, die der andere Elternteil angelegt hat, behalten ihre medizinischen Angaben, denn sie beruhen auf seiner eigenen Einwilligung.</string>
     <string name="health_consent_withdraw_confirm">Widerrufen und löschen</string>
     <string name="health_consent_withdrawn">Einwilligung widerrufen. Die medizinischen Angaben, die du hinzugefügt hast, wurden gelöscht.</string>
     <string name="health_consent_withdraw_photos_failed">Einige medizinische Fotos konnten nicht gelöscht werden, deshalb wurde nichts widerrufen. Prüfe deine Verbindung und versuche es erneut.</string>

@@ -44,7 +44,6 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.coparently.app.R
@@ -57,6 +56,7 @@ import com.coparently.app.domain.model.Expense
 import com.coparently.app.presentation.common.FullScreenImageDialog
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.rememberRecordPhoto
+import com.coparently.app.presentation.common.stacksAtLargeFont
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
@@ -107,7 +107,6 @@ fun ExpenseList(
     onDelete: ((Expense) -> Unit)? = null,
     onExpenseClick: ((Expense) -> Unit)? = null,
     canModify: (Expense) -> Boolean = { true },
-    bottomClearance: Dp = 0.dp,
     header: (LazyListScope.() -> Unit)? = null,
     state: LazyListState = rememberLazyListState(),
     modifier: Modifier = Modifier
@@ -121,10 +120,9 @@ fun ExpenseList(
     // contradict the summary directly above it.
     val splitKnown = remember(roleByUid) { bothSlotsKnown(roleByUid) }
 
-    // The clearance is `contentPadding`, not `padding`: the list still fills its box and still
-    // draws under the Add button while scrolling, but the last row can now come to rest above it.
-    // Without it the final expense stopped under the FAB with nowhere further to scroll — the
-    // analytics branch has carried this clearance since it was written, and the list never did.
+    // No clearance for the Add button here: the screen keeps a band clear under it while it is
+    // shown (`ExpenseScreen`'s `FAB_CLEARANCE`), so no row is ever drawn beneath it — at rest,
+    // while scrolling back, or at the end.
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         state = state,
@@ -132,7 +130,7 @@ fun ExpenseList(
             start = Spacing.L,
             end = Spacing.L,
             top = Spacing.XS,
-            bottom = Spacing.XS + bottomClearance
+            bottom = Spacing.XS
         ),
         verticalArrangement = Arrangement.spacedBy(7.dp)
     ) {
@@ -312,6 +310,16 @@ fun ExpenseItem(
                 }
             }
 
+            // From 130 % the amount moves under the title: beside it, it took the width and cut
+            // the title to "Winter jack…" at 150 % in German. Under it, it still never ends in
+            // an ellipsis (design refresh item 15), and the title gets the whole column.
+            val amountBelowTitle = stacksAtLargeFont()
+            val amount: @Composable () -> Unit = {
+                Text(
+                    text = format.format(expense.amount),
+                    style = MaterialTheme.typography.titleSmallEmphasized
+                )
+            }
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = expense.title,
@@ -319,6 +327,7 @@ fun ExpenseItem(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
+                if (amountBelowTitle) amount()
                 // Two lines, not one: the meta line says who paid and how the expense divides,
                 // and in Russian at 130 % one line ended at "заплатил(а)…", before the name
                 // (docs/AUDIT-2026-10-design.md, week 3). The title above may still end in an
@@ -332,10 +341,7 @@ fun ExpenseItem(
                 )
             }
 
-            Text(
-                text = format.format(expense.amount),
-                style = MaterialTheme.typography.titleSmallEmphasized
-            )
+            if (!amountBelowTitle) amount()
         }
     }
 }

@@ -241,7 +241,8 @@ private fun QuestionRow(
         title = stringResource(prompt),
         supporting = yourAnswer ?: stringResource(R.string.parenting_plan_not_answered),
         onClick = onClick,
-        trailing = { StatusChip(status, names.labelForUid(coParentUid)) }
+        trailing = { StatusChip(status, names.labelForUid(coParentUid)) },
+        stackTrailingAtLargeFont = true
     )
 }
 

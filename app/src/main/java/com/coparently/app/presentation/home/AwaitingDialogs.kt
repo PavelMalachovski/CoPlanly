@@ -22,6 +22,7 @@ import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.custody.custodyDiffDescription
 import com.coparently.app.presentation.parentingplan.planCitationLine
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.utils.unbreakableDate
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
@@ -190,7 +191,7 @@ private fun SwapDialog(
                     stringResource(
                         R.string.home_dialog_swap_message,
                         parentNames.labelForUid(first.override.requestedBy),
-                        swapGroup.firstDate.format(dateFormat)
+                        unbreakableDate(swapGroup.firstDate.format(dateFormat))
                     )
                 } else {
                     context.resources.getQuantityString(
@@ -198,8 +199,8 @@ private fun SwapDialog(
                         swapGroup.dayCount,
                         swapGroup.dayCount,
                         parentNames.labelForUid(first.override.requestedBy),
-                        swapGroup.firstDate.format(dateFormat),
-                        swapGroup.lastDate.format(dateFormat)
+                        unbreakableDate(swapGroup.firstDate.format(dateFormat)),
+                        unbreakableDate(swapGroup.lastDate.format(dateFormat))
                     )
                 }
             )
