@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- MON-17: read-only calendar links for an iPhone or any other calendar app. -->
-    <string name="calendar_feed_settings_title">Kalender-Abo für iPhone und andere Kalender</string>
-    <string name="calendar_feed_settings_description">Ein schreibgeschützter Link zu eurem Familienkalender</string>
+    <string name="calendar_feed_settings_title">Kalender-Abo für andere Apps</string>
+    <string name="calendar_feed_settings_description">Ein schreibgeschützter Link zu eurem Familienkalender, etwa fürs iPhone</string>
     <string name="calendar_feed_title">Kalender für andere Apps</string>
     <string name="calendar_feed_intro">Erstelle einen schreibgeschützten Link, den Apple Kalender auf einem iPhone – oder jede Kalender-App, die eine Webadresse abonnieren kann – aktuell hält. Die andere App aktualisiert ihn etwa einmal pro Stunde.</string>
     <string name="calendar_feed_included">Enthalten: Betreuungstage und Umgangszeiten, jeweils mit dem Namen des Elternteils, und die Termine, die du mit dem anderen Elternteil teilst.</string>

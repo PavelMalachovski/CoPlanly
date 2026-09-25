@@ -82,9 +82,9 @@
     <string name="family_switcher_schedule_other">In einer anderen Familie wartet ein Vorschlag zum Betreuungsplan</string>
     <string name="family_switcher_schedule_row">Ein Vorschlag zum Betreuungsplan wartet</string>
     <string name="settings_school_import_title">Import aus Bakaláři</string>
-    <string name="settings_school_import_description">Schulveranstaltungen und Schulzeiten deines Kindes direkt im Kalender.</string>
+    <string name="settings_school_import_description">Schultermine und Schulzeiten deines Kindes direkt im Kalender.</string>
     <string name="settings_edupage_title">EduPage</string>
-    <string name="settings_edupage_description">Schulveranstaltungen deines Kindes aus EduPage.</string>
+    <string name="settings_edupage_description">Schultermine deines Kindes aus EduPage.</string>
     <string name="settings_edupage_coming_soon">Bald verfügbar</string>
     <string name="settings_operation_failed">Das hat nicht geklappt. Prüfe deine Verbindung und versuche es erneut.</string>
 

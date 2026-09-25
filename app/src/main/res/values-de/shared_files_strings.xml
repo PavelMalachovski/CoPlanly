@@ -5,8 +5,8 @@
     <string name="documents_settings_description">Gerichtsbeschlüsse, Schulschreiben, Ausweiskopien – mit dem anderen Elternteil geteilt</string>
     <string name="documents_title">Dokumente</string>
     <string name="documents_shared_notice">Alles hier ist mit dem anderen Elternteil geteilt. Private Dokumente gibt es nicht: Was du hinzufügst, kann auch der andere Elternteil öffnen.</string>
-    <string name="documents_add_file">Datei hinzufügen</string>
-    <string name="documents_take_photo">Foto aufnehmen</string>
+    <string name="documents_add_file">Datei wählen</string>
+    <string name="documents_take_photo">Foto machen</string>
     <string name="documents_empty_title">Noch keine Dokumente</string>
     <string name="documents_empty_description">Füge ein PDF oder ein Foto eines Gerichtsbeschlusses, eines Schulschreibens oder eines Ausweises hinzu. Der andere Elternteil sieht es ebenfalls.</string>
     <string name="documents_no_family_title">Verknüpfe zuerst den anderen Elternteil</string>
