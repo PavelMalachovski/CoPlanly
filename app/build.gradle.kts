@@ -398,9 +398,12 @@ dependencies {
 
     // Removed with the AI subsystem (MON-7): `generativeai`, `retrofit`, `converter-gson`,
     // `okhttp` and `logging-interceptor`. All five were declared for it and, after it went,
-    // had no consumer left in `app/src` at all — retrofit already had none before. OkHttp
-    // stays on the classpath transitively via coil, at the same 4.12.0, for anything that
-    // needs it.
+    // had no consumer left in `app/src` at all — retrofit already had none before.
+    // OkHttp is declared again for the school import (MON-8), which talks to each school's
+    // Bakaláři server directly from the phone. Declared rather than borrowed from Coil's
+    // transitive copy, so a Coil upgrade cannot move or drop the client the import depends on;
+    // the version is the one Coil already brings, so the graph does not change.
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
     // Firebase - Updated to latest BOM
     val firebaseBom = platform("com.google.firebase:firebase-bom:33.7.0")
@@ -444,6 +447,10 @@ dependencies {
 
     // Turbine for Flow testing
     testImplementation("app.cash.turbine:turbine:1.2.0")
+
+    // A local HTTP server for the Bakaláři client's tests (MON-8): sign-in, token rotation and
+    // the refresh-and-retry on a 401, against real HTTP rather than a mocked OkHttp.
+    testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
 
     // ArchCore Testing for LiveData and ViewModel
     testImplementation("androidx.arch.core:core-testing:2.2.0")

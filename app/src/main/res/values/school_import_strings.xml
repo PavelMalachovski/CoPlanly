@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The school import (MON-8): Settings → Sync → Import from Bakaláři, and the connect flow. -->
+<resources>
+    <!-- Titles written into imported events, in the importing parent's language. -->
+    <string name="school_import_hours_title">%1$s at school</string>
+    <string name="school_import_day_off">%1$s: no school</string>
+    <string name="school_import_day_off_named">%1$s: %2$s</string>
+    <string name="school_import_director_day">%1$s: head teacher’s day off</string>
+
+    <!-- The connections screen. -->
+    <string name="school_import_title">School import</string>
+    <string name="school_import_intro">Each connection brings one child’s school events, school hours for the next four weeks and days without lessons into the family calendar. The phone talks to the school directly and updates once a day.</string>
+    <string name="school_import_empty_title">No school connected</string>
+    <string name="school_import_empty_description">Connect your child’s Bakaláři account to see school events and school hours in the calendar.</string>
+    <string name="school_import_connect">Connect a school</string>
+    <string name="school_import_connect_another">Connect another child</string>
+    <string name="school_import_last_sync">Last updated %1$s</string>
+    <string name="school_import_never_synced">Not updated yet</string>
+    <string name="school_import_status_needs_password">The school asked for the password again</string>
+    <string name="school_import_status_error">The last update failed</string>
+    <string name="school_import_update_now">Update now</string>
+    <string name="school_import_updating">Updating…</string>
+    <string name="school_import_reconnect">Sign in again</string>
+    <string name="school_import_disconnect">Disconnect</string>
+    <string name="school_import_disconnect_title">Disconnect this school?</string>
+    <string name="school_import_disconnect_message">The phone forgets this sign-in and stops importing. Events already imported stay in the calendar.</string>
+    <string name="school_import_disconnected">School disconnected</string>
+    <string name="school_import_sync_done">School calendar updated</string>
+    <string name="school_import_sync_needs_password">The school asked for the password again.</string>
+    <string name="school_import_sync_network">The school’s server could not be reached. Try again later.</string>
+    <string name="school_import_sync_server">The school’s server answered with an error. Try again later.</string>
+
+    <!-- The connect flow. -->
+    <string name="school_connect_title">Connect a school</string>
+    <string name="school_connect_reconnect_title">Sign in again</string>
+    <string name="school_connect_town_label">Town</string>
+    <string name="school_connect_town_hint">Type the town your child’s school is in</string>
+    <string name="school_connect_towns_failed">The list of schools could not be loaded.</string>
+    <string name="school_connect_no_towns">No town matches.</string>
+    <string name="school_connect_more_towns">Keep typing to see more towns.</string>
+    <string name="school_connect_manual">Enter the address manually</string>
+    <string name="school_connect_school_label">Schools in %1$s</string>
+    <string name="school_connect_no_schools">No schools are listed in this town.</string>
+    <string name="school_connect_schools_failed">The schools in this town could not be loaded.</string>
+    <string name="school_connect_url_label">School address</string>
+    <string name="school_connect_url_hint">The address of your school’s Bakaláři page, for example https://school.bakalari.cz</string>
+    <string name="school_connect_url_check">Check address</string>
+    <string name="school_connect_url_invalid">Enter an address that starts with https://.</string>
+    <string name="school_connect_url_not_bakalari">No Bakaláři server answered at this address.</string>
+    <string name="school_connect_username">Username</string>
+    <string name="school_connect_password">Password</string>
+    <string name="school_connect_password_note">The password is used once to sign in and is never stored. The phone talks to the school directly.</string>
+    <string name="school_connect_sign_in">Sign in</string>
+    <string name="school_connect_wrong_password">Wrong username or password.</string>
+    <string name="school_connect_network_error">The school’s server could not be reached. Check the connection and try again.</string>
+    <string name="school_connect_server_error">The school’s server answered with an error. Try again later.</string>
+    <string name="school_connect_signed_in_as">Signed in as</string>
+    <string name="school_connect_no_timetable">This account cannot see the timetable, so school hours and days without lessons will not be imported.</string>
+    <string name="school_connect_no_events">This account cannot see school events, so they will not be imported.</string>
+    <string name="school_connect_no_rights">This account can see neither the timetable nor school events, so there is nothing to import. The school can turn them on.</string>
+    <string name="school_connect_family_label">Which family is this for?</string>
+    <string name="school_connect_family_with">With %1$s</string>
+    <string name="school_connect_family_unnamed">Family %1$d</string>
+    <string name="school_connect_child_label">Which child is this?</string>
+    <string name="school_connect_no_children">This family has no child records yet. Add the child under Child information in Settings, then connect again.</string>
+    <string name="school_connect_continue">Continue</string>
+    <string name="school_connect_confirm_label">What will be imported</string>
+    <string name="school_connect_confirm_events">School events for the child’s class, for the child and for the whole school, for the next 90 days</string>
+    <string name="school_connect_confirm_hours">School hours of every school day in the next four weeks</string>
+    <string name="school_connect_confirm_days_off">Days without lessons, except holidays the calendar already shows</string>
+    <string name="school_connect_confirm_shared">They become ordinary events of this family about %1$s, and your co-parent sees them too.</string>
+    <string name="school_connect_confirm_not_imported">Grades, homework and individual lessons are not imported.</string>
+    <string name="school_connect_save">Connect and import</string>
+</resources>

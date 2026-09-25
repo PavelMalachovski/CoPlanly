@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- German translations of school_import_strings.xml. -->
+<resources>
+    <string name="school_import_hours_title">%1$s in der Schule</string>
+    <string name="school_import_day_off">%1$s: schulfrei</string>
+    <string name="school_import_day_off_named">%1$s: %2$s</string>
+    <string name="school_import_director_day">%1$s: schulfreier Tag der Schulleitung</string>
+
+    <string name="school_import_title">Schulimport</string>
+    <string name="school_import_intro">Jede Verbindung bringt die Schulveranstaltungen eines Kindes, die Schulzeiten der nächsten vier Wochen und unterrichtsfreie Tage in den Familienkalender. Das Telefon spricht direkt mit der Schule und aktualisiert einmal am Tag.</string>
+    <string name="school_import_empty_title">Keine Schule verbunden</string>
+    <string name="school_import_empty_description">Verbinden Sie das Bakaláři-Konto Ihres Kindes, um Schulveranstaltungen und Schulzeiten im Kalender zu sehen.</string>
+    <string name="school_import_connect">Schule verbinden</string>
+    <string name="school_import_connect_another">Weiteres Kind verbinden</string>
+    <string name="school_import_last_sync">Zuletzt aktualisiert %1$s</string>
+    <string name="school_import_never_synced">Noch nicht aktualisiert</string>
+    <string name="school_import_status_needs_password">Die Schule fragt erneut nach dem Passwort</string>
+    <string name="school_import_status_error">Die letzte Aktualisierung ist fehlgeschlagen</string>
+    <string name="school_import_update_now">Jetzt aktualisieren</string>
+    <string name="school_import_updating">Wird aktualisiert…</string>
+    <string name="school_import_reconnect">Erneut anmelden</string>
+    <string name="school_import_disconnect">Trennen</string>
+    <string name="school_import_disconnect_title">Diese Schule trennen?</string>
+    <string name="school_import_disconnect_message">Das Telefon vergisst diese Anmeldung und importiert nicht mehr. Bereits importierte Termine bleiben im Kalender.</string>
+    <string name="school_import_disconnected">Schule getrennt</string>
+    <string name="school_import_sync_done">Schulkalender aktualisiert</string>
+    <string name="school_import_sync_needs_password">Die Schule fragt erneut nach dem Passwort.</string>
+    <string name="school_import_sync_network">Der Server der Schule ist nicht erreichbar. Versuchen Sie es später erneut.</string>
+    <string name="school_import_sync_server">Der Server der Schule hat mit einem Fehler geantwortet. Versuchen Sie es später erneut.</string>
+
+    <string name="school_connect_title">Schule verbinden</string>
+    <string name="school_connect_reconnect_title">Erneut anmelden</string>
+    <string name="school_connect_town_label">Ort</string>
+    <string name="school_connect_town_hint">Geben Sie den Ort der Schule Ihres Kindes ein</string>
+    <string name="school_connect_towns_failed">Die Schulliste konnte nicht geladen werden.</string>
+    <string name="school_connect_no_towns">Kein Ort passt.</string>
+    <string name="school_connect_more_towns">Tippen Sie weiter, um weitere Orte zu sehen.</string>
+    <string name="school_connect_manual">Adresse selbst eingeben</string>
+    <string name="school_connect_school_label">Schulen in %1$s</string>
+    <string name="school_connect_no_schools">In diesem Ort sind keine Schulen aufgeführt.</string>
+    <string name="school_connect_schools_failed">Die Schulen in diesem Ort konnten nicht geladen werden.</string>
+    <string name="school_connect_url_label">Adresse der Schule</string>
+    <string name="school_connect_url_hint">Die Adresse der Bakaláři-Seite Ihrer Schule, zum Beispiel https://schule.bakalari.cz</string>
+    <string name="school_connect_url_check">Adresse prüfen</string>
+    <string name="school_connect_url_invalid">Geben Sie eine Adresse ein, die mit https:// beginnt.</string>
+    <string name="school_connect_url_not_bakalari">Unter dieser Adresse hat kein Bakaláři-Server geantwortet.</string>
+    <string name="school_connect_username">Benutzername</string>
+    <string name="school_connect_password">Passwort</string>
+    <string name="school_connect_password_note">Das Passwort wird einmal zum Anmelden verwendet und nie gespeichert. Das Telefon spricht direkt mit der Schule.</string>
+    <string name="school_connect_sign_in">Anmelden</string>
+    <string name="school_connect_wrong_password">Falscher Benutzername oder falsches Passwort.</string>
+    <string name="school_connect_network_error">Der Server der Schule ist nicht erreichbar. Prüfen Sie die Verbindung und versuchen Sie es erneut.</string>
+    <string name="school_connect_server_error">Der Server der Schule hat mit einem Fehler geantwortet. Versuchen Sie es später erneut.</string>
+    <string name="school_connect_signed_in_as">Angemeldet als</string>
+    <string name="school_connect_no_timetable">Dieses Konto sieht den Stundenplan nicht, daher werden Schulzeiten und unterrichtsfreie Tage nicht importiert.</string>
+    <string name="school_connect_no_events">Dieses Konto sieht keine Schulveranstaltungen, daher werden sie nicht importiert.</string>
+    <string name="school_connect_no_rights">Dieses Konto sieht weder den Stundenplan noch Schulveranstaltungen, es gibt also nichts zu importieren. Die Schule kann sie freischalten.</string>
+    <string name="school_connect_family_label">Für welche Familie?</string>
+    <string name="school_connect_family_with">Mit %1$s</string>
+    <string name="school_connect_family_unnamed">Familie %1$d</string>
+    <string name="school_connect_child_label">Welches Kind ist das?</string>
+    <string name="school_connect_no_children">Diese Familie hat noch keine Kinderdaten. Fügen Sie das Kind in den Einstellungen unter Informationen zum Kind hinzu und verbinden Sie dann erneut.</string>
+    <string name="school_connect_continue">Weiter</string>
+    <string name="school_connect_confirm_label">Was importiert wird</string>
+    <string name="school_connect_confirm_events">Schulveranstaltungen für die Klasse des Kindes, für das Kind selbst und für die ganze Schule, für die nächsten 90 Tage</string>
+    <string name="school_connect_confirm_hours">Die Schulzeiten jedes Schultags der nächsten vier Wochen</string>
+    <string name="school_connect_confirm_days_off">Unterrichtsfreie Tage, außer Ferien und Feiertagen, die der Kalender schon zeigt</string>
+    <string name="school_connect_confirm_shared">Sie werden gewöhnliche Termine dieser Familie zu %1$s, und Ihr anderer Elternteil sieht sie auch.</string>
+    <string name="school_connect_confirm_not_imported">Noten, Hausaufgaben und einzelne Unterrichtsstunden werden nicht importiert.</string>
+    <string name="school_connect_save">Verbinden und importieren</string>
+</resources>

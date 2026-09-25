@@ -1,0 +1,94 @@
+{
+  "Events": [
+    {
+      "Id": "OWNCL",
+      "Title": "Výlet do ZOO",
+      "Description": "Sraz v 7:45 před školou",
+      "Times": [
+        {"WholeDay": false, "StartTime": "2026-10-06T08:00:00+02:00", "EndTime": "2026-10-06T13:00:00+02:00"}
+      ],
+      "EventType": {"Id": "SA", "Abbrev": "škol", "Name": "školní akce"},
+      "Classes": [{"Id": "XL", "Abbrev": "X.A", "Name": "X. A"}],
+      "ClassSets": [], "Teachers": [], "TeacherSets": [], "Rooms": [], "RoomSets": [],
+      "Students": [],
+      "Note": null,
+      "DateChanged": "2026-09-20T10:30:00+02:00"
+    },
+    {
+      "Id": "PUPIL",
+      "Title": "Olympiáda v matematice",
+      "Description": "",
+      "Times": [
+        {"WholeDay": true, "StartTime": "2026-10-08T00:00:00+02:00", "EndTime": "2026-10-08T23:59:00+02:00"}
+      ],
+      "EventType": {"Id": "SA", "Abbrev": "škol", "Name": "školní akce"},
+      "Classes": [{"Id": "YB", "Abbrev": "Y.B", "Name": "Y. B"}],
+      "ClassSets": [], "Teachers": [], "TeacherSets": [], "Rooms": [], "RoomSets": [],
+      "Students": [{"Id": "GQ1DS", "Abbrev": "", "Name": "Příjmení  Jméno"}],
+      "Note": "Přinést kalkulačku",
+      "DateChanged": "2026-09-20T10:30:00+02:00"
+    },
+    {
+      "Id": "WHOLE",
+      "Title": "Den otevřených dveří",
+      "Description": "Celá škola",
+      "Times": [
+        {"WholeDay": true, "StartTime": "2026-10-12T00:00:00+02:00", "EndTime": "2026-10-12T23:59:00+02:00"},
+        {"WholeDay": false, "StartTime": "2026-10-13T08:00:00+02:00", "EndTime": "2026-10-13T10:45:00+02:00"}
+      ],
+      "EventType": {"Id": "SA", "Abbrev": "škol", "Name": "školní akce"},
+      "Classes": [], "ClassSets": [], "Teachers": [], "TeacherSets": [], "Rooms": [], "RoomSets": [],
+      "Students": [],
+      "Note": null,
+      "DateChanged": "2026-09-20T10:30:00+02:00"
+    },
+    {
+      "Id": "OTHER",
+      "Title": "Divadlo pro 5.B",
+      "Description": "",
+      "Times": [
+        {"WholeDay": false, "StartTime": "2026-10-07T09:00:00+02:00", "EndTime": "2026-10-07T11:00:00+02:00"}
+      ],
+      "EventType": {"Id": "SA", "Abbrev": "škol", "Name": "školní akce"},
+      "Classes": [{"Id": "5B", "Abbrev": "5.B", "Name": "5. B"}],
+      "ClassSets": [], "Teachers": [], "TeacherSets": [], "Rooms": [], "RoomSets": [],
+      "Students": [],
+      "Note": null,
+      "DateChanged": "2026-09-20T10:30:00+02:00"
+    },
+    {
+      "Id": "CSETS",
+      "Title": "Plavání pro první stupeň",
+      "Description": "",
+      "Times": [
+        {"WholeDay": false, "StartTime": "2026-10-09T09:00:00+02:00", "EndTime": "2026-10-09T11:00:00+02:00"}
+      ],
+      "EventType": {"Id": "SA", "Abbrev": "škol", "Name": "školní akce"},
+      "Classes": [],
+      "ClassSets": [{"Id": "S1", "Abbrev": "1. st.", "Name": "První stupeň"}],
+      "Teachers": [], "TeacherSets": [], "Rooms": [], "RoomSets": [],
+      "Students": [],
+      "Note": null,
+      "DateChanged": "2026-09-20T10:30:00+02:00"
+    },
+    {
+      "Id": "TRIP3",
+      "Title": "Škola v přírodě",
+      "Description": "",
+      "Times": [
+        {"WholeDay": true, "StartTime": "2026-10-19T00:00:00+02:00", "EndTime": "2026-10-21T23:59:00+02:00"}
+      ],
+      "EventType": {"Id": "SA", "Abbrev": "škol", "Name": "školní akce"},
+      "Classes": [{"Id": "XL", "Abbrev": "X.A", "Name": "X. A"}],
+      "ClassSets": [], "Teachers": [], "TeacherSets": [], "Rooms": [], "RoomSets": [],
+      "Students": [],
+      "Note": null,
+      "DateChanged": "2026-09-20T10:30:00+02:00"
+    },
+    {
+      "Title": "No id, dropped",
+      "Times": [{"WholeDay": true, "StartTime": "2026-10-20T00:00:00+02:00", "EndTime": "2026-10-20T23:59:00+02:00"}],
+      "Classes": [], "Students": []
+    }
+  ]
+}

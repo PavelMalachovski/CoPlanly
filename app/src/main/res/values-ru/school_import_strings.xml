@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Russian translations of school_import_strings.xml. -->
+<resources>
+    <string name="school_import_hours_title">%1$s в школе</string>
+    <string name="school_import_day_off">%1$s: нет уроков</string>
+    <string name="school_import_day_off_named">%1$s: %2$s</string>
+    <string name="school_import_director_day">%1$s: выходной по решению директора</string>
+
+    <string name="school_import_title">Импорт из школы</string>
+    <string name="school_import_intro">Каждое подключение переносит в семейный календарь школьные мероприятия одного ребёнка, учебные часы на ближайшие четыре недели и дни без уроков. Телефон обращается к школе напрямую и обновляет данные раз в день.</string>
+    <string name="school_import_empty_title">Школа не подключена</string>
+    <string name="school_import_empty_description">Подключите аккаунт ребёнка в Bakaláři, чтобы видеть школьные мероприятия и учебные часы в календаре.</string>
+    <string name="school_import_connect">Подключить школу</string>
+    <string name="school_import_connect_another">Подключить ещё одного ребёнка</string>
+    <string name="school_import_last_sync">Обновлено %1$s</string>
+    <string name="school_import_never_synced">Ещё не обновлялось</string>
+    <string name="school_import_status_needs_password">Школа снова просит пароль</string>
+    <string name="school_import_status_error">Последнее обновление не удалось</string>
+    <string name="school_import_update_now">Обновить сейчас</string>
+    <string name="school_import_updating">Обновляется…</string>
+    <string name="school_import_reconnect">Войти снова</string>
+    <string name="school_import_disconnect">Отключить</string>
+    <string name="school_import_disconnect_title">Отключить эту школу?</string>
+    <string name="school_import_disconnect_message">Телефон забудет этот вход и перестанет импортировать. Уже импортированные события останутся в календаре.</string>
+    <string name="school_import_disconnected">Школа отключена</string>
+    <string name="school_import_sync_done">Школьный календарь обновлён</string>
+    <string name="school_import_sync_needs_password">Школа снова просит пароль.</string>
+    <string name="school_import_sync_network">Сервер школы недоступен. Попробуйте позже.</string>
+    <string name="school_import_sync_server">Сервер школы ответил ошибкой. Попробуйте позже.</string>
+
+    <string name="school_connect_title">Подключить школу</string>
+    <string name="school_connect_reconnect_title">Войти снова</string>
+    <string name="school_connect_town_label">Город</string>
+    <string name="school_connect_town_hint">Введите город, где находится школа ребёнка</string>
+    <string name="school_connect_towns_failed">Не удалось загрузить список школ.</string>
+    <string name="school_connect_no_towns">Такого города нет в списке.</string>
+    <string name="school_connect_more_towns">Продолжайте вводить, чтобы увидеть другие города.</string>
+    <string name="school_connect_manual">Ввести адрес вручную</string>
+    <string name="school_connect_school_label">Школы: %1$s</string>
+    <string name="school_connect_no_schools">В этом городе нет школ в списке.</string>
+    <string name="school_connect_schools_failed">Не удалось загрузить школы этого города.</string>
+    <string name="school_connect_url_label">Адрес школы</string>
+    <string name="school_connect_url_hint">Адрес страницы Bakaláři вашей школы, например https://skola.bakalari.cz</string>
+    <string name="school_connect_url_check">Проверить адрес</string>
+    <string name="school_connect_url_invalid">Введите адрес, который начинается с https://.</string>
+    <string name="school_connect_url_not_bakalari">По этому адресу не ответил сервер Bakaláři.</string>
+    <string name="school_connect_username">Имя пользователя</string>
+    <string name="school_connect_password">Пароль</string>
+    <string name="school_connect_password_note">Пароль используется один раз для входа и нигде не хранится. Телефон обращается к школе напрямую.</string>
+    <string name="school_connect_sign_in">Войти</string>
+    <string name="school_connect_wrong_password">Неверное имя пользователя или пароль.</string>
+    <string name="school_connect_network_error">Сервер школы недоступен. Проверьте подключение и попробуйте снова.</string>
+    <string name="school_connect_server_error">Сервер школы ответил ошибкой. Попробуйте позже.</string>
+    <string name="school_connect_signed_in_as">Вход выполнен как</string>
+    <string name="school_connect_no_timetable">Этот аккаунт не видит расписание уроков, поэтому учебные часы и дни без уроков не импортируются.</string>
+    <string name="school_connect_no_events">Этот аккаунт не видит школьные мероприятия, поэтому они не импортируются.</string>
+    <string name="school_connect_no_rights">Этот аккаунт не видит ни расписание, ни школьные мероприятия, поэтому импортировать нечего. Школа может их открыть.</string>
+    <string name="school_connect_family_label">Для какой семьи?</string>
+    <string name="school_connect_family_with">Второй родитель: %1$s</string>
+    <string name="school_connect_family_unnamed">Семья %1$d</string>
+    <string name="school_connect_child_label">Какой это ребёнок?</string>
+    <string name="school_connect_no_children">В этой семье пока нет записей о детях. Добавьте ребёнка в настройках в разделе «Информация о ребёнке» и подключитесь снова.</string>
+    <string name="school_connect_continue">Продолжить</string>
+    <string name="school_connect_confirm_label">Что будет импортировано</string>
+    <string name="school_connect_confirm_events">Школьные мероприятия для класса ребёнка, для самого ребёнка и для всей школы на ближайшие 90 дней</string>
+    <string name="school_connect_confirm_hours">Учебные часы каждого учебного дня в ближайшие четыре недели</string>
+    <string name="school_connect_confirm_days_off">Дни без уроков, кроме каникул и праздников, которые календарь уже показывает</string>
+    <string name="school_connect_confirm_shared">Они станут обычными событиями этой семьи о ребёнке (%1$s), и второй родитель их тоже увидит.</string>
+    <string name="school_connect_confirm_not_imported">Оценки, домашние задания и отдельные уроки не импортируются.</string>
+    <string name="school_connect_save">Подключить и импортировать</string>
+</resources>

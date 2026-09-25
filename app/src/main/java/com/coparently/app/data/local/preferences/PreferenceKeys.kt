@@ -220,4 +220,20 @@ object PreferenceKeys {
      * family the account has left must not select itself.
      */
     const val SELECTED_FAMILY_PREFIX = "selected_family_"
+
+    /**
+     * Prefix for one school-system connection (MON-8) — the actual key is this prefix plus the
+     * connection's id, and the value is `SchoolConnectionCodec`'s JSON: the school's address, the
+     * username, the child it imports for, and the school's rotating refresh and access tokens.
+     * **Never the password**, which is used once to sign in and not kept anywhere.
+     *
+     * **Exempt from `EncryptedPreferences.clear()`**, like [PARENT_SLOT_MARKER_PREFIX], because a
+     * Google Calendar disconnect reaches `clear()` too, and a parent who disconnects one calendar
+     * has not asked to be signed out of their child's school. The three places that must forget
+     * it do so explicitly through `SchoolConnectionStore.clearAll()`: the app's own sign-out
+     * (`AuthStateViewModel.signOut`), an account switch (`AccountSwitchGuard`) and account
+     * deletion (`AccountDeletionService`). Each value also names the Firebase uid it belongs to,
+     * and the store refuses it to any other account.
+     */
+    const val SCHOOL_CONNECTION_PREFIX = "school_connection_"
 }

@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Czech translations of school_import_strings.xml. -->
+<resources>
+    <string name="school_import_hours_title">%1$s ve škole</string>
+    <string name="school_import_day_off">%1$s: bez vyučování</string>
+    <string name="school_import_day_off_named">%1$s: %2$s</string>
+    <string name="school_import_director_day">%1$s: ředitelské volno</string>
+
+    <string name="school_import_title">Import ze školy</string>
+    <string name="school_import_intro">Každé připojení přenáší do rodinného kalendáře školní akce jednoho dítěte, vyučování na příští čtyři týdny a dny bez vyučování. Telefon komunikuje přímo se školou a aktualizuje jednou denně.</string>
+    <string name="school_import_empty_title">Žádná škola není připojená</string>
+    <string name="school_import_empty_description">Připojte účet dítěte v Bakalářích a školní akce i vyučování uvidíte v kalendáři.</string>
+    <string name="school_import_connect">Připojit školu</string>
+    <string name="school_import_connect_another">Připojit další dítě</string>
+    <string name="school_import_last_sync">Naposledy aktualizováno %1$s</string>
+    <string name="school_import_never_synced">Zatím neaktualizováno</string>
+    <string name="school_import_status_needs_password">Škola znovu žádá heslo</string>
+    <string name="school_import_status_error">Poslední aktualizace se nezdařila</string>
+    <string name="school_import_update_now">Aktualizovat teď</string>
+    <string name="school_import_updating">Aktualizuje se…</string>
+    <string name="school_import_reconnect">Znovu přihlásit</string>
+    <string name="school_import_disconnect">Odpojit</string>
+    <string name="school_import_disconnect_title">Odpojit tuto školu?</string>
+    <string name="school_import_disconnect_message">Telefon zapomene toto přihlášení a přestane importovat. Už importované události v kalendáři zůstanou.</string>
+    <string name="school_import_disconnected">Škola odpojena</string>
+    <string name="school_import_sync_done">Školní kalendář aktualizován</string>
+    <string name="school_import_sync_needs_password">Škola znovu žádá heslo.</string>
+    <string name="school_import_sync_network">Školní server není dostupný. Zkuste to později.</string>
+    <string name="school_import_sync_server">Školní server odpověděl chybou. Zkuste to později.</string>
+
+    <string name="school_connect_title">Připojit školu</string>
+    <string name="school_connect_reconnect_title">Znovu přihlásit</string>
+    <string name="school_connect_town_label">Obec</string>
+    <string name="school_connect_town_hint">Napište obec, kde je škola vašeho dítěte</string>
+    <string name="school_connect_towns_failed">Seznam škol se nepodařilo načíst.</string>
+    <string name="school_connect_no_towns">Žádná obec neodpovídá.</string>
+    <string name="school_connect_more_towns">Pište dál a uvidíte další obce.</string>
+    <string name="school_connect_manual">Zadat adresu ručně</string>
+    <string name="school_connect_school_label">Školy v obci %1$s</string>
+    <string name="school_connect_no_schools">V této obci nejsou uvedeny žádné školy.</string>
+    <string name="school_connect_schools_failed">Školy v této obci se nepodařilo načíst.</string>
+    <string name="school_connect_url_label">Adresa školy</string>
+    <string name="school_connect_url_hint">Adresa stránky Bakalářů vaší školy, například https://skola.bakalari.cz</string>
+    <string name="school_connect_url_check">Ověřit adresu</string>
+    <string name="school_connect_url_invalid">Zadejte adresu, která začíná https://.</string>
+    <string name="school_connect_url_not_bakalari">Na této adrese neodpověděl žádný server Bakalářů.</string>
+    <string name="school_connect_username">Uživatelské jméno</string>
+    <string name="school_connect_password">Heslo</string>
+    <string name="school_connect_password_note">Heslo se použije jednou k přihlášení a nikde se neukládá. Telefon komunikuje přímo se školou.</string>
+    <string name="school_connect_sign_in">Přihlásit</string>
+    <string name="school_connect_wrong_password">Nesprávné uživatelské jméno nebo heslo.</string>
+    <string name="school_connect_network_error">Školní server není dostupný. Zkontrolujte připojení a zkuste to znovu.</string>
+    <string name="school_connect_server_error">Školní server odpověděl chybou. Zkuste to později.</string>
+    <string name="school_connect_signed_in_as">Přihlášen jako</string>
+    <string name="school_connect_no_timetable">Tento účet nevidí rozvrh, proto se vyučování a dny bez vyučování neimportují.</string>
+    <string name="school_connect_no_events">Tento účet nevidí školní akce, proto se neimportují.</string>
+    <string name="school_connect_no_rights">Tento účet nevidí rozvrh ani školní akce, takže není co importovat. Škola je může zpřístupnit.</string>
+    <string name="school_connect_family_label">Pro kterou rodinu?</string>
+    <string name="school_connect_family_with">Druhý rodič: %1$s</string>
+    <string name="school_connect_family_unnamed">Rodina %1$d</string>
+    <string name="school_connect_child_label">Které dítě to je?</string>
+    <string name="school_connect_no_children">Tato rodina zatím nemá záznam o žádném dítěti. Přidejte dítě v Nastavení v části Informace o dítěti a pak se připojte znovu.</string>
+    <string name="school_connect_continue">Pokračovat</string>
+    <string name="school_connect_confirm_label">Co se bude importovat</string>
+    <string name="school_connect_confirm_events">Školní akce pro třídu dítěte, pro dítě samotné a pro celou školu na příštích 90 dní</string>
+    <string name="school_connect_confirm_hours">Vyučování každého školního dne v příštích čtyřech týdnech</string>
+    <string name="school_connect_confirm_days_off">Dny bez vyučování kromě prázdnin a svátků, které kalendář už ukazuje</string>
+    <string name="school_connect_confirm_shared">Stanou se běžnými událostmi této rodiny týkajícími se dítěte %1$s a uvidí je i druhý rodič.</string>
+    <string name="school_connect_confirm_not_imported">Známky, domácí úkoly a jednotlivé hodiny se neimportují.</string>
+    <string name="school_connect_save">Připojit a importovat</string>
+</resources>

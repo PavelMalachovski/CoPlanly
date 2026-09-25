@@ -2,6 +2,7 @@ package com.coparently.app.presentation.sync
 
 import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
+import com.coparently.app.data.school.SchoolConnectionStore
 import com.coparently.app.domain.model.ChildInfo
 import com.coparently.app.domain.model.Pet
 import com.coparently.app.domain.model.User
@@ -46,6 +47,7 @@ class AuthStateViewModelTest {
     private val childInfoRepository = mockk<ChildInfoRepository>()
     private val petRepository = mockk<PetRepository>()
     private val fcmService = mockk<FcmService>(relaxed = true)
+    private val schoolConnections = mockk<SchoolConnectionStore>(relaxed = true)
 
     private val namedAccount = User(id = "u1", email = "olya@example.com", name = "Olya", role = "mom", colorCode = "")
 
@@ -54,7 +56,8 @@ class AuthStateViewModelTest {
         userRepository = userRepository,
         childInfoRepository = childInfoRepository,
         petRepository = petRepository,
-        fcmService = fcmService
+        fcmService = fcmService,
+        schoolConnections = schoolConnections
     )
 
     private fun child(createdBy: String?) = ChildInfo(
@@ -151,6 +154,8 @@ class AuthStateViewModelTest {
 
         coVerifyOrder {
             fcmService.unregisterToken()
+            // The school tokens (MON-8) are forgotten with the session, before it ends.
+            schoolConnections.clearAll()
             firebaseAuthService.signOutCompletely()
         }
         assertEquals(false, vm.isAuthenticated.value)
