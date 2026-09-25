@@ -90,6 +90,12 @@ const RULES = [
       'tools/generate-contrast-schemes.py'],
   },
   {
+    sections: ['3.17'],
+    why: 'the tabs\' wide layouts or the QR scanner',
+    paths: ['K/presentation/common/TwoPane.kt', 'K/presentation/home/HomeScreen.kt',
+      'K/presentation/chat/ConversationsScreen.kt', 'K/presentation/pairing/**'],
+  },
+  {
     sections: ['3.16'],
     why: 'the Add button, "Later", the default currency or the reader\'s clock',
     paths: ['K/presentation/common/FabScrollVisibility.kt', 'K/presentation/expenses/ExpenseScreen.kt',

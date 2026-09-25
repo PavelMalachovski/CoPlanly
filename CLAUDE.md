@@ -307,6 +307,16 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     one place that knows which destinations are tabs. On a phone it changes nothing.
     `ReadablePaneTest` measures both widths. The UI tour's `light-en-100-wide` variant (a
     1280 × 800 dp display) shows it next to the rail.
+    **The tabs go to two panes from 840 dp** (release audit R-8, week 8; `common/TwoPane.kt`,
+    `rememberTwoPane()` off the window width, as the rail is). Home puts what the parent acts on
+    now — contacts, what waits on them, the handover, today — beside what they read after — the
+    week, the co-parent's changes, the month's figures; Expenses puts the month's summary and
+    where the money went beside its expenses, with no List/Analytics switch; Chat puts the list
+    beside the open thread when there is more than one, and caps a single thread at 840 dp
+    (`WideColumn`). The pair is at most 1200 dp, centred. Deliberately not
+    `ListDetailPaneScaffold`: nothing navigates between the panes, so the adaptive library's pane
+    state would be a dependency for nothing. The calendar keeps the whole width. Below 840 dp
+    every tab is the phone's one column, unchanged. `TwoPaneTest` measures it.
 20. **There is no handover Live Update, on purpose** (October 2026 audit, correction §1.6). Android
     16's Live Updates are for an activity the user started and watches until it ends, like a ride
     or a delivery. Google's guidelines name "upcoming calendar events" and activities "triggered
@@ -792,6 +802,13 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   first line; a compile error still fails the leg through `$STATUS_FILE`), in `instrumented` and
   in `e2e`, which also restores the API 30 AVD snapshot (restore-only, so the two jobs never race
   to save it) and, like `rules`, caches the Firebase emulator jars.
+- **The app ships a hand-written baseline profile** (`app/src/main/baseline-prof.txt`, week 8):
+  package wildcards over the start path, installed by `profileinstaller` on a sideloaded or
+  closed-test install. Recording one needs a Macrobenchmark module and a device per release, which
+  these sessions do not have; when one is recorded it replaces this file. The `release` job runs
+  `tools/check-baseline-profile.sh`, which fails when the app's rules stop reaching the merged
+  profile or the APK stops carrying `assets/dexopt/baseline.prof` — libraries bring profiles of
+  their own, so the file's presence alone would prove nothing.
 - **Gradle's configuration cache is on** (`gradle.properties`). CI keeps it between runs only when
   the `GRADLE_ENCRYPTION_KEY` repository secret is set (`setup-gradle`'s `cache-encryption-key`);
   without it the cache still helps within a job. An incompatible plugin or script fails the build
