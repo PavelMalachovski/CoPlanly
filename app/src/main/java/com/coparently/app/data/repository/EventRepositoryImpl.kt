@@ -8,6 +8,7 @@ import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestoreEventDataSource
 import com.coparently.app.data.sync.EventDocument
 import com.coparently.app.data.sync.Tombstone
+import com.coparently.app.data.versions.EventVersionDocument
 import com.coparently.app.data.versions.EventVersionKind
 import com.coparently.app.data.versions.EventVersionRecorder
 import com.coparently.app.domain.activity.ActivityAnnouncement
@@ -18,6 +19,7 @@ import com.coparently.app.domain.events.CalendarVisibility
 import com.coparently.app.domain.events.EventAcceptance
 import com.coparently.app.domain.events.EventAcceptanceTransition
 import com.coparently.app.domain.events.EventTimestamp
+import com.coparently.app.domain.family.FamilyAudience
 import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.model.Event
@@ -136,7 +138,7 @@ class EventRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun insertEvent(event: Event) {
+    override suspend fun insertEvent(event: Event, announce: Boolean) {
         val firebaseUser = firebaseAuthService.getCurrentUser()
         // `createdByFirebaseUid` records who created the event, not whether it ever synced —
         // it must be stamped here, unconditionally, rather than only inside the sync branch
@@ -184,10 +186,10 @@ class EventRepositoryImpl @Inject constructor(
             }
         }
 
-        announce(stamped, ActivityKind.EVENT_CREATED)
+        if (announce) announceToCoParent(stamped, ActivityKind.EVENT_CREATED)
     }
 
-    override suspend fun updateEvent(event: Event) {
+    override suspend fun updateEvent(event: Event, announce: Boolean) {
         eventDao.updateEvent(event.toEntity())
 
         val firebaseUser = firebaseAuthService.getCurrentUser() ?: return
@@ -211,7 +213,7 @@ class EventRepositoryImpl @Inject constructor(
             }
         }
 
-        announce(event, event.acceptanceKind() ?: ActivityKind.EVENT_UPDATED)
+        if (announce) announceToCoParent(event, event.acceptanceKind() ?: ActivityKind.EVENT_UPDATED)
     }
 
     /**
@@ -232,10 +234,10 @@ class EventRepositoryImpl @Inject constructor(
      * holding one. Everything else keeps its tombstone until a remote write confirms it —
      * including while signed out, where the deletion simply waits for the next sync.
      */
-    override suspend fun deleteEvent(event: Event) {
+    override suspend fun deleteEvent(event: Event, announce: Boolean) {
         val deletedAtMillis = System.currentTimeMillis()
         eventDao.markDeleted(event.id, deletedAtMillis)
-        announce(event, ActivityKind.EVENT_DELETED)
+        if (announce) announceToCoParent(event, ActivityKind.EVENT_DELETED)
 
         if (event.isPrivate) {
             eventDao.deleteEventById(event.id)
@@ -360,7 +362,7 @@ class EventRepositoryImpl @Inject constructor(
      * Never throws — see [ActivityAnnouncer]. An announcement that fails is logged and dropped,
      * because a parent's event must not fail to save because chat is down.
      */
-    private suspend fun announce(event: Event, kind: ActivityKind) {
+    private suspend fun announceToCoParent(event: Event, kind: ActivityKind) {
         val myUid = firebaseAuthService.getCurrentUser()?.uid ?: return
         val mine = event.lastModifiedBy?.takeIf { it.isNotBlank() }
             ?: event.createdByFirebaseUid
@@ -422,7 +424,15 @@ class EventRepositoryImpl @Inject constructor(
     }
 
     private suspend fun shareTargets(event: Event, creatorUid: String, currentUid: String): List<String> {
-        val partnerId = userDao.getUserById(currentUid)?.partnerId
+        // The co-parent of the event's own family, not only of the family on screen: a school
+        // import (MON-8) writes into the family its connection names, whichever one is shown.
+        val me = userDao.getUserById(currentUid)
+        val partnerId = FamilyAudience.partnerFor(
+            familyId = event.familyId,
+            myUid = currentUid,
+            livePartners = EventVersionDocument.decodeAudience(me?.partnerIdsJson ?: "[]"),
+            selectedPartner = me?.partnerId
+        )
         val entitled = (listOf(currentUid, creatorUid) + listOfNotNull(partnerId))
             .filter { it.isNotBlank() }
             .distinct()

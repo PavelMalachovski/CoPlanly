@@ -19,8 +19,10 @@ import com.coparently.app.data.repository.LocalDateJsonAdapter
 import com.coparently.app.data.repository.ParentSlotMigrator
 import com.coparently.app.data.repository.ParentingPlanRepository
 import com.coparently.app.data.session.AccountSwitchGuard
+import com.coparently.app.data.versions.EventVersionDocument
 import com.coparently.app.data.versions.EventVersionRecorder
 import com.coparently.app.domain.events.EventTimestamp
+import com.coparently.app.domain.family.FamilyAudience
 import com.coparently.app.domain.guests.GuestGrantPolicy
 import com.coparently.app.domain.repository.ChangeRequestRepository
 import com.coparently.app.domain.repository.MessageRepository
@@ -178,7 +180,11 @@ class SyncService @Inject constructor(
      * Syncs events between local database and Firestore.
      */
     private suspend fun syncEvents(userId: String): Int {
-        val partnerId = userDao.getUserById(userId)?.partnerId?.takeIf { it.isNotBlank() }
+        val me = userDao.getUserById(userId)
+        val partnerId = me?.partnerId?.takeIf { it.isNotBlank() }
+        // Every live co-parent, so an event keeps its own family's audience whichever family the
+        // device is showing (`FamilyAudience`; a school import writes into its connection's).
+        val livePartners = EventVersionDocument.decodeAudience(me?.partnerIdsJson ?: "[]")
         // What was already waiting to go up before the backfill: those rows are genuinely new
         // or edited, and their pushes are wanted. Everything the backfill adds on top is a
         // re-publication of an old record and is announced once, together, at the end.
@@ -220,7 +226,7 @@ class SyncService @Inject constructor(
                 sharedWithJson = entity.sharedWithJson,
                 creatorUid = entity.createdByFirebaseUid,
                 userId = userId,
-                partnerId = partnerId
+                partnerId = FamilyAudience.partnerFor(entity.familyId, userId, livePartners, partnerId)
             )
             // Through `EventDocument` rather than built here: that file is the one definition of
             // the events wire format, and a second copy is one more place for the schema to drift

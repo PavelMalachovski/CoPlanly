@@ -20,9 +20,10 @@ class UpdateEventUseCase @Inject constructor(
 ) {
     /**
      * Updates an existing event.
+     * @param announce Whether the co-parent's chat is told; see `EventRepository.insertEvent`.
      * @return Result with updated event or exception
      */
-    suspend operator fun invoke(event: Event): Result<Event> {
+    suspend operator fun invoke(event: Event, announce: Boolean = true): Result<Event> {
         return try {
             // Validate event
             val validationResult = eventValidator.validate(event)
@@ -34,7 +35,7 @@ class UpdateEventUseCase @Inject constructor(
             val updatedEvent = event.copy(updatedAt = LocalDateTime.now())
 
             // Update event
-            eventRepository.updateEvent(updatedEvent)
+            eventRepository.updateEvent(updatedEvent, announce)
 
             // Reschedule (or cancel) the reminder to match the new state
             reminderScheduler.schedule(updatedEvent)

@@ -11,6 +11,7 @@ import com.coparently.app.data.versions.EventVersionRecorder
 import com.coparently.app.domain.activity.ActivityAnnouncer
 import com.coparently.app.domain.events.EventAcceptance
 import com.coparently.app.domain.events.EventTimestamp
+import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.model.Event
 import com.google.firebase.auth.FirebaseUser
 import com.google.gson.Gson
@@ -358,6 +359,50 @@ class EventRepositoryImplTest {
     }
 
     /** Puts [uid] in the auth service and gives their Room row [partnerId]. */
+    @Test
+    fun `a bulk import creates, edits and deletes without a card in the chat`() = runTest {
+        signIn(uid = "uidA", partnerId = "uidB")
+        coEvery { firestoreEventDataSource.insertEvent(any(), any()) } returns Result.success(Unit)
+        coEvery { firestoreEventDataSource.updateEvent(any(), any()) } returns Result.success(Unit)
+        coEvery { firestoreEventDataSource.tombstoneEvent(any(), any(), any()) } returns Result.success(Unit)
+        val event = baseDomain().copy(createdByFirebaseUid = "uidA")
+
+        repository.insertEvent(event, announce = false)
+        repository.updateEvent(event, announce = false)
+        repository.deleteEvent(event, announce = false)
+
+        coVerify(exactly = 0) { activityAnnouncer.announce(any(), any(), any()) }
+        // The revisions are still recorded: silence is about the chat, not the record.
+        coVerify(exactly = 3) {
+            eventVersionRecorder.record(any(), any(), any(), any(), any(), any(), any(), any())
+        }
+
+        repository.insertEvent(event)
+        coVerify(exactly = 1) { activityAnnouncer.announce(any(), any(), any()) }
+    }
+
+    @Test
+    fun `an event of a family not on screen is shared with that family's co-parent`() = runTest {
+        // The device shows the family with B; the event belongs to the family with C (MON-8).
+        signIn(uid = "uidA", partnerId = "uidB")
+        coEvery { userDao.getUserById("uidA") } returns UserEntity(
+            id = "uidA",
+            email = "uidA@example.com",
+            name = "uidA",
+            role = "mom",
+            colorCode = "#FF4081",
+            partnerId = "uidB",
+            partnerIdsJson = gson.toJson(listOf("uidB", "uidC"))
+        )
+        val uploaded = slot<Map<String, Any?>>()
+        coEvery { firestoreEventDataSource.insertEvent(any(), capture(uploaded)) } returns Result.success(Unit)
+
+        repository.insertEvent(baseDomain().copy(familyId = FamilyKey.of("uidA", "uidC")), announce = false)
+
+        assertEquals(listOf("uidA", "uidC"), uploaded.captured["sharedWith"])
+        assertEquals(FamilyKey.of("uidA", "uidC"), uploaded.captured["familyId"])
+    }
+
     private fun signIn(uid: String, partnerId: String?) {
         val firebaseUser = mockk<FirebaseUser>(relaxed = true)
         every { firebaseUser.uid } returns uid

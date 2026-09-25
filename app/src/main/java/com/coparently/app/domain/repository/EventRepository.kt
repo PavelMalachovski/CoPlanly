@@ -51,18 +51,26 @@ interface EventRepository {
 
     /**
      * Inserts a new event.
+     *
+     * @param announce Whether the co-parent's chat gets an activity card for it. False only for
+     *   a bulk import (MON-8's school import), where thirty cards in a row would bury the thread
+     *   and the family on screen need not be the family the events belong to.
      */
-    suspend fun insertEvent(event: Event)
+    suspend fun insertEvent(event: Event, announce: Boolean = true)
 
     /**
      * Updates an existing event.
+     *
+     * @param announce See [insertEvent].
      */
-    suspend fun updateEvent(event: Event)
+    suspend fun updateEvent(event: Event, announce: Boolean = true)
 
     /**
      * Deletes an event.
+     *
+     * @param announce See [insertEvent].
      */
-    suspend fun deleteEvent(event: Event)
+    suspend fun deleteEvent(event: Event, announce: Boolean = true)
 
     /**
      * Deletes an event by ID.
