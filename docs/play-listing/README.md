@@ -8,7 +8,7 @@ generator only adds a headline and a device frame around what the app drew.
 | File | Size | What it is |
 | --- | --- | --- |
 | `cs/01.png` … `cs/08.png` | 1080 × 1920 | Phone screenshots, Czech listing |
-| `en/01.png` … `en/08.png` | 1080 × 1920 | Phone screenshots, English listing. **Not generated yet**, see below |
+| `en/01.png` … `en/08.png` | 1080 × 1920 | Phone screenshots, English listing, from a `light-en-100` tour (`6f538838`) |
 | `feature-graphic-cs.png` | 1024 × 500 | Feature graphic, Czech listing |
 | `feature-graphic-en.png` | 1024 × 500 | Feature graphic, English listing |
 | `icon-512.png` | 512 × 512, 32-bit PNG | The Play Store icon, both listings. Made from `icon-512.svg` |
@@ -52,17 +52,12 @@ soft glows in the background and as the two dots on the feature graphic. The scr
 never stretched. The status bar is painted over in the app bar's own colour, and the system
 navigation bar is cropped.
 
-### English is waiting for an English tour
+### Both languages come from a tour in their own language
 
-The tour folder these images were made from held `light-cs-100`, `light-de-100`, `light-de-150`,
-`light-ru-100` and `light-uk-100`, with no English variant. Once a `light-en-100` folder exists, the
-second command above writes `en/01.png` to `en/08.png`. Until then there are no English phone
-screenshots, because slides built from Czech screens would show a Czech app under English
-headlines.
-
-The English feature graphic is committed anyway. Its phone shows only the month grid's day cells,
-cropped below the weekday names, so it holds numbers and custody colours and no text in either
-language.
+Since `6f538838` the Czech slides are made from a `light-cs-100` tour and the English ones from
+`light-en-100`, each with the demo family's words seeded in that language (`UiTourContent`). The
+feature graphics' phone shows only the month grid's day cells, cropped below the weekday names,
+so it holds numbers and custody colours and no text in either language.
 
 ## Play's rules for these assets
 
@@ -104,6 +99,3 @@ Feature graphic: **CoPlanly**, then "Sdílený kalendář pro rodiče, kteří s
   and the paragraph about the record ID and the file's fingerprint.
 - **`39_custody_setup`, not `43_parenting_plan`:** the plan screen is mostly long question text,
   and its sample answer is in English.
-- **Sample text is in English in the Czech tour:** the seeded chat messages and Emma's
-  medication, activity and notes (`UiTourSeed`). That text is data the parents typed, not the
-  app's interface. A fully Czech listing needs a Czech seed.
