@@ -71,7 +71,7 @@ class UiTourOnboardingTest : AliceOnScreenTest() {
         id = UUID.randomUUID().toString(),
         childName = UiTourSeed.EMMA,
         dateOfBirth = LocalDateTime.of(BORN_YEAR, BORN_MONTH, BORN_DAY, 0, 0),
-        allergies = listOf("Peanuts"),
+        allergies = UiTourContent.forLanguage(variant.language).emma.allergies.take(1),
         createdAt = LocalDateTime.now(),
         updatedAt = LocalDateTime.now(),
         createdByFirebaseUid = bob.uid,

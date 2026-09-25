@@ -34,8 +34,10 @@ import javax.inject.Inject
  * currencies under an agreed split, budgets, a half-agreed parenting plan, a chat with an attachment,
  * a vault document, and Bob's pending day swap and change request — and the tour then walks every
  * main screen through the app's own navigation, reading every label from the app's string resources
- * in the variant's language, and hands each one to [UiTourCamera]. A screen it cannot reach is
- * written to the manifest as skipped, with the reason; nothing here fails the test on its own.
+ * in the variant's language, and hands each one to [UiTourCamera]. What the family wrote — titles,
+ * notes, the chat — is in that language too ([UiTourContent]), and the tour looks for it there. A
+ * screen it cannot reach is written to the manifest as skipped, with the reason; nothing here fails
+ * the test on its own.
  *
  * **It runs only when asked for** — the emulator host *and* `-e coplanlyUiTour true`
  * ([EmulatorEnvironment.assumeUiTour]) — and `tools/e2e/run-two-parent-tests.sh` excludes it by name
@@ -55,6 +57,7 @@ class UiTourTest : AliceOnScreenTest() {
 
     private val variant by lazy { UiTourVariant.current() }
     private val localized by lazy { variant.localized(context) }
+    private val content by lazy { UiTourContent.forLanguage(variant.language) }
     private val driver by lazy { UiTourDriver(composeTestRule, tabBar) }
     private val camera by lazy { UiTourCamera(composeTestRule, SECTION, FIRST_NUMBER) { driver.backToTabs() } }
 
@@ -69,9 +72,9 @@ class UiTourTest : AliceOnScreenTest() {
     fun tour() {
         step("tour: seed")
         runBlocking {
-            seed.seedSettled(aliceUid, bob)
+            seed.seedSettled(aliceUid, bob, content)
             runCatching { syncService.performFullSync() }
-            seed.seedPending(aliceUid, bob)
+            seed.seedPending(aliceUid, bob, content)
         }
         section("home") { homeSection() }
         section("widget") { widgetSection() }
@@ -123,7 +126,7 @@ class UiTourTest : AliceOnScreenTest() {
         }
         camera.shot("change_requests_inbox") {
             driver.press("Review", dialogButton(R.string.home_dialog_review))
-            driver.appeared(hasText(UiTourSeed.DENTIST, substring = true))
+            driver.appeared(hasText(content.events.dentist, substring = true))
             driver.linger()
         }
         driver.backToTabs()
@@ -133,7 +136,7 @@ class UiTourTest : AliceOnScreenTest() {
         camera.shot("home_bottom") { driver.scrollToEnd() }
         camera.shot("event_preview_sheet") {
             driver.scrollToTop()
-            driver.press("today's pickup", hasText(UiTourSeed.SCHOOL_PICKUP, substring = true) and hasClickAction())
+            driver.press("today's pickup", hasText(content.events.schoolPickup, substring = true) and hasClickAction())
             driver.await("the preview's Edit", textButton(R.string.event_preview_edit))
         }
         camera.shot("event_edit_form") {
@@ -195,7 +198,7 @@ class UiTourTest : AliceOnScreenTest() {
             driver.await("the event form", hasSetTextAction())
         }
         camera.shot("event_add_keyboard") {
-            driver.type("the title field", hasSetTextAction(), "Parent-teacher meeting")
+            driver.type("the title field", hasSetTextAction(), content.events.parentTeacherMeeting)
             driver.linger(KEYBOARD_MS)
         }
         camera.shot("event_add_scrolled") {
@@ -211,7 +214,7 @@ class UiTourTest : AliceOnScreenTest() {
         camera.shot("chat_thread") {
             driver.backToTabs()
             openTab(BottomNavDestination.CHAT)
-            driver.await("the thread", hasText("see you there", substring = true), CROSS_DEVICE_TIMEOUT_MS)
+            driver.await("the thread", hasText(content.chat.lastLine, substring = true), CROSS_DEVICE_TIMEOUT_MS)
             driver.linger()
         }
         camera.shot("chat_composer_keyboard") {
@@ -222,7 +225,8 @@ class UiTourTest : AliceOnScreenTest() {
         camera.shot("chat_search") {
             driver.press("Search", hasContentDescription(string(R.string.chat_search)) and hasClickAction())
             val field = hasSetTextAction() and hasText(string(R.string.chat_search_placeholder), substring = true)
-            driver.type("the search field", if (driver.present(field)) field else hasSetTextAction(), "pickup")
+            val searchField = if (driver.present(field)) field else hasSetTextAction()
+            driver.type("the search field", searchField, content.chat.search)
             driver.closeKeyboard()
             driver.linger()
         }
@@ -235,7 +239,7 @@ class UiTourTest : AliceOnScreenTest() {
         camera.shot("expenses_list") {
             driver.backToTabs()
             openTab(BottomNavDestination.EXPENSES)
-            driver.appeared(hasText("Winter jacket", substring = true))
+            driver.appeared(hasText(content.expenses.jacket, substring = true))
             driver.linger()
         }
         camera.shot("expenses_scrolled") { check(driver.scrollDown()) { "Expenses does not scroll" } }
@@ -297,7 +301,7 @@ class UiTourTest : AliceOnScreenTest() {
         fromSettings("professionals", R.string.professional_section_title)
         fromSettings("export", R.string.export_settings_title)
         scrolls("export", 1)
-        fromSettings("documents_vault", R.string.documents_settings_title, "Custody agreement")
+        fromSettings("documents_vault", R.string.documents_settings_title, content.document.title)
         fromSettings("journal", R.string.journal_title)
         fromSettings("calendar_feed", R.string.calendar_feed_settings_title)
         // The school import (MON-8): the list with nobody connected, then the connect flow's

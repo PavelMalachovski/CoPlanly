@@ -649,7 +649,9 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   nothing: `UiTourSeed` fills both phones with a realistic family through the production
   repositories (custody with contact windows and a seasonal layer, Emma, Leo and Max, events,
   expenses in two currencies, budgets, plan, chat, a vault document, Bob's pending swap and
-  request), `UiTourDriver` walks the app's own navigation by string resource, and `UiTourCamera`
+  request) — what the family *wrote* in the variant's language (`UiTourContent`, one table per
+  app language, English for any other; the names Alice, Bob, Emma, Leo and Max never change,
+  because the screenshots double as store images), `UiTourDriver` walks the app's own navigation by string resource, and `UiTourCamera`
   saves `UiAutomation.takeScreenshot()` PNGs plus a `manifest.json` in which a screen it could not
   reach is **skipped with its reason, never a failure**. `tools/ui-tour/run-ui-tour.sh` runs them
   with `am instrument` (not Gradle, which uninstalls the app and its files) once per variant on an API
