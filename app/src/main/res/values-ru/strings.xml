@@ -14,7 +14,7 @@
     <string name="events_error">Ошибка: %1$s</string>
     <string name="events_empty">Пока нет событий</string>
     <string name="event_add">Добавить событие</string>
-    <string name="event_edit">Редактировать событие</string>
+    <string name="event_edit">Изменить событие</string>
     <string name="event_title">Название</string>
     <string name="event_description">Описание</string>
     <string name="event_save">Сохранить</string>
@@ -26,12 +26,12 @@
     <!-- Auth Screen -->
     <string name="auth_sign_in">Войти</string>
     <string name="auth_create_account">Создать аккаунт</string>
-    <string name="auth_email">Email</string>
+    <string name="auth_email">Эл. почта</string>
     <string name="auth_password">Пароль</string>
     <string name="auth_sign_up_prompt">Нет аккаунта? Зарегистрируйтесь</string>
     <string name="auth_sign_in_prompt">Уже есть аккаунт? Войдите</string>
     <string name="auth_forgot_password">Забыли пароль?</string>
-    <string name="auth_fill_all_fields">Пожалуйста, заполните все поля</string>
+    <string name="auth_fill_all_fields">Заполните все поля</string>
     <string name="auth_sign_in_failed">Вход не выполнен</string>
     <string name="auth_sign_in_with_google">Войти через Google</string>
     <string name="auth_sign_up_failed">Регистрация не выполнена</string>
@@ -42,8 +42,8 @@
     <string name="settings_back">Назад</string>
     <string name="settings_google_calendar_sync">Синхронизация с Google Calendar</string>
     <string name="settings_enable_sync">Включить синхронизацию</string>
-    <string name="settings_signed_in_google">Вошли в Google</string>
-    <string name="settings_not_signed_in">Не вошли</string>
+    <string name="settings_signed_in_google">Вход в Google выполнен</string>
+    <string name="settings_not_signed_in">Вход не выполнен</string>
     <string name="settings_sync_from_google">Синхронизировать из Google Calendar</string>
     <string name="settings_sign_out">Выйти</string>
     <string name="settings_syncing">Синхронизация…</string>
@@ -57,15 +57,15 @@
     <string name="settings_push_notifications_description">Получать уведомления об изменениях</string>
 
     <!-- Pairing Screen -->
-    <string name="pairing_title">Связь родителей</string>
+    <string name="pairing_title">Связь со вторым родителем</string>
     <string name="pairing_paired_with">Связаны с</string>
     <string name="pairing_unpair">Разорвать связь</string>
-    <string name="pairing_partner_email">Email партнёра</string>
+    <string name="pairing_partner_email">Эл. почта второго родителя</string>
     <string name="pairing_send_invitation">Отправить приглашение</string>
     <string name="pairing_pending_invitations">Ожидающие приглашения</string>
     <string name="pairing_accept">Принять</string>
     <string name="pairing_reject">Отклонить</string>
-    <string name="pairing_enter_email">Пожалуйста, введите email</string>
+    <string name="pairing_enter_email">Введите адрес эл. почты</string>
     <string name="pairing_failed_send">Не удалось отправить приглашение</string>
     <string name="pairing_unknown">Неизвестно</string>
 
@@ -88,11 +88,11 @@
     <string name="common_optional">необязательно</string>
 
     <!-- Child Info Screen -->
-    <string name="child_info_title">Информация о ребенке</string>
-    <string name="child_info_add">Добавить ребенка</string>
-    <string name="child_info_edit">Изменить данные ребенка</string>
-    <string name="child_info_name">Имя ребенка</string>
-    <string name="child_info_name_required">Имя ребенка *</string>
+    <string name="child_info_title">Информация о ребёнке</string>
+    <string name="child_info_add">Добавить ребёнка</string>
+    <string name="child_info_edit">Изменить данные ребёнка</string>
+    <string name="child_info_name">Имя ребёнка</string>
+    <string name="child_info_name_required">Имя ребёнка *</string>
     <string name="child_info_medical_notes">Дополнительная медицинская информация</string>
     <string name="child_info_medical_notes_hint">Любая другая важная медицинская информация…</string>
     <string name="child_info_medications">Лекарства</string>
@@ -104,7 +104,7 @@
     <!-- Medication Editor -->
     <string name="medication_name">Название лекарства</string>
     <string name="medication_dosage">Дозировка</string>
-    <string name="medication_frequency">Частота приема</string>
+    <string name="medication_frequency">Частота приёма</string>
     <string name="medication_notes">Заметки (необязательно)</string>
     <string name="medication_add">Добавить лекарство</string>
 
@@ -116,7 +116,7 @@
     <string name="activity_add">Добавить занятие</string>
 
     <!-- Allergy Editor -->
-    <string name="allergy_name">Название аллергии</string>
+    <string name="allergy_name">Аллерген</string>
     <string name="allergy_severity">Тяжесть</string>
     <string name="allergy_reaction">Реакция</string>
     <string name="allergy_notes">Заметки (необязательно)</string>
@@ -125,24 +125,24 @@
     <!-- Emergency Contact Editor -->
     <string name="emergency_contact_add">Добавить экстренный контакт</string>
     <string name="emergency_contact_name">Имя</string>
-    <string name="emergency_contact_relationship">Родство</string>
-    <string name="emergency_contact_relationship_hint">например, Бабушка, Дядя</string>
+    <string name="emergency_contact_relationship">Кем приходится</string>
+    <string name="emergency_contact_relationship_hint">Например, бабушка, дядя</string>
     <string name="emergency_contact_phone">Номер телефона</string>
-    <string name="emergency_contact_alternate">Альтернативный телефон (необязательно)</string>
+    <string name="emergency_contact_alternate">Дополнительный телефон (необязательно)</string>
 
     <!-- School Info Editor -->
     <string name="school_name">Название школы</string>
     <string name="school_address">Адрес (необязательно)</string>
     <string name="school_phone">Телефон школы (необязательно)</string>
     <string name="school_grade">Класс (необязательно)</string>
-    <string name="school_grade_hint">например, 3 класс</string>
+    <string name="school_grade_hint">Например, 3-й класс</string>
     <string name="school_teacher_name">Имя учителя (необязательно)</string>
-    <string name="school_teacher_email">Email учителя (необязательно)</string>
+    <string name="school_teacher_email">Эл. почта учителя (необязательно)</string>
 
     <!-- Sync -->
     <string name="sync_sign_in_google">Войти через Google</string>
     <string name="sync_syncing_from_google">Синхронизировать из Google Calendar</string>
     <string name="sync_google_sign_in_cancelled">Вход через Google отменён</string>
-    <string name="sync_google_sign_in_failed">Не удалось войти через Google. Пожалуйста, попробуйте ещё раз.</string>
+    <string name="sync_google_sign_in_failed">Не удалось войти через Google. Попробуйте ещё раз.</string>
 </resources>
 

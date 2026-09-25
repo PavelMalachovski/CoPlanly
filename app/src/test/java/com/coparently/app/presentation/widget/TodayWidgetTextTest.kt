@@ -146,7 +146,7 @@ class TodayWidgetTextTest {
         val lines = TodayWidgetText.lines(context, day, parents, maxEvents = 0)
 
         assertTrue(lines.title, lines.title.startsWith("Сегодня · "))
-        assertEquals("Передача (Sam) через 5 дней", lines.handover?.text)
+        assertEquals("Через 5 дней передача, дальше с: Sam", lines.handover?.text)
         assertEquals("2 события сегодня", lines.footer)
     }
 

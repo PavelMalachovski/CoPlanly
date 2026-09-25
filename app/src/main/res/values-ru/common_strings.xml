@@ -19,7 +19,7 @@
     <string name="common_quick_actions_title">Быстрые действия</string>
     <string name="common_quick_action_new_event">Новое событие</string>
     <string name="common_quick_action_new_event_subtitle">Создать новое событие календаря</string>
-    <string name="common_quick_action_today">Перейти к сегодня</string>
+    <string name="common_quick_action_today">К сегодняшнему дню</string>
     <string name="common_quick_action_today_subtitle">Перейти к текущей дате</string>
     <string name="common_quick_action_settings">Настройки</string>
     <string name="common_quick_action_settings_subtitle">Параметры приложения</string>
@@ -50,8 +50,8 @@
     <string name="common_error_invalid_input">Некоторые данные не заполнены или неверны. Проверьте их и попробуйте ещё раз.</string>
     <!-- Audit leftovers (Sept 2026): required-field marker and the discard-changes dialog. -->
     <string name="common_required">Обязательно</string>
-    <string name="common_keep_editing">Продолжить редактирование</string>
+    <string name="common_keep_editing">Остаться</string>
     <string name="common_discard">Не сохранять</string>
     <string name="common_discard_changes_title">Не сохранять изменения?</string>
-    <string name="common_discard_changes_message">Изменения здесь ещё не сохранены. Если уйти сейчас, они пропадут.</string>
+    <string name="common_discard_changes_message">Изменения не сохранены. Если уйти сейчас, они пропадут.</string>
 </resources>

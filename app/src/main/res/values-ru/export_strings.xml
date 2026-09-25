@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Экспорт записи общения (MON-3). Абзацы export_statement_* печатаются на каждом файле. -->
 <resources>
-    <string name="export_settings_title">Экспорт записи</string>
+    <string name="export_settings_title">Экспорт журнала</string>
     <string name="export_settings_description">Сообщения, история календаря, расходы и родительский план в PDF или CSV</string>
-    <string name="export_title">Экспорт записи</string>
+    <string name="export_title">Экспорт журнала</string>
     <string name="export_back">Назад</string>
-    <string name="export_intro">Создайте файл с тем, что вы и второй родитель записали и написали друг другу в CoPlanly, — для адвоката, медиатора или суда. Он создаётся на этом телефоне и попадает только туда, куда вы его отправите.</string>
+    <string name="export_intro">Создайте файл с тем, что вы и второй родитель записали и написали друг другу в CoPlanly, — для адвоката, медиатора или суда. Файл создаётся на этом телефоне и попадает только туда, куда вы его отправите.</string>
     <string name="export_range_label">Период</string>
     <string name="export_from">С</string>
     <string name="export_to">По</string>
-    <string name="export_pick_ok">ОК</string>
+    <string name="export_pick_ok">OK</string>
     <string name="export_pick_cancel">Отмена</string>
     <string name="export_what_it_says">Что файл сообщает о себе</string>
     <string name="export_csv">Экспорт в CSV</string>
@@ -17,25 +17,25 @@
     <string name="export_pdf">Экспорт в PDF</string>
     <string name="export_pdf_supporting">Документ для печати формата A4</string>
     <string name="export_working">Подготовка…</string>
-    <string name="export_share_title">Поделиться записью</string>
-    <string name="export_error_failed">Не удалось экспортировать запись. Попробуйте ещё раз.</string>
-    <string name="export_error_signed_out">Войдите, чтобы экспортировать запись.</string>
+    <string name="export_share_title">Поделиться журналом</string>
+    <string name="export_error_failed">Не удалось экспортировать журнал. Попробуйте ещё раз.</string>
+    <string name="export_error_signed_out">Войдите, чтобы экспортировать журнал.</string>
 
-    <string name="export_record_title">Запись общения CoPlanly</string>
-    <string name="export_statement_what">Это запись того, что родители записали и написали друг другу в CoPlanly, и когда. Это не запись того, что произошло на самом деле, и она не утверждает, что написанное здесь правда.</string>
+    <string name="export_record_title">Журнал общения CoPlanly</string>
+    <string name="export_statement_what">Это журнал того, что родители записали и написали друг другу в CoPlanly, и когда. Он не описывает то, что произошло на самом деле, и не утверждает, что написанное здесь правда.</string>
     <string name="export_statement_messages">Отправленное сообщение не может изменить или удалить ни один из родителей. Время сообщения взято с часов устройства отправителя.</string>
     <string name="export_statement_revisions">Каждая сохранённая версия записи календаря хранится целиком, и изменить её потом нельзя. У каждой два времени: когда её зафиксировало устройство редактировавшего родителя и когда её получил сервер.</string>
     <string name="export_statement_limits">Время записей — это местное время, которое ввели родители, без часового пояса. Расходы показаны в их нынешнем виде. Записи, сохранённые до начала истории версий, показаны только в текущем виде. Личные записи и медицинские сведения о детях никогда не включаются.</string>
     <string name="export_record_period">Период</string>
-    <string name="export_record_generated">Создано</string>
-    <string name="export_record_time_zone">Время указано в поясе</string>
+    <string name="export_record_generated">Дата создания</string>
+    <string name="export_record_time_zone">Часовой пояс</string>
     <string name="export_record_parents">Родители</string>
-    <string name="export_record_incomplete">Сервер был недоступен. Эта запись содержит только то, что было на этом телефоне, и в ней может чего-то не хватать.</string>
+    <string name="export_record_incomplete">Сервер был недоступен. Журнал содержит только то, что было на этом телефоне, и в нём могут отсутствовать записи.</string>
     <string name="export_record_section_events">Записи календаря</string>
     <string name="export_record_section_messages">Сообщения</string>
     <string name="export_record_section_expenses">Расходы</string>
     <string name="export_record_nothing">За этот период ничего не записано.</string>
-    <string name="export_record_not_on_server">Сервер ещё не получил</string>
+    <string name="export_record_not_on_server">Ещё не получено сервером</string>
     <string name="export_record_no_server_time">Не хранится</string>
     <string name="export_record_revision">Версия</string>
     <string name="export_record_page">Страница</string>
@@ -65,15 +65,15 @@
     <string name="export_action_server_recorded">записано сервером по сохранённой записи; телефон, на котором её меняли, это изменение не записал, поэтому время устройства неизвестно, а указан тот, кого называет сама запись</string>
 
     <!-- MON-16: the record id and whether the file can be verified. -->
-    <string name="export_verify_explainer">Если сервер доступен, файл регистрируется: сохраняются его идентификатор записи и отпечаток его точного содержимого, поэтому любой, у кого он есть, может проверить, что файл не изменён. С телефона уходит только отпечаток, никогда не сам файл.</string>
-    <string name="export_verify_record_id">Идентификатор записи</string>
-    <string name="export_verify_at">Проверить на</string>
+    <string name="export_verify_explainer">Если сервер доступен, файл регистрируется: сохраняются идентификатор журнала и отпечаток точного содержимого файла, поэтому любой, у кого есть файл, может проверить, что он не изменён. С телефона уходит только отпечаток, но никогда не сам файл.</string>
+    <string name="export_verify_record_id">Идентификатор журнала</string>
+    <string name="export_verify_at">Адрес проверки</string>
     <string name="export_verify_instruction">Чтобы проверить, что этот файл не изменён, откройте адрес выше и выберите файл. Даже один изменённый символ не пройдёт проверку.</string>
-    <string name="export_verify_instruction_no_url">Отпечаток этого файла был зарегистрирован в CoPlanly под этим идентификатором записи при его создании.</string>
+    <string name="export_verify_instruction_no_url">Отпечаток этого файла был зарегистрирован в CoPlanly под этим идентификатором журнала при создании файла.</string>
     <string name="export_verify_not_registered">Не зарегистрировано — проверка недоступна. При создании этого файла сервер был недоступен, поэтому его отпечаток не зарегистрирован и никто не сможет проверить его на изменения.</string>
     <string name="export_verify_not_registered_short">Не зарегистрировано — проверка недоступна</string>
     <string name="export_unregistered_title">Не зарегистрировано — проверка недоступна</string>
-    <string name="export_unregistered_body">Сервер был недоступен, поэтому этот файл не зарегистрирован и никто не сможет проверить его на изменения. Файл говорит об этом в начале. Можно всё равно поделиться им или экспортировать снова, когда появится сеть.</string>
+    <string name="export_unregistered_body">Сервер был недоступен, поэтому этот файл не зарегистрирован и никто не сможет проверить его на изменения. Об этом сказано в начале файла. Можно всё равно поделиться им или экспортировать снова, когда появится сеть.</string>
     <string name="export_unregistered_share">Всё равно поделиться</string>
     <string name="export_unregistered_not_now">Не сейчас</string>
 
@@ -81,7 +81,7 @@
     <string name="export_include_label">Также включить</string>
     <string name="export_include_plan">Родительский план</string>
     <string name="export_include_plan_supporting">Ответы обоих родителей и в чём вы согласны — в том виде, в каком план есть сегодня, независимо от периода</string>
-    <string name="export_plan_current_state">Не ограничено периодом выше: таким план был в момент создания этой записи. Каждый родитель отвечает отдельно; вопрос считается согласованным, только если каждый отметил ответ другого в его нынешней формулировке.</string>
+    <string name="export_plan_current_state">Не ограничено периодом выше: таким план был в момент создания этого журнала. Каждый родитель отвечает отдельно; вопрос считается согласованным, только если каждый отметил ответ другого в его нынешней формулировке.</string>
     <string name="export_plan_not_from_server">Родительский план не удалось прочитать с сервера. Ниже — копия с этого телефона, которая может не совпадать с тем, что видит другой родитель.</string>
     <string name="export_plan_unsent_here">Изменения, сделанные на этом телефоне и ещё не дошедшие до сервера, здесь не показаны.</string>
     <string name="export_plan_none">Родительский план не заполнен.</string>
@@ -92,9 +92,9 @@
 
     <!-- The private journal as an optional section (MON-22). -->
     <string name="export_include_journal">Мой личный дневник</string>
-    <string name="export_include_journal_supporting">Ваши собственные записи о днях этого периода, помеченные в файле как ваши личные заметки. Выключено, пока вы не отметите.</string>
+    <string name="export_include_journal_supporting">Ваши записи о днях этого периода; в файле они помечены как ваши личные заметки. Не включаются, пока вы не отметите.</string>
     <string name="export_journal_private_note">Это личные заметки одного из родителей, хранящиеся на его телефоне. Через приложение они никогда не передавались другому родителю, и другой родитель их не видел. Они включены, потому что этот родитель решил их включить.</string>
-    <string name="export_journal_clock_note">Каждая запись датирована днём, о котором она. Когда она была написана и в последний раз изменена — по часам того телефона; ни один сервер эти записи не получал.</string>
+    <string name="export_journal_clock_note">Каждая запись датирована тем днём, которому она посвящена. Время написания и последнего изменения взято с часов того телефона; ни один сервер эти записи не получал.</string>
     <string name="export_journal_none">Нет записей дневника о днях этого периода.</string>
     <string name="export_journal_written">Написано</string>
     <string name="export_journal_edited">Последнее изменение</string>

@@ -3,18 +3,18 @@
 <resources>
     <string name="home_title">Главная</string>
 
-    <string name="home_pairing_title">Разделите это со вторым родителем</string>
-    <string name="home_pairing_prompt">Свяжитесь со вторым родителем, чтобы делить календарь, расходы и сообщения.</string>
-    <string name="home_pairing_cta">Связаться со вторым родителем</string>
+    <string name="home_pairing_title">Поделитесь со вторым родителем</string>
+    <string name="home_pairing_prompt">Подключите второго родителя, чтобы вместе вести календарь, расходы и переписку.</string>
+    <string name="home_pairing_cta">Подключить второго родителя</string>
 
     <string name="home_handover_current">Сегодня с: %1$s</string>
-    <string name="home_handover_hero_today">Передача (%1$s) сегодня</string>
-    <string name="home_handover_hero_tomorrow">Передача (%1$s) завтра</string>
+    <string name="home_handover_hero_today">Сегодня передача, дальше с: %1$s</string>
+    <string name="home_handover_hero_tomorrow">Завтра передача, дальше с: %1$s</string>
     <plurals name="home_handover_hero_in_days">
-        <item quantity="one">Передача (%1$s) через %2$d день</item>
-        <item quantity="few">Передача (%1$s) через %2$d дня</item>
-        <item quantity="many">Передача (%1$s) через %2$d дней</item>
-        <item quantity="other">Передача (%1$s) через %2$d дня</item>
+        <item quantity="one">Через %2$d день передача, дальше с: %1$s</item>
+        <item quantity="few">Через %2$d дня передача, дальше с: %1$s</item>
+        <item quantity="many">Через %2$d дней передача, дальше с: %1$s</item>
+        <item quantity="other">Через %2$d дня передача, дальше с: %1$s</item>
     </plurals>
     <string name="home_handover_review">Посмотреть</string>
 
@@ -27,16 +27,16 @@
     <string name="home_stat_open_chat">Открыть чат →</string>
     <string name="home_stat_owed_to_you">Вам должны %1$s →</string>
     <string name="home_stat_you_owe">Вы должны %1$s →</string>
-    <string name="home_stat_settled">Всё улажено →</string>
+    <string name="home_stat_settled">Вы в расчёте →</string>
 
     <string name="home_section_this_week">На этой неделе</string>
     <string name="home_week_empty">В ближайшие семь дней ничего нет.</string>
     <string name="home_section_recent_changes">Недавние изменения</string>
     <string name="home_section_partner_changed">Изменения: %1$s</string>
 
-    <string name="home_timeline_meta">%1$s · день родителя %2$s</string>
+    <string name="home_timeline_meta">%1$s · чей день: %2$s</string>
 
-    <string name="home_recent_empty_paired">Пока ничего нового от второго родителя. Их изменения появятся здесь.</string>
+    <string name="home_recent_empty_paired">От второго родителя пока ничего нового. Его изменения появятся здесь.</string>
 
     <!-- Contacts: item 16's one button, between the changes feed and the spend tile. -->
     <string name="home_contacts">Контакты</string>
@@ -44,11 +44,11 @@
 
     <string name="home_activity_event_created">Добавлено: %1$s</string>
     <string name="home_activity_event_updated">Изменено: %1$s</string>
-    <string name="home_activity_pickup_confirmed">Подтверждён приём: %1$s</string>
+    <string name="home_activity_pickup_confirmed">Подтверждено, что ребёнка забрали: %1$s</string>
     <string name="home_activity_change_requested">Запрошено изменение: %1$s</string>
     <string name="home_activity_review">Посмотреть</string>
 
-    <string name="home_awaiting_title">Ожидают вашего ответа</string>
+    <string name="home_awaiting_title">Ждут вашего ответа</string>
     <string name="home_dialog_swap_title">Обмен днями</string>
     <!-- No full stop after the date: FormatStyle.FULL ends it with "г.", and a sentence ending in
          an abbreviation takes no second period (it read "2026 г.." — docs/AUDIT-2026-10-design.md

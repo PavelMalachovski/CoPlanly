@@ -28,8 +28,8 @@
     <string name="seasonal_confirm">Сохранить</string>
     <string name="seasonal_delete">Удалить</string>
     <string name="seasonal_cancel">Отмена</string>
-    <string name="seasonal_ok">ОК</string>
-    <string name="fairness_title">Праздники поровну</string>
+    <string name="seasonal_ok">OK</string>
+    <string name="fairness_title">Распределение праздников</string>
     <string name="fairness_no_schedule">Сохраните график, чтобы увидеть, у кого какие праздники.</string>
     <string name="fairness_nights">Ночи</string>
     <string name="fairness_christmas_eve">Сочельник</string>
@@ -40,7 +40,7 @@
     <string name="fairness_show_holidays">Показать другие праздники</string>
     <string name="fairness_hide_holidays">Скрыть другие праздники</string>
     <string name="fairness_not_set">Не задано</string>
-    <string name="fairness_note">Подсчитано так, как показывает календарь, с согласованными обменами и сезонными графиками. Дневное время общения ночью не считается.</string>
+    <string name="fairness_note">Подсчитано так, как показывает календарь, с учётом согласованных обменов и сезонных графиков. Периоды общения днём ночами не считаются.</string>
     <string name="fairness_propose">Предложить изменение</string>
     <string name="custody_diff_layers_changed">Сезонные графики тоже меняются.</string>
 </resources>

@@ -12,7 +12,7 @@
     <string name="expense_analytics_payer_label">Чьи расходы</string>
 
     <!-- Currency chip row, shown only when the month holds more than one currency. -->
-    <string name="expense_analytics_currency_label">Показанная валюта</string>
+    <string name="expense_analytics_currency_label">Валюта отображения</string>
 
     <!-- The table under the chart. It is also the chart's legend: each row carries the
          category's colour, so identity is never colour alone. -->

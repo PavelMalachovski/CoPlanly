@@ -9,7 +9,7 @@
     <string name="childinfo_save">Сохранить</string>
     <string name="childinfo_cancel">Отмена</string>
     <string name="childinfo_clear">Очистить</string>
-    <string name="childinfo_ok">ОК</string>
+    <string name="childinfo_ok">OK</string>
     <string name="childinfo_sync">Синхронизировать</string>
 
     <!-- Child info: titles and sections -->
@@ -58,16 +58,16 @@
     <string name="childinfo_dosage_label">Дозировка (напр., 10 мг)</string>
     <string name="childinfo_frequency_label">Частота (напр., 2 раза в день)</string>
     <string name="childinfo_notes_optional_label">Заметки (необязательно)</string>
-    <string name="childinfo_medication_summary">%1$s - %2$s</string>
+    <string name="childinfo_medication_summary">%1$s — %2$s</string>
 
     <!-- Child info: activities editor -->
     <string name="childinfo_add_activity">Добавить занятие</string>
     <string name="childinfo_new_activity">Новое занятие</string>
     <string name="childinfo_edit_activity">Изменить занятие</string>
     <string name="childinfo_activity_name_label">Название занятия</string>
-    <string name="childinfo_activity_name_placeholder">напр., футбол, уроки фортепиано</string>
+    <string name="childinfo_activity_name_placeholder">Например, футбол, фортепиано</string>
     <string name="childinfo_schedule_label">Расписание</string>
-    <string name="childinfo_schedule_placeholder">напр., пн и ср, 16:00–17:00</string>
+    <string name="childinfo_schedule_placeholder">Например, пн и ср, 16:00–17:00</string>
     <string name="childinfo_location_optional_label">Место (необязательно)</string>
     <string name="childinfo_contact_person_optional_label">Контактное лицо (необязательно)</string>
     <string name="childinfo_contact_phone_optional_label">Контактный телефон (необязательно)</string>
@@ -78,7 +78,7 @@
     <!-- Child info: allergies editor -->
     <string name="childinfo_add_allergy">Добавить аллергию</string>
     <string name="childinfo_allergy_label">Аллергия</string>
-    <string name="childinfo_allergy_placeholder">напр., арахис, лактоза</string>
+    <string name="childinfo_allergy_placeholder">Например, арахис, лактоза</string>
 
     <!-- Child info: emergency contacts editor -->
     <string name="childinfo_add_emergency_contact">Добавить экстренный контакт</string>
@@ -86,7 +86,7 @@
     <string name="childinfo_edit_emergency_contact">Изменить экстренный контакт</string>
     <string name="childinfo_name_label">Имя</string>
     <string name="childinfo_relationship_label">Кем приходится</string>
-    <string name="childinfo_relationship_placeholder">напр., бабушка, дядя</string>
+    <string name="childinfo_relationship_placeholder">Например, бабушка, дядя</string>
     <string name="childinfo_phone_number_label">Номер телефона</string>
     <string name="childinfo_alternate_phone_optional_label">Дополнительный телефон (необязательно)</string>
     <string name="childinfo_contact_phone_marker">📞 %1$s</string>
@@ -98,13 +98,13 @@
     <string name="childinfo_address_optional_label">Адрес (необязательно)</string>
     <string name="childinfo_school_phone_optional_label">Телефон заведения (необязательно)</string>
     <string name="childinfo_grade_optional_label">Класс (необязательно)</string>
-    <string name="childinfo_grade_placeholder">напр., 3-й класс</string>
+    <string name="childinfo_grade_placeholder">Например, 3-й класс</string>
     <string name="childinfo_teacher_name_optional_label">Имя учителя (необязательно)</string>
     <string name="childinfo_teacher_email_optional_label">Эл. почта учителя (необязательно)</string>
     <string name="childinfo_save_failed">Не удалось сохранить данные ребёнка. Попробуйте ещё раз.</string>
     <string name="childinfo_children_group_label">Дети</string>
     <string name="childinfo_delete_title">Удалить %1$s?</string>
-    <string name="childinfo_delete_message">Запись, лекарства, аллергии и фотографии будут удалены с этого устройства и с устройства второго родителя.</string>
+    <string name="childinfo_delete_message">Карточка ребёнка, лекарства, аллергии и фотографии будут удалены с этого устройства и с устройства второго родителя.</string>
     <string name="childinfo_delete_confirm">Удалить</string>
     <string name="childinfo_delete_cancel">Оставить</string>
     <string name="childinfo_delete_action">Удалить ребёнка</string>

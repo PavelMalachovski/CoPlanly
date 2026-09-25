@@ -24,21 +24,21 @@
 
     <string name="calendar_filter_event_types">Типы событий</string>
     <string name="calendar_filter_hidden_types_hint">Скрытые типы не показываются в календаре</string>
-    <string name="calendar_filter_type_visible">Видимый</string>
+    <string name="calendar_filter_type_visible">Показывать</string>
     <string name="calendar_filter_new_type_label">Новый тип события</string>
-    <string name="calendar_filter_new_type_placeholder">напр., уроки музыки</string>
+    <string name="calendar_filter_new_type_placeholder">Например, уроки музыки</string>
     <string name="calendar_filter_add_button">Добавить</string>
     <string name="calendar_filter_holidays_title">Праздники</string>
     <string name="calendar_filter_holidays_subtitle">Государственные праздники и школьные каникулы</string>
 
-    <string name="calendar_weekday_header_description">Заголовок дней недели календаря</string>
+    <string name="calendar_weekday_header_description">Дни недели</string>
     <string name="calendar_day_desc_today">Сегодня</string>
     <string name="calendar_day_desc_outside_month">Вне текущего месяца</string>
     <string name="calendar_day_desc_with_parent">С кем: %1$s</string>
-    <string name="calendar_day_desc_handover">Передача от %1$s к %2$s</string>
+    <string name="calendar_day_desc_handover">Передача. До: %1$s, после: %2$s</string>
     <string name="calendar_day_desc_swap_pending">Обмен днями ждёт ответа</string>
     <string name="calendar_day_desc_school_vacation">Школьные каникулы</string>
-    <string name="calendar_day_desc_proposal_pending">Предложено для %1$s, ещё не согласовано</string>
+    <string name="calendar_day_desc_proposal_pending">Предложено: %1$s, ещё не согласовано</string>
     <plurals name="calendar_day_desc_events">
         <item quantity="one">%1$d событие</item>
         <item quantity="few">%1$d события</item>
@@ -54,9 +54,9 @@
     <string name="calendar_event_resizing_start">Изменение времени начала на %1$s</string>
     <string name="calendar_event_resizing_end">Изменение времени окончания на %1$s</string>
     <string name="calendar_event_long_pressed">Долгое нажатие, показана кнопка удаления</string>
-    <string name="calendar_event_chip_hint">Нажмите для просмотра, удерживайте для удаления, тяните за углы для изменения размера</string>
+    <string name="calendar_event_chip_hint">Нажмите для просмотра, удерживайте для удаления, тяните за края, чтобы изменить длительность</string>
     <string name="calendar_event_private">Личное событие</string>
-    <string name="calendar_event_pickup_confirmed">Забор подтверждён: %1$s</string>
+    <string name="calendar_event_pickup_confirmed">Подтверждено, что ребёнка забрали: %1$s</string>
     <string name="calendar_resize_start_handle">Изменить время начала. Тяните вверх или вниз (шаг 15 минут).</string>
     <string name="calendar_resize_end_handle">Изменить время окончания. Тяните вверх или вниз (шаг 15 минут).</string>
     <!-- Accessibility actions on an event block in Day and Week view (D-10). -->
@@ -76,7 +76,7 @@
 
     <!-- Noun phrase, not "X изменил(а)" — Russian inflects that verb for gender and a name
          cannot agree with one; the software would end up guessing or hedging with "(а)". -->
-    <string name="calendar_custody_changed_by">Изменение графика опеки от %1$s</string>
+    <string name="calendar_custody_changed_by">%1$s: изменение графика опеки</string>
     <string name="calendar_agenda_empty">Ничего не запланировано.</string>
     <string name="calendar_agenda_time_range">%1$s–%2$s</string>
     <!-- Shown when a calendar write or query fails. The calendar used to say nothing at
@@ -84,7 +84,7 @@
     <string name="calendar_operation_failed">Не удалось сохранить изменение. Возможно, оно не дошло до второго родителя.</string>
     <string name="calendar_retry">Повторить</string>
     <!-- UX-8. -->
-    <string name="calendar_agenda_custody_day">День родителя %1$s</string>
+    <string name="calendar_agenda_custody_day">Чей день: %1$s</string>
     <string name="calendar_filter_members">Показать для</string>
 
     <!-- MON-6b: a contact window on the grid. -->

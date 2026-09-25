@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="chat_new_conversation">Новый разговор</string>
-    <string name="chat_empty_title">Пока нет разговоров</string>
-    <string name="chat_empty_description">Начните разговор со вторым родителем, чтобы согласовывать расписание и делиться новостями.</string>
+    <string name="chat_new_conversation">Новая переписка</string>
+    <string name="chat_empty_title">Переписок пока нет</string>
+    <string name="chat_empty_description">Начните переписку со вторым родителем, чтобы согласовывать расписание и делиться новостями.</string>
     <string name="chat_no_messages">Пока нет сообщений</string>
     <string name="chat_messages_empty_title">Пока нет сообщений</string>
-    <string name="chat_messages_empty_description">Начните разговор, отправив сообщение второму родителю.</string>
+    <string name="chat_messages_empty_description">Отправьте второму родителю первое сообщение.</string>
     <string name="chat_type_message">Введите сообщение…</string>
     <string name="chat_send">Отправить</string>
     <string name="chat_status_sending">Отправка</string>
@@ -26,9 +26,9 @@
     <!-- Shown when the co-parent action is used on an account that has no co-parent linked. -->
     <string name="chat_no_coparent">Вы ещё не связаны со вторым родителем.</string>
     <!-- Snackbar action next to chat_no_coparent; opens the pairing screen. -->
-    <string name="chat_no_coparent_action">Связать</string>
+    <string name="chat_no_coparent_action">Подключить</string>
     <!-- Shown when the pairing state has not resolved in time; the action is worth retrying. -->
-    <string name="chat_coparent_link_pending">Проверяем связь со вторым родителем. Попробуйте ещё раз через мгновение.</string>
+    <string name="chat_coparent_link_pending">Проверяем связь со вторым родителем. Попробуйте ещё раз чуть позже.</string>
 
     <!-- Screen-reader content description for the unread-message badge on the bottom nav's Chat tab. -->
     <plurals name="chat_unread_messages_badge">
@@ -62,7 +62,7 @@
     <string name="chat_template_category_conflict_resolution">Решение разногласий</string>
     <string name="chat_template_pickup_delay_title">Задержка с передачей</string>
     <string name="chat_template_pickup_delay_content">Я задержусь с передачей [ребёнка]. Буду примерно через [сколько минут]. Извини за неудобство.</string>
-    <string name="chat_template_pickup_early_title">Ранний приезд</string>
+    <string name="chat_template_pickup_early_title">Приеду раньше</string>
     <string name="chat_template_pickup_early_content">Я приеду раньше обычного, примерно в [время]. Тебе так удобно?</string>
     <string name="chat_template_doctor_visit_title">Визит к врачу</string>
     <string name="chat_template_doctor_visit_content">[Ребёнок] сегодня был у врача по поводу [жалобы]. Диагноз: [диагноз]. Врач рекомендует [рекомендации].</string>
@@ -85,7 +85,7 @@
     <string name="chat_search_clear">Очистить</string>
     <string name="chat_search_placeholder">Поиск по сообщениям</string>
     <string name="chat_search_prompt_title">Поиск в этой переписке</string>
-    <string name="chat_search_prompt_description">Ищет среди сообщений, которые уже есть на этом телефоне. Ничего из введённого здесь его не покидает.</string>
+    <string name="chat_search_prompt_description">Поиск идёт по сообщениям, которые уже есть на этом телефоне. Введённый текст никуда не отправляется.</string>
     <string name="chat_search_no_results_title">Подходящих сообщений нет</string>
     <string name="chat_search_no_results_description">В этой переписке ничего не найдено по запросу «%1$s».</string>
     <string name="chat_search_failed_title">Поиск не сработал</string>
@@ -108,14 +108,15 @@
         <item>никогда</item>
         <item>нелеп*</item>
         <item>глуп*</item>
-        <item>смешн*</item>
+        <item>жалк*</item>
+        <item>бесполезн*</item>
         <item>бестолк*</item>
         <item>эгоист*</item>
         <item>безответствен*</item>
         <item>типичн*</item>
     </string-array>
     <!-- A thread kept after the co-parent deleted their account (GDPR review, September 2026). %1$s = their name, %2$s = the day the thread is deleted. -->
-    <string name="chat_departed_banner">%1$s удалил(а) свой аккаунт. Эта переписка будет удалена %2$s. Экспортируйте её до этого.</string>
+    <string name="chat_departed_banner">%1$s: аккаунт удалён. Эта переписка будет удалена %2$s — экспортируйте её до этого срока.</string>
     <string name="chat_departed_export">Экспортировать</string>
     <string name="chat_departed_no_sending">В эту переписку больше нельзя отправлять сообщения.</string>
     <string name="chat_departed_unnamed">Второй родитель</string>

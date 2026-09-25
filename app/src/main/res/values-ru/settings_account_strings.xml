@@ -4,11 +4,11 @@
     <string name="settings_co_parent_sync">Синхронизация со вторым родителем</string>
     <string name="settings_co_parent_sync_description">Автоматически синхронизирует события и информацию о ребёнке со вторым родителем</string>
     <string name="settings_sync">Синхронизировать</string>
-    <string name="settings_google_sync">Синхронизация с Google Календарём</string>
+    <string name="settings_google_sync">Синхронизация с Google Calendar</string>
     <string name="settings_gcal_enable_sync">Включить синхронизацию</string>
-    <string name="settings_gcal_private_note">Импортированные события остаются на этом устройстве. Google Календарь — личный, поэтому со-родителю из него ничего не передаётся.</string>
+    <string name="settings_gcal_private_note">Импортированные события остаются на этом устройстве. Google Calendar — ваш личный календарь, поэтому второму родителю из него ничего не передаётся.</string>
     <string name="settings_parent_color">Мой цвет</string>
-    <string name="settings_parent_color_desc">Как отмечаются ваши события, дни опеки и расходы. Со-родитель выбирает свой.</string>
+    <string name="settings_parent_color_desc">Как отмечаются ваши события, дни опеки и расходы. Второй родитель выбирает свой цвет.</string>
     <string name="parent_color_pink">Розовый</string>
     <string name="parent_color_blue">Синий</string>
     <string name="parent_color_purple">Фиолетовый</string>
@@ -61,7 +61,7 @@
     <string name="settings_family_kind_cancel">Отмена</string>
     <string name="settings_family_kind_kept_by_co_parent">Сохранено. Убранный вами раздел остаётся видимым, потому что его сохраняет второй родитель.</string>
     <string name="settings_family_kind_records_kept">Убрано. Записи остаются на устройстве — включите раздел здесь снова, чтобы их увидеть.</string>
-    <string name="settings_family_kind_not_saved">Не удалось сохранить — профиль ещё не загрузился. Попробуйте через мгновение.</string>
+    <string name="settings_family_kind_not_saved">Не удалось сохранить — профиль ещё не загрузился. Попробуйте чуть позже.</string>
     <string name="settings_split_ratio_title">Деление расходов</string>
     <string name="settings_split_ratio_value">%1$d / %2$d</string>
     <string name="settings_split_ratio_value_named">%1$s %2$d / %3$s %4$d</string>
@@ -79,8 +79,8 @@
     <string name="family_switcher_unread_row">Новые сообщения</string>
     <string name="family_switcher_request_other">В другой семье ждёт запрос на изменение</string>
     <string name="family_switcher_request_row">Ждёт запрос на изменение</string>
-    <string name="family_switcher_schedule_other">В другой семье ждёт предложение по расписанию опеки</string>
-    <string name="family_switcher_schedule_row">Ждёт предложение по расписанию опеки</string>
+    <string name="family_switcher_schedule_other">В другой семье ждёт предложение графика опеки</string>
+    <string name="family_switcher_schedule_row">Ждёт предложение графика опеки</string>
     <string name="settings_school_import_title">Импорт из Bakaláři</string>
     <string name="settings_school_import_description">Школьные мероприятия и учебные часы ребёнка прямо в календаре.</string>
     <string name="settings_edupage_title">EduPage</string>
@@ -93,5 +93,5 @@
 
     <!-- MON-19: Settings → App. The argument is the pause, in seconds. -->
     <string name="settings_pause_before_sending_title">Пауза перед отправкой</string>
-    <string name="settings_pause_before_sending_description">Задерживает каждое сообщение в чате на %1$d секунд с возможностью отмены и при наборе подсказывает про заглавные буквы, !!! и резкие слова. Проверка — только на этом телефоне.</string>
+    <string name="settings_pause_before_sending_description">Каждое сообщение в чате ждёт %1$d с перед отправкой — его можно отменить. При наборе подсказывает про заглавные буквы, !!! и резкие слова. Проверка — только на этом телефоне.</string>
 </resources>
