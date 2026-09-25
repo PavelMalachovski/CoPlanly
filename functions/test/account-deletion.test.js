@@ -439,6 +439,16 @@ describe('deleteAccountDataImpl', () => {
     assert.deepStrictEqual(db._store.google_oauth.map((d) => d.id), [BOB]);
   });
 
+  it('deletes the AI assist quota and only the departing parent\'s', async () => {
+    const seed = family();
+    seed.ai_usage = [{id: ALICE, day: '2026-09-25', count: 4}, {id: BOB, day: '2026-09-25', count: 1}];
+    const db = fakeDb(seed);
+
+    await myFunctions.deleteAccountDataImpl(db, ALICE);
+
+    assert.deepStrictEqual(db._store.ai_usage.map((d) => d.id), [BOB]);
+  });
+
   it('tears down every co-parent link of a parent with two families', async () => {
     // A bare `unpairCoParentImpl(db, uid)` is refused as ambiguous for a parent with two
     // co-parents, so the erasure used to run with both pairings intact: each co-parent kept a
