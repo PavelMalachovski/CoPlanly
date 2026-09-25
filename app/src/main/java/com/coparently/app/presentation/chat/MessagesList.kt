@@ -47,6 +47,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.Hyphens
 import androidx.compose.ui.unit.dp
 import com.coparently.app.R
 import com.coparently.app.domain.activity.ActivityEntityType
@@ -549,7 +550,9 @@ fun MessageItem(
                     } else {
                         MaterialTheme.colorScheme.onSurface
                     },
-                    style = MaterialTheme.typography.bodyMedium,
+                    // Hyphenated, because the bubble is capped in dp while the text scales: at
+                    // 1.5x a German compound broke mid-word with no hyphen ("…erklär / ung").
+                    style = MaterialTheme.typography.bodyMedium.copy(hyphens = Hyphens.Auto),
                     modifier = Modifier.weight(1f, fill = false)
                 )
                 if (onCardTap != null) {

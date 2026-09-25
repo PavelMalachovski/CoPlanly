@@ -38,12 +38,12 @@
     <string name="expenses_settle_up_message_owing">Vyrovnání za %2$s – dlužím ti %1$s.</string>
     <string name="expenses_this_month">Tento měsíc</string>
     <plurals name="expenses_count">
-        <item quantity="one">%1$d výdaj</item>
-        <item quantity="few">%1$d výdaje</item>
+        <item quantity="one">%1$d\u00A0výdaj</item>
+        <item quantity="few">%1$d\u00A0výdaje</item>
         <!-- Czech uses "many" for decimal counts ("1,5 výdaje"), which takes the genitive
              singular, not the genitive plural that "other" carries. -->
-        <item quantity="many">%1$d výdaje</item>
-        <item quantity="other">%1$d výdajů</item>
+        <item quantity="many">%1$d\u00A0výdaje</item>
+        <item quantity="other">%1$d\u00A0výdajů</item>
     </plurals>
     <string name="expenses_row_subtitle">%1$s · zaplatil(a) %2$s · %3$s</string>
     <string name="expenses_row_subtitle_unknown_payer">%1$s · %2$s</string>

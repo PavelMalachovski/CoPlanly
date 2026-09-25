@@ -38,10 +38,10 @@
     <string name="expenses_settle_up_message_owing">Розрахунок за %2$s — з мене %1$s.</string>
     <string name="expenses_this_month">Цей місяць</string>
     <plurals name="expenses_count">
-        <item quantity="one">%1$d витрата</item>
-        <item quantity="few">%1$d витрати</item>
-        <item quantity="many">%1$d витрат</item>
-        <item quantity="other">%1$d витрати</item>
+        <item quantity="one">%1$d\u00A0витрата</item>
+        <item quantity="few">%1$d\u00A0витрати</item>
+        <item quantity="many">%1$d\u00A0витрат</item>
+        <item quantity="other">%1$d\u00A0витрати</item>
     </plurals>
     <string name="expenses_row_subtitle">%1$s · платник: %2$s · %3$s</string>
     <string name="expenses_row_subtitle_unknown_payer">%1$s · %2$s</string>

@@ -29,6 +29,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,7 +45,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.coparently.app.presentation.theme.CoPlanlyCorners
 import com.coparently.app.presentation.theme.IconSizes
-import com.coparently.app.presentation.theme.LayoutConstants
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.labelMediumEmphasized
 import com.coparently.app.utils.LightDarkPreviews
@@ -281,6 +281,10 @@ fun PillChip(
     val shape = CoPlanlyCorners.Pill
     Row(
         modifier = modifier
+            // The touch target grows, the pill does not: this reserves the 48dp a control needs
+            // around the drawn chip (Material's own chips do the same), where a minimum height
+            // inside the clip used to inflate the visible pill to 48dp beside 32dp siblings.
+            .then(if (onClick != null) Modifier.minimumInteractiveComponentSize() else Modifier)
             .clip(shape)
             .then(if (container != null) Modifier.background(container) else Modifier)
             .then(
@@ -297,7 +301,8 @@ fun PillChip(
             // announced as one. The padding below puts a pill at roughly 28dp tall — well
             // under the 48dp minimum — and nine call sites are interactive, including the
             // "Review" action on Home's handover card. `Role.Button` is what makes TalkBack
-            // say "button" instead of reading the label as ordinary text.
+            // say "button" instead of reading the label as ordinary text; the target itself is
+            // reserved outside the clip above.
             //
             // Only the interactive branch grows: a decorative chip (a status pill, a category
             // marker) is not a target and padding it to 48dp would wreck the chip strips it
@@ -309,7 +314,7 @@ fun PillChip(
                     } else {
                         Modifier.clickable(role = Role.Button, onClick = onClick)
                     }
-                    action.defaultMinSize(minHeight = LayoutConstants.MIN_TOUCH_TARGET)
+                    action
                 } else {
                     Modifier
                 }
