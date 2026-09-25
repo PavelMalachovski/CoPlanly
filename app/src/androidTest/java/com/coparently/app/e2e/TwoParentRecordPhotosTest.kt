@@ -184,7 +184,7 @@ class TwoParentRecordPhotosTest : TwoParentTest() {
         EmulatorEnvironment.step("onFamilyCreated moves the photo and rewrites the reference")
         val moved = withTimeout(EmulatorParent.WAIT_MS) {
             var photos = photosOnServer(carol, pet.id)
-            while (photos.singleOrNull()?.let(::pathOf) != familyPath) {
+            while (photos.singleOrNull()?.let { pathOf(it) } != familyPath) {
                 delay(POLL_MS)
                 photos = photosOnServer(carol, pet.id)
             }
@@ -194,7 +194,12 @@ class TwoParentRecordPhotosTest : TwoParentTest() {
         assertGone(soloPath, reader = carol)
 
         EmulatorEnvironment.step("Carol's phone writes its stale reference back; Dan still opens the photo")
-        carol.syncService.performFullSync().getOrThrow()
+        // Carol's Room row still names the solo path. Her next save of the pet writes it over the
+        // server's rewritten reference — and widens the audience to Dan, which a save now does.
+        carol.petRepository.upsertPet(
+            pet.copy(photos = listOf(solo), familyId = familyId, lastModifiedBy = carol.uid, updatedAt = now())
+        )
+        assertEquals(listOf(solo), photosOnServer(carol, pet.id))
         dan.petRepository.pullOnce()
         val onDansPhone = checkNotNull(dan.petRepository.getPetById(pet.id))
         val viewable = checkNotNull(
