@@ -65,7 +65,7 @@ repeated here.
 | Storage limitation | Every category has a period, and the periods are enforced by scheduled sweeps (`functions/index.js`). See the ROPA. |
 | Transparency | A privacy policy written from the code. A consent dialog at the point of collection. The sign-in screen names the age limit and the terms. The export states on its face what it is and is not. |
 | Rights | Access, rectification and erasure are in the app. Portability is the export (PDF/CSV). Objection and restriction go through the privacy contact, answered within one month. |
-| Processors | Google (Firebase / Google Cloud) under the Cloud Data Processing Addendum. No other processor. |
+| Processors | Google (Firebase / Google Cloud, including Vertex AI for the optional AI writing help) under the Cloud Data Processing Addendum. No other processor. |
 | Transfers | Functions in the EU (L-3). Firestore and Storage in the location confirmed in the console (L-3, Ops). FCM, Auth, Analytics and Crashlytics under the DPF and SCCs. |
 
 ## 4. Risk register
@@ -92,6 +92,9 @@ code today.
 | R14 | **Consent not demonstrable or not specific** (health data). | 3 | 3 | 9 | A dialog at the point of collection. Version and time recorded on the profile. Withdrawal in Settings clears what this parent entered (L-2). | Low |
 | R15 | **The child's own rights ignored as they grow up.** | 2 | 2 | 4 | The policy says how a child, or a young adult, can exercise their rights through the privacy contact. The parents can delete a child's record at any time. | Low |
 | R16 | **School credentials exposed** (Bakaláři import): a stored password, or a token readable off the phone, would open the child's whole school record — grades, absences, messages. | 2 | 4 | 8 | The password is never stored, only used once on the device. The refresh token is sealed in `EncryptedPreferences` under the Keystore key, bound to the signed-in account, and cleared on sign-out, disconnect and deletion. The app reads only the timetable and events; nothing passes through our servers. HTTPS only. | Low |
+| R17 | **The co-parent's messages are processed at the other parent's request** (AI reply suggestion, MON-12): the author of the words did not ask for the processing and may object to it. | 3 | 2 | 6 | Opt-in consent of the requester, recorded with its version (`users/{uid}.aiConsent`), withdrawable. Legitimate interest of the requester in answering correspondence addressed to them (Art. 6(1)(f)), stated in the policy with a right to object. **Minimisation**: the last 20 messages only, attachment names only, the co-parent named by display name, nothing stored or logged by us. EU processing on Vertex AI under Google's DPA. The server checks the requester is a participant of a live pairing, as the chat rules do. Open: an in-app way for the co-parent to opt their messages out (owner decision); counsel's view on incidental Art. 9 data in messages. | Low / Medium |
+| R18 | **Prompt injection**: the co-parent writes a message meant to steer the model (make it insult, disclose, or put words in the requester's mouth). | 3 | 2 | 6 | Messages are sent as inert JSON inside delimiting tags that a message cannot close (`<`, `>`, `&` escaped); the system prompt says their content is data and any instruction inside it is to be ignored. The model has **no tools and no data** beyond those 20 messages, so an injection can only change the draft. The draft goes to the requester alone and is never sent automatically. Tested in `functions/test/ai-assist.test.js`. | Low |
+| R19 | **The model drafts something harmful** — hostile, inaccurate, inventing a commitment, or reading like legal advice — and a parent sends it in a dispute. | 2 | 3 | 6 | The parent always edits and sends the draft themselves; nothing is posted by the model. The prompt asks for brief, neutral, BIFF-style text, forbids invented facts (placeholders instead), legal, medical or financial advice and blame. A small output cap, and a low temperature where the chosen model accepts one (`AI_TEMPERATURE`). The summary is restricted to validated numbers. The app is to present it as a suggestion in the message box, never as a sent message (client contract). Messages may mention a child's health: counsel to confirm the basis for that incidental Art. 9 data (see ROPA P15). | Low |
 
 ## 5. Measures summary
 
@@ -149,6 +152,7 @@ takeover), are accepted, with the second factor planned (L-18).
 | Second factor | R11 | Engineering | Within 6 months of release |
 | Inactive-account rule | R10 | Owner | Within 6 months of release |
 | Tester consultation recorded in §6 | — | Owner | Before public release |
+| Before enabling AI writing help: verify Claude's availability in the chosen EU Vertex region, configure Vertex data retention (prompt caching, abuse logging, zero data retention if eligible) and fill `{{AI_PROVIDER_RETENTION}}`; counsel to confirm the Art. 6(1)(f)/Art. 9 reasoning of ROPA P15; decide whether a co-parent can opt their messages out | R17–R19 | Owner, counsel | Before the client flag is switched on |
 
 ## 9. Sign-off
 

@@ -119,6 +119,21 @@ Play data types are *Crash logs* and *Diagnostics* / *App interactions* under Ap
 **No advertising, no ad IDs, no tracking.** The app declares no advertising SDK and does not
 link data to third-party identifiers.
 
-**AI.** No user data reaches a generative model: the AI subsystem was deleted in August 2026
-(MON-7). **If any AI feature ships, this declaration must be revisited**, because the
-prompts would carry calendar contents and message text to a third party.
+**AI writing help (MON-12).** The Gemini subsystem was deleted in August 2026 (MON-7). Its
+replacement is server-side only: the `aiAssist` Cloud Function sends a chat thread's last 20
+messages (a reply suggestion) or a month's figures (a summary) to Claude on Google Cloud Vertex AI
+in an EU region, **only after the parent's opt-in consent and only when they tap for it**, and
+keeps neither the prompt nor the answer. It is off on the server until configured and behind a
+client flag until billing exists. **While the flag is off in the release build, nothing changes in
+this declaration.** Once it is on, re-check two rows before submitting:
+
+- **Messages (in-app)** — still *Collected*; add the purpose *App functionality* for the AI draft
+  if it is not already covered, and keep it **Not shared**: Google Vertex AI processes the text
+  as our processor, which Play does not count as sharing. Mark the AI use as *optional*.
+- **Purchase/financial info** and **Name** — the month summary sends the parents' names and
+  expense totals to the same processor; already *Collected*, still *Not shared*.
+
+No new data type is collected: the only thing stored is a per-account daily request count
+(`ai_usage/{uid}`), which is not a Play data type. If Google's Vertex AI retention for the project
+turns out to include abuse-monitoring logs of prompts, say so in the privacy policy
+(`{{AI_PROVIDER_RETENTION}}`); it does not change the Play answers, since Google acts as processor.

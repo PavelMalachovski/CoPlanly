@@ -84,7 +84,7 @@ invocation is yours.
 | **MON-6b** | Contact windows ship (schema 36), on the grid and on Home's today card; left: verifying the mixed-version path on two phones | P2 | S |
 | **MON-8** | Bakaláři import **built**; EduPage waits for one real capture from a parent account | P2 | L |
 | **MON-11** | Payments (MVP 3) — the entitlement model, after MON-1 decides the price | P2 | L |
-| **MON-12** | Intelligent suggestions (MVP 3) — behind SEC-1's proxy, never with a key in the client | P3 | M |
+| **MON-12** | **Server half built** (September 2026): the `aiAssist` callable — reply suggestion and month summary, Claude on Vertex AI in an EU region, consent-gated, quota'd, off until configured; left: the Android client behind its flag, the owner's Vertex set-up and retention check, counsel on ROPA P15 | P3 | M |
 | **MON-13** | The tables, Germany's Länder, Slovakia's kraje and sourced school vacations (Slovakia nationwide and per kraj, Austria nationwide, Germany per Land) are done — left: Austria's per-Land breaks (not final in the source), Slovakia's half-year day (not in the dataset), and whether Austria's patron-saint days are drawn at all | P2 | M |
 | **FAM-4** | **Built** (schema 42, PR #101: per-child overrides in the one custody document, rules and rules tests, grid band behind the one-child filter, Home hero, custody-setup section; feed stays family); left: the rules deploy and a look on one and two phones — see DEVICE-CHECKLIST §3.13 | P2 | — |
 | **MON-14** | **Built** (schema 38, `38.json` committed; rules, feed port, custody screen); left: the rules deploy and a look at the grid — see the 👁 table | P1 | — |
@@ -1762,9 +1762,36 @@ subscription lapses — it should: the file is the parent's, and a record that v
 non-payment is the opposite of what it sells — and gate the *making* of a new one, in
 `ExportViewModel.export`, behind a server-checked entitlement rather than a client flag.
 
-### MON-12 · P3 · M · Intelligent suggestions (MVP 3)
+### MON-12 · **SERVER HALF BUILT** · P3 · M · Intelligent suggestions (MVP 3)
 
-**Where:** ☁️ cloud, and only behind **SEC-1**'s proxy.
+**Where:** ☁️ cloud, and only behind **SEC-1**'s proxy — done for the server (September 2026);
+📱 the client; 🔑 the owner's Google Cloud steps.
+
+**Built (server, September 2026, owner decisions).** One callable, `aiAssist`
+(`functions/ai-assist.js`, `europe-west3`), two tasks: a **reply suggestion** in the chat (the
+thread's last 20 messages, attachment names only, one short neutral BIFF-style reply in the
+caller's language, from the caller's side) and a **month summary** (3–5 sentences restating
+figures the phone computed; no message text). The model is **Claude on Google Cloud Vertex AI in an
+EU region** — the functions' service account, no key anywhere — chosen so the text stays in the EU
+under the Google Cloud DPA the project already has. Gates: `AI_ENABLED` plus a configured model and
+an `europe-…` region (`ai-disabled` otherwise), the caller's recorded consent
+(`users/{uid}.aiConsent`, `AI_CONSENT_VERSION` 1), participant of a live pairing for a reply, a
+daily quota in the closed `ai_usage/{uid}` (30 by default). Messages go in as inert, delimited data
+(prompt injection from the other parent); nothing is stored or logged but uid, task, token counts
+and latency. `CLAUDE.md` item 36 holds the invariants; `docs/legal/` P15 and DPIA R17–R19 the
+reasoning.
+
+**Left, in order:**
+1. 📱 The Android client (the chat's template chip and a month card), behind a feature flag that
+   is **off in release** until billing (MON-11) exists; the consent dialog writes `aiConsent`.
+2. 🔑 The owner: enable Vertex AI and the Claude model in Model Garden in an EU region (check
+   availability per region), grant `roles/aiplatform.user`, decide Vertex's data retention
+   (prompt caching, abuse logging, zero data retention) and fill the policy's
+   `{{AI_PROVIDER_RETENTION}}`, set `AI_ENABLED`/`AI_MODEL`/`AI_VERTEX_REGION`, deploy the function
+   and the rules (`functions/README.md`, "AI assist").
+3. ⚖️ Counsel: the Art. 6(1)(f) reading of the co-parent's messages and incidental Art. 9 data in
+   them (ROPA P15, DPIA R17); whether the co-parent gets an in-app opt-out.
+4. The tone check below is **not** part of this; it is still a separate decision.
 
 MVP 3's "suggestions based on past schedules". Two roads, and only one needs a model at all:
 patterns in the existing custody and event data are ordinary computation on-device, while anything

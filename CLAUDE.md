@@ -7,9 +7,11 @@ Guidance for Claude Code (and other AI assistants) working in this repository.
 CoPlanly — an Android shared-calendar app for separated parents. Kotlin + Jetpack Compose
 (Material 3), Clean Architecture with Hilt, Room as the offline-first source of truth,
 Firebase (Auth/Firestore/FCM) for sync between the two parents, Google Calendar integration.
-**No AI:** the Gemini subsystem was deleted in August 2026 (MON-7) — ~3,200 lines reachable from
-no navigation graph, with the API key shipping in every APK. If AI returns it goes behind the
-Cloud Function proxy (SEC-1), never with a key in the client. See `docs/AUDIT-2026-08.md` §6.
+**No AI in the client:** the Gemini subsystem was deleted in August 2026 (MON-7) — ~3,200 lines
+reachable from no navigation graph, with the API key shipping in every APK. AI came back **only**
+behind the Cloud Function proxy (SEC-1), never with a key in the client: the `aiAssist` callable
+(MON-12, September 2026; "Things that are easy to get wrong" item 36), off until the owner
+configures it. See `docs/AUDIT-2026-08.md` §6.
 
 **The plan of record is `docs/ROADMAP.md`** — one document, merged on 2026-08-25 from
 `docs/BACKLOG.md` and `docs/CoPlanly/MVP_phases.md`, both now deleted (`.cursor/roadmap.md` is the
@@ -1832,6 +1834,40 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     Nothing here reaches our servers except the imported events themselves, which sync like any
     shared event. What a live school server answers is unverified until `docs/DEVICE-CHECKLIST.md`
     §3.18 is run.
+
+36. **AI assist is a server-side callable, off until configured, and never sees more than it
+    needs** (MON-12, September 2026, owner decisions; `functions/ai-assist.js`, `aiAssist` in
+    `functions/index.js`, `functions/README.md` "AI assist"). Claude on **Google Cloud Vertex AI in
+    an EU region**, called as the functions' service account. Seven things not to undo.
+    - **No key, no model call from the client, ever.** The app calls `aiAssist` in `europe-west3`;
+      the model is reached only from the function. Don't add an SDK, a key or a direct endpoint to
+      the app, and don't add a "just for debug" path.
+    - **Off until the owner configures it.** `aiConfig` needs `AI_ENABLED=true`, an `AI_MODEL` (no
+      default: availability per EU region is the owner's to check) and an `europe-…`
+      `AI_VERTEX_REGION`; anything less answers `ai-disabled` and reads nothing. Don't add a default
+      model or accept a non-EU region. The client's feature flag stays **off in release** until
+      billing (MON-11) exists.
+    - **Consent first.** `users/{uid}.aiConsent = {version, grantedAt}`, written by the owner only
+      (`firestore.rules`' `aiConsentShapeValid`), deleted to withdraw; `AI_CONSENT_VERSION` (1) is
+      mirrored by the app — bump both when the consent wording changes. The check runs before any
+      thread is read.
+    - **A reply reads 20 messages of a live thread, and nothing else.** The caller must be a
+      participant, the pairing live on both profiles and the thread not kept after a departure —
+      the same checks as `notifyOfChatMessage` and the `messages` rule. Attachments are named,
+      never downloaded. Don't raise the cap or add other collections (events, child records) to
+      the prompt without a new legal assessment: ROPA P15 and DPIA R17 are written for this scope.
+    - **A summary is numbers only.** `validateMonthStats` refuses any key outside its list, so free
+      text cannot ride along; no message text is read for it. A new figure is a change to that list,
+      the prompt, the test and the policy.
+    - **Messages are data, not instructions** (the other parent writes half of them): inert JSON
+      inside tags a message cannot close, and a system prompt that says so. Keep both; the draft
+      goes to the requester only, who edits and sends it — nothing here writes to the chat.
+    - **Nothing is stored or logged but numbers.** One log line: uid, task, outcome, token counts,
+      latency, HTTP status. Never a prompt, a message, the hint, the figures or the output — not
+      even in an error. `ai_usage/{uid}` (a UTC date and a count, closed to clients, deleted with the
+      account) is the only thing written. `test/ai-assist.test.js` pins each of these.
+    Not AI, and not to be confused with it: `ToneCheck` (item 28), on-device receipt OCR (item 10)
+    and on-device voice-to-text — none of them may start calling this function.
 
 ## Legal and GDPR (September 2026) — keep consistent
 
