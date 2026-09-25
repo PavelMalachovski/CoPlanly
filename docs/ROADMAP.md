@@ -96,6 +96,7 @@ invocation is yours.
 | **MON-21** | **Built** (a proposal from an agreed plan answer, citing it; rules and rules tests); left: the rules deploy and a look on two phones — see the 👁 table | P2 | — |
 | **MON-22** | **Built** (schema 41, PR #101): a local-only journal and an opt-in export section; left: the device check (DEVICE-CHECKLIST §6) | P2 | — |
 | **REL-4 (drafting)** | Done as far as the code can answer: every placeholder left is a fact only the owner has, listed at the top of each document. The deletion page and the privacy link in the app are written | P0 | S |
+| **L-4 (photos)** | **Built** (family-keyed Storage paths, no download URLs, pre-pairing photos moved by the server, legacy purge callable; rules, functions, unit and e2e tests); left: `firebase deploy --only storage`, the functions deploy, `purgeLegacyPhotoPaths` once, and DEVICE-CHECKLIST §3.10 on two phones | P0 | S |
 
 ### ⚙️ Cloud, but a CI job has to be built first
 
@@ -322,9 +323,11 @@ is lost, since Room is the source of truth, but it is alarming to watch.
       `receipts/` and `event_images/` only, so `pet_photos/**` and `medical_photos/**` fall through
       to the catch-all `allow read, write: if false` and **every pet and medical photo upload is
       refused today**. The client path is sound and was ruled out end to end. The ruleset *in the
-      repository* is covered by `firestore-tests/rules/storage.test.js` (this line used to say
-      Storage had no coverage); only the deploy settles what the bucket enforces. This also closes
-      the unchecked box at `docs/REVIEW-2026-07-23.md:65`.
+      repository* is covered by `firestore-tests/rules/storage-record-photos.test.js` and
+      `storage-shared-files.test.js` (this line used to say Storage had no coverage); only the
+      deploy settles what the bucket enforces. This also closes the unchecked box at
+      `docs/REVIEW-2026-07-23.md:65`. Since L-4 a build uploads photos only under the family-keyed
+      paths, so **nothing uploads until this deploy**; after it, run `purgeLegacyPhotoPaths` once.
 
 **And the accounts:**
 
@@ -352,8 +355,16 @@ sign-off, not a first reading.
       the parent's own medical profile removed, a departed parent's chat kept 30 days for the
       co-parent, export receipts 10 years, a consent dialog before a child's health data, Cloud
       Functions in `europe-west3`).
-- [ ] **L-4 — photos behind rules, not unguessable URLs** (medical, pet, receipt and event photos;
-      SEC-6's Storage line below). Blocks publication.
+- [x] **L-4 — photos behind rules, not unguessable URLs** (medical, pet, receipt and event photos;
+      September 2026). Family-keyed paths (`{prefix}/{familyId}/{recordId}/…`, `isOneOfPair`),
+      `solo_{uid}` for a photo taken before pairing — moved into the family by `onFamilyCreated`
+      and `backfillRecordFamilyIds` — no download URLs (a `ph1|path|type|size|sha256` reference,
+      downloaded as the reader through the digest-checked cache), guests, friends and
+      professionals never see a photo, both parents may delete, nothing is overwritten. Tests:
+      `storage-record-photos.test.js`, `functions/test/record-photos.test.js`, `RecordPhotoTest`,
+      `TwoParentRecordPhotosTest`. **Still Ops, and still blocking:** `firebase deploy --only
+      storage`, the functions deploy, then `purgeLegacyPhotoPaths` once (`LEGAL-REVIEW-2026-09.md`
+      §4).
 - [ ] Confirm the Firestore/Storage location is in the EU; a new EU project if not (L-3).
 - [ ] Counsel's sign-off on the policy, the terms and the DPIA; the director signs the DPIA.
 - [ ] Owner decisions the review left open: an inactive-account rule (L-16), keeping a departed
@@ -630,13 +641,11 @@ Open, in the order they matter:
       revisit. Deciding these needs a person — a
       per-record "which family is this" prompt — not a server heuristic. Count them first:
       `backfillRecordFamilyIds` reports `unresolved`, and today it is expected to be near zero.
-- [ ] Cloud Storage: any signed-in user can still overwrite or delete any object (audit §3.1,
-      SEC-1 §1). **The legal review makes this a release blocker** (`LEGAL-REVIEW-2026-09.md`
-      L-4): `medical_photos/` holds photographs of a child's medical documents, and their download
-      URLs outlive a guest's or an ex-partner's revoked access. The shape to copy is MON-23's —
-      family-keyed paths gated by `isOneOfPair`, downloads as the reader, no download URLs — which
-      needs no cross-service rule. The cross-service rule is drafted in the audit report; the emulator cannot
-      evaluate `firestore.get()` from Storage rules, so it needs a staging bucket.
+- [x] Cloud Storage: any signed-in user could overwrite or delete any object (audit §3.1,
+      SEC-1 §1; `LEGAL-REVIEW-2026-09.md` L-4). **Fixed in code (September 2026)** with MON-23's
+      shape: every photo prefix is family-keyed and gated by `isOneOfPair`, read as the reader,
+      with no download URLs and no overwrite — no cross-service rule needed. What remains is the
+      deploy below, and the documented cost that a path does not narrow at unpair.
 - [ ] Invite-code redemption has no rate limit and no App Check. Space is 31⁶ and codes expire in
       24 h, so this is a growing risk, not a live one; `enforceAppCheck` needs the client wired
       to Play Integrity first.

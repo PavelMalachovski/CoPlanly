@@ -418,6 +418,26 @@ budgets recorded before pairing uploaded with `familyId: ""`): anything the trig
 pair formed before it was deployed, a failed run, a pre-pairing upload that landed after it —
 is stamped on the next run.
 
+**Step 3 and the trigger also move record photos** (L-4, `record-photos.js`). A photo a parent
+added before they had a co-parent is stored at `{prefix}/solo_{uid}/{recordId}/…`, readable by
+them alone. For every author whose family was resolved (never for a skipped one), each such photo
+on their own records naming that family is copied to `{prefix}/{familyId}/{recordId}/…` (metadata
+included), the reference on the record rewritten, and the personal copy deleted. Idempotent; the
+summary's `photos` counts `moved`, `rewritten` and `missing` (a reference whose object was in
+neither place, left as it is).
+
+### purgeLegacyPhotoPaths (L-4, once)
+
+Operator-only on the same `BACKFILL_ADMIN_UIDS` allow-list. Deletes every object under the flat
+photo layouts from before L-4 — `receipts/{id}.jpg`, `event_images/{id}.jpg`,
+`medical_photos/{childId}/{photoId}.jpg`, `pet_photos/{petId}/{photoId}.jpg` — and clears the
+download URLs and flat paths the records still carry (`receiptUrl`, `imageUrl` blanked; legacy
+entries removed from `medicalPhotos`/`photos`; nothing else on the record is written). An owner
+decision: before release these are test data, deleted rather than migrated. Run it once, **after**
+`firebase deploy --only storage` (from then on no client reaches those paths anyway); a second run
+reports zeros. It returns `{objectsDeleted, recordsCleared, perCollection}` — record it in the ops
+log.
+
 **Run `backfillParentSlots` before step 2** if any pair still shares a slot. Step 2 records the
 slots the two profiles hold and counts how many pairs came out indistinct (`sameSlot`); it does
 not decide who is parent 1, because that needs the invitation. Running them the other way round

@@ -67,14 +67,14 @@ users.
 **Where it is processed.** Cloud Functions run in `europe-west3`; Firestore and Storage in the
 project's location, which must be in the EU (`LEGAL-REVIEW-2026-09.md` L-3).
 
-**Photos are stored under unguessable paths, not access-controlled ones.** Cloud Storage rules
-cannot read Firestore, so a photograph's URL is protected by being unguessable rather than by
-a rule that knows who a parent is. This is documented at length in `storage.rules`. It does
-not change the declaration, but it is the honest state of the control and should be fixed
-before this ships (see `docs/ROADMAP.md`, **SEC-1**). **The vault and chat attachments
-(MON-23) are the exception**: their rules gate on the family id in the path, which names the
-family's two parents, so only those two can download them — with the one caveat `storage.rules`
-states, that the path still names an ex-partner after an unpair.
+**Every photo and file is access-controlled by its family** (L-4, September 2026; MON-23 before
+it). Receipts, event photos, medical and pet photos, vault documents and chat attachments are
+stored under a path that names the family's two parents, and `storage.rules` lets only those two
+download them — not a guest, a calendar friend or a professional. No public download link is ever
+created. A photo taken before a parent linked a co-parent is readable by that parent alone until
+the server moves it into the family. The one caveat `storage.rules` states: the path still names
+an ex-partner after an unpair. This does not change the declaration (*Photos: collected, shared
+with the co-parent*); it is what makes "shared" mean "with the other parent" and nobody else.
 
 **The Bakaláři school import collects no credentials.** The parent signs in on the phone, which
 talks to the school's server directly; the password is used once and never stored, and only a

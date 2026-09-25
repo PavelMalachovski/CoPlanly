@@ -127,7 +127,10 @@ completes — nothing is lost, since Room is the source of truth, but it is alar
 6. `firebase deploy --only storage`. The bucket still runs its July 2026 rules, which cover
    `receipts/` and `event_images/` only, so `pet_photos/**` and `medical_photos/**` fall through to
    the catch-all `allow read, write: if false` and **every pet and medical photo upload is refused
-   right now.** The client path is sound and was ruled out end to end.
+   right now.** The client path is sound and was ruled out end to end. Since L-4 the repository's
+   rules also key every photo on its family's path; a build carrying L-4 uploads nothing until
+   this deploy. Then run `purgeLegacyPhotoPaths` once (functions/README.md), which deletes the
+   photos stored under the old flat paths — test data, by owner decision.
 
 **And one decision that cannot be revisited:** the Firestore region. An EU region makes the whole
 GDPR story simpler and **cannot be changed once data exists.** Check what `coparently-a39c9` uses

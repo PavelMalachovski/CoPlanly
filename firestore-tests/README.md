@@ -4,10 +4,11 @@ Offline tests for `firestore.rules` **and `storage.rules`**, run against the Fir
 Cloud Storage emulators with `@firebase/rules-unit-testing`. No deploy, no device, no
 production project.
 
-The directory name predates the Storage half. Those rules had no coverage of any kind until
-`rules/storage.test.js`, which is how `pet_photos/**` reached a state where the ruleset here
-grants an upload the live bucket refuses — the tests prove the ruleset in this repository, and
-say nothing about what is deployed.
+The directory name predates the Storage half. Those rules had no coverage of any kind until the
+September 2026 pass (now `rules/storage-record-photos.test.js` and
+`rules/storage-shared-files.test.js`), which is how `pet_photos/**` reached a state where the
+ruleset here grants an upload the live bucket refuses — the tests prove the ruleset in this
+repository, and say nothing about what is deployed.
 
 They exist because the alternative — deploying a rule change to `coparently-a39c9` and
 watching a phone — is how a broken `expenses` delete rule reached production once already.
@@ -44,7 +45,7 @@ npm run test:only                                                    # terminal 
 | `fixtures/rules-b2bf6b83-incident.rules` | Frozen copy of the ruleset blamed for the expenses-delete incident |
 | `rules/expenses-delete-incident.test.js` | The incident, run against **both** that ruleset and the current one |
 | `rules/is-partner-of.test.js` | The `isPartnerOf` helper against every shape a `users` document can have |
-| `rules/storage.test.js` | `storage.rules`: the four prefixes, the JPEG and 5 MB limits, and the closing deny-all |
+| `rules/storage-record-photos.test.js` | `storage.rules` for record photos (L-4): family paths (both parents read, create, delete; strangers and guests never), `solo_` paths (the uploader alone), the stamp, image types and 10 MB cap, no overwrite, the flat layouts from before L-4 closed, and the closing deny-all |
 | `rules/notification-queue.test.js` | The enqueue allow path (co-parent target) and the phishing denials |
 | `rules/events.test.js` | `events` read/create/update/delete and the `sharedWith` sync query |
 | `rules/child-info.test.js` | `child_info`, including a document whose `sharedWith` was stripped |
