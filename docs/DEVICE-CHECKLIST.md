@@ -859,6 +859,25 @@ Release audit R-1, R-2, R-5 and R-9 (`docs/AUDIT-2026-10-release.md`). Unit test
   `data/money/CurrencyHints.kt` with `PreferencesRepositoryImpl`, and `utils/LocalizedDates.kt`
   (`shortTime`, `ClockFormat`).
 
+### 3.17 Large screens and the scanner turned sideways · 1P [branch]
+
+Release audit R-8 and §3.1, week 8. `TwoPaneTest` measures the panes, and the UI tour's
+`light-en-100-wide` variant draws the tabs at 1280 dp. What only a device shows is a real tablet or
+foldable, a fold and unfold, and a camera turning.
+
+- [ ] On a tablet held sideways (or a foldable unfolded): Home shows two columns — contacts, the
+      handover and today on one side, the week, the changes and the month on the other. Expenses
+      shows the month's summary and chart beside its list, with no List/Analytics switch. Chat
+      with one co-parent is one centred column; with two families' threads, the list sits beside
+      the open thread and a tap changes the thread without leaving the tab.
+- [ ] Fold the phone (or turn the tablet upright): every tab goes back to one column, nothing lost
+      and nothing doubled.
+- [ ] Open the QR scanner and turn the phone sideways, then back. The preview keeps running and a
+      code scanned sideways pairs. Deny the camera with "don't ask again", turn the phone: the
+      screen still offers Settings, not Allow.
+- **If it fails:** `presentation/common/TwoPane.kt`, the tab's screen (`HomeScreen`,
+  `ExpenseScreen`, `ConversationsScreen`), `presentation/pairing/QrScannerScreen.kt`.
+
 ---
 
 ## 4. Release-build checks

@@ -177,6 +177,14 @@ short. It shows the fixes on device:
 - the onboarding split step carries its own footnote (86)
 - English times are 12-hour in both the today card and the week list (04)
 
+### Week 8 record
+
+| # | What changed |
+| --- | --- |
+| R-8 | From 840 dp the tabs are two panes (`common/TwoPane.kt`): Home's act-now half beside its read-after half; the Expenses month's summary and chart beside its list, with no List/Analytics switch; Chat's list beside the open thread, and a single thread capped at 840 dp. The pair is at most 1200 dp, centred. Built on `Row`, not `ListDetailPaneScaffold`: nothing navigates between the panes, so `material3-adaptive` would add a dependency and no behaviour |
+| §3.2 speed | A hand-written baseline profile (`app/src/main/baseline-prof.txt`, package wildcards over the start path) with `profileinstaller`; the release job's `tools/check-baseline-profile.sh` proves the app's rules merged and the APK carries the compiled profile. A recorded profile needs a Macrobenchmark module and a device per release, and stays open |
+| §3.1 scanner | The QR scanner's portrait lock is gone (Android 16 ignores it on large screens, so every device now takes the one path), and the "don't ask again" state survives a turn |
+
 ## 5. How this audit was made, and how to repeat it
 
 As in `AUDIT-2026-10-design.md` §6. Since week 6 the tour clears system error dialogs before each
