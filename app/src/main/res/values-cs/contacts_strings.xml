@@ -9,11 +9,11 @@
     <string name="contacts_call">Zavolat</string>
 
     <string name="contacts_empty">Zatím žádné kontakty.</string>
-    <string name="contacts_empty_hint">Přidejte prarodiče, lékaře nebo rodiče kamaráda k údajům dítěte a zde je budete mít na jedno klepnutí.</string>
+    <string name="contacts_empty_hint">Přidejte k údajům dítěte prarodiče, lékaře nebo rodiče kamarádů a budete jim moci zavolat jedním klepnutím.</string>
 
     <!-- Shown when there is no dialler to open — rare, but a silent no-op looks like a broken
          button. -->
-    <string name="contacts_no_dialer">Toto zařízení nemá telefon.</string>
+    <string name="contacts_no_dialer">Toto zařízení neumí volat.</string>
     <string name="contacts_vet">Veterinář</string>
 
     <!-- Empty-state action: opens the children, where a contact is added. -->

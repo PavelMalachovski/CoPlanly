@@ -6,8 +6,8 @@
     <string name="custody_child_own_schedule">Vlastní rozvrh</string>
     <string name="custody_child_family_schedule">Řídí se rodinným rozvrhem</string>
     <string name="custody_child_scope_title">Rozvrh pro: %1$s</string>
-    <string name="custody_child_scope_hint">Tímto rozvrhem se řídí jen %1$s. Sezónní rozvrhy a jednorázové výměny dnů ho nemění a ostatní děti se řídí rodinným rozvrhem.</string>
+    <string name="custody_child_scope_hint">Tímto rozvrhem se řídí jen %1$s. Sezónní rozvrhy a jednorázové výměny dnů ho nemění a ostatní děti se řídí rodinným rozvrhem.</string>
     <string name="custody_child_follow_family">Znovu se řídit rodinným rozvrhem</string>
-    <string name="custody_diff_child_schedule_changed">Mění se i vlastní rozvrh dítěte.</string>
-    <string name="home_child_with_parent_today">%1$s je dnes s: %2$s</string>
+    <string name="custody_diff_child_schedule_changed">Mění se i vlastní rozvrh dítěte.</string>
+    <string name="home_child_with_parent_today">%1$s – dnes v péči: %2$s</string>
 </resources>

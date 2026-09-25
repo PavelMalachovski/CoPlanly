@@ -14,7 +14,7 @@
     <string name="medical_intolerances_label">Intolerance</string>
     <string name="medical_intolerances_hint">Laktóza, lepek, lék…</string>
     <string name="medical_hereditary_label">Dědičná onemocnění</string>
-    <string name="medical_hereditary_hint">Onemocnění, která se v rodině opakují</string>
+    <string name="medical_hereditary_hint">Onemocnění, která se v rodině opakují</string>
     <string name="medical_vaccinations_label">Očkování</string>
     <string name="medical_vaccination_name_label">Vakcína</string>
     <string name="medical_vaccination_date_label">Datum (nepovinné)</string>

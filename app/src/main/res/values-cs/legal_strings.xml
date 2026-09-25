@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="auth_legal_notice_age">CoPlanly je určen rodičům a pečovatelům od 18 let. Pokračováním potvrzujete, že je vám alespoň 18 let.</string>
-    <string name="auth_legal_notice_with_terms">CoPlanly je určen rodičům a pečovatelům od 18 let. Pokračováním potvrzujete, že je vám alespoň 18 let, a přijímáte podmínky používání.</string>
+    <string name="auth_legal_notice_age">CoPlanly je určen rodičům a pečovatelům od 18 let. Pokračováním potvrzujete, že je vám alespoň 18 let.</string>
+    <string name="auth_legal_notice_with_terms">CoPlanly je určen rodičům a pečovatelům od 18 let. Pokračováním potvrzujete, že je vám alespoň 18 let, a přijímáte podmínky používání.</string>
     <string name="terms_of_service_title">Podmínky používání</string>
-    <string name="terms_of_service_description">Na čem se s CoPlanly dohodnete</string>
+    <string name="terms_of_service_description">Na čem se s CoPlanly dohodnete</string>
 </resources>

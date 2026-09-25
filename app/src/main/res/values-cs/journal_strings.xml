@@ -2,17 +2,17 @@
 <resources>
     <!-- The private journal (MON-22): kept on this phone only, never synced or shared. -->
     <string name="journal_title">Soukromý deník</string>
-    <string name="journal_settings_description">Vaše vlastní poznámky, uložené jen v tomto telefonu</string>
-    <string name="journal_private_notice">Tento deník můžete číst jen vy. Záznamy zůstávají v tomto telefonu: nesynchronizují se, nezálohují se a nikdy se nesdílejí s druhým rodičem. Odinstalováním aplikace nebo přihlášením k jinému účtu v tomto telefonu se smažou. Záznamy můžete sami přidat do exportu.</string>
+    <string name="journal_settings_description">Vaše vlastní poznámky, uložené jen v tomto telefonu</string>
+    <string name="journal_private_notice">Tento deník můžete číst jen vy. Záznamy zůstávají v tomto telefonu: nesynchronizují se, nezálohují se a nikdy se nesdílejí s druhým rodičem. Odinstalováním aplikace nebo přihlášením k jinému účtu v tomto telefonu se smažou. Záznamy můžete sami přidat do exportu.</string>
     <string name="journal_empty_title">Zatím žádné záznamy</string>
-    <string name="journal_empty_description">Zapište si vlastními slovy, co se stalo, dokud to máte v čerstvé paměti.</string>
+    <string name="journal_empty_description">Zapište si vlastními slovy, co se stalo, dokud to máte v čerstvé paměti.</string>
     <string name="journal_add">Nový záznam</string>
     <string name="journal_deleted">Záznam smazán</string>
-    <string name="journal_undo">Zpět</string>
+    <string name="journal_undo">Vrátit</string>
     <string name="journal_delete">Smazat záznam</string>
     <string name="journal_editor_new_title">Nový záznam</string>
     <string name="journal_editor_edit_title">Upravit záznam</string>
-    <string name="journal_editor_notice">Uloží se jen v tomto telefonu. Druhý rodič ho nikdy neuvidí.</string>
+    <string name="journal_editor_notice">Uloží se jen v tomto telefonu. Druhý rodič ho nikdy neuvidí.</string>
     <string name="journal_entry_date">Den, kterého se týká</string>
     <string name="journal_entry_text">Co se stalo</string>
     <string name="journal_save">Uložit</string>
@@ -21,6 +21,6 @@
     <string name="journal_error_save">Záznam se nepodařilo uložit. Zkuste to znovu.</string>
     <string name="journal_error_delete">Záznam se nepodařilo smazat. Zkuste to znovu.</string>
     <string name="journal_delete_confirm_title">Smazat tento záznam?</string>
-    <string name="journal_delete_confirm_message">Záznam se smaže z tohoto telefonu. Deník není uložený nikde jinde, takže záznam nepůjde obnovit.</string>
+    <string name="journal_delete_confirm_message">Záznam se smaže z tohoto telefonu. Deník není uložený nikde jinde, takže záznam nepůjde obnovit.</string>
     <string name="journal_error_signed_out">Jste odhlášeni. Přihlaste se, abyste mohli záznam uložit.</string>
 </resources>

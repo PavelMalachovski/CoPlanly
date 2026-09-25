@@ -20,11 +20,11 @@
     <string name="budget_edit_title">Upravit rozpočet</string>
     <string name="budget_delete">Smazat rozpočet</string>
     <string name="budget_delete_confirm_title">Smazat tento rozpočet?</string>
-    <string name="budget_delete_confirm_message">Limit se odstraní. Výdaje v této kategorii zůstanou.</string>
+    <string name="budget_delete_confirm_message">Limit se odstraní. Výdaje v této kategorii zůstanou.</string>
     <string name="budgets_empty_title">Zatím žádné rozpočty</string>
     <string name="budgets_empty_description">Nastavte měsíční limit pro každou kategorii, ať máte společné výdaje pod kontrolou.</string>
     <string name="expenses_empty_title">Zatím žádné výdaje</string>
-    <string name="expenses_empty_description">Zaznamenejte společný náklad — školku, oblečení, návštěvu lékaře — a rozdělte ho s druhým rodičem.</string>
+    <string name="expenses_empty_description">Zaznamenejte společný výdaj – školku, oblečení, návštěvu lékaře – a rozdělte ho s druhým rodičem.</string>
     <!-- Replaces expenses_mom_paid/expenses_dad_paid. The call site (ExpenseSummaryHeader's
          who-paid row) needs both the payer's name and the amount in one Text; the name serves
          as its own label, so nothing has to agree with it. %1$s is the payer's name, %2$s is
@@ -34,8 +34,8 @@
     <string name="expenses_balance_you_owe">Dlužíte druhému rodiči %1$s</string>
     <string name="expenses_balance_settled">Máte vyrovnáno</string>
     <string name="expenses_settle_up">Vyrovnat</string>
-    <string name="expenses_settle_up_message_owed">Vyrovnání za %2$s — dlužíš mi %1$s.</string>
-    <string name="expenses_settle_up_message_owing">Vyrovnání za %2$s — dlužím ti %1$s.</string>
+    <string name="expenses_settle_up_message_owed">Vyrovnání za %2$s – dlužíš mi %1$s.</string>
+    <string name="expenses_settle_up_message_owing">Vyrovnání za %2$s – dlužím ti %1$s.</string>
     <string name="expenses_this_month">Tento měsíc</string>
     <plurals name="expenses_count">
         <item quantity="one">%1$d výdaj</item>
@@ -53,7 +53,7 @@
     <string name="expenses_split_none">nerozděleno</string>
     <string name="expenses_delete">Smazat výdaj</string>
     <string name="expenses_deleted">Výdaj smazán</string>
-    <string name="expenses_deleted_undo">Zpět</string>
+    <string name="expenses_deleted_undo">Vrátit</string>
     <string name="expense_field_date">Datum</string>
     <string name="expense_date_confirm">OK</string>
     <string name="expense_date_cancel">Zrušit</string>
@@ -61,11 +61,11 @@
     <!-- Month navigator on the expense list -->
     <string name="expenses_prev_month">Předchozí měsíc</string>
     <string name="expenses_next_month">Následující měsíc</string>
-    <string name="expenses_month_empty">V tomto měsíci nejsou žádné výdaje.</string>
+    <string name="expenses_month_empty">V tomto měsíci nejsou žádné výdaje.</string>
 
     <!-- Warning shown when saving an expense dated outside the current month -->
-    <string name="expense_date_other_month_title">Není v aktuálním měsíci</string>
-    <string name="expense_date_other_month_message">Tento výdaj má datum %1$s, takže se v aktuálním měsíci nezobrazí. Najdete jej přepnutím měsíce na obrazovce výdajů.</string>
+    <string name="expense_date_other_month_title">Není v aktuálním měsíci</string>
+    <string name="expense_date_other_month_message">Tento výdaj má datum %1$s, takže se v aktuálním měsíci nezobrazí. Najdete jej přepnutím měsíce na obrazovce výdajů.</string>
     <string name="expense_date_other_month_confirm">Přesto uložit</string>
     <string name="expenses_category_education">Vzdělání</string>
     <string name="expenses_category_medical">Zdraví</string>
@@ -96,8 +96,8 @@
     <string name="expenses_split_proposal_confirm">Potvrdit</string>
     <string name="expenses_split_proposal_decline">Odmítnout</string>
     <string name="expenses_split_proposal_later">Později</string>
-    <string name="expenses_split_answer_failed">Odpověď na rozdělení se nepodařilo odeslat. Zkontrolujte připojení a zkuste to znovu.</string>
-    <string name="expense_split_shared">Sdílet s druhým rodičem</string>
+    <string name="expenses_split_answer_failed">Odpověď na rozdělení se nepodařilo odeslat. Zkontrolujte připojení a zkuste to znovu.</string>
+    <string name="expense_split_shared">Sdílet s druhým rodičem</string>
     <string name="expense_split_not_shared_hint">Započítá se do vašich výdajů, ale nikdo nikomu za něj nic nedluží.</string>
     <string name="expense_split_ratio">Rozdělení %1$d / %2$d</string>
     <string name="expense_split_override_hint">Jiné rozdělení jen pro tento výdaj. Dohodnuté rozdělení rodiny se nemění.</string>
@@ -111,10 +111,10 @@
     <!-- UX-17: the proposer's side of the same conversation. -->
     <string name="expenses_split_proposal_waiting_title">Čeká se na odpověď</string>
     <string name="expenses_split_proposal_waiting_body">Navrhli jste %1$d/%2$d. Druhý rodič zatím neodpověděl.</string>
-    <string name="expenses_split_proposal_withdraw">Vzít zpět</string>
+    <string name="expenses_split_proposal_withdraw">Stáhnout</string>
 
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
     <string name="expense_error_signed_out">Pro přidání výdaje musíte být přihlášeni.</string>
-    <string name="expense_warning_receipt_upload_failed">Nahrání účtenky selhalo — výdaj byl uložen bez účtenky</string>
-    <string name="expense_warning_new_receipt_upload_failed">Nahrání účtenky selhalo — výdaj byl uložen bez nové účtenky</string>
+    <string name="expense_warning_receipt_upload_failed">Nahrání účtenky selhalo – výdaj byl uložen bez účtenky</string>
+    <string name="expense_warning_new_receipt_upload_failed">Nahrání účtenky selhalo – výdaj byl uložen bez nové účtenky</string>
 </resources>

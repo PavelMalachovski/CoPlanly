@@ -1,35 +1,35 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Czech translations of onboarding_strings.xml. -->
 <resources>
-    <string name="onboarding_title">Nastavení</string>
-    <string name="onboarding_progress">Krok %1$d z %2$d</string>
+    <string name="onboarding_title">Začínáme</string>
+    <string name="onboarding_progress">Krok %1$d z %2$d</string>
     <string name="onboarding_next">Další</string>
     <string name="onboarding_back">Zpět</string>
     <string name="onboarding_skip">Přeskočit</string>
     <string name="onboarding_finish">Hotovo</string>
     <string name="onboarding_intro_title">Několik otázek, než začnete</string>
-    <string name="onboarding_intro_body">CoPlanly umí uchovat důležité údaje o vaší rodině — krevní skupinu, alergie, telefon na babičku — aby se ten, kdo je zrovna s dítětem, dokázal v nečekané situaci rychle zorientovat.\n\nVšechno kromě vašeho jména je nepovinné a můžete to doplnit později v nastavení.</string>
-    <string name="onboarding_footnote">Uchováváme pro vás a druhého rodiče, pro případ nouze.</string>
-    <string name="onboarding_profile_title">O vás</string>
-    <string name="onboarding_profile_name_required">Jméno je jediné, co aplikace potřebuje — podepisuje se jím každá událost i každý výdaj.</string>
+    <string name="onboarding_intro_body">CoPlanly umí uchovat důležité údaje o vaší rodině – krevní skupinu, alergie, telefon na babičku – aby se ten, kdo je zrovna s dítětem, dokázal v nečekané situaci rychle zorientovat.\n\nVšechno kromě vašeho jména je nepovinné a můžete to doplnit později v nastavení.</string>
+    <string name="onboarding_footnote">Uchováváme pro vás a druhého rodiče, pro případ nouze.</string>
+    <string name="onboarding_profile_title">O vás</string>
+    <string name="onboarding_profile_name_required">Jméno je jediné, co aplikace potřebuje – podepisuje se jím každá událost i každý výdaj.</string>
     <string name="onboarding_child_title">Vaše děti</string>
-    <string name="onboarding_child_body">Jedno pole pro každé dítě. Léky, kroužky a údaje o škole můžete doplnit později v nastavení.</string>
+    <string name="onboarding_child_body">Jedno pole pro každé dítě. Léky, kroužky a údaje o škole můžete doplnit později v nastavení.</string>
     <string name="onboarding_relatives_title">Kdo může pomoci</string>
-    <string name="onboarding_relatives_body">Babička, dědeček, teta, strýc — kdokoli, kdo může dítě vyzvednout nebo komu se zavolá v nouzi.</string>
-    <string name="onboarding_relatives_needs_child">Tyto kontakty se ukládají k dítěti, takže nejdřív přidejte dítě — vraťte se o krok zpět, nebo je doplňte později v nastavení.</string>
+    <string name="onboarding_relatives_body">Babička, dědeček, teta, strýc – kdokoli, kdo může dítě vyzvednout nebo komu se zavolá v nouzi.</string>
+    <string name="onboarding_relatives_needs_child">Tyto kontakty se ukládají k dítěti, takže nejdřív přidejte dítě – vraťte se o krok zpět, nebo je doplňte později v nastavení.</string>
     <string name="onboarding_custody_title">Rozvrh péče</string>
-    <string name="onboarding_custody_body">Určete, které dny je dítě u koho z vás. Kdykoli to můžete změnit a druhý rodič bude muset se změnou souhlasit.</string>
+    <string name="onboarding_custody_body">Určete, které dny je dítě u koho z vás. Kdykoli to můžete změnit a druhý rodič bude muset se změnou souhlasit.</string>
     <string name="onboarding_custody_open">Sestavit rozvrh</string>
     <string name="onboarding_family_title">Koho vychováváte společně?</string>
-    <string name="onboarding_family_body">Pokud máte obojí, vyberte obě možnosti. Později to změníte v Nastavení.</string>
+    <string name="onboarding_family_body">Pokud máte obojí, vyberte obě možnosti. Později to změníte v Nastavení.</string>
     <string name="onboarding_family_children">Děti</string>
-    <string name="onboarding_family_children_hint">Záznamy o dětech, kontakty a údaje o škole</string>
+    <string name="onboarding_family_children_hint">Záznamy o dětech, kontakty a údaje o škole</string>
     <string name="onboarding_family_pets">Mazlíčci</string>
-    <string name="onboarding_family_pets_hint">Záznamy o mazlíčcích, očkování a číslo na veterináře</string>
+    <string name="onboarding_family_pets_hint">Záznamy o mazlíčcích, očkování a číslo na veterináře</string>
     <string name="onboarding_pet_title">Vaši mazlíčci</string>
-    <string name="onboarding_pet_body">Jedno pole pro každého mazlíčka — stačí jméno a druh. Očkování, poznámky ke krmení a veterinář přijdou později na obrazovce mazlíčka.</string>
+    <string name="onboarding_pet_body">Jedno pole pro každého mazlíčka – stačí jméno a druh. Očkování, poznámky ke krmení a veterinář přijdou později na obrazovce mazlíčka.</string>
     <string name="onboarding_split_title">Jak budete dělit výdaje?</string>
-    <string name="onboarding_split_body">Napůl, pokud se nedohodnete jinak. Jakmile připojíte druhého rodiče, změnu bude potvrzovat on — a již zadané výdaje si ponechají své rozdělení.</string>
+    <string name="onboarding_split_body">Napůl, pokud se nedohodnete jinak. Jakmile propojíte druhého rodiče, bude muset každou změnu potvrdit – a již zadané výdaje si ponechají své rozdělení.</string>
     <string name="onboarding_split_value">Vy %1$d / Druhý rodič %2$d</string>
     <string name="onboarding_child_add">Přidat další dítě</string>
     <string name="onboarding_child_unnamed">Dítě %1$d</string>
@@ -39,31 +39,31 @@
 
     <!-- The co-parent link, which comes first (September 2026): the link, what it brought back, and
          the wording the split and custody steps use once there is a co-parent to name. -->
-    <string name="onboarding_coparent_title">Propojte se s druhým rodičem</string>
-    <string name="onboarding_coparent_body">Pokud druhý rodič už CoPlanly používá, zadejte kód: děti, zvířata, rozvrh péče i dělení nákladů se přenesou samy — nic nebudete zadávat dvakrát. Pokud ještě ne, pošlete pozvánku: druhý rodič uvidí všechno, co tady vyplníte.</string>
+    <string name="onboarding_coparent_title">Propojte se s druhým rodičem</string>
+    <string name="onboarding_coparent_body">Pokud druhý rodič už CoPlanly používá, zadejte jeho kód: děti, mazlíčci, rozvrh péče i rozdělení výdajů se přenesou samy – nic nebudete zadávat dvakrát. Pokud ještě ne, pošlete mu pozvánku: uvidí všechno, co tady vyplníte.</string>
     <string name="onboarding_coparent_enter_code">Mám kód</string>
     <string name="onboarding_coparent_invite">Pozvat druhého rodiče</string>
     <string name="onboarding_coparent_later">Teď ne</string>
-    <string name="onboarding_coparent_linked_title">Propojeno s %1$s</string>
-    <string name="onboarding_coparent_linked_body">Všechno, co už %1$s zadal(a), se přenese k vám. Zkontrolujte to v dalších krocích a doplňte, co chybí.</string>
-    <string name="onboarding_coparent_fetching">Načítáme údaje od %1$s…</string>
+    <string name="onboarding_coparent_linked_title">Propojeno: %1$s</string>
+    <string name="onboarding_coparent_linked_body">Všechno, co už %1$s zadal(a), se přenese k vám. Zkontrolujte to v dalších krocích a doplňte, co chybí.</string>
+    <string name="onboarding_coparent_fetching">Načítáme, co zadal(a) %1$s…</string>
     <string name="onboarding_coparent_fetching_hint">Můžete pokračovat. Co ještě nedorazilo, dorazí na pozadí.</string>
-    <string name="onboarding_coparent_found_title">Už zadáno — %1$s</string>
+    <string name="onboarding_coparent_found_title">Už zadal(a) %1$s</string>
     <string name="onboarding_coparent_found_children">Děti</string>
-    <string name="onboarding_coparent_found_pets">Zvířata</string>
+    <string name="onboarding_coparent_found_pets">Mazlíčci</string>
     <string name="onboarding_coparent_found_custody">Rozvrh péče</string>
-    <string name="onboarding_coparent_found_split">Dělení nákladů</string>
+    <string name="onboarding_coparent_found_split">Rozdělení výdajů</string>
     <string name="onboarding_coparent_found_set">Nastaveno</string>
-    <string name="onboarding_coparent_nothing_yet">Zatím nic nedorazilo. Údaje přijdou, jakmile bude telefon %1$s online — můžete pokračovat a vše zadané se objeví později.</string>
-    <string name="onboarding_from_coparent">Od %1$s: zkontrolujte údaje a doplňte, co chybí.</string>
+    <string name="onboarding_coparent_nothing_yet">Zatím nic nedorazilo. Údaje přijdou, až bude telefon, který používá %1$s, online – můžete pokračovat a vše zadané se objeví později.</string>
+    <string name="onboarding_from_coparent">Zadal(a) %1$s. Zkontrolujte údaje a doplňte, co chybí.</string>
     <string name="onboarding_split_value_named">Vy %1$d / %2$s %3$d</string>
-    <string name="onboarding_split_body_linked">Napůl, pokud se nedohodnete jinak. Tohle bude vaše společné dělení s %1$s; pozdější změnu bude potvrzovat druhá strana — a již zadané výdaje si ponechají své dělení.</string>
-    <string name="onboarding_split_agreed_body">Už dohodnuto s %1$s. Posunutím jezdce navrhnete jiné dělení — druhá strana ho bude muset potvrdit.</string>
-    <string name="onboarding_custody_set_body">Rozvrh už je nastavený: %1$s. Zkontrolujte ho, nebo dokončete nastavení a změňte ho později v Nastavení.</string>
-    <string name="onboarding_custody_review">Zobrazit rozvrh</string>
+    <string name="onboarding_split_body_linked">Napůl, pokud se nedohodnete jinak. Tohle bude vaše společné rozdělení; pozdější změnu musí potvrdit %1$s – a již zadané výdaje si ponechají své rozdělení.</string>
+    <string name="onboarding_split_agreed_body">Rozdělení už je dohodnuté (%1$s). Posunutím jezdce navrhnete jiné – druhý rodič ho bude muset potvrdit.</string>
+    <string name="onboarding_custody_set_body">Rozvrh už je nastavený: %1$s. Zkontrolujte ho, nebo nastavení dokončete a rozvrh změňte později v Nastavení.</string>
+    <string name="onboarding_custody_review">Zkontrolovat rozvrh</string>
 
     <!-- Asked when Skip would leave something typed on this step unsaved. -->
     <string name="onboarding_skip_unsaved_title">Přeskočit bez uložení?</string>
-    <string name="onboarding_skip_unsaved_message">To, co jste v tomto kroku zadali, zatím není uložené. Přeskočit pokračuje bez toho, Další to uloží.</string>
-    <string name="onboarding_split_footnote">Platí pro vás oba a pro každý výdaj, který od teď zapíšete.</string>
+    <string name="onboarding_skip_unsaved_message">To, co jste v tomto kroku zadali, zatím není uložené. Přeskočit pokračuje bez toho, Další to uloží.</string>
+    <string name="onboarding_split_footnote">Platí pro vás oba a pro každý výdaj, který od teď zapíšete.</string>
 </resources>

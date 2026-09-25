@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="professional_section_title">Odborníci</string>
-    <string name="professional_section_supporting">Mediátor, advokát nebo terapeut — jen ke čtení, se souhlasem obou rodičů</string>
+    <string name="professional_section_supporting">Mediátor, advokát nebo terapeut – jen ke čtení, se souhlasem obou rodičů</string>
     <string name="professional_empty">Tuto rodinu nemůže číst žádný odborník</string>
     <string name="professional_invite_action">Pozvat odborníka</string>
-    <string name="professional_invite_explainer">Uvidí kalendář, rozpis péče a rodičovský plán — nic dalšího: nikdy chat, výdaje ani záznamy o dětech. Přístup začne, až souhlasí i druhý rodič, a skončí ve zvolený den.</string>
-    <string name="professional_invite_role_label">Jeho role</string>
+    <string name="professional_invite_explainer">Uvidí kalendář, rozvrh péče a rodičovský plán – nic dalšího: nikdy chat, výdaje ani záznamy o dětech. Přístup začne, až souhlasí i druhý rodič, a skončí ve zvolený den.</string>
+    <string name="professional_invite_role_label">Role</string>
     <string name="professional_invite_duration_label">Přístup na</string>
     <string name="professional_invite_create">Vytvořit kód</string>
-    <string name="professional_invite_code_label">Jeho kód</string>
+    <string name="professional_invite_code_label">Kód pro odborníka</string>
     <string name="professional_invite_share">Sdílet kód</string>
-    <string name="professional_share_message">Jste pozváni číst kalendář a rodičovský plán rodiny v aplikaci CoPlanly, jen ke čtení. Otevřete Nastavení → Odborníci a zadejte kód %1$s. Aplikace: %2$s</string>
+    <string name="professional_share_message">Jste pozváni číst kalendář a rodičovský plán rodiny v aplikaci CoPlanly, jen ke čtení. Otevřete Nastavení → Odborníci a zadejte kód %1$s. Aplikace: %2$s</string>
     <string name="professional_role_mediator">Mediátor</string>
     <string name="professional_role_lawyer">Advokát</string>
     <string name="professional_role_guardian_ad_litem">Kolizní opatrovník</string>
@@ -25,8 +25,8 @@
     <string name="professional_status_active_until">Může číst do %1$s</string>
     <string name="professional_status_expired">Přístup skončil %1$s</string>
     <string name="professional_row_supporting">%1$s · %2$s</string>
-    <string name="professional_dialog_body">%1$s může do %2$s číst kalendář, rozpis péče a rodičovský plán této rodiny — nikdy chat, výdaje ani záznamy o dětech. Přístup začne až se souhlasem obou rodičů a kterýkoli z vás ho může kdykoli ukončit.</string>
-    <string name="professional_revoke_confirm">Ukončit přístup pro %1$s? Druhý rodič nemusí souhlasit a nelze to vrátit — bylo by potřeba nové pozvání.</string>
+    <string name="professional_dialog_body">%1$s může do %2$s číst kalendář, rozvrh péče a rodičovský plán této rodiny – nikdy chat, výdaje ani záznamy o dětech. Přístup začne až se souhlasem obou rodičů a kterýkoli z vás ho může kdykoli ukončit.</string>
+    <string name="professional_revoke_confirm">Ukončit přístup pro %1$s? Druhý rodič nemusí souhlasit a nelze to vrátit – byla by potřeba nová pozvánka.</string>
     <string name="professional_dialog_consent">Souhlasím</string>
     <string name="professional_dialog_revoke">Ukončit přístup</string>
     <string name="professional_dialog_close">Zavřít</string>
@@ -36,23 +36,23 @@
     <string name="professional_redeem_action">Přijmout kód</string>
     <string name="professional_redeem_done">Kód přijat. Číst můžete, až budou souhlasit oba rodiče.</string>
     <string name="professional_my_access_title">Rodiny, které mohu číst</string>
-    <string name="professional_family_label">%1$s a %2$s</string>
+    <string name="professional_family_label">%1$s a %2$s</string>
     <string name="professional_open_calendar">Kalendář</string>
     <string name="professional_open_plan">Rodičovský plán</string>
     <string name="professional_calendar_title">Kalendář rodiny</string>
     <string name="professional_calendar_read_only">Jen ke čtení. Soukromé události se nikdy nesdílejí.</string>
-    <string name="professional_calendar_custody_with">S: %1$s</string>
+    <string name="professional_calendar_custody_with">V péči: %1$s</string>
     <string name="professional_calendar_no_events">Žádné události</string>
     <string name="professional_calendar_previous">Předchozí týdny</string>
     <string name="professional_calendar_next">Další týdny</string>
     <string name="professional_calendar_event_supporting">%1$s · %2$s</string>
-    <string name="professional_unavailable">Není co zobrazit — přístup není aktivní. Otevře se, až budou souhlasit oba rodiče, a skončí v den konce.</string>
+    <string name="professional_unavailable">Není co zobrazit – přístup není aktivní. Otevře se, až budou souhlasit oba rodiče, a skončí dnem, kdy vyprší.</string>
     <string name="professional_plan_not_answered">Bez odpovědi</string>
     <string name="professional_plan_answer_by">%1$s: %2$s</string>
     <string name="professional_parent_fallback">Rodič</string>
-    <string name="professional_error_is_professional_invitation">Toto je pozvání pro odborníka. Použijte ho v Nastavení → Odborníci.</string>
-    <string name="professional_error_not_professional_invitation">Toto není pozvání pro odborníka.</string>
-    <string name="professional_error_inviter_not_paired">Rodina uvedená v pozvání už není propojená.</string>
-    <string name="access_error_grant_ended">Tento přístup už skončil. Požádejte o nový kód.</string>
-    <string name="access_error_already_in_family">V této rodině už jste rodičem.</string>
+    <string name="professional_error_is_professional_invitation">Toto je pozvánka pro odborníka. Použijte ji v Nastavení → Odborníci.</string>
+    <string name="professional_error_not_professional_invitation">Toto není pozvánka pro odborníka.</string>
+    <string name="professional_error_inviter_not_paired">Rodina uvedená v pozvánce už není propojená.</string>
+    <string name="access_error_grant_ended">Tento přístup už skončil. Požádejte o nový kód.</string>
+    <string name="access_error_already_in_family">V této rodině už jste rodičem.</string>
 </resources>

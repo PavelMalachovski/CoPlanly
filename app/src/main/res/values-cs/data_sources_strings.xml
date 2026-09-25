@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="settings_data_sources_title">Zdroje dat a licence</string>
-    <string name="settings_data_sources_description">Odkud pocházejí svátky a školní prázdniny v kalendáři</string>
-    <string name="data_sources_intro">Státní svátky a školní prázdniny v kalendáři jsou součástí aplikace, takže se při používání nic nestahuje. Byly připraveny z níže uvedených zdrojů.</string>
-    <string name="data_sources_group_holidays">Svátky a školní prázdniny</string>
-    <string name="data_sources_openholidays_description">Školní prázdniny pro Slovensko, Rakousko a jednotlivé německé spolkové země. Obsahuje informace z dat OpenHolidays API, která jsou zpřístupněna pod licencí Open Database License (ODbL) 1.0.</string>
+    <string name="settings_data_sources_title">Zdroje dat a licence</string>
+    <string name="settings_data_sources_description">Odkud pocházejí svátky a školní prázdniny v kalendáři</string>
+    <string name="data_sources_intro">Státní svátky a školní prázdniny v kalendáři jsou součástí aplikace, takže se při používání nic nestahuje. Byly připraveny z níže uvedených zdrojů.</string>
+    <string name="data_sources_group_holidays">Svátky a školní prázdniny</string>
+    <string name="data_sources_openholidays_description">Školní prázdniny pro Slovensko, Rakousko a jednotlivé německé spolkové země. Obsahuje informace z dat OpenHolidays API, která jsou zpřístupněna pod licencí Open Database License (ODbL) 1.0.</string>
     <string name="data_sources_holidays_title">holidays (knihovna pro Python)</string>
-    <string name="data_sources_holidays_description">Státní svátky pro Slovensko, Německo, Rakousko a Rusko byly s ní porovnány den po dni. © Vacanza Team a přispěvatelé, licence MIT.</string>
-    <string name="data_sources_computed_note">České státní svátky a školní prázdniny počítá aplikace sama.</string>
+    <string name="data_sources_holidays_description">Státní svátky pro Slovensko, Německo, Rakousko a Rusko byly s ní porovnány den po dni. © Vacanza Team a přispěvatelé, licence MIT.</string>
+    <string name="data_sources_computed_note">České státní svátky a školní prázdniny počítá aplikace sama.</string>
     <string name="data_sources_group_typeface">Písmo</string>
-    <string name="data_sources_onest_description">Písmo aplikace pro latinku i cyrilici. © 2021 The Onest Project Authors, pod licencí SIL Open Font License 1.1.</string>
+    <string name="data_sources_onest_description">Písmo aplikace pro latinku i cyrilici. © 2021 The Onest Project Authors, pod licencí SIL Open Font License 1.1.</string>
 </resources>

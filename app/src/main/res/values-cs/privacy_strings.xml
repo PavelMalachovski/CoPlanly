@@ -7,16 +7,16 @@
   consent screen that leaves a parent guessing what refusing costs them is not one.
 -->
 <resources>
-    <string name="consent_title">Pomoct vylepšit CoPlanly?</string>
-    <string name="consent_body">CoPlanly může odesílat statistiky používání a hlášení o pádech do služby Google Firebase. Nesou náhodný identifikátor této instalace, ne vaše jméno ani e-mail, a říkají nám, které obrazovky jsou pomalé a které pády jsou skutečné — nic víc.</string>
-    <string name="consent_never">Nikdy neobsahují: jména ani zdravotní údaje vašich dětí, vaše zprávy, události, výdaje ani účtenky. Ty nejsou nikdy součástí statistik ani hlášení o pádech.</string>
-    <string name="consent_changeable">Kdykoli to můžete změnit v Nastavení. Aplikace funguje úplně stejně tak i tak.</string>
+    <string name="consent_title">Pomůžete vylepšit CoPlanly?</string>
+    <string name="consent_body">CoPlanly může odesílat statistiky používání a hlášení o pádech do služby Google Firebase. Nesou náhodný identifikátor této instalace, ne vaše jméno ani e-mail, a říkají nám, které obrazovky jsou pomalé a které pády jsou skutečné – nic víc.</string>
+    <string name="consent_never">Nikdy neobsahují: jména ani zdravotní údaje vašich dětí, vaše zprávy, události, výdaje ani účtenky. Ty nejsou nikdy součástí statistik ani hlášení o pádech.</string>
+    <string name="consent_changeable">Kdykoli to můžete změnit v Nastavení. Aplikace funguje úplně stejně tak i tak.</string>
     <string name="consent_accept">Ano, odesílat statistiky</string>
     <string name="consent_decline">Ne, neodesílat nic</string>
     <string name="settings_telemetry_title">Statistiky používání</string>
-    <string name="settings_telemetry_description">Statistiky a hlášení o pádech pod náhodným identifikátorem instalace. Nikdy data vaší rodiny.</string>
+    <string name="settings_telemetry_description">Statistiky a hlášení o pádech pod náhodným identifikátorem instalace. Nikdy data vaší rodiny.</string>
     <!-- REL-4. Shown only once BuildConfig.PRIVACY_POLICY_URL is set (PrivacyPolicyLink). -->
     <string name="privacy_policy_title">Zásady ochrany osobních údajů</string>
-    <string name="privacy_policy_description">Co CoPlanly o vaší rodině ukládá a proč</string>
+    <string name="privacy_policy_description">Co CoPlanly o vaší rodině ukládá a proč</string>
     <string name="consent_privacy_policy_link">Přečíst zásady ochrany osobních údajů</string>
 </resources>

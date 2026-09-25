@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="widget_today_name">Dnes</string>
-    <string name="widget_today_description">Čí je dnes den, příští předání a dnešní události</string>
+    <string name="widget_today_description">Čí je dnes den, příští předání a dnešní události</string>
     <string name="widget_today_title">Dnes · %1$s</string>
-    <string name="widget_today_signed_out">Přihlaste se do CoPlanly a uvidíte svůj den.</string>
+    <string name="widget_today_signed_out">Přihlaste se do CoPlanly a uvidíte svůj den.</string>
     <plurals name="widget_today_more">
         <item quantity="one">+%1$d další</item>
         <item quantity="few">+%1$d další</item>
@@ -11,9 +11,9 @@
         <item quantity="other">+%1$d dalších</item>
     </plurals>
     <plurals name="widget_today_events_count">
-        <item quantity="one">%1$d událost dnes</item>
-        <item quantity="few">%1$d události dnes</item>
-        <item quantity="many">%1$d události dnes</item>
-        <item quantity="other">%1$d událostí dnes</item>
+        <item quantity="one">Dnes %1$d událost</item>
+        <item quantity="few">Dnes %1$d události</item>
+        <item quantity="many">Dnes %1$d události</item>
+        <item quantity="other">Dnes %1$d událostí</item>
     </plurals>
 </resources>
