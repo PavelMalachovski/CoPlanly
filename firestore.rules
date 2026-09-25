@@ -531,6 +531,39 @@ service cloud.firestore {
 
     // ---- Users ---------------------------------------------------------
     // Users can read/write their own profile and read their partner's profile.
+    //
+    // **A parent's own health data is gone** (GDPR Art. 5(1)(c), data minimisation): this
+    // document is readable by the co-parent, so an adult's `allergies` and `medicalProfile` reached
+    // their ex-partner. A create may carry neither key, and an update may not add or change one.
+    // An update may still leave a key an older build stored untouched — refusing every write to
+    // such a document would lock its owner out of their own profile (and their FCM token) until
+    // something removed it — and may remove it: this build's profile save sends
+    // `FieldValue.delete()` for both, and the operator-run `purgeParentHealthFields` callable
+    // clears the rest. Pinned in `firestore-tests/rules/users-profile.test.js`.
+    function parentHealthKeyAbsent(key) {
+      return !(key in request.resource.data);
+    }
+
+    function parentHealthKeyNotWritten(key) {
+      return parentHealthKeyAbsent(key) ||
+             !(key in request.resource.data.diff(resource.data).affectedKeys());
+    }
+
+    // `healthDataConsent` records the parent's explicit consent to entering their children's
+    // health details (GDPR Art. 9(2)(a); `domain/consent/HealthConsent.kt`): exactly
+    // `{version, atMillis}`, both integers. Absent means never given or withdrawn.
+    function healthConsentValid(data) {
+      return !('healthDataConsent' in data) || (
+        data.healthDataConsent is map &&
+        data.healthDataConsent.keys().hasOnly(['version', 'atMillis']) &&
+        data.healthDataConsent.keys().hasAll(['version', 'atMillis']) &&
+        data.healthDataConsent.version is int &&
+        data.healthDataConsent.version >= 1 &&
+        data.healthDataConsent.atMillis is int &&
+        data.healthDataConsent.atMillis > 0
+      );
+    }
+
     match /users/{userId} {
       allow read: if isOwner(userId) || isPartnerOf(userId);
 
@@ -541,6 +574,9 @@ service cloud.firestore {
                       // See `update` below: a profile must not be born self-paired either, or
                       // the same hole reopens through the create path.
                       request.resource.data.get('partnerId', '') != userId &&
+                      parentHealthKeyAbsent('medicalProfile') &&
+                      parentHealthKeyAbsent('allergies') &&
+                      healthConsentValid(request.resource.data) &&
                       (!('firebaseUid' in request.resource.data) ||
                        request.resource.data.firebaseUid == null ||
                        request.resource.data.firebaseUid == request.auth.uid);
@@ -569,6 +605,9 @@ service cloud.firestore {
                       request.resource.data.get('partnerId', '') != userId &&
                       !request.resource.data.diff(resource.data).affectedKeys()
                         .hasAny(['role', 'partnerId', 'partnerIds']) &&
+                      parentHealthKeyNotWritten('medicalProfile') &&
+                      parentHealthKeyNotWritten('allergies') &&
+                      healthConsentValid(request.resource.data) &&
                       isValidLength(request.resource.data.get('name', ''), 0, 100) &&
                       (!('firebaseUid' in request.resource.data) ||
                        request.resource.data.firebaseUid == null ||

@@ -22,6 +22,9 @@ const {
   CURRENT_RULES, testEnv, seed, assertSucceeds, assertFails,
 } = require('../harness');
 
+const firebase = require('firebase/compat/app').default;
+require('firebase/compat/firestore');
+
 const PROJECT = 'demo-coplanly-user-profile';
 const ALICE = 'alice-uid';
 const BOB = 'bob-uid';
@@ -34,6 +37,17 @@ const IDENTITY_PATCH = {
   name: 'Alice Novak',
   email: 'alice@example.com',
 };
+
+/**
+ * The compat SDK's delete sentinel — what `FieldValue.delete()` sends from the app. The contexts
+ * the harness hands out are compat Firestore instances, so the modular `deleteField()` is not
+ * one they accept.
+ *
+ * @return {!Object} The sentinel.
+ */
+function deleteField() {
+  return firebase.firestore.FieldValue.delete();
+}
 
 /**
  * Performs the profile write as the signed-in owner.
@@ -228,15 +242,14 @@ describe('users profile: the identity write ensureProfile performs', () => {
             .doc(`users/${ALICE}`).set({name: 'Hacked'}, {merge: true}));
   });
 
-  it('lets a co-parent read the other parent\'s medical profile and phone', async () => {
-    // Deliberate: if something happens to one parent, the other can tell a paramedic the blood
-    // group. The questionnaire exists for exactly this.
+  it('lets a co-parent read the other parent\'s phone', async () => {
+    // Deliberate: if something happens to one parent, the other can reach them. The parent's own
+    // health data that used to ride on this document is gone — see the block below.
     await seed(env, {
       [`users/${ALICE}`]: {
         name: 'Alice Novak',
         partnerId: BOB,
         phone: '+420123456789',
-        medicalProfile: {bloodType: 'O_NEGATIVE', intolerances: ['lactose']},
       },
       [`users/${BOB}`]: {name: 'Bob Novak', partnerId: ALICE},
     });
@@ -245,26 +258,23 @@ describe('users profile: the identity write ensureProfile performs', () => {
         env.authenticatedContext(BOB).firestore().doc(`users/${ALICE}`).get());
     const data = snap.data();
     if (data.phone !== '+420123456789') throw new Error('phone did not come back with the document');
-    if (data.medicalProfile.bloodType !== 'O_NEGATIVE') {
-      throw new Error('medicalProfile did not come back with the document');
-    }
   });
 
-  it('refuses to let a co-parent write the other parent\'s medical profile', async () => {
+  it('refuses to let a co-parent write the other parent\'s profile fields', async () => {
     // Load-bearing. Client writes to another user's document are what forced the permissive
     // firestore.rules.simple to be deployed once already.
     await seed(env, {
       [`users/${ALICE}`]: {
         name: 'Alice Novak',
         partnerId: BOB,
-        medicalProfile: {bloodType: 'O_NEGATIVE'},
+        phone: '+420123456789',
       },
       [`users/${BOB}`]: {name: 'Bob Novak', partnerId: ALICE},
     });
 
     await assertFails(
         env.authenticatedContext(BOB).firestore()
-            .doc(`users/${ALICE}`).set({medicalProfile: {bloodType: 'A_POSITIVE'}}, {merge: true}));
+            .doc(`users/${ALICE}`).set({phone: '+420000000000'}, {merge: true}));
   });
 
   it('refuses a stranger who is nobody\'s co-parent', async () => {
@@ -272,11 +282,190 @@ describe('users profile: the identity write ensureProfile performs', () => {
       [`users/${ALICE}`]: {
         name: 'Alice Novak',
         partnerId: BOB,
-        medicalProfile: {bloodType: 'O_NEGATIVE'},
+        phone: '+420123456789',
       },
     });
 
     await assertFails(
         env.authenticatedContext(STRANGER).firestore().doc(`users/${ALICE}`).get());
+  });
+});
+
+/**
+ * The parent's own health data is gone (GDPR data minimisation): the co-parent reads this
+ * document, so an adult's `allergies` and `medicalProfile` reached their ex-partner. A write may
+ * never add or change either key; it may leave one an older build stored untouched, and it may
+ * delete it — which is exactly what `UserRepositoryImpl.updateUser` now sends on every save.
+ */
+describe('users profile: the parent\'s own health data is refused', () => {
+  let env;
+
+  before(async () => {
+    env = await testEnv(PROJECT, CURRENT_RULES);
+  });
+
+  beforeEach(async () => {
+    await env.clearFirestore();
+  });
+
+  it('refuses a create carrying allergies', async () => {
+    await assertFails(mergeProfile(env, {...IDENTITY_PATCH, allergies: ['peanuts']}));
+  });
+
+  it('refuses a create carrying a medical profile', async () => {
+    await assertFails(mergeProfile(env, {...IDENTITY_PATCH, medicalProfile: {}}));
+  });
+
+  it('refuses an update adding allergies', async () => {
+    await seed(env, {[`users/${ALICE}`]: {name: 'Alice Novak', email: 'alice@example.com'}});
+
+    await assertFails(mergeProfile(env, {allergies: ['peanuts']}));
+  });
+
+  it('refuses an update adding a medical profile, even an empty one', async () => {
+    await seed(env, {[`users/${ALICE}`]: {name: 'Alice Novak', email: 'alice@example.com'}});
+
+    await assertFails(mergeProfile(env, {medicalProfile: {bloodType: 'A_POSITIVE'}}));
+    await assertFails(mergeProfile(env, {medicalProfile: {}}));
+  });
+
+  it('refuses changing what an older build stored', async () => {
+    await seed(env, {
+      [`users/${ALICE}`]: {name: 'Alice Novak', allergies: ['peanuts'], medicalProfile: {}},
+    });
+
+    await assertFails(mergeProfile(env, {allergies: ['peanuts', 'penicillin']}));
+    await assertFails(mergeProfile(env, {medicalProfile: {bloodType: 'O_NEGATIVE'}}));
+  });
+
+  it('allows the profile save that deletes both keys', async () => {
+    await seed(env, {
+      [`users/${ALICE}`]: {
+        name: 'Alice Novak',
+        allergies: ['peanuts'],
+        medicalProfile: {bloodType: 'O_NEGATIVE'},
+      },
+    });
+
+    await assertSucceeds(mergeProfile(env, {
+      ...IDENTITY_PATCH,
+      phone: '+420123456789',
+      allergies: deleteField(),
+      medicalProfile: deleteField(),
+    }));
+
+    const stored = await readRaw(env, `users/${ALICE}`);
+    if ('allergies' in stored || 'medicalProfile' in stored) {
+      throw new Error('the health keys survived the deleting save');
+    }
+  });
+
+  it('allows the deleting save on a document that never held the keys', async () => {
+    // Every save sends the deletes, so they must be harmless where there is nothing to delete.
+    await seed(env, {[`users/${ALICE}`]: {name: 'Alice Novak', email: 'alice@example.com'}});
+
+    await assertSucceeds(mergeProfile(env, {
+      name: 'Alice N.',
+      allergies: deleteField(),
+      medicalProfile: deleteField(),
+    }));
+  });
+
+  it('still allows an ordinary write to a document an older build left the keys on', async () => {
+    // The FCM token refresh and ensureProfile merge only their own keys; refusing them until the
+    // legacy keys were gone would lock the owner out of their own profile.
+    await seed(env, {
+      [`users/${ALICE}`]: {name: 'Alice Novak', allergies: ['peanuts'], medicalProfile: {}},
+    });
+
+    await assertSucceeds(mergeProfile(env, {fcmToken: 'token-2'}));
+  });
+
+  it('still allows an ordinary profile write', async () => {
+    await seed(env, {[`users/${ALICE}`]: {name: 'Alice Novak', email: 'alice@example.com'}});
+
+    await assertSucceeds(mergeProfile(env, {name: 'Alice N.', phone: '+420123456789'}));
+  });
+});
+
+/**
+ * The child-health consent (GDPR Art. 9(2)(a)) lives on the parent's own document as
+ * `healthDataConsent: {version, atMillis}` — written by `UserRepositoryImpl.setHealthConsent`,
+ * bounded here to exactly that shape.
+ */
+describe('users profile: the child-health consent', () => {
+  let env;
+
+  before(async () => {
+    env = await testEnv(PROJECT, CURRENT_RULES);
+  });
+
+  beforeEach(async () => {
+    await env.clearFirestore();
+    await seed(env, {
+      [`users/${ALICE}`]: {name: 'Alice Novak', email: 'alice@example.com', partnerId: BOB},
+      [`users/${BOB}`]: {name: 'Bob Novak', partnerId: ALICE},
+    });
+  });
+
+  it('lets the owner record their consent', async () => {
+    await assertSucceeds(mergeProfile(env, {
+      healthDataConsent: {version: 1, atMillis: 1787000000000},
+    }));
+  });
+
+  it('lets the owner withdraw it', async () => {
+    await mergeProfile(env, {healthDataConsent: {version: 1, atMillis: 1787000000000}});
+
+    await assertSucceeds(mergeProfile(env, {healthDataConsent: deleteField()}));
+    const stored = await readRaw(env, `users/${ALICE}`);
+    if ('healthDataConsent' in stored) throw new Error('the consent survived its withdrawal');
+  });
+
+  it('accepts the consent on a create too', async () => {
+    await env.clearFirestore();
+
+    await assertSucceeds(mergeProfile(env, {
+      ...IDENTITY_PATCH,
+      healthDataConsent: {version: 1, atMillis: 1787000000000},
+    }));
+  });
+
+  it('refuses a consent with an extra key', async () => {
+    await assertFails(mergeProfile(env, {
+      healthDataConsent: {version: 1, atMillis: 1787000000000, scope: 'everything'},
+    }));
+  });
+
+  it('refuses a consent missing a key', async () => {
+    await assertFails(mergeProfile(env, {healthDataConsent: {version: 1}}));
+    await assertFails(mergeProfile(env, {healthDataConsent: {atMillis: 1787000000000}}));
+  });
+
+  it('refuses a consent whose values are not integers', async () => {
+    await assertFails(mergeProfile(env, {
+      healthDataConsent: {version: '1', atMillis: 1787000000000},
+    }));
+    await assertFails(mergeProfile(env, {
+      healthDataConsent: {version: 1, atMillis: '2026-09-25'},
+    }));
+    await assertFails(mergeProfile(env, {
+      healthDataConsent: {version: 1.5, atMillis: 1787000000000},
+    }));
+  });
+
+  it('refuses a consent that is not a map', async () => {
+    await assertFails(mergeProfile(env, {healthDataConsent: true}));
+  });
+
+  it('refuses a version or time below one', async () => {
+    await assertFails(mergeProfile(env, {healthDataConsent: {version: 0, atMillis: 1787000000000}}));
+    await assertFails(mergeProfile(env, {healthDataConsent: {version: 1, atMillis: 0}}));
+  });
+
+  it('does not let the co-parent record or withdraw it', async () => {
+    await assertFails(
+        env.authenticatedContext(BOB).firestore().doc(`users/${ALICE}`)
+            .set({healthDataConsent: {version: 1, atMillis: 1787000000000}}, {merge: true}));
   });
 });
