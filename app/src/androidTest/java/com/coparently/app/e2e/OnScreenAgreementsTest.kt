@@ -27,6 +27,7 @@ import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.repository.EventRepository
 import com.coparently.app.e2e.EmulatorEnvironment.step
 import com.coparently.app.presentation.navigation.BottomNavDestination
+import com.coparently.app.utils.unbreakableDate
 import dagger.hilt.android.testing.HiltAndroidTest
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
@@ -346,7 +347,7 @@ class OnScreenAgreementsTest : AliceOnScreenTest() {
         string(
             R.string.home_dialog_swap_message,
             bob.name,
-            date.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL))
+            unbreakableDate(date.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL)))
         )
     )
 
