@@ -7,4 +7,5 @@
     <string name="auth_legal_notice_age">CoPlanly is for parents and guardians aged 18 or over. By continuing, you confirm you are 18 or older.</string>
     <string name="auth_legal_notice_with_terms">CoPlanly is for parents and guardians aged 18 or over. By continuing, you confirm you are 18 or older and accept the terms of service.</string>
     <string name="terms_of_service_title">Terms of service</string>
+    <string name="terms_of_service_description">What you and CoPlanly agree to</string>
 </resources>

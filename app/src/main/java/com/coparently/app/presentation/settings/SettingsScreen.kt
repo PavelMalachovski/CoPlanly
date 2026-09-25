@@ -119,6 +119,7 @@ import com.coparently.app.presentation.common.PrivacyPolicyLink
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.SignedInAsRow
+import com.coparently.app.presentation.common.TermsOfServiceLink
 import com.coparently.app.presentation.common.UiState
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.animations.sectionEnter
@@ -1031,6 +1032,25 @@ fun SettingsScreen(
                             title = stringResource(R.string.privacy_policy_title),
                             supporting = stringResource(R.string.privacy_policy_description),
                             onClick = { PrivacyPolicyLink.open(uriHandler) },
+                            trailing = {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.OpenInNew,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(IconSizes.Standard)
+                                )
+                            }
+                        )
+                        Divider()
+                    }
+                    // The contract the sign-in screen pointed to, readable again afterwards (§ 1751
+                    // of the Civil Code). Absent until hosted — see TermsOfServiceLink.
+                    if (TermsOfServiceLink.url != null) {
+                        SectionRow(
+                            icon = Icons.Default.Gavel,
+                            title = stringResource(R.string.terms_of_service_title),
+                            supporting = stringResource(R.string.terms_of_service_description),
+                            onClick = { TermsOfServiceLink.open(uriHandler) },
                             trailing = {
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.OpenInNew,

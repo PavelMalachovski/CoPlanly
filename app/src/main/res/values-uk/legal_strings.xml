@@ -3,4 +3,5 @@
     <string name="auth_legal_notice_age">CoPlanly призначений для батьків і опікунів від 18 років. Продовжуючи, ви підтверджуєте, що вам виповнилося 18 років.</string>
     <string name="auth_legal_notice_with_terms">CoPlanly призначений для батьків і опікунів від 18 років. Продовжуючи, ви підтверджуєте, що вам виповнилося 18 років, і приймаєте умови використання.</string>
     <string name="terms_of_service_title">Умови використання</string>
+    <string name="terms_of_service_description">Про що ви домовляєтеся з CoPlanly</string>
 </resources>
