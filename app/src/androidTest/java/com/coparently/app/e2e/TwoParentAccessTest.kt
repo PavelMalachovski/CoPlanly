@@ -405,7 +405,7 @@ class TwoParentAccessTest : TwoParentTest() {
         EmulatorEnvironment.step("Bob deletes his account")
         val deletedAt = System.currentTimeMillis()
         AccountDeletionService(
-            functions = FirebaseFunctions.getInstance(bob.app),
+            functions = FirebaseFunctions.getInstance(bob.app, FirebaseModule.FUNCTIONS_REGION),
             database = bob.database,
             encryptedPreferences = bob.encryptedPreferences,
             fcmService = bob.fcmService
