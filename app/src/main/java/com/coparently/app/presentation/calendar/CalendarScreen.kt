@@ -60,9 +60,9 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.data.sync.SyncWorker
+import com.coparently.app.domain.changerequests.AwaitingAnswers
 import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.custody.CustodyResolver
-import com.coparently.app.domain.custody.DaySwapInbox
 import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.holidays.Holiday
 import com.coparently.app.domain.model.Event
@@ -568,17 +568,14 @@ fun CalendarScreen(
 
     // Day swaps live on the custody document, not in `change_requests`, so the banner count
     // must add them explicitly — an incoming swap used to raise no banner at all, leaving the
-    // co-parent no visible route to the inbox that answers it.
+    // co-parent no visible route to the inbox that answers it. Pending events count too, and a
+    // swap counts once per offer: the same number Home's "Awaiting your answer" row shows for the
+    // same inbox (`AwaitingAnswers`), where the banner used to say 2 beside Home's 6.
     val inboxUserId by changeRequestViewModel.currentUserId.collectAsState()
-    val pendingSwapsAwaitingMe = remember(dayOverrides, inboxUserId, today) {
-        if (inboxUserId.isEmpty()) {
-            0
-        } else {
-            DaySwapInbox.visible(dayOverrides, today)
-                .count { DaySwapInbox.awaitsAnswerFrom(it, inboxUserId) }
-        }
+    val eventsAwaitingMe by changeRequestViewModel.eventsAwaitingMe.collectAsState()
+    val pendingInboxCount = remember(pendingChangeRequests, dayOverrides, eventsAwaitingMe, inboxUserId, today) {
+        AwaitingAnswers.count(pendingChangeRequests, dayOverrides, eventsAwaitingMe, inboxUserId, today)
     }
-    val pendingInboxCount = pendingChangeRequests + pendingSwapsAwaitingMe
 
     // A custody-pattern proposal draws two different banners (item 7): the parent who must
     // answer gets a Review into the inbox; the one who proposed it gets a passive "waiting".
@@ -778,7 +775,7 @@ fun CalendarScreen(
                     }
 
                     // Change requests as a labelled banner rather than a badged glyph in the bar.
-                    // The count folds in day swaps awaiting this parent — see pendingSwapsAwaitingMe.
+                    // The count folds in day swaps and pending events — see pendingInboxCount.
                     if (pendingInboxCount > 0 && onChangeRequestsClick != null) {
                         ChangeRequestBanner(
                             pendingCount = pendingInboxCount,
