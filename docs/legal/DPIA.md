@@ -91,6 +91,7 @@ code today.
 | R13 | **Telemetry revealing family life.** | 2 | 2 | 4 | Off until consent. No content in events. No user ID set in Analytics. Pseudonymous installation ID, disclosed accurately (L-13). | Low |
 | R14 | **Consent not demonstrable or not specific** (health data). | 3 | 3 | 9 | A dialog at the point of collection. Version and time recorded on the profile. Withdrawal in Settings clears what this parent entered (L-2). | Low |
 | R15 | **The child's own rights ignored as they grow up.** | 2 | 2 | 4 | The policy says how a child, or a young adult, can exercise their rights through the privacy contact. The parents can delete a child's record at any time. | Low |
+| R16 | **School credentials exposed** (Bakaláři import): a stored password, or a token readable off the phone, would open the child's whole school record — grades, absences, messages. | 2 | 4 | 8 | The password is never stored, only used once on the device. The refresh token is sealed in `EncryptedPreferences` under the Keystore key, bound to the signed-in account, and cleared on sign-out, disconnect and deletion. The app reads only the timetable and events; nothing passes through our servers. HTTPS only. | Low |
 
 ## 5. Measures summary
 

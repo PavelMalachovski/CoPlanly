@@ -96,6 +96,11 @@ const RULES = [
       'K/presentation/chat/ConversationsScreen.kt', 'K/presentation/pairing/**'],
   },
   {
+    sections: ['3.18'],
+    why: 'the Bakaláři school import',
+    paths: ['K/data/school/**', 'K/domain/school/**', 'K/presentation/school/**'],
+  },
+  {
     sections: ['3.16'],
     why: 'the Add button, "Later", the default currency or the reader\'s clock',
     paths: ['K/presentation/common/FabScrollVisibility.kt', 'K/presentation/expenses/ExpenseScreen.kt',

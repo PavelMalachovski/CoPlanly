@@ -76,6 +76,12 @@ before this ships (see `docs/ROADMAP.md`, **SEC-1**). **The vault and chat attac
 family's two parents, so only those two can download them — with the one caveat `storage.rules`
 states, that the path still names an ex-partner after an unpair.
 
+**The Bakaláři school import collects no credentials.** The parent signs in on the phone, which
+talks to the school's server directly; the password is used once and never stored, and only a
+refresh token stays on the device, encrypted. What it imports (school events, the day's first and
+last lesson times, days without lessons) becomes ordinary *Calendar events*, already declared. Do
+not declare the school login as collected: nothing about it reaches us.
+
 **Receipt OCR is on-device.** ML Kit's bundled model recognises receipt text without the
 photograph or the text leaving the device. Nothing about it is collected or shared, and it is
 worth saying so in the listing — it is a genuine differentiator in this category.

@@ -82,7 +82,7 @@ invocation is yours.
 | **MON-4** | **Built**, `Event.updatedAt`'s compared instant included (schema 39, `39.json` committed); left: the deploy in 💻 | P1 | — |
 | **MON-5** | The plan ships; swapping in the Ministry's own wording needs the form itself | P1 | S |
 | **MON-6b** | Contact windows ship (schema 36), on the grid and on Home's today card; left: verifying the mixed-version path on two phones | P2 | S |
-| **MON-8** | Bakaláři / EduPage school import — the parsing, once you supply a real export | P2 | L |
+| **MON-8** | Bakaláři import **built**; EduPage waits for one real capture from a parent account | P2 | L |
 | **MON-11** | Payments (MVP 3) — the entitlement model, after MON-1 decides the price | P2 | L |
 | **MON-12** | Intelligent suggestions (MVP 3) — behind SEC-1's proxy, never with a key in the client | P3 | M |
 | **MON-13** | The tables, Germany's Länder, Slovakia's kraje and sourced school vacations (Slovakia nationwide and per kraj, Austria nationwide, Germany per Land) are done — left: Austria's per-Land breaks (not final in the source), Slovakia's half-year day (not in the dataset), and whether Austria's patron-saint days are drawn at all | P2 | M |
@@ -145,7 +145,7 @@ invocation is yours.
 | **CQ-18** | Cross-time-zone chat on two phones — **what is drawn only** | The logic now runs end to end in CI (`e2e` job, `TwoParentChatTest`: UTC+14 and UTC−11, unread → DELIVERED → READ). Left for the phones: the badge and ticks as rendered, the displayed times, and the push. |
 | **MON-1** | Price, unit (family, not seat), and what the free tier contains | A decision, and it shapes the code that follows. |
 | **MON-9** | Distribution: mediators, Cochem courts, OSPOD, NGOs | Phone calls and meetings. A session can draft the material; it cannot make the call. |
-| **MON-8 (input)** | A real Bakaláři or EduPage export | The parser is cloud work; it needs one actual file to be written against. |
+| **MON-8 (input)** | A Bakaláři login to run `DEVICE-CHECKLIST.md` §3.18; one EduPage capture (timetable, children, one event) | Bakaláři was built from published samples; EduPage has none anywhere. |
 
 ### If you want a shortlist of what to hand a session next
 
@@ -1656,7 +1656,32 @@ What it took, and the choices worth knowing:
 proposal each way — is covered by the rules suite and the unit tests but has not been run on two
 devices.
 
-### MON-8 · P2 · L · Bakaláři / EduPage school import
+### MON-8 · **Bakaláři BUILT (September 2026), EduPage open** · P2 · L · Bakaláři / EduPage school import
+
+**Bakaláři is built** (owner decisions of 25 September 2026): the parent signs in on the phone,
+which talks to the school's Bakaláři API v3 directly; the password is used once and never stored,
+only the rotating refresh token, encrypted on the device. One connection is one child (Bakaláři
+issues one login per child), and the parent chooses **explicitly** which child and which family it
+feeds — which settles the "where does an import land" question below. It imports the school's
+events for the child's class and the whole school, and for each school day of the next four weeks
+one event from the first lesson's start to the last lesson's end, plus days without lessons the
+calendar does not already draw; daily in the background and on "Update now"; never deleting by
+absence (Bakaláři empties last year's events over the summer). Grades, homework and single lessons
+are deliberately not imported. It was written against the API's published sample responses — **no
+real account has been tried**; `DEVICE-CHECKLIST.md` §3.18 is the first contact. The research is
+summarised in the PR; the legal side is in `docs/legal/` (privacy policy, P11a, DPIA R16).
+
+**EduPage is still open**, deliberately. It has no API: every client reverse-engineers the web app
+(an RPC login with a form fallback, captcha, two-factor, a `PHPSESSID` session with no refresh
+token, `curentttGetData` for the timetable, timeline items for events, and a server-side
+"switch child" for parents), and **not one captured response exists in any public source**. It is
+built when someone supplies **one capture from a real parent account** — a timetable response, the
+login's list of children, and one event timeline item, names redacted. EduPage's help also warns
+users not to type their password into unofficial apps; decide, before building, whether to store
+only the session (and ask for the password when it expires) — the recommended answer.
+
+The original text of this item follows.
+
 
 **Where:** ☁️ cloud for the parser and the mapping — but 💻 you have to supply one real export
 file, or it is written blind.
