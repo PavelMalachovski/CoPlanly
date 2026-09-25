@@ -135,4 +135,13 @@
     <string name="chat_departed_export">Export</string>
     <string name="chat_departed_no_sending">Messages can no longer be sent in this conversation.</string>
     <string name="chat_departed_unnamed">Your co-parent</string>
+    <!-- Report and block (play-final audit F-10). A report opens the parent's email app to the
+         support address with the message's ids and time; the message text is never included. Block
+         opens the existing unpair confirmation: unpairing ends messaging and sharing. -->
+    <string name="chat_more_actions">More actions</string>
+    <string name="chat_block">Block and stop sharing</string>
+    <string name="chat_report_message">Report message</string>
+    <string name="chat_report_subject">CoPlanly: report a chat message</string>
+    <string name="chat_report_body">Tell us what is wrong with this message:\n\n\n---\nThe message text is not included. If you want us to read it, paste it above.\nMessage ID: %1$s\nConversation ID: %2$s\nSent at (UTC): %3$s</string>
+    <string name="chat_report_no_email_app">No email app is set up. To report the message, write to %1$s.</string>
 </resources>

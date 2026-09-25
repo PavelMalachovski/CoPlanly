@@ -49,7 +49,7 @@
     <string name="pairing_paired_since">Зʼєднано з %1$s</string>
     <string name="pairing_partner_email_unknown">Електронна пошта недоступна</string>
     <string name="pairing_unpair_confirm_title">Розірвати звʼязок із другим із батьків?</string>
-    <string name="pairing_unpair_confirm_message">Ви перестанете ділитися календарем, чатом і витратами з %1$s. Дані, вже збережені на цьому телефоні, залишаться.</string>
+    <string name="pairing_unpair_confirm_message">Ви перестанете ділитися календарем і витратами з %1$s, і ніхто з вас більше не зможе писати в чаті. Дані, вже збережені на цьому телефоні, залишаться.</string>
     <string name="pairing_unpair_confirm_action">Розʼєднати</string>
     <string name="pairing_unpair_final_title">Припинити спільне ведення опіки?</string>
     <string name="pairing_unpair_final_message">У такому разі ви втратите дані про дитину, внесені в застосунок: у вас не буде доступу до календаря, подій, важливих контактів і спільних витрат. Усе це залишиться в другого з батьків.</string>

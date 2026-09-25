@@ -135,4 +135,10 @@
     <string name="chat_departed_export">Экспортировать</string>
     <string name="chat_departed_no_sending">В эту переписку больше нельзя отправлять сообщения.</string>
     <string name="chat_departed_unnamed">Второй родитель</string>
+    <string name="chat_more_actions">Другие действия</string>
+    <string name="chat_block">Заблокировать и прекратить обмен</string>
+    <string name="chat_report_message">Пожаловаться на сообщение</string>
+    <string name="chat_report_subject">CoPlanly: жалоба на сообщение в чате</string>
+    <string name="chat_report_body">Опишите, что не так с этим сообщением:\n\n\n---\nТекст сообщения не приложен. Если хотите, чтобы мы его прочли, вставьте его выше.\nID сообщения: %1$s\nID переписки: %2$s\nОтправлено (UTC): %3$s</string>
+    <string name="chat_report_no_email_app">Не настроено ни одного почтового приложения. Чтобы пожаловаться на сообщение, напишите на %1$s.</string>
 </resources>

@@ -133,4 +133,10 @@
     <string name="chat_departed_export">Експортувати</string>
     <string name="chat_departed_no_sending">У цю розмову більше не можна надсилати повідомлення.</string>
     <string name="chat_departed_unnamed">Другий із батьків</string>
+    <string name="chat_more_actions">Інші дії</string>
+    <string name="chat_block">Заблокувати й припинити обмін</string>
+    <string name="chat_report_message">Поскаржитися на повідомлення</string>
+    <string name="chat_report_subject">CoPlanly: скарга на повідомлення в чаті</string>
+    <string name="chat_report_body">Опишіть, що не так із цим повідомленням:\n\n\n---\nТекст повідомлення не додано. Якщо хочете, щоб ми його прочитали, вставте його вище.\nID повідомлення: %1$s\nID розмови: %2$s\nНадіслано (UTC): %3$s</string>
+    <string name="chat_report_no_email_app">Не налаштовано жодного поштового застосунку. Щоб поскаржитися на повідомлення, напишіть на %1$s.</string>
 </resources>

@@ -52,7 +52,7 @@ No app yet? %4$s</string>
     <string name="pairing_paired_since">Paired since %1$s</string>
     <string name="pairing_partner_email_unknown">Email unavailable</string>
     <string name="pairing_unpair_confirm_title">Unlink your co-parent?</string>
-    <string name="pairing_unpair_confirm_message">You will stop sharing the calendar, chat and expenses with %1$s. Data already on this phone is kept.</string>
+    <string name="pairing_unpair_confirm_message">You will stop sharing the calendar and expenses with %1$s, and neither of you will be able to send messages in the chat. Data already on this phone is kept.</string>
     <string name="pairing_unpair_confirm_action">Unlink</string>
     <string name="pairing_unpair_final_title">Stop sharing with your co-parent?</string>
     <string name="pairing_unpair_final_message">You will lose access to the child data entered in this app: the calendar, events, important contacts and shared expenses. All of it stays with the other parent.</string>
