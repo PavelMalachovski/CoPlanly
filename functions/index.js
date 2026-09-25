@@ -17,6 +17,21 @@ const admin = require('firebase-admin');
 const {FieldValue, Timestamp} = require('firebase-admin/firestore');
 const exportReceipts = require('./export-receipts');
 
+/**
+ * Where every function here runs. The European Union, because the payloads are a family's own —
+ * chat text on its way to a push, a child's medical profile changing, an account being deleted —
+ * and keeping them inside the EEA means no transfer to a third country is needed to process them
+ * (GDPR Chapter V; `docs/legal/LEGAL-REVIEW-2026-09.md` L-3). Frankfurt, as the nearest region to
+ * the Czech families the app is written for. 1st-generation triggers are not tied to the
+ * Firestore database's location, so this holds whatever that is.
+ *
+ * The app (`FirebaseModule.FUNCTIONS_REGION`), `web/verify/`, the e2e smoke and the web tests
+ * name the same region; change them together.
+ */
+const FUNCTIONS_REGION = 'europe-west3';
+const regional = functions.region(FUNCTIONS_REGION);
+
+
 // Инициализация Firebase Admin SDK
 admin.initializeApp();
 
@@ -1523,6 +1538,149 @@ exports.sweepLapsedProfessionalGrants = functions.pubsub
     });
 
 /**
+ * How long an invitation nobody accepted is kept after its expiry.
+ *
+ * An invitation carries the inviter's name and e-mail (`fromUserName`, `fromUserEmail`) and, for
+ * an e-mailed one, the address it was sent to — personal data with no use once nobody can redeem
+ * the code (GDPR Art. 5(1)(e)). Thirty days past the expiry rather than at once so that a parent
+ * whose code "stopped working" can still be helped by somebody looking at what was sent.
+ */
+const INVITATION_EXPIRED_GRACE_DAYS = 30;
+
+/**
+ * How long an unaccepted invitation with **no** numeric expiry is kept after it was created.
+ *
+ * The invitations create rule requires a numeric `expiresAt`, so this covers only documents
+ * written before that rule or by hand. Ninety days is far longer than any invitation the app
+ * issues stays redeemable (seven days at most), so nothing a person could still use is taken.
+ */
+const INVITATION_UNDATED_MAX_AGE_DAYS = 90;
+
+/**
+ * The states of an invitation that was never accepted: still waiting, withdrawn by the inviter,
+ * or declined by the addressee. `accepted` is deliberately absent — see
+ * [sweepUnacceptedInvitationsImpl].
+ */
+const UNACCEPTED_INVITATION_STATUSES = ['pending', 'cancelled', 'rejected'];
+
+/** How many invitations of each kind one run deletes; the next run takes the rest. */
+const INVITATION_SWEEP_LIMIT = 500;
+
+/**
+ * Deletes invitations of every kind (co-parent, guest, calendar friend, professional) that were
+ * never accepted and can no longer be: their `expiresAt` passed more than
+ * [INVITATION_EXPIRED_GRACE_DAYS] ago, or — for one with no positive numeric expiry — their
+ * `createdAt` is more than [INVITATION_UNDATED_MAX_AGE_DAYS] old.
+ *
+ * **An accepted invitation is never deleted**, by this or by anything but account deletion. It is
+ * the one trace an ended co-parenting relationship leaves once unpair has cleaned up after it, and
+ * two things read it as that evidence: [hadAnotherCoParent], and through it the server-side
+ * `familyId` stamping ([stampOwnBlankFamilyIds]), which refuses to guess a family for a person who
+ * has co-parented with somebody else before. Sweeping accepted invitations would make an old
+ * household's records look like the new one's. The status filter is in the query, and checked
+ * again per document.
+ *
+ * Two range queries (`status in […]` plus a range on the date, each with a composite index in
+ * `firestore.indexes.json`), bounded by [INVITATION_SWEEP_LIMIT] and deleted in batches. A range
+ * only ever matches a number, so a document whose date is missing or not a number is never matched
+ * by that query. The limits are strict: an invitation exactly at its limit is kept a day longer.
+ *
+ * @param {FirebaseFirestore.Firestore} db Firestore instance.
+ * @param {number} nowMillis The instant to sweep at.
+ * @return {Promise<{expired: number, undated: number}>} What was deleted.
+ */
+async function sweepUnacceptedInvitationsImpl(db, nowMillis) {
+  const expiredBefore = nowMillis - INVITATION_EXPIRED_GRACE_DAYS * DAY_MILLIS;
+  const createdBefore = nowMillis - INVITATION_UNDATED_MAX_AGE_DAYS * DAY_MILLIS;
+  const unaccepted = (data) => data.status !== 'accepted' &&
+    UNACCEPTED_INVITATION_STATUSES.includes(data.status);
+  const hasExpiry = (data) => typeof data.expiresAt === 'number' && data.expiresAt > 0;
+
+  const expired = await deleteMatching(db, db.collection('invitations')
+      .where('status', 'in', UNACCEPTED_INVITATION_STATUSES)
+      .where('expiresAt', '>', 0)
+      .where('expiresAt', '<', expiredBefore)
+      .limit(INVITATION_SWEEP_LIMIT),
+  (data) => unaccepted(data) && hasExpiry(data));
+  const undated = await deleteMatching(db, db.collection('invitations')
+      .where('status', 'in', UNACCEPTED_INVITATION_STATUSES)
+      .where('createdAt', '>', 0)
+      .where('createdAt', '<', createdBefore)
+      .limit(INVITATION_SWEEP_LIMIT),
+  (data) => unaccepted(data) && !hasExpiry(data));
+  return {expired, undated};
+}
+
+exports.sweepUnacceptedInvitationsImpl = sweepUnacceptedInvitationsImpl;
+exports.INVITATION_EXPIRED_GRACE_DAYS = INVITATION_EXPIRED_GRACE_DAYS;
+exports.INVITATION_UNDATED_MAX_AGE_DAYS = INVITATION_UNDATED_MAX_AGE_DAYS;
+
+/**
+ * Deletes the documents [query] returns that [shouldDelete] confirms, in batches.
+ *
+ * @param {FirebaseFirestore.Firestore} db Firestore instance.
+ * @param {FirebaseFirestore.Query} query The candidates.
+ * @param {function(!Object): boolean} shouldDelete The per-document check.
+ * @return {Promise<number>} How many were deleted.
+ */
+async function deleteMatching(db, query, shouldDelete) {
+  const snap = await query.get();
+  let batch = db.batch();
+  let pending = 0;
+  let removed = 0;
+  for (const doc of snap.docs) {
+    if (!shouldDelete(doc.data() || {})) continue;
+    batch.delete(doc.ref);
+    pending++;
+    removed++;
+    if (pending === GUEST_SWEEP_BATCH_LIMIT) {
+      await batch.commit();
+      batch = db.batch();
+      pending = 0;
+    }
+  }
+  if (pending > 0) {
+    await batch.commit();
+  }
+  return removed;
+}
+
+/**
+ * The daily storage-limitation sweep (GDPR Art. 5(1)(e), September 2026): conversations kept for
+ * a parent whose co-parent deleted their account, once their 30 days are up
+ * ([sweepRetainedConversationsImpl]); export receipts past ten years and reservations past seven
+ * days (`exportReceipts.sweepReceiptsImpl`); and invitations that were never accepted
+ * ([sweepUnacceptedInvitationsImpl]).
+ *
+ * At 07:00 UTC, an hour after the professional-grant sweep, keeping the scheduled jobs an hour
+ * apart as the others are. The three run independently — one failing does not keep the others
+ * from their work — and the run then fails with the first error, so the scheduler's log shows it.
+ */
+exports.sweepRetentionLimits = regional.runWith({timeoutSeconds: 540}).pubsub
+    .schedule('0 7 * * *')
+    .timeZone('UTC')
+    .onRun(async () => {
+      const db = admin.firestore();
+      const now = Date.now();
+      const steps = [
+        ['retained conversations', () => sweepRetainedConversationsImpl(db, now, admin.storage().bucket())],
+        ['export receipts', () => exportReceipts.sweepReceiptsImpl(db, now, Timestamp.fromMillis)],
+        ['unaccepted invitations', () => sweepUnacceptedInvitationsImpl(db, now)],
+      ];
+      let firstError = null;
+      for (const [what, run] of steps) {
+        try {
+          console.log(`Swept ${what}: ${JSON.stringify(await run())}`);
+        } catch (err) {
+          console.error(`Sweeping ${what} failed`, err);
+          firstError = firstError || err;
+        }
+      }
+      if (firstError) throw firstError;
+      return null;
+    });
+
+/**
  * Collections whose documents are deleted by being tombstoned rather than removed (CQ-3, CQ-19).
  *
  * Each is read by the co-parent's phone through a filtered collection query, which is the
@@ -1866,10 +2024,16 @@ exports.partnerFromFamilyId = partnerFromFamilyId;
  * @param {?string} requestedPartnerId Which co-parent to unpair from. Null means "the only
  *   one", which is what a build that predates multiple families sends; with several, a null
  *   is refused rather than guessed at.
+ * @param {{notifyPartner: (boolean|undefined)}=} options `notifyPartner: false` skips the
+ *   `pairing_removed` push. Only account deletion passes it, and only for a co-parent who is
+ *   about to be told something more specific — that the account is gone and their thread is kept
+ *   for them to export (`coparent_account_deleted`, see [retainOrDeleteConversations]). Two pushes
+ *   for one departure would be one too many, and the generic one is the less truthful of the two.
  * @return {Promise<Object>} `{unpairedFrom, revokedDocuments}`: the former partner's UID
  *   (null when no intact link was torn down) and how many documents the sweep narrowed.
  */
-async function unpairCoParentImpl(db, callerUid, requestedPartnerId) {
+async function unpairCoParentImpl(db, callerUid, requestedPartnerId, options) {
+  const notifyPartner = !(options && options.notifyPartner === false);
   const callerRef = db.collection('users').doc(callerUid);
 
   const result = await db.runTransaction(async (tx) => {
@@ -1969,7 +2133,7 @@ async function unpairCoParentImpl(db, callerUid, requestedPartnerId) {
   // Queued before the sweep: the transaction has committed, so the link really is gone,
   // and this is the only attempt on which `unpairedFrom` is non-null. See the block
   // comment above for why queuing it after the sweep lost it altogether.
-  if (result.unpairedFrom) {
+  if (result.unpairedFrom && notifyPartner) {
     try {
       await db.collection('notification_queue').add({
         targetUserId: result.unpairedFrom,
@@ -3440,6 +3604,196 @@ async function scrubRevisionAudiences(db, uid) {
 exports.scrubRevisionAudiences = scrubRevisionAudiences;
 
 /**
+ * How long a conversation outlives the account of a parent who deleted theirs, for the parent who
+ * remains to read and export it.
+ *
+ * The owner's decision (GDPR review, September 2026). A 1:1 thread is both parents' record: the
+ * departing parent's messages are their personal data, which Art. 17 lets them erase, and the
+ * whole thread is the other parent's record of what was said to them — in a custody dispute it
+ * is often the evidence. Erasing it the moment one side leaves took the second parent's record
+ * without a word. Thirty days, announced by a push and a banner in the thread, lets them export
+ * it (Settings → Family → Export the record) first; Art. 17(3)(e) and 6(1)(f) are what carry the
+ * retention. After that the thread goes whole, as it always did ([sweepRetainedConversationsImpl]).
+ * Thirty days rather than longer because the only thing it has to allow is one export.
+ */
+const DEPARTED_CHAT_RETENTION_DAYS = 30;
+
+exports.DEPARTED_CHAT_RETENTION_DAYS = DEPARTED_CHAT_RETENTION_DAYS;
+
+/**
+ * The push type that tells the remaining parent, and the one server-only type the account
+ * deletion queues. `PushPayload.COPARENT_ACCOUNT_DELETED` on the client; not in `firestore.rules`'
+ * client allow-list, so no client can forge it.
+ */
+const COPARENT_ACCOUNT_DELETED = 'coparent_account_deleted';
+
+/**
+ * The calendar day, `YYYY-MM-DD` in UTC, of an instant.
+ *
+ * What the push carries as its `date`, beside the exact `retainedUntilMillis`. The phone words the
+ * deadline from the millis, as a day in its own zone — which is never later than the day the sweep
+ * deletes the thread, since the sweep runs *after* the deadline — and falls back to this UTC day
+ * only when the millis cannot be read.
+ *
+ * @param {number} millis Epoch millis.
+ * @return {string} The ISO date.
+ */
+function isoDateUtc(millis) {
+  return new Date(millis).toISOString().slice(0, 10);
+}
+
+/**
+ * The other participants of [conversation] who still have an account, in stored order.
+ *
+ * "Has an account" is read as "has a profile": the profile is the last thing [deleteAccountDataImpl]
+ * deletes, and `isPartnerOf` in the rules keys on it too.
+ *
+ * @param {FirebaseFirestore.Firestore} db Firestore instance.
+ * @param {!Object} conversation The conversation's data.
+ * @param {string} uid The departing account.
+ * @return {Promise<!Array<string>>} The remaining participants.
+ */
+async function remainingParticipants(db, conversation, uid) {
+  const others = (conversation.participants || [])
+      .filter((p) => typeof p === 'string' && p !== '' && p !== uid);
+  const remaining = [];
+  for (const other of others) {
+    const snap = await db.collection('users').doc(other).get();
+    if (snap.exists) remaining.push(other);
+  }
+  return remaining;
+}
+
+/**
+ * Deletes one conversation whole: its files, then its messages, then the document.
+ *
+ * The files first, while the messages that name them still exist — the same order as
+ * [deleteAuthoredFiles] — so a failure leaves the thread for a retry to find.
+ *
+ * @param {FirebaseFirestore.Firestore} db Firestore instance.
+ * @param {?Object} bucket The Storage bucket, or null to skip files.
+ * @param {string} conversationId The thread.
+ * @return {Promise<{messages: number, attachments: number}>} What went.
+ */
+async function deleteConversationWhole(db, bucket, conversationId) {
+  const attachments = await deleteChatAttachments(bucket, conversationId);
+  const messages = await deleteQueryInBatches(
+      db, db.collection('messages').where('conversationId', '==', conversationId));
+  await db.collection('conversations').doc(conversationId).delete();
+  return {messages, attachments};
+}
+
+/**
+ * What account deletion does to the departing parent's conversations.
+ *
+ * - **Somebody else in the thread still has an account**: the thread stays for
+ *   [DEPARTED_CHAT_RETENTION_DAYS], messages and files untouched, and the document is marked with
+ *   `retainedUntilMillis`, `departedUid` and `departedName` (read before the profile goes). Those
+ *   three are written by this function only — `firestore.rules` refuses them from a client, and
+ *   refuses any new message in a thread that carries `departedUid`. The remaining parent is queued
+ *   one `coparent_account_deleted` push naming the deadline and the thread. The departing account
+ *   loses every way to read it: its Auth user is deleted by the callable.
+ * - **Nobody else remains** — the other parent deleted their account first, or never existed —
+ *   the thread is deleted whole at once, as it always was.
+ *
+ * **Idempotent on a retry.** A thread this account already marked keeps its deadline and is not
+ * announced again: re-marking it would move the deadline and send a second push for one departure.
+ *
+ * @param {FirebaseFirestore.Firestore} db Firestore instance.
+ * @param {string} uid The departing account.
+ * @param {string} departedName The departing parent's display name, '' when unknown.
+ * @param {?Object} bucket The Storage bucket, or null to skip files.
+ * @param {number} nowMillis The instant of the deletion.
+ * @return {Promise<!Object>} `{retained, deleted, messages, attachments, notified}`.
+ */
+async function retainOrDeleteConversations(db, uid, departedName, bucket, nowMillis) {
+  const result = {retained: 0, deleted: 0, messages: 0, attachments: 0, notified: []};
+  const conversations = await db.collection('conversations')
+      .where('participants', 'array-contains', uid)
+      .get();
+  for (const conversation of conversations.docs) {
+    const data = conversation.data() || {};
+    const remaining = await remainingParticipants(db, data, uid);
+    if (remaining.length === 0) {
+      const gone = await deleteConversationWhole(db, bucket, conversation.id);
+      result.deleted++;
+      result.messages += gone.messages;
+      result.attachments += gone.attachments;
+      continue;
+    }
+    result.retained++;
+    if (data.departedUid === uid && typeof data.retainedUntilMillis === 'number') {
+      continue;
+    }
+    const retainedUntilMillis = nowMillis + DEPARTED_CHAT_RETENTION_DAYS * DAY_MILLIS;
+    await db.collection('conversations').doc(conversation.id).update({
+      retainedUntilMillis,
+      departedUid: uid,
+      departedName,
+    });
+    for (const target of remaining) {
+      try {
+        await db.collection('notification_queue').add({
+          targetUserId: target,
+          data: {
+            type: COPARENT_ACCOUNT_DELETED,
+            actorName: departedName,
+            date: isoDateUtc(retainedUntilMillis),
+            retainedUntilMillis: String(retainedUntilMillis),
+            conversationId: conversation.id,
+          },
+          status: 'pending',
+          createdAt: FieldValue.serverTimestamp(),
+        });
+        result.notified.push(target);
+      } catch (err) {
+        // The thread is kept either way; an undelivered notice must not stop an erasure. The
+        // banner in the thread still says it.
+        console.error(`Account-deleted notice could not be queued for ${target}`, err);
+      }
+    }
+  }
+  return result;
+}
+
+exports.retainOrDeleteConversations = retainOrDeleteConversations;
+
+/** How many lapsed conversations one run of the retention sweep deletes; the next run takes the rest. */
+const RETAINED_CHAT_SWEEP_LIMIT = 200;
+
+/**
+ * Deletes the conversations whose [DEPARTED_CHAT_RETENTION_DAYS] have run out — files, messages,
+ * then the document, exactly as account deletion used to at once.
+ *
+ * A range query on `retainedUntilMillis` (`> 0` and `<= now`), which only ever matches a number,
+ * so a thread nobody marked is never touched; and a marked thread without `departedUid` is left
+ * alone as well, because only [retainOrDeleteConversations] writes the two together and anything
+ * else is not ours to guess about. Bounded per run by [RETAINED_CHAT_SWEEP_LIMIT].
+ *
+ * @param {FirebaseFirestore.Firestore} db Firestore instance.
+ * @param {number} nowMillis The instant to sweep at.
+ * @param {?Object=} bucket The Storage bucket, or null to skip files (tests).
+ * @return {Promise<number>} How many conversations were deleted.
+ */
+async function sweepRetainedConversationsImpl(db, nowMillis, bucket) {
+  const snap = await db.collection('conversations')
+      .where('retainedUntilMillis', '>', 0)
+      .where('retainedUntilMillis', '<=', nowMillis)
+      .limit(RETAINED_CHAT_SWEEP_LIMIT)
+      .get();
+  let removed = 0;
+  for (const doc of snap.docs) {
+    const departedUid = (doc.data() || {}).departedUid;
+    if (typeof departedUid !== 'string' || departedUid === '') continue;
+    await deleteConversationWhole(db, bucket || null, doc.id);
+    removed++;
+  }
+  return removed;
+}
+
+exports.sweepRetainedConversationsImpl = sweepRetainedConversationsImpl;
+
+/**
  * Erases everything an account holds, and returns a per-collection tally.
  *
  * **Why this exists at all.** `FirebaseAuthService.deleteCurrentUser()` on the client removes
@@ -3458,9 +3812,14 @@ exports.scrubRevisionAudiences = scrubRevisionAudiences;
  * prevent. Neither is free. This picks the one the regulation asks for, and the client warns
  * the user before calling it.
  *
- * Chat is deleted whole. A 1:1 thread whose second participant no longer exists has no reader
- * the app can serve, and half a conversation is worse than none: the surviving parent would
- * read their own messages answering nothing.
+ * **Chat is kept for the parent who remains, for [DEPARTED_CHAT_RETENTION_DAYS], then deleted
+ * whole** (September 2026, owner decision; [retainOrDeleteConversations]). Deleting it at once
+ * took the other parent's own record of what was said to them — often the evidence in a custody
+ * case — without a word. Now the thread is marked with its deadline, the remaining parent gets
+ * one `coparent_account_deleted` push (instead of `pairing_removed`: one departure, one push) and
+ * a banner in the thread, and can export it; [sweepRetainedConversationsImpl] deletes it once the
+ * deadline passes. A thread with nobody left in it is still deleted at once. Half a conversation
+ * is still worse than none, which is why it is never trimmed to one side's messages.
  *
  * **Order matters.** The pairing is torn down first, through the existing
  * [unpairCoParentImpl], so the co-parent's `partnerId` is cleared and the audience sweep that
@@ -3477,21 +3836,40 @@ exports.scrubRevisionAudiences = scrubRevisionAudiences;
  * through [deleteAuthoredFiles] before the records that name them. Until September 2026 they
  * were not: the documents went and the files stayed, which the deletion page promised otherwise.
  * The document vault (MON-23) is an authored collection like the others — this parent's filings
- * and their files go, the co-parent's stay — and files sent in chat go with the chat, whole.
+ * and their files go, the co-parent's stay — and files sent in chat go with the chat, whole,
+ * when the chat goes.
  *
  * @param {FirebaseFirestore.Firestore} db Firestore instance.
  * @param {string} uid The account being erased.
  * @param {?Object=} bucket The Storage bucket holding the account's files; omitted in tests that
  *     do not exercise Storage, in which case no file is touched.
+ * @param {number=} nowMillis The instant of the deletion; `Date.now()` when omitted.
  * @return {Promise<!Object>} Counts per collection, plus `unpairedFrom`.
  */
-async function deleteAccountDataImpl(db, uid, bucket) {
+async function deleteAccountDataImpl(db, uid, bucket, nowMillis) {
   const removed = {};
+  const now = typeof nowMillis === 'number' ? nowMillis : Date.now();
 
   // Every co-parent, read before any of the links come down: unpairing clears the list this
-  // is read from, and the parenting plans below are keyed by the pair.
+  // is read from, and the parenting plans below are keyed by the pair. The name too, for the
+  // retained threads below: the profile is the last thing to go, but the thread must name the
+  // parent who left after it has.
   const profileSnap = await db.collection('users').doc(uid).get();
-  const partners = partnersOf(profileSnap.exists ? profileSnap.data() : null);
+  const profile = profileSnap.exists ? profileSnap.data() : null;
+  const partners = partnersOf(profile);
+  const departedName = profile && typeof profile.name === 'string' ? profile.name : '';
+
+  // The co-parents who will hear about this through their kept thread rather than through
+  // `pairing_removed`: one departure, one push, and the more specific one wins.
+  const threadsBefore = await db.collection('conversations')
+      .where('participants', 'array-contains', uid)
+      .get();
+  const toldByThread = new Set();
+  for (const doc of threadsBefore.docs) {
+    for (const other of (doc.data() || {}).participants || []) {
+      if (other !== uid) toldByThread.add(other);
+    }
+  }
 
   // Tear each co-parent link down first, while both accounts still exist. This also runs the
   // shared-audience revocation unpair already owns, so the ex-partner is out of this user's
@@ -3501,7 +3879,8 @@ async function deleteAccountDataImpl(db, uid, bucket) {
   let unpairedFrom = null;
   for (const partnerId of partners.length > 0 ? partners : [null]) {
     try {
-      const unpair = await unpairCoParentImpl(db, uid, partnerId);
+      const unpair = await unpairCoParentImpl(
+          db, uid, partnerId, {notifyPartner: !toldByThread.has(partnerId)});
       unpairedFrom = unpairedFrom || unpair.unpairedFrom;
     } catch (err) {
       // An account with no partner, or a sweep that could not finish, must not stop an erasure
@@ -3560,21 +3939,13 @@ async function deleteAccountDataImpl(db, uid, bucket) {
     await deleteQueryInBatches(db, db.collection('change_requests').where('requestedBy', '==', uid)) +
     await deleteQueryInBatches(db, db.collection('change_requests').where('requestedTo', '==', uid));
 
-  // Conversations and their messages, whole — see the block comment above.
-  const conversations = await db.collection('conversations')
-      .where('participants', 'array-contains', uid)
-      .get();
-  removed.messages = 0;
-  removed.chat_attachments = 0;
-  for (const conversation of conversations.docs) {
-    // The files first, while the messages that name them still exist — the same order as
-    // [deleteAuthoredFiles], and a failure here leaves the thread for a retry to find.
-    removed.chat_attachments += await deleteChatAttachments(bucket || null, conversation.id);
-    removed.messages += await deleteQueryInBatches(
-        db, db.collection('messages').where('conversationId', '==', conversation.id));
-  }
-  removed.conversations = await deleteQueryInBatches(
-      db, db.collection('conversations').where('participants', 'array-contains', uid));
+  // Conversations: kept for the parent who remains, deleted whole when nobody does — see the
+  // block comment above.
+  const chats = await retainOrDeleteConversations(db, uid, departedName, bucket || null, now);
+  removed.messages = chats.messages;
+  removed.chat_attachments = chats.attachments;
+  removed.conversations = chats.deleted;
+  removed.conversations_retained = chats.retained;
 
   removed.custody_models = await deleteQueryInBatches(
       db, db.collection('custody_models').where('participants', 'array-contains', uid));
