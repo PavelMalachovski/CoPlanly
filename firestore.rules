@@ -573,6 +573,37 @@ service cloud.firestore {
       );
     }
 
+    // `aiConsent` records the parent's opt-in to AI assist (MON-12; `functions/ai-assist.js`,
+    // which reads it as admin and refuses a call without it): exactly `{version, grantedAt}`,
+    // `version` an integer of at least 1 and `grantedAt` either epoch millis (the
+    // `healthDataConsent` style) or the server's timestamp of this very write. Absent means never
+    // given or withdrawn — withdrawal is deleting the field. It sits on the owner's own document,
+    // so only the owner writes it (`isOwner` below); the co-parent can read that it was given, as
+    // they can read the rest of the profile, and cannot give or withdraw it.
+    //
+    // Checked only when the write adds or changes it: a stored server timestamp no longer equals
+    // `request.time`, and a later ordinary profile save that repeats it must not be refused.
+    // Pinned in `firestore-tests/rules/ai-assist.test.js`.
+    function aiConsentShapeValid(data) {
+      return data.aiConsent is map &&
+        data.aiConsent.keys().hasOnly(['version', 'grantedAt']) &&
+        data.aiConsent.keys().hasAll(['version', 'grantedAt']) &&
+        data.aiConsent.version is int &&
+        data.aiConsent.version >= 1 &&
+        ((data.aiConsent.grantedAt is int && data.aiConsent.grantedAt > 0) ||
+         (data.aiConsent.grantedAt is timestamp && data.aiConsent.grantedAt == request.time));
+    }
+
+    function aiConsentCreateValid() {
+      return !('aiConsent' in request.resource.data) || aiConsentShapeValid(request.resource.data);
+    }
+
+    function aiConsentUpdateValid() {
+      return !('aiConsent' in request.resource.data) ||
+             !('aiConsent' in request.resource.data.diff(resource.data).affectedKeys()) ||
+             aiConsentShapeValid(request.resource.data);
+    }
+
     match /users/{userId} {
       allow read: if isOwner(userId) || isPartnerOf(userId);
 
@@ -586,6 +617,7 @@ service cloud.firestore {
                       parentHealthKeyAbsent('medicalProfile') &&
                       parentHealthKeyAbsent('allergies') &&
                       healthConsentValid(request.resource.data) &&
+                      aiConsentCreateValid() &&
                       (!('firebaseUid' in request.resource.data) ||
                        request.resource.data.firebaseUid == null ||
                        request.resource.data.firebaseUid == request.auth.uid);
@@ -617,6 +649,7 @@ service cloud.firestore {
                       parentHealthKeyNotWritten('medicalProfile') &&
                       parentHealthKeyNotWritten('allergies') &&
                       healthConsentValid(request.resource.data) &&
+                      aiConsentUpdateValid() &&
                       isValidLength(request.resource.data.get('name', ''), 0, 100) &&
                       (!('firebaseUid' in request.resource.data) ||
                        request.resource.data.firebaseUid == null ||
@@ -638,6 +671,15 @@ service cloud.firestore {
     // `exchangeGoogleAuthCode` and `refreshGoogleAccessToken` run on Admin credentials and
     // bypass these rules, which is what makes a flat denial workable rather than merely strict.
     match /google_oauth/{userId} {
+      allow read, write: if false;
+    }
+
+    // ---- AI assist quota (MON-12) --------------------------------------------
+    // `ai_usage/{uid}` is the daily count `aiAssist` keeps per account: `{day, count,
+    // updatedAtMillis}` and nothing about what was asked. **Closed to every client**: a parent who
+    // could write it would reset their own quota, and the callable, on Admin credentials, is its
+    // only reader and writer. Account deletion removes it (`deleteAccountDataImpl`).
+    match /ai_usage/{userId} {
       allow read, write: if false;
     }
 

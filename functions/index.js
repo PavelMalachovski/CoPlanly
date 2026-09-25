@@ -17,6 +17,7 @@ const admin = require('firebase-admin');
 const {FieldValue, Timestamp} = require('firebase-admin/firestore');
 const exportReceipts = require('./export-receipts');
 const recordPhotos = require('./record-photos');
+const aiAssist = require('./ai-assist');
 
 /**
  * Where every function here runs. The European Union, because the payloads are a family's own —
@@ -4050,6 +4051,9 @@ async function deleteAccountDataImpl(db, uid, bucket, nowMillis) {
   // refresh token issued to an account that no longer exists has no reason to remain.
   await db.collection('google_oauth').doc(uid).delete();
 
+  // The AI assist quota (MON-12): a date and a count, keyed by the uid, and nothing else.
+  await db.collection(aiAssist.AI_USAGE_COLLECTION).doc(uid).delete();
+
   // Files first: the documents deleted next are the only record of which files exist.
   removed.storage = await deleteAuthoredFiles(db, bucket || null, uid);
 
@@ -4878,4 +4882,40 @@ exports.verifyExport = regional
             {reason: 'rate-limited'});
       }
       return asCallable(() => exportReceipts.verifyImpl(admin.firestore(), data));
+    });
+
+// ---- AI assist (MON-12) --------------------------------------------------------
+// The logic lives in `ai-assist.js`; this wrapper only authenticates and translates its refusals
+// into an `HttpsError` carrying a stable `reason`. Off unless `AI_ENABLED=true` and the model,
+// region and project are configured (see `functions/README.md`): until then every call answers
+// `failed-precondition` / `ai-disabled`, reading nothing.
+
+exports.AI_CONSENT_VERSION = aiAssist.AI_CONSENT_VERSION;
+exports.aiAssistImpl = aiAssist.aiAssistImpl;
+
+/** The provider, built once per instance on the first call that needs it. */
+let aiProvider = null;
+
+/**
+ * Drafts a chat reply or a month's summary with Claude on Vertex AI, for a signed-in parent who
+ * has consented. Never stores or logs the text. See `ai-assist.js`.
+ */
+exports.aiAssist = regional
+    .runWith({timeoutSeconds: 60, maxInstances: 10})
+    .https.onCall(async (data, context) => {
+      const config = aiAssist.aiConfig(process.env);
+      if (config.enabled && !aiProvider) aiProvider = aiAssist.vertexProvider(config);
+      try {
+        return await aiAssist.aiAssistImpl(context.auth ? context.auth.uid : null, data, {
+          db: admin.firestore(),
+          config,
+          provider: aiProvider,
+          partnersOf,
+        });
+      } catch (err) {
+        if (err instanceof aiAssist.AiAssistError) {
+          throw new functions.https.HttpsError(err.code, err.message, {reason: err.reason});
+        }
+        throw err;
+      }
     });
