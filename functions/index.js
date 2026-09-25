@@ -3088,7 +3088,7 @@ exports.purgeParentHealthFieldsImpl = purgeParentHealthFieldsImpl;
  *
  * @return {Promise<{scanned: number, purged: number}>} See [purgeParentHealthFieldsImpl].
  */
-exports.purgeParentHealthFields = functions.runWith({timeoutSeconds: 540}).https.onCall(
+exports.purgeParentHealthFields = regional.runWith({timeoutSeconds: 540}).https.onCall(
     async (data, context) => {
       if (!isBackfillOperator(context)) {
         throw new functions.https.HttpsError(
