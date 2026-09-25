@@ -82,7 +82,7 @@
 
 <div class="draft" role="note">
   <p><strong>Draft.</strong> This page has not been reviewed by a lawyer and is not in force.
-    Placeholders still to be filled in: <code>{{COMPANY_ID}}</code>, <code>{{DATE}}</code>, <code>{{FIRESTORE_REGION}}</code>, <code>{{LEGAL_ENTITY_NAME}}</code>, <code>{{PLACEHOLDER}}</code>, <code>{{PRIVACY_CONTACT_EMAIL}}</code>, <code>{{REGISTERED_ADDRESS}}</code>, <code>{{WEB_DELETION_URL}}</code>.</p>
+    Placeholders still to be filled in: <code>{{AI_PROVIDER_RETENTION}}</code>, <code>{{AI_VERTEX_REGION}}</code>, <code>{{COMPANY_ID}}</code>, <code>{{DATE}}</code>, <code>{{FIRESTORE_REGION}}</code>, <code>{{LEGAL_ENTITY_NAME}}</code>, <code>{{PLACEHOLDER}}</code>, <code>{{PRIVACY_CONTACT_EMAIL}}</code>, <code>{{REGISTERED_ADDRESS}}</code>, <code>{{WEB_DELETION_URL}}</code>.</p>
 </div>
 
 <h1>CoPlanly — Privacy Policy</h1>
@@ -124,6 +124,14 @@ facts only the owner can supply; each is a <code>{{PLACEHOLDER}}</code> in the t
 <tr>
 <td><code>{{WEB_DELETION_URL}}</code></td>
 <td>Where <code>web/delete-account/</code> is hosted</td>
+</tr>
+<tr>
+<td><code>{{AI_VERTEX_REGION}}</code></td>
+<td>The Vertex AI region the writing help runs in (<code>AI_VERTEX_REGION</code> in <code>functions/.env</code>, an EU region such as <code>europe-west1</code>) — see &quot;Writing help (AI)&quot;. Remove the section instead if the feature is not offered at publication</td>
+</tr>
+<tr>
+<td><code>{{AI_PROVIDER_RETENTION}}</code></td>
+<td>What Google keeps of a writing-help request on its side (prompt caching, abuse monitoring) under the project&#39;s Vertex AI settings, once the owner has checked and configured them — see <code>functions/README.md</code>, &quot;AI assist&quot;</td>
 </tr>
 </tbody></table></div>
 <p>The controller is a Czech <em>s.r.o.</em> (owner decision, September 2026). No DPO is appointed at
@@ -314,11 +322,49 @@ town&#39;s name.</li>
 <p><strong>Why:</strong> so both parents see the school&#39;s calendar without retyping it. <strong>Legal basis:</strong>
 performance of our contract with you (Art. 6(1)(b)) — you asked for the import; the school&#39;s own
 processing of your child&#39;s data in Bakaláři is the school&#39;s, under its own privacy notice.</p>
+<h3>Writing help (AI), if you turn it on</h3>
+<p>CoPlanly can offer two kinds of <strong>writing help</strong> from an AI model. Both are <strong>optional and off
+until you agree</strong>: the first time you use one, the app explains what is sent and asks for your
+consent, and you can withdraw it in Settings at any time. Nothing is sent before that, and nothing
+is sent unless you tap the button for it.</p>
+<ul>
+<li><strong>A suggested reply in the chat.</strong> Our server reads the <strong>last 20 messages</strong> of the thread you
+are in — yours and your co-parent&#39;s — with the names of any files attached to them (never the
+files themselves), and your own note on what you want to say if you typed one, and asks the
+model for one short, neutral reply in your language. The suggestion appears in your message box:
+<strong>nothing is sent to your co-parent unless you send it yourself</strong>, and you can change it first.</li>
+<li><strong>A summary of the month.</strong> Your phone counts the month&#39;s figures — days with each parent (by
+name), handovers, swaps, the number of events, expenses and balances per currency — and our
+server asks the model to put <strong>only those numbers</strong> into a few neutral sentences. No message
+text, no event titles and nothing about your child&#39;s records is sent for this.</li>
+</ul>
+<p><strong>Who processes it.</strong> The model is <strong>Claude, made by Anthropic, run by Google on Google Cloud&#39;s
+Vertex AI</strong> in the European Union ({{AI_VERTEX_REGION}}), under the same Google Cloud Data
+Processing Addendum as the rest of our infrastructure. Our server calls it as itself; your phone
+never talks to the model and holds no key for it. {{AI_PROVIDER_RETENTION}}</p>
+<p><strong>What we keep.</strong> We do <strong>not</strong> store what was sent or what the model wrote, and our logs record
+only that your account made a request, when, how long it took and how many units of text it used
+— never its content. To keep the service affordable we count how many requests each account makes
+per day; that count (a date and a number) is kept until you delete your account.</p>
+<p><strong>Your co-parent&#39;s messages.</strong> A reply suggestion necessarily reads what your co-parent wrote to
+you. They wrote it to you, and a suggestion only helps you answer it; the model is told to treat
+the messages as text to answer, not as instructions, and never to invent facts or give legal
+advice. You can object to your messages being used this way (see &quot;Your rights&quot;).</p>
+<p><strong>Legal basis:</strong> your <strong>consent</strong> (Art. 6(1)(a)) for your own requests; for your co-parent&#39;s
+messages in a reply suggestion, your <strong>legitimate interest</strong> in answering the correspondence
+addressed to you, which we have weighed against theirs (Art. 6(1)(f)). The model makes no
+decision about anyone (Art. 22): it drafts words that you read, change and choose to send or not.</p>
 <h2>What happens on your device and goes nowhere</h2>
 <ul>
 <li><strong>Receipt scanning.</strong> When you photograph a receipt, the text is recognised <strong>entirely on
 your device</strong>. The photograph and the recognised text are not sent to any text-recognition
-or AI service.</li>
+or AI service — writing help, if you turn it on, never receives a receipt.</li>
+<li><strong>Voice typing in chat.</strong> If you use the microphone in the chat composer, your phone&#39;s own
+speech recognition turns what you say into text <strong>on the device</strong>. The app offers the
+microphone only on phones that can do this on the device, and never uses an online speech
+service instead. The audio is not recorded, stored or sent to us or anyone else; only the text,
+once you choose to send it, becomes an ordinary chat message. The app asks for microphone
+access the first time you tap the microphone, and you can withdraw it in your phone&#39;s settings.</li>
 <li><strong>Private events.</strong> An event you mark private never leaves your device. It is not uploaded,
 not synced, and not visible to your co-parent.</li>
 </ul>
@@ -368,6 +414,11 @@ not synced, and not visible to your co-parent.</li>
 <td>Our hosting, database, file storage and messaging provider, acting only on our instructions</td>
 </tr>
 <tr>
+<td>Google (Vertex AI), <strong>our processor</strong>, running Anthropic&#39;s Claude model</td>
+<td>Only if you use writing help: the last 20 messages of the thread and your note (reply suggestion), or the month&#39;s figures (summary)</td>
+<td>To draft the text you asked for — see &quot;Writing help (AI)&quot;</td>
+</tr>
+<tr>
 <td>Google (Calendar API)</td>
 <td>Only your calendar, only if you connect it</td>
 <td>The integration you enabled — for your Google Calendar, Google is responsible under its own privacy policy</td>
@@ -376,7 +427,8 @@ not synced, and not visible to your co-parent.</li>
 <p><strong>Where your data is processed.</strong> Our database and file storage are located in
 {{FIRESTORE_REGION}}. Our server functions — which link co-parents, send notifications, renew
 Google Calendar access, register exports and delete accounts — run in Google&#39;s <code>europe-west3</code>
-region in Frankfurt, Germany.</p>
+region in Frankfurt, Germany. Writing help, if you use it, runs on Google Cloud&#39;s Vertex AI in
+{{AI_VERTEX_REGION}}, also in the European Union.</p>
 <p>Some Google services we use run on Google&#39;s global infrastructure and may process data outside
 the European Economic Area: delivering push notifications (Firebase Cloud Messaging), signing in
 (Firebase Authentication), and — only if you agreed — usage statistics and crash reports. Google
@@ -443,6 +495,14 @@ daily on our servers, not by hand.</p>
 <td><strong>30 days</strong></td>
 </tr>
 <tr>
+<td>What writing help sends and writes</td>
+<td><strong>Not stored by us</strong>; see &quot;Writing help (AI)&quot; for Google&#39;s side</td>
+</tr>
+<tr>
+<td>The daily count of writing-help requests (a date and a number)</td>
+<td>Until you delete your account</td>
+</tr>
+<tr>
 <td>Emails you send us about your privacy rights</td>
 <td><strong>3 years</strong> after we close the request</td>
 </tr>
@@ -469,7 +529,7 @@ calendar-friend or professional access you granted or held;</li>
 <li>deletes every read-only calendar link into your families, whichever of you created it;</li>
 <li>unlinks the two of you, so their access ends immediately;</li>
 <li>deletes the fingerprint of your Google Calendar authorisation, if you connected one, and
-any notifications still queued for you;</li>
+any notifications still queued for you, and the daily count of your writing-help requests;</li>
 <li>removes your account and your family from the receipts of exports you or your co-parent made.
 The fingerprint, period, format, size and registration time stay, so that an export already
 handed to a lawyer or a court can still be verified — but nothing left in a receipt identifies
@@ -507,10 +567,12 @@ our account-deletion page: {{WEB_DELETION_URL}}.</p>
 <li><strong>receive it in a portable form</strong> (Art. 20) — the export in Settings → Family gives you your
 family&#39;s record as CSV or PDF;</li>
 <li><strong>object</strong> to processing we base on our or someone else&#39;s legitimate interests (Art. 21) — the
-90-day deletion markers, the message thread kept for your co-parent, and export receipts. We
+90-day deletion markers, the message thread kept for your co-parent, export receipts, and your
+messages being read for your co-parent&#39;s reply suggestions. We
 then stop unless our reasons override yours or the data is needed for a legal claim;</li>
 <li><strong>withdraw a consent</strong> at any time — to health details about your child, or to statistics and
-crash reports — in Settings, without affecting what was done before (Art. 7(3)).</li>
+crash reports, or to writing help — in Settings, without affecting what was done before
+(Art. 7(3)).</li>
 </ul>
 <p>Most of these you can exercise directly in the app — everything you entered is visible and
 editable, and deletion is one screen away. For anything else, write to
@@ -523,7 +585,8 @@ entered are theirs</strong>: you can ask us about them, but we will weigh their 
 deleting something they wrote.</p>
 <p>We make <strong>no decisions about you by automated means</strong> that have legal or similarly significant
 effects (Art. 22). The app computes things — whose day it is, who owes whom — from what the two of
-you entered, and shows its working; it does not decide anything.</p>
+you entered, and shows its working; it does not decide anything. Writing help, if you use it,
+drafts text for you to read and change; it decides nothing either.</p>
 <p>You may also complain to a supervisory authority. In the Czech Republic that is the Office for
 Personal Data Protection (Úřad pro ochranu osobních údajů), Pplk. Sochora 27, 170 00 Praha 7,
 <a href="https://uoou.gov.cz">uoou.gov.cz</a>.</p>

@@ -23,10 +23,12 @@
 
 | Processor | Services | Terms | Location |
 | --- | --- | --- | --- |
-| Google Ireland Ltd / Google LLC (Firebase, Google Cloud) | Firestore, Cloud Storage, Cloud Functions, Authentication, Cloud Messaging, Analytics, Crashlytics, Cloud Logging | Google Cloud Data Processing Addendum; Firebase Data Processing and Security Terms; SCCs incorporated | Functions: `europe-west3`. Firestore/Storage: {{FIRESTORE_REGION}}. FCM, Auth, Analytics, Crashlytics: global |
+| Google Ireland Ltd / Google LLC (Firebase, Google Cloud) | Firestore, Cloud Storage, Cloud Functions, Authentication, Cloud Messaging, Analytics, Crashlytics, Cloud Logging; **Vertex AI** (Anthropic's Claude model, served by Google) for P15 once enabled | Google Cloud Data Processing Addendum; Firebase Data Processing and Security Terms; SCCs incorporated; for Vertex AI also Google's Service Specific Terms for generative AI / partner models (**to verify**, see P15) | Functions: `europe-west3`. Vertex AI: `AI_VERTEX_REGION`, an EU region (default `europe-west1`). Firestore/Storage: {{FIRESTORE_REGION}}. FCM, Auth, Analytics, Crashlytics: global |
 
-Google's sub-processors are listed by Google and accepted under the Addendum. No other processor
-is used: no email service, no support desk, no advertising or attribution SDK, no AI service.
+Google's sub-processors are listed by Google and accepted under the Addendum; whether Anthropic
+appears among them for Claude on Vertex AI is for counsel to confirm (P15). No other processor
+is used: no email service, no support desk, no advertising or attribution SDK, and no AI service
+other than the one in P15, which the company reaches only through Google Cloud.
 
 ## Processing activities
 
@@ -39,7 +41,7 @@ only what is specific to it.
 | --- | --- |
 | Purpose | Provide an account; link two co-parents; decide who may read what |
 | Data subjects | Parents |
-| Data | Name, email, optional profile photo (Google), optional date of birth and phone, auth identifier, parent slot, partner uids, FCM token, country and region, onboarding state, whether the family cares for children, pets or both (`caresFor`), health-data consent record `{version, atMillis}` |
+| Data | Name, email, optional profile photo (Google), optional date of birth and phone, auth identifier, parent slot, partner uids, FCM token, country and region, onboarding state, whether the family cares for children, pets or both (`caresFor`), health-data consent record `{version, atMillis}`, AI-assist consent record `{version, grantedAt}` (P15) |
 | Legal basis | Art. 6(1)(b) contract; the consent record is kept under Art. 7(1) to demonstrate consent |
 | Recipients | The linked co-parent (name, slot, photo) |
 | Retention | Life of the account; deleted at once on account deletion |
@@ -191,6 +193,19 @@ only what is specific to it.
 | Legal basis | Art. 6(1)(f) — security of the service (Recital 49) |
 | Retention | 30 days (Cloud Logging `_Default`) |
 
+### P15. AI writing help (optional, MON-12)
+
+| | |
+| --- | --- |
+| Purpose | Draft a neutral reply in the chat, or a short summary of a month, at the requesting parent's request; the parent reads, edits and sends (or discards) the draft |
+| Data subjects | The requesting parent; the co-parent (their messages, in a reply suggestion); children and third parties only as far as the messages mention them |
+| Data | **Reply:** the last **20** messages of the thread (text, sender as "me"/"co-parent", time), attachment **file names** (never their bytes, paths or digests), the two parents' display names, the requester's optional note (≤ 500 characters) and language. **Summary:** figures the phone computed — days with each parent (by name), handovers, swaps proposed/accepted, event count, expenses and balances per currency, optional holiday fairness — validated to that exact list; **no message text**. **Kept by us:** `ai_usage/{uid}` — a UTC date and a request count; the consent record on `users/{uid}` (P1) |
+| Legal basis | **Art. 6(1)(a)** consent of the requesting parent (recorded with its version and time, withdrawable in Settings), for their own data and request. The co-parent's messages: **Art. 6(1)(f)** — the requester's interest in answering correspondence addressed to them, with minimisation to 20 messages, no storage, transparency in the policy and a right to object. **Art. 9:** messages may mention a child's health; whether 9(2)(a) consent of the requester suffices for incidental health data in the co-parent's words is **for counsel** (DPIA R19) |
+| Recipients | Google Cloud Vertex AI (processor), running Claude by Anthropic in the configured EU region. Nothing is sent to the co-parent: the draft goes back to the requester only |
+| Retention | Prompt and output: **not stored by the company** — held in the function's memory for one call; never logged (logs: uid, task, outcome, token counts, latency, HTTP status). `ai_usage/{uid}`: overwritten daily, deleted with the account. **Google's side — to verify and configure before enabling:** Vertex AI's prompt caching and abuse-monitoring logging for partner models, and whether the project qualifies for zero data retention; record the answer here and in the policy's `{{AI_PROVIDER_RETENTION}}` |
+| Where | `functions/ai-assist.js` (`aiAssist` callable, `europe-west3`); Vertex AI `rawPredict` in `AI_VERTEX_REGION` (EU only — the code refuses any other region); `ai_usage` (closed to every client) |
+| Note | Off until `AI_ENABLED=true` with a model and an EU region is configured, and behind a client feature flag until billing (MON-11). A per-account daily limit (`AI_DAILY_LIMIT`, default 30) bounds cost and misuse. Receipt OCR stays on-device and never reaches this processing |
+
 ### P14. Privacy requests and breaches
 
 | | |
@@ -202,7 +217,8 @@ only what is specific to it.
 
 ## Transfers to third countries (Art. 30(1)(e))
 
-Functions run in the EU (`europe-west3`). Firestore and Storage: {{FIRESTORE_REGION}} — must be an
+Functions run in the EU (`europe-west3`). AI writing help (P15) runs on Vertex AI in an EU region
+the code enforces (`europe-…`). Firestore and Storage: {{FIRESTORE_REGION}} — must be an
 EU location (LEGAL-REVIEW L-3). FCM, Firebase Authentication, Analytics and Crashlytics are global
 Google services: Google LLC is certified under the EU–US Data Privacy Framework, and the SCCs in
 Google's data processing terms apply as a fallback.
@@ -211,11 +227,12 @@ Google's data processing terms apply as a fallback.
 
 - **Access control on the server**: `firestore.rules` and `storage.rules`, tested offline on every
   change (`firestore-tests/`); every shared record gated on its family and live pairing; closed
-  collections for receipts, feeds and OAuth fingerprints.
+  collections for receipts, feeds, OAuth fingerprints and the AI-assist quota.
 - **Encryption**: TLS in transit; Google's encryption at rest; on the device, SQLCipher with a
   Keystore-wrapped key, sealed preferences, backup and device transfer disabled.
 - **Minimisation by design**: private events and the journal never leave the device; on-device OCR;
-  pushes without content; telemetry off until consent.
+  pushes without content; telemetry off until consent; AI writing help off until consent, capped at
+  20 messages or a fixed list of numbers, and never stored or logged.
 - **Integrity**: immutable messages and revisions; server timestamps; SHA-256 on every shared file
   and export.
 - **Deletion**: scheduled sweeps for every period in this record; server-side account teardown.

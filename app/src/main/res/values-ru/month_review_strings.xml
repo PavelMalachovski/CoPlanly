@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="month_review_title">Итоги месяца</string>
+    <string name="month_review_settings_description">Дни с каждым из родителей, передачи, обмены, события и расходы по месяцам</string>
+    <string name="month_review_previous">Предыдущий месяц</string>
+    <string name="month_review_next">Следующий месяц</string>
+
+    <string name="month_review_group_summary">Сводка</string>
+    <string name="month_review_summarize">Подвести итог месяца</string>
+    <string name="month_review_summarize_subtitle">Несколько предложений о цифрах ниже, написанных ИИ</string>
+    <string name="month_review_summarizing">Пишу сводку…</string>
+    <string name="month_review_summary_label">Написано ИИ по цифрам ниже. Сверьте с ними.</string>
+
+    <string name="month_review_group_schedule">График</string>
+    <string name="month_review_no_schedule">График опеки не настроен</string>
+    <plurals name="month_review_days">
+        <item quantity="one">%1$d день</item>
+        <item quantity="few">%1$d дня</item>
+        <item quantity="many">%1$d дней</item>
+        <item quantity="other">%1$d дня</item>
+    </plurals>
+    <string name="month_review_days_without_schedule">Дни без графика</string>
+    <string name="month_review_handovers">Передачи</string>
+    <string name="month_review_special_days">Праздники, школьные каникулы и дни рождения</string>
+    <string name="month_review_parent_days">%1$s: %2$s</string>
+
+    <string name="month_review_group_activity">Обмены и события</string>
+    <string name="month_review_swaps_offered">Дни, предложенные для обмена</string>
+    <string name="month_review_swaps_agreed">Обменянные дни</string>
+    <string name="month_review_events">Общие события</string>
+
+    <string name="month_review_group_money">Расходы</string>
+    <string name="month_review_no_expenses">В этом месяце расходов нет</string>
+    <string name="month_review_total">Всего в %1$s</string>
+    <string name="month_review_paid_by">%1$s: оплачено %2$s</string>
+    <string name="month_review_to_even_out">Для выравнивания: %1$s от %2$s для %3$s</string>
+    <string name="month_review_even">Поровну</string>
+
+    <string name="month_review_note">Посчитано по тому, что есть на этом телефоне: график так, как его показывает календарь, с учётом согласованных обменов; события, которые видите вы оба; и расходы, записанные за месяц.</string>
+</resources>

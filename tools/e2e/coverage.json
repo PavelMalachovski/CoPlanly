@@ -71,6 +71,9 @@
     "export_receipts": {
       "exempt": "Closed to every client; the callables that write it are listed under functions."
     },
+    "ai_usage": {
+      "exempt": "Closed to every client; only the aiAssist callable (listed under functions) reads and writes it, and firestore-tests/rules/ai-assist.test.js pins the closed rule."
+    },
     "family_settings": {
       "e2e": [
         "TwoParentAgreementsTest#firstRatioOnAFreshPairAppliesAndIsAnnouncedAsAgreed",
@@ -370,6 +373,9 @@
     },
     "refreshGoogleAccessToken": {
       "exempt": "Needs a real Google refresh token; functions/test covers the oracle check."
+    },
+    "aiAssist": {
+      "exempt": "Calls a paid external model (Claude on Vertex AI) that no Firebase emulator provides, and is off until the owner configures it; one parent asks for a draft only they see, so no second phone is involved. functions/test/ai-assist.test.js covers the consent gate, the thread and pairing checks, the 20-message cap, the numbers-only summary, the quota and the no-text logging."
     },
     "backfillRecordFamilyIds": {
       "exempt": "Operator-only maintenance callable, not a phone-to-phone feature; functions/test covers it."

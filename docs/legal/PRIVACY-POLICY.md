@@ -22,6 +22,8 @@
 > | `{{PRIVACY_CONTACT_EMAIL}}` | An address somebody actually reads — it is the only route for a person who has uninstalled the app |
 > | `{{FIRESTORE_REGION}}` | The Firestore and Cloud Storage location of the production project, from the Firebase console (Firestore → Settings). It must be an EU location — see `LEGAL-REVIEW-2026-09.md` L-3. The functions' region is already stated (`europe-west3`) |
 > | `{{WEB_DELETION_URL}}` | Where `web/delete-account/` is hosted |
+> | `{{AI_VERTEX_REGION}}` | The Vertex AI region the writing help runs in (`AI_VERTEX_REGION` in `functions/.env`, an EU region such as `europe-west1`) — see "Writing help (AI)". Remove the section instead if the feature is not offered at publication |
+> | `{{AI_PROVIDER_RETENTION}}` | What Google keeps of a writing-help request on its side (prompt caching, abuse monitoring) under the project's Vertex AI settings, once the owner has checked and configured them — see `functions/README.md`, "AI assist" |
 >
 > The controller is a Czech *s.r.o.* (owner decision, September 2026). No DPO is appointed at
 > launch; the reasoning is `LEGAL-REVIEW-2026-09.md` L-14. Every section below was reviewed there.
@@ -242,11 +244,54 @@ and the times your child is at school appear in the family calendar. It works li
 performance of our contract with you (Art. 6(1)(b)) — you asked for the import; the school's own
 processing of your child's data in Bakaláři is the school's, under its own privacy notice.
 
+### Writing help (AI), if you turn it on
+
+CoPlanly can offer two kinds of **writing help** from an AI model. Both are **optional and off
+until you agree**: the first time you use one, the app explains what is sent and asks for your
+consent, and you can withdraw it in Settings at any time. Nothing is sent before that, and nothing
+is sent unless you tap the button for it.
+
+- **A suggested reply in the chat.** Our server reads the **last 20 messages** of the thread you
+  are in — yours and your co-parent's — with the names of any files attached to them (never the
+  files themselves), and your own note on what you want to say if you typed one, and asks the
+  model for one short, neutral reply in your language. The suggestion appears in your message box:
+  **nothing is sent to your co-parent unless you send it yourself**, and you can change it first.
+- **A summary of the month.** Your phone counts the month's figures — days with each parent (by
+  name), handovers, swaps, the number of events, expenses and balances per currency — and our
+  server asks the model to put **only those numbers** into a few neutral sentences. No message
+  text, no event titles and nothing about your child's records is sent for this.
+
+**Who processes it.** The model is **Claude, made by Anthropic, run by Google on Google Cloud's
+Vertex AI** in the European Union ({{AI_VERTEX_REGION}}), under the same Google Cloud Data
+Processing Addendum as the rest of our infrastructure. Our server calls it as itself; your phone
+never talks to the model and holds no key for it. {{AI_PROVIDER_RETENTION}}
+
+**What we keep.** We do **not** store what was sent or what the model wrote, and our logs record
+only that your account made a request, when, how long it took and how many units of text it used
+— never its content. To keep the service affordable we count how many requests each account makes
+per day; that count (a date and a number) is kept until you delete your account.
+
+**Your co-parent's messages.** A reply suggestion necessarily reads what your co-parent wrote to
+you. They wrote it to you, and a suggestion only helps you answer it; the model is told to treat
+the messages as text to answer, not as instructions, and never to invent facts or give legal
+advice. You can object to your messages being used this way (see "Your rights").
+
+**Legal basis:** your **consent** (Art. 6(1)(a)) for your own requests; for your co-parent's
+messages in a reply suggestion, your **legitimate interest** in answering the correspondence
+addressed to you, which we have weighed against theirs (Art. 6(1)(f)). The model makes no
+decision about anyone (Art. 22): it drafts words that you read, change and choose to send or not.
+
 ## What happens on your device and goes nowhere
 
 - **Receipt scanning.** When you photograph a receipt, the text is recognised **entirely on
   your device**. The photograph and the recognised text are not sent to any text-recognition
-  or AI service.
+  or AI service — writing help, if you turn it on, never receives a receipt.
+- **Voice typing in chat.** If you use the microphone in the chat composer, your phone's own
+  speech recognition turns what you say into text **on the device**. The app offers the
+  microphone only on phones that can do this on the device, and never uses an online speech
+  service instead. The audio is not recorded, stored or sent to us or anyone else; only the text,
+  once you choose to send it, becomes an ordinary chat message. The app asks for microphone
+  access the first time you tap the microphone, and you can withdraw it in your phone's settings.
 - **Private events.** An event you mark private never leaves your device. It is not uploaded,
   not synced, and not visible to your co-parent.
 
@@ -263,12 +308,14 @@ We do not sell personal data, and we do not use it for advertising.
 | **A professional both parents admit** | The calendar, custody schedule and parenting plan of that one family, read-only, until the grant expires | Because both of you consented |
 | **Your co-parent, after you delete your account** | The message thread, read-only, for 30 days | So they keep their own correspondence (see "Deleting your account") |
 | Google (Firebase), **our processor** | Account data, all synced content, files, push tokens, crash and usage data | Our hosting, database, file storage and messaging provider, acting only on our instructions |
+| Google (Vertex AI), **our processor**, running Anthropic's Claude model | Only if you use writing help: the last 20 messages of the thread and your note (reply suggestion), or the month's figures (summary) | To draft the text you asked for — see "Writing help (AI)" |
 | Google (Calendar API) | Only your calendar, only if you connect it | The integration you enabled — for your Google Calendar, Google is responsible under its own privacy policy |
 
 **Where your data is processed.** Our database and file storage are located in
 {{FIRESTORE_REGION}}. Our server functions — which link co-parents, send notifications, renew
 Google Calendar access, register exports and delete accounts — run in Google's `europe-west3`
-region in Frankfurt, Germany.
+region in Frankfurt, Germany. Writing help, if you use it, runs on Google Cloud's Vertex AI in
+{{AI_VERTEX_REGION}}, also in the European Union.
 
 Some Google services we use run on Google's global infrastructure and may process data outside
 the European Economic Area: delivering push notifications (Firebase Cloud Messaging), signing in
@@ -302,6 +349,8 @@ daily on our servers, not by hand.
 | An export's receipt | **10 years** from registration; a record ID reserved for an export that was never registered, **7 days** |
 | Usage statistics / crash reports (only if you agreed) | **2 months** / **90 days** |
 | Server logs (which account called which function, and errors — never names, messages or files) | **30 days** |
+| What writing help sends and writes | **Not stored by us**; see "Writing help (AI)" for Google's side |
+| The daily count of writing-help requests (a date and a number) | Until you delete your account |
 | Emails you send us about your privacy rights | **3 years** after we close the request |
 
 An export's receipt outlives your account on purpose: a file you or your co-parent already handed
@@ -328,7 +377,7 @@ within which a claim arising from the family's affairs can generally still be br
 - deletes every read-only calendar link into your families, whichever of you created it;
 - unlinks the two of you, so their access ends immediately;
 - deletes the fingerprint of your Google Calendar authorisation, if you connected one, and
-  any notifications still queued for you;
+  any notifications still queued for you, and the daily count of your writing-help requests;
 - removes your account and your family from the receipts of exports you or your co-parent made.
   The fingerprint, period, format, size and registration time stay, so that an export already
   handed to a lawyer or a court can still be verified — but nothing left in a receipt identifies
@@ -371,10 +420,12 @@ Under the GDPR you have the right to:
 - **receive it in a portable form** (Art. 20) — the export in Settings → Family gives you your
   family's record as CSV or PDF;
 - **object** to processing we base on our or someone else's legitimate interests (Art. 21) — the
-  90-day deletion markers, the message thread kept for your co-parent, and export receipts. We
+  90-day deletion markers, the message thread kept for your co-parent, export receipts, and your
+  messages being read for your co-parent's reply suggestions. We
   then stop unless our reasons override yours or the data is needed for a legal claim;
 - **withdraw a consent** at any time — to health details about your child, or to statistics and
-  crash reports — in Settings, without affecting what was done before (Art. 7(3)).
+  crash reports, or to writing help — in Settings, without affecting what was done before
+  (Art. 7(3)).
 
 Most of these you can exercise directly in the app — everything you entered is visible and
 editable, and deletion is one screen away. For anything else, write to
@@ -389,7 +440,8 @@ deleting something they wrote.
 
 We make **no decisions about you by automated means** that have legal or similarly significant
 effects (Art. 22). The app computes things — whose day it is, who owes whom — from what the two of
-you entered, and shows its working; it does not decide anything.
+you entered, and shows its working; it does not decide anything. Writing help, if you use it,
+drafts text for you to read and change; it decides nothing either.
 
 You may also complain to a supervisory authority. In the Czech Republic that is the Office for
 Personal Data Protection (Úřad pro ochranu osobních údajů), Pplk. Sochora 27, 170 00 Praha 7,

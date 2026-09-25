@@ -50,14 +50,23 @@ import com.coparently.app.presentation.theme.Spacing
  * @param onSendMessage Called with the text when the user sends; the caller clears [value]
  * @param modifier Modifier for the row
  * @param focusRequester Lets the caller move focus here when it seeds the field
+ * @param placeholder What the empty field says ("Listening…" while dictating)
+ * @param trailingIcon Drawn inside the pill at its end — the voice-dictation microphone
+ *   (`DictationMicButton`), only on phones that can recognise speech on the device. Inside the
+ *   field rather than a fourth control in the row, so the send button keeps its place.
  */
 @Composable
+// Stateless on purpose (the caller owns the text and the dictation state), so everything the
+// field shows arrives as a parameter; all but the first three have defaults.
+@Suppress("LongParameterList")
 fun MessageInput(
     value: String,
     onValueChange: (String) -> Unit,
     onSendMessage: (String) -> Unit,
     modifier: Modifier = Modifier,
-    focusRequester: FocusRequester = remember { FocusRequester() }
+    focusRequester: FocusRequester = remember { FocusRequester() },
+    placeholder: String = stringResource(R.string.chat_type_message),
+    trailingIcon: (@Composable () -> Unit)? = null
 ) {
     Row(
         modifier = modifier
@@ -74,7 +83,8 @@ fun MessageInput(
                 .weight(1f)
                 .padding(end = Spacing.S)
                 .focusRequester(focusRequester),
-            placeholder = { Text(stringResource(R.string.chat_type_message)) },
+            placeholder = { Text(placeholder) },
+            trailingIcon = trailingIcon,
             shape = MaterialTheme.shapes.large,
             colors = TextFieldDefaults.colors(
                 focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,

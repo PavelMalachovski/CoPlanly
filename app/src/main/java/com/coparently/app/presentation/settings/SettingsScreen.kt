@@ -40,6 +40,7 @@ import androidx.compose.material.icons.filled.Gavel
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.HourglassTop
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Lock
@@ -108,6 +109,7 @@ import com.coparently.app.domain.holidays.HolidayCountry
 import com.coparently.app.domain.model.FamilyKind
 import com.coparently.app.domain.money.SupportedCurrency
 import com.coparently.app.domain.telemetry.TelemetryConsent
+import com.coparently.app.presentation.ai.AiConsentSettingsEntry
 import com.coparently.app.presentation.chat.SendHold
 import com.coparently.app.presentation.common.ConfirmationDialog
 import com.coparently.app.presentation.common.FamilySwitcherDialog
@@ -167,6 +169,7 @@ import kotlinx.coroutines.launch
  * @param onNavigateToParentingPlan Opens the parenting plan (MON-5)
  * @param onNavigateToPets Opens the pets list
  * @param onNavigateToExport Opens the communication-record export (MON-3)
+ * @param onNavigateToMonthReview Opens the month in review
  * @param onNavigateToDocuments Opens the family document vault (MON-23)
  * @param onNavigateToJournal Opens the private journal (MON-22)
  * @param onNavigateToPairing Opens co-parent pairing
@@ -196,6 +199,7 @@ fun SettingsScreen(
     onNavigateToChildInfo: (() -> Unit)? = null,
     onNavigateToParentingPlan: (() -> Unit)? = null,
     onNavigateToExport: (() -> Unit)? = null,
+    onNavigateToMonthReview: (() -> Unit)? = null,
     onNavigateToDocuments: (() -> Unit)? = null,
     onNavigateToJournal: (() -> Unit)? = null,
     onNavigateToPets: (() -> Unit)? = null,
@@ -679,6 +683,20 @@ fun SettingsScreen(
                         )
                         Divider()
                     }
+                    // Beside the export: the same records, looked back over one month at a time.
+                    onNavigateToMonthReview?.let { navigate ->
+                        SectionRow(
+                            icon = Icons.Default.Insights,
+                            title = stringResource(R.string.month_review_title),
+                            supporting = stringResource(R.string.month_review_settings_description),
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                navigate()
+                            },
+                            trailing = { Chevron() }
+                        )
+                        Divider()
+                    }
                     // The vault (MON-23) sits with the record: both are the family's papers.
                     onNavigateToDocuments?.let { navigate ->
                         SectionRow(
@@ -964,6 +982,9 @@ fun SettingsScreen(
                         onWithdraw = { showHealthConsentWithdraw = true }
                     )
                     Divider()
+                    // The AI-assist consent, beside the other consents: given where it is used,
+                    // turned off here. Draws nothing (not even a divider) while the build has no AI.
+                    AiConsentSettingsEntry(snackbarHostState = snackbarHostState)
                     // POST_NOTIFICATIONS is requested here, contextually, not on app start.
                     val notificationPermissionRequester =
                         com.coparently.app.presentation.common.rememberNotificationPermissionRequester()

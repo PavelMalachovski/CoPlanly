@@ -44,76 +44,143 @@ data class MessageTemplate(
 /**
  * Categories for message templates.
  *
+ * The sheet groups the list by category in first-seen order, so the order of
+ * [DefaultMessageTemplates.getAll] decides the order of the headings; this enum only names them.
+ *
  * @property labelRes Group heading shown above the category's templates.
  */
 enum class TemplateCategory(@StringRes val labelRes: Int) {
-    PICKUP_DROP(R.string.chat_template_category_pickup_drop),
-    ILLNESS(R.string.chat_template_category_illness),
-    SCHOOL_EVENTS(R.string.chat_template_category_school_events),
+    HANDOVER(R.string.chat_template_category_handover),
+    HEALTH(R.string.chat_template_category_health),
+    SCHOOL(R.string.chat_template_category_school),
     HOLIDAYS(R.string.chat_template_category_holidays),
-    CONFLICT_RESOLUTION(R.string.chat_template_category_conflict_resolution)
+    EXPENSES(R.string.chat_template_category_expenses),
+    REPLIES(R.string.chat_template_category_replies)
 }
 
 /**
- * Default message templates for common situations.
+ * Default message templates for common co-parenting situations.
+ *
+ * Written to the BIFF shape used for high-conflict co-parenting (brief, informative, friendly,
+ * firm): one topic per message, about the children, no blame, and where something is asked, a
+ * concrete proposal with a day or time to answer by. Some templates ask for nothing on purpose
+ * (a school update, an acknowledgement), because sharing information without a demand is half of
+ * what keeps a thread calm. In Czech, Russian and Ukrainian the bodies avoid past-tense verbs
+ * whose ending would assume the sender's or the child's gender. `docs/TEMPLATES-AUDIT-2026-09.md`
+ * records the reasoning; a new template follows it and arrives in all five locales.
+ *
+ * A template only prepares text for the composer. None may mention or promise something the app
+ * does (design refresh item 8): the parent edits it, sends it or discards it.
  */
 object DefaultMessageTemplates {
-    fun getAll(): List<MessageTemplate> = listOf(
+    /** Every template, in the order the sheet shows them. */
+    fun getAll(): List<MessageTemplate> = ALL
+
+    private val ALL = listOf(
+        MessageTemplate(
+            id = "handover_confirm",
+            category = TemplateCategory.HANDOVER,
+            titleRes = R.string.chat_template_handover_confirm_title,
+            contentRes = R.string.chat_template_handover_confirm_content,
+            placeholders = listOf("day", "time", "place")
+        ),
         MessageTemplate(
             id = "pickup_delay",
-            category = TemplateCategory.PICKUP_DROP,
+            category = TemplateCategory.HANDOVER,
             titleRes = R.string.chat_template_pickup_delay_title,
             contentRes = R.string.chat_template_pickup_delay_content,
-            placeholders = listOf("child", "minutes")
+            placeholders = listOf("minutes", "time")
         ),
         MessageTemplate(
             id = "pickup_early",
-            category = TemplateCategory.PICKUP_DROP,
+            category = TemplateCategory.HANDOVER,
             titleRes = R.string.chat_template_pickup_early_title,
             contentRes = R.string.chat_template_pickup_early_content,
-            placeholders = listOf("time")
+            placeholders = listOf("day", "time")
         ),
         MessageTemplate(
-            id = "doctor_visit",
-            category = TemplateCategory.ILLNESS,
-            titleRes = R.string.chat_template_doctor_visit_title,
-            contentRes = R.string.chat_template_doctor_visit_content,
-            placeholders = listOf("child", "symptom", "diagnosis", "recommendation")
+            id = "packing",
+            category = TemplateCategory.HANDOVER,
+            titleRes = R.string.chat_template_packing_title,
+            contentRes = R.string.chat_template_packing_content,
+            placeholders = listOf("day", "items", "purpose")
+        ),
+        MessageTemplate(
+            id = "schedule_change",
+            category = TemplateCategory.HANDOVER,
+            titleRes = R.string.chat_template_schedule_change_title,
+            contentRes = R.string.chat_template_schedule_change_content,
+            placeholders = listOf("date", "other date", "reply by")
         ),
         MessageTemplate(
             id = "child_sick",
-            category = TemplateCategory.ILLNESS,
+            category = TemplateCategory.HEALTH,
             titleRes = R.string.chat_template_child_sick_title,
             contentRes = R.string.chat_template_child_sick_content,
-            placeholders = listOf("child", "symptoms", "temperature")
+            placeholders = listOf("child", "symptoms", "temperature", "update by")
+        ),
+        MessageTemplate(
+            id = "doctor_visit",
+            category = TemplateCategory.HEALTH,
+            titleRes = R.string.chat_template_doctor_visit_title,
+            contentRes = R.string.chat_template_doctor_visit_content,
+            placeholders = listOf("child", "reason", "diagnosis", "medicine", "next check-up")
         ),
         MessageTemplate(
             id = "school_event",
-            category = TemplateCategory.SCHOOL_EVENTS,
+            category = TemplateCategory.SCHOOL,
             titleRes = R.string.chat_template_school_event_title,
             contentRes = R.string.chat_template_school_event_content,
             placeholders = listOf("event", "date", "time")
         ),
         MessageTemplate(
             id = "parent_teacher_meeting",
-            category = TemplateCategory.SCHOOL_EVENTS,
+            category = TemplateCategory.SCHOOL,
             titleRes = R.string.chat_template_parent_teacher_meeting_title,
             contentRes = R.string.chat_template_parent_teacher_meeting_content,
             placeholders = listOf("date", "time", "topic")
+        ),
+        MessageTemplate(
+            id = "school_update",
+            category = TemplateCategory.SCHOOL,
+            titleRes = R.string.chat_template_school_update_title,
+            contentRes = R.string.chat_template_school_update_content,
+            placeholders = listOf("child", "what happened")
         ),
         MessageTemplate(
             id = "holiday_plan",
             category = TemplateCategory.HOLIDAYS,
             titleRes = R.string.chat_template_holiday_plan_title,
             contentRes = R.string.chat_template_holiday_plan_content,
-            placeholders = listOf("holiday", "proposal")
+            placeholders = listOf("holiday", "proposal", "reply by")
         ),
         MessageTemplate(
-            id = "schedule_change",
-            category = TemplateCategory.CONFLICT_RESOLUTION,
-            titleRes = R.string.chat_template_schedule_change_title,
-            contentRes = R.string.chat_template_schedule_change_content,
-            placeholders = listOf("date", "alternative date")
+            id = "travel_abroad",
+            category = TemplateCategory.HOLIDAYS,
+            titleRes = R.string.chat_template_travel_abroad_title,
+            contentRes = R.string.chat_template_travel_abroad_content,
+            placeholders = listOf("child", "country", "from", "to", "address", "phone", "reply by")
+        ),
+        MessageTemplate(
+            id = "expense_share",
+            category = TemplateCategory.EXPENSES,
+            titleRes = R.string.chat_template_expense_share_title,
+            contentRes = R.string.chat_template_expense_share_content,
+            placeholders = listOf("what", "date", "total", "share", "pay by")
+        ),
+        MessageTemplate(
+            id = "acknowledge",
+            category = TemplateCategory.REPLIES,
+            titleRes = R.string.chat_template_acknowledge_title,
+            contentRes = R.string.chat_template_acknowledge_content,
+            placeholders = listOf("topic", "reply by")
+        ),
+        MessageTemplate(
+            id = "confirm_agreement",
+            category = TemplateCategory.REPLIES,
+            titleRes = R.string.chat_template_confirm_agreement_title,
+            contentRes = R.string.chat_template_confirm_agreement_content,
+            placeholders = listOf("agreement")
         )
     )
 }

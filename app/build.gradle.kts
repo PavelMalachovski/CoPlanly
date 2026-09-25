@@ -90,6 +90,21 @@ val publishedTermsUrl = ""
  */
 val publishedExportVerifyUrl = ""
 
+/**
+ * The AI assist (reply suggestions, the month-in-review summary): on in debug, off in `release`
+ * and `r8Test` until billing (MON-11) exists to gate it. `-PCOPLANLY_AI_ASSIST_ENABLED=true|false`
+ * overrides every build type, to try it in a release build or switch it off in a debug one. While
+ * it is false no AI affordance renders at all (design item 8); the server has its own switch
+ * (`ai-disabled`) on top of this one.
+ */
+val aiAssistOverride: String? = (findProperty("COPLANLY_AI_ASSIST_ENABLED") as String?)
+    ?.trim()
+    ?.lowercase()
+    ?.takeIf { it == "true" || it == "false" }
+
+/** The `AI_ASSIST_ENABLED` value for a build type whose own default is [default]. */
+fun aiAssistFlag(default: Boolean): String = aiAssistOverride ?: default.toString()
+
 android {
     // The Kotlin package, and therefore where `R` and `BuildConfig` are generated. Deliberately
     // *not* the same as `applicationId` below: renaming the package would touch every file in
@@ -167,6 +182,7 @@ android {
             isMinifyEnabled = false
             buildConfigField("Boolean", "ENABLE_CRASHLYTICS", "false")
             buildConfigField("Boolean", "ENABLE_ANALYTICS", "false")
+            buildConfigField("Boolean", "AI_ASSIST_ENABLED", aiAssistFlag(default = true))
         }
 
         release {
@@ -181,6 +197,8 @@ android {
             )
             buildConfigField("Boolean", "ENABLE_CRASHLYTICS", "true")
             buildConfigField("Boolean", "ENABLE_ANALYTICS", "true")
+            // Premium, and gated until billing (MON-11) exists: no AI affordance in a release.
+            buildConfigField("Boolean", "AI_ASSIST_ENABLED", aiAssistFlag(default = false))
         }
 
         // REL-7's runtime proof: `release` as R8 builds it, plus the probe in `src/r8Test/`, run on
@@ -203,6 +221,7 @@ android {
             // applier anyway (it skips Application.onCreate); these only close the build-flag half.
             buildConfigField("Boolean", "ENABLE_CRASHLYTICS", "false")
             buildConfigField("Boolean", "ENABLE_ANALYTICS", "false")
+            buildConfigField("Boolean", "AI_ASSIST_ENABLED", aiAssistFlag(default = false))
         }
     }
 

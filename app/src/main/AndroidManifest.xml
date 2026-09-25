@@ -6,6 +6,12 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.CAMERA" />
+    <!--
+      Voice dictation in the chat composer, and nothing else. Asked for on the first tap of the
+      composer's microphone, never on start. The audio goes to the phone's on-device speech
+      recognizer only (OnDeviceSpeechDictation) and is not recorded, stored or sent.
+    -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
     <!--
       firebase-analytics declares the advertising-id permission on the app's behalf. This app
@@ -21,6 +27,11 @@
          camera (e.g. some ChromeOS/tablets) can still install the app. -->
     <uses-feature
         android:name="android.hardware.camera"
+        android:required="false" />
+    <!-- Dictation is optional too: a device without a microphone installs and simply has no
+         dictation (the button appears only where on-device recognition is available). -->
+    <uses-feature
+        android:name="android.hardware.microphone"
         android:required="false" />
 
     <application

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Голосовой ввод в поле сообщения чата: распознаётся на этом телефоне, не записывается и не отправляется. -->
+    <string name="voice_start">Ввести голосом</string>
+    <string name="voice_stop">Остановить голосовой ввод</string>
+    <string name="voice_listening">Слушаю…</string>
+    <string name="voice_open_settings">Открыть настройки</string>
+    <string name="voice_permission_rationale">Чтобы вводить текст голосом, разрешите доступ к микрофону. Слова превращаются в текст на этом телефоне; звук не записывается и не отправляется.</string>
+    <string name="voice_error_nothing_heard">Не удалось разобрать. Нажмите на микрофон и попробуйте ещё раз.</string>
+    <string name="voice_error_language">Голосовой ввод на этом языке не установлен на этом телефоне.</string>
+    <string name="voice_error_busy">Голосовой ввод сейчас занят другим приложением. Попробуйте чуть позже.</string>
+    <string name="voice_error_unavailable">Голосовой ввод на этом телефоне сейчас недоступен.</string>
+    <string name="voice_error_other">Голосовой ввод остановился. Попробуйте ещё раз.</string>
+</resources>

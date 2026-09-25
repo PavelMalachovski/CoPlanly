@@ -7,12 +7,14 @@ import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestoreFamilyDataSource
 import com.coparently.app.data.remote.firebase.FirestoreUserDataSource
 import com.coparently.app.data.session.ProfileIdentity
+import com.coparently.app.domain.ai.AiConsent
 import com.coparently.app.domain.consent.HealthConsent
 import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.holidays.HolidayCountry
 import com.coparently.app.domain.model.FamilyKind
 import com.coparently.app.domain.model.User
 import com.coparently.app.domain.repository.UserRepository
+import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.UserInfo
 import com.google.firebase.firestore.FieldValue
@@ -526,6 +528,26 @@ class UserRepositoryImpl @Inject constructor(
             .onFailure { android.util.Log.e(TAG, "Failed to write the health consent to Firestore", it) }
     }
 
+    override suspend fun getAiConsent(): AiConsent? {
+        val uid = firebaseAuthService.getCurrentUser()?.uid ?: return null
+        return firestoreUserDataSource.getUserById(uid)?.aiConsent()
+    }
+
+    /**
+     * No Room write: nothing on the device decides from a stored copy whether a request is allowed —
+     * the server does, from the document — so the one remote key is the whole record. A merge of
+     * that key alone, like [setHealthConsent]'s, so no profile field moves with it.
+     */
+    override suspend fun setAiConsent(version: Int?): Boolean {
+        val uid = firebaseAuthService.getCurrentUser()?.uid ?: return false
+        val value: Any = version?.let {
+            mapOf(AI_CONSENT_VERSION_KEY to it, AI_CONSENT_AT_KEY to FieldValue.serverTimestamp())
+        } ?: FieldValue.delete()
+        return firestoreUserDataSource.updateUser(uid, mapOf(AI_CONSENT_KEY to value))
+            .onFailure { android.util.Log.e(TAG, "Failed to write the AI consent to Firestore", it) }
+            .isSuccess
+    }
+
     override suspend fun deleteUser(id: String) {
         userDao.deleteUserById(id)
     }
@@ -686,8 +708,29 @@ class UserRepositoryImpl @Inject constructor(
         return if (version != null && atMillis != null) HealthConsent(version, atMillis) else null
     }
 
+    /**
+     * The `aiConsent` map this document carries, or null when it carries none or one without a
+     * version. `grantedAt` is a server `Timestamp` as this build writes it, or epoch millis as the
+     * callable also accepts; one still pending on this device reads as null.
+     */
+    private fun Map<String, Any?>.aiConsent(): AiConsent? {
+        val stored = this[AI_CONSENT_KEY] as? Map<*, *> ?: return null
+        val version = (stored[AI_CONSENT_VERSION_KEY] as? Number)?.toInt() ?: return null
+        val grantedAt = when (val at = stored[AI_CONSENT_AT_KEY]) {
+            is Timestamp -> at.toDate().time
+            is Number -> at.toLong()
+            else -> null
+        }
+        return AiConsent(version, grantedAt)
+    }
+
     private companion object {
         const val TAG = "UserRepository"
+
+        /** `users/{uid}.aiConsent` and its two keys: the contract the `aiAssist` callable reads. */
+        const val AI_CONSENT_KEY = "aiConsent"
+        const val AI_CONSENT_VERSION_KEY = "version"
+        const val AI_CONSENT_AT_KEY = "grantedAt"
 
         /** Same defaults [toUser] applies to a Firestore document that omits them. */
         const val DEFAULT_ROLE = "mom"

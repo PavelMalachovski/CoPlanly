@@ -19,16 +19,28 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextOverflow
 import com.coparently.app.R
 import com.coparently.app.domain.model.DefaultMessageTemplates
 import com.coparently.app.domain.model.MessageTemplate
 import com.coparently.app.presentation.theme.Spacing
 
+/**
+ * The message templates, grouped by category; a tap prepares the message in the composer.
+ *
+ * @param onTemplateSelected Receives the chosen template
+ * @param onDismiss Closes the sheet
+ * @param header Drawn above the templates when given — the "Suggest a reply" row, which draws
+ *   nothing while the AI assist is off
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MessageTemplatesBottomSheet(
     onTemplateSelected: (MessageTemplate) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    header: (@Composable () -> Unit)? = null
 ) {
     val templates by remember {
         mutableStateOf(DefaultMessageTemplates.getAll())
@@ -49,13 +61,17 @@ fun MessageTemplatesBottomSheet(
                 modifier = Modifier.padding(bottom = Spacing.L)
             )
 
+            header?.invoke()
+
             LazyColumn {
                 items(templates.groupBy { it.category }.toList()) { (category, categoryTemplates) ->
                     Text(
                         text = stringResource(category.labelRes),
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(vertical = Spacing.S)
+                        modifier = Modifier
+                            .padding(vertical = Spacing.S)
+                            .semantics { heading() }
                     )
 
                     categoryTemplates.forEach { template ->
@@ -83,6 +99,7 @@ fun TemplateItem(
             Text(
                 text = stringResource(template.contentRes),
                 maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
                 style = MaterialTheme.typography.bodySmall
             )
         },

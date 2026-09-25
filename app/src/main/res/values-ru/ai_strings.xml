@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ai_reply_suggest_title">Предложить ответ</string>
+    <string name="ai_reply_suggest_subtitle">Черновик от ИИ по этой переписке — отредактируйте его перед отправкой</string>
+    <string name="ai_reply_suggest_working">Пишу черновик…</string>
+
+    <string name="ai_consent_dialog_title">Черновики и сводки от ИИ</string>
+    <string name="ai_consent_dialog_message">Чтобы предложить ответ, CoPlanly отправляет последние 20 сообщений переписки, включая сообщения второго родителя, и то, что вы уже набрали. Для сводки за месяц — цифры за этот месяц и имена обоих родителей. Данные уходят в Google Cloud в ЕС, где текст пишет ИИ-модель (Claude от Anthropic). После того как текст написан, там ничего не хранится.\n\nЧерновик только вставляется в поле сообщения: второму родителю ничего не придёт, пока вы сами не отправите. ИИ может ошибаться, поэтому сначала прочитайте текст. Отключить это можно в любой момент в Настройках → Приложение.</string>
+    <string name="ai_consent_agree">Даю согласие</string>
+    <string name="ai_consent_not_saved">Не удалось сохранить ваш ответ. Проверьте подключение и попробуйте ещё раз.</string>
+
+    <string name="ai_error_disabled">Предложения сейчас недоступны.</string>
+    <string name="ai_error_rate_limited">Слишком много запросов за короткое время. Попробуйте чуть позже.</string>
+    <string name="ai_error_unavailable">Сервис недоступен. Проверьте подключение и попробуйте ещё раз.</string>
+    <string name="ai_error_failed">Что-то пошло не так. Попробуйте ещё раз.</string>
+    <string name="ai_error_invalid_request">Сервис не смог обработать этот запрос. Обновите приложение и попробуйте ещё раз.</string>
+    <string name="ai_error_empty_thread">В этой переписке пока нет сообщений, на которые можно ответить.</string>
+    <string name="ai_error_not_participant">Ответ можно предложить только в вашей собственной переписке.</string>
+    <string name="ai_error_pairing_not_live">Эта переписка больше не связана со вторым родителем, поэтому предложить ответ нельзя.</string>
+
+    <string name="ai_consent_settings_title">Черновики и сводки от ИИ</string>
+    <string name="ai_consent_settings_given">Включено %1$s</string>
+    <string name="ai_consent_settings_given_now">Включено</string>
+    <string name="ai_consent_settings_not_given">Выключено. Мы спросим, когда вы впервые воспользуетесь предложением.</string>
+    <string name="ai_consent_settings_withdraw">Выключить</string>
+    <string name="ai_consent_withdraw_title">Выключить черновики и сводки от ИИ?</string>
+    <string name="ai_consent_withdraw_message">Пока вы снова не согласитесь, для черновиков и сводок больше ничего не отправляется. Черновик, который уже в поле сообщения, там и останется.</string>
+    <string name="ai_consent_withdraw_confirm">Выключить</string>
+    <string name="ai_consent_withdrawn">Черновики и сводки от ИИ выключены</string>
+    <string name="ai_consent_withdraw_failed">Не удалось выключить. Проверьте подключение и попробуйте ещё раз.</string>
+</resources>

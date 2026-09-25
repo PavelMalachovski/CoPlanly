@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="month_review_title">Monatsrückblick</string>
+    <string name="month_review_settings_description">Tage bei jedem Elternteil, Übergaben, getauschte Tage, Termine und Ausgaben, Monat für Monat</string>
+    <string name="month_review_previous">Vorheriger Monat</string>
+    <string name="month_review_next">Nächster Monat</string>
+
+    <string name="month_review_group_summary">Zusammenfassung</string>
+    <string name="month_review_summarize">Diesen Monat zusammenfassen</string>
+    <string name="month_review_summarize_subtitle">Ein paar von KI geschriebene Sätze zu den Zahlen unten</string>
+    <string name="month_review_summarizing">Zusammenfassung wird geschrieben…</string>
+    <string name="month_review_summary_label">Von KI aus den Zahlen unten geschrieben. Prüfe den Text anhand der Zahlen.</string>
+
+    <string name="month_review_group_schedule">Betreuungsplan</string>
+    <string name="month_review_no_schedule">Kein Betreuungsplan eingerichtet</string>
+    <plurals name="month_review_days">
+        <item quantity="one">%1$d Tag</item>
+        <item quantity="other">%1$d Tage</item>
+    </plurals>
+    <string name="month_review_days_without_schedule">Tage ohne Plan</string>
+    <string name="month_review_handovers">Übergaben</string>
+    <string name="month_review_special_days">Feiertage, Schulferien und Geburtstage</string>
+    <string name="month_review_parent_days">%1$s: %2$s</string>
+
+    <string name="month_review_group_activity">Tauschtage und Termine</string>
+    <string name="month_review_swaps_offered">Zum Tausch angebotene Tage</string>
+    <string name="month_review_swaps_agreed">Getauschte Tage</string>
+    <string name="month_review_events">Gemeinsame Termine</string>
+
+    <string name="month_review_group_money">Ausgaben</string>
+    <string name="month_review_no_expenses">Keine Ausgaben in diesem Monat</string>
+    <string name="month_review_total">Gesamt in %1$s</string>
+    <string name="month_review_paid_by">%1$s hat %2$s bezahlt</string>
+    <string name="month_review_to_even_out">Zum Ausgleich: %1$s von %2$s an %3$s</string>
+    <string name="month_review_even">Ausgeglichen</string>
+
+    <string name="month_review_note">Gezählt aus dem, was dieses Telefon hat: der Plan, wie der Kalender ihn zeigt, vereinbarte Tauschtage eingeschlossen; Termine, die ihr beide seht; und die für den Monat erfassten Ausgaben.</string>
+</resources>

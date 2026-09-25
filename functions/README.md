@@ -334,6 +334,88 @@ What to know before touching it:
 - **Region.** The callables run in `europe-west3` with every other function here; `web/verify/`
   hard-codes that base URL (`PRODUCTION_FUNCTIONS_BASE`) and must change with it.
 
+## AI assist (MON-12)
+
+`ai-assist.js` holds the logic and `index.js` the one callable. **Off until the owner switches it
+on**: with the variables below unset, every call answers `failed-precondition` with reason
+`ai-disabled` and reads nothing. The model is Claude on **Google Cloud Vertex AI in an EU region**,
+called as the functions' own service account — there is no model key anywhere, and never one in
+the app (the Gemini key that shipped in every APK is why MON-7 deleted the old subsystem).
+
+| callable | auth | what it does |
+| --- | --- | --- |
+| `aiAssist({task: 'reply', locale, conversationId, draftHint?})` | a participant of `conversations/{id}` whose pairing is live (both profiles name each other, no `departedUid`), with consent | reads the thread's **last 20 messages** as admin (attachment file names only), asks for one short, neutral reply from the caller's side in `locale`, returns `{text}` |
+| `aiAssist({task: 'monthSummary', locale, month: 'YYYY-MM', stats})` | any signed-in parent with consent | validates `stats` against a fixed list of figures (`validateMonthStats`), asks for 3–5 neutral sentences restating only them, returns `{text}`. No message text is read or sent |
+
+The request contract, which the app mirrors — change both together:
+
+- **Consent**: `users/{uid}.aiConsent = {version, grantedAt}`; `version` must be at least
+  `AI_CONSENT_VERSION` (1, exported from `ai-assist.js`); `grantedAt` is epoch millis or the
+  server timestamp of the write. The owner writes it and deletes it to withdraw
+  (`firestore.rules`, pinned by `firestore-tests/rules/ai-assist.test.js`). Bump the constant, here
+  and in the app, when the consent wording changes.
+- **Error reasons** (`details.reason`): `ai-disabled` (failed-precondition), `ai-consent-required`
+  (failed-precondition), `ai-rate-limited` (resource-exhausted), `ai-unavailable` (unavailable —
+  the provider failed, timed out, refused or returned nothing), `ai-invalid-request` and
+  `ai-empty-thread` (invalid-argument), `ai-not-participant` and `ai-pairing-not-live`
+  (permission-denied).
+- **`stats`** for `monthSummary`, every key but `holidayFairness` required, nothing else allowed:
+  `daysWithParent: [{name, days}]` (1–2 entries, summing to at most the month's length),
+  `handovers`, `swapsProposed`, `swapsAccepted` (≤ proposed), `eventsCount` (integers),
+  `expensesByCurrency: [{currency, total}]`, `balanceByCurrency: [{currency, amount, owedBy,
+  owedTo}]` (ISO 4217 codes, amounts ≥ 0 in major units; names may be empty only when the amount
+  is 0), `holidayFairness?: [{name, days}]`. Names are plain strings of at most 60 characters, no
+  `<` or `>`.
+
+### Switching it on (the owner's steps)
+
+1. **Enable the Vertex AI API** in the Google Cloud project behind Firebase
+   (`gcloud services enable aiplatform.googleapis.com`).
+2. **Enable the Claude model in Model Garden** (Vertex AI → Model Garden → the Claude model →
+   Enable, accepting Anthropic's terms there) and **check that it is offered in the EU region you
+   choose** — availability differs per model and region, and the code refuses any region that is
+   not `europe-…`. Note the model id Model Garden shows (for example `claude-sonnet-5`, or a
+   dated `claude-…@YYYYMMDD` form); that string goes into `AI_MODEL` exactly.
+3. **Grant the functions' service account `roles/aiplatform.user`** (1st-gen functions run as
+   `<project-id>@appspot.gserviceaccount.com` unless configured otherwise):
+   `gcloud projects add-iam-policy-binding <project> --member=serviceAccount:<project-id>@appspot.gserviceaccount.com --role=roles/aiplatform.user`.
+4. **Decide Google's retention before any family's words go through it**: check Vertex AI's data
+   governance settings for the project — prompt caching and abuse-monitoring logging for partner
+   models — and zero data retention if the project is eligible. Write the answer into
+   `docs/legal/PRIVACY-POLICY.md` (`{{AI_PROVIDER_RETENTION}}`) and `RECORDS-OF-PROCESSING.md` P15.
+5. **Set the variables** in `functions/.env` (see `.env.example`): `AI_ENABLED=true`, `AI_MODEL`,
+   and optionally `AI_VERTEX_REGION` (default `europe-west1`), `AI_DAILY_LIMIT` (default 30),
+   `AI_MAX_TOKENS` (default 1024), `AI_TIMEOUT_MS` (default 25000), `AI_TEMPERATURE` (unset by
+   default — the newest Claude models refuse the parameter; set it only for a model that takes
+   it), `AI_VERTEX_PROJECT` (defaults to the functions' own project).
+6. **Deploy**: `firebase deploy --only functions:aiAssist,functions:deleteAccount` and
+   `firebase deploy --only firestore:rules` (the `aiConsent` shape and the closed `ai_usage`).
+7. **Try it** with one consented test account before the app's flag is switched on for anyone.
+   A half-configured deployment (switched on, but no model, a non-EU region or no project) keeps
+   answering `ai-disabled` and logs `aiAssist misconfigured: …` with the reason.
+
+### What to know before touching it
+
+- **Nothing is logged but numbers.** One line per call: uid, task, outcome, token counts, latency,
+  and for a provider failure its HTTP status. Never the prompt, a message, the draft hint, the
+  figures or the answer — an error body is not logged either, because it may quote the request.
+  `test/ai-assist.test.js` fails if a message, a hint, a name or the output reaches a log line.
+- **Messages are data, not instructions.** They go into the prompt as JSON inside
+  `<conversation>` with `<`, `>` and `&` escaped, so a message cannot close the block; the system
+  prompt says instructions inside it are to be ignored. The other parent writes half of that text.
+- **Twenty messages, merged across both timestamp formats.** Firestore orders every number before
+  every string, so the thread is read with two queries (epoch millis and legacy ISO strings) and
+  cut to the newest 20 by time. Both use the existing `(conversationId, timestamp DESC)` index.
+- **The quota** is `ai_usage/{uid}` (`{day, count, updatedAtMillis}`, UTC day), incremented in a
+  transaction after every check has passed and before the model is called, so a failing provider
+  cannot be retried without end. The collection is closed to clients; account deletion removes it.
+- **`maxInstances: 10`, `timeoutSeconds: 60`**, and the provider's own timeout (`AI_TIMEOUT_MS`)
+  bound cost and latency; `max_tokens` is small (`AI_MAX_TOKENS`).
+- **The request body** is the Anthropic Messages API with `anthropic_version: "vertex-2023-10-16"`,
+  POSTed to `https://{region}-aiplatform.googleapis.com/v1/projects/{project}/locations/{region}/publishers/anthropic/models/{model}:rawPredict`
+  with a `cloud-platform` access token from `google-auth-library`. A `stop_reason` of `refusal` or
+  an empty answer is `ai-unavailable`.
+
 ## Region: europe-west3 (September 2026)
 
 Every function is declared through `regional` (`functions.region(FUNCTIONS_REGION)` at the top of

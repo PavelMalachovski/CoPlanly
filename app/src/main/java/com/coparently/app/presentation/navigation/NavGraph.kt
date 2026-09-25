@@ -68,6 +68,7 @@ import com.coparently.app.presentation.pairing.PairingScreen
 import com.coparently.app.presentation.parentingplan.ParentingPlanScreen
 import com.coparently.app.presentation.pets.AddEditPetScreen
 import com.coparently.app.presentation.pets.PetsScreen
+import com.coparently.app.presentation.review.MonthReviewScreen
 import com.coparently.app.presentation.settings.SettingsScreen
 import com.coparently.app.presentation.sync.AuthStateViewModel
 import com.coparently.app.presentation.sync.SyncViewModel
@@ -527,6 +528,9 @@ fun NavGraph(
                         onNavigateToExport = {
                             navController.navigate(Screen.Export.createRoute())
                         },
+                        onNavigateToMonthReview = {
+                            navController.navigate(Screen.MonthReview.route)
+                        },
                         onNavigateToDocuments = {
                             navController.navigate(Screen.Documents.route)
                         },
@@ -583,6 +587,17 @@ fun NavGraph(
                     popExitTransition = { slideOutToRight() }
                 ) {
                     ExportScreen(onNavigateBack = { navController.popBackStack() })
+                }
+
+                // A month in review, beside the export: another look back over the family's records.
+                pane(
+                    route = Screen.MonthReview.route,
+                    enterTransition = { slideInFromRight() },
+                    exitTransition = { slideOutToLeft() },
+                    popEnterTransition = { slideInFromLeft() },
+                    popExitTransition = { slideOutToRight() }
+                ) {
+                    MonthReviewScreen(onNavigateUp = { navController.popBackStack() })
                 }
 
                 // The document vault (MON-23), beside the export: the family's papers, shared with both
@@ -1547,6 +1562,9 @@ sealed class Screen(val route: String) {
             if (conversationId.isNullOrBlank()) "export" else "export?thread=${Uri.encode(conversationId)}"
     }
     data object Documents : Screen("family_documents")
+
+    /** A month in figures, with an optional AI-written summary of them. */
+    data object MonthReview : Screen("month_review")
 
     /** The private journal's list (MON-22). */
     data object Journal : Screen("journal")

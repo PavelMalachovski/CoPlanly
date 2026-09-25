@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The AI assist: reply suggestions in chat, the month-in-review summary, and its consent.
+         Shown only while BuildConfig.AI_ASSIST_ENABLED is true. The consent dialog's wording is
+         what AI_CONSENT_VERSION versions: change it in any locale, bump the version. -->
+
+    <!-- The first row of the templates sheet -->
+    <string name="ai_reply_suggest_title">Suggest a reply</string>
+    <string name="ai_reply_suggest_subtitle">AI-generated draft from this conversation, for you to edit before sending</string>
+    <string name="ai_reply_suggest_working">Writing a draft…</string>
+
+    <!-- The consent dialog, asked before the first request -->
+    <string name="ai_consent_dialog_title">Drafts and summaries written by AI</string>
+    <string name="ai_consent_dialog_message">To suggest a reply, CoPlanly sends the last 20 messages of the conversation, including your co-parent\'s, and anything you have already typed. To summarise a month, it sends that month\'s figures and both parents\' names. They go to Google Cloud in the EU, where an AI model (Claude, by Anthropic) writes the text. Nothing is kept there once it is written.\n\nA draft only goes into your message box: nothing reaches your co-parent unless you send it. AI can be wrong, so read it first. You can turn this off at any time in Settings → App.</string>
+    <string name="ai_consent_agree">I agree</string>
+    <string name="ai_consent_not_saved">Your answer could not be saved. Check your connection and try again.</string>
+
+    <!-- Why a request brought back no text -->
+    <string name="ai_error_disabled">Suggestions are not available right now.</string>
+    <string name="ai_error_rate_limited">You have asked for a lot in a short time. Try again a little later.</string>
+    <string name="ai_error_unavailable">Could not reach the service. Check your connection and try again.</string>
+    <string name="ai_error_failed">Something went wrong. Try again.</string>
+    <string name="ai_error_invalid_request">The service could not use this request. Update the app and try again.</string>
+    <string name="ai_error_empty_thread">There are no messages in this conversation to reply to yet.</string>
+    <string name="ai_error_not_participant">A reply can only be suggested in your own conversation.</string>
+    <string name="ai_error_pairing_not_live">This conversation is no longer linked to your co-parent, so no reply can be suggested.</string>
+
+    <!-- Settings → App -->
+    <string name="ai_consent_settings_title">AI drafts and summaries</string>
+    <string name="ai_consent_settings_given">Turned on %1$s</string>
+    <string name="ai_consent_settings_given_now">Turned on</string>
+    <string name="ai_consent_settings_not_given">Off. You will be asked the first time you use a suggestion.</string>
+    <string name="ai_consent_settings_withdraw">Turn off</string>
+    <string name="ai_consent_withdraw_title">Turn off AI drafts and summaries?</string>
+    <string name="ai_consent_withdraw_message">Nothing more is sent to write drafts or summaries until you agree again. A draft already in your message box stays there.</string>
+    <string name="ai_consent_withdraw_confirm">Turn off</string>
+    <string name="ai_consent_withdrawn">AI drafts and summaries are off</string>
+    <string name="ai_consent_withdraw_failed">Could not turn it off. Check your connection and try again.</string>
+</resources>

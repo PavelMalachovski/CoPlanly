@@ -1,5 +1,6 @@
 package com.coparently.app.domain.repository
 
+import com.coparently.app.domain.ai.AiConsent
 import com.coparently.app.domain.consent.HealthConsent
 import com.coparently.app.domain.model.User
 import kotlinx.coroutines.flow.Flow
@@ -105,6 +106,22 @@ interface UserRepository {
      * Does nothing while signed out.
      */
     suspend fun setHealthConsent(consent: HealthConsent?)
+
+    /**
+     * The signed-in parent's AI-assist consent as `users/{uid}.aiConsent` holds it, read from
+     * Firestore (server first, this device's cache offline) — Room has no column for it. Null when
+     * never given, withdrawn, unreadable or signed out.
+     */
+    suspend fun getAiConsent(): AiConsent?
+
+    /**
+     * Records the signed-in parent's AI-assist consent at [version], or deletes it when [version] is
+     * null (a withdrawal). The only writer of `users/{uid}.aiConsent`: a merge of that one key,
+     * `{version, grantedAt}` with the **server's** timestamp.
+     *
+     * @return Whether the write reached the server; false while signed out or when it failed
+     */
+    suspend fun setAiConsent(version: Int?): Boolean
 
     /**
      * Deletes a user by ID.
