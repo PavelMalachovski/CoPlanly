@@ -76,9 +76,11 @@ import com.coparently.app.presentation.common.ConfirmationDialog
 import com.coparently.app.presentation.common.CountryPicker
 import com.coparently.app.presentation.common.DatePickerField
 import com.coparently.app.presentation.common.MedicalProfileEditor
+import com.coparently.app.presentation.common.STACK_CONTROLS_FONT_SCALE
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.labelRes
+import com.coparently.app.presentation.common.stacksAtLargeFont
 import com.coparently.app.presentation.consent.HealthConsentDialog
 import com.coparently.app.presentation.consent.HealthConsentViewModel
 import com.coparently.app.presentation.consent.LockedMedicalSection
@@ -1065,6 +1067,10 @@ private fun DateOfBirthField(date: LocalDate?, onDateChange: (LocalDate?) -> Uni
  * Skip is present on every step that may be left unanswered — which is every step except the
  * intro, which asks nothing, and the profile, whose name field the app cannot work without. On
  * the co-parent step it reads "Not now", because that is what it means there.
+ *
+ * One row at the default size. From [STACK_CONTROLS_FONT_SCALE] the primary button takes a row
+ * of its own at full width, with Back and Skip under it: sharing one row at 150 %, German broke
+ * the primary label inside the word ("Weit|er", "Ferti|g").
  */
 @Composable
 private fun OnboardingBottomBar(
@@ -1073,55 +1079,84 @@ private fun OnboardingBottomBar(
     onSkip: () -> Unit,
     onNext: () -> Unit
 ) {
+    val back: @Composable () -> Unit = {
+        if (!state.isFirstStep) {
+            TextButton(onClick = onBack) {
+                Text(stringResource(R.string.onboarding_back))
+            }
+        }
+    }
+    val skip: @Composable () -> Unit = {
+        if (state.canSkip) OnboardingSkipButton(state.step, onSkip)
+    }
+    val next: @Composable (Modifier) -> Unit = { modifier -> OnboardingNextButton(state, onNext, modifier) }
     Surface(shadowElevation = 8.dp) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(Spacing.L),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.S)
-        ) {
-            if (!state.isFirstStep) {
-                TextButton(onClick = onBack) {
-                    Text(stringResource(R.string.onboarding_back))
-                }
-            }
-            Spacer(modifier = Modifier.weight(1f))
-            if (state.canSkip) {
-                TextButton(onClick = onSkip) {
-                    Text(
-                        stringResource(
-                            if (state.step == OnboardingStep.CoParent) {
-                                R.string.onboarding_coparent_later
-                            } else {
-                                R.string.onboarding_skip
-                            }
-                        )
-                    )
-                }
-            }
-            Button(
-                onClick = onNext,
-                enabled = state.canAdvance && !state.isSaving,
-                modifier = Modifier.heightIn(min = 48.dp)
+        if (stacksAtLargeFont()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(Spacing.L),
+                verticalArrangement = Arrangement.spacedBy(Spacing.S)
             ) {
-                if (state.isSaving) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
-                } else {
-                    Text(
-                        stringResource(
-                            if (state.isLastStep) {
-                                R.string.onboarding_finish
-                            } else {
-                                R.string.onboarding_next
-                            }
-                        )
-                    )
+                next(Modifier.fillMaxWidth())
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    back()
+                    Spacer(modifier = Modifier.weight(1f))
+                    skip()
                 }
             }
+        } else {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(Spacing.L),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.S)
+            ) {
+                back()
+                Spacer(modifier = Modifier.weight(1f))
+                skip()
+                next(Modifier)
+            }
+        }
+    }
+}
+
+/** Skip — "Not now" on the co-parent step, because that is what it means there. */
+@Composable
+private fun OnboardingSkipButton(step: OnboardingStep, onSkip: () -> Unit) {
+    TextButton(onClick = onSkip) {
+        Text(
+            stringResource(
+                if (step == OnboardingStep.CoParent) {
+                    R.string.onboarding_coparent_later
+                } else {
+                    R.string.onboarding_skip
+                }
+            )
+        )
+    }
+}
+
+/** Next, or Finish on the last step; a spinner while the step saves. */
+@Composable
+private fun OnboardingNextButton(state: OnboardingUiState, onNext: () -> Unit, modifier: Modifier) {
+    Button(
+        onClick = onNext,
+        enabled = state.canAdvance && !state.isSaving,
+        modifier = modifier.heightIn(min = 48.dp)
+    ) {
+        if (state.isSaving) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(20.dp),
+                strokeWidth = 2.dp,
+                color = MaterialTheme.colorScheme.onPrimary
+            )
+        } else {
+            Text(
+                stringResource(
+                    if (state.isLastStep) R.string.onboarding_finish else R.string.onboarding_next
+                )
+            )
         }
     }
 }
