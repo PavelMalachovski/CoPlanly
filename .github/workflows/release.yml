@@ -17,7 +17,11 @@
 # refuses to sign unless all four are present and the store file exists, so a run with a secret
 # missing produces an *unsigned* bundle and says so in the summary rather than failing obscurely.
 #
-# What comes out: the `.aab` and R8's `mapping.txt`, as artifacts. Keep the mapping with every
+# What comes out: the `.aab`, a signed `.apk` of the same build to install on a phone by hand
+# (download the `coplanly-release-apk` artifact, unzip, open the `.apk` on the phone), and R8's
+# `mapping.txt`, as artifacts. The APK is the same release build Play would serve, signed with the
+# upload key, so Google sign-in works once that key's SHA-1 is in the Firebase app; an unsigned
+# run (a signing secret missing) produces an APK Android refuses to install, and the summary says so. Keep the mapping with every
 # upload — without it Crashlytics stack traces from that build are unreadable — and run
 # `node tools/check-r8-mapping.js` here as CI does, because a release that renames a Gson field
 # ships a child's medical profile as an empty object (audit §2.8).
@@ -89,7 +93,7 @@ jobs:
           COPLANLY_RELEASE_KEY_PASSWORD: ${{ secrets.COPLANLY_RELEASE_KEY_PASSWORD }}
         # Every upload to Play needs a higher versionCode than the last. The run number only
         # grows, and the offset keeps it above the hard-coded default in app/build.gradle.kts.
-        run: ./gradlew bundleRelease -PCOPLANLY_VERSION_CODE=$(( 100 + ${{ github.run_number }} ))
+        run: ./gradlew bundleRelease assembleRelease -PCOPLANLY_VERSION_CODE=$(( 100 + ${{ github.run_number }} ))
 
       - name: Verify R8 kept the Gson field names
         run: node tools/check-r8-mapping.js
@@ -118,6 +122,14 @@ jobs:
         with:
           name: coplanly-release-aab
           path: app/build/outputs/bundle/release/*.aab
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload the APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: coplanly-release-apk
+          path: app/build/outputs/apk/release/*.apk
           if-no-files-found: error
           retention-days: 30
 
