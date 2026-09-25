@@ -7,11 +7,11 @@ import com.coparently.app.R
  * The screen a push opens when tapped (docs/AUDIT-2026-10-design.md D-13).
  *
  * Most types used to open the launcher and leave the parent to find what the notification was
- * about. The two with links of their own keep them: pairing opens `coplanly://pair` and a chat
- * message its thread. Every other type names one of these, and [PushNotifier] puts it on the
- * launcher intent as [EXTRA]. `MainActivity` reads it through [fromKey], so a value it does not
- * know opens the app as before rather than anywhere else. The activity is exported, and nothing
- * here may do more than pick a screen.
+ * about. The ones with links of their own keep them: pairing opens `coplanly://pair`, and a chat
+ * message and a departed co-parent's notice open their thread. Every other type names one of
+ * these, and [PushNotifier] puts it on the launcher intent as [EXTRA]. `MainActivity` reads it
+ * through [fromKey], so a value it does not know opens the app as before rather than anywhere
+ * else. The activity is exported, and nothing here may do more than pick a screen.
  *
  * @property key The value carried in the intent. Stable: a notification already in the tray
  *   holds it.
@@ -79,11 +79,15 @@ enum class PushChannel(
  *
  * `when` over the type constants, with no `else`, would not compile over strings, so
  * `PushRoutingTest` holds the table complete instead: every type in [PushPayload] has a channel,
- * and every type except pairing and chat, which have links of their own, has a destination.
+ * and every type except pairing, chat and a co-parent's deleted account, which have links of
+ * their own, has a destination.
  */
 object PushRouting {
 
-    /** The screen [type] opens, or null for pairing, chat and a type this build does not know. */
+    /**
+     * The screen [type] opens, or null for pairing, chat, a departed co-parent's notice (which
+     * opens its thread through the chat link, like a message) and a type this build does not know.
+     */
     fun destinationOf(type: String?): PushDestination? = when (type) {
         PushPayload.EVENT_CREATED, PushPayload.EVENT_UPDATED, PushPayload.EVENT_DELETED ->
             PushDestination.CALENDAR
@@ -112,7 +116,11 @@ object PushRouting {
         else -> null
     }
 
-    /** The channel [type] posts to; the family channel for a type this build does not know. */
+    /**
+     * The channel [type] posts to; the family channel for news about the family itself — pairing,
+     * a professional's request, a co-parent's deleted account — and for a type this build does not
+     * know.
+     */
     fun channelOf(type: String?): PushChannel = when (type) {
         PushPayload.CHAT_MESSAGE -> PushChannel.CHAT
         PushPayload.EVENT_CREATED,

@@ -18,14 +18,17 @@ class PushRoutingTest {
         PushPayload.CHAT_MESSAGE,
         PushPayload.PAIRING_ACCEPTED,
         PushPayload.PAIRING_REMOVED,
-        PushPayload.PROFESSIONAL_ACCESS_REQUESTED
+        PushPayload.PROFESSIONAL_ACCESS_REQUESTED,
+        PushPayload.COPARENT_ACCOUNT_DELETED
     )
 
     @Test
-    fun `every worded type opens a screen, except the two with links of their own`() {
+    fun `every worded type opens a screen, except the ones with links of their own`() {
         for (type in PushNotifier.PUSH_TEXT.keys) {
             if (type == PushPayload.PAIRING_ACCEPTED || type == PushPayload.PAIRING_REMOVED) {
                 assertNull(PushRouting.destinationOf(type), "$type keeps its pairing link")
+            } else if (type == PushPayload.COPARENT_ACCOUNT_DELETED) {
+                assertNull(PushRouting.destinationOf(type), "$type opens its thread through the chat link")
             } else {
                 assertNotNull(PushRouting.destinationOf(type), "$type opens a screen, not the launcher")
             }

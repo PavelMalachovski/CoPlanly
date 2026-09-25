@@ -88,14 +88,18 @@ import kotlinx.coroutines.delay
  *   tab's own gear action would otherwise be lost
  * @param onOpenChangeRequest Opens the change-request inbox with the request for the given
  *   event id highlighted; tapping a change-request card in the thread calls this
+ * @param onOpenInbox Opens the change-request inbox with nothing highlighted (a day-swap card)
+ * @param onOpenExport Opens the export screen for a thread; offered by the banner over a thread
+ *   kept after the co-parent deleted their account ([DepartedThreadBanner]), and by nothing else
  * @param viewModel Chat state
  * @param searchViewModel Search inside this thread (MON-15) — local, this conversation only
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 // One callback per navigation target this screen offers; the body is the thread scaffold, which
-// only reads as one screen when it is written as one.
-@Suppress("LongParameterList", "LongMethod")
+// only reads as one screen when it is written as one — including its kept-thread shape, where the
+// banner and the closed composer replace the composer's own branches.
+@Suppress("LongParameterList", "LongMethod", "CyclomaticComplexMethod")
 fun ChatScreen(
     conversationId: String,
     onBack: (() -> Unit)? = null,
@@ -104,6 +108,7 @@ fun ChatScreen(
     onOpenSettings: (() -> Unit)? = null,
     onOpenChangeRequest: ((String) -> Unit)? = null,
     onOpenInbox: (() -> Unit)? = null,
+    onOpenExport: ((conversationId: String) -> Unit)? = null,
     viewModel: ChatViewModel = hiltViewModel(),
     searchViewModel: ChatSearchViewModel = hiltViewModel()
 ) {
@@ -123,6 +128,9 @@ fun ChatScreen(
     var revealTarget by remember { mutableStateOf<String?>(null) }
 
     val conversation = conversations.find { it.id == conversationId }
+    // A thread kept after the co-parent deleted their account: readable and exportable, closed to
+    // new messages. Null for every ordinary thread.
+    val departed = viewModel.departedThreads.collectAsState().value.firstOrNull { it.conversationId == conversationId }
 
     var showTemplates by remember { mutableStateOf(false) }
     var showEventPicker by remember { mutableStateOf(false) }
@@ -196,6 +204,7 @@ fun ChatScreen(
                 // A blank (not null) title means this row was mirrored locally before any
                 // successful `ensureConversation` set it — `?:` alone never catches that.
                 val title = conversation?.title?.takeIf { it.isNotBlank() }
+                    ?: departed?.departedName?.takeIf { it.isNotBlank() }
                     ?: stringResource(R.string.chat_title_fallback)
                 ChatThreadHeader(title = title, messages = messages, currentUserId = currentUserId)
             }
@@ -206,6 +215,9 @@ fun ChatScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
+            if (departed != null && !searching) {
+                DepartedThreadBanner(thread = departed, onOpenExport = onOpenExport)
+            }
             if (searching) {
                 ChatSearchResults(
                     state = searchState,
@@ -249,8 +261,11 @@ fun ChatScreen(
                 )
             }
 
-            // The composer and its chips give way to the results while search is open.
-            if (!searching) {
+            // The composer and its chips give way to the results while search is open, and to a
+            // one-line note in a thread the departed co-parent can no longer answer.
+            if (departed != null && !searching) {
+                DepartedThreadComposerNote()
+            } else if (!searching) {
                 // Labelled, above the composer — where a compose-time action belongs, and where
                 // it can say what it does.
                 Row(

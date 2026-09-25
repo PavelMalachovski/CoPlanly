@@ -75,4 +75,7 @@
     <string name="push_channel_family_description">Связь со вторым родителем, записи о детях, общие записи и доступ специалистов</string>
     <string name="push_professional_access_requested_title">Запрос доступа специалиста</string>
     <string name="push_professional_access_requested_body">%1$s принял(а) приглашение читать календарь и родительский план семьи. Доступ откроется только с согласия обоих родителей.</string>
+    <!-- A co-parent deleted their account; the thread is kept for 30 days (%1$s = their name, %2$s = the day it goes). -->
+    <string name="push_coparent_account_deleted_title">Второй родитель удалил аккаунт</string>
+    <string name="push_coparent_account_deleted_body">%1$s удалил(а) свой аккаунт. Ваша переписка будет удалена %2$s — экспортируйте её до этого.</string>
 </resources>

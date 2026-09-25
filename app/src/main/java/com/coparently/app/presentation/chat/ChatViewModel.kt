@@ -5,10 +5,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.coparently.app.data.chat.ChatPartner
 import com.coparently.app.data.chat.ChatPartnerSource
+import com.coparently.app.data.chat.DepartedThreadSource
 import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.domain.chat.ChatReadState
 import com.coparently.app.domain.chat.ChatWindow
 import com.coparently.app.domain.chat.ConversationKey
+import com.coparently.app.domain.chat.DepartedThread
 import com.coparently.app.domain.model.Conversation
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.model.Message
@@ -99,13 +101,15 @@ sealed interface ChatEvent {
  * permanently dead for that ViewModel instance.
  */
 @HiltViewModel
+@Suppress("LongParameterList") // the chat's sources: messages, session, events, partner, drafts, kept threads
 class ChatViewModel @Inject constructor(
     private val messageRepository: MessageRepository,
     private val userRepository: UserRepository,
     private val eventRepository: EventRepository,
     private val chatPartnerSource: ChatPartnerSource,
     private val preferences: EncryptedPreferences,
-    private val preferencesRepository: PreferencesRepository
+    private val preferencesRepository: PreferencesRepository,
+    departedThreadSource: DepartedThreadSource
 ) : ViewModel() {
 
     private val _currentConversationId = MutableStateFlow<String?>(null)
@@ -193,6 +197,33 @@ class ChatViewModel @Inject constructor(
         )
 
     /**
+     * The threads kept after a co-parent deleted their account ([DepartedThread]), or null until
+     * the listener has answered. One upstream for both [conversations] and [departedThreads], so a
+     * screen collecting both holds one Firestore listener, not two.
+     */
+    private val departedOrUnknown: StateFlow<List<DepartedThread>?> = departedThreadSource.observe()
+        .map<List<DepartedThread>, List<DepartedThread>?> { it }
+        .catch { e -> failSoft("observe kept threads", e) { emit(emptyList()) } }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(SUBSCRIPTION_TIMEOUT_MS),
+            initialValue = null
+        )
+
+    /**
+     * The threads kept for this parent after a co-parent deleted their account, soonest deadline
+     * first. The thread screen reads it to show the banner, offer the export and hide the composer:
+     * the pairing is gone, so the rules refuse a new message there anyway.
+     */
+    val departedThreads: StateFlow<List<DepartedThread>> = departedOrUnknown
+        .map { it.orEmpty() }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(SUBSCRIPTION_TIMEOUT_MS),
+            initialValue = emptyList()
+        )
+
+    /**
      * Runs [block] in [viewModelScope] with a failure boundary around it.
      *
      * Every chat action below reaches Firestore. An uncaught failure in a
@@ -243,7 +274,9 @@ class ChatViewModel @Inject constructor(
     }
 
     /**
-     * The co-parent thread, as a single-element list while it exists.
+     * The co-parent thread, as a single-element list while it exists — followed by any thread kept
+     * after a co-parent deleted their account ([departedThreads]), which no pairing names any more.
+     * With no co-parent left, that kept thread is the only one, and the tab renders it in place.
      *
      * There is exactly one conversation per account pair and its id is a pure function of
      * the two uids, so this is derived from the session and the pairing rather than fetched
@@ -256,16 +289,21 @@ class ChatViewModel @Inject constructor(
      */
     @OptIn(ExperimentalCoroutinesApi::class)
     val conversations: StateFlow<Loadable<List<Conversation>>> =
-        combine(currentUserId, coParentLink) { userId, link -> userId to link }
-            .flatMapLatest { (userId, link) ->
-                when (link) {
+        combine(currentUserId, coParentLink, departedOrUnknown) { userId, link, departed ->
+            Triple(userId, link, departed)
+        }
+            .flatMapLatest { (userId, link, departed) ->
+                val current: Flow<Loadable<List<Conversation>>> = when (link) {
                     // Not an answer yet. Collapsing this into an empty list is the same false
                     // assertion `Loadable` exists to remove, one layer further down: the screen
                     // would say "no conversations" for the frames before the pairing listener
                     // has reported anything at all.
                     CoParentLink.Resolving -> flowOf(Loadable.Loading)
 
-                    CoParentLink.NotPaired -> flowOf(Loadable.Loaded(emptyList()))
+                    // Unpaired is an answer only once the kept threads have answered too: the
+                    // parent whose co-parent deleted their account is unpaired *and* has a thread.
+                    CoParentLink.NotPaired ->
+                        flowOf(if (departed == null) Loadable.Loading else Loadable.Loaded(emptyList()))
 
                     is CoParentLink.Linked -> {
                         // A null id means the session has not resolved, so there is no key to
@@ -280,6 +318,7 @@ class ChatViewModel @Inject constructor(
                         }
                     }
                 }
+                if (userId.isEmpty()) current else withDepartedThreads(current, departed.orEmpty(), messageRepository)
             }
             // A failed read is a different question from an unfinished one: this one has been
             // asked and answered badly, so the screen gets an answer rather than a skeleton it
@@ -833,4 +872,30 @@ private fun ChatPartner.toCoParentLink(): CoParentLink = when (this) {
     ChatPartner.Resolving -> CoParentLink.Resolving
     ChatPartner.None -> CoParentLink.NotPaired
     is ChatPartner.Linked -> CoParentLink.Linked(partnerUid)
+}
+
+/**
+ * [current] with the kept threads of [departed] after it, each read through the ordinary
+ * conversation path ([MessageRepository.observeConversation]: Room, mirrored from Firestore) and
+ * each at most once. A kept thread Room has no row for yet is left out until the mirror writes
+ * one; while [current] is still loading the answer stays loading.
+ */
+private fun withDepartedThreads(
+    current: Flow<Loadable<List<Conversation>>>,
+    departed: List<DepartedThread>,
+    messageRepository: MessageRepository
+): Flow<Loadable<List<Conversation>>> {
+    if (departed.isEmpty()) return current
+    val kept = combine(departed.map { messageRepository.observeConversation(it.conversationId) }) { rows ->
+        rows.filterNotNull()
+    }
+    return combine(current, kept) { now, extra ->
+        when (now) {
+            Loadable.Loading -> now
+            is Loadable.Loaded -> {
+                val shown = now.value.map { it.id }.toSet()
+                Loadable.Loaded(now.value + extra.filter { it.id !in shown })
+            }
+        }
+    }
 }
