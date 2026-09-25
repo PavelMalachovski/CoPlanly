@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="health_consent_dialog_title">Данные о здоровье вашего ребёнка</string>
+    <string name="health_consent_dialog_message">Аллергии, лекарства, заболевания, группа крови, прививки, медицинские заметки и медицинские фото — это данные о здоровье вашего ребёнка.\n\n• Второй родитель может их читать и редактировать. Гость, которому вы откроете карточку ребёнка, может их читать.\n• Они хранятся на наших серверах.\n• Они необязательны. Приложение работает и без них.\n• Вы можете в любой момент отозвать согласие в настройках. Тогда добавленные вами медицинские данные будут удалены.</string>
+    <string name="health_consent_agree">Даю согласие</string>
+    <string name="health_consent_not_now">Не сейчас</string>
+    <string name="health_consent_locked">Медицинские данные необязательны, и для них сначала нужно ваше согласие.</string>
+    <string name="health_consent_add_action">Добавить медицинские данные</string>
+    <string name="health_consent_settings_title">Согласие на данные о здоровье</string>
+    <string name="health_consent_settings_given">Дано %1$s</string>
+    <string name="health_consent_settings_not_given">Не дано</string>
+    <string name="health_consent_settings_withdraw">Отозвать</string>
+    <string name="health_consent_withdraw_title">Отозвать согласие?</string>
+    <string name="health_consent_withdraw_message">Медицинские данные, которые вы добавили в карточки своих детей, — аллергии, лекарства, медицинский профиль, медицинские заметки и медицинские фото — будут удалены, в том числе на телефоне второго родителя.\n\nВ карточках, которые создал второй родитель, медицинские данные останутся: они основаны на его собственном согласии.</string>
+    <string name="health_consent_withdraw_confirm">Отозвать и удалить</string>
+    <string name="health_consent_withdrawn">Согласие отозвано. Добавленные вами медицинские данные удалены.</string>
+    <string name="health_consent_withdraw_photos_failed">Некоторые медицинские фото не удалось удалить, поэтому ничего не отозвано. Проверьте подключение и попробуйте ещё раз.</string>
+    <string name="health_consent_withdraw_failed">Не удалось отозвать согласие. Попробуйте ещё раз.</string>
+</resources>

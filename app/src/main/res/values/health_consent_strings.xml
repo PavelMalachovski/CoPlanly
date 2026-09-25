@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The child-health consent (GDPR Art. 9(2)(a)): the dialog asked before a child's medical
+     details are entered, the locked medical section, and the Settings row that withdraws it.
+     Changing the wording of health_consent_dialog_* means bumping HEALTH_CONSENT_VERSION
+     (domain/consent/HealthConsent.kt), so every parent is asked again. -->
+<resources>
+    <string name="health_consent_dialog_title">Your child\'s health details</string>
+    <string name="health_consent_dialog_message">Allergies, medications, conditions, blood group, vaccinations, medical notes and medical photos are health details about your child.\n\n• Your co-parent can read and edit them. Any guest you give access to your child\'s record can read them.\n• They are stored on our servers.\n• They are optional. The app works without them.\n• You can withdraw your consent at any time in Settings. The medical details you added are then deleted.</string>
+    <string name="health_consent_agree">I agree</string>
+    <string name="health_consent_not_now">Not now</string>
+    <string name="health_consent_locked">Medical details are optional and need your consent first.</string>
+    <string name="health_consent_add_action">Add medical details</string>
+    <string name="health_consent_settings_title">Health details consent</string>
+    <string name="health_consent_settings_given">Given on %1$s</string>
+    <string name="health_consent_settings_not_given">Not given</string>
+    <string name="health_consent_settings_withdraw">Withdraw</string>
+    <string name="health_consent_withdraw_title">Withdraw your consent?</string>
+    <string name="health_consent_withdraw_message">The medical details you added to your children\'s records — allergies, medications, the medical profile, medical notes and medical photos — will be deleted, on your co-parent\'s phone too.\n\nRecords your co-parent created keep their medical details, because they rest on your co-parent\'s own consent.</string>
+    <string name="health_consent_withdraw_confirm">Withdraw and delete</string>
+    <string name="health_consent_withdrawn">Consent withdrawn. The medical details you added were deleted.</string>
+    <string name="health_consent_withdraw_photos_failed">Some medical photos could not be deleted, so nothing was withdrawn. Check your connection and try again.</string>
+    <string name="health_consent_withdraw_failed">Your consent could not be withdrawn. Try again.</string>
+</resources>

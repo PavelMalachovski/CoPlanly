@@ -55,6 +55,20 @@ interface UserDao {
     suspend fun updateUser(user: UserEntity)
 
     /**
+     * Records or clears the child-health consent on one row, touching no other column.
+     *
+     * A targeted update rather than a `copy()` through [updateUser], so granting or withdrawing
+     * consent cannot race a profile save that holds an older copy of the row.
+     *
+     * @return the number of rows changed; 0 when [id] has no row yet
+     */
+    @Query(
+        "UPDATE users SET healthConsentVersion = :version, healthConsentAtMillis = :atMillis " +
+            "WHERE id = :id"
+    )
+    suspend fun setHealthConsent(id: String, version: Int?, atMillis: Long?): Int
+
+    /**
      * Deletes a user by ID.
      */
     @Query("DELETE FROM users WHERE id = :id")

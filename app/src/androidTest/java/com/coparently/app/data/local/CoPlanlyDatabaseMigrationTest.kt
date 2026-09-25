@@ -1083,6 +1083,65 @@ class CoPlanlyDatabaseMigrationTest {
         }
     }
 
+    /**
+     * 43-to-44 erases the parent's own health data and adds the child-health consent (GDPR). A
+     * profile holding allergies and a medical profile comes out with both at their empty values,
+     * every other column intact, and the two consent columns null — "never asked", so the medical
+     * sections lock until the parent agrees. The update at the end proves the consent columns are
+     * the ones the app writes. Needs `44.json`, which the Regenerate workflow exports
+     * (`.github/regenerate-request`).
+     */
+    @Test
+    fun migration43To44_erasesTheParentsHealthDataAndAddsNoConsent() {
+        val db = helper.createDatabase(TEST_DB, VERSION_43)
+        db.execSQL(
+            """
+            INSERT INTO users (id, email, name, role, colorCode, profilePhotoUrl,
+                               googleCalendarSyncEnabled, googleCalendarId, partnerId,
+                               partnerIdsJson, fcmToken, dateOfBirth, phone, allergiesJson,
+                               medicalProfileJson, onboardingCompletedAt, caresForKinds,
+                               countryCode, regionCode)
+            VALUES ('alice', 'alice@example.com', 'Alice', 'mom', '#FF4081', NULL, 0, NULL, 'bob',
+                    '["bob"]', 'token-1', '1988-04-17', '+420123456789', '["peanuts"]',
+                    '{"bloodType":"AB_POSITIVE","hereditaryConditions":["asthma"]}',
+                    '2026-08-01T09:00:00', 'CHILDREN', 'DE', 'BY')
+            """.trimIndent()
+        )
+        db.close()
+
+        val migrated = helper.runMigrationsAndValidate(
+            TEST_DB,
+            VERSION_44,
+            true,
+            DatabaseMigrations.MIGRATION_43_44
+        )
+
+        migrated.query(
+            "SELECT allergiesJson, medicalProfileJson, name, phone, partnerIdsJson, countryCode, " +
+                "regionCode, healthConsentVersion, healthConsentAtMillis FROM users WHERE id = 'alice'"
+        ).use {
+            assertTrue(it.moveToFirst())
+            assertEquals("no copy of the allergies survives", "[]", it.getString(0))
+            assertEquals("no copy of the medical profile survives", "{}", it.getString(1))
+            assertEquals("Alice", it.getString(2))
+            assertEquals("+420123456789", it.getString(3))
+            assertEquals("[\"bob\"]", it.getString(4))
+            assertEquals("DE", it.getString(5))
+            assertEquals("BY", it.getString(6))
+            assertTrue("nobody has consented yet", it.isNull(7))
+            assertTrue(it.isNull(8))
+        }
+        migrated.execSQL(
+            "UPDATE users SET healthConsentVersion = 1, healthConsentAtMillis = 1787000000000 " +
+                "WHERE id = 'alice'"
+        )
+        migrated.query("SELECT healthConsentVersion, healthConsentAtMillis FROM users").use {
+            assertTrue(it.moveToFirst())
+            assertEquals(1, it.getInt(0))
+            assertEquals(1_787_000_000_000L, it.getLong(1))
+        }
+    }
+
     private companion object {
         const val TEST_DB = "coplanly-migration-test.db"
         const val VERSION_11 = 11
@@ -1108,6 +1167,7 @@ class CoPlanlyDatabaseMigrationTest {
         const val VERSION_41 = 41
         const val VERSION_42 = 42
         const val VERSION_43 = 43
+        const val VERSION_44 = 44
 
         /** 2026-08-01T12:00:00 at UTC+05:30, i.e. 06:30:00Z. */
         const val NOON_AT_PLUS_FIVE_THIRTY_MILLIS = 1_785_565_800_000L
