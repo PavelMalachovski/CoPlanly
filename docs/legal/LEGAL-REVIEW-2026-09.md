@@ -122,15 +122,17 @@ recorded it.
 
 **What changed.** The first time a parent opens a child's medical section, a dialog explains:
 - that it is health data about their child;
-- that the co-parent and any guest they admit can read and edit it;
+- that the co-parent can read and edit it, and any guest they admit can read it;
 - that it is stored on the company's servers;
 - that it is optional;
 - how to withdraw.
 
 "I agree" records `healthDataConsent {version, atMillis}` on the parent's profile, in Room and
 Firestore. A new wording bumps the version and asks again. Settings shows the consent and
-withdraws it. Withdrawal clears the medical details of the children **this parent** created;
-records the co-parent created rest on the co-parent's own consent.
+withdraws it. Withdrawal clears the medical details of the children **this parent** created,
+and only once every medical photo in them has been deleted — all or nothing, so a withdrawal never
+leaves a photo behind while saying it is done. Records the co-parent created rest on the
+co-parent's own consent.
 
 **Residual point for counsel.** When the two parents disagree, the medical section holds what
 either of them entered. The app cannot resolve a dispute over parental responsibility, and the
@@ -221,8 +223,8 @@ fairness principle (Art. 5(1)(a)) towards the remaining parent.
 
 **What changed.**
 - The conversation is marked `retainedUntilMillis` (30 days) instead of being deleted.
-- The remaining parent gets a push and a banner in the thread. The banner names the date and opens
-  the export.
+- The remaining parent gets a push (`coparent_account_deleted`, which replaces the plain "unlinked"
+  push for them) and a banner in the thread. Both name the date, and the banner opens the export.
 - They can read and export the thread read-only; nobody can write to it.
 - A daily sweep deletes it when the 30 days end.
 - If the remaining parent deletes their own account first, it goes at once.
