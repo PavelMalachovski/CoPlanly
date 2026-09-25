@@ -87,15 +87,11 @@
     <string name="family_switcher_request_row">A change request is waiting</string>
     <string name="family_switcher_schedule_other">A schedule proposal is waiting in another family</string>
     <string name="family_switcher_schedule_row">A schedule proposal is waiting</string>
-    <!-- The school import rows (MON-8). Bakaláři opens the import; EduPage is inert until its
-         import exists — see the comment at its call site in SettingsScreen for why an inert row
-         is not the affordance design rule 8 forbids, and for the condition under which it has to
-         come out. -->
+    <!-- The school import row (MON-8). Bakaláři opens the import. EduPage's inert "Coming soon" row
+         was removed before the first release (owner decision, September 2026); it returns only
+         with a real import. -->
     <string name="settings_school_import_title">Import from Bakaláři</string>
     <string name="settings_school_import_description">Your child’s school events and school hours, straight into the calendar.</string>
-    <string name="settings_edupage_title">EduPage</string>
-    <string name="settings_edupage_description">Your child’s school events from EduPage.</string>
-    <string name="settings_edupage_coming_soon">Coming soon</string>
     <string name="settings_operation_failed">That didn\'t work. Check your connection and try again.</string>
 
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->

@@ -27,8 +27,8 @@
     </plurals>
     <string name="home_stat_open_chat">Open chat →</string>
     <!-- %1$s = amount, already formatted with its currency symbol. -->
-    <string name="home_stat_owed_to_you">You are owed %1$s →</string>
-    <string name="home_stat_you_owe">You owe %1$s →</string>
+    <string name="home_stat_owed_to_you">You are owed %1$s\u00A0→</string>
+    <string name="home_stat_you_owe">You owe %1$s\u00A0→</string>
     <string name="home_stat_settled">All settled →</string>
 
     <!-- Section headers. %1$s = the co-parent's name. -->

@@ -286,7 +286,10 @@ fun MonthView(
                         onDayClick = onDayClick,
                         holiday = holidays[day.date],
                         isSchoolVacation = day.date in schoolVacationDays,
-                        isSwapPending = day.date in pendingSwapDates,
+                        // A borrowed cell refuses what you would act on (design item 10), and a
+                        // pending swap is answered in its own month.
+                        isSwapPending = day.position == DayPosition.MonthDate &&
+                            day.date in pendingSwapDates,
                         isSwapped = day.date in swappedDates,
                         previousSwapped = day.date.minusDays(1) in swappedDates,
                         onDayLongClick = onDayLongClick,

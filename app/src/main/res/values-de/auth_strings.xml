@@ -5,7 +5,7 @@
     <string name="auth_welcome_back">Willkommen zurück!</string>
     <string name="auth_create_your_account">Konto erstellen</string>
     <string name="auth_sign_in_subtitle">Melde dich an, um euren Betreuungsplan weiter zu verwalten</string>
-    <string name="auth_sign_up_subtitle">Schließ dich Tausenden Eltern an, die an einem Strang ziehen</string>
+    <string name="auth_sign_up_subtitle">Ein gemeinsamer Kalender für euch beide</string>
     <string name="auth_email_label">E-Mail-Adresse</string>
     <string name="auth_email_placeholder">deine@email.de</string>
     <string name="auth_password_label">Passwort</string>

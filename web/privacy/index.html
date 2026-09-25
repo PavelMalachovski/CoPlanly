@@ -179,6 +179,10 @@ you can export the history of your calendar. Neither parent can edit or delete a
 version; the versions you saved are removed when you delete your account. Private events
 have no saved versions.</li>
 <li><strong>The custody schedule</strong> — the pattern you agree and any one-off day swaps.</li>
+<li><strong>Change requests</strong> — a proposed change to an event or a day, with the reason you give, and
+your co-parent&#39;s answer.</li>
+<li><strong>The parenting plan</strong> — each parent&#39;s written answers to the plan&#39;s questions and which of
+the other parent&#39;s answers they marked as agreed. Each of you can change only your own half.</li>
 <li><strong>Expenses and budgets</strong> — amounts, currencies, categories, and optional receipt photos.</li>
 <li><strong>Records about your child</strong> — name, date of birth, school and activity details, emergency
 contacts, and a medical profile: allergies, medications, conditions, blood group,
@@ -273,6 +277,16 @@ one-way fingerprint (a SHA-256 hash) of the link, never the link itself, togethe
 it belongs to, who created it and when a calendar last fetched it. You can revoke a link at any
 time; a link no calendar has fetched for <strong>90 days</strong> is deleted automatically, and every link into
 a family ends when the co-parents unlink or either account is deleted.</p>
+<h3>Reporting a message, and blocking</h3>
+<p>If a message from your co-parent is abusive, you can <strong>report</strong> it: press and hold it in the chat
+and choose <em>Report message</em>. The app then opens <strong>your own email app</strong> with a message to
+{{PRIVACY_CONTACT_EMAIL}} that contains the message&#39;s ID, the conversation&#39;s ID and when it was
+sent — <strong>not the message&#39;s text</strong>, which you may paste in yourself if you want us to read it.
+Nothing is sent until you send that email, and the app itself sends us nothing. We use what you
+send only to look into the report. <strong>Blocking</strong> your co-parent is unlinking from them (the
+thread&#39;s menu, <em>Block and stop sharing</em>): from then on neither of you can send messages in the
+chat, and the calendar, expenses and records stop being shared. What is already on each phone
+stays there.</p>
 <h3>Technical data</h3>
 <ul>
 <li><strong>A push notification token</strong>, so we can notify you about changes your co-parent makes.</li>
@@ -367,6 +381,11 @@ once you choose to send it, becomes an ordinary chat message. The app asks for m
 access the first time you tap the microphone, and you can withdraw it in your phone&#39;s settings.</li>
 <li><strong>Private events.</strong> An event you mark private never leaves your device. It is not uploaded,
 not synced, and not visible to your co-parent.</li>
+<li><strong>Your private journal.</strong> Notes you write in the journal are stored only on your phone, in its
+encrypted database. They are never uploaded or synced, and your co-parent cannot see them. The
+only way they leave the phone is if you tick &quot;My private journal&quot; when you export the record
+and then share that file yourself. Deleting your account or signing in with another account on
+the phone erases them.</li>
 </ul>
 <h2>Who else sees your data</h2>
 <p>We do not sell personal data, and we do not use it for advertising.</p>
@@ -503,7 +522,7 @@ daily on our servers, not by hand.</p>
 <td>Until you delete your account</td>
 </tr>
 <tr>
-<td>Emails you send us about your privacy rights</td>
+<td>Emails you send us about your privacy rights, or to report a message</td>
 <td><strong>3 years</strong> after we close the request</td>
 </tr>
 </tbody></table></div>

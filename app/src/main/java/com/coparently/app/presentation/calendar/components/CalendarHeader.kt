@@ -149,7 +149,11 @@ private fun MonthTitle(
                 text = monthLabel,
                 style = MaterialTheme.typography.titleLargeEmphasized,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                // The name gives way, never the chevron: unweighted, a long month at 1.3x took
+                // the whole title slot and measured the chevron at zero, and the chevron is the
+                // only sign that the title opens the view picker.
+                modifier = Modifier.weight(1f, fill = false)
             )
             Icon(
                 imageVector = Icons.Default.ExpandMore,

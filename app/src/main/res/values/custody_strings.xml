@@ -7,7 +7,7 @@
     <string name="custody_save_button">Save custody schedule</string>
     <string name="custody_select_schedule_type">Select schedule type</string>
     <string name="custody_pattern_start_date">Pattern start date</string>
-    <string name="custody_start_date_hint">This is the anchor date - the pattern will repeat from this day</string>
+    <string name="custody_start_date_hint">This is the anchor date – the pattern will repeat from this day</string>
     <string name="custody_who_starts_first">Who starts first?</string>
     <!-- Replaces custody_mom_starts_first/custody_dad_starts_first: a label the parent's
          name can sit next to without a verb agreeing with it. %1$s is that parent's name. -->

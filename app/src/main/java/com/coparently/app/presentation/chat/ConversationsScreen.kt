@@ -83,6 +83,7 @@ import com.coparently.app.utils.dateWithTime
  * @param onOpenInbox Opens the change-request inbox; forwarded to the inlined [ChatScreen]
  * @param onOpenExport Opens the export screen; forwarded to the inlined [ChatScreen], whose banner
  *   offers it over a thread kept after the co-parent deleted their account
+ * @param onBlock Opens the unpair confirmation; forwarded to the inlined [ChatScreen]'s header
  * @param viewModel Chat state
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -99,6 +100,7 @@ fun ConversationsScreen(
     onOpenChangeRequest: ((String) -> Unit)? = null,
     onOpenInbox: (() -> Unit)? = null,
     onOpenExport: ((conversationId: String) -> Unit)? = null,
+    onBlock: (() -> Unit)? = null,
     viewModel: ChatViewModel = hiltViewModel()
 ) {
     val conversationsState by viewModel.conversations.collectAsState()
@@ -143,7 +145,8 @@ fun ConversationsScreen(
             onOpenSettings = onOpenSettings,
             onOpenChangeRequest = onOpenChangeRequest,
             onOpenInbox = onOpenInbox,
-            onOpenExport = onOpenExport
+            onOpenExport = onOpenExport,
+            onBlock = onBlock
         )
     }
     val twoPane = rememberTwoPane()

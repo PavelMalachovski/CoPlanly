@@ -91,6 +91,14 @@ val publishedTermsUrl = ""
 val publishedExportVerifyUrl = ""
 
 /**
+ * Where a parent reports a chat message (Play's user-generated content policy; play-final audit
+ * F-10): the support or privacy mailbox somebody reads. Empty until the owner names one, and empty
+ * hides the chat's "Report message" action, since a report with nowhere to go is the affordance
+ * design item 8 forbids. Pass -PCOPLANLY_SUPPORT_EMAIL to try one without committing it.
+ */
+val publishedSupportEmail = ""
+
+/**
  * The AI assist (reply suggestions, the month-in-review summary): on in debug, off in `release`
  * and `r8Test` until billing (MON-11) exists to gate it. `-PCOPLANLY_AI_ASSIST_ENABLED=true|false`
  * overrides every build type, to try it in a release build or switch it off in a debug one. While
@@ -158,6 +166,12 @@ android {
             ?.trim()
             ?: publishedExportVerifyUrl
         buildConfigField("String", "EXPORT_VERIFY_URL", "\"$exportVerifyUrl\"")
+
+        // F-10. The chat's report address; blank hides the action (see publishedSupportEmail).
+        val supportEmail = (project.findProperty("COPLANLY_SUPPORT_EMAIL") as String?)
+            ?.trim()
+            ?: publishedSupportEmail
+        buildConfigField("String", "SUPPORT_EMAIL", "\"$supportEmail\"")
 
         vectorDrawables {
             useSupportLibrary = true

@@ -49,7 +49,7 @@ Nemáte aplikaci? %4$s</string>
     <string name="pairing_paired_since">Propojeno od %1$s</string>
     <string name="pairing_partner_email_unknown">E-mail není k dispozici</string>
     <string name="pairing_unpair_confirm_title">Odpojit druhého rodiče?</string>
-    <string name="pairing_unpair_confirm_message">%1$s a vy přestanete sdílet kalendář, chat a výdaje. Data, která už máte v telefonu, zůstanou zachována.</string>
+    <string name="pairing_unpair_confirm_message">%1$s a vy přestanete sdílet kalendář a výdaje a nebudete si už moci psát v chatu. Data, která už máte v telefonu, zůstanou zachována.</string>
     <string name="pairing_unpair_confirm_action">Odpojit</string>
     <string name="pairing_unpair_final_title">Opravdu ukončit sdílení péče?</string>
     <string name="pairing_unpair_final_message">Pokud sdílení ukončíte, přijdete o údaje o dítěti zadané v aplikaci: nebudete mít přístup ke kalendáři, událostem, důležitým kontaktům ani společným výdajům. Všechno zůstane druhému rodiči.</string>

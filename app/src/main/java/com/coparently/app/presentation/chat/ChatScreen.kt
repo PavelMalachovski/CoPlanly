@@ -95,6 +95,9 @@ import kotlinx.coroutines.delay
  * @param onOpenInbox Opens the change-request inbox with nothing highlighted (a day-swap card)
  * @param onOpenExport Opens the export screen for a thread; offered by the banner over a thread
  *   kept after the co-parent deleted their account ([DepartedThreadBanner]), and by nothing else
+ * @param onBlock Opens the existing unpair confirmation from the header's "Block and stop sharing"
+ *   (play-final audit F-10), or null to leave it out; never offered over a kept thread, whose
+ *   pairing has already ended
  * @param viewModel Chat state
  * @param searchViewModel Search inside this thread (MON-15) — local, this conversation only
  * @param dictationViewModel Voice dictation into the composer — on the phone only, and drawn only
@@ -115,6 +118,7 @@ fun ChatScreen(
     onOpenChangeRequest: ((String) -> Unit)? = null,
     onOpenInbox: (() -> Unit)? = null,
     onOpenExport: ((conversationId: String) -> Unit)? = null,
+    onBlock: (() -> Unit)? = null,
     viewModel: ChatViewModel = hiltViewModel(),
     searchViewModel: ChatSearchViewModel = hiltViewModel(),
     dictationViewModel: DictationViewModel = hiltViewModel()
@@ -236,7 +240,8 @@ fun ChatScreen(
                 onOpenSearch = { searchViewModel.open(conversationId) },
                 onCloseSearch = searchViewModel::close,
                 onBack = onBack,
-                onOpenSettings = onOpenSettings
+                onOpenSettings = onOpenSettings,
+                onBlock = onBlock.takeIf { departed == null }
             ) {
                 // A blank (not null) title means this row was mirrored locally before any
                 // successful `ensureConversation` set it — `?:` alone never catches that.
@@ -266,21 +271,24 @@ fun ChatScreen(
                 // The attachment renderer and the tap-to-open handling (MON-23), provided rather
                 // than passed so `MessageItem`'s baselined signature stays as it is.
                 ChatAttachmentsHost {
-                    MessagesList(
-                        messages = messages,
-                        currentUserId = currentUserId,
-                        canLoadEarlier = canLoadEarlier,
-                        onLoadEarlier = viewModel::loadEarlier,
-                        onRefresh = {
-                            viewModel.refreshThread()
-                        },
-                        onEventLinkClick = onOpenChangeRequest,
-                        onOpenInbox = onOpenInbox,
-                        onRetryFailed = { viewModel.resendFailedMessages() },
-                        modifier = Modifier.weight(1f),
-                        revealMessageId = revealTarget,
-                        onRevealed = { revealTarget = null }
-                    )
+                    // Long-press "Report message" on the co-parent's bubbles (F-10).
+                    ChatReportHost {
+                        MessagesList(
+                            messages = messages,
+                            currentUserId = currentUserId,
+                            canLoadEarlier = canLoadEarlier,
+                            onLoadEarlier = viewModel::loadEarlier,
+                            onRefresh = {
+                                viewModel.refreshThread()
+                            },
+                            onEventLinkClick = onOpenChangeRequest,
+                            onOpenInbox = onOpenInbox,
+                            onRetryFailed = { viewModel.resendFailedMessages() },
+                            modifier = Modifier.weight(1f),
+                            revealMessageId = revealTarget,
+                            onRevealed = { revealTarget = null }
+                        )
+                    }
                 }
             }
 
@@ -442,6 +450,7 @@ fun ChatScreen(
  * @param onCloseSearch Closes search and returns to the thread
  * @param onBack Up navigation, or null when the thread is the Chat tab itself
  * @param onOpenSettings Opens settings, or null when the tab's own gear is elsewhere
+ * @param onBlock Opens the unpair confirmation from the overflow menu, or null for no menu
  * @param header The thread's identity line
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -455,6 +464,7 @@ private fun ChatTopBar(
     onCloseSearch: () -> Unit,
     onBack: (() -> Unit)?,
     onOpenSettings: (() -> Unit)?,
+    onBlock: (() -> Unit)?,
     header: @Composable () -> Unit
 ) {
     if (searchQuery != null) {
@@ -504,6 +514,7 @@ private fun ChatTopBar(
                     )
                 }
             }
+            onBlock?.let { block -> ChatOverflowMenu(onBlock = block) }
         }
     )
 }

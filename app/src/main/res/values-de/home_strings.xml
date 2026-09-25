@@ -21,8 +21,8 @@
         <item quantity="other">%1$d ungelesen</item>
     </plurals>
     <string name="home_stat_open_chat">Chat öffnen →</string>
-    <string name="home_stat_owed_to_you">Du bekommst %1$s →</string>
-    <string name="home_stat_you_owe">Du schuldest %1$s →</string>
+    <string name="home_stat_owed_to_you">Du bekommst %1$s\u00A0→</string>
+    <string name="home_stat_you_owe">Du schuldest %1$s\u00A0→</string>
     <string name="home_stat_settled">Alles ausgeglichen →</string>
 
     <string name="home_section_this_week">Diese Woche</string>

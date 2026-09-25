@@ -295,26 +295,15 @@ shipped unseen: the colour picker, the family switcher, the second co-parent inv
 August 2026 calendar work — whether the borrowed days at the edges of the month grid read as
 *present but secondary* rather than as a second full-strength month.
 
-### 2.8 Publication checklist, in order
+### 2.8 Publication checklist — moved
 
-```
-[ ]  1. functions/.env, deploy functions, backfills ×2, rules+indexes, storage   (§2.0)
-[ ]  2. Firestore region confirmed as EU                                          (§2.0)
-[ ]  3. D-U-N-S application started, if going organisation                        (§2.1)
-[ ]  4. Firebase + Cloud console: app.coplanly, new google-services.json, SHA-1s   (§2.2)
-[ ]  5. Upload keystore, signingConfig, bundleRelease builds green                 (§2.3)
-[ ]  6. Legal review of PRIVACY-POLICY.md and TERMS-OF-SERVICE.md                  (REL-4)
-[ ]  7. Both hosted at stable URLs + a web account-deletion page                   (REL-4)
-[ ]  8. Settings rows linked to those URLs, once they resolve                      (REL-4)
-[x]  9. Analytics consent gate — done in code                                     (REL-5)
-[ ] 10. REL-7 on a real device: medical profile survives R8                        (§2.7)
-[ ] 11. Play Console: listing, assets, Data Safety, content rating, declarations   (§2.4–2.5)
-[ ] 12. Closed track, 6 real pairs, 14 days                                        (§2.6)
-[ ] 13. Production
-```
-
-Items 1–2 and 6–7 are the long poles. 6 depends on a lawyer's calendar and 12 on a fortnight that
-cannot be compressed; start both before the engineering is finished.
+The ordered list from today to production now lives in one place:
+**[`docs/AUDIT-2026-09-play-final.md` §4](AUDIT-2026-09-play-final.md#4-the-owners-checklist-from-today-to-production)**.
+It merges this section's old thirteen lines with `legal/LEGAL-REVIEW-2026-09.md` §4,
+`DEVICE-CHECKLIST.md` §0, the ops order in `functions/README.md` and the reviewer's demo-account
+need, and marks each step as required for the closed test or for production only. The sections
+above (§2.0–2.7) stay as the detail its steps link to. Two long poles have not changed: counsel's
+calendar (step A-3/E-1) and the fourteen days of the closed test (D-7) — start both first.
 
 ---
 

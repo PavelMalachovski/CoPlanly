@@ -82,6 +82,10 @@ decide what each of you may read. **Legal basis:** performance of our contract w
   version; the versions you saved are removed when you delete your account. Private events
   have no saved versions.
 - **The custody schedule** — the pattern you agree and any one-off day swaps.
+- **Change requests** — a proposed change to an event or a day, with the reason you give, and
+  your co-parent's answer.
+- **The parenting plan** — each parent's written answers to the plan's questions and which of
+  the other parent's answers they marked as agreed. Each of you can change only your own half.
 - **Expenses and budgets** — amounts, currencies, categories, and optional receipt photos.
 - **Records about your child** — name, date of birth, school and activity details, emergency
   contacts, and a medical profile: allergies, medications, conditions, blood group,
@@ -191,6 +195,18 @@ it belongs to, who created it and when a calendar last fetched it. You can revok
 time; a link no calendar has fetched for **90 days** is deleted automatically, and every link into
 a family ends when the co-parents unlink or either account is deleted.
 
+### Reporting a message, and blocking
+
+If a message from your co-parent is abusive, you can **report** it: press and hold it in the chat
+and choose *Report message*. The app then opens **your own email app** with a message to
+{{PRIVACY_CONTACT_EMAIL}} that contains the message's ID, the conversation's ID and when it was
+sent — **not the message's text**, which you may paste in yourself if you want us to read it.
+Nothing is sent until you send that email, and the app itself sends us nothing. We use what you
+send only to look into the report. **Blocking** your co-parent is unlinking from them (the
+thread's menu, *Block and stop sharing*): from then on neither of you can send messages in the
+chat, and the calendar, expenses and records stop being shared. What is already on each phone
+stays there.
+
 ### Technical data
 
 - **A push notification token**, so we can notify you about changes your co-parent makes.
@@ -294,6 +310,11 @@ decision about anyone (Art. 22): it drafts words that you read, change and choos
   access the first time you tap the microphone, and you can withdraw it in your phone's settings.
 - **Private events.** An event you mark private never leaves your device. It is not uploaded,
   not synced, and not visible to your co-parent.
+- **Your private journal.** Notes you write in the journal are stored only on your phone, in its
+  encrypted database. They are never uploaded or synced, and your co-parent cannot see them. The
+  only way they leave the phone is if you tick "My private journal" when you export the record
+  and then share that file yourself. Deleting your account or signing in with another account on
+  the phone erases them.
 
 ## Who else sees your data
 
@@ -351,7 +372,7 @@ daily on our servers, not by hand.
 | Server logs (which account called which function, and errors — never names, messages or files) | **30 days** |
 | What writing help sends and writes | **Not stored by us**; see "Writing help (AI)" for Google's side |
 | The daily count of writing-help requests (a date and a number) | Until you delete your account |
-| Emails you send us about your privacy rights | **3 years** after we close the request |
+| Emails you send us about your privacy rights, or to report a message | **3 years** after we close the request |
 
 An export's receipt outlives your account on purpose: a file you or your co-parent already handed
 to a lawyer or a court can still be checked. What stays is only the file's fingerprint, its period,

@@ -139,4 +139,10 @@
     <string name="chat_departed_export">Exportovat</string>
     <string name="chat_departed_no_sending">Do této konverzace už nelze posílat zprávy.</string>
     <string name="chat_departed_unnamed">Druhý rodič</string>
+    <string name="chat_more_actions">Další akce</string>
+    <string name="chat_block">Zablokovat a přestat sdílet</string>
+    <string name="chat_report_message">Nahlásit zprávu</string>
+    <string name="chat_report_subject">CoPlanly: nahlášení zprávy v chatu</string>
+    <string name="chat_report_body">Napište nám, co je s touto zprávou v nepořádku:\n\n\n---\nText zprávy není přiložen. Pokud chcete, abychom si ho přečetli, vložte ho výše.\nID zprávy: %1$s\nID konverzace: %2$s\nOdesláno (UTC): %3$s</string>
+    <string name="chat_report_no_email_app">Není nastavena žádná e-mailová aplikace. Zprávu nahlásíte na adrese %1$s.</string>
 </resources>

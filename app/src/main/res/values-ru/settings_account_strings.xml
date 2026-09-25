@@ -83,9 +83,6 @@
     <string name="family_switcher_schedule_row">Ждёт предложение графика опеки</string>
     <string name="settings_school_import_title">Импорт из Bakaláři</string>
     <string name="settings_school_import_description">Школьные мероприятия и учебные часы ребёнка прямо в календаре.</string>
-    <string name="settings_edupage_title">EduPage</string>
-    <string name="settings_edupage_description">Школьные мероприятия ребёнка из EduPage.</string>
-    <string name="settings_edupage_coming_soon">Скоро</string>
     <string name="settings_operation_failed">Не получилось. Проверьте подключение и попробуйте ещё раз.</string>
 
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->

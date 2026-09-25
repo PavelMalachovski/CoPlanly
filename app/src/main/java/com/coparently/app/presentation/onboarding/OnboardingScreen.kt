@@ -4,7 +4,6 @@ import androidx.activity.compose.BackHandler
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,6 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -61,6 +61,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
@@ -86,6 +87,7 @@ import com.coparently.app.presentation.consent.HealthConsentViewModel
 import com.coparently.app.presentation.consent.LockedMedicalSection
 import com.coparently.app.presentation.custody.labelRes
 import com.coparently.app.presentation.theme.IconSizes
+import com.coparently.app.presentation.theme.LayoutConstants
 import com.coparently.app.presentation.theme.ParentColorChoice
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
@@ -424,15 +426,23 @@ private fun ParentColorSwatches(
             val label = stringResource(choice.labelRes)
             Box(
                 modifier = Modifier
-                    .size(44.dp)
+                    .size(LayoutConstants.MIN_TOUCH_TARGET)
                     .clip(CircleShape)
                     .background(ParentColors.choiceFill(choice))
-                    .border(
-                        width = if (selected == choice) 3.dp else 0.dp,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        shape = CircleShape
+                    // Only the chosen swatch gets a ring: a zero-width border still draws a
+                    // hairline, which ringed every swatch as if all four were picked.
+                    .then(
+                        if (selected == choice) {
+                            Modifier.border(3.dp, MaterialTheme.colorScheme.onSurface, CircleShape)
+                        } else {
+                            Modifier
+                        }
                     )
-                    .clickable(onClickLabel = label) { onSelect(choice) }
+                    .selectable(
+                        selected = selected == choice,
+                        role = Role.RadioButton,
+                        onClick = { onSelect(choice) }
+                    )
                     .semantics { contentDescription = label }
             )
         }

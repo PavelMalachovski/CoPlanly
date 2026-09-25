@@ -106,6 +106,10 @@ which wraps everywhere and cuts nothing but the one FAB overlap.
 
 ### 3.2 What is missing, in the order it has to happen
 
+> Superseded by the ordered owner checklist in `docs/AUDIT-2026-09-play-final.md` §4 (2026-09-25),
+> which re-checks this list against `main` and adds the reviewer's demo account, the in-app policy
+> link and the chat reporting question.
+
 | # | Item | Who | Why it blocks |
 | --- | --- | --- | --- |
 | 1 | **Firebase app for `app.coplanly`**, a new `google-services.json`, debug and release SHA-1 (REL-1) | Owner, console | No signed-in build exists without it |

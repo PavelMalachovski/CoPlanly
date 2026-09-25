@@ -93,15 +93,23 @@ private enum class PairingMode { SHARE, ENTER }
  * @param startOnCodeEntry Open on "enter a code" rather than "share my code". The onboarding
  *   wizard sets it for a parent who said they are holding the other one's code — showing that
  *   parent their own code first is exactly the mix-up the two modes exist to prevent.
+ * @param startOnUnpair Raise the unpair confirmation once the paired state has loaded — the
+ *   chat's "Block and stop sharing" (play-final audit F-10). Once only: dismissing it leaves the
+ *   screen as it is.
  * @param viewModel Pairing state and actions.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+// Over the length threshold before `startOnUnpair` arrived (the baseline holds the old signature);
+// explicit rather than a baseline entry keyed to a signature that changes with every parameter.
+// One entry argument per route that opens this screen in a particular state, plus the ViewModel.
+@Suppress("LongMethod", "LongParameterList")
 fun PairingScreen(
     onNavigateBack: () -> Unit,
     onCustodyConflict: () -> Unit,
     prefilledCode: String? = null,
     startOnCodeEntry: Boolean = false,
+    startOnUnpair: Boolean = false,
     viewModel: PairingViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
@@ -133,6 +141,15 @@ fun PairingScreen(
     // Held as MutableState (rather than `by`-delegated vars) so they can be
     // passed by reference into UnpairFlow/DeepLinkFlow below.
     val showUnpairConfirm = rememberSaveable { mutableStateOf(false) }
+    // Blocking from the chat is unpairing: open the same two-step confirmation, once the screen
+    // knows there is a co-parent to unpair from, and only once.
+    val unpairRequested = rememberSaveable { mutableStateOf(startOnUnpair) }
+    LaunchedEffect(state, unpairRequested.value) {
+        if (unpairRequested.value && state is PairingState.Paired) {
+            unpairRequested.value = false
+            showUnpairConfirm.value = true
+        }
+    }
     // Whether the paired screen has been expanded to bring in a second co-parent. Collapsed on
     // every entry: one relationship is the ordinary case, and an invite flow already open would
     // read as "you are about to be paired with somebody" to a parent who came here to unpair.

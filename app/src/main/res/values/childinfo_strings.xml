@@ -27,7 +27,7 @@
     <string name="childinfo_section_teacher">Teacher information</string>
 
     <!-- Child info: basic form -->
-    <string name="childinfo_child_name_label">Child\'s Name *</string>
+    <string name="childinfo_child_name_label">Child\'s name *</string>
     <string name="childinfo_dob_value">Date of birth: %1$s</string>
     <string name="childinfo_add_child_button">Add child</string>
     <string name="childinfo_save_changes">Save changes</string>

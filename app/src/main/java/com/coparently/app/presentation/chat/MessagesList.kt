@@ -47,6 +47,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.Hyphens
 import androidx.compose.ui.unit.dp
 import com.coparently.app.R
 import com.coparently.app.domain.activity.ActivityEntityType
@@ -511,63 +512,69 @@ fun MessageItem(
             LocalChatAttachments.current?.invoke(message, isCurrentUser)
         }
         val openLabel = stringResource(R.string.chat_open_change_request)
-        Row(
-            modifier = Modifier
-                .widthIn(max = BUBBLE_MAX_WIDTH)
-                .clip(chatBubbleShape(isCurrentUser, startsGroup, endsGroup))
-                .background(
-                    if (isCurrentUser) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        // A step above the day pill's surfaceContainer, so a bubble and a
-                        // separator never read as the same kind of surface.
-                        MaterialTheme.colorScheme.surfaceContainerHigh
-                    }
-                )
-                .then(
-                    if (onCardTap != null) {
-                        Modifier.clickable(
-                            onClickLabel = openLabel,
-                            role = Role.Button
-                        ) { onCardTap() }
-                    } else {
-                        Modifier
-                    }
-                )
-                .padding(horizontal = Spacing.M, vertical = Spacing.S),
-            // Bottom, not centre: the meta trailer sits beside the *last* line of a
-            // multi-line message, hugging the bubble's bottom-end corner.
-            verticalAlignment = Alignment.Bottom
-        ) {
-            Text(
-                text = bubbleText,
-                color = if (isCurrentUser) {
-                    MaterialTheme.colorScheme.onPrimary
-                } else {
-                    MaterialTheme.colorScheme.onSurface
-                },
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.weight(1f, fill = false)
-            )
-            if (onCardTap != null) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                    contentDescription = null,
-                    modifier = Modifier
-                        .padding(start = Spacing.XS)
-                        .size(RECEIPT_ICON_SIZE * CHEVRON_SCALE),
-                    tint = if (isCurrentUser) {
+        // A co-parent's own words can be reported with a long press (play-final audit F-10); a
+        // card the app composed cannot, and nothing changes while no support address is set.
+        ReportableBubble(message = message, isCurrentUser = isCurrentUser) {
+            Row(
+                modifier = Modifier
+                    .widthIn(max = BUBBLE_MAX_WIDTH)
+                    .clip(chatBubbleShape(isCurrentUser, startsGroup, endsGroup))
+                    .background(
+                        if (isCurrentUser) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            // A step above the day pill's surfaceContainer, so a bubble and a
+                            // separator never read as the same kind of surface.
+                            MaterialTheme.colorScheme.surfaceContainerHigh
+                        }
+                    )
+                    .then(
+                        if (onCardTap != null) {
+                            Modifier.clickable(
+                                onClickLabel = openLabel,
+                                role = Role.Button
+                            ) { onCardTap() }
+                        } else {
+                            Modifier
+                        }
+                    )
+                    .padding(horizontal = Spacing.M, vertical = Spacing.S),
+                // Bottom, not centre: the meta trailer sits beside the *last* line of a
+                // multi-line message, hugging the bubble's bottom-end corner.
+                verticalAlignment = Alignment.Bottom
+            ) {
+                Text(
+                    text = bubbleText,
+                    color = if (isCurrentUser) {
                         MaterialTheme.colorScheme.onPrimary
                     } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    }
+                        MaterialTheme.colorScheme.onSurface
+                    },
+                    // Hyphenated, because the bubble is capped in dp while the text scales: at
+                    // 1.5x a German compound broke mid-word with no hyphen ("…erklär / ung").
+                    style = MaterialTheme.typography.bodyMedium.copy(hyphens = Hyphens.Auto),
+                    modifier = Modifier.weight(1f, fill = false)
+                )
+                if (onCardTap != null) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .padding(start = Spacing.XS)
+                            .size(RECEIPT_ICON_SIZE * CHEVRON_SCALE),
+                        tint = if (isCurrentUser) {
+                            MaterialTheme.colorScheme.onPrimary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        }
+                    )
+                }
+                BubbleMeta(
+                    message = message,
+                    isCurrentUser = isCurrentUser,
+                    modifier = Modifier.padding(start = Spacing.S)
                 )
             }
-            BubbleMeta(
-                message = message,
-                isCurrentUser = isCurrentUser,
-                modifier = Modifier.padding(start = Spacing.S)
-            )
         }
 
         // The one delivery state loud enough to leave the bubble: error red on the filled

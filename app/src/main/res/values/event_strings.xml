@@ -47,7 +47,7 @@
     <string name="event_type_birthday">Birthday</string>
     <string name="event_form_cd_selected_icon">Selected</string>
     <string name="event_form_cd_event_type">%1$s event type, %2$s</string>
-    <string name="event_form_date_time">Date &amp; Time</string>
+    <string name="event_form_date_time">Date &amp; time</string>
     <string name="event_form_cd_select_date">Select date, currently %1$s</string>
     <string name="event_form_cd_calendar_icon">Calendar icon</string>
     <string name="event_form_date">Date</string>

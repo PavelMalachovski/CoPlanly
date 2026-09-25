@@ -5,7 +5,7 @@
     <string name="auth_welcome_back">С возвращением!</string>
     <string name="auth_create_your_account">Создайте аккаунт</string>
     <string name="auth_sign_in_subtitle">Войдите, чтобы продолжить вести общее расписание</string>
-    <string name="auth_sign_up_subtitle">Присоединяйтесь к тысячам родителей, которые действуют сообща</string>
+    <string name="auth_sign_up_subtitle">Один общий календарь на двоих</string>
     <string name="auth_email_label">Электронная почта</string>
     <string name="auth_email_placeholder">your@email.com</string>
     <string name="auth_password_label">Пароль</string>

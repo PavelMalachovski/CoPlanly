@@ -750,6 +750,10 @@ fun NavGraph(
                         navArgument(Screen.Pairing.ARG_ENTER) {
                             type = NavType.BoolType
                             defaultValue = false
+                        },
+                        navArgument(Screen.Pairing.ARG_UNPAIR) {
+                            type = NavType.BoolType
+                            defaultValue = false
                         }
                     ),
                     enterTransition = { slideInFromRight() },
@@ -768,7 +772,9 @@ fun NavGraph(
                             ?.getString(Screen.Pairing.ARG_CODE)
                             ?.takeIf { it.isNotEmpty() },
                         startOnCodeEntry = backStackEntry.arguments
-                            ?.getBoolean(Screen.Pairing.ARG_ENTER) ?: false
+                            ?.getBoolean(Screen.Pairing.ARG_ENTER) ?: false,
+                        startOnUnpair = backStackEntry.arguments
+                            ?.getBoolean(Screen.Pairing.ARG_UNPAIR) ?: false
                     )
                 }
 
@@ -1021,6 +1027,11 @@ fun NavGraph(
                         // the same export screen Settings → Family opens, naming that thread.
                         onOpenExport = { conversationId ->
                             navController.navigate(Screen.Export.createRoute(conversationId))
+                        },
+                        // "Block and stop sharing" (F-10): the pairing screen, opened on its
+                        // existing unpair confirmation. Unpairing is the block.
+                        onBlock = {
+                            navController.navigate(Screen.Pairing.routeForUnpair())
                         }
                     )
                 }
@@ -1066,6 +1077,11 @@ fun NavGraph(
                         // the same export screen Settings → Family opens, naming that thread.
                         onOpenExport = { conversationId ->
                             navController.navigate(Screen.Export.createRoute(conversationId))
+                        },
+                        // "Block and stop sharing" (F-10): the pairing screen, opened on its
+                        // existing unpair confirmation. Unpairing is the block.
+                        onBlock = {
+                            navController.navigate(Screen.Pairing.routeForUnpair())
                         }
                     )
                 }
@@ -1576,7 +1592,7 @@ sealed class Screen(val route: String) {
     }
 
     data object Pets : Screen("pets")
-    data object Pairing : Screen("pairing?code={code}&enter={enter}") {
+    data object Pairing : Screen("pairing?code={code}&enter={enter}&unpair={unpair}") {
         /** Optional invite code carried by a `coplanly://pair` deep link. */
         const val ARG_CODE = "code"
 
@@ -1592,6 +1608,15 @@ sealed class Screen(val route: String) {
 
         /** Builds the route that opens on code entry, with nothing pre-filled. */
         fun routeForCodeEntry(): String = "pairing?enter=true"
+
+        /**
+         * Whether the screen opens its unpair confirmation as soon as it knows the account is
+         * paired: the chat's "Block and stop sharing" (play-final audit F-10) lands here.
+         */
+        const val ARG_UNPAIR = "unpair"
+
+        /** Builds the route that opens straight on the unpair confirmation. */
+        fun routeForUnpair(): String = "pairing?unpair=true"
     }
 
     /**

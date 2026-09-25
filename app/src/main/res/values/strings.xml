@@ -92,7 +92,7 @@
     <string name="child_info_add">Add child</string>
     <string name="child_info_edit">Edit child</string>
     <string name="child_info_name">Child\'s Name</string>
-    <string name="child_info_name_required">Child\'s Name *</string>
+    <string name="child_info_name_required">Child\'s name *</string>
     <string name="child_info_medical_notes">Additional medical information</string>
     <string name="child_info_medical_notes_hint">Any other important medical information…</string>
     <string name="child_info_medications">Medications</string>

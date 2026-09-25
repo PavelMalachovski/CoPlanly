@@ -44,8 +44,8 @@
     <!-- Expense list rows -->
     <string name="expenses_this_month">This month</string>
     <plurals name="expenses_count">
-        <item quantity="one">%1$d expense</item>
-        <item quantity="other">%1$d expenses</item>
+        <item quantity="one">%1$d\u00A0expense</item>
+        <item quantity="other">%1$d\u00A0expenses</item>
     </plurals>
     <string name="expenses_row_subtitle">%1$s · %2$s paid · %3$s</string>
     <string name="expenses_row_subtitle_unknown_payer">%1$s · %2$s</string>

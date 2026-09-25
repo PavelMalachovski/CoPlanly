@@ -46,12 +46,13 @@ our processor are declared.
 | Files and docs | Yes | No | Yes | App functionality — the family document vault and PDFs sent in chat (MON-23). Always shared with the co-parent by design; optional to use |
 | Calendar events | Yes | No | No | App functionality |
 | Messages (in-app) | Yes | No | No | App functionality |
+| Other user-generated content | Yes | No | **Yes** | App functionality — free text that is not a message or an event: each parent's parenting-plan answers (`parenting_plans`), the reason on a change request (`change_requests`), and notes on expenses, children's and pets' records. Added September 2026 (`docs/AUDIT-2026-09-play-final.md` F-7); the private journal is **not** in it — it never leaves the phone |
 | Health info | Yes | No | Yes | App functionality — the **child's** medical profile, only after the parent's explicit consent (a dialog, recorded with its version and time; withdrawable in Settings). The parent's own medical profile was removed in September 2026 (`LEGAL-REVIEW-2026-09.md` L-1, L-2) |
 | Purchase/financial info | Yes | No | Yes | App functionality — shared expenses and budgets. **Not** payment data: the app processes no payments |
 | App interactions | Yes | No | **Yes** | Analytics — consent-gated since REL-5 |
 | Crash logs | Yes | No | **Yes** | Diagnostics — consent-gated since REL-5 |
 | Diagnostics | Yes | No | **Yes** | Diagnostics — consent-gated since REL-5 |
-| Approximate/precise location | **No** | — | — | Re-checked: the manifest declares only INTERNET, ACCESS_NETWORK_STATE, POST_NOTIFICATIONS, CAMERA and RECORD_AUDIO, and no location API is called |
+| Approximate/precise location | **No** | — | — | Re-checked: the manifest declares only INTERNET, ACCESS_NETWORK_STATE, POST_NOTIFICATIONS, CAMERA and RECORD_AUDIO (the libraries add no location permission), and no location API is called. **Check before submitting:** Google Analytics derives a coarse region from the IP address on Google's side. Read Firebase's own "Data disclosure for Google Play's data safety section" page for the Analytics SDK version in the build and follow what it says for *Approximate location*; this row was written without access to that page |
 | Voice or sound recordings | **No** | — | — | RECORD_AUDIO serves chat voice dictation only, through the phone's **on-device** recognizer (`data/dictation/OnDeviceSpeechDictation`); the audio is not recorded, stored or sent, and only text the parent chooses to send leaves the phone, as an ordinary message. See the note below |
 | Contacts | **No** | — | — | Re-checked: `ContactsContract` appears nowhere; an emergency contact is typed by hand |
 | Payment info | **No** | — | — | No billing exists yet — **revisit when it does** |

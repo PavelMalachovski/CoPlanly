@@ -49,7 +49,7 @@ Noch keine App? %4$s</string>
     <string name="pairing_paired_since">Verknüpft seit %1$s</string>
     <string name="pairing_partner_email_unknown">E-Mail nicht verfügbar</string>
     <string name="pairing_unpair_confirm_title">Verknüpfung mit dem anderen Elternteil aufheben?</string>
-    <string name="pairing_unpair_confirm_message">Du teilst dann Kalender, Chat und Ausgaben nicht mehr mit %1$s. Daten, die bereits auf diesem Telefon sind, bleiben erhalten.</string>
+    <string name="pairing_unpair_confirm_message">Du teilst dann Kalender und Ausgaben nicht mehr mit %1$s, und ihr könnt euch im Chat keine Nachrichten mehr schicken. Daten, die bereits auf diesem Telefon sind, bleiben erhalten.</string>
     <string name="pairing_unpair_confirm_action">Aufheben</string>
     <string name="pairing_unpair_final_title">Gemeinsame Planung wirklich beenden?</string>
     <string name="pairing_unpair_final_message">Wenn du sie beendest, verlierst du die in der App erfassten Daten deines Kindes: Du hast keinen Zugriff mehr auf Kalender, Termine, wichtige Kontakte und gemeinsame Ausgaben. Alles bleibt beim anderen Elternteil.</string>

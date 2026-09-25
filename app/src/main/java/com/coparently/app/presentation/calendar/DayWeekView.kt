@@ -15,6 +15,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -22,6 +23,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -1670,7 +1672,10 @@ private fun CustodyWeekBand(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(CUSTODY_BAND_HEIGHT),
+            // At least the band's height, and as tall as its name needs: a fixed 16dp clipped the
+            // label top and bottom at 1.5x text. Intrinsic height keeps every run the same height.
+            .height(IntrinsicSize.Min)
+            .heightIn(min = CUSTODY_BAND_HEIGHT),
         horizontalArrangement = Arrangement.spacedBy(Spacing.XS)
     ) {
         Box(modifier = Modifier.width(gutterWidth))

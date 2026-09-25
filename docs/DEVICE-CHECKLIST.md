@@ -117,6 +117,9 @@ so.
 
 ## 0. Before the session: owner ops
 
+> These steps are also in the release order of `docs/AUDIT-2026-09-play-final.md` §4 (phase B
+> and C-5), which says which of them the closed test needs.
+
 Without these, several checks below fail for reasons that have nothing to do with the app. Do
 them the evening before, from the commit you will build the app from.
 
@@ -1196,7 +1199,19 @@ Preconditions: A and B are paired, and each phone has its own account signed in.
 - [ ] **Partial fallback (1P):** send a few messages, change the phone's zone by 3 hours, and
       force-stop. The times shift by 3 hours and the order is unchanged. This checks display
       only, not the read or unread logic.
-- **If it fails:** tags `ChatMirror`, `MessageRepo`, `ChatViewModel`. `ChatReadState` holds the
+- [ ] **Report and block (play-final audit F-10)**, on a build with `COPLANLY_SUPPORT_EMAIL` set
+      (without it neither long-press menu nor report exists — check that too, once):
+  - Long-press one of **B's** messages: a menu offers *Report message*. Your own messages and
+    the app's cards (an event, a change request) offer nothing. With TalkBack on, the bubble's
+    actions include *Report message*.
+  - Choose it: the email app opens to the support address, with the subject and a body naming
+    the message ID, conversation ID and time in UTC — **not** the message's text — in the app's
+    language. With no email app installed, a snackbar names the address instead.
+  - The thread's **⋮** menu offers *Block and stop sharing* in red; it opens the pairing screen
+    with the first unpair confirmation already up, whose text says messaging ends. **Cancel**
+    both dialogs unless this is the end of the session. The menu is absent over a thread kept
+    after the co-parent deleted their account (§7.1).
+- **If it fails:** tags `ChatMirror`, `MessageRepo`, `ChatViewModel`, `ChatReport`. `ChatReadState` holds the
   logic, and `ChatReadStateTimeZoneTest` is the unit-level pin.
 
 ### 5.2 Family switcher and chat following the selected family (M-8) · 3A, 2P or 1P fallback

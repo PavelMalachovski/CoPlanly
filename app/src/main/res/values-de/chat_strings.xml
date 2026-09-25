@@ -133,4 +133,10 @@
     <string name="chat_departed_export">Exportieren</string>
     <string name="chat_departed_no_sending">In dieser Unterhaltung können keine Nachrichten mehr gesendet werden.</string>
     <string name="chat_departed_unnamed">Der andere Elternteil</string>
+    <string name="chat_more_actions">Weitere Aktionen</string>
+    <string name="chat_block">Blockieren und nicht mehr teilen</string>
+    <string name="chat_report_message">Nachricht melden</string>
+    <string name="chat_report_subject">CoPlanly: Chatnachricht melden</string>
+    <string name="chat_report_body">Schreib uns, was mit dieser Nachricht nicht stimmt:\n\n\n---\nDer Text der Nachricht ist nicht enthalten. Wenn wir ihn lesen sollen, füge ihn oben ein.\nNachrichten-ID: %1$s\nUnterhaltungs-ID: %2$s\nGesendet (UTC): %3$s</string>
+    <string name="chat_report_no_email_app">Keine E-Mail-App eingerichtet. Schreib an %1$s, um die Nachricht zu melden.</string>
 </resources>
