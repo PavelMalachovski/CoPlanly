@@ -19,6 +19,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextOverflow
 import com.coparently.app.R
 import com.coparently.app.domain.model.DefaultMessageTemplates
 import com.coparently.app.domain.model.MessageTemplate
@@ -55,7 +58,9 @@ fun MessageTemplatesBottomSheet(
                         text = stringResource(category.labelRes),
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(vertical = Spacing.S)
+                        modifier = Modifier
+                            .padding(vertical = Spacing.S)
+                            .semantics { heading() }
                     )
 
                     categoryTemplates.forEach { template ->
@@ -83,6 +88,7 @@ fun TemplateItem(
             Text(
                 text = stringResource(template.contentRes),
                 maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
                 style = MaterialTheme.typography.bodySmall
             )
         },
