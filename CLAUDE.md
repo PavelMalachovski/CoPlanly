@@ -1793,8 +1793,9 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     column.
 
 35. **The school import talks from the phone to the school, keeps no password, and never deletes
-    by absence** (MON-8, September 2026; Bakaláři now, EduPage a greyed "Coming soon" row until it
-    ships — the row must become real or go). `data/school/bakalari/` is the client (`/api/login`
+    by absence** (MON-8, September 2026; Bakaláři now. EduPage's greyed "Coming soon" row was
+    removed before the first release (owner decision, September 2026); EduPage returns as a row
+    only when its import exists). `data/school/bakalari/` is the client (`/api/login`
     with `client_id=ANDR`, `/api/3/timetable/actual`, `/api/3/events`, the school directory at
     `sluzby.bakalari.cz`), parsed by hand over Gson's tree — no reflected DTO, so R8 has nothing to
     rename. `SchoolImportPlanner` is the pure decision. Six things not to undo.

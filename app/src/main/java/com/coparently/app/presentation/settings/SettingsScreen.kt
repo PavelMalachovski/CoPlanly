@@ -116,7 +116,6 @@ import com.coparently.app.presentation.common.FamilySwitcherDialog
 import com.coparently.app.presentation.common.FamilySwitcherViewModel
 import com.coparently.app.presentation.common.GroupLabel
 import com.coparently.app.presentation.common.ParentNames
-import com.coparently.app.presentation.common.PillChip
 import com.coparently.app.presentation.common.PrivacyPolicyLink
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
@@ -856,6 +855,9 @@ fun SettingsScreen(
                         }
                     // The school import (MON-8): Bakaláři today. It opens the connections screen,
                     // in every build — the import is real, so the row is no longer a promise.
+                    // EduPage had an inert "Coming soon" row below this one; it was removed before
+                    // the first release (owner decision, September 2026), and EduPage returns as a
+                    // row only when its import exists (design item 8).
                     onNavigateToSchoolImport?.let { navigate ->
                         Divider()
                         SectionRow(
@@ -869,36 +871,6 @@ fun SettingsScreen(
                             trailing = { Chevron() }
                         )
                     }
-                    Divider()
-                    // Inert on purpose, and present on purpose (owner decision, MON-8): EduPage is
-                    // the next school system, and a Slovak parent opening Settings should learn the
-                    // app means to read it.
-                    //
-                    // Design rule 8 forbids an affordance that *promises* a feature that does not
-                    // exist — one that looks tappable and then does nothing, or does something
-                    // else. This row does not pretend: it cannot be tapped, it is drawn in the muted
-                    // role, and it says in words that the feature is not here yet.
-                    //
-                    // **It must not outlive the decision.** When the EduPage import lands this row
-                    // becomes the real one, and if it is abandoned the row comes out with it. A
-                    // "coming soon" badge still sitting here in a year is exactly the lie rule 8 is
-                    // about, arriving slowly instead of at once.
-                    SectionRow(
-                        icon = Icons.Default.School,
-                        iconTint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        title = stringResource(R.string.settings_edupage_title),
-                        titleColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        supporting = stringResource(R.string.settings_edupage_description),
-                        trailing = {
-                            PillChip(
-                                label = stringResource(R.string.settings_edupage_coming_soon),
-                                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        },
-                        // At 150 % the pill took ~40 % of the row and broke the summary
-                        // inside words; from 130 % it sits under the summary.
-                        stackTrailingAtLargeFont = true
-                    )
                 }
             }
 

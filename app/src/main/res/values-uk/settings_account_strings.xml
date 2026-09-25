@@ -83,9 +83,6 @@
     <string name="family_switcher_schedule_row">Чекає пропозиція щодо графіка опіки</string>
     <string name="settings_school_import_title">Імпорт із Bakaláři</string>
     <string name="settings_school_import_description">Шкільні заходи й навчальні години дитини одразу в календарі.</string>
-    <string name="settings_edupage_title">EduPage</string>
-    <string name="settings_edupage_description">Шкільні заходи дитини з EduPage.</string>
-    <string name="settings_edupage_coming_soon">Незабаром</string>
     <string name="settings_operation_failed">Не вдалося. Перевірте підключення та спробуйте ще раз.</string>
 
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
