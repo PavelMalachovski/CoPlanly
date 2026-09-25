@@ -286,7 +286,9 @@ class UserRepositoryEnsureProfileTest {
 
         coVerify { userDao.setHealthConsent(UID, 1, 1_787_000_000_000L) }
         assertEquals(
-            mapOf("healthDataConsent" to mapOf("version" to 1, "atMillis" to 1_787_000_000_000L)),
+            // `mapOf<String, Any>`: left to inference, the literal 1 beside a Long is typed Long,
+            // and the Int the repository writes (Firestore's rule wants an int) never equals it.
+            mapOf("healthDataConsent" to mapOf<String, Any>("version" to 1, "atMillis" to 1_787_000_000_000L)),
             capturedRemotePatch()
         )
     }
