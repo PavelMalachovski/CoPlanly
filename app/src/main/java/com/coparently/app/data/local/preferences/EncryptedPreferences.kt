@@ -386,8 +386,39 @@ class EncryptedPreferences internal constructor(
     }
 
     /**
+     * Every stored key that starts with [prefix].
+     *
+     * @param prefix The family of keys to list, such as [PreferenceKeys.SCHOOL_CONNECTION_PREFIX]
+     */
+    fun keysWithPrefix(prefix: String): Set<String> =
+        store.all.keys.filterTo(mutableSetOf()) { it.startsWith(prefix) }
+
+    /**
+     * Removes one entry. Written through at once, like every other edit here.
+     *
+     * @param key The key name
+     */
+    fun remove(key: String) {
+        store.edit()
+            .remove(key)
+            .apply()
+    }
+
+    /**
+     * Removes every entry whose key starts with [prefix], in one write.
+     *
+     * @param prefix The family of keys to forget, such as [PreferenceKeys.SCHOOL_CONNECTION_PREFIX]
+     */
+    fun removeWithPrefix(prefix: String) {
+        val keys = keysWithPrefix(prefix)
+        if (keys.isEmpty()) return
+        store.edit().apply { keys.forEach { remove(it) } }.apply()
+    }
+
+    /**
      * Clears stored preferences — **except** the per-user parent-slot markers
-     * ([PreferenceKeys.PARENT_SLOT_MARKER_PREFIX]).
+     * ([PreferenceKeys.PARENT_SLOT_MARKER_PREFIX]) and the school connections
+     * ([PreferenceKeys.SCHOOL_CONNECTION_PREFIX], whose KDoc says who clears them instead).
      *
      * This is no longer literally "all", and that is deliberate, not an oversight: this method
      * is reached from the app's own Sign out (`SettingsScreen`'s confirm dialog runs
@@ -410,7 +441,7 @@ class EncryptedPreferences internal constructor(
      */
     fun clear() {
         val preservedMarkers = store.all
-            .filterKeys { it.startsWith(PreferenceKeys.PARENT_SLOT_MARKER_PREFIX) }
+            .filterKeys { key -> PRESERVED_PREFIXES.any { key.startsWith(it) } }
             .mapNotNull { (key, value) -> (value as? String)?.let { key to it } }
 
         store.edit().apply {
@@ -546,5 +577,11 @@ class EncryptedPreferences internal constructor(
         private const val KEY_DARK_THEME = "dark_theme"
         private const val KEY_EVENT_DRAFT = "event_draft"
         private const val KEY_DEFAULT_CURRENCY = "default_currency"
+
+        /** The key families [clear] keeps; each prefix's own KDoc says why. */
+        private val PRESERVED_PREFIXES = listOf(
+            PreferenceKeys.PARENT_SLOT_MARKER_PREFIX,
+            PreferenceKeys.SCHOOL_CONNECTION_PREFIX
+        )
     }
 }

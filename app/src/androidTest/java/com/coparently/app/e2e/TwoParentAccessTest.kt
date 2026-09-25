@@ -417,7 +417,12 @@ class TwoParentAccessTest : TwoParentTest() {
         assertTrue("the thread went with Bob's account", thread.exists())
         val retainedUntil = requireNotNull(thread.getLong(DepartedThread.RETAINED_UNTIL)) { "no deadline" }
         assertTrue("the deadline is not about thirty days out", retainedUntil >= deletedAt + RETENTION_MS - SLACK_MS)
-        assertTrue("the deadline is past thirty days", retainedUntil <= System.currentTimeMillis() + RETENTION_MS)
+        // The deadline is the functions emulator's clock (the host's), the bound this phone's: the
+        // two drift apart by seconds, in either direction, so both bounds carry the same slack.
+        assertTrue(
+            "the deadline is past thirty days",
+            retainedUntil <= System.currentTimeMillis() + RETENTION_MS + SLACK_MS
+        )
         assertEquals(bobUid, thread.getString(DepartedThread.DEPARTED_UID))
         assertEquals(bob.name, thread.getString(DepartedThread.DEPARTED_NAME))
         val kept = alice.firestore.collection("messages")

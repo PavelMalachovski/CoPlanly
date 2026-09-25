@@ -3,6 +3,7 @@ package com.coparently.app.data.session
 import android.util.Log
 import com.coparently.app.data.local.CoPlanlyDatabase
 import com.coparently.app.data.local.preferences.EncryptedPreferences
+import com.coparently.app.data.local.preferences.PreferenceKeys
 import com.coparently.app.data.remote.firebase.FcmService
 import com.google.firebase.functions.FirebaseFunctions
 import kotlinx.coroutines.CancellationException
@@ -73,6 +74,9 @@ class AccountDeletionService @Inject constructor(
         fcmService.unregisterToken()
         withContext(Dispatchers.IO) { database.clearAllTables() }
         encryptedPreferences.clear()
+        // Kept by `clear()` on purpose (see `PreferenceKeys.SCHOOL_CONNECTION_PREFIX`); a deleted
+        // account's school tokens have no business staying on the phone.
+        encryptedPreferences.removeWithPrefix(PreferenceKeys.SCHOOL_CONNECTION_PREFIX)
     }
 
     private companion object {

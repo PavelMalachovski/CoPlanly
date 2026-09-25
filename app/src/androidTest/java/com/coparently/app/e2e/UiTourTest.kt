@@ -300,6 +300,13 @@ class UiTourTest : AliceOnScreenTest() {
         fromSettings("documents_vault", R.string.documents_settings_title, "Custody agreement")
         fromSettings("journal", R.string.journal_title)
         fromSettings("calendar_feed", R.string.calendar_feed_settings_title)
+        // The school import (MON-8): the list with nobody connected, then the connect flow's
+        // first step. The tour signs in to no school.
+        fromSettings("school_import", R.string.settings_school_import_title)
+        camera.shot("school_connect") {
+            driver.press("school_connect", hasText(string(R.string.school_import_connect)) and hasClickAction())
+            driver.linger()
+        }
         fromSettings("my_profile", R.string.settings_my_profile_title)
         fromSettings("coparent_profile", R.string.settings_coparent_profile_title)
         fromSettings("data_sources", R.string.settings_data_sources_title)

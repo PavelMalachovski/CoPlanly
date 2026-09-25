@@ -1,6 +1,7 @@
 package com.coparently.app.e2e
 
 import android.content.Context
+import android.os.SystemClock
 import android.util.Log
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.hasAnyAncestor
@@ -40,8 +41,13 @@ import com.coparently.app.testing.settle
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.UserProfileChangeRequest
 import dagger.hilt.android.testing.HiltAndroidRule
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeout
@@ -132,6 +138,14 @@ abstract class AliceOnScreenTest {
     private var coParent: EmulatorParent? = null
     private val otherPhones = mutableListOf<EmulatorParent>()
     private var scenario: ActivityScenario<MainActivity>? = null
+
+    /**
+     * The chat mirror, run in a scope this test owns rather than through `ChatMirror.start()`,
+     * whose process-lifetime scope nothing cancels: every test's mirror used to live on into the
+     * next, following the process-wide FirebaseAuth to the next Alice and writing her rows through
+     * a database instance the next test's Room observers never hear from.
+     */
+    private var chatMirrorScope: CoroutineScope? = null
     private var savedConsent: String? = null
 
     /**
@@ -180,7 +194,9 @@ abstract class AliceOnScreenTest {
             // "No": nothing in a test should switch collection on.
             preferencesRepository.setTelemetryConsent(TelemetryConsent.DENIED)
         }
-        chatMirror.start()
+        chatMirrorScope = CoroutineScope(SupervisorJob() + Dispatchers.IO).also { scope ->
+            scope.launch { chatMirror.mirror() }
+        }
         beforeLaunch()
         step("before: launch MainActivity")
 
@@ -210,12 +226,21 @@ abstract class AliceOnScreenTest {
         if (!::encryptedPreferences.isInitialized) return
         step("after: close")
         scenario?.close()
+        chatMirrorScope?.cancel()
         otherPhones.forEach { it.close() }
         coParent?.close()
         runCatching { firebaseAuth.signOut() }
         // The database is a file on the emulator; nothing Alice's account wrote may outlive the test.
         runCatching { database.clearAllTables() }
         encryptedPreferences.putString(PreferenceKeys.TELEMETRY_CONSENT, savedConsent.orEmpty())
+        // Each test builds a new Hilt graph (a new Room instance on the same file) but shares the
+        // process-wide FirebaseAuth and Firestore. This graph's shared streams (the custody mirror,
+        // ParentsSource, FamilyKindSource) stay up for their WhileSubscribed(5 s) after the
+        // activity closes, and in that window they followed the *next* test's account: the stale
+        // custody mirror wrote the next pair's day swap into the file first, the current mirror's
+        // equality guard then skipped its own write, and the current instance's observers were
+        // never invalidated — Home never showed Bob's second swap. Let them lapse first.
+        SystemClock.sleep(STALE_GRAPH_LINGER_MS)
         step("after: done")
     }
 
@@ -294,6 +319,9 @@ abstract class AliceOnScreenTest {
         private const val PASSWORD = "e2e-password-1"
         private const val HOME_TIMEOUT_MS = 60_000L
         private const val SHORT_ID_LENGTH = 6
+
+        /** Past every `WhileSubscribed(5_000)` in the app's process-lifetime singletons, with margin. */
+        private const val STALE_GRAPH_LINGER_MS = 6_000L
 
         /** How long something the other phone did may take to be drawn on Alice's screen. */
         const val CROSS_DEVICE_TIMEOUT_MS = 45_000L

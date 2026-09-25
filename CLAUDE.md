@@ -1763,6 +1763,49 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     phone's clock (`domain/export/RecordJournal.kt`). Don't add a sync path, a backup or an outbox
     column.
 
+35. **The school import talks from the phone to the school, keeps no password, and never deletes
+    by absence** (MON-8, September 2026; Bakaláři now, EduPage a greyed "Coming soon" row until it
+    ships — the row must become real or go). `data/school/bakalari/` is the client (`/api/login`
+    with `client_id=ANDR`, `/api/3/timetable/actual`, `/api/3/events`, the school directory at
+    `sluzby.bakalari.cz`), parsed by hand over Gson's tree — no reflected DTO, so R8 has nothing to
+    rename. `SchoolImportPlanner` is the pure decision. Six things not to undo.
+    - **The password is used once and dropped.** A connection is one `EncryptedPreferences` key,
+      `school_connection_<16 hex of sha256(uid|baseUrl|username)>`, holding the tokens, the child,
+      the family and a ledger of imported ids, and naming its owner uid — the store refuses it to
+      another account. The refresh token rotates: `BakalariAuthorizer` holds a mutex and **stores
+      the new token before using it**, and an `invalid_grant` means "ask for the password again",
+      never "delete the connection". Sign-out, an account switch and deletion remove every
+      connection; a Google Calendar disconnect does **not** (the keys are exempt from
+      `EncryptedPreferences.clear()` like the slot markers, because that disconnect calls it).
+    - **One connection is one child in one family, chosen explicitly.** The family is asked for at
+      two or more and never pre-selected; the child is pre-selected only when there is exactly
+      one. Imported events are `eventType = "school"`, not private, `forMembers = [child:<id>]`,
+      `parentOwner` the importer's own slot.
+    - **An event is shared with its own family's co-parent** (`domain/family/FamilyAudience`): the
+      import runs in the background for the family its connection names, whichever the switcher
+      shows, so `EventRepositoryImpl.shareTargets` and `SyncService`'s upload name the other parent
+      of the event's `familyId` while that pairing is live, and fall back to the family on screen
+      otherwise. Don't go back to "the partner on screen" for every event.
+    - **Ids are derived**: `"school-" +` 32 hex of sha256(`"bakalari|" + baseUrl + "|" + username +
+      "|" + kind + "|" + key`), kinds `event`, `hours`, `dayoff`. Two parents connecting the same
+      school account de-duplicate instead of doubling up.
+    - **Nothing is deleted by absence and nothing is resurrected.** A school's summer purge empties
+      its responses; an import that deleted what it no longer saw would erase the term. The one
+      deletion is a school-hours event for a day that became a day off. A pending tombstone, or a
+      ledger id Room no longer holds, is never re-created — the parent deleted it. An event is
+      rewritten only when the school's fingerprint (title, description, start, end) changed, and
+      only those fields, through `copy()`, so a parent's edit survives until the school changes
+      it. Nothing before today is touched.
+    - **Quiet writes, daily job.** The import writes through the event use cases with
+      `announce = false` (no chat card per event; revisions are still recorded), skips a day off the
+      holiday provider already draws, merges a run of days off into one event, and runs as unique
+      periodic work `school_import_daily` (network required, `KEEP`) that cancels itself when no
+      connection is left; "Update now" calls `SchoolImporter.sync` directly. Windows: school events
+      90 days ahead, timetable four weeks.
+    Nothing here reaches our servers except the imported events themselves, which sync like any
+    shared event. What a live school server answers is unverified until `docs/DEVICE-CHECKLIST.md`
+    §3.18 is run.
+
 ## Legal and GDPR (September 2026) — keep consistent
 
 `docs/legal/LEGAL-REVIEW-2026-09.md` reviewed the app as a data-protection and consumer lawyer

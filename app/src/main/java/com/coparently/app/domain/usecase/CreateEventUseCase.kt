@@ -22,9 +22,10 @@ class CreateEventUseCase @Inject constructor(
 ) {
     /**
      * Creates a new event.
+     * @param announce Whether the co-parent's chat is told; see `EventRepository.insertEvent`.
      * @return Result with created event or exception
      */
-    suspend operator fun invoke(event: Event): Result<Event> {
+    suspend operator fun invoke(event: Event, announce: Boolean = true): Result<Event> {
         return try {
             // Validate event
             val validationResult = eventValidator.validate(event)
@@ -47,7 +48,7 @@ class CreateEventUseCase @Inject constructor(
             )
 
             // Create event
-            eventRepository.insertEvent(finalEvent)
+            eventRepository.insertEvent(finalEvent, announce)
 
             // Schedule reminder notification if requested
             reminderScheduler.schedule(finalEvent)

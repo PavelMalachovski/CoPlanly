@@ -202,6 +202,7 @@ fun SettingsScreen(
     onNavigateToPairing: (() -> Unit)? = null,
     onNavigateToFriends: (() -> Unit)? = null,
     onNavigateToCalendarFeed: (() -> Unit)? = null,
+    onNavigateToSchoolImport: (() -> Unit)? = null,
     onNavigateToProfessionals: (() -> Unit)? = null,
     onNavigateToCustodySetup: (() -> Unit)? = null,
     onNavigateToMyProfile: (() -> Unit)? = null,
@@ -835,40 +836,48 @@ fun SettingsScreen(
                                 trailing = { Chevron() }
                             )
                         }
-                    // Debug builds only (release audit R-4, owner decision): a store reviewer
-                    // reads a "Planned" row as an unfinished app, while the team still wants to
-                    // see where the import will sit.
-                    if (com.coparently.app.BuildConfig.DEBUG) {
+                    // The school import (MON-8): Bakaláři today. It opens the connections screen,
+                    // in every build — the import is real, so the row is no longer a promise.
+                    onNavigateToSchoolImport?.let { navigate ->
                         Divider()
-                        // Inert on purpose, and present on purpose.
-                        //
-                        // Design rule 8 forbids an affordance that *promises* a feature that does
-                        // not exist — one that looks tappable and then does nothing, or does
-                        // something else, the way the chat composer's "attach" button opened
-                        // message templates. This row does not pretend: it cannot be tapped, it is
-                        // drawn in the muted role, and it says in words that the feature is not
-                        // built. What it buys is that a Czech parent opening Settings learns the
-                        // app means to read their school's system, which is the first question
-                        // this product will be asked.
-                        //
-                        // **It must not outlive the feature.** When MON-8 lands this row becomes
-                        // the real import, and if MON-8 is abandoned the row comes out with it. A
-                        // "planned" badge still sitting here in a year is exactly the lie rule 8
-                        // is about, arriving slowly instead of at once.
                         SectionRow(
                             icon = Icons.Default.School,
-                            iconTint = MaterialTheme.colorScheme.onSurfaceVariant,
                             title = stringResource(R.string.settings_school_import_title),
-                            titleColor = MaterialTheme.colorScheme.onSurfaceVariant,
                             supporting = stringResource(R.string.settings_school_import_description),
-                            trailing = {
-                                PillChip(
-                                    label = stringResource(R.string.settings_school_import_planned),
-                                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                navigate()
+                            },
+                            trailing = { Chevron() }
                         )
                     }
+                    Divider()
+                    // Inert on purpose, and present on purpose (owner decision, MON-8): EduPage is
+                    // the next school system, and a Slovak parent opening Settings should learn the
+                    // app means to read it.
+                    //
+                    // Design rule 8 forbids an affordance that *promises* a feature that does not
+                    // exist — one that looks tappable and then does nothing, or does something
+                    // else. This row does not pretend: it cannot be tapped, it is drawn in the muted
+                    // role, and it says in words that the feature is not here yet.
+                    //
+                    // **It must not outlive the decision.** When the EduPage import lands this row
+                    // becomes the real one, and if it is abandoned the row comes out with it. A
+                    // "coming soon" badge still sitting here in a year is exactly the lie rule 8 is
+                    // about, arriving slowly instead of at once.
+                    SectionRow(
+                        icon = Icons.Default.School,
+                        iconTint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        title = stringResource(R.string.settings_edupage_title),
+                        titleColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        supporting = stringResource(R.string.settings_edupage_description),
+                        trailing = {
+                            PillChip(
+                                label = stringResource(R.string.settings_edupage_coming_soon),
+                                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    )
                 }
             }
 

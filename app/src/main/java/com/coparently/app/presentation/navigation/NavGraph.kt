@@ -506,6 +506,9 @@ fun NavGraph(
                         onNavigateToCalendarFeed = {
                             navController.navigate(Screen.CalendarFeed.route)
                         },
+                        onNavigateToSchoolImport = {
+                            navController.navigate(Screen.SchoolImport.route)
+                        },
                         onNavigateToDataSources = {
                             navController.navigate(Screen.DataSources.route)
                         },
@@ -790,6 +793,32 @@ fun NavGraph(
                         onResolved = {
                             navController.popBackStack()
                         }
+                    )
+                }
+
+                // The school import (MON-8): Settings → Sync, a detail route like the calendar links.
+                pane(route = Screen.SchoolImport.route) {
+                    com.coparently.app.presentation.school.SchoolImportScreen(
+                        onNavigateUp = { navController.popBackStack() },
+                        onConnect = { navController.navigate(Screen.SchoolConnect.createRoute()) },
+                        onReconnect = { id -> navController.navigate(Screen.SchoolConnect.createRoute(id)) }
+                    )
+                }
+
+                // Connecting a school, or signing one in again, off the school import screen.
+                pane(
+                    route = Screen.SchoolConnect.route,
+                    arguments = listOf(
+                        navArgument(Screen.SchoolConnect.ARG_CONNECTION_ID) {
+                            type = NavType.StringType
+                            nullable = true
+                            defaultValue = null
+                        }
+                    )
+                ) {
+                    com.coparently.app.presentation.school.ConnectSchoolScreen(
+                        onNavigateUp = { navController.popBackStack() },
+                        onDone = { navController.popBackStack() }
                     )
                 }
 
@@ -1566,6 +1595,23 @@ sealed class Screen(val route: String) {
 
     /** Read-only calendar links for an iPhone or any other calendar app (MON-17). */
     data object CalendarFeed : Screen("calendar_feed")
+
+    /** The school import's connections (MON-8). */
+    data object SchoolImport : Screen("school_import")
+
+    /** Connecting a school, or signing a stored connection in again (MON-8). */
+    data object SchoolConnect : Screen("school_connect?connectionId={connectionId}") {
+        /** The connection to sign in again; absent for a new connection. */
+        const val ARG_CONNECTION_ID =
+            com.coparently.app.presentation.school.ConnectSchoolViewModel.ARG_CONNECTION_ID
+
+        /** The route for a new connection, or for signing [connectionId] in again. */
+        fun createRoute(connectionId: String? = null): String = if (connectionId.isNullOrBlank()) {
+            "school_connect"
+        } else {
+            "school_connect?connectionId=${Uri.encode(connectionId)}"
+        }
+    }
 
     /** Where the calendar's holiday data comes from, and its licences (MON-13). */
     data object DataSources : Screen("data_sources")

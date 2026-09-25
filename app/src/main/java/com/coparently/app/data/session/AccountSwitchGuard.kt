@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import com.coparently.app.data.local.CoPlanlyDatabase
 import com.coparently.app.data.local.preferences.EncryptedPreferences
+import com.coparently.app.data.local.preferences.PreferenceKeys
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -67,6 +68,9 @@ class AccountSwitchGuard @Inject constructor(
                 // and could import that person's calendar into its own family. The per-uid
                 // parent-slot markers survive `clear()` by design.
                 encryptedPreferences.clear()
+                // The school connections survive `clear()` (a Google Calendar disconnect reaches
+                // it too) and hold the previous account's school tokens, so they go explicitly.
+                encryptedPreferences.removeWithPrefix(PreferenceKeys.SCHOOL_CONNECTION_PREFIX)
             }
             if (lastUid != uid) {
                 prefs.edit().putString(KEY_LAST_UID, uid).apply()

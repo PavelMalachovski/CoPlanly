@@ -1,0 +1,95 @@
+{
+  "Hours": [
+    {"Id": 2, "Caption": "0", "BeginTime": "7:05", "EndTime": "7:50"},
+    {"Id": 3, "Caption": "1", "BeginTime": "8:00", "EndTime": "8:45"},
+    {"Id": "4", "Caption": "2", "BeginTime": "8:55", "EndTime": "9:40"},
+    {"Id": 5, "Caption": "3", "BeginTime": "10:00", "EndTime": "10:45"},
+    {"Id": 6, "Caption": "4", "BeginTime": "10:55", "EndTime": "11:40"},
+    {"Id": 7, "Caption": "5", "BeginTime": "11:50", "EndTime": "12:35"},
+    {"Id": 8, "Caption": "6", "BeginTime": "12:40", "EndTime": "13:25"},
+    {"Id": 9, "Caption": "7", "BeginTime": "13:35", "EndTime": "14:20"}
+  ],
+  "Days": [
+    {
+      "Atoms": [
+        {"HourId": "3", "GroupIds": ["0C"], "SubjectId": "10", "TeacherId": "USBOY", "RoomId": "SR", "CycleIds": ["1"], "Change": null, "HomeworkIds": [], "Theme": ""},
+        {"HourId": "5", "GroupIds": ["0C"], "SubjectId": " 6", "TeacherId": "U  12", "RoomId": "SR", "CycleIds": ["1"],
+         "Change": {"ChangeSubject": null, "Day": "2020-02-24T00:00:00+01:00", "Hours": "3. hod", "ChangeType": "Added", "Description": "Přidáno do rozvrhu: B, H. Karel, B", "Time": "10:00 - 10:45", "TypeAbbrev": null, "TypeName": null},
+         "HomeworkIds": [], "Theme": null},
+        {"HourId": 6, "GroupIds": ["0C"], "SubjectId": "15", "TeacherId": "USBOY", "RoomId": "SR", "CycleIds": ["1"], "Change": null, "HomeworkIds": [], "Theme": null}
+      ],
+      "DayOfWeek": 1,
+      "Date": "2020-02-24T00:00:00+01:00",
+      "DayDescription": "",
+      "DayType": "WorkDay"
+    },
+    {
+      "Atoms": [
+        {"HourId": 3, "GroupIds": [], "SubjectId": null, "TeacherId": null, "RoomId": null, "CycleIds": [],
+         "Change": {"ChangeSubject": null, "Day": "2020-02-25T00:00:00+01:00", "Hours": "1. - 3. hod", "ChangeType": "Canceled", "Description": "Obecná absence třídy", "Time": "8:00 - 10:45", "TypeAbbrev": "Absc", "TypeName": "Obecná absence třídy"},
+         "HomeworkIds": [], "Theme": null},
+        {"HourId": 4, "GroupIds": [], "SubjectId": null, "TeacherId": null, "RoomId": null, "CycleIds": [],
+         "Change": {"ChangeSubject": null, "Day": "2020-02-25T00:00:00+01:00", "Hours": "1. - 3. hod", "ChangeType": "Canceled", "Description": "Obecná absence třídy", "Time": "8:00 - 10:45", "TypeAbbrev": "Absc", "TypeName": "Obecná absence třídy"},
+         "HomeworkIds": [], "Theme": null},
+        {"HourId": 5, "GroupIds": [], "SubjectId": null, "TeacherId": null, "RoomId": null, "CycleIds": [],
+         "Change": {"ChangeSubject": null, "Day": "2020-02-25T00:00:00+01:00", "Hours": "1. - 3. hod", "ChangeType": "Canceled", "Description": "Obecná absence třídy", "Time": "8:00 - 10:45", "TypeAbbrev": "Absc", "TypeName": "Obecná absence třídy"},
+         "HomeworkIds": [], "Theme": null},
+        {"HourId": 6, "GroupIds": ["0C"], "SubjectId": "27", "TeacherId": "UZBN3", "RoomId": "RR", "CycleIds": ["1"], "Change": null, "HomeworkIds": [], "Theme": null},
+        {"HourId": 7, "GroupIds": ["0C"], "SubjectId": "28", "TeacherId": "UZBN3", "RoomId": "RR", "CycleIds": ["1"], "Change": null, "HomeworkIds": [], "Theme": null}
+      ],
+      "DayOfWeek": 2,
+      "Date": "2020-02-25T00:00:00+01:00",
+      "DayDescription": "",
+      "DayType": "WorkDay"
+    },
+    {
+      "Atoms": [
+        {"HourId": 3, "GroupIds": [], "SubjectId": null, "TeacherId": null, "RoomId": null, "CycleIds": [],
+         "Change": {"ChangeSubject": null, "Day": "2020-02-26T00:00:00+01:00", "Hours": "1. - 3. hod", "ChangeType": "Canceled", "Description": "přednáška", "Time": "8:00 - 10:45", "TypeAbbrev": "Absc", "TypeName": "Obecná absence třídy"},
+         "HomeworkIds": [], "Theme": null},
+        {"HourId": 9, "GroupIds": [], "SubjectId": null, "TeacherId": null, "RoomId": null, "CycleIds": [],
+         "Change": {"ChangeSubject": null, "Day": "2020-02-26T00:00:00+01:00", "Hours": "7. hod", "ChangeType": "Removed", "Description": "Přesun na 26.2., 4. hod (NJ, V. Jitka)", "Time": "13:35 - 14:20", "TypeAbbrev": null, "TypeName": null},
+         "HomeworkIds": [], "Theme": null}
+      ],
+      "DayOfWeek": 3,
+      "Date": "2020-02-26T00:00:00+01:00",
+      "DayDescription": "",
+      "DayType": "WorkDay"
+    },
+    {
+      "Atoms": [
+        {"HourId": 3, "GroupIds": ["0C"], "SubjectId": "10", "TeacherId": "USBOY", "RoomId": "SR", "CycleIds": ["1"], "Change": null, "HomeworkIds": [], "Theme": null},
+        {"HourId": "4", "GroupIds": ["0C"], "SubjectId": "38", "TeacherId": "UNBO4", "RoomId": "SR", "CycleIds": ["1"], "Change": null, "HomeworkIds": [], "Theme": null}
+      ],
+      "DayOfWeek": 4,
+      "Date": "2020-02-27T00:00:00+01:00",
+      "DayDescription": "",
+      "DayType": "Holiday"
+    },
+    {
+      "Atoms": [
+        {"HourId": 3, "GroupIds": ["0C"], "SubjectId": "10", "TeacherId": "U  12", "RoomId": "SR", "CycleIds": ["1"],
+         "Change": {"ChangeSubject": null, "Day": "2020-02-28T00:00:00+01:00", "Hours": "1. hod", "ChangeType": "Substitution", "Description": "Suplování: Vedral Jaroslav, 211 (Kt, 119A)", "Time": "7:45 - 8:30", "TypeAbbrev": null, "TypeName": null},
+         "HomeworkIds": [], "Theme": null},
+        {"HourId": 9, "GroupIds": ["0C"], "SubjectId": "38", "TeacherId": "UNBO4", "RoomId": "01", "CycleIds": ["1"],
+         "Change": {"ChangeSubject": null, "Day": "2020-02-28T00:00:00+01:00", "Hours": "7. hod", "ChangeType": "RoomChanged", "Description": "Změna místnosti: 33 (01)", "Time": "13:35 - 14:20", "TypeAbbrev": null, "TypeName": null},
+         "HomeworkIds": [], "Theme": null}
+      ],
+      "DayOfWeek": 5,
+      "Date": "2020-02-28T00:00:00+01:00",
+      "DayDescription": "",
+      "DayType": "WorkDay",
+      "SomethingNew": {"UnknownField": true}
+    },
+    {
+      "Atoms": [
+        {"HourId": 3, "GroupIds": ["0C"], "SubjectId": "10", "TeacherId": "USBOY", "RoomId": "SR", "CycleIds": ["1"], "Change": null, "HomeworkIds": [], "Theme": null}
+      ],
+      "DayOfWeek": 1,
+      "Date": "2020-03-02T00:00:00+01:00",
+      "DayDescription": "",
+      "DayType": "WorkDay"
+    }
+  ],
+  "Classes": [], "Groups": [], "Subjects": [], "Teachers": [], "Rooms": [], "Cycles": []
+}

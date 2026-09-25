@@ -17,11 +17,12 @@ class DeleteEventUseCase @Inject constructor(
 ) {
     /**
      * Deletes an event.
+     * @param announce Whether the co-parent's chat is told; see `EventRepository.insertEvent`.
      * @return Result indicating success or failure
      */
-    suspend operator fun invoke(event: Event): Result<Unit> {
+    suspend operator fun invoke(event: Event, announce: Boolean = true): Result<Unit> {
         return try {
-            eventRepository.deleteEvent(event)
+            eventRepository.deleteEvent(event, announce)
             reminderScheduler.cancel(event.id)
 
             // Log analytics

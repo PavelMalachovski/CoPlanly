@@ -81,9 +81,11 @@
     <string name="family_switcher_request_row">Ждёт запрос на изменение</string>
     <string name="family_switcher_schedule_other">В другой семье ждёт предложение по расписанию опеки</string>
     <string name="family_switcher_schedule_row">Ждёт предложение по расписанию опеки</string>
-    <string name="settings_school_import_title">Импорт из Bakaláři и EduPage</string>
-    <string name="settings_school_import_description">Школьное расписание ребёнка прямо в календарь. Пока не сделано.</string>
-    <string name="settings_school_import_planned">В планах</string>
+    <string name="settings_school_import_title">Импорт из Bakaláři</string>
+    <string name="settings_school_import_description">Школьные мероприятия и учебные часы ребёнка прямо в календаре.</string>
+    <string name="settings_edupage_title">EduPage</string>
+    <string name="settings_edupage_description">Школьные мероприятия ребёнка из EduPage.</string>
+    <string name="settings_edupage_coming_soon">Скоро</string>
     <string name="settings_operation_failed">Не получилось. Проверьте подключение и попробуйте ещё раз.</string>
 
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->

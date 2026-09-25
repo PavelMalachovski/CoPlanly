@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
+import com.coparently.app.data.school.SchoolConnectionStore
 import com.coparently.app.domain.onboarding.OnboardingState
 import com.coparently.app.domain.repository.ChildInfoRepository
 import com.coparently.app.domain.repository.PetRepository
@@ -32,7 +33,8 @@ class AuthStateViewModel @Inject constructor(
     private val userRepository: UserRepository,
     private val childInfoRepository: ChildInfoRepository,
     private val petRepository: PetRepository,
-    private val fcmService: FcmService
+    private val fcmService: FcmService,
+    private val schoolConnections: SchoolConnectionStore
 ) : ViewModel() {
 
     private val _isAuthenticated = MutableStateFlow<Boolean?>(null)
@@ -128,6 +130,9 @@ class AuthStateViewModel @Inject constructor(
             // token that stays on the profile keeps this phone receiving the account's pushes —
             // the co-parent's chat included — for whoever signs in next.
             fcmService.unregisterToken()
+            // The school connections' tokens (MON-8) are the account's, and the one piece of
+            // `EncryptedPreferences` a Google Calendar disconnect deliberately leaves alone.
+            schoolConnections.clearAll()
             firebaseAuthService.signOutCompletely()
             refreshAuthState()
         }
