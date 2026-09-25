@@ -470,16 +470,29 @@ private fun EmergencyContactsGroup(contacts: List<EmergencyContact>, onClick: ()
     }
 }
 
-/** The school: its name as the title, address (falling back to grade) as the summary line. */
+/**
+ * The school: its name as the title, then the child's class ("Grade: 4") and the address on
+ * the summary line, whichever of the two were recorded. The class is free text a parent typed,
+ * often a bare number, so it always carries its label — "4" alone under a school name said
+ * nothing.
+ */
 @Composable
 private fun SchoolGroup(schoolInfo: SchoolInfo, onClick: () -> Unit) {
+    val grade = schoolInfo.grade?.takeIf { it.isNotBlank() }
+        ?.let { stringResource(R.string.childinfo_detail_grade, it) }
+    val address = schoolInfo.address?.takeIf { it.isNotBlank() }
+    val summary = if (grade != null && address != null) {
+        stringResource(R.string.childinfo_school_summary, grade, address)
+    } else {
+        grade ?: address
+    }
     Column {
         GroupLabel(stringResource(R.string.childinfo_section_school))
         SectionGroup {
             SectionRow(
-                icon = Icons.Default.Place,
+                icon = Icons.Default.School,
                 title = schoolInfo.name,
-                supporting = schoolInfo.address ?: schoolInfo.grade,
+                supporting = summary,
                 onClick = onClick
             )
         }

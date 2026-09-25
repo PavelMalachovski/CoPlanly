@@ -4,12 +4,12 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.coparently.app.data.repository.CustodyModelRepository
+import com.coparently.app.domain.changerequests.AwaitingAnswers
 import com.coparently.app.domain.chat.ChatReadState
 import com.coparently.app.domain.chat.ConversationKey
 import com.coparently.app.domain.custody.CustodyResolver
 import com.coparently.app.domain.custody.DayOverride
 import com.coparently.app.domain.custody.DaySwapGroup
-import com.coparently.app.domain.custody.DaySwapInbox
 import com.coparently.app.domain.custody.HandoverCalculator
 import com.coparently.app.domain.custody.HandoverInfo
 import com.coparently.app.domain.expenses.CurrencyBalance
@@ -587,14 +587,9 @@ class HomeViewModel @Inject constructor(
         custodyModelRepository.observeDayOverrides(),
         _userId
     ) { overrides, uid ->
-        if (uid.isEmpty()) {
-            emptyList()
-        } else {
-            // Grouped, so a week offered as one agreement raises one dialog rather than seven in
-            // a row — each dismissal revealing the next, which is what the reporter saw.
-            DaySwapInbox.groups(overrides, LocalDate.now())
-                .filter { it.awaitsAnswerFrom(uid) }
-        }
+        // Grouped, so a week offered as one agreement raises one dialog rather than seven in a
+        // row — each dismissal revealing the next, which is what the reporter saw.
+        AwaitingAnswers.swapOffers(overrides, uid, LocalDate.now())
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())
 
     /**
@@ -609,11 +604,7 @@ class HomeViewModel @Inject constructor(
             if (uid.isEmpty()) flowOf(0) else changeRequestRepository.getPendingIncomingCount(uid)
         },
         combine(eventRepository.getAllEvents(), _userId) { events, uid ->
-            if (uid.isEmpty()) {
-                0
-            } else {
-                events.count { it.acceptance.isPending && it.createdByFirebaseUid != uid }
-            }
+            AwaitingAnswers.eventCount(events, uid)
         }
     ) { requests, events -> requests + events }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), 0)

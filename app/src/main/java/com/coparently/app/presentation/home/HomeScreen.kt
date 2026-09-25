@@ -77,9 +77,9 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.domain.custody.HandoverInfo
+import com.coparently.app.domain.events.AllDayEvent
 import com.coparently.app.domain.expenses.CurrencyBalance
 import com.coparently.app.domain.home.WeekEntry
-import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.model.FamilyKind
 import com.coparently.app.presentation.calendar.components.DayAgendaCard
 import com.coparently.app.presentation.changerequests.ChangeRequestViewModel
@@ -110,22 +110,12 @@ import com.coparently.app.utils.shortTime
 import java.text.NumberFormat
 import java.time.LocalDate
 import java.time.LocalDateTime
-import java.time.LocalTime
 import java.util.Currency
 import java.util.Locale
 
 /** A date in the locale's order for [skeleton], then the locale's short time (D-18). */
 private fun LocalDateTime.dateAndTime(skeleton: String): String =
     "${format(localizedDate(skeleton))} · ${format(shortTime())}"
-
-/**
- * Whether [event] reads as an all-day one: it starts at midnight and ends at a midnight, or has
- * no end. The model has no all-day flag, and a Google import of a birthday or a school holiday
- * arrives as exactly this shape, which Home used to print as "12:00 AM" (D-18).
- */
-private fun looksAllDay(event: Event): Boolean =
-    event.startDateTime.toLocalTime() == LocalTime.MIDNIGHT &&
-        (event.endDateTime?.toLocalTime() ?: LocalTime.MIDNIGHT) == LocalTime.MIDNIGHT
 
 /** Strength of the parent-hue wash behind the handover hero. */
 private const val HERO_TINT_ALPHA = 0.16f
@@ -966,8 +956,9 @@ internal fun TimelineRow(
                     overflow = TextOverflow.Ellipsis
                 )
             }
-            val timeLabel = if (looksAllDay(event)) {
-                event.startDateTime.format(localizedDate("EEEd"))
+            // An all-day event says so rather than "12:00 AM" (D-18; `AllDayEvent`).
+            val timeLabel = if (AllDayEvent.isAllDay(event)) {
+                "${event.startDateTime.format(localizedDate("EEEd"))} · ${stringResource(R.string.event_all_day)}"
             } else {
                 event.startDateTime.dateAndTime("EEEd")
             }

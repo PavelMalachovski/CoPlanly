@@ -41,6 +41,10 @@ import java.time.format.FormatStyle
  * can share it — a vet asks the same question a paramedic does, and one editor means the two
  * never drift apart. The strings stay the `medical_vaccination_*` set for the same reason.
  *
+ * It draws no heading of its own: each caller already has one (the medical profile's
+ * "Vaccinations" label, the pet form's section card), and the pet form showed the same word
+ * twice while the editor drew one too.
+ *
  * @param vaccinations Current values
  * @param onAdd Called with the new entry
  * @param onRemove Called with the index to remove
@@ -59,12 +63,6 @@ fun VaccinationListEditor(
     val noDateLabel = stringResource(R.string.medical_vaccination_no_date)
 
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(Spacing.S)) {
-        Text(
-            text = stringResource(R.string.medical_vaccinations_label),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-
         if (vaccinations.isEmpty() && !enabled) {
             Text(
                 text = stringResource(R.string.medical_empty),

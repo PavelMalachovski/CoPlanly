@@ -86,6 +86,25 @@ internal object DataSources {
     /** The licence the app's typeface, Onest, is distributed under. */
     const val OFL_URL = "https://openfontlicense.org"
 
+    /** Where a line may break after a `/` of a printed address, and nowhere else. */
+    private const val BREAK_AFTER_SLASH = "/\u200B"
+
+    /** Keeps a hyphen inside a printed address from being a line break ("1" / "-0/"). */
+    private const val UNBROKEN_HYPHEN = "\u2060-\u2060"
+
+    /**
+     * [url] as a row prints it: without the scheme and the trailing slash, which say nothing to a
+     * reader, and breakable only after a `/`. Left to the line breaker, the licence's address
+     * split at its hyphen and ran "…/odbl/1" into "-0/" on the next line. The characters added
+     * are a zero-width space after each slash and word joiners around each hyphen, both invisible;
+     * the row still opens the full [url].
+     */
+    fun displayAddress(url: String): String =
+        url.removePrefix("https://")
+            .removeSuffix("/")
+            .replace("-", UNBROKEN_HYPHEN)
+            .replace("/", BREAK_AFTER_SLASH)
+
     /** Every notice, in the order the screen shows them. */
     val notices: List<DataSourceNotice> = listOf(
         DataSourceNotice(
@@ -202,7 +221,8 @@ private fun NoticeRow(notice: DataSourceNotice, onOpen: () -> Unit) {
     SectionRow(
         icon = notice.kind.icon(),
         title = stringResource(notice.titleRes),
-        supporting = notice.descriptionRes?.let { stringResource(it) } ?: notice.url,
+        supporting = notice.descriptionRes?.let { stringResource(it) }
+            ?: DataSources.displayAddress(notice.url),
         onClick = onOpen,
         trailing = {
             Icon(

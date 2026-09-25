@@ -968,6 +968,11 @@ private fun EventChip(
     // tap or move it by, so a handle takes up to a third of the block. The actions below are the
     // route that does not depend on hitting it (docs/AUDIT-2026-10-design.md D-10).
     val handleTouchHeight = minOf(RESIZE_HANDLE_TOUCH_HEIGHT, eventHeightDp / 3)
+    val showResizeGrips = onResize != null && resizable
+    val twoLineTitle = dynamicHeightDp >= TWO_LINE_MIN_HEIGHT
+    // Set by the title's own layout when its wrap would cut a word; asked again whenever the
+    // title, the column or the number of lines on offer changes.
+    var titleCutsWord by remember(event.title, columnWidthPx, twoLineTitle) { mutableStateOf(false) }
 
     Box(
         modifier = Modifier
@@ -992,6 +997,13 @@ private fun EventChip(
                     color = accentColor,
                     size = Size(EVENT_ACCENT_BAR_WIDTH.toPx(), size.height)
                 )
+                // The resize grips are drawn here, behind the title, not by the handles: drawn
+                // in the handles' own boxes, which sit over the content, 14 dp pills covered
+                // the only line a short week block has (the UI tour's "Vyzv…" was half hidden).
+                if (showResizeGrips) {
+                    drawResizePill(borderColor, atTop = true)
+                    drawResizePill(borderColor, atTop = false)
+                }
             }
             .border(
                 width = 1.dp,
@@ -1235,9 +1247,19 @@ private fun EventChip(
                     color = textColor,
                     // Wrap onto a second line when the block is tall enough to show one.
                     // A ~53dp column fits roughly seven characters per line, so a second line
-                    // is the difference between "Dentist" and "Dentist appt".
-                    maxLines = if (dynamicHeightDp >= TWO_LINE_MIN_HEIGHT) 2 else 1,
+                    // is the difference between "Dentist" and "Dentist appt" — unless the
+                    // wrap cut a word, which reads worse than an ellipsis ("Plaván" over "í"):
+                    // then the title goes back to one line (breaksInsideWord).
+                    maxLines = if (twoLineTitle && !titleCutsWord) 2 else 1,
+                    softWrap = !titleCutsWord,
                     overflow = TextOverflow.Ellipsis,
+                    onTextLayout = { layout ->
+                        if (!titleCutsWord && layout.lineCount > 1 &&
+                            breaksInsideWord(event.title, List(layout.lineCount) { layout.getLineEnd(it) })
+                        ) {
+                            titleCutsWord = true
+                        }
+                    },
                     // Medium rather than SemiBold: at this size the heavier weight is no more
                     // legible on a tinted fill, and it costs about half a character per line —
                     // which in a ~54dp column is the difference between fitting a word and not.
@@ -1292,7 +1314,6 @@ private fun EventChip(
                     .align(Alignment.TopCenter)
                     .width(RESIZE_HANDLE_TOUCH_WIDTH)
                     .height(handleTouchHeight)
-                    .drawBehind { drawResizePill(borderColor, atTop = true) }
                     .semantics { contentDescription = resizeStartDescription }
                     .pointerInput(hourHeightPx, onResize) {
                         detectDragGestures(
@@ -1333,7 +1354,6 @@ private fun EventChip(
                     .align(Alignment.BottomCenter)
                     .width(RESIZE_HANDLE_TOUCH_WIDTH)
                     .height(handleTouchHeight)
-                    .drawBehind { drawResizePill(borderColor, atTop = false) }
                     .semantics { contentDescription = resizeEndDescription }
                     .pointerInput(hourHeightPx, onResize) {
                         detectDragGestures(
@@ -1393,26 +1413,34 @@ private fun OfferDayButton(onClick: () -> Unit) {
     }
 }
 
-/** Width of a resize handle's touch strip; the pill drawn in it is [RESIZE_PILL_SIZE] wide. */
+/** Width of a resize handle's touch strip; the grip drawn under it is [RESIZE_PILL_SIZE] wide. */
 private val RESIZE_HANDLE_TOUCH_WIDTH = 48.dp
 
 /** Tallest a resize handle's touch strip gets, on a block tall enough to spare it. */
 private val RESIZE_HANDLE_TOUCH_HEIGHT = 24.dp
 
-/** The visible pill of a resize handle, unchanged from before its touch strip grew. */
-private val RESIZE_PILL_SIZE = DpSize(40.dp, 14.dp)
+/**
+ * The visible grip of a resize handle: Material's drag-handle bar, slim enough to sit behind a
+ * line of text without hiding it. It was a 40 × 14 dp pill drawn over the title.
+ */
+private val RESIZE_PILL_SIZE = DpSize(32.dp, 4.dp)
+
+/** How far a resize grip sits in from the block's top or bottom edge. */
+private val RESIZE_PILL_INSET = Spacing.XXS
 
 /** Minutes the accessibility actions move an event's end by, the same step as a move. */
 private const val RESIZE_ACTION_MINUTES = 15L
 
 /**
- * Draws a resize handle's pill against the strip's outer edge: the top of the strip for the
- * start handle, the bottom for the end handle, centred across it, where it always sat.
+ * Draws a resize handle's grip in the event block, behind its content: against the top edge for
+ * the start handle, the bottom edge for the end handle, centred across it, where the handles'
+ * touch strips are.
  */
 private fun DrawScope.drawResizePill(color: Color, atTop: Boolean) {
     val pill = RESIZE_PILL_SIZE.toSize()
+    val inset = RESIZE_PILL_INSET.toPx()
     val left = (size.width - pill.width) / 2f
-    val top = if (atTop) 0f else size.height - pill.height
+    val top = if (atTop) inset else size.height - inset - pill.height
     drawRoundRect(
         color = color,
         topLeft = Offset(left, top),

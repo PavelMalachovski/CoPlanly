@@ -2,7 +2,6 @@ package com.coparently.app.presentation.calendar.components
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.padding
@@ -12,6 +11,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -20,7 +20,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -41,7 +40,6 @@ import com.coparently.app.presentation.common.rememberToday
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.LayoutConstants
 import com.coparently.app.presentation.theme.Spacing
-import com.coparently.app.presentation.theme.labelMediumEmphasized
 import com.coparently.app.presentation.theme.titleLargeEmphasized
 import com.coparently.app.utils.LightDarkPreviews
 import com.coparently.app.utils.PreviewWrapper
@@ -136,8 +134,8 @@ private fun MonthTitle(
 
     Box {
         Row(
-            // The one control in this bar that Material does not size for us: `FilterChip`,
-            // `OutlinedButton` and `IconButton` all expand their own touch target to 48dp, and a
+            // The one control in this bar that Material does not size for us: the two chips
+            // and `IconButton` all expand their own touch target to 48dp, and a
             // bare `clickable` Row does not. It measured about 28dp and announced no role, so
             // TalkBack did not call it a control at all.
             modifier = Modifier
@@ -219,20 +217,23 @@ private fun FiltersButton(onClick: () -> Unit, active: Boolean) {
  *
  * Replaces a button whose entire label was the current day number — which told the user the
  * date but not that tapping it jumps the calendar there.
+ *
+ * A chip, not an `OutlinedButton`, so it has the Filters chip beside it for a twin: the button's
+ * 40 dp minimum height stood a head taller than the chip's 32 dp, with a heavier label and a
+ * darker outline, and the two actions of one bar read as two different kinds of control.
  */
 @Composable
 private fun TodayButton(onClick: () -> Unit) {
-    OutlinedButton(
+    AssistChip(
         onClick = onClick,
-        shape = MaterialTheme.shapes.small,
-        contentPadding = PaddingValues(horizontal = Spacing.M, vertical = Spacing.XXS),
-        modifier = Modifier.padding(end = Spacing.XXS)
-    ) {
-        Text(
-            text = stringResource(R.string.calendar_today_button),
-            style = MaterialTheme.typography.labelMediumEmphasized
-        )
-    }
+        label = {
+            Text(
+                text = stringResource(R.string.calendar_today_button),
+                style = MaterialTheme.typography.labelMedium
+            )
+        },
+        modifier = Modifier.padding(end = Spacing.XS)
+    )
 }
 
 /** Display label for a calendar view mode. */

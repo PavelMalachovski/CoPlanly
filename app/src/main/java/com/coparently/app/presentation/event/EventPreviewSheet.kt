@@ -44,6 +44,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.coparently.app.R
+import com.coparently.app.domain.events.AllDayEvent
 import com.coparently.app.domain.files.RecordPhotoKind
 import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.common.FamilyMember
@@ -164,8 +165,17 @@ internal fun EventPreviewContent(
                     append(end.format(timeFormat))
                 }
             }
+            // An all-day event names its days and says "All day", never the "12:00 AM" its
+            // midnight start would print (`AllDayEvent`).
+            val allDayText = stringResource(R.string.event_all_day)
+            val lastDay = AllDayEvent.lastDay(event)
             Text(
-                text = "$dateText · $timeText",
+                text = when {
+                    !AllDayEvent.isAllDay(event) -> "$dateText · $timeText"
+                    lastDay != event.startDateTime.toLocalDate() ->
+                        "$dateText – ${lastDay.format(dateFormat)} · $allDayText"
+                    else -> "$dateText · $allDayText"
+                },
                 style = MaterialTheme.typography.bodyMedium
             )
         }

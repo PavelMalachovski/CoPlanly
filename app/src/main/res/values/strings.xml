@@ -135,7 +135,7 @@
     <string name="school_address">Address (optional)</string>
     <string name="school_phone">School Phone (optional)</string>
     <string name="school_grade">Grade (optional)</string>
-    <string name="school_grade_hint">e.g., 3rd Grade</string>
+    <string name="school_grade_hint">e.g., 3rd grade</string>
     <string name="school_teacher_name">Teacher Name (optional)</string>
     <string name="school_teacher_email">Teacher Email (optional)</string>
 

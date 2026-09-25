@@ -109,8 +109,14 @@ fun JournalListScreen(
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
-            FloatingActionButton(onClick = onNewEntry) {
-                Icon(imageVector = Icons.Default.Add, contentDescription = stringResource(R.string.journal_add))
+            // Only once there are entries. With none, the empty state carries the call to action,
+            // so a FAB would be a second button saying the same thing (as `PetsScreen` and
+            // `ChildInfoScreen` settled).
+            val current = state
+            if (current is JournalListState.Loaded && current.entries.isNotEmpty()) {
+                FloatingActionButton(onClick = onNewEntry) {
+                    Icon(imageVector = Icons.Default.Add, contentDescription = stringResource(R.string.journal_add))
+                }
             }
         }
     ) { padding ->
