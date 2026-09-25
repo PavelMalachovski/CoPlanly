@@ -8,16 +8,27 @@
   from Android 12+ device-to-device transfer so it never leaves the device through
   the transfer path either. The encryption keys live in the Android Keystore and are
   not transferable, so a transferred copy would be undecryptable regardless.
+
+  `root` and `external` are excluded too (September 2026, docs/AUDIT-2026-09-play-final.md F-5):
+  `root` is where libraries keep `app_*` directories outside the three domains above, and
+  `external` is the app's own external files directory. Nothing of ours is written to either
+  today; excluding them keeps "no local data leaves through a transfer" true of whatever a
+  library adds later. `cache` and `no_backup` (the sealed preference store) are never backed up
+  or transferred by Android in the first place.
 -->
 <data-extraction-rules>
     <cloud-backup>
         <exclude domain="database" path="." />
         <exclude domain="sharedpref" path="." />
         <exclude domain="file" path="." />
+        <exclude domain="root" path="." />
+        <exclude domain="external" path="." />
     </cloud-backup>
     <device-transfer>
         <exclude domain="database" path="." />
         <exclude domain="sharedpref" path="." />
         <exclude domain="file" path="." />
+        <exclude domain="root" path="." />
+        <exclude domain="external" path="." />
     </device-transfer>
 </data-extraction-rules>
