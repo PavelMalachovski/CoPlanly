@@ -9,10 +9,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -47,7 +45,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
@@ -307,30 +304,36 @@ fun MessagesList(
  *
  * The window resizes above the keyboard (adjustResize, `docs/AUDIT-2026-10-design.md` D-9), and
  * a LazyColumn that gets shorter keeps its first visible item — so the newest messages would
- * slide out of view under the composer at the moment the parent starts a reply. The window used
- * to pan instead, which kept them in view but scrolled the thread header away.
+ * slide out of view under the composer and its chips at the moment the parent starts a reply.
+ * The window used to pan instead, which kept them in view but scrolled the thread header away.
+ *
+ * It reacts to the list's own viewport getting shorter, not to the keyboard inset. The inset
+ * changes before the list is measured at its new height, and a scroll made then is measured
+ * against the old, taller viewport — so the newest message still slid out afterwards, and with
+ * one inset step (animations off) it never came back (UI tour, `20_chat_composer_keyboard`).
+ * Reading the viewport scrolls after the shrink has been laid out. It covers the other things
+ * that shorten the thread for the same reason: the tone hint and the held-message notice.
  *
  * Two limits keep this from fighting the reader. It follows only when the newest entry was on
- * screen before the keyboard grew, so a parent reading history keeps their place. And only the
- * keyboard *growing* moves the list: a scroll made while it is up, or the keyboard closing (the
+ * screen before the list got shorter, so a parent reading history keeps their place. And only a
+ * shrink moves the list: a scroll made while the keyboard is up, or the keyboard closing (the
  * list then only gets taller), leaves the position alone.
  */
 @Composable
 private fun FollowNewestWhileKeyboardOpens(listState: LazyListState) {
-    val density = LocalDensity.current
-    val ime = WindowInsets.ime
-    LaunchedEffect(listState, ime, density) {
+    LaunchedEffect(listState) {
         var newestWasVisible = true
-        var lastKeyboardHeight = 0
-        snapshotFlow { ime.getBottom(density) to listState.isNewestVisible() }
-            .collect { (keyboardHeight, newestVisible) ->
-                val keyboardGrew = keyboardHeight > lastKeyboardHeight
-                lastKeyboardHeight = keyboardHeight
-                if (!keyboardGrew) {
+        var lastViewportHeight = 0
+        snapshotFlow { listState.layoutInfo.viewportSize.height to listState.isNewestVisible() }
+            .collect { (viewportHeight, newestVisible) ->
+                val shrank = viewportHeight < lastViewportHeight
+                lastViewportHeight = viewportHeight
+                val lastIndex = listState.layoutInfo.totalItemsCount - 1
+                val follow = shrank && newestWasVisible && !listState.isScrollInProgress
+                if (follow && lastIndex >= 0) {
+                    listState.scrollToItem(lastIndex)
+                } else {
                     newestWasVisible = newestVisible
-                } else if (newestWasVisible && !listState.isScrollInProgress) {
-                    val lastIndex = listState.layoutInfo.totalItemsCount - 1
-                    if (lastIndex >= 0) listState.scrollToItem(lastIndex)
                 }
             }
     }
