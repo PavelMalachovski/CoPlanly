@@ -65,6 +65,7 @@ import com.coparently.app.presentation.common.ListSkeleton
 import com.coparently.app.presentation.common.Loadable
 import com.coparently.app.presentation.common.ScrollAwareFab
 import com.coparently.app.presentation.common.TwoPanes
+import com.coparently.app.presentation.common.clearance
 import com.coparently.app.presentation.common.monthPagingTransition
 import com.coparently.app.presentation.common.rememberFabScrollVisibility
 import com.coparently.app.presentation.common.rememberParentNames
@@ -78,11 +79,13 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 /**
- * How much empty space the scrolling page keeps under its last row.
+ * The band kept clear under the Add button while it is shown.
  *
- * The Add button floats over the content, so without this the bottom of the analytics ledger
- * would come to rest underneath it. Sized for a standard 56 dp FAB plus its 16 dp margin, and
- * a little air on top of that.
+ * The button floats over the content, and a month's first rows reached under it before any
+ * scroll — the list's first amount, the analytics total. The whole content area is padded by
+ * this band while the button is on screen and gets it back while the button is away
+ * (`FabScrollVisibility.clearance`), so no amount is ever drawn under it. Sized for a standard
+ * 56 dp FAB plus its 16 dp margin, and a little air on top of that.
  */
 private val FAB_CLEARANCE = 88.dp
 
@@ -253,6 +256,7 @@ fun ExpenseScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .nestedScroll(fabVisibility.connection)
+                .padding(bottom = fabVisibility.clearance(FAB_CLEARANCE))
         ) {
             // The money screen is where a change to how money divides belongs. A banner, not a
             // modal: every other agreement in this app is an inline banner plus an inbox card,
@@ -426,10 +430,6 @@ fun ExpenseScreen(
                                         expense.createdByFirebaseUid == null ||
                                             expense.createdByFirebaseUid == currentUserId
                                     },
-                                    // The same clearance the analytics branch takes, for the same
-                                    // reason: without it the last expense comes to rest under the
-                                    // Add button and the list will not scroll any further.
-                                    bottomClearance = FAB_CLEARANCE,
                                     header = header,
                                     state = listState,
                                     modifier = Modifier.fillMaxSize()
@@ -490,9 +490,9 @@ fun ExpenseScreen(
                                     onSelectCurrency = viewModel::selectAnalyticsCurrency,
                                     onSelectPayer = viewModel::selectAnalyticsPayer,
                                     // No weight: the page scrolls, so this is as tall as
-                                    // it needs to be, and the clearance keeps the last
-                                    // ledger row from coming to rest under the Add button.
-                                    modifier = Modifier.padding(bottom = FAB_CLEARANCE)
+                                    // it needs to be. The band under the Add button is the
+                                    // screen's, not this view's (`FAB_CLEARANCE`).
+                                    modifier = Modifier.padding(bottom = Spacing.L)
                                 )
                             } else {
                                 // The summary cards and the switcher are the list's first item, so

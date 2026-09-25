@@ -1,6 +1,7 @@
 package com.coparently.app.presentation.common
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -15,6 +16,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import com.coparently.app.presentation.theme.Motion
 
 /**
@@ -25,6 +28,12 @@ import com.coparently.app.presentation.theme.Motion
  * button. That is the one position in which a floating button can honestly promise to cover
  * nothing; everywhere else on a list whose trailing column is money, something sits under it
  * (release audit R-1: "CZK1,89…" behind the Expenses "+", before any scroll at all).
+ *
+ * Hiding on scroll alone left the button over money **at rest**: a month opened with its first
+ * rows reaching under the "+" before any scroll (the UI tour, September 2026: the list's first
+ * amount and the analytics total). So the screen also keeps a band clear under the button while
+ * it is shown — [clearance], applied as bottom padding to the scrolling area — and gives the band
+ * back while the button is away. Nothing is ever drawn under the button, at rest or moving.
  *
  * It reads [connection], a pass-through: it consumes nothing, so the list scrolls exactly as it
  * did. A TalkBack scroll action reaches the list by `scrollBy`, not through nested scrolling, so
@@ -61,6 +70,23 @@ class FabScrollVisibility internal constructor() {
             return Offset.Zero
         }
     }
+}
+
+/**
+ * The band to keep clear under the button: [height] while it is shown, nothing while it is away,
+ * moving in the app's short step. Apply it as bottom padding to the area the button floats over.
+ *
+ * @param height the button's height plus its margin and a little air
+ * @return the current bottom clearance
+ */
+@Composable
+fun FabScrollVisibility.clearance(height: Dp): Dp {
+    val band by animateDpAsState(
+        targetValue = if (visible) height else 0.dp,
+        animationSpec = tween(Motion.SHORT_MS),
+        label = "fab-clearance"
+    )
+    return band
 }
 
 /** A [FabScrollVisibility] that lives as long as the calling composable. */

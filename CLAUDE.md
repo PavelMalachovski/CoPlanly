@@ -58,7 +58,9 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
      button on four forms; don't bring the button back.
    - `ScrollAwareFab` with `rememberFabScrollVisibility` (`FabScrollVisibility.kt`) is a floating
      button over a list whose trailing column is money: it leaves while the list moves forward
-     and returns on the way back and at the end (R-1). Expenses uses it.
+     and returns on the way back and at the end (R-1). While it is shown, the screen pads its
+     content by `clearance(...)`, a band the button floats in, so nothing is drawn under it even
+     at rest (the UI tour found the first amount there before any scroll). Expenses uses it.
 
    **Icon sizes come from `theme/IconSizes.kt`** (October 2026 audit, D-25): `Inline` 16 dp (a
    mark in a line of text), `Small` 18 (buttons, chips, banners, status lines — Material's own),
@@ -235,7 +237,8 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     its column never breaks at the space but inside the code ("CZ|K") — give it the width instead. A
     title or a row's meta line may still end in an ellipsis; the amount beside it may not.
     A floating button counts too: on Expenses the "+" sat on the second row's amount before any
-    scroll (release audit R-1), which is why it now hides while the list scrolls (item 1).
+    scroll (release audit R-1), which is why it now hides while the list scrolls and keeps a clear
+    band under itself while shown (item 1).
 
 16. **A form keeps what was typed until the parent says otherwise** (October 2026 audit, D-11).
     `presentation/common/DiscardGuard.kt`'s `rememberDiscardGuard(dirty, onLeave)` asks "Discard

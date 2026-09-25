@@ -44,7 +44,6 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.coparently.app.R
@@ -107,7 +106,6 @@ fun ExpenseList(
     onDelete: ((Expense) -> Unit)? = null,
     onExpenseClick: ((Expense) -> Unit)? = null,
     canModify: (Expense) -> Boolean = { true },
-    bottomClearance: Dp = 0.dp,
     header: (LazyListScope.() -> Unit)? = null,
     state: LazyListState = rememberLazyListState(),
     modifier: Modifier = Modifier
@@ -121,10 +119,9 @@ fun ExpenseList(
     // contradict the summary directly above it.
     val splitKnown = remember(roleByUid) { bothSlotsKnown(roleByUid) }
 
-    // The clearance is `contentPadding`, not `padding`: the list still fills its box and still
-    // draws under the Add button while scrolling, but the last row can now come to rest above it.
-    // Without it the final expense stopped under the FAB with nowhere further to scroll — the
-    // analytics branch has carried this clearance since it was written, and the list never did.
+    // No clearance for the Add button here: the screen keeps a band clear under it while it is
+    // shown (`ExpenseScreen`'s `FAB_CLEARANCE`), so no row is ever drawn beneath it — at rest,
+    // while scrolling back, or at the end.
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         state = state,
@@ -132,7 +129,7 @@ fun ExpenseList(
             start = Spacing.L,
             end = Spacing.L,
             top = Spacing.XS,
-            bottom = Spacing.XS + bottomClearance
+            bottom = Spacing.XS
         ),
         verticalArrangement = Arrangement.spacedBy(7.dp)
     ) {
