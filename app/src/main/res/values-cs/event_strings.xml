@@ -96,4 +96,7 @@
     <string name="event_form_title_empty">Název nesmí být prázdný</string>
     <string name="event_form_title_too_long">Název je příliš dlouhý (max. %1$d znaků)</string>
     <string name="event_form_description_too_long">Popis je příliš dlouhý (max. %1$d znaků)</string>
+    <!-- In place of a time for an event that starts at midnight and runs the whole day
+         (domain/events/AllDayEvent.kt): Home, the today card, the event preview, the widget. -->
+    <string name="event_all_day">Celý den</string>
 </resources>

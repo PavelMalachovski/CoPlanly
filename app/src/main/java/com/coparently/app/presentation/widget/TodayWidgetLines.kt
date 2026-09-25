@@ -4,6 +4,7 @@ import android.content.Context
 import android.text.format.DateFormat
 import com.coparently.app.R
 import com.coparently.app.domain.custody.HandoverInfo
+import com.coparently.app.domain.events.AllDayEvent
 import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.Parents
@@ -189,8 +190,12 @@ object TodayWidgetText {
     private fun timeFormatter(context: Context): DateTimeFormatter =
         shortTime(context.resources.configuration.locales[0], DateFormat.is24HourFormat(context))
 
-    /** "14:00–15:30", or just the start when the event has no end — the today card's format. */
+    /**
+     * "14:00–15:30", just the start when the event has no end, or "All day" ([AllDayEvent]) —
+     * the today card's format.
+     */
     private fun timeOf(context: Context, event: Event, timeFormatter: DateTimeFormatter): String {
+        if (AllDayEvent.isAllDay(event)) return context.getString(R.string.event_all_day)
         val start = event.startDateTime.format(timeFormatter)
         val end = event.endDateTime?.format(timeFormatter) ?: return start
         return context.getString(R.string.calendar_agenda_time_range, start, end)

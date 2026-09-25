@@ -33,6 +33,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.coparently.app.R
 import com.coparently.app.domain.custody.ContactWindow
+import com.coparently.app.domain.events.AllDayEvent
 import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.theme.CoPlanlyColors
@@ -421,9 +422,10 @@ private fun ContactWindowLine(
     }
 }
 
-/** "14:00–15:30", or just the start when the event has no end. */
+/** "14:00–15:30", just the start when the event has no end, or "All day" ([AllDayEvent]). */
 @Composable
 private fun agendaTime(event: Event, formatter: DateTimeFormatter): String {
+    if (AllDayEvent.isAllDay(event)) return stringResource(R.string.event_all_day)
     val start = event.startDateTime.format(formatter)
     val end = event.endDateTime?.format(formatter)
     return if (end != null) {

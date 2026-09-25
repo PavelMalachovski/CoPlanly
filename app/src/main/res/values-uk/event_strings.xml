@@ -96,4 +96,7 @@
     <string name="event_form_title_empty">Назва не може бути порожньою</string>
     <string name="event_form_title_too_long">Назва задовга (макс. %1$d символів)</string>
     <string name="event_form_description_too_long">Опис задовгий (макс. %1$d символів)</string>
+    <!-- In place of a time for an event that starts at midnight and runs the whole day
+         (domain/events/AllDayEvent.kt): Home, the today card, the event preview, the widget. -->
+    <string name="event_all_day">Увесь день</string>
 </resources>
