@@ -24,10 +24,39 @@ import java.util.Locale
  * can contain letters `java.time` on older Android cannot parse. Use [shortTime] for the time.
  * Falls back to the medium date style if the platform pattern is refused anyway, or where there
  * is no platform (a plain JVM test).
+ *
+ * The platform's pattern goes through [monthInFormatForm] first: it can name the month in its
+ * stand-alone form (`LLL`/`LLLL`) beside a day, which is the nominative in Russian and Ukrainian
+ * ("25 вересень" for "25 вересня").
  */
 fun localizedDate(skeleton: String, locale: Locale = Locale.getDefault()): DateTimeFormatter =
-    runCatching { DateTimeFormatter.ofPattern(DateFormat.getBestDateTimePattern(locale, skeleton), locale) }
-        .getOrElse { DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale) }
+    runCatching {
+        DateTimeFormatter.ofPattern(monthInFormatForm(DateFormat.getBestDateTimePattern(locale, skeleton)), locale)
+    }.getOrElse { DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale) }
+
+/**
+ * [pattern] with a stand-alone month (`L`) written in its format form (`M`) whenever the pattern
+ * also carries a day of the month (`d`) — a month inside a date is declined ("25 сентября",
+ * "25. září"), a month on its own is not ("září 2026"). Quoted literals are left alone.
+ *
+ * @param pattern a `java.time` date pattern
+ * @return the pattern, with `L` turned into `M` when a day stands beside it
+ */
+fun monthInFormatForm(pattern: String): String {
+    var quoted = false
+    var hasDay = false
+    for (c in pattern) {
+        if (c == '\'') quoted = !quoted else if (!quoted && c == 'd') hasDay = true
+    }
+    if (!hasDay) return pattern
+    quoted = false
+    return buildString(pattern.length) {
+        for (c in pattern) {
+            if (c == '\'') quoted = !quoted
+            append(if (!quoted && c == 'L') 'M' else c)
+        }
+    }
+}
 
 /**
  * The time of day as the reader's clock shows it: "15:30" or "3:30 PM" (release audit R-9, owner

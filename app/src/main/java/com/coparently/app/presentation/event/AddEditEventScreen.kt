@@ -1038,7 +1038,9 @@ fun AddEditEventScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
-                                text = startDate.format(localizedDate("yMMMEEEEd")),
+                                // The month in full: Czech abbreviates it to "zář" inside a
+                                // date, where a form field has room for "25. září 2026".
+                                text = startDate.format(localizedDate("yMMMMEEEEd")),
                                 style = MaterialTheme.typography.bodyLarge
                             )
                         }
@@ -1234,7 +1236,7 @@ fun AddEditEventScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
-                                text = recurrenceEndDate?.format(localizedDate("yMMMEEEEd"))
+                                text = recurrenceEndDate?.format(localizedDate("yMMMMEEEEd"))
                                     ?: stringResource(R.string.event_form_repeat_forever),
                                 style = MaterialTheme.typography.bodyLarge
                             )
