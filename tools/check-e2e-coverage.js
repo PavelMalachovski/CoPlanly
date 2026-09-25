@@ -12,6 +12,7 @@
  *  - **Push types**: every snake_case value in `PushPayload.kt` (field names there are camelCase
  *    or a single word, so the two cannot be confused).
  *  - **Callables and HTTPS functions**: every `exports.<name> = functions….https.onCall/onRequest`
+ *    (or `regional….`, the region-bound `functions.region(…)` handle `index.js` declares them through)
  *    in `functions/*.js`.
  *
  * Each one must appear in `tools/e2e/coverage.json`, either with `e2e` — the two-parent tests in
@@ -87,7 +88,7 @@ function pushTypes(source) {
 /** Callable and HTTPS functions exported from `functions/*.js`. */
 function httpsFunctions(sources) {
   const names = new Set();
-  const re = /exports\.(\w+)\s*=\s*functions((?:(?!exports\.)[\s\S]){0,240}?)\.https\.on(Call|Request)\b/g;
+  const re = /exports\.(\w+)\s*=\s*(?:functions|regional)((?:(?!exports\.)[\s\S]){0,240}?)\.https\.on(Call|Request)\b/g;
   for (const source of sources) {
     for (const m of stripComments(source).matchAll(re)) names.add(m[1]);
   }

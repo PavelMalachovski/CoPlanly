@@ -51,7 +51,7 @@ const FUNCTIONS = `exports.helper = helper
 exports.acceptX = functions.https.onCall(async () => {})
 exports.backfill = functions.runWith({timeoutSeconds: 540}).https.onCall(
   async () => {})
-exports.feed = functions.https.onRequest(async () => {})
+exports.feed = regional.https.onRequest(async () => {})
 exports.trigger = functions.firestore.document('a/{b}').onCreate(() => {})`;
 const TESTS = {
   EventsTest: `class EventsTest {\n    @Test\n    fun aTest() = Unit\n}`,
