@@ -51,7 +51,9 @@ function fakeDb(childInfo) {
 }
 
 const NOW = Date.parse('2026-08-23T12:00:00Z');
-const ACTIVE = Date.parse('2026-09-30T00:00:00Z');
+// Relative to the real clock: part of this suite compares grants with Date.now(), and a fixed
+// date here turned the suite red on the day it passed.
+const ACTIVE = Date.now() + 30 * 24 * 60 * 60 * 1000;
 const ENDED = Date.parse('2026-08-01T00:00:00Z');
 
 /**

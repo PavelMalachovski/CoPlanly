@@ -5,6 +5,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.staticCompositionLocalOf
 import kotlinx.coroutines.delay
 import java.time.Duration
 import java.time.LocalDate
@@ -33,6 +34,7 @@ import java.time.LocalDateTime
  */
 @Composable
 fun rememberToday(): State<LocalDate> {
+    LocalFixedToday.current?.let { fixed -> return remember(fixed) { mutableStateOf(fixed) } }
     val today = remember { mutableStateOf(LocalDate.now()) }
 
     LaunchedEffect(Unit) {
@@ -44,6 +46,13 @@ fun rememberToday(): State<LocalDate> {
 
     return today
 }
+
+/**
+ * A fixed date in place of the clock, for rendering that must not depend on the day it runs: the
+ * screenshot tests provide their pinned fixture date, so the weekday header's "today" does not
+ * move a baseline every day. `null`, the default and the app's value, follows the clock.
+ */
+val LocalFixedToday = staticCompositionLocalOf<LocalDate?> { null }
 
 /**
  * How long from [now] until the start of the next day, in milliseconds.
