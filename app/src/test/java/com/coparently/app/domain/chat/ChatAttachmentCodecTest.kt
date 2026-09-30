@@ -44,6 +44,25 @@ class ChatAttachmentCodecTest {
     }
 
     @Test
+    fun `a file name that could climb out of its folder is refused`() {
+        // The name comes from the other phone and becomes a file in this phone's cache, and the
+        // tail of the path `belongsTo` compares — `../..` would pass the one and escape the other.
+        for (name in listOf("..", ".", "../../secret.pdf", "a/b.pdf", "a\\b.pdf", "..hidden.pdf")) {
+            val forged = attachment.copy(
+                storagePath = ChatAttachmentCodec.storagePath("alice__bob", "m-1", name),
+                fileName = name
+            )
+            assertNull(ChatAttachmentCodec.decode(ChatAttachmentCodec.encode(forged)), "\"$name\" must not decode")
+        }
+        // A name `SharedFilePolicy.safeFileName` can produce still reads, double dot and all.
+        val honest = attachment.copy(
+            storagePath = ChatAttachmentCodec.storagePath("alice__bob", "m-1", "report..v2.pdf"),
+            fileName = "report..v2.pdf"
+        )
+        assertEquals(honest, ChatAttachmentCodec.decode(ChatAttachmentCodec.encode(honest)))
+    }
+
+    @Test
     fun `a reference pointing at another message's file does not belong to this one`() {
         assertTrue(ChatAttachmentCodec.belongsTo(attachment, "alice__bob", "m-1"))
         assertFalse(ChatAttachmentCodec.belongsTo(attachment, "alice__bob", "m-2"))
