@@ -565,9 +565,10 @@ private fun DayWeekPage(
                                     }
 
                                     // Resolved here: the semantics lambda is not a composable context.
+                                    // Spoken on the reader's clock (R-9), not a fixed "HH:00".
                                     val slotDescription = stringResource(
                                         R.string.calendar_time_slot_description,
-                                        String.format(Locale.getDefault(), "%02d:00", hour),
+                                        java.time.LocalTime.of(hour, 0).format(shortTime()),
                                         date.format(localizedDate("MMMd"))
                                     )
 
@@ -840,8 +841,7 @@ private fun EventChip(
     // times for multi-day / overnight events, which are clamped to each day).
     displayStart: LocalDateTime = event.startDateTime,
     displayEnd: LocalDateTime = event.endDateTime ?: event.startDateTime.plusHours(1),
-    // Continuation segments of multi-day events are not resizable/movable (ambiguous), and
-    // neither is an occurrence of a recurring event (it would move the whole series).
+    // Continuation segments of multi-day events are not resizable/movable (ambiguous).
     resizable: Boolean = true,
     draggable: Boolean = true,
     // Day view spells the time out under the title; week view leaves it to the block's
