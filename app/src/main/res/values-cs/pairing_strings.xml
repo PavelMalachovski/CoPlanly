@@ -39,7 +39,8 @@
     <string name="pairing_expires_in_minutes">Platný ještě %1$d min</string>
     <string name="pairing_code_expired_generate">Kód vypršel – klepněte na „Nový kód“</string>
     <string name="pairing_share_message">%1$s vás zve do CoPlanly. Kód: %2$s · %3$s
-Nemáte aplikaci? %4$s</string>
+Nemáte aplikaci? %4$s
+Máte iPhone? Požádejte mě o odkaz na náš kalendář, otevře se v Kalendáři Apple.</string>
     <!-- Code entry -->
     <string name="pairing_have_a_code">Mám kód</string>
     <string name="pairing_code_field_label">Kód pozvánky</string>

@@ -42,7 +42,8 @@
     <string name="pairing_expires_in_minutes">Valid for %1$d min</string>
     <string name="pairing_code_expired_generate">Code expired — tap “New code”</string>
     <string name="pairing_share_message">%1$s invites you to CoPlanly. Code: %2$s · %3$s
-No app yet? %4$s</string>
+No app yet? %4$s
+On an iPhone? Ask me for our calendar link, it opens in Apple Calendar.</string>
     <!-- Code entry -->
     <string name="pairing_have_a_code">I have a code</string>
     <string name="pairing_code_field_label">Invite code</string>

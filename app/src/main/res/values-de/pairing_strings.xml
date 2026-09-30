@@ -39,7 +39,8 @@
     <string name="pairing_expires_in_minutes">Noch %1$d Min. gültig</string>
     <string name="pairing_code_expired_generate">Code abgelaufen – tippe auf „Neuer Code“</string>
     <string name="pairing_share_message">%1$s lädt dich zu CoPlanly ein. Code: %2$s · %3$s
-Noch keine App? %4$s</string>
+Noch keine App? %4$s
+Du hast ein iPhone? Frag mich nach dem Link zu unserem Kalender, er öffnet sich im Apple-Kalender.</string>
     <!-- Code entry -->
     <string name="pairing_have_a_code">Ich habe einen Code</string>
     <string name="pairing_code_field_label">Einladungscode</string>
