@@ -639,7 +639,9 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   on a wire-format change — `app/src/test/resources/wire/current/` is one of the job's inputs.
 
   **A second workflow file exists and is not part of CI**: `.github/workflows/regenerate.yml` runs
-  `detektBaseline` and exports the Room schema, then commits both back to the branch it ran on.
+  `detektBaseline` and exports the Room schema, then commits both back to the branch it ran on
+  (rebasing onto the branch head first, so a push made while it ran does not lose its work; the
+  bot's commit starts no CI run, so the next human push is what verifies it).
   It exists because those are the two artefacts only a machine with an Android SDK can produce,
   and it is **manual on purpose** — regenerating a baseline accepts every violation that exists
   at that moment. Trigger it with `workflow_dispatch` from `main`, or, on a branch that has not
