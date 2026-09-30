@@ -76,6 +76,10 @@ test('a baseline-only change runs screenshots, not e2e, on API 30 alone', () => 
   assert.deepEqual(legs(d), [30]);
 });
 
+test('the date and time formatters run screenshots: rendered components show their output', () => {
+  assert.equal(decide(['app/src/main/java/com/coparently/app/utils/LocalizedDates.kt']).screenshots, true);
+});
+
 test('a non-screenshot unit test does not run screenshots', () => {
   assert.equal(decide(['app/src/test/java/com/coparently/app/domain/FooTest.kt']).screenshots, false);
 });
@@ -83,6 +87,7 @@ test('a non-screenshot unit test does not run screenshots', () => {
 test('the database, the manifest and the instrumented tests run all three emulators', () => {
   for (const path of [
     'app/src/main/java/com/coparently/app/data/local/security/EncryptedDatabase.kt',
+    'app/src/main/java/com/coparently/app/data/security/EncryptionManager.kt',
     'app/src/main/AndroidManifest.xml',
     'app/src/androidTest/java/com/coparently/app/data/local/security/NativeLibrariesTest.kt',
     'app/src/debug/res/xml/network_security_config.xml',

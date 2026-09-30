@@ -13,9 +13,14 @@
 # bless every visual regression, the exact opposite of what a gate is for. It runs when somebody
 # asks for it, and the asking is visible in the history: the baselines arrive as a commit whose
 # PNG diff a reviewer can open. **Changing the UI on purpose means running this on the branch**,
-# after which the `screenshots` job verifies against the new images.
+# after which the `screenshots` job verifies against the new images — on the next *human* push:
+# this job pushes with the workflow's own token, which starts no workflow, so the bot's commit
+# gets no CI run of its own until somebody pushes after it.
 #
-# The screenshots are recorded here, on the same `ubuntu-latest` image and JDK the `screenshots`
+# Editing this file does not run it: only `.github/regenerate-request` is on the trigger path, so
+# changing the workflow cannot quietly accept a new detekt baseline.
+#
+# The screenshots are recorded here, on the same pinned `ubuntu-24.04` image and JDK the `screenshots`
 # job verifies on, because Robolectric's native renderer is pixel-stable per platform and font set,
 # not across them — a baseline recorded on a laptop fails CI on pixels nobody changed.
 #
@@ -37,7 +42,6 @@ on:
   push:
     paths:
       - '.github/regenerate-request'
-      - '.github/workflows/regenerate.yml'
 
 # The whole point: the job writes files back to the branch it ran on.
 permissions:
@@ -50,7 +54,7 @@ concurrency:
 jobs:
   regenerate:
     name: Regenerate baselines and schema
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04   # the image the screenshots job verifies on; move both together
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4

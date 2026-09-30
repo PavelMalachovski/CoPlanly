@@ -103,6 +103,9 @@ jobs:
           STORE_PASSWORD: ${{ secrets.COPLANLY_RELEASE_STORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.COPLANLY_RELEASE_KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.COPLANLY_RELEASE_KEY_PASSWORD }}
+          # Through the environment, never expanded into the script: a dispatch input is text
+          # anyone who can run the workflow types, and this step holds the signing passwords.
+          TRACK_NOTE: ${{ github.event.inputs.track_note }}
         run: |
           {
             echo "## Release bundle"
@@ -113,7 +116,7 @@ jobs:
             else
               echo "- Signing: **UNSIGNED** — one or more of the four COPLANLY_RELEASE_* secrets is missing"
             fi
-            echo "- Note: ${{ github.event.inputs.track_note }}"
+            echo "- Note: $TRACK_NOTE"
             echo "- versionCode: $(( 100 + ${{ github.run_number }} )), versionName: $(grep -E 'versionName' app/build.gradle.kts | tr -s ' ')"
           } >> "$GITHUB_STEP_SUMMARY"
 

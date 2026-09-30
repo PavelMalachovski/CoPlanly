@@ -42,7 +42,9 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Only a pull request's superseded run is cancelled: a run on `main` is the backstop for the legs
+  # a pull request skipped, and two quick merges must each get their full matrix.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   # Decides which jobs a pull request needs, from the paths it changes. The rules live in
@@ -373,6 +375,11 @@ jobs:
       - name: Verify the baseline profile reached the release build
         run: tools/check-baseline-profile.sh
 
+      # Play refuses an app whose 64-bit native libraries are not 16 KB-page ready, and the 16 KB
+      # emulator leg only loads the few libraries its test touches (see the script).
+      - name: Verify native libraries are 16 KB-page aligned
+        run: tools/check-16kb-alignment.sh
+
       - name: Upload reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -561,7 +568,9 @@ jobs:
     name: Android — screenshots (Roborazzi)
     needs: changes
     if: needs.changes.outputs.screenshots == 'true'
-    runs-on: ubuntu-latest
+    # Pinned, like the Regenerate job that records the baselines: Robolectric's renderer is
+    # pixel-stable per image and font set, so a moved `ubuntu-latest` would redden every PR.
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
@@ -1333,7 +1342,7 @@ jobs:
       # app/build.gradle.kts rather than demoted, and a disabled check reports nothing under
       # any severity — so an untranslated key reaches a reader's device as English and no job
       # in this file notices. The push-type half is not something lint could check at all: it
-      # spans PushPayload.kt, firestore.rules, CoPlanlyMessagingService.kt and push_strings.xml,
+      # spans PushPayload.kt, firestore.rules, PushNotifier.kt and push_strings.xml,
       # and a type missing from any one of them is a notification that never appears (SEC-3).
       - name: Check locale completeness, format arguments and push types
         run: node tools/check-invariants.js
