@@ -137,6 +137,7 @@ function users() {
     'users/alice-uid': {name: 'Alice', email: 'a@x.test', partnerId: BOB},
     'users/bob-uid': {name: 'Bob', email: 'b@x.test', partnerId: ALICE},
     'users/carol-uid': {name: 'Carol', email: 'c@x.test', partnerId: ''},
+    [`families/${FAMILY}`]: {members: [ALICE, BOB].sort()},
   };
 }
 

@@ -292,6 +292,84 @@ describe('users profile: the identity write ensureProfile performs', () => {
 });
 
 /**
+ * The server-owned fields may not be born on a create, and the profile may not be deleted from a
+ * client. Together they closed a loop: delete `users/{me}`, create it again with
+ * `partnerIds: [victim]`, and `isMyAudience` then admitted the victim — so events, children and
+ * pets could be written into their sync, where they could neither delete nor hide them.
+ */
+describe('users profile: no self-pairing through delete and re-create', () => {
+  let env;
+
+  before(async () => {
+    env = await testEnv(PROJECT, CURRENT_RULES);
+  });
+
+  beforeEach(async () => {
+    await env.clearFirestore();
+  });
+
+  const as = (uid) => env.authenticatedContext(uid).firestore();
+
+  it('refuses a create that names a co-parent in any shape', async () => {
+    await assertFails(as(STRANGER).doc(`users/${STRANGER}`)
+        .set({name: 'S', email: 's@example.com', partnerIds: [ALICE]}));
+    await assertFails(as(STRANGER).doc(`users/${STRANGER}`)
+        .set({name: 'S', email: 's@example.com', partnerId: ALICE}));
+    await assertFails(as(STRANGER).doc(`users/${STRANGER}`)
+        .set({name: 'S', email: 's@example.com', pendingRevocationOf: [ALICE]}));
+  });
+
+  it('refuses a create that chooses its own slot', async () => {
+    // Pairing assigns the slots (`assignSlots`); nobody chooses one.
+    await assertFails(as(STRANGER).doc(`users/${STRANGER}`)
+        .set({name: 'S', email: 's@example.com', role: 'dad'}));
+  });
+
+  it('accepts the create the app actually performs', async () => {
+    // `ensureProfile`'s identity merge onto a missing document…
+    await assertSucceeds(mergeProfile(env, IDENTITY_PATCH));
+    // …and `updateUser`'s full profile merge, on a fresh account.
+    await assertSucceeds(as(BOB).doc(`users/${BOB}`).set({
+      id: BOB, firebaseUid: BOB, email: 'bob@example.com', name: 'Bob', colorCode: '#FF4081',
+      profilePhotoUrl: '', googleCalendarSyncEnabled: false, googleCalendarId: '', fcmToken: '',
+      dateOfBirth: '', phone: '', onboardingCompletedAt: '', caresFor: '', countryCode: 'CZ',
+      regionCode: '',
+    }, {merge: true}));
+  });
+
+  it('accepts the empty values an unpaired profile holds', async () => {
+    await assertSucceeds(as(STRANGER).doc(`users/${STRANGER}`).set({
+      name: 'S', email: 's@example.com', partnerId: '', partnerIds: [], pendingRevocationOf: [],
+    }));
+  });
+
+  it('refuses deleting the profile, even one\'s own', async () => {
+    await seed(env, {[`users/${ALICE}`]: {name: 'Alice', email: 'alice@example.com'}});
+    await assertFails(as(ALICE).doc(`users/${ALICE}`).delete());
+    await assertFails(as(BOB).doc(`users/${ALICE}`).delete());
+  });
+
+  it('refuses the owner clearing the unpair marker the server left', async () => {
+    await seed(env, {
+      [`users/${ALICE}`]: {name: 'Alice', email: 'alice@example.com', pendingRevocationOf: [BOB]},
+    });
+    await assertFails(as(ALICE).doc(`users/${ALICE}`).update({pendingRevocationOf: []}));
+    await assertSucceeds(as(ALICE).doc(`users/${ALICE}`).update({name: 'Alice N'}));
+  });
+
+  it('therefore cannot write an event into a stranger\'s audience', async () => {
+    // The end-to-end shape of the finding: with no way to name Alice as a co-parent, a create
+    // listing her in `sharedWith` is refused by `isMyAudience`.
+    await seed(env, {[`users/${STRANGER}`]: {name: 'S', email: 's@example.com'}});
+    await assertFails(as(STRANGER).doc(`users/${STRANGER}`).delete());
+    await assertFails(as(STRANGER).doc('events/planted').set({
+      title: 'Planted', startDateTime: '2026-08-05T16:00:00', eventType: 'ACTIVITY',
+      parentOwner: 'MOM', createdByFirebaseUid: STRANGER, sharedWith: [STRANGER, ALICE],
+    }));
+  });
+});
+
+/**
  * The parent's own health data is gone (GDPR data minimisation): the co-parent reads this
  * document, so an adult's `allergies` and `medicalProfile` reached their ex-partner. A write may
  * never add or change either key; it may leave one an older build stored untouched, and it may
