@@ -330,6 +330,14 @@ Preconditions: `adb uninstall app.coplanly`, set the system to **dark** theme
     then `adb shell pm clear-permission-flags app.coplanly android.permission.POST_NOTIFICATIONS user-set user-fixed`.
   - **If it fails:** `presentation/common/NotificationPermission.kt`, `SettingsScreen.kt`,
     `AddEditEventScreen.kt`.
+- [ ] **After the Firebase BoM 34 move (audit L-2)**: every Firebase SDK moved a major version
+      at once (`-ktx` artifacts gone, BoM 33.7 → 34.4). CI compiles and runs the emulator suites
+      against them, but not a real project, Google sign-in or FCM.
+  - **Expected:** Google sign-in and email sign-in both complete; a sync brings the co-parent's
+    events; a push arrives (a chat message from the second phone); a photo upload succeeds (a
+    receipt or an event image — record photos need `firebase deploy --only storage` first).
+  - **If it fails:** `app/build.gradle.kts`'s Firebase block, `di/FirebaseModule.kt`; logcat for
+    `NoSuchMethodError`/`ClassNotFoundException` under `com.google.firebase`.
 - [ ] **Onboarding, co-parent first** (CLAUDE.md item 22). The wizard opens on the co-parent
       step. "Next" and "Not now" behave the same, which is a known open item (AUDIT §4.2).
 

@@ -163,12 +163,12 @@ firebase deploy --only functions
 ```kotlin
 dependencies {
     // Firebase
-    val firebaseBom = platform("com.google.firebase:firebase-bom:32.7.0")
+    val firebaseBom = platform("com.google.firebase:firebase-bom:34.4.0")
     implementation(firebaseBom)
-    implementation("com.google.firebase:firebase-auth-ktx")
-    implementation("com.google.firebase:firebase-firestore-ktx")
-    implementation("com.google.firebase:firebase-messaging-ktx")
-    implementation("com.google.firebase:firebase-analytics-ktx")
+    implementation("com.google.firebase:firebase-auth")
+    implementation("com.google.firebase:firebase-firestore")
+    implementation("com.google.firebase:firebase-messaging")
+    implementation("com.google.firebase:firebase-analytics")
 
     // Gson для JSON
     implementation("com.google.code.gson:gson:2.10.1")
@@ -390,13 +390,13 @@ android {
 
 Добавьте в зависимости:
 ```kotlin
-implementation("com.google.firebase:firebase-crashlytics-ktx")
+implementation("com.google.firebase:firebase-crashlytics")
 ```
 
 ### 7.2 Firebase Performance Monitoring
 
 ```kotlin
-implementation("com.google.firebase:firebase-perf-ktx")
+implementation("com.google.firebase:firebase-perf")
 ```
 
 ### 7.3 Analytics
