@@ -128,6 +128,16 @@ class SyncServiceTest {
             flowOf(EventDownload(emptyList(), null))
         every { firestoreChildInfoDataSource.getChildInfoForParent(any()) } returns
             flowOf(emptyList())
+        // Every remote write lands unless a test says otherwise: the service reads each `Result`
+        // now, and a relaxed mock's answer for one is not something to depend on.
+        coEvery { firestoreEventDataSource.insertEvent(any(), any()) } returns Result.success(Unit)
+        coEvery { firestoreEventDataSource.updateEvent(any(), any()) } returns Result.success(Unit)
+        coEvery { firestoreEventDataSource.deleteEvent(any()) } returns Result.success(Unit)
+        coEvery { firestoreEventDataSource.tombstoneEvent(any(), any(), any()) } returns Result.success(Unit)
+        coEvery { firestoreChildInfoDataSource.upsertChildInfo(any(), any()) } returns Result.success(Unit)
+        coEvery { firestoreChildInfoDataSource.updateChildInfo(any(), any()) } returns Result.success(Unit)
+        coEvery { firestoreChildInfoDataSource.tombstoneChildInfo(any(), any(), any()) } returns
+            Result.success(Unit)
 
         syncService = SyncService(
             eventDao,
@@ -792,6 +802,155 @@ class SyncServiceTest {
         coVerify(exactly = 1) { firestoreEventDataSource.insertEvent(any(), any()) }
     }
 
+    @Test
+    fun `a private row is never resolved against a surviving document, and its creator removes it`() =
+        runTest {
+            // The event was turned private and the removal of its document has not landed. As a
+            // "conflict", UseLocal wrote the private content onto the shared document and UseRemote
+            // wrote the shared copy over the row, making it public again.
+            pairWith(partnerId = BOB)
+            val shared = eventEntity(createdByFirebaseUid = ALICE, sharedWith = listOf(ALICE, BOB))
+            val private = shared.copy(isPrivate = true, syncedToFirestore = true, title = "Private note")
+            coEvery { eventDao.getEventById(EVENT_ID) } returns private
+            every { firestoreEventDataSource.observeEventsSharedWith(ALICE, any()) } returns
+                flowOf(EventDownload(listOf(eventDocument(shared, listOf(ALICE, BOB))), null))
+
+            syncService.performFullSync()
+
+            coVerify(exactly = 0) { firestoreEventDataSource.updateEvent(any(), any()) }
+            coVerify(exactly = 0) { eventDao.insertEvent(any()) }
+            coVerify(exactly = 1) { firestoreEventDataSource.deleteEvent(EVENT_ID) }
+            coVerify { eventDao.updateEvent(match { it.id == EVENT_ID && it.isPrivate && !it.syncedToFirestore }) }
+        }
+
+    @Test
+    fun `a private row of somebody else's event is skipped without touching the document`() = runTest {
+        // Only the creator may remove an event document; anybody else just keeps their row private.
+        pairWith(partnerId = BOB)
+        val shared = eventEntity(createdByFirebaseUid = BOB, sharedWith = listOf(ALICE, BOB))
+        coEvery { eventDao.getEventById(EVENT_ID) } returns shared.copy(isPrivate = true)
+        every { firestoreEventDataSource.observeEventsSharedWith(ALICE, any()) } returns
+            flowOf(EventDownload(listOf(eventDocument(shared, listOf(ALICE, BOB))), null))
+
+        syncService.performFullSync()
+
+        coVerify(exactly = 0) { firestoreEventDataSource.deleteEvent(any()) }
+        coVerify(exactly = 0) { firestoreEventDataSource.updateEvent(any(), any()) }
+        coVerify(exactly = 0) { eventDao.insertEvent(any()) }
+    }
+
+    @Test
+    fun `a failed private removal leaves the row as it was, for the next pass to retry`() = runTest {
+        pairWith(partnerId = BOB)
+        val shared = eventEntity(createdByFirebaseUid = ALICE, sharedWith = listOf(ALICE, BOB))
+        coEvery { eventDao.getEventById(EVENT_ID) } returns shared.copy(isPrivate = true, syncedToFirestore = true)
+        every { firestoreEventDataSource.observeEventsSharedWith(ALICE, any()) } returns
+            flowOf(EventDownload(listOf(eventDocument(shared, listOf(ALICE, BOB))), null))
+        coEvery { firestoreEventDataSource.deleteEvent(EVENT_ID) } returns
+            Result.failure(IllegalStateException("offline"))
+
+        val result = syncService.performFullSync()
+
+        assertTrue(result.isSuccess)
+        coVerify(exactly = 0) { eventDao.updateEvent(any()) }
+        coVerify(exactly = 0) { eventDao.insertEvent(any()) }
+    }
+
+    @Test
+    fun `an event document that does not parse is skipped, and the rest of the pass goes on`() = runTest {
+        pairWith(partnerId = BOB)
+        val good = eventEntity(createdByFirebaseUid = BOB, sharedWith = listOf(ALICE, BOB))
+            .copy(id = "event-2")
+        val malformed = eventDocument(good.copy(id = EVENT_ID), listOf(ALICE, BOB)) + ("title" to 42L)
+        every { firestoreEventDataSource.observeEventsSharedWith(ALICE, any()) } returns
+            flowOf(EventDownload(listOf(malformed, eventDocument(good, listOf(ALICE, BOB))), null))
+        coEvery { eventDao.getEventById(any()) } returns null
+        val inserted = mutableListOf<EventEntity>()
+        coEvery { eventDao.insertEvent(capture(inserted)) } returns Unit
+
+        val result = syncService.performFullSync()
+
+        assertTrue(result.isSuccess, "one bad document must not fail the sync")
+        assertEquals(listOf("event-2"), inserted.map { it.id })
+    }
+
+    @Test
+    fun `an event conflict won locally is marked synced only once the update lands`() = runTest {
+        pairWith(partnerId = BOB)
+        val remote = eventEntity(createdByFirebaseUid = ALICE, sharedWith = listOf(ALICE, BOB))
+        val local = remote.copy(syncedToFirestore = false, updatedAtMillis = remote.updatedAtMillis + HOUR_MS)
+        coEvery { eventDao.getEventById(EVENT_ID) } returns local
+        every { firestoreEventDataSource.observeEventsSharedWith(ALICE, any()) } returns
+            flowOf(EventDownload(listOf(eventDocument(remote, listOf(ALICE, BOB))), null))
+        coEvery { firestoreEventDataSource.updateEvent(EVENT_ID, any()) } returns
+            Result.failure(IllegalStateException("denied"))
+
+        syncService.performFullSync()
+
+        coVerify(exactly = 1) { firestoreEventDataSource.updateEvent(EVENT_ID, any()) }
+        coVerify(exactly = 0) { eventDao.markAsSynced(EVENT_ID) }
+    }
+
+    @Test
+    fun `a child conflict won locally is marked synced only once the update lands`() = runTest {
+        pairWith(partnerId = BOB)
+        coEvery { childInfoDao.getChildInfoById(CHILD_ID) } returns
+            childInfoEntity(updatedAt = now.plusHours(1), synced = false)
+        every { firestoreChildInfoDataSource.getChildInfoForParent(ALICE) } returns
+            flowOf(listOf(remoteChildInfoMap(updatedAt = now)))
+        coEvery { firestoreChildInfoDataSource.updateChildInfo(CHILD_ID, any()) } returns
+            Result.failure(IllegalStateException("denied"))
+
+        syncService.performFullSync()
+
+        coVerify(exactly = 1) { firestoreChildInfoDataSource.updateChildInfo(CHILD_ID, any()) }
+        coVerify(exactly = 0) { childInfoDao.markAsSynced(CHILD_ID) }
+    }
+
+    @Test
+    fun `a child document that does not parse is skipped, and the rest of the pass goes on`() = runTest {
+        pairWith(partnerId = null)
+        val malformed = remoteChildInfoMap(updatedAt = now) + ("createdAt" to 42L)
+        val good = remoteChildInfoMap(updatedAt = now) + ("id" to "child-2")
+        every { firestoreChildInfoDataSource.getChildInfoForParent(ALICE) } returns
+            flowOf(listOf(malformed, good))
+        coEvery { childInfoDao.getChildInfoById(any()) } returns null
+        val inserted = mutableListOf<ChildInfoEntity>()
+        coEvery { childInfoDao.insertChildInfo(capture(inserted)) } returns Unit
+
+        val result = syncService.performFullSync()
+
+        assertTrue(result.isSuccess, "one bad document must not fail the sync")
+        assertEquals(listOf("child-2"), inserted.map { it.id })
+    }
+
+    @Test
+    fun `the profile refresh writes over the row as it stands, not as it stood before the network`() =
+        runTest {
+            // A consent granted while the profile read was in flight: a copy of the first read,
+            // written whole, withdrew it again with nothing said.
+            val stale = UserEntity(
+                id = ALICE,
+                email = "alice@example.test",
+                name = "Alice",
+                role = "mom",
+                colorCode = "#FF4081",
+                partnerId = BOB
+            )
+            coEvery { userDao.getUserById(ALICE) } returnsMany listOf(
+                stale,
+                stale.copy(healthConsentVersion = 1, healthConsentAtMillis = 1_000L)
+            )
+            coEvery { firestoreUserDataSource.getUserById(ALICE) } returns mapOf("role" to "mom")
+
+            syncService.performFullSync()
+
+            val rows = mutableListOf<UserEntity>()
+            coVerify { userDao.updateUser(capture(rows)) }
+            assertEquals(1, rows.last().healthConsentVersion)
+            assertEquals(1_000L, rows.last().healthConsentAtMillis)
+        }
+
     /**
      * Backs the mocked [EventDao] with [rows], so a write in one half of a sync pass is visible
      * to the half that follows it. The default `relaxed` mock forgets everything, which is
@@ -1010,6 +1169,7 @@ class SyncServiceTest {
         const val CAROL = "carol-uid"
         const val CHILD_ID = "child-1"
         const val EVENT_ID = "event-1"
+        const val HOUR_MS = 60L * 60 * 1000
 
         /** Where [SyncServiceTest.declaredSql] looks, relative to the repository root. */
         const val DAO_SOURCE_PATH =

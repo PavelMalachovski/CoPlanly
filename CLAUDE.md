@@ -1470,8 +1470,9 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     `FieldValue.serverTimestamp()`, never a client value** — the rule refuses anything else, and
     the export labels the two clocks separately because they answer different questions (when the
     parent acted; when the server saw it). **A revision is queued in Room before the event's own
-    upload, and deleted only once the server has it** — the event write paths discard their
-    `Result`, so a revision riding on them would be lost exactly when the phone was offline; a
+    upload, and deleted only once the server has it** — a failed event write re-queues the event
+    (it is marked synced only on success) but re-sends it as it stands then, so a revision riding
+    on that write would be lost exactly when the phone was offline; a
     `PERMISSION_DENIED` on a retry is checked with `exists()` against the server, because a second
     `set()` of a landed id is an update the rule refuses. **`event_versions` is not in
     `TOMBSTONED_COLLECTIONS`, and not in `SHARED_AUDIENCE_COLLECTIONS`** — a revision survives its

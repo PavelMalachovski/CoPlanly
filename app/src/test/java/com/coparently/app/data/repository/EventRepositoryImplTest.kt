@@ -63,6 +63,12 @@ class EventRepositoryImplTest {
         // No signed-in user -> insert/update stay local, so the Firestore path doesn't
         // interfere with what we assert about the persisted entity.
         every { firebaseAuthService.getCurrentUser() } returns null
+        // Every remote write lands unless a test says otherwise: the repository now reads each
+        // `Result`, and a relaxed mock's answer for one is not something to depend on.
+        coEvery { firestoreEventDataSource.insertEvent(any(), any()) } returns Result.success(Unit)
+        coEvery { firestoreEventDataSource.updateEvent(any(), any()) } returns Result.success(Unit)
+        coEvery { firestoreEventDataSource.deleteEvent(any()) } returns Result.success(Unit)
+        coEvery { firestoreEventDataSource.tombstoneEvent(any(), any(), any()) } returns Result.success(Unit)
         activityAnnouncer = mockk(relaxed = true)
         eventVersionRecorder = mockk(relaxed = true)
         repository = EventRepositoryImpl(
@@ -208,6 +214,85 @@ class EventRepositoryImplTest {
 
         val persisted = gson.fromJson(stored.last().sharedWithJson, Array<String>::class.java).toList()
         assertEquals(listOf("uidA"), persisted)
+        assertTrue(stored.last().syncedToFirestore, "a landed update is marked synced")
+    }
+
+    @Test
+    fun `a create whose upload fails stays queued for the sync`() = runTest {
+        // Marking it synced regardless took the event out of `getUnsyncedEvents()` for good: the
+        // co-parent never received it and nothing retried it.
+        signIn(uid = "uidA", partnerId = "uidB")
+        coEvery { firestoreEventDataSource.insertEvent(any(), any()) } returns
+            Result.failure(IllegalStateException("offline"))
+        val stored = mutableListOf<EventEntity>()
+        coEvery { eventDao.updateEvent(capture(stored)) } returns Unit
+
+        repository.insertEvent(baseDomain())
+
+        assertTrue(stored.none { it.syncedToFirestore }, "nothing may claim the create landed")
+    }
+
+    @Test
+    fun `a create whose upload lands is marked synced`() = runTest {
+        signIn(uid = "uidA", partnerId = "uidB")
+        val stored = mutableListOf<EventEntity>()
+        coEvery { eventDao.updateEvent(capture(stored)) } returns Unit
+
+        repository.insertEvent(baseDomain())
+
+        assertTrue(stored.last().syncedToFirestore)
+    }
+
+    @Test
+    fun `an edit whose upload fails is left queued, not marked synced`() = runTest {
+        signIn(uid = "uidA", partnerId = "uidB")
+        coEvery { firestoreEventDataSource.updateEvent(any(), any()) } returns
+            Result.failure(IllegalStateException("denied"))
+        val stored = mutableListOf<EventEntity>()
+        coEvery { eventDao.updateEvent(capture(stored)) } returns Unit
+
+        repository.updateEvent(
+            baseDomain().copy(
+                createdByFirebaseUid = "uidA",
+                sharedWith = listOf("uidA", "uidB"),
+                syncedToFirestore = true
+            )
+        )
+
+        assertTrue(stored.isNotEmpty())
+        assertTrue(stored.none { it.syncedToFirestore }, "the edit stays in the outbox")
+    }
+
+    @Test
+    fun `an event turned private is only called unshared once its remote copy is removed`() = runTest {
+        signIn(uid = "uidA", partnerId = "uidB")
+        coEvery { firestoreEventDataSource.deleteEvent(any()) } returns
+            Result.failure(IllegalStateException("offline"))
+        val stored = mutableListOf<EventEntity>()
+        coEvery { eventDao.updateEvent(capture(stored)) } returns Unit
+
+        repository.updateEvent(
+            baseDomain().copy(createdByFirebaseUid = "uidA", isPrivate = true, syncedToFirestore = true)
+        )
+
+        coVerify(exactly = 1) { firestoreEventDataSource.deleteEvent("e1") }
+        // Still flagged: the document survives, and `SyncService` retries the removal when it
+        // meets it rather than taking the row for a local-only one.
+        assertTrue(stored.all { it.syncedToFirestore })
+        coVerify(exactly = 0) { firestoreEventDataSource.updateEvent(any(), any()) }
+    }
+
+    @Test
+    fun `an event turned private whose remote copy is removed is marked local-only`() = runTest {
+        signIn(uid = "uidA", partnerId = "uidB")
+        val stored = mutableListOf<EventEntity>()
+        coEvery { eventDao.updateEvent(capture(stored)) } returns Unit
+
+        repository.updateEvent(
+            baseDomain().copy(createdByFirebaseUid = "uidA", isPrivate = true, syncedToFirestore = true)
+        )
+
+        assertEquals(false, stored.last().syncedToFirestore)
     }
 
     @Test

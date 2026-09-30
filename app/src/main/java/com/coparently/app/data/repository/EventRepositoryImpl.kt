@@ -175,14 +175,21 @@ class EventRepositoryImpl @Inject constructor(
             recordVersion(stamped, EventVersionKind.CREATED, firebaseUser.uid, audience, document)
 
             if (!stamped.syncedToFirestore) {
-                firestoreEventDataSource.insertEvent(stamped.id, document)
+                val uploaded = firestoreEventDataSource.insertEvent(stamped.id, document)
 
-                val syncedEvent = stamped.copy(
-                    syncedToFirestore = true,
-                    createdByFirebaseUid = firebaseUser.uid,
-                    sharedWith = audience
-                )
-                eventDao.updateEvent(syncedEvent.toEntity())
+                // Synced only once the write has landed. Marking it regardless took a refused or
+                // offline create out of `getUnsyncedEvents()` for good, so the co-parent never
+                // received the event and nothing on this phone said so.
+                if (uploaded.isSuccess) {
+                    val syncedEvent = stamped.copy(
+                        syncedToFirestore = true,
+                        createdByFirebaseUid = firebaseUser.uid,
+                        sharedWith = audience
+                    )
+                    eventDao.updateEvent(syncedEvent.toEntity())
+                } else {
+                    Log.w(TAG, "Event ${stamped.id} not uploaded; it stays queued", uploaded.exceptionOrNull())
+                }
             }
         }
 
@@ -190,26 +197,42 @@ class EventRepositoryImpl @Inject constructor(
     }
 
     override suspend fun updateEvent(event: Event, announce: Boolean) {
-        eventDao.updateEvent(event.toEntity())
+        // A shared edit is not on the server until the write below lands, so it goes into Room
+        // queued (`syncedToFirestore = false`) and is marked synced only on success; a refused or
+        // offline update is then retried by `SyncService` instead of being lost. A private event
+        // keeps its flag, which here means "a remote copy may still exist" — see below.
+        eventDao.updateEvent(
+            (if (event.isPrivate) event else event.copy(syncedToFirestore = false)).toEntity()
+        )
 
         val firebaseUser = firebaseAuthService.getCurrentUser() ?: return
         if (event.isPrivate) {
-            // Event turned private after being shared: remove the remote copy
+            // Event turned private after being shared: remove the remote copy, and only call it
+            // gone once the removal landed. Until then the flag stays set, and `SyncService`
+            // retries the removal when it meets the surviving document.
             if (event.syncedToFirestore) {
-                firestoreEventDataSource.deleteEvent(event.id)
-                eventDao.updateEvent(event.copy(syncedToFirestore = false).toEntity())
+                val removed = firestoreEventDataSource.deleteEvent(event.id)
+                if (removed.isSuccess) {
+                    eventDao.updateEvent(event.copy(syncedToFirestore = false).toEntity())
+                } else {
+                    Log.w(TAG, "Private event ${event.id} still has a remote copy", removed.exceptionOrNull())
+                }
             }
         } else {
             val uid = event.createdByFirebaseUid ?: firebaseUser.uid
             val audience = shareTargets(event, uid, firebaseUser.uid)
             val document = event.toFirestoreMap(uid, audience)
             recordVersion(event, EventVersionKind.UPDATED, firebaseUser.uid, audience, document)
-            firestoreEventDataSource.updateEvent(event.id, document)
+            val uploaded = firestoreEventDataSource.updateEvent(event.id, document)
+            if (uploaded.isFailure) {
+                Log.w(TAG, "Event ${event.id} update not written; it stays queued", uploaded.exceptionOrNull())
+            }
             // Converge the Room copy on what was uploaded. Without this the stale audience
             // survives locally until the next down-sync, which is exactly the window the
             // unpair sweep cannot reach.
-            if (event.sharedWith != audience) {
-                eventDao.updateEvent(event.copy(sharedWith = audience).toEntity())
+            val converged = event.copy(sharedWith = audience, syncedToFirestore = uploaded.isSuccess)
+            if (uploaded.isSuccess || event.sharedWith != audience) {
+                eventDao.updateEvent(converged.toEntity())
             }
         }
 
