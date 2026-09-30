@@ -1,15 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="event_list_title">Події</string>
-    <string name="event_list_back">Назад</string>
-    <string name="event_list_add">Додати подію</string>
-    <string name="event_list_loading">Завантаження…</string>
-    <string name="event_list_error">Помилка: %1$s</string>
-    <string name="event_list_empty_title">Поки немає подій</string>
-    <string name="event_list_empty_description">Створіть першу подію, щоб почати вести спільний розклад.</string>
-    <string name="event_list_empty_action">Додати подію</string>
-    <string name="event_list_date">Дата: %1$s</string>
-    <string name="event_list_parent">Хто з батьків: %1$s</string>
     <string name="event_delete">Видалити</string>
 
     <string name="event_form_title_new">Нова подія</string>

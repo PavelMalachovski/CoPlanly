@@ -64,7 +64,6 @@
 - `getEventsByDateRange(start, end)` - Получить события в диапазоне дат
 - `getEventsByDate(date)` - Получить события на конкретную дату
 - `getEventById(id)` - Получить событие по ID
-- `getEventsByParent(parentOwner)` - Получить события конкретного родителя
 - `insertEvent(event)` - Вставить новое событие
 - `insertEvents(events)` - Вставить несколько событий
 - `updateEvent(event)` - Обновить событие

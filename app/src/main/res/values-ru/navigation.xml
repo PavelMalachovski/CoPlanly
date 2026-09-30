@@ -6,8 +6,6 @@
     <string name="nav_expenses">Расходы</string>
     <string name="nav_settings">Настройки</string>
     <string name="expenses_title">Расходы</string>
-    <string name="expenses_open_budgets">Бюджеты</string>
-    <string name="budgets_title">Бюджеты</string>
     <string name="budgets_back">Назад</string>
     <string name="conversations_title">Сообщения</string>
     <string name="navigation_loading">Загрузка…</string>

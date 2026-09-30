@@ -15,7 +15,6 @@ import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.files.RecordPhotoKind
 import com.coparently.app.domain.model.Expense
 import com.coparently.app.domain.model.ExpenseCategory
-import com.coparently.app.domain.model.ExpenseSummary
 import com.coparently.app.domain.money.SupportedCurrency
 import com.coparently.app.domain.receipts.ReceiptParser
 import com.coparently.app.domain.receipts.ReceiptScan
@@ -265,9 +264,6 @@ class ExpenseViewModel @Inject constructor(
         .map { it.valueOrNull.orEmpty() }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())
 
-    private val _expenseSummary = MutableStateFlow<ExpenseSummary?>(null)
-    val expenseSummary: StateFlow<ExpenseSummary?> = _expenseSummary.asStateFlow()
-
     /**
      * uid -> slot, so a payer can be named and coloured. Empty until the profiles load.
      *
@@ -475,20 +471,6 @@ class ExpenseViewModel @Inject constructor(
     private val _saveState = MutableStateFlow<ExpenseSaveState>(ExpenseSaveState.Idle)
     val saveState: StateFlow<ExpenseSaveState> = _saveState.asStateFlow()
 
-    init {
-        // Load initial summary for current month
-        loadSummaryForMonth(LocalDate.now())
-    }
-
-    fun loadSummaryForMonth(date: LocalDate) {
-        val start = date.withDayOfMonth(1)
-        val end = date.withDayOfMonth(date.lengthOfMonth())
-
-        viewModelScope.launch {
-            _expenseSummary.value = expenseRepository.getExpenseSummary(start, end)
-        }
-    }
-
     /**
      * Saves a new expense. When [receiptImageUri] is provided, the photo is uploaded
      * to remote storage first and its reference stored on the expense (L-4), so the
@@ -564,9 +546,6 @@ class ExpenseViewModel @Inject constructor(
                 }
             )
             expenseRepository.addExpense(expense)
-
-            // Refresh summary
-            loadSummaryForMonth(date)
             _saveState.value = ExpenseSaveState.Saved(warning)
         }
     }
@@ -635,7 +614,6 @@ class ExpenseViewModel @Inject constructor(
                 runCatching { receiptStorage.delete(replaced, original.familyId) }
             }
 
-            loadSummaryForMonth(date)
             _saveState.value = ExpenseSaveState.Saved(warning)
         }
     }
@@ -691,7 +669,6 @@ class ExpenseViewModel @Inject constructor(
     fun deleteExpense(expenseId: String) {
         viewModelScope.launch {
             expenseRepository.deleteExpense(expenseId)
-            loadSummaryForMonth(LocalDate.now())
         }
     }
 
@@ -704,7 +681,6 @@ class ExpenseViewModel @Inject constructor(
     fun restoreExpense(expense: Expense) {
         viewModelScope.launch {
             expenseRepository.addExpense(expense)
-            loadSummaryForMonth(expense.date)
         }
     }
 

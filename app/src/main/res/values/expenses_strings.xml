@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Expenses & budget feature strings. Kept out of strings.xml because
+<!-- Expenses feature strings. Kept out of strings.xml because
      strings.xml is gitignored in this project (it holds local OAuth values). -->
 <resources>
     <string name="expenses_add">Add expense</string>
@@ -14,17 +14,6 @@
     <string name="expense_field_notes">Notes (optional)</string>
     <string name="expense_save">Save expense</string>
     <string name="expense_remove_receipt">Remove receipt photo</string>
-    <string name="budget_add">Add budget</string>
-    <string name="budget_add_title">New budget</string>
-    <string name="budget_field_category">Category</string>
-    <string name="budget_field_limit">Monthly limit</string>
-    <string name="budget_save">Save budget</string>
-    <string name="budget_edit_title">Edit budget</string>
-    <string name="budget_delete">Delete budget</string>
-    <string name="budget_delete_confirm_title">Delete this budget?</string>
-    <string name="budget_delete_confirm_message">The limit is removed. Expenses in this category are kept.</string>
-    <string name="budgets_empty_title">No budgets yet</string>
-    <string name="budgets_empty_description">Set a monthly limit per category to keep shared spending on track.</string>
     <string name="expenses_empty_title">No expenses yet</string>
     <string name="expenses_empty_description">Log a shared cost — daycare, clothes, a doctor visit — and split it with your co-parent.</string>
     <!-- Month summary header: total, who-paid split and settle-up -->
@@ -82,22 +71,14 @@
     <string name="expenses_category_household">Household</string>
     <string name="expenses_category_other">Other</string>
 
-    <!-- Budget screen -->
-    <string name="budget_alerts_title">Alerts</string>
-    <string name="budget_alert_exceeded">Budget Exceeded: %1$s</string>
-    <string name="budget_alert_percent_spent">You have spent %1$d%% of your limit.</string>
-    <string name="budget_spent_of_limit">%1$s / %2$s</string>
-    <string name="budget_percent_used">%1$d%% used</string>
 
-    <!-- Summary card: month switcher, total, and the budget chip strip. -->
+    <!-- Summary card: month switcher and total. -->
     <string name="expenses_shared_spend">shared spend</string>
     <string name="expenses_month_and_count">%1$s · %2$s</string>
     <!-- The month summary folded into one pinned line; %1$s is each currency's total, joined. -->
     <string name="expenses_collapsed_totals">Shared spend: %1$s</string>
     <string name="expenses_row_meta">%1$s · %2$s</string>
     <string name="expenses_row_meta_with_receipt">%1$s · %2$s · receipt</string>
-    <string name="expenses_budget_chip">%1$s %2$s / %3$s</string>
-    <string name="expenses_budget_add">+ Budget</string>
     <string name="expenses_split_proposal_title">New expense split proposed</string>
     <string name="expenses_split_proposal_body">Your co-parent proposes %1$d / %2$d for shared expenses from now on. Already recorded expenses keep their split.</string>
     <string name="expenses_split_proposal_confirm">Confirm</string>
@@ -108,18 +89,8 @@
     <string name="expense_split_not_shared_hint">Counts towards your spending, but neither of you owes the other for it.</string>
     <string name="expense_split_ratio">Split %1$d / %2$d</string>
     <string name="expense_split_override_hint">Different split for this expense only. The family\'s agreed split does not change.</string>
-    <!-- Budget status in words (UX-10). Colour used to be the only channel: a 6dp dot in
-         green/amber/red with no semantics, so a screen reader was handed "School 800 / 1000"
-         and no status, and a colour-blind reader saw a dot they could not name. The numbers do
-         not answer it either — "near" is measured against each budget's own alert threshold,
-         which is not on screen. expenses_budget_chip_status joins the amounts to the status on
-         a chip; it is a separator, so it is the same in every locale. -->
-    <string name="budget_status_near">Near limit</string>
-    <string name="budget_status_over">Over limit</string>
-    <string name="expenses_budget_chip_status">%1$s · %2$s</string>
     <string name="expense_for_members">Who is this for?</string>
     <string name="expenses_filter_members">Show for</string>
-    <string name="budget_for_members">Who is this budget for?</string>
     <!-- UX-17: the proposer's side of the same conversation. -->
     <string name="expenses_split_proposal_waiting_title">Waiting for an answer</string>
     <string name="expenses_split_proposal_waiting_body">You proposed %1$d/%2$d. Your co-parent has not answered yet.</string>

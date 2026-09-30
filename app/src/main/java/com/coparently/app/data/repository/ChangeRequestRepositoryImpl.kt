@@ -83,7 +83,7 @@ class ChangeRequestRepositoryImpl @Inject constructor(
      *
      * Both callers run inside a bare `viewModelScope.launch`, so an uncaught `PERMISSION_DENIED`
      * here did not merely fail the sync — it took the process down. The same guard
-     * `ExpenseRepositoryImpl` and `BudgetRepositoryImpl` already carry, for the same reason.
+     * `ExpenseRepositoryImpl` already carries, for the same reason.
      *
      * A failure leaves `syncedToFirestore = false`, which is what [flushOutbox] selects on.
      */

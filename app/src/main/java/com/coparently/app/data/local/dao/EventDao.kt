@@ -81,15 +81,6 @@ interface EventDao {
     suspend fun getEventById(id: String): EventEntity?
 
     /**
-     * Gets events for a specific parent owner.
-     */
-    @Query(
-        "SELECT * FROM events WHERE deletedAtMillis IS NULL " +
-            "AND parentOwner = :parentOwner ORDER BY startDateTime ASC"
-    )
-    fun getEventsByParent(parentOwner: String): Flow<List<EventEntity>>
-
-    /**
      * Inserts a new event.
      */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -128,12 +119,6 @@ interface EventDao {
      */
     @Query("UPDATE events SET syncedToFirestore = 1 WHERE id = :id")
     suspend fun markAsSynced(id: String)
-
-    /**
-     * Upserts an event (insert or update if exists).
-     */
-    @androidx.room.Upsert
-    suspend fun upsertEvent(event: EventEntity)
 
     /**
      * Batch insert events.

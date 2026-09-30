@@ -984,6 +984,29 @@ with them.
 **Not to be deleted**: the five `EventDao` methods including `getEventsForParentPaginated`, which is
 the thing CQ-5's Home-screen half would use. Deleting it now would be deleting the answer.
 
+**Closed again after the 30 September 2026 audit (its L-4, and F-21 of the Play audit).** Each
+was checked for a caller first, and had none:
+- **The budgets client** — `BudgetScreen`, `BudgetViewModel`, `BudgetSheet`/`BudgetItem`/
+  `BudgetChips`/`BudgetStatus`, the `budgets` route, `BudgetRepository(Impl)`,
+  `FirestoreBudgetDataSource`, the `Budget` domain model, their Hilt binding, the budget strings in
+  all five locales and the `BudgetWarning*` colours, the unit tests, the `budgets` wire contract and
+  fixtures, the e2e case and the UI tour's two seeded budgets. Nothing had navigated to the screen
+  since `85f1afb`. **Kept:** `BudgetEntity`, `BudgetDao` and the `budgets` table (removing a table
+  is a schema bump and a migration), `FamilyIdBackfill`'s stamp of it, and the `budgets` rule
+  block with its `firestore-tests` and the functions' sweeps and account deletion — an older build
+  may still write one. `tools/e2e/coverage.json` exempts the collection for that reason.
+- `EventRepository.pullOnce` and `UserRepository.pullOnce` (and their implementations);
+  `ExpenseRepository.getExpenseSummary`, `ExpenseSummary` and `ExpenseViewModel`'s
+  `expenseSummary`/`loadSummaryForMonth`, which nothing collected; `GetEventsUseCase.getByParent`
+  → `EventRepository.getEventsByParent` → `EventDao.getEventsByParent`; `EventDao.upsertEvent`.
+  `getEventsForParentPaginated` and `getEventsCountForParent` stay, for the reason above.
+- `FeatureManager`, `di/FeatureModule.kt` and the `firebase-config-ktx` dependency: injected
+  nowhere, so Remote Config never fetched. This also takes one `-ktx` artifact off the list the
+  BoM 34 move (audit L-2) has to rename.
+- `EventListScreen` and the `event_list` route, which nothing navigated to, with its strings (the
+  creator's "waiting on your co-parent" strip lived only there). The swipe-to-delete-with-Undo
+  pattern CLAUDE.md cited it for lives in Expenses (`ExpenseList.SwipeToDeleteRow`).
+
 ### CQ-16 · P3 · S · No Digital Asset Links
 
 **Where:** 💻 yours — it needs a domain and the release fingerprint.
@@ -1007,7 +1030,7 @@ changing.
 | `androidx.security:security-crypto` | 1.1.0-alpha06 | **Read-only since SEC-5** — it opens the pre-SEC-5 store once to migrate it and writes nothing. Remove, don't bump. |
 | `play-services-auth` | 21.2.0, deprecated | **Left.** Not a version bump: `CredentialManagerService` still calls `GoogleSignIn`/`GoogleSignInClient` for the Calendar scope, so dropping it means moving that flow to `AuthorizationClient` — a sign-in change only a device can judge. Both it and Credential Manager stay in the graph until then. |
 | `google-api-services-calendar` | `v3-rev20220715` | **Tried and reverted** (September 2026, PR #101). Maven Central was reachable: the current revision (`v3-rev20260708-2.0.0`) needs `google-api-client` **2.7.2**, and moving `google-api-client-android` there with it compiled — but the 2.7 line brings `google-auth-library` (two JARs with the same `META-INF/INDEX.LIST`), full `protobuf-java` and `google-http-client` 1.45, and R8 then failed on `io.grpc.InternalGlobalInterceptors`, referenced from `grpc-core`: the Calendar client's dependencies had moved part of the gRPC family Firestore runs on. A `-dontwarn` would turn that into a runtime failure in Firestore's channel. The bump needs the gRPC and protobuf families pinned to what the Firebase BoM resolves (or the Calendar client's transitive auth/protobuf excluded) and a device run of sync *and* one Calendar import and export — not a blind move. |
-| `firebase-functions` (Node) | ^4.5.0 (lockfile 4.9.0, the last 4.x), gen-1 API | **Left.** Already at the top of its major. 5.x/6.x move the gen-1 triggers behind `firebase-functions/v1` and v6 changes the default export; every function then needs a `firebase deploy` to prove it, which is yours. ESLint 8 → 9 needs a flat config and goes with it. |
+| `firebase-functions` / `firebase-admin` (Node) | firebase-functions **^6.6.0** (was ^4.5.0, lockfile 4.9.0), firebase-admin **^13.10.0** (was ^12.0.0, lockfile 12.7.0); gen-1 API through `firebase-functions/v1` | **Done** (September 2026, audit L-3). 4.x's peer range stopped at firebase-admin 12; 6.1.1 is the first to admit 13. `index.js` now requires `firebase-functions/v1`, the same gen-1 API — no function changed how it is declared. Functions (459), rules (807) and web (22) suites and the e2e pairing smoke pass on the emulators; a `firebase deploy --only functions` is still what proves it live. Left: the 9 moderate `uuid` advisories under `google-gax`/`gaxios`/`teeny-request`, which only firebase-admin 14 clears; firebase-functions 7 / the v2 API (redeploys every function as gen 2); ESLint 8 → 9 (flat config). |
 
 *(`retrofit` left the graph with the AI subsystem — MON-7.)*
 

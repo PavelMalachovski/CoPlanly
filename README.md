@@ -60,7 +60,7 @@ Firebase sync between the two households.
 | DI | Hilt |
 | Local DB | Room (schema v9, exported schemas in `app/schemas`) |
 | Background work | WorkManager (+ HiltWorkerFactory) |
-| Backend | Firebase: Auth, Firestore, Cloud Messaging, Crashlytics, Analytics, Remote Config |
+| Backend | Firebase: Auth, Firestore, Cloud Messaging, Crashlytics, Analytics, Storage, Functions |
 | Cloud Functions | `functions/` (Node.js) — notification fan-out |
 | APIs | Google Calendar API |
 | Min / target SDK | 26 / 34 |

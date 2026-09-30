@@ -67,6 +67,19 @@ cd functions
 npm install
 ```
 
+### Versions and the v1 API
+
+`firebase-admin` 13 and `firebase-functions` 6 (September 2026; L-3 of
+`docs/AUDIT-2026-09-30.md`). firebase-functions 4.x declared a peer range ending at
+firebase-admin 12, and 6.1.1 is the first release that admits 13. From 6.x the package's root
+export is the 2nd-generation API, so `index.js` requires **`firebase-functions/v1`** — the same
+1st-generation API as before (`regional = functions.region(...)`, `https.onCall`,
+`firestore.document(...)`, `pubsub.schedule`), and nothing else about how a function is declared
+changed. Keep that import when adding a function; a bare `require('firebase-functions')` hands out
+the v2 API, which has no `region()`. The Firebase CLI warns that firebase-functions is outdated
+until 7.x; moving to 7 or to the v2 API is a separate step, because it redeploys every function as
+2nd generation.
+
 ## Разработка
 
 ### Локальное тестирование

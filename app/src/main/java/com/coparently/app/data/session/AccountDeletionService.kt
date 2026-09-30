@@ -5,6 +5,7 @@ import com.coparently.app.data.local.CoPlanlyDatabase
 import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.local.preferences.PreferenceKeys
 import com.coparently.app.data.remote.firebase.FcmService
+import com.coparently.app.domain.notification.ReminderScheduler
 import com.google.firebase.functions.FirebaseFunctions
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -36,7 +37,8 @@ class AccountDeletionService @Inject constructor(
     private val functions: FirebaseFunctions,
     private val database: CoPlanlyDatabase,
     private val encryptedPreferences: EncryptedPreferences,
-    private val fcmService: FcmService
+    private val fcmService: FcmService,
+    private val reminderScheduler: ReminderScheduler
 ) {
 
     /**
@@ -73,6 +75,8 @@ class AccountDeletionService @Inject constructor(
         // and that half is the one that stops this device receiving pushes for a dead uid.
         fcmService.unregisterToken()
         withContext(Dispatchers.IO) { database.clearAllTables() }
+        // Nothing is left for a pending event reminder to announce.
+        reminderScheduler.cancelAll()
         encryptedPreferences.clear()
         // Kept by `clear()` on purpose (see `PreferenceKeys.SCHOOL_CONNECTION_PREFIX`); a deleted
         // account's school tokens have no business staying on the phone.

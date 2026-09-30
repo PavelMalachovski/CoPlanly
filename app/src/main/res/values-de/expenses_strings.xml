@@ -12,17 +12,6 @@
     <string name="expense_field_notes">Notizen (optional)</string>
     <string name="expense_save">Ausgabe speichern</string>
     <string name="expense_remove_receipt">Belegfoto entfernen</string>
-    <string name="budget_add">Budget hinzufügen</string>
-    <string name="budget_add_title">Neues Budget</string>
-    <string name="budget_field_category">Kategorie</string>
-    <string name="budget_field_limit">Monatliches Limit</string>
-    <string name="budget_save">Budget speichern</string>
-    <string name="budget_edit_title">Budget bearbeiten</string>
-    <string name="budget_delete">Budget löschen</string>
-    <string name="budget_delete_confirm_title">Dieses Budget löschen?</string>
-    <string name="budget_delete_confirm_message">Das Limit wird entfernt. Ausgaben in dieser Kategorie bleiben erhalten.</string>
-    <string name="budgets_empty_title">Noch keine Budgets</string>
-    <string name="budgets_empty_description">Lege pro Kategorie ein monatliches Limit fest, um die gemeinsamen Ausgaben im Blick zu behalten.</string>
     <string name="expenses_empty_title">Noch keine Ausgaben</string>
     <string name="expenses_empty_description">Erfasse eine gemeinsame Ausgabe – Kita, Kleidung, Arztbesuch – und teile sie mit dem anderen Elternteil.</string>
     <!-- Replaces expenses_mom_paid/expenses_dad_paid. The call site (ExpenseSummaryHeader's
@@ -75,21 +64,14 @@
     <string name="expenses_category_toys">Spielzeug</string>
     <string name="expenses_category_household">Haushalt</string>
     <string name="expenses_category_other">Sonstiges</string>
-    <string name="budget_alerts_title">Warnungen</string>
-    <string name="budget_alert_exceeded">Budget überschritten: %1$s</string>
-    <string name="budget_alert_percent_spent">Du hast %1$d%% deines Limits ausgegeben.</string>
-    <string name="budget_spent_of_limit">%1$s / %2$s</string>
-    <string name="budget_percent_used">%1$d%% verbraucht</string>
 
-    <!-- Summary card: month switcher, total, and the budget chip strip. -->
+    <!-- Summary card: month switcher and total. -->
     <string name="expenses_shared_spend">gemeinsame Ausgaben</string>
     <string name="expenses_month_and_count">%1$s · %2$s</string>
     <!-- The month summary folded into one pinned line; %1$s is each currency's total, joined. -->
     <string name="expenses_collapsed_totals">Gemeinsame Ausgaben: %1$s</string>
     <string name="expenses_row_meta">%1$s · %2$s</string>
     <string name="expenses_row_meta_with_receipt">%1$s · %2$s · Beleg</string>
-    <string name="expenses_budget_chip">%1$s %2$s / %3$s</string>
-    <string name="expenses_budget_add">+ Budget</string>
     <string name="expenses_split_proposal_title">Neue Kostenaufteilung vorgeschlagen</string>
     <string name="expenses_split_proposal_body">Der andere Elternteil schlägt ab jetzt %1$d / %2$d für gemeinsame Ausgaben vor. Bereits erfasste Ausgaben behalten ihre Aufteilung.</string>
     <string name="expenses_split_proposal_confirm">Bestätigen</string>
@@ -100,13 +82,8 @@
     <string name="expense_split_not_shared_hint">Zählt zu deinen Ausgaben, aber keiner von euch schuldet dem anderen etwas dafür.</string>
     <string name="expense_split_ratio">Aufteilung %1$d / %2$d</string>
     <string name="expense_split_override_hint">Abweichende Aufteilung nur für diese Ausgabe. Die vereinbarte Aufteilung der Familie ändert sich nicht.</string>
-    <!-- Budget status in words (UX-10). -->
-    <string name="budget_status_near">Nahe am Limit</string>
-    <string name="budget_status_over">Über dem Limit</string>
-    <string name="expenses_budget_chip_status">%1$s · %2$s</string>
     <string name="expense_for_members">Für wen ist das?</string>
     <string name="expenses_filter_members">Anzeigen für</string>
-    <string name="budget_for_members">Für wen ist dieses Budget?</string>
     <!-- UX-17: the proposer's side of the same conversation. -->
     <string name="expenses_split_proposal_waiting_title">Warten auf eine Antwort</string>
     <string name="expenses_split_proposal_waiting_body">Du hast %1$d/%2$d vorgeschlagen. Der andere Elternteil hat noch nicht geantwortet.</string>

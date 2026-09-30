@@ -14,13 +14,11 @@ import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.model.Expense
 import com.coparently.app.domain.model.ExpenseCategory
-import com.coparently.app.domain.model.ExpenseSummary
 import com.coparently.app.domain.repository.ExpenseRepository
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -65,23 +63,6 @@ class ExpenseRepositoryImpl @Inject constructor(
         return expenseDao.getExpenseById(id)?.takeIf { it.deletedAtMillis == null }?.toDomain()
     }
 
-    override suspend fun getExpenseSummary(start: LocalDate, end: LocalDate): ExpenseSummary {
-        val expenses = getExpensesForPeriod(start, end).first()
-
-        val totalAmount = expenses.sumOf { it.amount }
-        val byCategory = expenses.groupBy { it.category }
-            .mapValues { (_, list) -> list.sumOf { it.amount } }
-        val byPayer = expenses.groupBy { it.paidBy }
-            .mapValues { (_, list) -> list.sumOf { it.amount } }
-
-        return ExpenseSummary(
-            totalAmount = totalAmount,
-            expenseCount = expenses.size,
-            byCategory = byCategory,
-            byPayer = byPayer
-        )
-    }
-
     override suspend fun addExpense(expense: Expense) {
         // A brand-new expense has no prior owner, so the current user is the owner — stamped on
         // the Room row too, so the client can enforce creator-only editing without a network
@@ -121,7 +102,6 @@ class ExpenseRepositoryImpl @Inject constructor(
             // Without this, a co-parent editing an expense they didn't create would flip the
             // owner field, Firestore would reject the write, and the edit would sit in Room
             // with syncedToFirestore = false forever, failing again on every retry.
-            // Same fix as BudgetRepositoryImpl.updateBudget.
             val existingOwnerUid = firestoreExpenseDataSource.getExpense(expense.id)
                 ?.get("createdByFirebaseUid") as? String
             pushToFirestore(expense, ownerUid = existingOwnerUid ?: firebaseUser.uid)

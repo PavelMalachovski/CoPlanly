@@ -9,7 +9,7 @@
 # `tools/ui-tour/run-ui-tour.sh`. Each run
 # signs Alice up on the Auth emulator, pairs her with Bob through the real callable, seeds a few
 # weeks of family life through the production repositories (custody with contact afternoons and an
-# autumn break, Emma, Leo and Max, events, expenses in CZK and EUR, budgets, a parenting plan, chat,
+# autumn break, Emma, Leo and Max, events, expenses in CZK and EUR, a parenting plan, chat,
 # a vault document, a pending swap and change request) and photographs every main screen through the
 # app's own navigation. A screen the tour cannot reach is listed as skipped in `manifest.json`.
 #

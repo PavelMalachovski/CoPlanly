@@ -17,7 +17,6 @@ import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.model.Activity
 import com.coparently.app.domain.model.BloodType
-import com.coparently.app.domain.model.Budget
 import com.coparently.app.domain.model.ChangeRequest
 import com.coparently.app.domain.model.ChildInfo
 import com.coparently.app.domain.model.CustodyModel
@@ -33,7 +32,6 @@ import com.coparently.app.domain.model.PetSpecies
 import com.coparently.app.domain.model.SchoolInfo
 import com.coparently.app.domain.model.Vaccination
 import com.coparently.app.domain.parentingplan.ParentingPlanEntry
-import com.coparently.app.domain.repository.BudgetRepository
 import com.coparently.app.domain.repository.ChildInfoRepository
 import com.coparently.app.domain.repository.EventRepository
 import com.coparently.app.domain.repository.ExpenseRepository
@@ -69,7 +67,6 @@ import javax.inject.Inject
 class UiTourSeed @Inject constructor(
     private val events: EventRepository,
     private val expenses: ExpenseRepository,
-    private val budgets: BudgetRepository,
     private val children: ChildInfoRepository,
     private val pets: PetRepository,
     private val messages: MessageRepository,
@@ -306,7 +303,7 @@ class UiTourSeed @Inject constructor(
 
     // ---- money ----------------------------------------------------------------------------------
 
-    /** A 60/40 split agreed first, then a month of expenses in crowns and euros, and two budgets. */
+    /** A 60/40 split agreed first, then a month of expenses in crowns and euros. */
     private suspend fun seedMoney(family: Family) {
         splits.submitRatio(SplitRatio(SPLIT_BASIS_POINTS)).getOrThrow()
         val both = listOf(family.alice, family.bob.uid)
@@ -332,16 +329,7 @@ class UiTourSeed @Inject constructor(
             expense(titles.trip, 85.0, "EUR", ExpenseCategory.EDUCATION, 2),
             expense(titles.skis, 60.0, "EUR", ExpenseCategory.ACTIVITIES, 0)
         ).forEach { expenses.addExpense(it) }
-        budgets.addBudget(budget(ExpenseCategory.ACTIVITIES, 3_000.0, "CZK"))
-        budgets.addBudget(budget(ExpenseCategory.EDUCATION, 100.0, "EUR"))
     }
-
-    private fun budget(category: ExpenseCategory, limit: Double, currency: String) = Budget(
-        id = UUID.randomUUID().toString(),
-        category = category,
-        monthlyLimit = limit,
-        currency = currency
-    )
 
     // ---- the plan, the chat, a document ---------------------------------------------------------
 

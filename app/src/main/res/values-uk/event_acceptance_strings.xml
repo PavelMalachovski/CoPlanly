@@ -10,7 +10,5 @@
     <string name="event_acceptance_accept">Прийняти</string>
     <string name="event_acceptance_decline">Відхилити</string>
     <string name="event_acceptance_withdraw">Відкликати</string>
-    <string name="event_acceptance_waiting_strip">Ваших подій, що чекають на відповідь другого з батьків: %1$d</string>
-    <string name="event_acceptance_waiting_strip_one">Одна ваша подія чекає на відповідь другого з батьків</string>
     <string name="event_acceptance_hidden_note">Вона не зʼявиться в жодному календарі, доки не буде відповіді.</string>
 </resources>

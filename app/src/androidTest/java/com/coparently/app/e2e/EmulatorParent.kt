@@ -19,7 +19,6 @@ import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirebaseImageStorage
-import com.coparently.app.data.remote.firebase.FirestoreBudgetDataSource
 import com.coparently.app.data.remote.firebase.FirestoreChangeRequestDataSource
 import com.coparently.app.data.remote.firebase.FirestoreChildInfoDataSource
 import com.coparently.app.data.remote.firebase.FirestoreCustodyDataSource
@@ -33,7 +32,6 @@ import com.coparently.app.data.remote.firebase.FirestoreParentingPlanDataSource
 import com.coparently.app.data.remote.firebase.FirestorePetDataSource
 import com.coparently.app.data.remote.firebase.FirestoreUserDataSource
 import com.coparently.app.data.remote.firebase.PairingFunctions
-import com.coparently.app.data.repository.BudgetRepositoryImpl
 import com.coparently.app.data.repository.CalendarFeedRepositoryImpl
 import com.coparently.app.data.repository.ChangeRequestRepositoryImpl
 import com.coparently.app.data.repository.ChildInfoRepositoryImpl
@@ -66,6 +64,7 @@ import com.coparently.app.domain.model.Message
 import com.coparently.app.domain.model.PairingState
 import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.testing.NoFcm
+import com.coparently.app.testing.NoReminders
 import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.UserProfileChangeRequest
@@ -106,7 +105,7 @@ import java.util.UUID
  * callable), `UserRepositoryImpl`, `SelectedFamilySource`, `ParentsSource` and `ActivityAnnouncer`.
  * `SharedFileStorage`, `ChatAttachmentOutbox`, `SharedFileCache` and `FamilyDocumentRepositoryImpl`
  * are production too, over the Storage emulator, each phone with its own `files` and `cache`, and
- * so are the repositories for children, pets, budgets, change requests, the custody schedule, the
+ * so are the repositories for children, pets, change requests, the custody schedule, the
  * expense split, the parenting plan, calendar friends, professionals, guests, calendar feeds and
  * export receipts — every feature two phones share has its production writer here, so a
  * two-parent test of it exercises what ships (`tools/e2e/coverage.json` says which test
@@ -268,14 +267,6 @@ class EmulatorParent private constructor(
         firestorePetDataSource = FirestorePetDataSource(firestore)
     )
 
-    val budgetRepository = BudgetRepositoryImpl(
-        budgetDao = database.budgetDao(),
-        expenseDao = database.expenseDao(),
-        userDao = database.userDao(),
-        firebaseAuthService = authService,
-        firestoreBudgetDataSource = FirestoreBudgetDataSource(firestore)
-    )
-
     val changeRequestRepository = ChangeRequestRepositoryImpl(
         changeRequestDao = database.changeRequestDao(),
         firestoreDataSource = FirestoreChangeRequestDataSource(firestore),
@@ -362,9 +353,16 @@ class EmulatorParent private constructor(
             encryptedPreferences = encryptedPreferences
         ),
         selectedFamilySource = selectedFamilySource,
-        accountSwitchGuard = AccountSwitchGuard(fileContext, database, authService, encryptedPreferences),
+        accountSwitchGuard = AccountSwitchGuard(
+            fileContext,
+            database,
+            authService,
+            encryptedPreferences,
+            NoReminders
+        ),
         custodyModelRepository = custodyRepository,
-        eventVersionRecorder = eventVersionRecorder
+        eventVersionRecorder = eventVersionRecorder,
+        reminderScheduler = NoReminders
     )
 
     val calendarFeedRepository = CalendarFeedRepositoryImpl(functions)

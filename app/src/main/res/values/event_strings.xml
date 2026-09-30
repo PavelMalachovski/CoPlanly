@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Event list and add/edit form strings, kept in their own feature file (the note this
+<!-- Event add/edit form strings, kept in their own feature file (the note this
      comment used to carry — that strings.xml is gitignored and untracked — has been wrong
      since the OAuth values moved to BuildConfig; strings.xml is tracked).
      strings.xml still defines event_add, event_edit, event_title, event_description,
@@ -8,17 +8,6 @@
      event_parent_mom/event_parent_dad were on that list until parent labels started
      resolving to names; they no longer exist anywhere. -->
 <resources>
-    <!-- Event list screen -->
-    <string name="event_list_title">Events</string>
-    <string name="event_list_back">Back</string>
-    <string name="event_list_add">Add event</string>
-    <string name="event_list_loading">Loading…</string>
-    <string name="event_list_error">Error: %1$s</string>
-    <string name="event_list_empty_title">No events yet</string>
-    <string name="event_list_empty_description">Create your first event to start organizing your co-parenting schedule.</string>
-    <string name="event_list_empty_action">Add event</string>
-    <string name="event_list_date">Date: %1$s</string>
-    <string name="event_list_parent">Parent: %1$s</string>
     <string name="event_delete">Delete</string>
 
     <!-- Add/edit event form -->

@@ -16,6 +16,8 @@ import androidx.work.WorkerParameters
 import com.coparently.app.R
 import com.coparently.app.data.local.dao.EventDao
 import com.coparently.app.data.local.entity.EventEntity
+import com.coparently.app.domain.notification.ReminderPlanner
+import com.coparently.app.domain.notification.ReminderScheduler
 import com.coparently.app.presentation.MainActivity
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
@@ -27,30 +29,47 @@ import java.time.LocalDateTime
  * event's reminder offset (e.g. 30 min or 1 h before start).
  *
  * The event is looked up in Room when the reminder is due, not trusted from the moment it was
- * scheduled: only this phone's own saves reschedule or cancel the work, so an event the co-parent
- * deleted or moved — arriving through sync — would otherwise still announce itself, at the old
- * time and under the old title (see [shouldFire]).
+ * scheduled: a sync that deleted or moved it reschedules the work too, but a stale reminder that
+ * got through anyway would announce itself at the old time and under the old title (see
+ * [shouldFire]).
+ *
+ * A reminder is for one occurrence. Once it has fired — or been skipped because that occurrence
+ * no longer exists — the worker asks the scheduler for the event's next one, which is how a
+ * recurring event keeps reminding every week. The request replaces this very work under its
+ * unique name, so it is the last thing done.
  */
 @HiltWorker
 class ReminderWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted params: WorkerParameters,
-    private val eventDao: EventDao
+    private val eventDao: EventDao,
+    private val reminderScheduler: ReminderScheduler
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
         val eventId = inputData.getString(KEY_EVENT_ID) ?: return Result.failure()
-        val startTime = inputData.getString(KEY_START_TIME) ?: ""
 
         val stored = eventDao.getEventById(eventId)
-        if (stored == null || !shouldFire(stored, inputData.getString(KEY_START_AT))) {
-            // Deleted, tombstoned or moved since it was scheduled: a stale reminder is worse than
-            // none. (A move this phone saved itself has already replaced this work; one that
-            // arrived through sync is not rescheduled here — that is a separate change.)
-            return Result.success()
-        }
+        // Deleted or tombstoned: nothing to remind of, now or later.
+        if (stored == null || stored.deletedAtMillis != null) return Result.success()
+
+        val scheduledStartAt = inputData.getString(KEY_START_AT)
+        val fire = shouldFire(stored, scheduledStartAt)
+        if (fire) notify(stored)
+
+        // A recurring event goes on to its next occurrence; one whose occurrence moved or lost its
+        // reminder is re-planned from what Room holds now (which may cancel). A single event that
+        // has just fired has no next one and is left alone.
+        if (!fire || stored.isRecurring) reminderScheduler.schedule(stored.toReminderEvent())
+        return Result.success()
+    }
+
+    /** Posts the reminder for [stored], unless notifications are not allowed. */
+    private fun notify(stored: EventEntity) {
+        val eventId = stored.id
         // The title as it stands now, not as it stood when the reminder was scheduled.
         val title = stored.title
+        val startTime = inputData.getString(KEY_START_TIME) ?: ""
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             ContextCompat.checkSelfPermission(
@@ -59,7 +78,7 @@ class ReminderWorker @AssistedInject constructor(
             ) != PackageManager.PERMISSION_GRANTED
         ) {
             // Permission revoked after scheduling; nothing to show
-            return Result.success()
+            return
         }
 
         ensureChannel()
@@ -90,8 +109,6 @@ class ReminderWorker @AssistedInject constructor(
         val notificationManager =
             applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.notify(eventId.hashCode(), notification)
-
-        return Result.success()
     }
 
     private fun ensureChannel() {
@@ -115,8 +132,9 @@ class ReminderWorker @AssistedInject constructor(
         const val KEY_START_TIME = "start_time"
 
         /**
-         * The event's start as it was scheduled, `LocalDateTime.toString()`. Absent on work an
-         * older build enqueued, which is then checked for existence only.
+         * The start of the occurrence the reminder is for, `LocalDateTime.toString()`: the
+         * event's start, or one of a recurring event's occurrences. Absent on work an older
+         * build enqueued, which is then checked for existence only.
          */
         const val KEY_START_AT = "start_at"
         const val EXTRA_EVENT_ID = "reminder_event_id"
@@ -124,15 +142,17 @@ class ReminderWorker @AssistedInject constructor(
 
         /**
          * Whether a reminder scheduled for [scheduledStartAt] should still fire for [stored], the
-         * event's Room row now: not for a missing row or a pending tombstone, and not once the
-         * start has moved. An unreadable or absent [scheduledStartAt] (an older build's work)
-         * checks existence only.
+         * event's Room row now: not for a missing row or a pending tombstone, not once the
+         * reminder has been removed, and not once [scheduledStartAt] is no longer one of the
+         * event's occurrences ([ReminderPlanner.isOccurrence] — the start itself for a single
+         * event). An unreadable or absent [scheduledStartAt] (an older build's work) checks
+         * existence only.
          */
         internal fun shouldFire(stored: EventEntity?, scheduledStartAt: String?): Boolean {
-            if (stored == null || stored.deletedAtMillis != null) return false
+            if (stored == null || stored.deletedAtMillis != null || stored.reminderMinutes == null) return false
             val scheduled = scheduledStartAt?.let { runCatching { LocalDateTime.parse(it) }.getOrNull() }
                 ?: return true
-            return stored.startDateTime == scheduled
+            return ReminderPlanner.isOccurrence(stored.toReminderEvent(), scheduled)
         }
     }
 }

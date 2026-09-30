@@ -57,7 +57,6 @@ import com.coparently.app.presentation.consent.TelemetryConsentScreen
 import com.coparently.app.presentation.consent.TelemetryConsentViewModel
 import com.coparently.app.presentation.documents.FamilyDocumentsScreen
 import com.coparently.app.presentation.event.AddEditEventScreen
-import com.coparently.app.presentation.event.EventListScreen
 import com.coparently.app.presentation.export.ExportScreen
 import com.coparently.app.presentation.export.ExportViewModel
 import com.coparently.app.presentation.journal.JournalEditorScreen
@@ -341,26 +340,6 @@ fun NavGraph(
                         },
                         onChangeRequestsClick = {
                             navController.navigate(Screen.ChangeRequests.createRoute())
-                        }
-                    )
-                }
-
-                pane(
-                    route = Screen.EventList.route,
-                    enterTransition = { slideInFromRight() },
-                    exitTransition = { slideOutToLeft() },
-                    popEnterTransition = { slideInFromLeft() },
-                    popExitTransition = { slideOutToRight() }
-                ) {
-                    EventListScreen(
-                        onEventClick = { eventId ->
-                            navController.navigate(Screen.EditEvent.createRoute(eventId))
-                        },
-                        onAddEventClick = {
-                            navController.navigate(Screen.AddEvent.route)
-                        },
-                        onNavigateUp = {
-                            navController.popBackStack()
                         }
                     )
                 }
@@ -1086,7 +1065,7 @@ fun NavGraph(
                     )
                 }
 
-                // Expenses & Budget
+                // Expenses
                 composable(
                     route = Screen.Expenses.route,
                     enterTransition = { tabEnter(forward = true) },
@@ -1145,20 +1124,6 @@ fun NavGraph(
                             navController.popBackStack()
                         },
                         expenseId = expenseId
-                    )
-                }
-
-                pane(
-                    route = Screen.Budgets.route,
-                    enterTransition = { slideInFromRight() },
-                    exitTransition = { slideOutToLeft() },
-                    popEnterTransition = { slideInFromLeft() },
-                    popExitTransition = { slideOutToRight() }
-                ) {
-                    com.coparently.app.presentation.expenses.BudgetScreen(
-                        onBack = {
-                            navController.popBackStack()
-                        }
                     )
                 }
             }
@@ -1550,7 +1515,6 @@ sealed class Screen(val route: String) {
     data object Onboarding : Screen("onboarding")
     data object Home : Screen("home")
     data object Calendar : Screen("calendar")
-    data object EventList : Screen("event_list")
     data object AddEvent : Screen("add_event?date={date}&hour={hour}") {
         const val ARG_DATE = "date"
         const val ARG_HOUR = "hour"
@@ -1791,7 +1755,6 @@ sealed class Screen(val route: String) {
 
         fun createRoute(expenseId: String): String = "edit_expense/$expenseId"
     }
-    data object Budgets : Screen("budgets")
 
     /**
      * Important phone numbers, one tap from the dialler.

@@ -1,7 +1,7 @@
 package com.coparently.app.domain.money
 
 /**
- * Currencies the app offers when logging an expense or a budget.
+ * Currencies the app offers when logging an expense.
  *
  * @property code ISO 4217 code stored on [com.coparently.app.domain.model.Expense]
  * @property symbol Short symbol for compact UI where a full code would not fit

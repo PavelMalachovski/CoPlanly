@@ -27,7 +27,6 @@ import com.coparently.app.domain.repository.EventRepository
 import com.google.gson.Gson
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -130,12 +129,6 @@ class EventRepositoryImpl @Inject constructor(
 
         eventDao.insertEvent(entity)
         return entity.toDomain()
-    }
-
-    override fun getEventsByParent(parentOwner: String): Flow<List<Event>> {
-        return eventDao.getEventsByParent(parentOwner).map { entities ->
-            entities.map { it.toDomain() }
-        }
     }
 
     override suspend fun insertEvent(event: Event, announce: Boolean) {
@@ -308,27 +301,6 @@ class EventRepositoryImpl @Inject constructor(
             // which is not wrong so much as two answers to one question.
             event.deletedAtMillis != null -> Unit
             else -> deleteEvent(event.toDomain())
-        }
-    }
-
-    override suspend fun pullOnce() {
-        val firebaseUser = firebaseAuthService.getCurrentUser() ?: return
-
-        // Take a single snapshot; collecting the flow here would never complete
-        val entities = eventDao.getAllEvents().first()
-        entities.forEach { entity ->
-            if (!entity.syncedToFirestore && !entity.isPrivate) {
-                val event = entity.toDomain()
-                val audience = shareTargets(event, firebaseUser.uid, firebaseUser.uid)
-                firestoreEventDataSource.insertEvent(event.id, event.toFirestoreMap(firebaseUser.uid, audience))
-
-                val syncedEvent = event.copy(
-                    syncedToFirestore = true,
-                    createdByFirebaseUid = firebaseUser.uid,
-                    sharedWith = audience
-                )
-                eventDao.updateEvent(syncedEvent.toEntity())
-            }
         }
     }
 

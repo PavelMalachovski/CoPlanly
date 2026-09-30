@@ -34,7 +34,8 @@ const PAIRED_USERS = {
 };
 
 /**
- * Builds a budget document as `BudgetRepositoryImpl.addBudget` writes it.
+ * Builds a budget document as `BudgetRepositoryImpl.addBudget` wrote it (the client was removed in
+ * September 2026; the rule stays for older builds that may still write one).
  *
  * @param {!Object} overrides Fields to override on the default document.
  * @return {!Object} The document data.

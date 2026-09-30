@@ -188,6 +188,13 @@ const RULES = [
       'app/src/main/res/values*/ai_strings.xml', 'app/src/main/res/values*/month_review_strings.xml'],
   },
   {
+    sections: ['3.23'],
+    why: 'event reminders: which occurrence, synced events, cleared at sign-out',
+    paths: ['K/data/notification/EventReminderScheduler.kt', 'K/data/notification/ReminderWorker.kt',
+      'K/data/notification/ReminderEvents.kt', 'K/domain/notification/Reminder*',
+      'K/data/session/AccountSwitchGuard.kt', 'K/data/session/AccountDeletionService.kt'],
+  },
+  {
     sections: ['3.6', '4.2'],
     why: 'strings, locales or the language picker',
     paths: ['app/src/main/res/values*/**', 'app/src/main/res/xml/locales_config.xml',

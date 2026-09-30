@@ -31,7 +31,7 @@ import javax.inject.Inject
  * with Bob through the real callable, `MainActivity` on the paused Compose clock) that asserts
  * nothing. [UiTourSeed] fills both phones with a few weeks' worth of family — custody with contact
  * afternoons and an autumn break, two children and a dog, a dozen events, a month of expenses in two
- * currencies under an agreed split, budgets, a half-agreed parenting plan, a chat with an attachment,
+ * currencies under an agreed split, a half-agreed parenting plan, a chat with an attachment,
  * a vault document, and Bob's pending day swap and change request — and the tour then walks every
  * main screen through the app's own navigation, reading every label from the app's string resources
  * in the variant's language, and hands each one to [UiTourCamera]. What the family wrote — titles,

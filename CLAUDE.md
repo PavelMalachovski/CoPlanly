@@ -348,10 +348,13 @@ When touching the UI, keep these invariants:
    August 2026 audit; the file had in fact survived this note by several months.
    *(Aug 2026: budgets no longer open from an unlabelled Expenses top-bar action — and since
    `85f1afb` they open from nowhere: the chip strip that replaced it was dropped with the
-   Expenses scroll fix (owner decision), so `BudgetScreen` and its ViewModel are unreachable
-   until a separate change deletes them with their data layer. This line said they were a chip
-   strip for a month after that, and the UI tour kept a budgets step that timed out on every
-   run. Tab switches, including Home's stat-tile deep
+   Expenses scroll fix (owner decision). The budgets client — screen, ViewModel, route,
+   repository, Firestore data source, strings, wire contract and e2e case — was then **deleted**
+   (September 2026, audit L-4). What stays, on purpose: `BudgetEntity`, `BudgetDao` and the
+   `budgets` table (dropping a table is a schema bump and a migration), `FamilyIdBackfill`'s stamp
+   of that table, and the `budgets` block in `firestore.rules` with its `firestore-tests` and the
+   server's sweeps and account deletion, because an older build may still write one. Don't bring
+   a budget screen back without a product decision. Tab switches, including Home's stat-tile deep
    links, go through `NavHostController.navigateToTab` so they share one back-stack policy.)*
 2. **Toolchain**: compileSdk/targetSdk 36, Kotlin 2.1 (+ `kotlin.plugin.compose`),
    Compose BOM 2025.10 (Material 3 1.4 — whose public API has none of M3 Expressive:
@@ -382,8 +385,11 @@ When touching the UI, keep these invariants:
    `rememberNotificationPermissionRequester()` (push toggle, reminder selection), never on
    cold start.
 8. **Destructive list actions** use M3 `SwipeToDismissBox` with an Undo snackbar
-   (see `EventListScreen`; the delete runs from `SwipeToDismissBox`'s `onDismiss`, material3 1.4,
-   not the deprecated `confirmValueChange`); Undo re-creates the captured event (id is preserved).
+   (see `ExpenseList`'s `SwipeToDeleteRow` and `ExpenseScreen`'s `deleteWithUndo`; the delete runs
+   from `SwipeToDismissBox`'s `onDismiss`, material3 1.4, not the deprecated `confirmValueChange`,
+   and the row carries the same delete as a custom accessibility action); Undo re-creates the
+   captured record (id is preserved, `ExpenseViewModel.restoreExpense`). The unreachable
+   `EventListScreen` this line used to cite was deleted in September 2026.
    Danger actions (e.g. "Sign out of app") live at the bottom of their screen, not
    mid-list.
 9. **User-facing strings** live in tracked, feature-named `res/values/*_strings.xml`
@@ -652,7 +658,7 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   a phone. `e2e/UiTourTest` and `UiTourOnboardingTest` are `AliceOnScreenTest`s that assert
   nothing: `UiTourSeed` fills both phones with a realistic family through the production
   repositories (custody with contact windows and a seasonal layer, Emma, Leo and Max, events,
-  expenses in two currencies, budgets, plan, chat, a vault document, Bob's pending swap and
+  expenses in two currencies, plan, chat, a vault document, Bob's pending swap and
   request) — what the family *wrote* in the variant's language (`UiTourContent`, one table per
   app language, English for any other; the names Alice, Bob, Emma, Leo and Max never change,
   because the screenshots double as store images), `UiTourDriver` walks the app's own navigation by string resource, and `UiTourCamera`
@@ -972,12 +978,13 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
 - **Who a record is about goes through `domain/family/FamilyMemberRef`** (FAM-2, Aug 2026) — one
   file defining the stored vocabulary, like `Tombstone.kt` and `PushPayload.kt`. Children *and*
   pets, because a vet's bill is an expense and the `Expense.childId` it replaced had nowhere to
-  put it. `Expense.forMembers` and `Budget.forMembers` are lists of it; the wire form is a JSON
+  put it. `Expense.forMembers` is a list of it (and `BudgetEntity.forMembersJson` still stores
+  one for the budgets older builds wrote; the client that read it is gone); the wire form is a JSON
   array of the prefixed strings (`"child:abc"`, `"pet:xyz"`), never a Gson serialisation of the
   type — R8 rewrote a Gson model's field names once already and it shipped. Three things not to
   invert. **Naming nobody is not naming everybody:** an untagged record shows in the unfiltered
-  list and under no chip, or every chip shows the same untagged pile and the filter says nothing;
-  a budget naming members is charged only what names them back. **An unrecognised reference
+  list and under no chip, or every chip shows the same untagged pile and the filter says nothing.
+  **An unrecognised reference
   survives a round trip** as `FamilyMemberRef.Unknown`, so an older build cannot erase a tag a
   newer one wrote — dropping it on read is data loss, not a missing feature. And **a member is a
   name, never a colour**: pink and blue are the parent slots, teal is a calendar friend, neutral
@@ -1048,7 +1055,8 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
    `L2;…`, `p2|…`) — and `wire/current/<collection>/` holds what *this* build writes, generated.
    `WireContractTest` (`app/src/test/java/com/coparently/app/wire/`) runs every fixture through the
    production reader and writer of its collection (one `WireContract` each: `events`,
-   `custody_models`, `messages`, `child_info`, `pets`, `expenses`, `budgets`, `event_versions`) and
+   `custody_models`, `messages`, `child_info`, `pets`, `expenses`, `event_versions`; `budgets` lost
+   its contract with its client, September 2026) and
    checks that it reads what `reads` says (or is skipped, where `skipped` says why), and that a
    read-then-write loses exactly the paths `notPreserved` declares, each with its reason — so an
    unreadable codec entry, an unknown member or a proposal's citation that stops surviving turns it
@@ -1131,8 +1139,15 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
    `GermanState`'s KDoc says why. The Room schema JSON for v36 (which carries this column) is exported by the Regenerate
    workflow, not by hand.
 9. **Reminders** are scheduled through the `ReminderScheduler` domain interface
-   (WorkManager impl `EventReminderScheduler`), hooked into the event use cases —
-   schedule on create/update, cancel on delete.
+   (WorkManager impl `EventReminderScheduler`, one unique work per event id, `REPLACE`, tag
+   `event_reminder`), hooked into the event use cases — schedule on create/update, cancel on
+   delete — **and into the sync's event download** (`SyncService.rearmReminder`: the co-parent's
+   events remind too, a downloaded tombstone cancels). A reminder is for **one occurrence**:
+   `domain/notification/ReminderPlanner` picks the next one whose reminder time is still ahead
+   through `RecurrenceExpander`, and `ReminderWorker` re-checks it against Room when due
+   (`ReminderPlanner.isOccurrence`) and then schedules the next, so a weekly event reminds every
+   week. `cancelAll()` runs at sign-out, account switch and deletion, because the worker reads the
+   title from Room and Room survives sign-out; `null` `reminderMinutes` is "no reminder".
 10. **Receipt OCR is on-device only** (`ReceiptTextRecognizer`/ML Kit, parsed by
     `ReceiptParser`, wired up in `AddExpenseScreen`/`ExpenseViewModel.scanReceipt`) — no
     receipt text or photo may be sent to a model or any other remote service without an
@@ -2203,7 +2218,10 @@ whatever you were doing; a stale "known issue" costs more than a missing one.
   (no error — they're just excluded from `whereIn`'s results). Room stays the source of
   truth so nothing visibly disappears on the device that created them, but they won't
   restore on a reinstall or a second device until re-saved. No backfill migration was run
-  as part of this fix.
+  as part of this fix. **The client half described here no longer exists** (September 2026):
+  `BudgetRepositoryImpl` and `FirestoreBudgetDataSource` were deleted with the rest of the
+  unreachable budgets client, and this build neither writes nor reads the collection. The rule
+  block stays for older builds; `tools/e2e/coverage.json` exempts `budgets` for that reason.
 - A full audit (grep every `.collection(...)` call in `app/src/main/java` and
   `functions/index.js`, diff against `firestore.rules`' match blocks) found two more
   mismatches. One is now fixed; the other is left as-is because it is not reachable in

@@ -6,8 +6,6 @@
     <string name="nav_expenses">Витрати</string>
     <string name="nav_settings">Налаштування</string>
     <string name="expenses_title">Витрати</string>
-    <string name="expenses_open_budgets">Бюджети</string>
-    <string name="budgets_title">Бюджети</string>
     <string name="budgets_back">Назад</string>
     <string name="conversations_title">Повідомлення</string>
     <string name="navigation_loading">Завантаження…</string>

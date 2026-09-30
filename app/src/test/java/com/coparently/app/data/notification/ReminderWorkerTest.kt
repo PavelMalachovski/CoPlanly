@@ -43,6 +43,26 @@ class ReminderWorkerTest {
         assertFalse(ReminderWorker.shouldFire(null, null))
     }
 
+    @Test
+    fun `a reminder for an event whose reminder was removed does not fire`() {
+        assertFalse(ReminderWorker.shouldFire(event().copy(reminderMinutes = null), start.toString()))
+    }
+
+    @Test
+    fun `a reminder for a later occurrence of a recurring event fires`() {
+        val weekly = event().copy(isRecurring = true, recurrencePattern = "weekly")
+
+        assertTrue(ReminderWorker.shouldFire(weekly, start.plusWeeks(3).toString()))
+        // Not an occurrence: an hour off, or past a recurrence end set since.
+        assertFalse(ReminderWorker.shouldFire(weekly, start.plusWeeks(3).plusHours(1).toString()))
+        assertFalse(
+            ReminderWorker.shouldFire(
+                weekly.copy(recurrenceEndDate = start.toLocalDate().plusWeeks(2)),
+                start.plusWeeks(3).toString()
+            )
+        )
+    }
+
     private fun event() = EventEntity(
         id = "e1",
         title = "Dentist",
@@ -50,6 +70,7 @@ class ReminderWorkerTest {
         endDateTime = start.plusHours(1),
         eventType = "medical",
         parentOwner = "mom",
+        reminderMinutes = 30,
         createdAt = start.minusDays(3),
         updatedAt = start.minusDays(3),
         updatedAtMillis = EventTimestamp.ofWallClock(start.minusDays(3))
