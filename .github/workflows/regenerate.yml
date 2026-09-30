@@ -132,6 +132,11 @@ jobs:
 
           Produced by .github/workflows/regenerate.yml, which exists because the sessions that
           write most of this repository have no Android SDK and cannot run Gradle at all."
+          # The branch may have moved while this job ran (a push after the request). The files this
+          # commit touches are generated, so rebasing onto the newer head is safe; without it the
+          # push was refused and the job's whole run was lost.
+          git fetch origin ${{ github.ref_name }}
+          git rebase origin/${{ github.ref_name }}
           git push origin HEAD:${{ github.ref_name }}
 
       - name: Upload the reports either way
