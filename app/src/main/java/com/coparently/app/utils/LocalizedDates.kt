@@ -4,6 +4,7 @@ import android.content.Context
 import android.text.format.DateFormat
 import androidx.compose.runtime.mutableStateOf
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.chrono.IsoChronology
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeFormatterBuilder
@@ -81,6 +82,31 @@ fun shortTime(
     }
 
 /**
+ * The label of one hour row in the Day and Week views' gutter, on the reader's clock (L-7,
+ * September 2026).
+ *
+ * On a 24-hour clock it is the bare two-digit hour ("09", "13"), as it always was: on an hour
+ * gridline the ":00" is constant and costs gutter width without telling anybody anything. On a
+ * 12-hour clock it is the hour with its day-period marker in [locale]'s words ("9 AM", "1 PM",
+ * "1 odp."), because "13" is exactly what a reader on that clock does not use. The gutter is wider
+ * for that case (`Dimensions.hourGutterWidthFor`), and only for that case.
+ *
+ * @param hour The hour of the day, 0–23
+ * @param locale The language, for the marker of a 12-hour clock
+ * @param is24Hour Whether the reader's clock is 24-hour; [ClockFormat] by default
+ */
+fun hourLabel(
+    hour: Int,
+    locale: Locale = Locale.getDefault(),
+    is24Hour: Boolean = ClockFormat.is24Hour
+): String =
+    if (is24Hour) {
+        String.format(locale, "%02d", hour)
+    } else {
+        LocalTime.of(hour, 0).format(DateTimeFormatter.ofPattern(PATTERN_12_HOUR_GUTTER, locale))
+    }
+
+/**
  * A date in [locale]'s own order for [skeleton], then [separator], then the time on the reader's
  * clock ([shortTime]) — "Wed, Sep 2 · 3:30 PM", "st 2. 9. · 15:30".
  */
@@ -113,6 +139,7 @@ fun unbreakableDate(text: String): String = buildString(text.length) {
 private const val NO_BREAK_SPACE = ' '
 private const val PATTERN_24_HOUR = "HH:mm"
 private const val PATTERN_12_HOUR = "h:mm a"
+private const val PATTERN_12_HOUR_GUTTER = "h a"
 
 /**
  * Whether the reader's clock is 24-hour: the device's "Use 24-hour format" setting, which

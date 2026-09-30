@@ -103,15 +103,17 @@ import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.bodyMediumEmphasized
 import com.coparently.app.presentation.theme.dimensions
+import com.coparently.app.presentation.theme.hourGutterWidthFor
 import com.coparently.app.presentation.theme.labelMediumEmphasized
 import com.coparently.app.presentation.theme.labelSmallEmphasized
+import com.coparently.app.utils.ClockFormat
+import com.coparently.app.utils.hourLabel
 import com.coparently.app.utils.localizedDate
 import com.coparently.app.utils.shortTime
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.time.temporal.WeekFields
-import java.util.Locale
 import kotlin.math.roundToInt
 
 /** Virtual center page of the day/week pager (allows ~3 years of swiping each way). */
@@ -268,6 +270,10 @@ private fun DayWeekPage(
     holidays: Map<LocalDate, com.coparently.app.domain.holidays.Holiday> = emptyMap()
 ) {
     val dims = dimensions()
+    // The reader's clock (L-7): a 12-hour label carries its day-period marker, and only then is
+    // the gutter wider — a 24-hour layout is exactly what it was.
+    val is24Hour = ClockFormat.is24Hour
+    val gutterWidth = dims.hourGutterWidthFor(is24Hour)
     val today by rememberToday()
     val hours = (0..23).toList()
     val density = LocalDensity.current
@@ -313,7 +319,7 @@ private fun DayWeekPage(
                         dates = currentDates,
                         getCustody = getCustody,
                         parentNames = parentNames,
-                        gutterWidth = dims.hourGutterWidth,
+                        gutterWidth = gutterWidth,
                         modifier = Modifier.align(Alignment.TopCenter)
                     )
                 }
@@ -351,7 +357,7 @@ private fun DayWeekPage(
                     // Time column space - fixed width for consistency (matches content layout)
                     Box(
                         modifier = Modifier
-                            .width(dims.hourGutterWidth)
+                            .width(gutterWidth)
                             .fillMaxHeight()
                     )
 
@@ -467,16 +473,17 @@ private fun DayWeekPage(
                         // Fixed width to ensure consistent layout and single-line time display
                         Box(
                             modifier = Modifier
-                                .width(dims.hourGutterWidth)
+                                .width(gutterWidth)
                                 .height(hourCellHeight) // ~60dp for compact
                                 .padding(top = dims.paddingSmall / 2),
                             contentAlignment = Alignment.TopCenter
                         ) {
                             Text(
-                                // Hour number only: on an hour gridline the ":00" is constant,
-                                // so it costs gutter width without telling the user anything.
-                                // The accessible time-slot description below still spells it out.
-                                text = String.format(Locale.getDefault(), "%02d", hour),
+                                // Hour only ("09", or "9 AM" on a 12-hour clock): on an hour
+                                // gridline the ":00" is constant, so it costs gutter width without
+                                // telling the user anything. The accessible time-slot description
+                                // below still spells it out.
+                                text = hourLabel(hour, is24Hour = is24Hour),
                                 // labelSmall (11sp) rather than bodyMedium: the hour gutter is
                                 // narrow, and this keeps the rendered size while still scaling
                                 // with the user's font-size setting.
@@ -612,7 +619,7 @@ private fun DayWeekPage(
             val firstVisibleHour = scrollState.firstVisibleItemIndex
 
             // Calculate layout dimensions
-            val hourLabelWidth = dims.hourGutterWidth
+            val hourLabelWidth = gutterWidth
             val horizontalPadding = 8.dp
             val daySpacing = 4.dp
 

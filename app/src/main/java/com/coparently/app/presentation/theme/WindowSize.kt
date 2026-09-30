@@ -18,7 +18,8 @@ import androidx.compose.ui.unit.dp
  * @property cornerRadius Default corner radius for UI elements
  * @property hourGutterWidth Width of the hour-label gutter in the Week and Day views. The day
  *   headers, the custody band, the hour grid and the events overlay all measure from it, so they
- *   line up with the day each block belongs to. It holds a bare hour number ("13"), so it grows
+ *   line up with the day each block belongs to. It holds a bare hour number ("13"; a 12-hour clock
+ *   reads it through [hourGutterWidthFor], which is wider for "1 PM"), so it grows
  *   with the font scale (see `adaptiveDimensions`). Icons do not, which is why this is its own
  *   value rather than a multiple of an icon size, as it used to be (`IconSizes`).
  * @property buttonHeight Default button height
@@ -130,3 +131,21 @@ fun WindowSizeClass.getDimensions(): Dimensions {
  */
 @Composable
 fun dimensions(): Dimensions = LocalDimensions.current
+
+/**
+ * How much wider the hour gutter is on a 12-hour clock (L-7): "12 PM" or "12 odp." instead of
+ * "12". A factor rather than a fixed amount, so the extra room grows with the font scale the
+ * base width already carries (`adaptiveDimensions`).
+ */
+private const val TWELVE_HOUR_GUTTER_SCALE = 1.7f
+
+/**
+ * The hour gutter's width for the reader's clock: [Dimensions.hourGutterWidth] unchanged on a
+ * 24-hour clock, so that layout (and its screenshot baselines) never moves, and
+ * [TWELVE_HOUR_GUTTER_SCALE] times it on a 12-hour clock, whose label carries a day-period
+ * marker (`utils.hourLabel`).
+ *
+ * @param is24Hour Whether the reader's clock is 24-hour
+ */
+fun Dimensions.hourGutterWidthFor(is24Hour: Boolean): Dp =
+    if (is24Hour) hourGutterWidth else hourGutterWidth * TWELVE_HOUR_GUTTER_SCALE

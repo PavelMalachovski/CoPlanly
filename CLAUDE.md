@@ -2341,7 +2341,9 @@ Ukrainian** (`values-cs/`, `values-de/`, `values-ru/`, `values-uk/`). Rules:
   every resume; code that can run without the activity — the widget, a reminder — passes
   `DateFormat.is24HourFormat(context)` itself. The one `"HH:mm"` left is a wire format
   (`ContactWindowCodec`), and the export's `RecordFormat` keeps its fixed `Locale.ROOT` patterns
-  on purpose.
+  on purpose. The Day and Week views' hour gutter follows the same clock through `hourLabel`
+  (L-7: "09" on 24 hours, "9 AM" on 12), and only a 12-hour clock widens it
+  (`Dimensions.hourGutterWidthFor`), so the 24-hour layout never moves.
 - There is no `values-en/` — base `values/` IS English; don't recreate it.
 - **English is written in sentence case** (October 2026 audit, D-21): "Event title", "Week on /
   week off", "Save changes" — only the first word and proper names (Google Calendar, CoPlanly)
