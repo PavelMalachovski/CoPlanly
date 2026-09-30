@@ -226,12 +226,16 @@ fun AddExpenseScreen(
 
     // A fresh photo (camera or gallery) is the single trigger for OCR — both capture paths
     // above end by setting receiptUri. The existing receipt pre-loaded in edit mode is not a
-    // fresh photo (and is a remote URL OCR can't read), so it is deliberately skipped.
+    // fresh photo (and is a stored reference OCR can't read), so it is deliberately skipped —
+    // by its form, because after a rotation `editedExpense` is not back yet when this runs. The
+    // last photo scanned survives a rotation too, so turning the phone does not scan it again
+    // over what the parent corrected.
+    var lastScannedReceipt by rememberSaveable { mutableStateOf<String?>(null) }
     LaunchedEffect(receiptUri) {
-        val uri = receiptUri ?: return@LaunchedEffect
-        if (uri.toString() != editedExpense?.receiptUrl) {
-            viewModel.scanReceipt(uri.toString())
-        }
+        val uri = receiptUri?.toString() ?: return@LaunchedEffect
+        if (RecordPhotoCodec.isReference(uri) || uri == lastScannedReceipt) return@LaunchedEffect
+        lastScannedReceipt = uri
+        viewModel.scanReceipt(uri)
     }
 
     ReceiptScanEffect(
