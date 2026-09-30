@@ -96,6 +96,19 @@ describe('sweepLapsedCalendarFriends', () => {
     assert.deepStrictEqual(db._deleted, ['nina']);
   });
 
+  it('ends a friend of two families in one family only, on that grant\'s own expiry', async () => {
+    // L-5: one grant per family, `{familyId}__{friendUid}`, each with its own end.
+    const db = fakeDb({
+      'alice__bob__nina': grant(NOW - DAY),
+      'dave__erin__nina': Object.assign(grant(NOW + DAY),
+          {familyParents: ['dave', 'erin'], familyId: 'dave__erin', friendUid: 'nina'}),
+    });
+
+    await index.sweepLapsedCalendarFriendsImpl(db, NOW);
+
+    assert.deepStrictEqual(db._deleted, ['alice__bob__nina']);
+  });
+
   it('keeps a grant that is still running', async () => {
     const db = fakeDb({nina: grant(NOW + DAY)});
 

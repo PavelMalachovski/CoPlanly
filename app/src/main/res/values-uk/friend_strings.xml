@@ -5,6 +5,7 @@
     <string name="friend_invite_action">Запросити друга</string>
     <string name="friend_invite_code_label">Передайте цей код</string>
     <string name="friend_access_until">Доступ до %1$s</string>
+    <string name="friend_access_several">Родини: %1$d · перший доступ закінчується %2$s</string>
     <string name="friend_revoke">Закрити доступ</string>
     <string name="friend_revoke_confirm_title">Закрити доступ: %1$s?</string>
     <string name="friend_revoke_confirm_message">Ця людина перестане бачити сімейний календар. Ви зможете запросити її знову будь-коли.</string>

@@ -916,10 +916,22 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   (`theme/ParentPalette.kt`), defaulting to pink for slot 1 and blue for slot 2.
 - **A calendar friend sits beside the two slots and never occupies one** (item 16, Aug 2026).
   A guardian/friend/grandparent with their own account reads the family's calendar through a
-  **central** grant, `calendar_friends/{friendUid}` — never by being fanned out into every
-  event's `sharedWith`, so admitting or revoking one is a single write and no event document is
-  rewritten. The `events` read rule consults it in a **last** disjunct (a parent's own read
+  **central** grant, `calendar_friends/{familyId}__{friendUid}` — never by being fanned out into
+  every event's `sharedWith`, so admitting or revoking one is a single write and no event document
+  is rewritten. The `events` read rule consults it in a **last** disjunct (a parent's own read
   short-circuits before the `get()`), with expiry compared against `request.time`.
+  **One grant per family** (L-5, September 2026), keyed like a professional grant: the rule builds
+  the path from the event's own `familyId` and the reader, and the stored `familyId` and
+  `friendUid` must repeat it. A grandmother admitted by two families holds two grants, reads both
+  calendars and loses only the one that is revoked or lapses; the per-person id it replaced let
+  the second family's invitation overwrite the first. The friend lists their own grants with
+  `whereEqualTo("friendUid", uid)`, a parent with `whereArrayContains("familyParents", uid)`
+  kept to the family on screen, and `revokeFriend` deletes the on-screen family's grant only.
+  `friend_profiles/{uid}.familyParents` (the profile's read gate) holds every admitting family's
+  parents: the friend writes the union on create (`CalendarFriendPolicy.profileGate`), and the
+  callable adds a later family's two. **No rule fallback to the old `calendar_friends/{friendUid}`**
+  — `backfillRecordFamilyIds` re-keys those, and the callable re-keys the redeemer's own; run the
+  backfill right after the rules deploy.
   **The grant names one family, not one person** (M-6, Aug 2026): it carries the `familyId` it
   was issued for, and `isCalendarFriendOf` requires the event's own `familyId` to match *and* its
   creator to be one of that family's two parents. Keying on the creator alone is what leaked —
@@ -943,7 +955,7 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   an event falls on is a fact about custody. The friend's colour is `CoPlanlyColors.FriendTeal`
   — never a parent hue, and never the theme's neutral `secondary`, which is for controls.
   **Faces come from the Google account, never from an upload.** A friend's `photoUrl` is seeded
-  from Firebase Auth at their first profile save and copied into `calendar_friends/{uid}` by the
+  from Firebase Auth at their first profile save and copied into each of their grants by the
   callable, so the parents' list names *and* pictures them without a second read of a document
   that is not theirs; the parents' own faces come from `users/{uid}.profilePhotoUrl` through
   `NamedParent.photoUrl` and `ParentNames.photoForUid(uid)` — keyed on the uid, because a pair

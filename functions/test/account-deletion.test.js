@@ -557,9 +557,16 @@ describe('deleteAccountDataImpl', () => {
 
   it('removes the friend grant in both directions', async () => {
     const withFriend = family();
+    // Since L-5 one grant per family: `{familyId}__{friendUid}`. Alice is a friend of two other
+    // families, and still holds a per-person grant from before L-5 the backfill has not moved.
     withFriend.calendar_friends = [
-      {id: 'granny', familyParents: [ALICE, BOB], expiresAtMillis: 4102444800000},
-      {id: ALICE, familyParents: ['other-a', 'other-b'], expiresAtMillis: 4102444800000},
+      {id: `${ALICE}__${BOB}__granny`, familyParents: [ALICE, BOB], friendUid: 'granny',
+        expiresAtMillis: 4102444800000},
+      {id: `other-a__other-b__${ALICE}`, familyParents: ['other-a', 'other-b'],
+        friendUid: ALICE, expiresAtMillis: 4102444800000},
+      {id: `other-c__other-d__${ALICE}`, familyParents: ['other-c', 'other-d'],
+        friendUid: ALICE, expiresAtMillis: 4102444800000},
+      {id: ALICE, familyParents: ['other-e', 'other-f'], expiresAtMillis: 4102444800000},
     ];
     withFriend.friend_profiles = [{id: ALICE, name: 'Alice', familyParents: ['other-a', 'other-b']}];
     const db = fakeDb(withFriend);

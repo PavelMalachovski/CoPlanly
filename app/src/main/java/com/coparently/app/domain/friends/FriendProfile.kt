@@ -56,11 +56,18 @@ enum class FriendRole {
 /**
  * A friend's live read access to one family's calendar.
  *
- * Mirrors `calendar_friends/{friendUid}`. Held centrally rather than fanned out into every
- * event's audience, so admitting or revoking a friend is one write and no event document is ever
- * rewritten — see the events read rule in `firestore.rules`.
+ * Mirrors `calendar_friends/{familyId}__{friendUid}` ([documentId]). Held centrally rather than
+ * fanned out into every event's audience, so admitting or revoking a friend is one write and no
+ * event document is ever rewritten — see the events read rule in `firestore.rules`.
  *
- * @property friendUid Whose access this is; the document's id.
+ * **One grant per family (L-5).** A grandparent admitted by two families holds two of these, one
+ * each, and loses neither when the other is revoked or runs out; before L-5 the grant was keyed on
+ * the friend alone and the second family's invitation silently overwrote the first.
+ *
+ * @property friendUid Whose access this is; the second half of the document's id.
+ * @property familyId The family it opens — `FamilyKey.of(familyParents)`, the first half of the
+ *   document's id, and what the events rule matches against each event's own `familyId` (M-6).
+ *   Blank only in a value built by hand; the mapper drops a stored grant without one.
  * @property name The friend's display name at the time the grant was made, so a parent's
  *   "who can see this" list can name them without reading their profile.
  * @property photoUrl Their avatar at that same moment — a Google account's own picture, copied
@@ -81,8 +88,19 @@ data class CalendarFriendGrant(
     val familyParents: List<String>,
     val grantedBy: String,
     val grantedAtMillis: Long,
-    val expiresAtMillis: Long
-)
+    val expiresAtMillis: Long,
+    val familyId: String = ""
+) {
+    companion object {
+        /**
+         * The id of [friendUid]'s grant over [familyId]: `{familyId}__{friendUid}` — the shape
+         * `professional_grants` uses, and the path `isCalendarFriendOf` in `firestore.rules`
+         * builds from an event's family and the reader. `calendarFriendGrantId` in
+         * `functions/index.js` writes the same.
+         */
+        fun documentId(familyId: String, friendUid: String): String = "${familyId}__$friendUid"
+    }
+}
 
 /**
  * Whether a calendar-friend grant is still live — the single statement the app, the security
@@ -109,4 +127,14 @@ object CalendarFriendPolicy {
     /** The live grants among [grants], at [nowMillis]. */
     fun active(grants: List<CalendarFriendGrant>, nowMillis: Long): List<CalendarFriendGrant> =
         grants.filter { isActive(it, nowMillis) }
+
+    /**
+     * Who may read a friend's profile, from the grants they hold: every parent of every family
+     * that admitted them, each once, oldest grant first — the `familyParents` gate
+     * `friend_profiles` is created with (L-5). With one grant, exactly that grant's two parents.
+     * Afterwards the gate is immutable to the friend, and `acceptCalendarFriendInvitation` adds a
+     * later family's parents itself.
+     */
+    fun profileGate(grants: List<CalendarFriendGrant>): List<String> =
+        grants.sortedBy { it.grantedAtMillis }.flatMap { it.familyParents }.distinct()
 }

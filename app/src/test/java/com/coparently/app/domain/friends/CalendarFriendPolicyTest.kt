@@ -61,4 +61,27 @@ class CalendarFriendPolicyTest {
         val over = grant(now - 1)
         assertEquals(listOf(live), CalendarFriendPolicy.active(listOf(live, over), now))
     }
+
+    @Test
+    fun `the profile gate of one grant is that family's two parents`() {
+        // One family must look exactly as before L-5.
+        assertEquals(listOf("mom", "dad"), CalendarFriendPolicy.profileGate(listOf(grant(now + 1))))
+    }
+
+    @Test
+    fun `the profile gate of two families names all four parents, each once, oldest first`() {
+        // L-5: a grandmother admitted by two families is readable by both. A parent who is in
+        // both families (the M-4 case) appears once.
+        val first = grant(now + 1)
+        val second = grant(now + 1).copy(
+            familyParents = listOf("dad", "aunt"),
+            familyId = "aunt__dad",
+            grantedAtMillis = 2L
+        )
+        assertEquals(
+            listOf("mom", "dad", "aunt"),
+            CalendarFriendPolicy.profileGate(listOf(second, first))
+        )
+        assertEquals(emptyList<String>(), CalendarFriendPolicy.profileGate(emptyList()))
+    }
 }

@@ -126,7 +126,7 @@ only what is specific to it.
 | Data | Their profile (name, email, Google photo), the grant, its expiry, consents (professionals) |
 | Legal basis | Art. 6(1)(b) (the invited person's own account and the parent's instruction) |
 | Retention | Until the grant expires or is revoked, then swept daily; a calendar friend's and a professional's grant also end when the family's two parents unpair; invitations never accepted are swept 30 days after expiry (90 days after creation if they have none); accepted co-parent invitations kept for the life of the account — they prevent records being assigned to the wrong household (Art. 5(1)(d)). When the person who *accepted* an invitation deletes their account, the invitation stays with its sender but its `toEmail` is blanked, and a departing guest is removed from the child record's `guests` map as well as its audience |
-| Where | `invitations`, `calendar_friends`, `friend_profiles`, `professional_grants` |
+| Where | `invitations`, `calendar_friends` (one grant per family, `{familyId}__{friendUid}`), `friend_profiles` (read by the parents of each family that admitted the friend), `professional_grants` |
 
 ### P9. Calendar-feed links
 

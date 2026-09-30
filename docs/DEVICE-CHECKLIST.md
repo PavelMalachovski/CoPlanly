@@ -1424,6 +1424,33 @@ the screens, the pickers, the camera, a viewer app and a real network.
 
 ---
 
+### 5.6 A calendar friend of two families (L-5) · 5A, 2P or 1P fallback
+
+Needs the rules **and** functions deploys, then `backfillRecordFamilyIds` once (it re-keys grants
+from before L-5 to `calendar_friends/{familyId}__{friendUid}`; until it runs, an old grant admits
+nothing). Accounts: A and B paired, D and E paired (a second, unrelated family), F the friend.
+
+> **[CI e2e]** `TwoParentAccessTest#aCalendarFriendOfTwoFamiliesReadsBothAndLosesOnlyTheOneThatRevokes`
+> runs the mechanism: two grants, both families' events read, both families listing F and reading
+> her profile, one revoke leaving the other family standing. What a phone adds is the screens.
+
+- [ ] A: Settings → Family → **Friend with calendar access** → Invite. F redeems the code (Settings
+      → the same row → enter the code). F's row reads "Access until {date}", exactly as before.
+- [ ] D invites F too; F redeems. F's row now reads "Families: 2 · the first access ends {date}",
+      the earlier of the two ends. Nothing about the first family changed.
+- [ ] F opens her profile and saves it. A **and** D each open Friends → F: her name, role and
+      phone show on both.
+- [ ] B lists F under the A–B family only; E under the D–E family only. On a parent in two
+      families (M-8), switching family shows each family's friends under that family.
+- [ ] B → F → **Remove access**. F's row returns to "Access until {date}" for the D–E family; D and
+      E still list her.
+- **Fallback (1P, 2P):** do the steps signing in and out as each account; the rows update on the
+  next open rather than live.
+- **If it fails:** tag `FriendRepository`; `presentation/friends/`, `firestore.rules`
+  `isCalendarFriendOf`, `functions/index.js` `acceptCalendarFriendInvitationImpl`.
+
+---
+
 ## 6. Export (MON-3) · 1P
 
 Expected: event versions, plus a PDF and CSV export started from Settings → Family → **Export the

@@ -34,37 +34,43 @@ interface FriendRepository {
     suspend fun acceptFriendInvite(code: String): Result<AcceptCalendarFriendResult>
 
     /**
-     * The live calendar-friend grants on this family, for the parents' "who can see this" list.
+     * The live calendar-friend grants on the family on screen, for the parents' "who can see
+     * this" list.
      *
-     * Filtered to the grants naming this signed-in parent, so a parent never sees another
-     * family's friends; expiry is applied by
+     * Read through the grants naming this signed-in parent (the query the rule keys on) and kept
+     * to the family the switcher shows, so a parent in two families sees each family's friends
+     * under that family, and never another family's; expiry is applied by
      * [com.coparently.app.domain.friends.CalendarFriendPolicy] on read rather than trusted from
      * storage, so a lapsed grant disappears without waiting for a sweep.
      */
     fun observeFamilyFriends(): Flow<List<CalendarFriendGrant>>
 
-    /** Ends [friendUid]'s access. Either parent may revoke. */
+    /**
+     * Ends [friendUid]'s access to the family on screen — the grant
+     * `calendar_friends/{familyId}__{friendUid}`. Either parent may revoke. A grant the same
+     * friend holds in another family is not touched (L-5).
+     */
     suspend fun revokeFriend(friendUid: String): Result<Unit>
 
     /**
-     * This account's own grant, when the signed-in user is a friend rather than a parent — the
-     * flow the friend's own calendar reads to learn whose events to query. Null while they are
-     * not a friend of anybody, or once their grant lapses.
+     * This account's own grants, when the signed-in user is a friend rather than a parent — one
+     * per family that admitted them (L-5), live ones only, soonest-ending first. Empty while they
+     * are not a friend of anybody, or once every grant has lapsed.
      */
-    fun observeMyGrant(): Flow<CalendarFriendGrant?>
+    fun observeMyGrants(): Flow<List<CalendarFriendGrant>>
 
     /**
-     * This account's own grant, read once.
+     * This account's own live grants, read once.
      *
      * The save path's accessor, and it exists for the reason CLAUDE.md's invariant 17 gives:
-     * `FriendViewModel.myGrant` is a `WhileSubscribed` StateFlow, and `FriendProfileScreen` is
-     * its own route that never collects it — so `myGrant.value` was the initial `null` for every
-     * save that ViewModel instance ever made, and the profile went out with an empty
+     * `FriendViewModel.myGrants` is a `WhileSubscribed` StateFlow, and `FriendProfileScreen` is
+     * its own route that never collects it — so its `.value` was the initial empty value for
+     * every save that ViewModel instance ever made, and the profile went out with an empty
      * `familyParents`, which is the gate the parents read it through.
      *
-     * @return the grant, or null when this account is not a calendar friend or it has lapsed.
+     * @return the grants, empty when this account is not a calendar friend or every one lapsed.
      */
-    suspend fun myGrant(): CalendarFriendGrant?
+    suspend fun myGrants(): List<CalendarFriendGrant>
 
     /** The friend's own profile, or null before they have written one. */
     fun observeMyProfile(): Flow<FriendProfile?>

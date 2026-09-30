@@ -56,9 +56,14 @@ function fakeDb(seed) {
         get: (ref) => ref.get(),
         update: (ref, update) => staged.push({ref, update, whole: false}),
         set: (ref, value) => staged.push({ref, update: value, whole: true}),
+        delete: (ref) => staged.push({ref, remove: true}),
       });
-      staged.forEach(({ref, update, whole}) => {
+      staged.forEach(({ref, update, whole, remove}) => {
         docs[ref.collection] = docs[ref.collection] || {};
+        if (remove) {
+          delete docs[ref.collection][ref.id];
+          return;
+        }
         docs[ref.collection][ref.id] = whole ?
           update : Object.assign({}, docs[ref.collection][ref.id], update);
       });
@@ -69,6 +74,9 @@ function fakeDb(seed) {
 
 /** Far enough out that no test run is ever near it. */
 const GRANT_ENDS = Date.parse('2099-01-01T00:00:00Z');
+
+/** Nina's grant over Alice and Bob's family: `{familyId}__{friendUid}` (L-5). */
+const GRANT_ID = 'alice__bob__nina';
 
 /**
  * A world with paired parents Alice and Bob, and a pending friend invitation Alice made.
@@ -132,7 +140,7 @@ describe('acceptCalendarFriendInvitation', () => {
     const result = await myFunctions.acceptCalendarFriendInvitationImpl(
         db, 'nina', 'nina@example.com', ref);
 
-    const grant = db._docs.calendar_friends.nina;
+    const grant = db._docs.calendar_friends[GRANT_ID];
     assert.deepStrictEqual(grant.familyParents, ['alice', 'bob']);
     assert.strictEqual(grant.grantedBy, 'alice');
     assert.strictEqual(grant.expiresAtMillis, GRANT_ENDS);
@@ -156,7 +164,7 @@ describe('acceptCalendarFriendInvitation', () => {
     await myFunctions.acceptCalendarFriendInvitationImpl(db, 'nina', 'nina@example.com', ref);
 
     assert.strictEqual(
-        db._docs.calendar_friends.nina.photoUrl, 'https://lh3.googleusercontent.com/a/x');
+        db._docs.calendar_friends[GRANT_ID].photoUrl, 'https://lh3.googleusercontent.com/a/x');
   });
 
   it('writes no photoUrl key at all when the accepter has no picture', async () => {
@@ -164,7 +172,7 @@ describe('acceptCalendarFriendInvitation', () => {
     // object to merge rather than a value.
     const db = seeded();
     await myFunctions.acceptCalendarFriendInvitationImpl(db, 'nina', 'nina@example.com', ref);
-    assert.ok(!('photoUrl' in db._docs.calendar_friends.nina));
+    assert.ok(!('photoUrl' in db._docs.calendar_friends[GRANT_ID]));
   });
 
   it('marks the invitation accepted', async () => {
@@ -253,7 +261,7 @@ describe('the grant is scoped to one family (M-6)', () => {
 
     await myFunctions.acceptCalendarFriendInvitationImpl(db, 'nina', 'nina@example.com', ref);
 
-    assert.strictEqual(db._docs.calendar_friends.nina.familyId, 'alice__bob');
+    assert.strictEqual(db._docs.calendar_friends[GRANT_ID].familyId, 'alice__bob');
   });
 
   it('honours the family the invitation was generated in', async () => {
@@ -265,7 +273,7 @@ describe('the grant is scoped to one family (M-6)', () => {
     const result = await myFunctions.acceptCalendarFriendInvitationImpl(
         db, 'nina', 'nina@example.com', ref);
 
-    assert.strictEqual(db._docs.calendar_friends.nina.familyId, 'alice__carol');
+    assert.strictEqual(db._docs.calendar_friends['alice__carol__nina'].familyId, 'alice__carol');
     assert.deepStrictEqual(result.familyParents, ['alice', 'carol']);
   });
 
@@ -279,7 +287,7 @@ describe('the grant is scoped to one family (M-6)', () => {
     await assert.rejects(
         () => myFunctions.acceptCalendarFriendInvitationImpl(db, 'nina', 'nina@example.com', ref),
         (err) => err.code === 'failed-precondition' && err.details.reason === 'inviter-not-paired');
-    assert.strictEqual((db._docs.calendar_friends || {}).nina, undefined);
+    assert.deepStrictEqual(Object.keys(db._docs.calendar_friends || {}), []);
     assert.strictEqual(db._docs.invitations.inv1.status, 'pending');
   });
 
@@ -289,7 +297,7 @@ describe('the grant is scoped to one family (M-6)', () => {
     await assert.rejects(
         () => myFunctions.acceptCalendarFriendInvitationImpl(db, 'nina', 'nina@example.com', ref),
         (err) => err.code === 'failed-precondition' && err.details.reason === 'inviter-not-paired');
-    assert.strictEqual((db._docs.calendar_friends || {}).nina, undefined);
+    assert.deepStrictEqual(Object.keys(db._docs.calendar_friends || {}), []);
   });
 
   it('refuses a stale family even when the inviter still has another one', async () => {
@@ -304,7 +312,7 @@ describe('the grant is scoped to one family (M-6)', () => {
     await assert.rejects(
         () => myFunctions.acceptCalendarFriendInvitationImpl(db, 'nina', 'nina@example.com', ref),
         (err) => err.code === 'failed-precondition');
-    assert.strictEqual((db._docs.calendar_friends || {}).nina, undefined);
+    assert.deepStrictEqual(Object.keys(db._docs.calendar_friends || {}), []);
   });
 
   it('falls back for an invitation made by a build that predates M-6', async () => {
@@ -312,7 +320,180 @@ describe('the grant is scoped to one family (M-6)', () => {
 
     await myFunctions.acceptCalendarFriendInvitationImpl(db, 'nina', 'nina@example.com', ref);
 
-    assert.strictEqual(db._docs.calendar_friends.nina.familyId, 'alice__bob');
+    assert.strictEqual(db._docs.calendar_friends[GRANT_ID].familyId, 'alice__bob');
+  });
+});
+
+describe('one grant per family (L-5)', () => {
+  let myFunctions;
+
+  before(() => {
+    myFunctions = require('../index');
+  });
+
+  /**
+   * Two unrelated families — Alice and Bob, Dave and Erin — each with a pending friend
+   * invitation, so one grandmother can be admitted by both.
+   *
+   * @param {!Object=} extra More collections to seed.
+   * @return {!Object} The fake db.
+   */
+  function twoFamilies(extra) {
+    return fakeDb(Object.assign({
+      invitations: {
+        inv1: {id: 'inv1', kind: 'friend', status: 'pending', fromUserId: 'alice', toEmail: '',
+          friendExpiresAt: GRANT_ENDS, familyId: 'alice__bob'},
+        inv2: {id: 'inv2', kind: 'friend', status: 'pending', fromUserId: 'dave', toEmail: '',
+          friendExpiresAt: GRANT_ENDS - 1, familyId: 'dave__erin'},
+      },
+      users: {
+        alice: {id: 'alice', name: 'Alice', partnerId: 'bob', partnerIds: ['bob']},
+        bob: {id: 'bob', name: 'Bob', partnerId: 'alice', partnerIds: ['alice']},
+        dave: {id: 'dave', name: 'Dave', partnerId: 'erin', partnerIds: ['erin']},
+        erin: {id: 'erin', name: 'Erin', partnerId: 'dave', partnerIds: ['dave']},
+        nina: {id: 'nina', name: 'Nina'},
+      },
+    }, extra || {}));
+  }
+
+  const accept = (db, invitationId) => myFunctions.acceptCalendarFriendInvitationImpl(
+      db, 'nina', 'nina@example.com', {code: null, invitationId});
+
+  it('keeps the first family when a second one admits the same friend', async () => {
+    // The defect: both grants lived at `calendar_friends/nina`, and the second redemption
+    // overwrote the first without anybody being told.
+    const db = twoFamilies();
+
+    await accept(db, 'inv1');
+    await accept(db, 'inv2');
+
+    assert.deepStrictEqual(
+        Object.keys(db._docs.calendar_friends).sort(), ['alice__bob__nina', 'dave__erin__nina']);
+    const first = db._docs.calendar_friends['alice__bob__nina'];
+    assert.deepStrictEqual(first.familyParents, ['alice', 'bob']);
+    assert.strictEqual(first.expiresAtMillis, GRANT_ENDS);
+    const second = db._docs.calendar_friends['dave__erin__nina'];
+    assert.strictEqual(second.familyId, 'dave__erin');
+    assert.strictEqual(second.expiresAtMillis, GRANT_ENDS - 1);
+  });
+
+  it('repeats the family and the friend in the grant, which the rule checks against the id',
+      async () => {
+        const db = twoFamilies();
+
+        await accept(db, 'inv1');
+
+        const grant = db._docs.calendar_friends['alice__bob__nina'];
+        assert.strictEqual(grant.familyId, 'alice__bob');
+        assert.strictEqual(grant.friendUid, 'nina');
+      });
+
+  it('re-keys a per-person grant from before L-5 when the friend redeems another family',
+      async () => {
+        const db = twoFamilies({
+          calendar_friends: {
+            nina: {familyParents: ['dave', 'erin'], familyId: 'dave__erin', name: 'Nina',
+              grantedBy: 'dave', grantedAtMillis: 1, expiresAtMillis: GRANT_ENDS},
+          },
+        });
+
+        await accept(db, 'inv1');
+
+        assert.deepStrictEqual(
+            Object.keys(db._docs.calendar_friends).sort(),
+            ['alice__bob__nina', 'dave__erin__nina']);
+        const moved = db._docs.calendar_friends['dave__erin__nina'];
+        assert.strictEqual(moved.friendUid, 'nina');
+        assert.strictEqual(moved.grantedBy, 'dave');
+        assert.strictEqual(moved.expiresAtMillis, GRANT_ENDS);
+      });
+
+  it('lets a new grant over the same family supersede the legacy one', async () => {
+    const db = twoFamilies({
+      calendar_friends: {nina: {familyParents: ['alice', 'bob'], expiresAtMillis: 5}},
+    });
+
+    await accept(db, 'inv1');
+
+    assert.deepStrictEqual(Object.keys(db._docs.calendar_friends), ['alice__bob__nina']);
+    assert.strictEqual(db._docs.calendar_friends['alice__bob__nina'].expiresAtMillis, GRANT_ENDS);
+  });
+
+  it('only deletes a legacy grant that has already lapsed', async () => {
+    const db = twoFamilies({
+      calendar_friends: {nina: {familyParents: ['dave', 'erin'], expiresAtMillis: 5}},
+    });
+
+    await accept(db, 'inv1');
+
+    assert.deepStrictEqual(Object.keys(db._docs.calendar_friends), ['alice__bob__nina']);
+  });
+
+  it('leaves a legacy grant it cannot name a family for where it is', async () => {
+    const db = twoFamilies({
+      calendar_friends: {nina: {familyParents: ['dave'], expiresAtMillis: GRANT_ENDS}},
+    });
+
+    await accept(db, 'inv1');
+
+    assert.deepStrictEqual(
+        Object.keys(db._docs.calendar_friends).sort(), ['alice__bob__nina', 'nina']);
+  });
+
+  it('widens the friend profile gate to the new family, keeping the first', async () => {
+    const db = twoFamilies({
+      friend_profiles: {nina: {uid: 'nina', name: 'Nina', familyParents: ['alice', 'bob']}},
+    });
+
+    await accept(db, 'inv1');
+    assert.deepStrictEqual(db._docs.friend_profiles.nina.familyParents, ['alice', 'bob']);
+    await accept(db, 'inv2');
+
+    assert.deepStrictEqual(
+        db._docs.friend_profiles.nina.familyParents, ['alice', 'bob', 'dave', 'erin']);
+    assert.strictEqual(db._docs.friend_profiles.nina.name, 'Nina');
+  });
+
+  it('creates no profile for a friend who has not written one', async () => {
+    const db = twoFamilies();
+    await accept(db, 'inv1');
+    assert.strictEqual(db._docs.friend_profiles, undefined);
+  });
+});
+
+describe('rekeyedLegacyCalendarFriendGrant', () => {
+  let myFunctions;
+
+  before(() => {
+    myFunctions = require('../index');
+  });
+
+  it('moves a legacy grant to its family, stamping a missing familyId', () => {
+    const out = myFunctions.rekeyedLegacyCalendarFriendGrant(
+        'nina', {familyParents: ['bob', 'alice'], expiresAtMillis: 9});
+    assert.deepStrictEqual(out, {
+      id: 'alice__bob__nina',
+      data: {familyParents: ['bob', 'alice'], expiresAtMillis: 9, familyId: 'alice__bob',
+        friendUid: 'nina'},
+    });
+  });
+
+  it('leaves a per-family id alone', () => {
+    assert.strictEqual(myFunctions.rekeyedLegacyCalendarFriendGrant(
+        'alice__bob__nina', {familyParents: ['alice', 'bob'], familyId: 'alice__bob'}), null);
+  });
+
+  it('refuses to name a family it cannot state honestly', () => {
+    [
+      {familyParents: ['alice']},
+      {familyParents: ['alice', 'alice']},
+      {familyParents: ['alice', '']},
+      {},
+      // A stored family that disagrees with the parents is a person's call, not a migration's.
+      {familyParents: ['alice', 'bob'], familyId: 'alice__carol'},
+    ].forEach((data) => {
+      assert.strictEqual(myFunctions.rekeyedLegacyCalendarFriendGrant('nina', data), null);
+    });
   });
 });
 

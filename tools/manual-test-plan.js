@@ -265,6 +265,12 @@ const RULES = [
       'K/data/repository/**', 'K/data/remote/**', 'firestore.rules', 'functions/**'],
   },
   {
+    sections: ['5.6'],
+    why: 'a calendar friend, whose grants are one per family',
+    paths: ['K/presentation/friends/**', 'K/domain/friends/**', 'K/data/repository/Friend*',
+      'app/src/main/res/values*/friend_strings.xml'],
+  },
+  {
     sections: ['5.5'],
     why: 'the document vault or chat attachments',
     paths: ['K/presentation/documents/**', 'K/domain/documents/**', 'K/data/documents/**',

@@ -21,28 +21,57 @@ object FriendMappers {
     /**
      * A [CalendarFriendGrant] from its stored map, or null when the document cannot describe one.
      *
-     * @param friendUid The document's id — the grant does not repeat it in its own fields.
+     * The grant must repeat its own id — `familyId` and `friendUid` both present, and the
+     * document id exactly [CalendarFriendGrant.documentId] of the two — because that is what the
+     * events rule checks (L-5). A per-person grant from before L-5 (`calendar_friends/{friendUid}`,
+     * no `friendUid` field) is dropped for the same reason: the rule admits nothing through it, so
+     * listing it would show access that does not exist, and a revoke of it by family would miss.
+     * The operator's backfill re-keys those.
+     *
+     * @param documentId The document's id, `{familyId}__{friendUid}`.
      * @param data The document's data.
      */
-    fun grantFrom(friendUid: String, data: Map<String, Any?>?): CalendarFriendGrant? {
-        if (data == null || friendUid.isBlank()) return null
-        val parents = (data["familyParents"] as? List<*>)
+    fun grantFrom(documentId: String, data: Map<String, Any?>?): CalendarFriendGrant? {
+        val stored = data ?: return null
+        val (familyId, friendUid) = grantIdentity(documentId, stored) ?: return null
+        val parents = (stored["familyParents"] as? List<*>)
             ?.mapNotNull { (it as? String)?.takeIf { uid -> uid.isNotBlank() } }
             .orEmpty()
-        // Exactly two, always: the events query is `whereIn` over this list, and a list of one
-        // or three would either under-fetch or reach past the family.
-        if (parents.size != 2) return null
-        val expiresAtMillis = (data["expiresAtMillis"] as? Number)?.toLong() ?: 0L
-        if (expiresAtMillis <= 0L) return null
-        return CalendarFriendGrant(
-            friendUid = friendUid,
-            name = (data["name"] as? String).orEmpty(),
-            photoUrl = (data["photoUrl"] as? String)?.takeIf { it.isNotBlank() },
-            familyParents = parents,
-            grantedBy = (data["grantedBy"] as? String).orEmpty(),
-            grantedAtMillis = (data["grantedAtMillis"] as? Number)?.toLong() ?: 0L,
-            expiresAtMillis = expiresAtMillis
-        )
+        val expiresAtMillis = (stored["expiresAtMillis"] as? Number)?.toLong() ?: 0L
+        // Exactly two parents, always: the events query is `whereIn` over this list, and a list
+        // of one or three would either under-fetch or reach past the family. And an expiry,
+        // always: the one default this must never have is "forever".
+        return if (parents.size == 2 && expiresAtMillis > 0L) {
+            CalendarFriendGrant(
+                friendUid = friendUid,
+                name = (stored["name"] as? String).orEmpty(),
+                photoUrl = (stored["photoUrl"] as? String)?.takeIf { it.isNotBlank() },
+                familyParents = parents,
+                grantedBy = (stored["grantedBy"] as? String).orEmpty(),
+                grantedAtMillis = (stored["grantedAtMillis"] as? Number)?.toLong() ?: 0L,
+                expiresAtMillis = expiresAtMillis,
+                familyId = familyId
+            )
+        } else {
+            null
+        }
+    }
+
+    /**
+     * The `(familyId, friendUid)` a grant document names in its own fields, or null when either
+     * is missing or the pair does not spell [documentId] — the same agreement the events rule
+     * requires between a grant's path and its contents.
+     */
+    private fun grantIdentity(documentId: String, data: Map<String, Any?>): Pair<String, String>? {
+        val friendUid = (data["friendUid"] as? String)?.takeIf { it.isNotBlank() }
+        val familyId = (data["familyId"] as? String)?.takeIf { it.isNotBlank() }
+        return if (friendUid != null && familyId != null &&
+            documentId == CalendarFriendGrant.documentId(familyId, friendUid)
+        ) {
+            familyId to friendUid
+        } else {
+            null
+        }
     }
 
     /**

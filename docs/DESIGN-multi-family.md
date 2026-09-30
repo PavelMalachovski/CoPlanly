@@ -339,7 +339,9 @@ today and says so at the call site; that line is where the answer goes.
 
 **Calendar friends.** `calendar_friends/{friendUid}` is central today and is checked against an
 event's creator. It has to become per family, or a grandmother admitted by one household would
-read the other household's calendar.
+read the other household's calendar. *(Done: M-6 scoped the grant to one `familyId`, and L-5
+keyed it `calendar_friends/{familyId}__{friendUid}` so one friend can hold a grant in each
+family — see ROADMAP M-6.)*
 
 ## Why now
 

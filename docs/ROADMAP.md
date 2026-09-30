@@ -2712,8 +2712,18 @@ keeping:
   never trusts the id it is sent: it checks it against the inviter's live co-parents and falls
   back to the family they are showing, which is also what an invitation from an older build gets.
 
-**Lapsed grants are swept** (September 2026): `sweepLapsedCalendarFriends` deletes
-`calendar_friends/{uid}` daily at 05:00 UTC once `expiresAtMillis` has passed. Nothing leaked
+**One grant per family** (L-5, September 2026, `docs/AUDIT-2026-09-30.md` §3). M-6 scoped the
+grant to one family but still stored it at `calendar_friends/{friendUid}`, one per person, so a
+grandmother admitted by a second family silently lost the first. Grants now live at
+`calendar_friends/{familyId}__{friendUid}` and repeat both halves, the professional-grant shape:
+the rule builds the path from the event's family and the reader, the friend lists their grants
+with `where('friendUid', '==', uid)`, a parent revokes only the family on screen, and the friend's
+profile gate gains each admitting family's parents. The rule keeps no fallback to the per-person
+id; `backfillRecordFamilyIds` re-keys those, and the callable re-keys the redeemer's own. Device
+check §5.6.
+
+**Lapsed grants are swept** (September 2026): `sweepLapsedCalendarFriends` deletes a grant
+daily at 05:00 UTC once `expiresAtMillis` has passed. Nothing leaked
 before it — the rule refuses an expired read at `request.time` — but the row lingered in the
 parents' list. A grant with no positive numeric expiry is never swept: the callable does not write
 one, and the rule admits nothing through it.
