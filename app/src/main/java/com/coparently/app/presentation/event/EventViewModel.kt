@@ -264,12 +264,15 @@ class EventViewModel @Inject constructor(
     }
 
     /**
-     * Data class to store previous event position for undo functionality.
+     * The times an event had before the last move, restored exactly by [undoLastMove].
+     *
+     * Only the hour used to be kept, so undoing a move of a 9:30 event put it back at the
+     * minute it had been dragged to.
      */
     data class PreviousEventPosition(
         val eventId: String,
-        val previousDate: LocalDate,
-        val previousHour: Int?
+        val previousStart: LocalDateTime,
+        val previousEnd: LocalDateTime?
     )
 
     private var lastMoveUndoInfo: PreviousEventPosition? = null
@@ -285,11 +288,12 @@ class EventViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val event = eventUseCases.getEvents.getById(eventId) ?: return@launch
+                // A recurring event is stored once: moving one drawn occurrence would write its
+                // times onto the whole series. The views do not offer the drag; this is the guard.
+                if (event.isRecurring) return@launch
 
                 // Store previous position for undo
-                val previousDate = event.startDateTime.toLocalDate()
-                val previousHour = event.startDateTime.hour
-                lastMoveUndoInfo = PreviousEventPosition(eventId, previousDate, previousHour)
+                lastMoveUndoInfo = PreviousEventPosition(eventId, event.startDateTime, event.endDateTime)
 
                 // An event with no end time keeps none: Duration.between(start, null) is an NPE
                 // (a platform-type Java call Kotlin lets through), and an all-day Google import
@@ -332,15 +336,9 @@ class EventViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val event = eventUseCases.getEvents.getById(undoInfo.eventId) ?: return@launch
-                // Same null-end guard as moveEvent: keep no end time rather than NPE.
-                val duration = event.endDateTime?.let { Duration.between(event.startDateTime, it) }
-                val originalTime = event.startDateTime.toLocalTime()
-                val previousTime = undoInfo.previousHour?.let { originalTime.withHour(it) } ?: originalTime
-                val previousStart = undoInfo.previousDate.atTime(previousTime)
-                val previousEnd = duration?.let { previousStart.plus(it) }
                 val restoredEvent = event.copy(
-                    startDateTime = previousStart,
-                    endDateTime = previousEnd
+                    startDateTime = undoInfo.previousStart,
+                    endDateTime = undoInfo.previousEnd
                 )
                 val result = eventUseCases.updateEvent(restoredEvent)
                 result.onSuccess {
@@ -374,6 +372,8 @@ class EventViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val event = eventUseCases.getEvents.getById(eventId) ?: return@launch
+                // As in moveEvent: resizing one occurrence must not rewrite the whole series.
+                if (event.isRecurring) return@launch
 
                 val updatedStart = newStartTime ?: event.startDateTime
                 val updatedEnd = newEndTime ?: (event.endDateTime ?: event.startDateTime.plusHours(1))

@@ -716,8 +716,11 @@ private fun DayWeekPage(
                                         onDragOverDeleteButton = onDragOverDeleteButton,
                                         displayStart = seg.segStart,
                                         displayEnd = seg.segEnd,
-                                        resizable = !seg.clamped,
-                                        draggable = !seg.clamped,
+                                        // A recurring event is drawn once per occurrence
+                                        // but stored once: a move or resize would write
+                                        // this occurrence's times onto the whole series.
+                                        resizable = !seg.clamped && !seg.event.isRecurring,
+                                        draggable = !seg.clamped && !seg.event.isRecurring,
                                         showTime = daysCount == 1
                                     )
                                 }
@@ -837,7 +840,8 @@ private fun EventChip(
     // times for multi-day / overnight events, which are clamped to each day).
     displayStart: LocalDateTime = event.startDateTime,
     displayEnd: LocalDateTime = event.endDateTime ?: event.startDateTime.plusHours(1),
-    // Continuation segments of multi-day events are not resizable/movable (ambiguous).
+    // Continuation segments of multi-day events are not resizable/movable (ambiguous), and
+    // neither is an occurrence of a recurring event (it would move the whole series).
     resizable: Boolean = true,
     draggable: Boolean = true,
     // Day view spells the time out under the title; week view leaves it to the block's
