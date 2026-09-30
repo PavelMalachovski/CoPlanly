@@ -494,13 +494,13 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   **(2) Missing schemas.** `CoPlanlyDatabaseMigrationTest` held 14 test methods when the job
   was added, and only the six covering 11→12, 12→13 and 13→14 could run. The other eight name
   14→15 through 24→25 and need `15.json`–`24.json`, which do not exist and cannot be
-  regenerated — `app/schemas/` holds 2–14, then 33, 34 and 36. Those eight have **never passed anywhere**; they were written against
+  regenerated — `app/schemas/` holds 2–14, then 33, 34 and 36–44. Those eight have **never passed anywhere**; they were written against
   schemas that were already gone. They carry `@Ignore` naming the versions they want, so the
   job is green on what can run and the intent survives for whoever restores a schema. Do not
   read that as ordinary quarantine: an `@Ignore` normally hides a defect, and this one records
   missing data that no fix to the code can supply. The migrations a test can prove are those
-  six plus 33→34 (MON-5's parenting plan), 34→35 (MON-13's region) and 35→36 (MON-6b's contact
-  windows) — this line once credited a 33→34 test to MON-5 before one existed; it was written in
+  six plus 33→34 (MON-5's parenting plan), 34→35 (MON-13's region), 35→36 (MON-6b's contact
+  windows) and every step from 36→37 to 43→44, which `36.json`–`44.json` make possible — this line once credited a 33→34 test to MON-5 before one existed; it was written in
   September 2026 from `33.json` and `34.json`. The last two each run 34→36 through both
   migrations, because **`35.json` does not exist**: the build exports only the current version, and v35 and v36 landed on the
   same branch before the Regenerate workflow ran, so 35 was never current there. A schema
@@ -639,7 +639,9 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   on a wire-format change — `app/src/test/resources/wire/current/` is one of the job's inputs.
 
   **A second workflow file exists and is not part of CI**: `.github/workflows/regenerate.yml` runs
-  `detektBaseline` and exports the Room schema, then commits both back to the branch it ran on.
+  `detektBaseline` and exports the Room schema, then commits both back to the branch it ran on
+  (rebasing onto the branch head first, so a push made while it ran does not lose its work; the
+  bot's commit starts no CI run, so the next human push is what verifies it).
   It exists because those are the two artefacts only a machine with an Android SDK can produce,
   and it is **manual on purpose** — regenerating a baseline accepts every violation that exists
   at that moment. Trigger it with `workflow_dispatch` from `main`, or, on a branch that has not
@@ -918,7 +920,12 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   says so — and a grant or an event with no `familyId` admits nothing until
   `backfillRecordFamilyIds` has run. Do **not** soften that with a fallback to `familyParents`
   alone: it restores exactly the check M-6 removed, which is how the same leak survived once
-  already in `expenses`.
+  already in `expenses`. **A grant ends with its family** (September 2026): `unpairCoParent`
+  deletes every `calendar_friends` grant naming the ended `familyId`, as it does professional
+  grants, and `acceptCalendarFriendInvitation` **refuses** an invitation whose `familyId` names a
+  relationship the inviter is no longer in (`inviter-not-paired`) instead of re-pointing it at the
+  family the inviter happens to be showing; only an invitation naming no family at all (an older
+  build's) falls back to `partnerId`.
   `acceptCalendarFriendInvitation` is a **third** callable beside pairing and guest and
   `acceptPairingInvitation` refuses its `kind` outright — redeeming a friend code there would
   run `assignSlots` and hand a friend a permanent parent slot. `Event.friendParticipates`
@@ -1158,7 +1165,10 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
 13. **The conversation id is derived, never generated.** `ConversationKey.of(uidA, uidB)`
     sorts the two UIDs and joins them, so both devices compute the same id without
     coordination and creating the conversation is idempotent. Randomly generated ids are
-    what made the two phones settle on separate threads. Read and delivery state live on
+    what made the two phones settle on separate threads. **The `conversations` create rule binds
+    it** (September 2026): the id must be `canonicalPairId` of the participants, which must be
+    stored sorted — a thread under any other id was a look-alike one parent could talk into alone,
+    or a squat on another pair's id. Read and delivery state live on
     the conversation as `{uid: epochMillis}` maps — one write per event — and the ticks and
     unread badge are derived from them by `ChatReadState`, never stored per message.
     Message times are stored the same way: `Message.sentAtMillis`, epoch millis (Room
@@ -1422,8 +1432,22 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     `messages` create additionally requires the pairing behind the thread to be
     live, and `notifyOfChatMessage` re-checks it and takes the sender's name from their profile
     — an unpaired ex could otherwise keep posting under any name and have it pushed. Client
-    writes to `users/{uid}` may no longer move `role`, `partnerId` or `partnerIds` (repeating the
-    stored value is fine: `diff().affectedKeys()`). Three things not to undo on the client:
+    writes to `users/{uid}` may no longer move `role`, `partnerId`, `partnerIds` or
+    `pendingRevocationOf` (repeating the stored value is fine: `diff().affectedKeys()`), **may not
+    create a profile carrying any of them** (an empty `partnerId`/`partnerIds`/`pendingRevocationOf`
+    is allowed, `role` must be absent — `ensureProfile` and `updateUser` write neither), and **may
+    not delete it at all** (`allow delete: if false`; account deletion runs as admin). The create
+    pin and the delete are one fix: delete-then-re-create with `partnerIds: [victim]` made
+    `myAudience()` name the victim, which is exactly what `isMyAudience` exists to refuse. A
+    non-creator's event edit also keeps the stored `familyId` and `isPrivate`, except filling a
+    blank family with the creator's and the caller's own (`partnerKeepsFamily`, what the
+    co-parent's `FamilyIdBackfill` writes back), and a change request's status moves only as the
+    app moves it: the addressee answers (`ACCEPTED`/`DECLINED`), the requester withdraws
+    (`CANCELLED`). **`expenses` and `budgets` are readable by a co-parent only while the family is
+    live** (`isLiveFamilyMember`: the id names them *and* `families/{id}` exists — unpair deletes
+    it); the id alone kept an ex-partner reading the household's money for ever, because those two
+    carry no audience for unpair to narrow. So a pair must have a `families/{id}` document:
+    `backfillFamilyDocuments` has to have run before these rules are deployed. Three things not to undo on the client:
     `CoPlanlyMessagingService` drops a push whose `targetUserId` is not the signed-in uid, and
     `FcmService.unregisterToken` runs on sign-out and deletion — a token names a *device*, and a
     device that changed hands used to show the previous account's chat; `EncryptedDatabase.
@@ -1470,8 +1494,9 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     `FieldValue.serverTimestamp()`, never a client value** — the rule refuses anything else, and
     the export labels the two clocks separately because they answer different questions (when the
     parent acted; when the server saw it). **A revision is queued in Room before the event's own
-    upload, and deleted only once the server has it** — the event write paths discard their
-    `Result`, so a revision riding on them would be lost exactly when the phone was offline; a
+    upload, and deleted only once the server has it** — a failed event write re-queues the event
+    (it is marked synced only on success) but re-sends it as it stands then, so a revision riding
+    on that write would be lost exactly when the phone was offline; a
     `PERMISSION_DENIED` on a retry is checked with `exists()` against the server, because a second
     `set()` of a landed id is an update the rule refuses. **`event_versions` is not in
     `TOMBSTONED_COLLECTIONS`, and not in `SHARED_AUDIENCE_COLLECTIONS`** — a revision survives its
@@ -1658,9 +1683,11 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     knows nothing of layers, and without that every fortnight edit would propose deleting the
     summer. And **a layer change is a pattern change**: `submitSeasonalLayers` goes through
     `submitPattern`, so a paired family gets a proposal, never an overwrite, and the section
-    refuses to send while the co-parent's own proposal waits (the repository's fallback there is
-    a local save). The grid shows a layer only through the custody band it already draws — **no
-    new colour, and no per-month banner** (the variable-height strip `CalendarScreen` removed for
+    refuses to send while the co-parent's own proposal waits — and so does the repository: a pair
+    with a shared document never falls back to `saveAndActivate`, which would push the pattern
+    over the agreed one and the waiting proposal; it answers `COPARENT_PROPOSAL_WAITING` or
+    `NOT_SENT` and writes nothing. The grid shows a layer only through the custody band it
+    already draws — **no new colour, and no per-month banner** (the variable-height strip `CalendarScreen` removed for
     school vacations). `functions/calendar-feed.js` ports the codec and the precedence; change the
     Kotlin, change the fixture both suites share. **Holiday fairness (MON-20) only counts**:
     `HolidayFairnessCalculator` reads the same resolver, so swaps and layers count as drawn and a
@@ -1970,6 +1997,14 @@ below hold what it fixed in place.
      record stays with that record.
    The cost is MON-23's: a path does not narrow at unpair. A new Storage prefix follows this shape.
    None of it is live until `firebase deploy --only storage`, then `purgeLegacyPhotoPaths` once.
+9. **Erasure reaches the families a parent already left** (September 2026). Unpair leaves a
+   `parenting_plans/{familyId}` in place, so `deleteAccountDataImpl` finds former co-parents
+   through accepted co-parent invitations (`coParentsByInvitation`, the same evidence
+   `hadAnotherCoParent` reads) and deletes the departing uid's key from `answers`, `agreedTo`,
+   `catalogueVersions` and `updatedAt` there — the former co-parent's half stays. Invitations the
+   departing parent *accepted* keep `acceptedBy` (the sender's evidence of an earlier
+   relationship; don't delete them) and lose `toEmail`; a departing guest leaves a child record's
+   `guests` map as well as its `sharedWith`.
 
 ## Known issues / do not "fix" silently
 

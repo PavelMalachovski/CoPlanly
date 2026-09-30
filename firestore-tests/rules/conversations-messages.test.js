@@ -81,9 +81,36 @@ describe('Part 1d: conversations', () => {
     await seed(env, PAIRED_USERS);
   });
 
-  it('lets a paired parent create the 1:1 thread', async () => {
+  it('lets a paired parent create the 1:1 thread under the pair\'s own id', async () => {
+    // The shape `ensureConversation` writes: `ConversationKey.of` as the id, the two uids sorted.
     const db = env.authenticatedContext(ALICE).firestore();
-    await assertSucceeds(db.doc('conversations/conv-1').set(conversationDoc({})));
+    await assertSucceeds(db.doc(`conversations/${CANONICAL_ID}`).set(
+        conversationDoc({id: CANONICAL_ID}), {merge: true}));
+  });
+
+  it('refuses a thread for the pair under any other id', async () => {
+    // A look-alike nobody else's phone observes — the destination the message-hiding attack
+    // needed, and a thread one parent could keep talking into alone.
+    const db = env.authenticatedContext(ALICE).firestore();
+    await assertFails(db.doc('conversations/conv-1').set(conversationDoc({})));
+    await assertFails(db.doc(`conversations/${CANONICAL_ID}x`).set(conversationDoc({})));
+  });
+
+  it('refuses the pair\'s id with the participants out of order', async () => {
+    const db = env.authenticatedContext(ALICE).firestore();
+    await assertFails(db.doc(`conversations/${CANONICAL_ID}`)
+        .set(conversationDoc({participants: [BOB, ALICE]})));
+  });
+
+  it('refuses squatting another pair\'s id with the caller\'s own participants', async () => {
+    // Alice is paired with Bob; she must not be able to create `bob__carol` naming herself, which
+    // would turn Bob and Carol's own first write into a refused update for ever.
+    await seed(env, {
+      'users/bob-uid': {name: 'Bob', email: 'b@x.test', partnerIds: [ALICE, CAROL]},
+      'users/carol-uid': {name: 'Carol', email: 'c@x.test', partnerId: BOB},
+    });
+    const db = env.authenticatedContext(ALICE).firestore();
+    await assertFails(db.doc(`conversations/${BOB}__${CAROL}`).set(conversationDoc({})));
   });
 
   it('denies creating a thread the caller is not part of', async () => {
@@ -517,14 +544,15 @@ describe('a thread kept after the co-parent deleted their account', () => {
     const db = env.authenticatedContext(ALICE).firestore();
     await assertFails(db.doc('conversations/conv-ac')
         .update({departedUid: CAROL, retainedUntilMillis: Date.parse('2026-10-25T10:00:00Z')}));
-    await assertFails(db.doc('conversations/conv-new').set(conversationDoc({
-      id: 'conv-new',
+    const pairId = [ALICE, CAROL].sort().join('__');
+    await assertFails(db.doc(`conversations/${pairId}`).set(conversationDoc({
+      id: pairId,
       participants: [ALICE, CAROL],
       retainedUntilMillis: Date.parse('2026-10-25T10:00:00Z'),
     })));
     // The control: the same new thread without the mark is created.
-    await assertSucceeds(db.doc('conversations/conv-new').set(conversationDoc({
-      id: 'conv-new',
+    await assertSucceeds(db.doc(`conversations/${pairId}`).set(conversationDoc({
+      id: pairId,
       participants: [ALICE, CAROL],
     })));
   });

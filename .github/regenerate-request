@@ -66,3 +66,5 @@ requested: 2026-09-25 — MON-8 again, after the Hilt fix (7370ee12)
 requested: 2026-09-25 — translation review: cs/de/ru/uk wording moves the screenshot baselines
 tour-fixes 2026-09-25T12:12:26Z
 # 2026-09-25: screenshot baselines after the final design pass
+requested: 2026-09-30 — screenshot baselines with the pinned fixture date (audit PR #123)
+requested: 2026-09-30 — again, after the branch moved during the first run

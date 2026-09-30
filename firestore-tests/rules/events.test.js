@@ -183,6 +183,55 @@ describe('Part 1d: events', () => {
       await assertFails(db.doc('events/event-1').update({title: 'Renamed by Carol'}));
     });
 
+    describe('a co-parent\'s edit keeps the creator\'s household and privacy', () => {
+      const FAMILY = [ALICE, BOB].sort().join('__');
+
+      it('refuses moving the event into another family', async () => {
+        // `familyId` decides who else reads it — a calendar friend, a professional, the feed.
+        await seed(env, {'events/event-1': eventDoc({familyId: FAMILY})});
+        const bob = env.authenticatedContext(BOB).firestore();
+        await assertFails(bob.doc('events/event-1')
+            .update({familyId: [BOB, CAROL].sort().join('__')}));
+        await assertFails(bob.doc('events/event-1').update({familyId: ''}));
+      });
+
+      it('refuses marking it private', async () => {
+        await seed(env, {'events/event-1': eventDoc({familyId: FAMILY})});
+        const bob = env.authenticatedContext(BOB).firestore();
+        await assertFails(bob.doc('events/event-1').update({isPrivate: true}));
+      });
+
+      it('lets the co-parent\'s full save through when it repeats both', async () => {
+        await seed(env, {'events/event-1': eventDoc({familyId: FAMILY})});
+        const bob = env.authenticatedContext(BOB).firestore();
+        await assertSucceeds(bob.doc('events/event-1')
+            .set(eventDoc({familyId: FAMILY, title: 'Moved by Bob', lastModifiedBy: BOB})));
+      });
+
+      it('lets the co-parent fill a blank family with the pair\'s own', async () => {
+        // What Bob's phone writes back after its `FamilyIdBackfill` stamped the downloaded copy.
+        await seed(env, {'events/event-1': eventDoc({familyId: ''})});
+        const bob = env.authenticatedContext(BOB).firestore();
+        await assertSucceeds(bob.doc('events/event-1').update({familyId: FAMILY}));
+      });
+
+      it('refuses filling a blank family with one the creator is not in', async () => {
+        await seed(env, {
+          'events/event-1': eventDoc({familyId: ''}),
+          'users/bob-uid': {name: 'Bob', email: 'b@x.test', partnerIds: [ALICE, CAROL]},
+        });
+        const bob = env.authenticatedContext(BOB).firestore();
+        await assertFails(bob.doc('events/event-1')
+            .update({familyId: [BOB, CAROL].sort().join('__')}));
+      });
+
+      it('still lets the creator re-file their own event', async () => {
+        await seed(env, {'events/event-1': eventDoc({familyId: ''})});
+        const alice = env.authenticatedContext(ALICE).firestore();
+        await assertSucceeds(alice.doc('events/event-1').update({familyId: FAMILY}));
+      });
+    });
+
     describe('acceptance', () => {
       // No rule was added for these fields: they live on a document the audience already reads,
       // and the update rule already requires `createdByFirebaseUid` to be unchanged, which

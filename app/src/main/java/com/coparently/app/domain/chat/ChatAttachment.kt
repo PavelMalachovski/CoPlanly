@@ -105,5 +105,19 @@ object ChatAttachmentCodec {
             attachment.sizeBytes > 0 &&
             attachment.sha256.length == SHA256_HEX_LENGTH &&
             HEX.matches(attachment.sha256) &&
-            attachment.fileName.isNotBlank()
+            isOneSafeSegment(attachment.fileName)
+
+    /**
+     * True when [name] is one path segment that cannot climb out of a folder: no separator, and
+     * not `.` or `..`. The name is written by the *other* phone, and it becomes both the tail of
+     * [belongsTo]'s path comparison and a file name in this phone's cache — `../..` there would
+     * pass the first and escape the second. A leading dot is refused as a whole, which
+     * [SharedFilePolicy.safeFileName] never produces (it trims them), so it covers `.`, `..` and
+     * `..anything` without refusing an honest `report..pdf`.
+     */
+    private fun isOneSafeSegment(name: String): Boolean =
+        name.isNotBlank() &&
+            '/' !in name &&
+            '\\' !in name &&
+            !name.startsWith('.')
 }

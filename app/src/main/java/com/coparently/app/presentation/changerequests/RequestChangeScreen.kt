@@ -32,6 +32,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -150,12 +151,13 @@ private fun RequestChangeForm(
     val dateFormatter = localizedDate("yMMMEEEd")
     val timeFormatter = shortTime()
 
-    var proposedDate by remember { mutableStateOf(event.startDateTime.toLocalDate()) }
-    var proposedStartTime by remember { mutableStateOf(event.startDateTime.toLocalTime()) }
-    var proposedEndTime by remember {
+    // Saveable, so a rotation keeps what the parent proposed and wrote (D-11's rule).
+    var proposedDate by rememberSaveable { mutableStateOf(event.startDateTime.toLocalDate()) }
+    var proposedStartTime by rememberSaveable { mutableStateOf(event.startDateTime.toLocalTime()) }
+    var proposedEndTime by rememberSaveable {
         mutableStateOf(event.endDateTime?.toLocalTime())
     }
-    var note by remember { mutableStateOf("") }
+    var note by rememberSaveable { mutableStateOf("") }
 
     var showDatePicker by remember { mutableStateOf(false) }
     var showStartTimePicker by remember { mutableStateOf(false) }

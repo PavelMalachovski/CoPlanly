@@ -8,6 +8,8 @@ import com.coparently.app.data.remote.google.GoogleCalendarApi
 import com.coparently.app.domain.model.User
 import com.coparently.app.domain.repository.UserRepository
 import com.google.api.client.auth.oauth2.Credential
+import com.google.api.client.util.DateTime
+import com.google.api.services.calendar.model.EventDateTime
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -175,6 +177,40 @@ class CalendarSyncRepositoryTest {
 
         assertEquals(LocalDate.of(2026, 8, 24), success.from, "start of the window")
         assertEquals(LocalDate.of(2027, 8, 24), success.until, "end of the window")
+    }
+
+    @Test
+    fun `an all-day import ends on its last day, not on Google's exclusive end date`() = runTest {
+        // Google closes a one-day event on the 14th with `end.date` = the 15th. Stored as the 15th
+        // at midnight it overlapped the 15th in every day query and was drawn a day too long.
+        val credential = mockk<Credential>()
+        coEvery { credentialProvider.getCredential() } returns credential
+        coEvery { userRepository.getCurrentUserId() } returns "u1"
+        coEvery { userRepository.getUserById("u1") } returns User(
+            id = "u1", email = "p@example.com", name = "Pavel", role = "dad", colorCode = "#2196F3"
+        )
+        every {
+            googleCalendarApi.listEvents(any(), any(), any(), any(), any())
+        } returns imported(
+            allDay("one-day", from = "2026-09-14", toExclusive = "2026-09-15"),
+            allDay("two-days", from = "2026-09-14", toExclusive = "2026-09-16")
+        )
+        val inserted = slot<List<EventEntity>>()
+        coEvery { eventDao.insertEvents(capture(inserted)) } returns Unit
+
+        repository().syncFromGoogle().toList()
+
+        val byId = inserted.captured.associateBy { it.id }
+        assertEquals(LocalDateTime.of(2026, 9, 14, 0, 0), byId.getValue("one-day").startDateTime)
+        assertEquals(LocalDateTime.of(2026, 9, 14, 23, 59), byId.getValue("one-day").endDateTime)
+        assertEquals(LocalDateTime.of(2026, 9, 15, 23, 59), byId.getValue("two-days").endDateTime)
+    }
+
+    private fun allDay(id: String, from: String, toExclusive: String) = GoogleEvent().apply {
+        this.id = id
+        summary = "Holiday"
+        start = EventDateTime().setDate(DateTime(from))
+        end = EventDateTime().setDate(DateTime(toExclusive))
     }
 
     private fun imported(vararg events: GoogleEvent, truncated: Boolean = false) = CalendarEvents(

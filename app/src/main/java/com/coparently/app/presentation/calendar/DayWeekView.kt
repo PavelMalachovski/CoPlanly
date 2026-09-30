@@ -152,7 +152,7 @@ fun DayWeekView(
     getContactWindows: (LocalDate) -> List<ContactWindow> = { emptyList() },
     parentNames: ParentNames,
     onDateChange: (LocalDate) -> Unit,
-    onEventClick: (String) -> Unit,
+    onEventClick: (Event) -> Unit,
     onAddEventClick: (LocalDate, Int) -> Unit = { _, _ -> },
     onEventDragDrop: ((String, LocalDate, Int) -> Unit)? = null,
     onEventResize: ((String, LocalDateTime?, LocalDateTime?) -> Unit)? = null,
@@ -255,7 +255,7 @@ private fun DayWeekPage(
     getContactWindows: (LocalDate) -> List<ContactWindow>,
     parentNames: ParentNames,
     scrollState: LazyListState,
-    onEventClick: (String) -> Unit,
+    onEventClick: (Event) -> Unit,
     onAddEventClick: (LocalDate, Int) -> Unit = { _, _ -> },
     onEventDragDrop: ((String, LocalDate, Int) -> Unit)? = null,
     onEventResize: ((String, LocalDateTime?, LocalDateTime?) -> Unit)? = null,
@@ -565,9 +565,10 @@ private fun DayWeekPage(
                                     }
 
                                     // Resolved here: the semantics lambda is not a composable context.
+                                    // Spoken on the reader's clock (R-9), not a fixed "HH:00".
                                     val slotDescription = stringResource(
                                         R.string.calendar_time_slot_description,
-                                        String.format(Locale.getDefault(), "%02d:00", hour),
+                                        java.time.LocalTime.of(hour, 0).format(shortTime()),
                                         date.format(localizedDate("MMMd"))
                                     )
 
@@ -702,7 +703,7 @@ private fun DayWeekPage(
                                 ) {
                                     EventChip(
                                         event = seg.event,
-                                        onClick = { onEventClick(seg.event.id) },
+                                        onClick = { onEventClick(seg.event) },
                                         columnWidthPx = laneWidth,
                                         hourHeightPx = hourCellHeightPx,
                                         baseDate = date,
@@ -716,8 +717,11 @@ private fun DayWeekPage(
                                         onDragOverDeleteButton = onDragOverDeleteButton,
                                         displayStart = seg.segStart,
                                         displayEnd = seg.segEnd,
-                                        resizable = !seg.clamped,
-                                        draggable = !seg.clamped,
+                                        // A recurring event is drawn once per occurrence
+                                        // but stored once: a move or resize would write
+                                        // this occurrence's times onto the whole series.
+                                        resizable = !seg.clamped && !seg.event.isRecurring,
+                                        draggable = !seg.clamped && !seg.event.isRecurring,
                                         showTime = daysCount == 1
                                     )
                                 }

@@ -186,25 +186,41 @@ class ChildInfoRepositoryImpl @Inject constructor(
             .catch { e -> android.util.Log.w("ChildInfoRepo", "Child info sync failed", e) }
             .collect { firestoreList ->
                 for (firestoreData in firestoreList) {
-                    // A tombstone is the co-parent telling this device the child record is gone.
-                    // Answered from the raw document, before it is mapped: a deletion is the one
-                    // thing that must not depend on the rest of the document still parsing.
-                    if (Tombstone.isDeleted(firestoreData)) {
-                        childInfoDao.deleteChildInfoById(firestoreData["id"] as? String ?: continue)
-                        continue
-                    }
-                    val childInfo = firestoreData.toChildInfo()
-                    // The mirror image: this device has deleted the record and the deletion has
-                    // not been written yet, so the document is still alive remotely. Inserting it
-                    // would undo the parent's own delete a few lines after the upload half tried
-                    // to deliver it.
-                    if (childInfoDao.getChildInfoById(childInfo.id)?.deletedAtMillis != null) {
-                        continue
-                    }
-                    val entity = childInfo.toEntity().copy(syncedToFirestore = true)
-                    childInfoDao.insertChildInfo(entity)
+                    applyDownloaded(firestoreData)
                 }
             }
+    }
+
+    /** Takes one downloaded child document into Room, unless this device's row must win. */
+    private suspend fun applyDownloaded(firestoreData: Map<String, Any?>) {
+        // A tombstone is the co-parent telling this device the child record is gone. Answered
+        // from the raw document, before it is mapped: a deletion is the one thing that must not
+        // depend on the rest of the document still parsing.
+        if (Tombstone.isDeleted(firestoreData)) {
+            (firestoreData["id"] as? String)?.let { childInfoDao.deleteChildInfoById(it) }
+            return
+        }
+        // One document that does not parse must not end the whole pull: it is logged by id
+        // (never by content) and skipped, as `ExpenseRepositoryImpl` does.
+        val childInfo = runCatching { firestoreData.toChildInfo() }
+            .onFailure { e ->
+                android.util.Log.w(
+                    "ChildInfoRepo",
+                    "Child info document ${firestoreData["id"]} could not be read " +
+                        "(${e.javaClass.simpleName}); skipped"
+                )
+            }
+            .getOrNull() ?: return
+        val local = childInfoDao.getChildInfoById(childInfo.id)
+        // Two local states the server's copy must not replace. A pending tombstone: this device
+        // deleted the record and the deletion has not been written yet, so inserting the live
+        // document would undo the parent's own delete. And an unsynced edit: the upload half ran
+        // first and failed, so replacing the row would erase the edit before it was ever sent —
+        // it stays queued, and the server's version comes down once the edit has gone up.
+        val localWins = local != null && (local.deletedAtMillis != null || !local.syncedToFirestore)
+        if (!localWins) {
+            childInfoDao.insertChildInfo(childInfo.toEntity().copy(syncedToFirestore = true))
+        }
     }
 
     /**

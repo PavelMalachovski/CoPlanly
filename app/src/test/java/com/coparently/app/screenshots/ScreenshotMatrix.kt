@@ -15,6 +15,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
+import com.coparently.app.presentation.common.LocalFixedToday
 import com.coparently.app.presentation.theme.CoPlanlyTheme
 import com.coparently.app.presentation.theme.LocalParentPalette
 import com.github.takahirom.roborazzi.RoborazziOptions
@@ -130,7 +131,9 @@ private fun ScreenshotFrame(
     val density = LocalDensity.current
     CompositionLocalProvider(
         LocalDensity provides Density(density.density, variant.fontScale),
-        LocalParentPalette provides variant.palette.palette
+        LocalParentPalette provides variant.palette.palette,
+        // The fixtures' date, not the clock: the month grid's weekday header marks today.
+        LocalFixedToday provides ScreenshotFixtures.TODAY
     ) {
         CoPlanlyTheme(darkTheme = variant.dark, contrastLevel = variant.contrast) {
             Surface(color = MaterialTheme.colorScheme.background) {

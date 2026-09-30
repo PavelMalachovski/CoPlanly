@@ -5,6 +5,7 @@ import com.coparently.app.data.family.SelectedFamilySource
 import com.coparently.app.data.local.dao.ChildInfoDao
 import com.coparently.app.data.local.dao.EventDao
 import com.coparently.app.data.local.dao.UserDao
+import com.coparently.app.data.local.entity.EventEntity
 import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.local.preferences.PreferenceKeys
 import com.coparently.app.data.remote.firebase.FcmService
@@ -295,7 +296,21 @@ class SyncService @Inject constructor(
                     continue
                 }
 
-                val remoteEntity = firestoreData.toEventEntity()
+                // This device holds the event as private, and a private event never meets the
+                // server (CLAUDE.md item 3). A surviving document means the removal that making
+                // it private should have done has not landed yet — it is not a conflict to
+                // resolve: `UseLocal` would `update()` the private content onto the document, and
+                // `UseRemote` would write the shared copy over the row and make it public again.
+                if (localEntity?.isPrivate == true) {
+                    retractPrivateEvent(localEntity, userId)
+                    continue
+                }
+
+                // One document that does not parse must not end the whole pass — every document
+                // after it, and the cursor below, would go with it.
+                val remoteEntity = readDocument("Event", remoteId) {
+                    firestoreData.toEventEntity()
+                } ?: continue
 
                 if (localEntity != null && !localEntity.syncedToFirestore) {
                     // Conflict detected - resolve it
@@ -338,8 +353,18 @@ class SyncService @Inject constructor(
                                     EventDocument.storedMembers(localEntity.forMembersJson),
                                 "familyId" to (localEntity.familyId ?: "")
                             )
-                            firestoreEventDataSource.updateEvent(localEntity.id, localData)
-                            eventDao.markAsSynced(localEntity.id)
+                            // Synced only once the write has landed: a refused or offline
+                            // update leaves the row queued, and the next pass tries again.
+                            val updated = firestoreEventDataSource.updateEvent(localEntity.id, localData)
+                            if (updated.isSuccess) {
+                                eventDao.markAsSynced(localEntity.id)
+                            } else {
+                                Log.w(
+                                    TAG,
+                                    "Event ${localEntity.id} kept locally; its update was not written",
+                                    updated.exceptionOrNull()
+                                )
+                            }
                         }
                         is ConflictResolution.UseRemote -> {
                             // Use remote version
@@ -593,7 +618,10 @@ class SyncService @Inject constructor(
                     continue
                 }
 
-                val remoteEntity = firestoreData.toChildInfoEntity()
+                // See the events pass: one malformed document is skipped, not fatal.
+                val remoteEntity = readDocument("Child info", firestoreData["id"] as? String) {
+                    firestoreData.toChildInfoEntity()
+                } ?: continue
                 val localEntity = childInfoDao.getChildInfoById(remoteEntity.id)
 
                 // This device deleted the record and the deletion has not been written yet, so
@@ -643,8 +671,17 @@ class SyncService @Inject constructor(
                                 "lastModifiedBy" to userId,
                                 "familyId" to (localEntity.familyId ?: "")
                             )
-                            firestoreChildInfoDataSource.updateChildInfo(localEntity.id, localData)
-                            childInfoDao.markAsSynced(localEntity.id)
+                            val updated =
+                                firestoreChildInfoDataSource.updateChildInfo(localEntity.id, localData)
+                            if (updated.isSuccess) {
+                                childInfoDao.markAsSynced(localEntity.id)
+                            } else {
+                                Log.w(
+                                    TAG,
+                                    "Child info ${localEntity.id} kept locally; its update was not written",
+                                    updated.exceptionOrNull()
+                                )
+                            }
                         }
                         is ConflictResolution.UseRemote -> {
                             // Use remote version
@@ -694,13 +731,21 @@ class SyncService @Inject constructor(
         val token = fcmService.getCurrentToken()
         if (token != null && token != localUser.fcmToken) {
             fcmService.updateUserToken(token)
-            userDao.updateUser(localUser.copy(fcmToken = token))
+            // Re-read after the network call: a whole-row write from the copy taken above would
+            // put back every column another writer changed meanwhile (a health consent, say).
+            val current = userDao.getUserById(userId) ?: localUser
+            userDao.updateUser(current.copy(fcmToken = token))
         }
 
         // Download latest user data from Firestore
         val remoteUserData = firestoreUserDataSource.getUserById(userId)
         if (remoteUserData != null) {
-            val updatedUser = localUser.copy(
+            // The row as it stands now, not as it stood before the network round trips above:
+            // `updateUser` writes every column, so a copy of the first read would undo whatever
+            // was saved in between — a granted or withdrawn health consent, a profile edit — with
+            // nothing to say it happened. Only the fields below come from the server.
+            val currentUser = userDao.getUserById(userId) ?: localUser
+            val updatedUser = currentUser.copy(
                 // **`partnerId` is deliberately not refreshed from the remote document.** It
                 // stopped meaning "my co-parent" and started meaning "the family this device is
                 // showing" (`SelectedFamilySource`), so copying the server's value here would
@@ -716,7 +761,7 @@ class SyncService @Inject constructor(
                 // way `ParentSlotMigrator.reslotIfSlotChanged` rejects a blank incoming role,
                 // so a document with `role: ""` cannot get stamped onto new records and then
                 // permanently block a real re-stamp of them.
-                role = (remoteUserData["role"] as? String)?.takeIf { it.isNotBlank() } ?: localUser.role
+                role = (remoteUserData["role"] as? String)?.takeIf { it.isNotBlank() } ?: currentUser.role
             )
             userDao.updateUser(updatedUser)
 
@@ -734,7 +779,7 @@ class SyncService @Inject constructor(
             Log.i(
                 TAG,
                 "Profile sync for $userId: remote role=${remoteUserData["role"]}, " +
-                    "local=${localUser.role}, applied=${updatedUser.role}"
+                    "local=${currentUser.role}, applied=${updatedUser.role}"
             )
 
             runCatching {
@@ -745,6 +790,40 @@ class SyncService @Inject constructor(
             }
         }
     }
+
+    /**
+     * Takes a private event's leftover document off the server, if this user may.
+     *
+     * Only the creator can remove an event document (the rule's `delete` is creator-only), so
+     * anybody else simply leaves it alone — skipping it is what keeps their private row private.
+     * A failed removal is logged and retried on the next pass, which meets the same document.
+     */
+    private suspend fun retractPrivateEvent(localEntity: EventEntity, userId: String) {
+        if (localEntity.createdByFirebaseUid != userId) return
+        val removed = firestoreEventDataSource.deleteEvent(localEntity.id)
+        if (removed.isSuccess) {
+            if (localEntity.syncedToFirestore) {
+                eventDao.updateEvent(localEntity.copy(syncedToFirestore = false))
+            }
+        } else {
+            Log.w(
+                TAG,
+                "Private event ${localEntity.id} still has a remote copy; retrying next sync",
+                removed.exceptionOrNull()
+            )
+        }
+    }
+
+    /**
+     * Maps one downloaded document, or answers null when it does not parse — logged with its id
+     * and the failure's type, never its content.
+     */
+    private inline fun <T> readDocument(kind: String, id: String?, read: () -> T): T? =
+        runCatching(read)
+            .onFailure { e ->
+                Log.w(TAG, "$kind document $id could not be read (${e.javaClass.simpleName}); skipped")
+            }
+            .getOrNull()
 
     /**
      * Tells the co-parent, once, that this parent's records have been shared with them.

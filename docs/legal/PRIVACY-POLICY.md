@@ -362,7 +362,7 @@ daily on our servers, not by hand.
 | Your account and everything you entered | Until you delete it, or delete the record |
 | A single event, expense, child record, pet or family document you delete | Marked deleted at once, so your co-parent's phone learns of it; removed for good **90 days** later, with its file or photographs |
 | A photograph you remove or replace | Deleted from our servers when you save the change |
-| A guest's, calendar friend's or professional's access | Until the date set when it was granted, or until either parent ends it; professionals at most **180 days** |
+| A guest's, calendar friend's or professional's access | Until the date set when it was granted, or until either parent ends it; professionals at most **180 days**. A calendar friend's or professional's access to a family also ends when its two parents unlink |
 | An invitation nobody accepted | Deleted **30 days** after it expired (**90 days** after it was made, if it had no expiry) |
 | A read-only calendar link | Until revoked; deleted after **90 days** without use |
 | Notifications waiting to be delivered | **30 days** |
@@ -386,7 +386,8 @@ within which a claim arising from the family's affairs can generally still be br
 
 - deletes your profile, your events and the saved revisions of events you edited, your expenses
   and budgets, the records you entered about your child and pet, your custody schedule and agreed
-  expense split, your parenting plan and your invitations;
+  expense split, your parenting plan and your invitations — and takes your answers out of the
+  parenting plan of any family you had already left, leaving that co-parent's own answers;
 - deletes the photographs attached to those records — event photos, receipts, and medical and
   pet photographs — any photograph you added before you linked a co-parent, and the family
   documents you added. A photograph you added to a record your co-parent created stays with that
@@ -394,7 +395,11 @@ within which a claim arising from the family's affairs can generally still be br
 - **keeps the message thread with your co-parent for 30 days, then deletes it** — messages and
   files, whichever of you sent them. See "The message thread" below;
 - removes you from the audience of anything your co-parent created, and ends any guest,
-  calendar-friend or professional access you granted or held;
+  calendar-friend or professional access you granted or held (as a guest, your name is removed
+  from the child's record as well);
+- removes your email address from invitations you accepted from somebody else. The invitation
+  itself stays with the person who sent it, because it is their record that the two of you were
+  once linked;
 - deletes every read-only calendar link into your families, whichever of you created it;
 - unlinks the two of you, so their access ends immediately;
 - deletes the fingerprint of your Google Calendar authorisation, if you connected one, and

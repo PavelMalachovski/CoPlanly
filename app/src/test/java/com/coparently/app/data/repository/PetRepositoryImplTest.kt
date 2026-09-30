@@ -2,6 +2,7 @@ package com.coparently.app.data.repository
 
 import com.coparently.app.data.local.dao.PetDao
 import com.coparently.app.data.local.dao.UserDao
+import com.coparently.app.data.local.entity.PetEntity
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestorePetDataSource
 import com.coparently.app.domain.model.Pet
@@ -11,11 +12,13 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
 import java.io.IOException
 import java.time.LocalDateTime
+import kotlin.test.assertEquals
 
 /**
  * The pet delete path (CQ-19).
@@ -92,6 +95,40 @@ class PetRepositoryImplTest {
         coVerify { petDao.markDeleted(PET_ID, any()) }
         coVerify(exactly = 0) { firestorePetDataSource.tombstonePet(any(), any(), any()) }
         coVerify(exactly = 0) { petDao.deletePetById(any()) }
+    }
+
+    @Test
+    fun `a pull keeps an edit that has not gone up instead of replacing it with the server's copy`() =
+        runTest {
+            val edited = with(repository) { pet().copy(name = "Rex (edited)").toEntity() }
+            // The upload half runs first and fails, so the edit is still unsynced when the
+            // download half meets the older document.
+            coEvery { petDao.getUnsyncedPets() } returns listOf(edited)
+            coEvery { firestorePetDataSource.upsertPet(any(), any()) } returns
+                Result.failure(IOException("offline"))
+            coEvery { petDao.getPetById(PET_ID) } returns edited
+            val document = with(repository) { pet().toFirestoreMap(listOf(ALICE)) }
+            every { firestorePetDataSource.getPetsForParent(ALICE) } returns flowOf(listOf(document))
+
+            repository.pullOnce()
+
+            coVerify(exactly = 0) { petDao.insertPet(any()) }
+        }
+
+    @Test
+    fun `a pull skips a document that does not parse and takes the rest`() = runTest {
+        coEvery { petDao.getUnsyncedPets() } returns emptyList()
+        coEvery { petDao.getPetById(any()) } returns null
+        val document = with(repository) { pet().toFirestoreMap(listOf(ALICE)) }
+        every { firestorePetDataSource.getPetsForParent(ALICE) } returns flowOf(
+            listOf(document + ("name" to 42L), document + ("id" to "pet-2"))
+        )
+        val inserted = mutableListOf<PetEntity>()
+        coEvery { petDao.insertPet(capture(inserted)) } returns Unit
+
+        repository.pullOnce()
+
+        assertEquals(listOf("pet-2"), inserted.map { it.id })
     }
 
     private fun pet() = Pet(

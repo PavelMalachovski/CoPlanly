@@ -63,7 +63,12 @@ class RequestChangeViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<RequestChangeUiState>(RequestChangeUiState.Loading)
     val uiState: StateFlow<RequestChangeUiState> = _uiState.asStateFlow()
 
+    /**
+     * Loads [eventId] once. The screen calls this again after a rotation, and a second load would
+     * turn a request being sent back into an editable form with Send enabled.
+     */
     fun loadEvent(eventId: String) {
+        if (_uiState.value !is RequestChangeUiState.Loading) return
         viewModelScope.launch {
             val event = eventRepository.getEventById(eventId)
             _uiState.value = if (event != null) {

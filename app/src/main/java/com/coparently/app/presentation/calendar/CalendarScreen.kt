@@ -301,6 +301,9 @@ fun CalendarScreen(
 
     // Event preview sheet: a tap opens the read-only preview, Edit goes to the editor
     var previewEventId by remember { mutableStateOf<String?>(null) }
+    // The tapped occurrence's start: every occurrence of a recurring event shares its id, so the
+    // id alone opened the first one on screen and showed its date instead of the tapped one's.
+    var previewEventStart by remember { mutableStateOf<LocalDateTime?>(null) }
 
     // Day-swap selection: a long-press starts a run, further taps extend it, and the sheet opens
     // when the parent commits. Screen state rather than ViewModel state for the same reason
@@ -541,25 +544,27 @@ fun CalendarScreen(
 
     // Single delete path for the whole screen, so every way of destroying an event offers the
     // same protection. Deleting by id alone cannot be undone (the row is already gone), so the
-    // full event is captured first and Undo re-creates it with the same id.
+    // full event is captured first and Undo re-creates it with the same id. Captured from the
+    // store, not from the grid's list: for a recurring event that holds expanded occurrences,
+    // and re-creating the first one on screen restarted the series from that day.
     val deletedMessage = stringResource(R.string.event_deleted_message)
     val undoLabel = stringResource(R.string.event_deleted_undo)
     val deleteEventWithUndo: (String) -> Unit = { eventId ->
-        val deletedEvent = events.firstOrNull { it.id == eventId }
-        if (deletedEvent == null) {
-            // Already gone (deleted elsewhere or synced away) — nothing to capture or restore.
-            eventViewModel.deleteEventById(eventId)
-        } else {
+        scope.launch {
+            val deletedEvent = eventViewModel.getEventById(eventId)
+            if (deletedEvent == null) {
+                // Already gone (deleted elsewhere or synced away) — nothing to capture or restore.
+                eventViewModel.deleteEventById(eventId)
+                return@launch
+            }
             eventViewModel.deleteEvent(deletedEvent)
-            scope.launch {
-                val result = snackbarHostState.showSnackbar(
-                    message = deletedMessage,
-                    actionLabel = undoLabel,
-                    duration = SnackbarDuration.Short
-                )
-                if (result == SnackbarResult.ActionPerformed) {
-                    eventViewModel.createEvent(deletedEvent)
-                }
+            val result = snackbarHostState.showSnackbar(
+                message = deletedMessage,
+                actionLabel = undoLabel,
+                duration = SnackbarDuration.Short
+            )
+            if (result == SnackbarResult.ActionPerformed) {
+                eventViewModel.createEvent(deletedEvent)
             }
         }
     }
@@ -866,7 +871,10 @@ fun CalendarScreen(
                                     getContactWindows = grid.windows,
                                     parentNames = parentNames,
                                     onDateChange = { calendarViewModel.setSelectedDate(it) },
-                                    onEventClick = { eventId -> previewEventId = eventId },
+                                    onEventClick = { event ->
+                                        previewEventStart = event.startDateTime
+                                        previewEventId = event.id
+                                    },
                                     onAddEventClick = { date, hour ->
                                         onAddEventClick(date, hour)
                                     },
@@ -967,7 +975,8 @@ fun CalendarScreen(
 
     // Event preview bottom sheet
     previewEventId?.let { eventId ->
-        val previewEvent = events.firstOrNull { it.id == eventId }
+        val previewEvent = events.firstOrNull { it.id == eventId && it.startDateTime == previewEventStart }
+            ?: events.firstOrNull { it.id == eventId }
         if (previewEvent != null) {
             com.coparently.app.presentation.event.EventPreviewSheet(
                 event = previewEvent,

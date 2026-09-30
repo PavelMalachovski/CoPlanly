@@ -102,6 +102,35 @@ class ExpenseRepositoryImplTest {
         coVerify(exactly = 1) { firestoreExpenseDataSource.getAllExpenses(null) }
     }
 
+    @Test
+    fun `a retried tombstone names the parent deleting it, not the expense's creator`() = runTest {
+        // Bob deleted Alice's expense offline. The retry used to stamp the tombstone with the
+        // creator, so the record said Alice deleted what Bob did — the delete path names the
+        // deleter, and a retry of the same deletion must say the same thing.
+        val firebaseUser = mockk<FirebaseUser> { every { uid } returns "uidB" }
+        every { firebaseAuthService.getCurrentUser() } returns firebaseUser
+        coEvery { userDao.getUserById("uidB") } returns userEntity(id = "uidB", partnerId = "uidA")
+        coEvery { expenseDao.getUnsyncedExpenses() } returns listOf(
+            com.coparently.app.data.local.entity.ExpenseEntity(
+                id = "e1",
+                title = "School trip",
+                amount = 42.0,
+                category = "EDUCATION",
+                paidBy = "mom",
+                date = LocalDate.of(2026, 8, 1),
+                createdAt = LocalDateTime.of(2026, 8, 1, 9, 0),
+                createdByFirebaseUid = "uidA",
+                deletedAtMillis = 1_000L
+            )
+        )
+        coEvery { firestoreExpenseDataSource.tombstoneExpense(any(), any(), any()) } returns Result.success(Unit)
+        every { firestoreExpenseDataSource.getAllExpenses(any()) } returns emptyFlow()
+
+        repository.observeRemote()
+
+        coVerify(exactly = 1) { firestoreExpenseDataSource.tombstoneExpense("e1", 1_000L, "uidB") }
+    }
+
     // ---- ownership on update ------------------------------------------------
 
     @Test

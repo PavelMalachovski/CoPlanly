@@ -38,18 +38,20 @@ const BUILD = /^(build\.gradle\.kts$|settings\.gradle\.kts$|gradle\.properties$|
 /**
  * What the screenshot job renders, what renders it, and what it compares against: the committed
  * baselines under `app/src/test/screenshots/` (written by the Regenerate workflow), so a commit
- * that changes only a baseline is verified against the code it was recorded from.
+ * that changes only a baseline is verified against the code it was recorded from. `utils/` is
+ * here because `LocalizedDates` formats the dates and times the rendered components show.
  */
-const SCREENSHOT_INPUTS = /^(app\/src\/main\/java\/com\/coparently\/app\/(presentation|domain)\/|app\/src\/main\/res\/|app\/src\/test\/java\/com\/coparently\/app\/screenshots\/|app\/src\/test\/screenshots\/|tools\/screenshot-gallery\.js$)/;
+const SCREENSHOT_INPUTS = /^(app\/src\/main\/java\/com\/coparently\/app\/(presentation|domain|utils)\/|app\/src\/main\/res\/|app\/src\/test\/java\/com\/coparently\/app\/screenshots\/|app\/src\/test\/screenshots\/|tools\/screenshot-gallery\.js$)/;
 
 /**
  * What the API 26 and 16 KB emulator legs exist to catch beyond API 30: native libraries and the
- * encrypted database (`data/local/`), the manifest, the instrumented tests themselves, the
+ * encrypted database (`data/local/`) with the Keystore wrapper that seals its passphrase
+ * (`data/security/`), the manifest, the instrumented tests themselves, the
  * debug-only network config, and how the emulator step runs. A newer-API call elsewhere in the
  * code is lint's NewApi check first, on every pull request; these two legs are its runtime
  * confirmation, and they run on every push to `main`.
  */
-const EMULATOR_SENSITIVE = /^(app\/src\/main\/AndroidManifest\.xml$|app\/src\/main\/jniLibs\/|app\/src\/main\/java\/com\/coparently\/app\/data\/local\/|app\/src\/androidTest\/|app\/src\/debug\/|tools\/with-screen-recording\.sh$)/;
+const EMULATOR_SENSITIVE = /^(app\/src\/main\/AndroidManifest\.xml$|app\/src\/main\/jniLibs\/|app\/src\/main\/java\/com\/coparently\/app\/data\/local\/|app\/src\/main\/java\/com\/coparently\/app\/data\/security\/|app\/src\/androidTest\/|app\/src\/debug\/|tools\/with-screen-recording\.sh$)/;
 
 /**
  * What the `upgrade` job (the base build's data opened by this build) can be broken by: the

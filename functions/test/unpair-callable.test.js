@@ -199,8 +199,17 @@ function fakeDb(seed, options) {
         update(ref, update) {
           ops.push({ref, update});
         },
+        delete(ref) {
+          ops.push({ref, remove: true});
+        },
         async commit() {
-          ops.forEach((op) => applyUpdate(op.ref.collection, op.ref.id, op.update));
+          ops.forEach((op) => {
+            if (op.remove) {
+              if (docs[op.ref.collection]) delete docs[op.ref.collection][op.ref.id];
+            } else {
+              applyUpdate(op.ref.collection, op.ref.id, op.update);
+            }
+          });
         },
       };
     },
@@ -489,6 +498,29 @@ describe('unpairCoParentImpl', () => {
       assert.ok(!('alice__bob' in (db._docs.families || {})),
           'the family should be gone');
     });
+
+    it('ends the calendar-friend and professional grants of that family, and only those',
+        async () => {
+          // A friend's grant names one family (M-6); the events rule would keep admitting them
+          // to every event that still carries the ended family's id until the grant expired.
+          const seed = seedWithCustodyModel();
+          seed.calendar_friends = {
+            nina: {familyId: CUSTODY_KEY, familyParents: ['alice', 'bob'], expiresAtMillis: 9e12},
+            otto: {familyId: 'alice__carol', familyParents: ['alice', 'carol'],
+              expiresAtMillis: 9e12},
+          };
+          seed.professional_grants = {
+            [`${CUSTODY_KEY}__pro`]: {familyId: CUSTODY_KEY, proUid: 'pro'},
+            'alice__carol__pro': {familyId: 'alice__carol', proUid: 'pro'},
+          };
+          const db = fakeDb(seed);
+
+          await unpairCoParentImpl(db, 'alice');
+
+          assert.deepStrictEqual(Object.keys(db._docs.calendar_friends), ['otto']);
+          assert.deepStrictEqual(
+              Object.keys(db._docs.professional_grants), ['alice__carol__pro']);
+        });
 
     it('leaves the co-parent local copies alone when unpairing', async () => {
       // The custody_models document is the one *shared* Firestore document a pair has;

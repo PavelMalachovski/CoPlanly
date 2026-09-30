@@ -28,6 +28,9 @@ const PAIRED_USERS = {
   'users/alice-uid': {name: 'Alice', email: 'a@x.test', partnerId: BOB},
   'users/bob-uid': {name: 'Bob', email: 'b@x.test', partnerId: ALICE},
   'users/carol-uid': {name: 'Carol', email: 'c@x.test', partnerId: ''},
+  // The family document pairing writes: its existence is what keeps the pair's money readable
+  // to both of them (`isLiveFamilyMember`). Unpair deletes it.
+  [`families/${FAMILY}`]: {members: [ALICE, BOB].sort()},
 };
 
 /**
@@ -78,6 +81,21 @@ function changeRequestDoc(overrides) {
     reason: 'Work trip',
     createdAt: '2026-08-01T10:00:00',
   }, overrides);
+}
+
+/**
+ * What `unpairCoParent` leaves behind: both profiles cleared and `families/{id}` deleted. The
+ * records still name the family, so membership of the id alone kept the ex-partner reading.
+ *
+ * @param {!Object} env Rules test environment.
+ * @return {!Promise<void>} Resolves when the family has ended.
+ */
+async function endFamily(env) {
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    await ctx.firestore().doc(`families/${FAMILY}`).delete();
+    await ctx.firestore().doc('users/alice-uid').set({partnerId: ''}, {merge: true});
+    await ctx.firestore().doc('users/bob-uid').set({partnerId: ''}, {merge: true});
+  });
 }
 
 describe('Part 1d: budgets', () => {
@@ -139,6 +157,16 @@ describe('Part 1d: budgets', () => {
         .where('familyId', '==', FAMILY).get());
     await assertFails(db.collection('budgets')
         .where('createdByFirebaseUid', 'in', [ALICE, BOB]).get());
+  });
+
+  it('ends the co-parent\'s access once the family is gone, and keeps the author\'s', async () => {
+    await seed(env, {'budgets/budget-1': budgetDoc({})});
+    await endFamily(env);
+    const bob = env.authenticatedContext(BOB).firestore();
+    await assertFails(bob.doc('budgets/budget-1').get());
+    await assertFails(bob.doc('budgets/budget-1').update({monthlyLimit: 1}));
+    await assertFails(bob.collection('budgets').where('familyId', '==', FAMILY).get());
+    await assertSucceeds(env.authenticatedContext(ALICE).firestore().doc('budgets/budget-1').get());
   });
 });
 
@@ -228,6 +256,25 @@ describe('Part 1d: expenses (read, create, update)', () => {
     await assertFails(db.collection('expenses')
         .where('createdByFirebaseUid', 'in', [ALICE, BOB]).get());
   });
+
+  it('ends the co-parent\'s access once the family is gone, and keeps the author\'s', async () => {
+    await seed(env, {'expenses/expense-1': expenseDoc({})});
+    await endFamily(env);
+    const bob = env.authenticatedContext(BOB).firestore();
+    await assertFails(bob.doc('expenses/expense-1').get());
+    await assertFails(bob.collection('expenses').where('familyId', '==', FAMILY).get());
+    await assertSucceeds(
+        env.authenticatedContext(ALICE).firestore().doc('expenses/expense-1').get());
+  });
+
+  it('serves the app\'s ordered family query while the family is live', async () => {
+    // `FirestoreExpenseDataSource.getAllExpenses`: equality on `familyId`, ordered by date. The
+    // `exists()` in the rule is evaluated once for the query because the id is fixed by it.
+    await seed(env, {'expenses/expense-1': expenseDoc({})});
+    const db = env.authenticatedContext(BOB).firestore();
+    await assertSucceeds(db.collection('expenses')
+        .where('familyId', '==', FAMILY).orderBy('date', 'desc').get());
+  });
 });
 
 describe('Part 1d: change_requests', () => {
@@ -248,14 +295,14 @@ describe('Part 1d: change_requests', () => {
 
     const bob = env.authenticatedContext(BOB).firestore();
     await assertSucceeds(bob.doc('change_requests/cr-1').get());
-    await assertSucceeds(bob.doc('change_requests/cr-1').update({status: 'APPROVED'}));
+    await assertSucceeds(bob.doc('change_requests/cr-1').update({status: 'ACCEPTED'}));
   });
 
   it('denies an unrelated third party', async () => {
     await seed(env, {'change_requests/cr-1': changeRequestDoc({})});
     const db = env.authenticatedContext(CAROL).firestore();
     await assertFails(db.doc('change_requests/cr-1').get());
-    await assertFails(db.doc('change_requests/cr-1').update({status: 'APPROVED'}));
+    await assertFails(db.doc('change_requests/cr-1').update({status: 'ACCEPTED'}));
     await assertFails(db.doc('change_requests/cr-1').delete());
   });
 
@@ -285,6 +332,42 @@ describe('Part 1d: change_requests', () => {
     await assertSucceeds(alice.doc('change_requests/cr-2').update({
       status: 'CANCELLED', respondedAt: '2026-08-02T10:00:00',
     }));
+  });
+
+  it('refuses the requester answering their own request', async () => {
+    // Accepting is the addressee's decision; the requester's own phone would otherwise show a
+    // request the other parent never agreed to as accepted on both screens.
+    await seed(env, {'change_requests/cr-1': changeRequestDoc({})});
+    const alice = env.authenticatedContext(ALICE).firestore();
+    await assertFails(alice.doc('change_requests/cr-1').update({
+      status: 'ACCEPTED', respondedAt: '2026-08-02T10:00:00',
+    }));
+    await assertFails(alice.doc('change_requests/cr-1').update({
+      status: 'DECLINED', respondedAt: '2026-08-02T10:00:00',
+    }));
+  });
+
+  it('refuses the addressee withdrawing somebody else\'s request', async () => {
+    await seed(env, {'change_requests/cr-1': changeRequestDoc({})});
+    const bob = env.authenticatedContext(BOB).firestore();
+    await assertFails(bob.doc('change_requests/cr-1').update({
+      status: 'CANCELLED', respondedAt: '2026-08-02T10:00:00',
+    }));
+  });
+
+  it('refuses a status the app never writes, from either side', async () => {
+    await seed(env, {'change_requests/cr-1': changeRequestDoc({status: 'DECLINED'})});
+    await assertFails(env.authenticatedContext(BOB).firestore()
+        .doc('change_requests/cr-1').update({status: 'PENDING'}));
+    await assertFails(env.authenticatedContext(ALICE).firestore()
+        .doc('change_requests/cr-1').update({status: 'APPROVED'}));
+  });
+
+  it('lets either party re-send the stored status with a family stamp', async () => {
+    // `flushOutbox` and the family backfill rewrite the whole document with the status unchanged.
+    await seed(env, {'change_requests/cr-1': changeRequestDoc({status: 'ACCEPTED'})});
+    await assertSucceeds(env.authenticatedContext(ALICE).firestore()
+        .doc('change_requests/cr-1').set(changeRequestDoc({status: 'ACCEPTED', familyId: FAMILY})));
   });
 
   it('refuses re-addressing a request to a third uid', async () => {

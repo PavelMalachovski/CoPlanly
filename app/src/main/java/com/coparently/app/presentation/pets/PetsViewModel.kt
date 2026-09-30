@@ -16,6 +16,7 @@ import com.coparently.app.presentation.common.FormDraft
 import com.coparently.app.presentation.common.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -136,11 +137,18 @@ class PetsViewModel @Inject constructor(
         }
     }
 
+    /** The editor's observation of one pet, cancelled before the next one starts. */
+    private var petObservation: Job? = null
+
     /**
      * Observes the one pet being edited, by id, for the editor's whole lifetime.
+     *
+     * Cancels a previous observation first, as `ChildInfoViewModel.loadChildInfoById` does:
+     * otherwise opening one pet after another leaves two collectors writing [currentPet].
      */
     fun loadPetById(id: String) {
-        viewModelScope.launch {
+        petObservation?.cancel()
+        petObservation = viewModelScope.launch {
             petRepository.observePetById(id).collect { pet ->
                 _currentPet.value = pet
             }

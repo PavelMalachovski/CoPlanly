@@ -137,6 +137,29 @@ class SeasonalScheduleViewModelTest {
     }
 
     @Test
+    fun `the repository's own refusals reach the screen as what they are`() = runTest(dispatcher) {
+        // A proposal can land between the check above and the send; the repository refuses then.
+        val vm = viewModel()
+        coEvery { repository.submitSeasonalLayers(any()) } returns PatternSubmission.COPARENT_PROPOSAL_WAITING
+
+        vm.saveLayer(draft("X", "2026-07-01", "2026-07-02"), null)
+        advanceUntilIdle()
+
+        assertEquals(UiText.Res(R.string.seasonal_answer_pending_first), vm.firstMessage())
+    }
+
+    @Test
+    fun `a layer change that could not be sent reads as a failed save`() = runTest(dispatcher) {
+        val vm = viewModel()
+        coEvery { repository.submitSeasonalLayers(any()) } returns PatternSubmission.NOT_SENT
+
+        vm.saveLayer(draft("X", "2026-07-01", "2026-07-02"), null)
+        advanceUntilIdle()
+
+        assertEquals(UiText.Res(R.string.seasonal_save_failed), vm.firstMessage())
+    }
+
+    @Test
     fun `opened from an agreed holiday answer, the editor's layer is proposed citing it`() =
         runTest(dispatcher) {
             coEvery { planReferences.referenceFor("holidays_school") } returns holidayReference

@@ -78,6 +78,28 @@ service cloud.firestore {
              request.auth.uid in familyId.split('__');
     }
 
+    // True when [familyId] names a family the caller is in **and that family still exists**.
+    //
+    // `isFamilyMember` alone reads the id and nothing else, so it stays true after the
+    // relationship ends: an ex-partner kept reading — and, on `budgets`, editing — every expense
+    // and budget of the household they left, because those records carry no per-document audience
+    // for unpair to narrow. `unpairCoParent` deletes `families/{id}` in the same transaction that
+    // clears the pairing (and account deletion runs unpair first), so the document's existence is
+    // the relationship's liveness. The id check runs first, so a blank or foreign id never builds
+    // a path and never costs a read.
+    //
+    // The cost: a pair must have a `families/{id}` document. Pairing has written one since M-1,
+    // and `backfillFamilyDocuments` creates it for a pair formed before that — which is why that
+    // callable must have run before these rules are deployed (functions/README.md).
+    //
+    // List queries still validate: the app's own queries constrain `familyId` by equality
+    // (`FirestoreExpenseDataSource`, `FirestoreBudgetDataSource`), which is what lets the rules
+    // engine evaluate this `exists()` once for the whole query.
+    function isLiveFamilyMember(familyId) {
+      return isFamilyMember(familyId) &&
+             exists(/databases/$(database)/documents/families/$(familyId));
+    }
+
     // The family a caller may stamp on a record they write: one they are in, or none.
     //
     // `isFamilyMember` used to be the whole of the story — "a person can only put their own
@@ -497,8 +519,8 @@ service cloud.firestore {
     // The canonical pair id for a 2-element participants list — the same sorted-join formula
     // as Kotlin's `ConversationKey.of(uidA, uidB)` and `CustodyKey.of(uidA, uidB)`
     // (`listOf(uidA, uidB).sorted().joinToString("__")`). Shared by two collections:
-    // `conversations` (used only inside `canRepointMessage` below — its own `create` rule does
-    // not bind the id) and `custody_models` (bound directly into its `create` rule, so a
+    // `conversations` (inside `canRepointMessage` below, and bound directly into its own `create`
+    // rule since September 2026) and `custody_models` (bound directly into its `create` rule, so a
     // document whose id does not match its own participants can never be created). Pinned
     // against the Kotlin side drifting apart by matching tests on each side: `ConversationKeyTest`
     // and `CustodyKeyTest` (Kotlin) assert their respective `of(...)` calls against the literal
@@ -614,6 +636,19 @@ service cloud.firestore {
                       // See `update` below: a profile must not be born self-paired either, or
                       // the same hole reopens through the create path.
                       request.resource.data.get('partnerId', '') != userId &&
+                      // The server-owned fields `update` pins may not be *born* either. A profile
+                      // created with `partnerIds: [victim]` made `myAudience()` name the victim,
+                      // so the creator could write events, children and pets into the victim's
+                      // sync with `isMyAudience` satisfied — and before `delete` was closed, any
+                      // account could get here again by deleting its own profile first. Nothing
+                      // the app creates carries any of them: `ensureProfile`, `updateUser`,
+                      // `setHealthConsent` and the FCM token merge write identity and settings
+                      // only, and pairing (`acceptPairingInvitation`, admin) adds the rest later.
+                      // An empty value is what an unpaired profile honestly holds, so it passes.
+                      request.resource.data.get('partnerId', '') == '' &&
+                      request.resource.data.get('partnerIds', []).size() == 0 &&
+                      request.resource.data.get('pendingRevocationOf', []).size() == 0 &&
+                      !('role' in request.resource.data) &&
                       parentHealthKeyAbsent('medicalProfile') &&
                       parentHealthKeyAbsent('allergies') &&
                       healthConsentValid(request.resource.data) &&
@@ -636,16 +671,18 @@ service cloud.firestore {
       // The same self-reference let an account create a `conversations` document with any
       // stranger as the second participant and post messages into it.
       //
-      // `role`, `partnerId` and `partnerIds` are **server-owned**: `acceptPairingInvitation` and
-      // `unpairCoParent` write them as admin, and the client deliberately omits them from its
-      // profile writes (`UserRepositoryImpl.updateUser`). A client may still *repeat* the stored
-      // value — `diff().affectedKeys()` counts only what changed — but may not move any of the
-      // three. Before this pin a parent could flip their own slot and take the co-parent's
+      // `role`, `partnerId`, `partnerIds` and `pendingRevocationOf` are **server-owned**:
+      // `acceptPairingInvitation` and `unpairCoParent` write them as admin, and the client
+      // deliberately omits them from its profile writes (`UserRepositoryImpl.updateUser`). A client
+      // may still *repeat* the stored value — `diff().affectedKeys()` counts only what changed —
+      // but may not move any of the four. (`pendingRevocationOf` is what tells
+      // `stampOwnBlankFamilyIds` an earlier relationship is still being unwound; clearing it
+      // would let the server stamp an old household's records into a new one.) Before this pin a parent could flip their own slot and take the co-parent's
       // colour, or put both parents in one slot and switch the expense split off for the pair.
       allow update: if isOwner(userId) &&
                       request.resource.data.get('partnerId', '') != userId &&
                       !request.resource.data.diff(resource.data).affectedKeys()
-                        .hasAny(['role', 'partnerId', 'partnerIds']) &&
+                        .hasAny(['role', 'partnerId', 'partnerIds', 'pendingRevocationOf']) &&
                       parentHealthKeyNotWritten('medicalProfile') &&
                       parentHealthKeyNotWritten('allergies') &&
                       healthConsentValid(request.resource.data) &&
@@ -655,7 +692,11 @@ service cloud.firestore {
                        request.resource.data.firebaseUid == null ||
                        request.resource.data.firebaseUid == request.auth.uid);
 
-      allow delete: if isOwner(userId);
+      // Never from a client. Account deletion removes the profile as admin (`deleteAccount`), and
+      // nothing in the app deletes it otherwise. An owner who could delete it could create it
+      // again — and a create is the one write that has no stored value to compare against, which
+      // is how `partnerIds` was re-seeded before `create` pinned it too.
+      allow delete: if false;
     }
 
     // ---- Google OAuth fingerprints ---------------------------------------
@@ -823,6 +864,16 @@ service cloud.firestore {
     // ---- Events --------------------------------------------------------
     // Owners and shared partners have access. Date fields are ISO strings, so
     // no timestamp-type or ordering checks here (that is enforced app-side).
+    // True when a non-creator's edit of an event leaves its `familyId` alone, or fills a blank one
+    // with the family of exactly the creator and the caller (see the events update rule).
+    function partnerKeepsFamily(before, after) {
+      return after.get('familyId', '') == before.get('familyId', '') ||
+             (before.get('familyId', '') == '' &&
+              isFamilyMember(after.get('familyId', '')) &&
+              after.familyId.split('__').size() == 2 &&
+              before.get('createdByFirebaseUid', '') in after.familyId.split('__'));
+    }
+
     match /events/{eventId} {
       // Creator, a shared partner, or a live calendar friend of the creator (item 16). The
       // friend disjunct is last so a parent's own read short-circuits before any `get()`.
@@ -874,7 +925,15 @@ service cloud.firestore {
         (request.auth.uid in resource.data.get('sharedWith', []) &&
          resource.data.get('permissions', '') == 'read_write' &&
          request.resource.data.get('sharedWith', []) == resource.data.get('sharedWith', []) &&
-         request.resource.data.get('permissions', '') == resource.data.get('permissions', ''))
+         request.resource.data.get('permissions', '') == resource.data.get('permissions', '') &&
+         // Nor which household it belongs to, nor whether it is private. `familyId` decides who
+         // else reads it (a calendar friend, a professional, the calendar feed) and `isPrivate`
+         // hides it from the feed and the server's revision record — both the creator's call.
+         // The one move a co-parent's phone legitimately makes is filling a *blank* family with
+         // the pair's own: its `FamilyIdBackfill` stamps a downloaded event that came without one,
+         // and its next save writes that back. Only the family both of them are in qualifies.
+         partnerKeepsFamily(resource.data, request.resource.data) &&
+         request.resource.data.get('isPrivate', false) == resource.data.get('isPrivate', false))
       ) && request.resource.data.createdByFirebaseUid == resource.data.createdByFirebaseUid;
 
       allow delete: if isAuthenticated() &&
@@ -1228,9 +1287,10 @@ service cloud.firestore {
     // is why `backfillRecordFamilyIds` must finish **before** these rules are deployed, not
     // after — see the ordered steps in docs/DESIGN-multi-family.md, M-4.
     match /expenses/{expenseId} {
+      // Live, not merely named: see `isLiveFamilyMember`. The author keeps their own records.
       allow read: if isAuthenticated() && (
         resource.data.createdByFirebaseUid == request.auth.uid ||
-        isFamilyMember(resource.data.get('familyId', ''))
+        isLiveFamilyMember(resource.data.get('familyId', ''))
       );
 
       // The family stamped on it must be the writer's own — see `familyIsMineOrBlank`. Before
@@ -1265,7 +1325,7 @@ service cloud.firestore {
       // budget they had ever set.
       allow read: if isAuthenticated() && (
         resource.data.createdByFirebaseUid == request.auth.uid ||
-        isFamilyMember(resource.data.get('familyId', ''))
+        isLiveFamilyMember(resource.data.get('familyId', ''))
       );
 
       allow create: if isAuthenticated() &&
@@ -1280,12 +1340,22 @@ service cloud.firestore {
       // from another family rewrite this one's limits.
       allow update: if isAuthenticated() && (
         resource.data.createdByFirebaseUid == request.auth.uid ||
-        isFamilyMember(resource.data.get('familyId', ''))
+        isLiveFamilyMember(resource.data.get('familyId', ''))
       ) && request.resource.data.createdByFirebaseUid == resource.data.createdByFirebaseUid &&
         request.resource.data.get('familyId', '') == resource.data.get('familyId', '');
 
       allow delete: if isAuthenticated() &&
                       resource.data.createdByFirebaseUid == request.auth.uid;
+    }
+
+    // True when the status in [after] is one the caller may have set: unchanged by anyone, an
+    // answer by the addressee, a withdrawal by the requester.
+    function changeRequestStatusMove(before, after) {
+      return after.get('status', '') == before.get('status', '') ||
+             (after.get('status', '') in ['ACCEPTED', 'DECLINED'] &&
+              request.auth.uid == before.requestedTo) ||
+             (after.get('status', '') == 'CANCELLED' &&
+              request.auth.uid == before.requestedBy);
     }
 
     // ---- Change requests ----------------------------------------------
@@ -1302,12 +1372,19 @@ service cloud.firestore {
       // read/update/delete on it. What may move is the status, when it was answered, and the
       // family stamp a backfill adds — the fields `ChangeRequestRepositoryImpl.updateStatus`
       // actually changes; it writes the whole document, so unchanged keys do not count.
+      //
+      // **Who decides is pinned too.** Only the addressee answers (`ACCEPTED`, `DECLINED`) and only
+      // the requester withdraws (`CANCELLED`) — the values `ChangeRequestStatus.name` writes, and
+      // the two paths `ChangeRequestViewModel` offers each side. Before this either party could set
+      // any status, so a requester could mark their own request accepted on the addressee's phone.
+      // A write that leaves the status alone (the family stamp) is either party's.
       allow update: if isAuthenticated() && (
         request.auth.uid == resource.data.requestedBy ||
         request.auth.uid == resource.data.requestedTo
       ) && request.resource.data.diff(resource.data).affectedKeys()
              .hasOnly(['status', 'respondedAt', 'familyId']) &&
-        familyIsMineOrBlank(request.resource.data.get('familyId', ''));
+        familyIsMineOrBlank(request.resource.data.get('familyId', '')) &&
+        changeRequestStatusMove(resource.data, request.resource.data);
 
       // A request must be authored by the caller and addressed to their live co-parent.
       //
@@ -1460,8 +1537,8 @@ service cloud.firestore {
     // an app about family conflict. A client may now only notify itself or its real
     // co-parent, using the same `isPartnerOf` relationship the rest of this file gates on.
     //
-    // The Cloud Functions that write here (`onEventCreated`, `onChildInfoUpdated`,
-    // `acceptPairingInvitation`, `unpairCoParent`) all use the Admin SDK, which bypasses
+    // The Cloud Functions that write here (`acceptPairingInvitation`, `unpairCoParent`,
+    // `notifyOfChatMessage` and the other callables and triggers) all use the Admin SDK, which bypasses
     // security rules entirely, so this restriction does not affect them.
     // Types a client may enqueue. An **allow-list**, and the asymmetry is the point: forgetting
     // to add a new client type here makes its push fail to enqueue, which is obvious, while
@@ -1929,9 +2006,20 @@ service cloud.firestore {
       // A newly created conversation may not carry a foreign uid in either mark map (see
       // `noForeignMarksOnCreate`) — otherwise the update-time restriction above is moot,
       // since a forged mark could be baked into the document at creation instead.
+      //
+      // **The id is the pair's, and nothing else** (`ConversationKey.of`: the two uids sorted and
+      // joined). Without that bind a participant could create a second thread for the same pair
+      // under any id — a look-alike nobody else's phone observes — or squat the id of a pair they
+      // are not in with their own participants, so the real pair's `ensureConversation` became an
+      // update of a document naming somebody else, which the update rule refuses for ever. The
+      // participants are stored sorted, as `ensureConversation` writes them, so the id and the
+      // list say the same thing and `canonicalPairId` can index them. Only the functions (admin)
+      // and legacy documents from before the bind carry any other id.
       allow create: if isAuthenticated() &&
                       request.auth.uid in request.resource.data.participants &&
                       request.resource.data.participants.size() == 2 &&
+                      request.resource.data.participants[0] < request.resource.data.participants[1] &&
+                      conversationId == canonicalPairId(request.resource.data.participants) &&
                       (isPartnerOf(request.resource.data.participants[0]) ||
                        isPartnerOf(request.resource.data.participants[1])) &&
                       noForeignMarksOnCreate(request.resource.data, 'lastReadAt') &&

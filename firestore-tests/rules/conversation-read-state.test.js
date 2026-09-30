@@ -159,6 +159,8 @@ describe('Part 1f: conversation creation cannot forge a mark', () => {
   // forged mark for the *other* participant baked directly into the initial document (e.g.
   // a far-future `lastReadAt` entry for the other uid), permanently suppressing their
   // unread badge. This closes that one lifecycle stage earlier than the update path.
+  // A create must use the pair's own id (`ConversationKey.of`), so these do.
+  const PAIR_ID = [ALICE, BOB].sort().join('__');
   let env;
 
   before(async () => {
@@ -172,19 +174,19 @@ describe('Part 1f: conversation creation cannot forge a mark', () => {
 
   it('denies creating with a foreign key already in lastReadAt', async () => {
     const db = env.authenticatedContext(ALICE).firestore();
-    await assertFails(db.doc('conversations/conv-1').set(
+    await assertFails(db.doc(`conversations/${PAIR_ID}`).set(
         conversationDoc({lastReadAt: {[BOB]: 9999999999999}})));
   });
 
   it('denies creating with a foreign key already in lastDeliveredAt', async () => {
     const db = env.authenticatedContext(ALICE).firestore();
-    await assertFails(db.doc('conversations/conv-1').set(
+    await assertFails(db.doc(`conversations/${PAIR_ID}`).set(
         conversationDoc({lastDeliveredAt: {[BOB]: 9999999999999}})));
   });
 
   it('allows creating with only the creator own key in both maps', async () => {
     const db = env.authenticatedContext(ALICE).firestore();
-    await assertSucceeds(db.doc('conversations/conv-1').set(conversationDoc({
+    await assertSucceeds(db.doc(`conversations/${PAIR_ID}`).set(conversationDoc({
       lastReadAt: {[ALICE]: 1722500000000},
       lastDeliveredAt: {[ALICE]: 1722500000000},
     })));
@@ -195,6 +197,6 @@ describe('Part 1f: conversation creation cannot forge a mark', () => {
     delete doc.lastReadAt;
     delete doc.lastDeliveredAt;
     const db = env.authenticatedContext(ALICE).firestore();
-    await assertSucceeds(db.doc('conversations/conv-1').set(doc));
+    await assertSucceeds(db.doc(`conversations/${PAIR_ID}`).set(doc));
   });
 });

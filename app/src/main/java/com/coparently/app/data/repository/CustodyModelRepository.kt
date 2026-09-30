@@ -71,8 +71,16 @@ import javax.inject.Singleton
  * [ACTIVATED] on an unpaired account or a pair's very first schedule (nobody to ask, nothing to
  * protect); [PROPOSED] once a pair has an agreed pattern that a change must not overwrite without
  * consent (owner decision, Aug 2026 walkthrough, item 7).
+ *
+ * The last two are refusals, and both mean **nothing was written**, locally or remotely: a pair
+ * with a shared schedule never takes a change except as a proposal, so there is no local save to
+ * fall back to — the old fallback activated the pattern and pushed it over the shared document,
+ * erasing the co-parent's agreed schedule and any proposal of theirs. [COPARENT_PROPOSAL_WAITING]
+ * when the co-parent's own proposal waits for this parent's answer (only one proposal fits the
+ * document); [NOT_SENT] when the shared document could not be read or the proposal not written,
+ * so the parent can simply try again.
  */
-enum class PatternSubmission { ACTIVATED, PROPOSED }
+enum class PatternSubmission { ACTIVATED, PROPOSED, COPARENT_PROPOSAL_WAITING, NOT_SENT }
 
 /**
  * A run of days that was only partly written.
@@ -311,24 +319,47 @@ class CustodyModelRepository(
      *   ask and a schedule that waited forever for an approval that can never come is worse than
      *   one that simply applies. The very first schedule of a pair also lands this way: there is
      *   no agreed pattern to protect yet.
+     * - **Paired, and the answer is not a proposal** → a refusal, with nothing written: the
+     *   co-parent's own proposal is waiting ([PatternSubmission.COPARENT_PROPOSAL_WAITING]), or
+     *   the document could not be read or the proposal not written ([PatternSubmission.NOT_SENT]).
+     *   Never a local save instead — that pushes the pattern over the shared document.
      *
      * @param planCitation The parenting-plan answer the parent built [model] from (MON-21), as a
      *   `PlanCitationCodec` string, or null. It rides on a proposal only — a pattern that is
      *   simply activated has nobody to show its source to — and it is a citation, never an input:
      *   [model] is what the parent built, whatever the plan says.
-     * @return whether the pattern was activated or merely proposed, so the UI can say which.
+     * @return whether the pattern was activated, merely proposed, or refused, so the UI can say
+     *   which.
      */
     suspend fun submitPattern(model: CustodyModel, planCitation: String? = null): PatternSubmission =
         submit(model, planCitation)
 
-    @Suppress("ReturnCount") // three fall-backs to a local save, each a different failure
+    @Suppress("ReturnCount") // one road per answer: activated, refused, unsent, proposed
     private suspend fun submit(model: CustodyModel, planCitation: String?): PatternSubmission {
         val pair = currentPair()
-        val existing = pair?.let { firestoreCustodyDataSource.getCustody(it.documentId) }
-        if (pair == null || existing == null) {
+        if (pair == null) {
             saveAndActivate(model)
             return PatternSubmission.ACTIVATED
         }
+        // Guarded: an unguarded read threw straight out of the caller's `viewModelScope.launch`.
+        // And a failed read is not an absent document — only a read that *proved* there is none
+        // may activate, because activating pushes this pattern over whatever the pair holds.
+        val read = guarded("proposal read") {
+            firestoreCustodyDataSource.getCustody(pair.documentId)
+                ?.let { SharedCustodyRead.Found(it) }
+                ?: SharedCustodyRead.Absent
+        } ?: SharedCustodyRead.Unavailable
+        val existing = when (read) {
+            is SharedCustodyRead.Found -> read.custody
+            SharedCustodyRead.Absent -> {
+                saveAndActivate(model)
+                return PatternSubmission.ACTIVATED
+            }
+            SharedCustodyRead.Unavailable -> return PatternSubmission.NOT_SENT
+        }
+        // From here on the pair has an agreed schedule, and nothing but a proposal may change it:
+        // no refusal below falls back to `saveAndActivate`, which would overwrite the document —
+        // the agreed pattern and the co-parent's pending proposal with it.
         val proposed = CustodyProposalTransition.propose(
             current = existing,
             model = model,
@@ -336,17 +367,12 @@ class CustodyModelRepository(
             byUid = pair.myUid,
             atIso = nowIso(),
             planCitation = planCitation
-        ).getOrElse { return PatternSubmission.ACTIVATED.also { saveAndActivate(model) } }
+        ).getOrElse { return PatternSubmission.COPARENT_PROPOSAL_WAITING }
 
         val written = guarded("propose") {
             firestoreCustodyDataSource.setCustody(pair.documentId, pair.participants, proposed)
         }
-        if (written == null) {
-            // The proposal write was refused or failed. Fall back to a local-only save so the
-            // parent's work is not lost; the mirror settles the rest.
-            saveAndActivate(model)
-            return PatternSubmission.ACTIVATED
-        }
+        if (written == null) return PatternSubmission.NOT_SENT
         announceProposal(pair, ActivityKind.CUSTODY_PROPOSED, planCitation)
         notifyPartnerOfProposal(pair, "proposed")
         return PatternSubmission.PROPOSED

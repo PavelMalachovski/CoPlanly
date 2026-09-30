@@ -26,6 +26,7 @@ function seedPairAndExpense(env) {
   return seed(env, {
     'users/alice-uid': {name: 'Alice', email: 'a@x.test', partnerId: BOB},
     'users/bob-uid': {name: 'Bob', email: 'b@x.test', partnerId: ALICE},
+    [`families/${[ALICE, BOB].sort().join('__')}`]: {members: [ALICE, BOB].sort()},
     'expenses/expense-1': {
       id: 'expense-1', title: 'School trip', amount: 42.5, currency: 'CZK',
       category: 'EDUCATION', createdByFirebaseUid: ALICE, paidBy: ALICE,

@@ -27,7 +27,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -65,16 +65,20 @@ fun FriendProfileScreen(
     val stored by viewModel.myProfile.collectAsState()
     val saveError by viewModel.saveError.collectAsState()
 
-    var name by remember { mutableStateOf("") }
-    var role by remember { mutableStateOf(FriendRole.FRIEND) }
-    var phone by remember { mutableStateOf("") }
-    var bloodGroup by remember { mutableStateOf("") }
+    var name by rememberSaveable { mutableStateOf("") }
+    var role by rememberSaveable { mutableStateOf(FriendRole.FRIEND) }
+    var phone by rememberSaveable { mutableStateOf("") }
+    var bloodGroup by rememberSaveable { mutableStateOf("") }
+    var seeded by rememberSaveable { mutableStateOf(false) }
 
-    // Fills the form once the stored profile arrives, and again if it changes underneath —
-    // keyed on the value rather than on Unit so a slow first read does not leave a blank form
-    // the friend then saves over their own details.
+    // Fills the form once, when the stored profile arrives — keyed on the value rather than on
+    // Unit so a slow first read does not leave a blank form the friend then saves over their own
+    // details. Only once (D-11): the profile re-emits on every sync write, and copying each
+    // emission overwrote what the friend was typing; a rotation keeps the typed fields too.
     LaunchedEffect(stored) {
+        if (seeded) return@LaunchedEffect
         stored?.let { profile ->
+            seeded = true
             name = profile.name
             role = profile.role
             phone = profile.phones.firstOrNull().orEmpty()

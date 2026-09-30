@@ -274,6 +274,40 @@ class EventViewModelTest {
     }
 
     @Test
+    fun `undo of a move restores the exact start and end, minutes included`() = runTest {
+        advanceUntilIdle()
+        val halfPast = sampleEvent.copy(
+            startDateTime = LocalDateTime.of(2026, 7, 20, 9, 30),
+            endDateTime = LocalDateTime.of(2026, 7, 20, 10, 45)
+        )
+        coEvery { getEvents.getById("e1") } returns halfPast
+        val saved = mutableListOf<Event>()
+        coEvery { updateEvent.invoke(capture(saved)) } answers { Result.success(saved.last()) }
+
+        viewModel.moveEvent("e1", LocalDate.of(2026, 7, 22), 14 * 60 + 15)
+        advanceUntilIdle()
+        viewModel.undoLastMove()
+        advanceUntilIdle()
+
+        assertEquals(LocalDateTime.of(2026, 7, 22, 14, 15), saved[0].startDateTime)
+        assertEquals(halfPast.startDateTime, saved[1].startDateTime)
+        assertEquals(halfPast.endDateTime, saved[1].endDateTime)
+    }
+
+    @Test
+    fun `a recurring series is neither moved nor resized from one of its occurrences`() = runTest {
+        advanceUntilIdle()
+        coEvery { getEvents.getById("e1") } returns sampleEvent.copy(isRecurring = true)
+
+        viewModel.moveEvent("e1", LocalDate.of(2026, 7, 22), 10 * 60)
+        viewModel.resizeEvent("e1", newEndTime = LocalDateTime.of(2026, 7, 20, 18, 0))
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) { updateEvent.invoke(any()) }
+        assertTrue(!viewModel.hasUndoAction())
+    }
+
+    @Test
     fun `a validation failure names the field in the reader's language, not the validator's`() = runTest {
         advanceUntilIdle()
         val failure = RuntimeException("Event title cannot be empty")

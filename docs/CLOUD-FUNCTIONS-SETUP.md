@@ -9,8 +9,8 @@ Cloud Functions автоматически обрабатывают push-уве�
 ### 1. Firebase Cloud Functions
 - `sendNotification` - отправка push-уведомлений из очереди notification_queue
 - `cleanupOldNotifications` - автоматическая очистка старых уведомлений (каждый день в 2:00 UTC)
-- `onEventCreated` - автоматическое создание уведомления при добавлении события
-- `onChildInfoUpdated` - автоматическое создание уведомления при обновлении информации о ребенке
+- `onEventCreated` and `onChildInfoUpdated` were removed in September 2026 (see
+  `functions/README.md`, "Removed functions"); the client queues typed pushes instead.
 
 ### 2. Структура проекта
 ```
@@ -111,9 +111,9 @@ npm run serve
 
 ### Автоматические уведомления
 
-Функции автоматически создают уведомления при:
-- Создании нового события (`onEventCreated`)
-- Обновлении информации о ребенке (`onChildInfoUpdated`)
+The server-side event and child-record triggers were removed in September 2026: an event is
+announced by its chat activity card, and an upload the sync carries up queues `event_created` or
+`child_info_updated` from `SyncService`.
 
 ### Ручная отправка уведомлений
 

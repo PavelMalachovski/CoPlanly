@@ -39,7 +39,8 @@
     <string name="pairing_expires_in_minutes">Действителен ещё %1$d мин</string>
     <string name="pairing_code_expired_generate">Код истёк — нажмите «Новый код»</string>
     <string name="pairing_share_message">%1$s приглашает вас в CoPlanly. Код: %2$s · %3$s
-Нет приложения? %4$s</string>
+Нет приложения? %4$s
+У вас iPhone? Попросите у меня ссылку на наш календарь, она откроется в Календаре Apple.</string>
     <!-- Code entry -->
     <string name="pairing_have_a_code">У меня есть код</string>
     <string name="pairing_code_field_label">Код приглашения</string>

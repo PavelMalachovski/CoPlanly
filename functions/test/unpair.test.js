@@ -128,7 +128,7 @@ describe('revokeSharedAudience', () => {
     assert.strictEqual(db._updates[0].collection, 'child_info');
   });
 
-  it('does not touch expenses or budgets, which gate on the live partnerId', async () => {
+  it('does not touch expenses or budgets, which gate on the family document unpair deletes', async () => {
     const db = fakeDb({
       events: [], child_info: [],
       expenses: [{id: 'x1', createdByFirebaseUid: 'a', sharedWith: ['a', 'b']}],
