@@ -152,7 +152,7 @@ fun DayWeekView(
     getContactWindows: (LocalDate) -> List<ContactWindow> = { emptyList() },
     parentNames: ParentNames,
     onDateChange: (LocalDate) -> Unit,
-    onEventClick: (String) -> Unit,
+    onEventClick: (Event) -> Unit,
     onAddEventClick: (LocalDate, Int) -> Unit = { _, _ -> },
     onEventDragDrop: ((String, LocalDate, Int) -> Unit)? = null,
     onEventResize: ((String, LocalDateTime?, LocalDateTime?) -> Unit)? = null,
@@ -255,7 +255,7 @@ private fun DayWeekPage(
     getContactWindows: (LocalDate) -> List<ContactWindow>,
     parentNames: ParentNames,
     scrollState: LazyListState,
-    onEventClick: (String) -> Unit,
+    onEventClick: (Event) -> Unit,
     onAddEventClick: (LocalDate, Int) -> Unit = { _, _ -> },
     onEventDragDrop: ((String, LocalDate, Int) -> Unit)? = null,
     onEventResize: ((String, LocalDateTime?, LocalDateTime?) -> Unit)? = null,
@@ -702,7 +702,7 @@ private fun DayWeekPage(
                                 ) {
                                     EventChip(
                                         event = seg.event,
-                                        onClick = { onEventClick(seg.event.id) },
+                                        onClick = { onEventClick(seg.event) },
                                         columnWidthPx = laneWidth,
                                         hourHeightPx = hourCellHeightPx,
                                         baseDate = date,
