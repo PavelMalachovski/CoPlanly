@@ -86,7 +86,9 @@ decide what each of you may read. **Legal basis:** performance of our contract w
   your co-parent's answer.
 - **The parenting plan** — each parent's written answers to the plan's questions and which of
   the other parent's answers they marked as agreed. Each of you can change only your own half.
-- **Expenses and budgets** — amounts, currencies, categories, and optional receipt photos.
+- **Expenses** — amounts, currencies, categories, and optional receipt photos. (Earlier test
+  builds also let you set a monthly budget per category. This version no longer creates, shows
+  or syncs budgets; any an earlier build saved stay in your account until you delete it.)
 - **Records about your child** — name, date of birth, school and activity details, emergency
   contacts, and a medical profile: allergies, medications, conditions, blood group,
   vaccinations, doctors' notes and photographs you attach to them.

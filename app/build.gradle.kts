@@ -446,7 +446,6 @@ dependencies {
     implementation("com.google.firebase:firebase-messaging-ktx")
     implementation("com.google.firebase:firebase-analytics-ktx")
     implementation("com.google.firebase:firebase-crashlytics-ktx")
-    implementation("com.google.firebase:firebase-config-ktx")
     implementation("com.google.firebase:firebase-storage-ktx")
 
     // Callable Cloud Functions — pairing accept/unpair write both parents'

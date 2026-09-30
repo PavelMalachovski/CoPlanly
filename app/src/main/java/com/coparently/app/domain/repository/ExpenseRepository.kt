@@ -2,7 +2,6 @@ package com.coparently.app.domain.repository
 
 import com.coparently.app.domain.model.Expense
 import com.coparently.app.domain.model.ExpenseCategory
-import com.coparently.app.domain.model.ExpenseSummary
 import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate
 
@@ -30,11 +29,6 @@ interface ExpenseRepository {
      * Gets an expense by ID.
      */
     suspend fun getExpenseById(id: String): Expense?
-
-    /**
-     * Gets expense summary for a specific period.
-     */
-    suspend fun getExpenseSummary(start: LocalDate, end: LocalDate): ExpenseSummary
 
     /**
      * Adds a new expense.

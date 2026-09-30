@@ -48,7 +48,7 @@ our processor are declared.
 | Messages (in-app) | Yes | No | No | App functionality |
 | Other user-generated content | Yes | No | **Yes** | App functionality — free text that is not a message or an event: each parent's parenting-plan answers (`parenting_plans`), the reason on a change request (`change_requests`), and notes on expenses, children's and pets' records. Added September 2026 (`docs/AUDIT-2026-09-play-final.md` F-7); the private journal is **not** in it — it never leaves the phone |
 | Health info | Yes | No | Yes | App functionality — the **child's** medical profile, only after the parent's explicit consent (a dialog, recorded with its version and time; withdrawable in Settings). The parent's own medical profile was removed in September 2026 (`LEGAL-REVIEW-2026-09.md` L-1, L-2) |
-| Purchase/financial info | Yes | No | Yes | App functionality — shared expenses and budgets. **Not** payment data: the app processes no payments |
+| Purchase/financial info | Yes | No | Yes | App functionality — shared expenses. **Not** payment data: the app processes no payments |
 | App interactions | Yes | No | **Yes** | Analytics — consent-gated since REL-5 |
 | Crash logs | Yes | No | **Yes** | Diagnostics — consent-gated since REL-5 |
 | Diagnostics | Yes | No | **Yes** | Diagnostics — consent-gated since REL-5 |

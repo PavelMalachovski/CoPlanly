@@ -53,11 +53,11 @@ only what is specific to it.
 | --- | --- |
 | Purpose | The shared service |
 | Data subjects | Parents; children (named in records); third parties named in event text |
-| Data | Events (title, time, place, notes, photo), custody schedule, swaps, seasonal layers, contact windows, expenses and budgets (amount, currency, category, receipt photo), parenting plan answers, change requests |
+| Data | Events (title, time, place, notes, photo), custody schedule, swaps, seasonal layers, contact windows, expenses (amount, currency, category, receipt photo), budgets written by earlier builds (this one no longer creates or reads them), parenting plan answers, change requests |
 | Legal basis | Art. 6(1)(b) |
 | Recipients | The co-parent; a calendar friend (calendar only, time-limited); a professional with both parents' consent (calendar, custody, plan; ≤ 180 days); whoever holds a calendar-feed link a parent created |
 | Retention | Life of the account. An individual deletion is a tombstone for **90 days** (so the other phone learns of it), then swept. On account deletion the departing parent's half of the parenting plan is also removed from the plans of families they had already left (found through accepted invitations); the former co-parent's half stays. At unpair a co-parent loses read access to the family's expenses and budgets at once (the family document is deleted) |
-| Where | `events`, `custody_models`, `expenses`, `budgets`, `parenting_plans`, `change_requests`, `family_settings`; Storage `event_images/{familyId}/…`, `receipts/{familyId}/…` (photos: the two parents only — not calendar friends or professionals; `solo_{uid}/…` for the uploader alone before pairing) |
+| Where | `events`, `custody_models`, `expenses`, `budgets` (earlier builds only), `parenting_plans`, `change_requests`, `family_settings`; Storage `event_images/{familyId}/…`, `receipts/{familyId}/…` (photos: the two parents only — not calendar friends or professionals; `solo_{uid}/…` for the uploader alone before pairing) |
 
 ### P3. Event revision history
 

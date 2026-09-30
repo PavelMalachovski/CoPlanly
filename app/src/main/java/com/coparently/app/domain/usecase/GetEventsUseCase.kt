@@ -34,13 +34,6 @@ class GetEventsUseCase @Inject constructor(
     }
 
     /**
-     * Gets events for a specific parent.
-     */
-    fun getByParent(parentOwner: String): Flow<List<Event>> {
-        return eventRepository.getEventsByParent(parentOwner)
-    }
-
-    /**
      * Gets a single event by ID.
      */
     suspend fun getById(eventId: String): Event? {

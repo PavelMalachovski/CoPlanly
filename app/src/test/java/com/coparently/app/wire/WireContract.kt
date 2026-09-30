@@ -78,7 +78,6 @@ internal object WireContracts {
         ChildInfoWireContract,
         PetWireContract,
         ExpenseWireContract,
-        BudgetWireContract,
         EventVersionWireContract
     )
 

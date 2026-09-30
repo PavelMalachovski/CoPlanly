@@ -1,7 +1,6 @@
 package com.coparently.app.di
 
 import com.coparently.app.data.remote.firebase.FirebaseImageStorage
-import com.coparently.app.data.repository.BudgetRepositoryImpl
 import com.coparently.app.data.repository.CalendarFeedRepositoryImpl
 import com.coparently.app.data.repository.ChangeRequestRepositoryImpl
 import com.coparently.app.data.repository.ChatSearchRepositoryImpl
@@ -15,7 +14,6 @@ import com.coparently.app.data.repository.PairingRepositoryImpl
 import com.coparently.app.data.repository.PetRepositoryImpl
 import com.coparently.app.data.repository.PreferencesRepositoryImpl
 import com.coparently.app.data.repository.ProfessionalRepositoryImpl
-import com.coparently.app.domain.repository.BudgetRepository
 import com.coparently.app.domain.repository.CalendarFeedRepository
 import com.coparently.app.domain.repository.ChangeRequestRepository
 import com.coparently.app.domain.repository.ChatSearchRepository
@@ -96,15 +94,6 @@ abstract class RepositoryModule {
     abstract fun bindExpenseRepository(
         expenseRepositoryImpl: ExpenseRepositoryImpl
     ): ExpenseRepository
-
-    /**
-     * Provides BudgetRepository implementation.
-     */
-    @Binds
-    @Singleton
-    abstract fun bindBudgetRepository(
-        budgetRepositoryImpl: BudgetRepositoryImpl
-    ): BudgetRepository
 
     /**
      * Provides ChangeRequestRepository implementation.

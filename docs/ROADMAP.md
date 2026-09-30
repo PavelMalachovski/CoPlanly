@@ -984,6 +984,29 @@ with them.
 **Not to be deleted**: the five `EventDao` methods including `getEventsForParentPaginated`, which is
 the thing CQ-5's Home-screen half would use. Deleting it now would be deleting the answer.
 
+**Closed again after the 30 September 2026 audit (its L-4, and F-21 of the Play audit).** Each
+was checked for a caller first, and had none:
+- **The budgets client** — `BudgetScreen`, `BudgetViewModel`, `BudgetSheet`/`BudgetItem`/
+  `BudgetChips`/`BudgetStatus`, the `budgets` route, `BudgetRepository(Impl)`,
+  `FirestoreBudgetDataSource`, the `Budget` domain model, their Hilt binding, the budget strings in
+  all five locales and the `BudgetWarning*` colours, the unit tests, the `budgets` wire contract and
+  fixtures, the e2e case and the UI tour's two seeded budgets. Nothing had navigated to the screen
+  since `85f1afb`. **Kept:** `BudgetEntity`, `BudgetDao` and the `budgets` table (removing a table
+  is a schema bump and a migration), `FamilyIdBackfill`'s stamp of it, and the `budgets` rule
+  block with its `firestore-tests` and the functions' sweeps and account deletion — an older build
+  may still write one. `tools/e2e/coverage.json` exempts the collection for that reason.
+- `EventRepository.pullOnce` and `UserRepository.pullOnce` (and their implementations);
+  `ExpenseRepository.getExpenseSummary`, `ExpenseSummary` and `ExpenseViewModel`'s
+  `expenseSummary`/`loadSummaryForMonth`, which nothing collected; `GetEventsUseCase.getByParent`
+  → `EventRepository.getEventsByParent` → `EventDao.getEventsByParent`; `EventDao.upsertEvent`.
+  `getEventsForParentPaginated` and `getEventsCountForParent` stay, for the reason above.
+- `FeatureManager`, `di/FeatureModule.kt` and the `firebase-config-ktx` dependency: injected
+  nowhere, so Remote Config never fetched. This also takes one `-ktx` artifact off the list the
+  BoM 34 move (audit L-2) has to rename.
+- `EventListScreen` and the `event_list` route, which nothing navigated to, with its strings (the
+  creator's "waiting on your co-parent" strip lived only there). The swipe-to-delete-with-Undo
+  pattern CLAUDE.md cited it for lives in Expenses (`ExpenseList.SwipeToDeleteRow`).
+
 ### CQ-16 · P3 · S · No Digital Asset Links
 
 **Where:** 💻 yours — it needs a domain and the release fingerprint.

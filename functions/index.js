@@ -3038,7 +3038,7 @@ exports.stampFamilyOnCreateImpl = stampFamilyOnCreateImpl;
  * The family's creation is the one moment the answer changes, so that is the moment to act. That
  * race does not vanish here, it shrinks to one instant: a parent editing a budget in the very
  * milliseconds between the client's read and write at pairing time has that edit refused
- * remotely, kept in Room by `BudgetRepositoryImpl`'s guard, and published on their next edit.
+ * remotely (older builds only: this client no longer writes budgets, September 2026).
  *
  * Best-effort: a failure is logged and not retried (1st-gen triggers do not retry by default), and
  * `backfillRecordFamilyIds` repairs anything it left.

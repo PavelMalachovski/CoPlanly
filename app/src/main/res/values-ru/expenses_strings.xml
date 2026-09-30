@@ -12,17 +12,6 @@
     <string name="expense_field_notes">Заметки (необязательно)</string>
     <string name="expense_save">Сохранить расход</string>
     <string name="expense_remove_receipt">Убрать фото чека</string>
-    <string name="budget_add">Добавить бюджет</string>
-    <string name="budget_add_title">Новый бюджет</string>
-    <string name="budget_field_category">Категория</string>
-    <string name="budget_field_limit">Месячный лимит</string>
-    <string name="budget_save">Сохранить бюджет</string>
-    <string name="budget_edit_title">Изменить бюджет</string>
-    <string name="budget_delete">Удалить бюджет</string>
-    <string name="budget_delete_confirm_title">Удалить этот бюджет?</string>
-    <string name="budget_delete_confirm_message">Лимит будет снят. Расходы в этой категории останутся.</string>
-    <string name="budgets_empty_title">Пока нет бюджетов</string>
-    <string name="budgets_empty_description">Задайте месячный лимит по категориям, чтобы держать общие расходы под контролем.</string>
     <string name="expenses_empty_title">Пока нет расходов</string>
     <string name="expenses_empty_description">Запишите общий расход — сад, одежду, визит к врачу — и разделите его со вторым родителем.</string>
     <!-- Replaces expenses_mom_paid/expenses_dad_paid. The call site (ExpenseSummaryHeader's
@@ -74,21 +63,14 @@
     <string name="expenses_category_toys">Игрушки</string>
     <string name="expenses_category_household">Быт</string>
     <string name="expenses_category_other">Прочее</string>
-    <string name="budget_alerts_title">Оповещения</string>
-    <string name="budget_alert_exceeded">Бюджет превышен: %1$s</string>
-    <string name="budget_alert_percent_spent">Вы потратили %1$d%% своего лимита.</string>
-    <string name="budget_spent_of_limit">%1$s / %2$s</string>
-    <string name="budget_percent_used">использовано %1$d%%</string>
 
-    <!-- Summary card: month switcher, total, and the budget chip strip. -->
+    <!-- Summary card: month switcher and total. -->
     <string name="expenses_shared_spend">общие расходы</string>
     <string name="expenses_month_and_count">%1$s · %2$s</string>
     <!-- The month summary folded into one pinned line; %1$s is each currency's total, joined. -->
     <string name="expenses_collapsed_totals">Общие расходы: %1$s</string>
     <string name="expenses_row_meta">%1$s · %2$s</string>
     <string name="expenses_row_meta_with_receipt">%1$s · %2$s · чек</string>
-    <string name="expenses_budget_chip">%1$s %2$s / %3$s</string>
-    <string name="expenses_budget_add">+ Бюджет</string>
     <string name="expenses_split_proposal_title">Предложено новое деление расходов</string>
     <string name="expenses_split_proposal_body">Второй родитель предлагает с этого момента делить общие расходы в пропорции %1$d / %2$d. Уже внесённые расходы сохранят своё деление.</string>
     <string name="expenses_split_proposal_confirm">Подтвердить</string>
@@ -99,13 +81,8 @@
     <string name="expense_split_not_shared_hint">Учитывается в ваших тратах, но никто никому за него не должен.</string>
     <string name="expense_split_ratio">Деление %1$d / %2$d</string>
     <string name="expense_split_override_hint">Другое деление только для этого расхода. Согласованное деление семьи не меняется.</string>
-    <!-- Budget status in words (UX-10). -->
-    <string name="budget_status_near">Близко к лимиту</string>
-    <string name="budget_status_over">Сверх лимита</string>
-    <string name="expenses_budget_chip_status">%1$s · %2$s</string>
     <string name="expense_for_members">Для кого это?</string>
     <string name="expenses_filter_members">Показать для</string>
-    <string name="budget_for_members">Для кого этот бюджет?</string>
     <!-- UX-17: the proposer's side of the same conversation. -->
     <string name="expenses_split_proposal_waiting_title">Ждём ответа</string>
     <string name="expenses_split_proposal_waiting_body">Вы предложили %1$d/%2$d. Второй родитель ещё не ответил.</string>

@@ -24,7 +24,7 @@ import com.coparently.app.presentation.theme.Spacing
  * reader something about what they are looking at, or asking them something.
  *
  * One anatomy for what the expense split's two banners, the vault's two notices, the journal's
- * privacy line and the events list's waiting strip each drew their own way — a tonal container
+ * privacy line and the (since removed) events list's waiting strip each drew their own way — a tonal container
  * of the tone's colour, an optional icon, an optional title, the text, and the actions in a
  * [FlowRow], so three buttons wrap onto a second line at large text instead of squeezing their
  * labels. Nothing here truncates.

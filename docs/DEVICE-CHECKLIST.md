@@ -105,7 +105,7 @@ so.
 | `TwoParentChatTest`, `OneParentOnScreenTest` | Chat across the date line to unread, DELIVERED, READ; one parent's real screens (§5.1) | Two screens at once, displayed times, the push |
 | `TwoParentAttachmentsTest` | Chat attachments and the vault, bytes and digests, a stranger refused (§5.5) | A viewer app opening the file |
 | `TwoParentExpensesTest`, `TwoParentAgreementsTest` | A shared expense on the other parent's balance; the split ratio agreed, proposed, accepted, declined, withdrawn; the parenting plan's agreement lapsing on a reword, the other half unwritable | The Expenses and plan screens, the banners |
-| `TwoParentFamilyRecordsTest` | Children, pets and budgets both ways with tombstones; records made before pairing shared and announced once | The forms |
+| `TwoParentFamilyRecordsTest` | Children and pets both ways with tombstones; records made before pairing shared and announced once | The forms |
 | `TwoParentRecordPhotosTest` | Medical, pet, receipt and event photos (L-4): uploaded under the family's path, the co-parent's download matching its digest, a stranger refused, either parent deleting, no overwrite, the old flat paths closed; a photo taken before pairing moved into the family by `onFamilyCreated` and still opening for the co-parent after the uploader's phone writes its stale reference back (§3.10) | The thumbnails as drawn, a guest's screen without them, and the live bucket before `firebase deploy --only storage` |
 | `TwoParentRequestsAndEventPushesTest` | Change requests accepted, declined, cancelled; `event_created`; event revisions immutable, none for a private event | The request screens |
 | `TwoParentCustodyTest` | A pattern proposed, accepted, declined in two zones; single-day and group swaps; a self-accepted swap refused | The grid's band, markers and banners |
@@ -1303,7 +1303,7 @@ Preconditions: A is paired with **both** B and C (two families). Invite C from S
       **[CI]** "one phone on the previous build" is now a wire contract first (CLAUDE.md, the rule
       under item 5 of "Things that are easy to get wrong"): `WireContractTest` reads older and newer
       builds' `events`, `messages` (legacy ISO `timestamp` included), `child_info`, `pets`,
-      `expenses`, `budgets` and `event_versions` documents through this build's mappers and writes
+      `expenses` and `event_versions` documents through this build's mappers and writes
       them back, and the `upgrade` job runs the *previous* build's copy of it over what this build
       writes. A PR that changes `app/src/test/resources/wire/current/` is the one to do this check
       for; otherwise it confirms what CI saw. The phone adds the real sync timing, both builds'

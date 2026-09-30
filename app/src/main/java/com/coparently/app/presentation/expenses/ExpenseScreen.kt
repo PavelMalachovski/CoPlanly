@@ -120,8 +120,8 @@ private fun Modifier.scrollsAsPage(
  * Expense list screen — a top-level bottom-navigation destination.
  *
  * Leads with one card carrying the month, the who-paid-what split and the settle-up balance,
- * then a segmented control choosing between two views of that month: the **list** (budget chips
- * and this month's expenses) or the **analytics** (a pie by category and a sorted table).
+ * then a segmented control choosing between two views of that month: the **list** (this month's
+ * expenses) or the **analytics** (a pie by category and a sorted table).
  *
  * Both views share one month control: in the summary card on the list, and as the same line on
  * its own above the analytics, which leave the balance cards to the list so that the chart is on
@@ -131,8 +131,8 @@ private fun Modifier.scrollsAsPage(
  * looking at August's chart and September's list, with nothing on screen saying so.
  *
  * The August 2026 refresh merged the standalone month navigator into the summary card (the
- * screen used to spend three stacked headers before the first row) and surfaced budgets here
- * instead of leaving them behind an unlabelled top-bar icon.
+ * screen used to spend three stacked headers before the first row). Budgets, which it surfaced
+ * here for a while, were later removed from the client.
  *
  * @param onAddExpense Opens the add-expense form
  * @param onEditExpense Opens an expense for editing
@@ -194,7 +194,7 @@ fun ExpenseScreen(
         }
     }
 
-    // Delete now, offer Undo — the same shape EventListScreen uses. The receipt photo is only
+    // Delete now, offer Undo — the calendar's delete does the same. The receipt photo is only
     // purged once the window closes, because a deleted photo cannot be brought back and Undo
     // has to restore the expense intact.
     val deleteWithUndo: (Expense) -> Unit = { expense ->
@@ -223,9 +223,6 @@ fun ExpenseScreen(
             TopAppBar(
                 title = { Text(stringResource(R.string.expenses_title)) },
                 actions = {
-                    // Budgets used to live behind an unlabelled piggy-bank icon here. They are
-                    // now visible on the screen itself as a chip strip, so this action is gone
-                    // rather than duplicated.
                     // Only with two families or more (M-8). A ledger is the screen where being in
                     // the wrong family costs most: an expense is recorded against the one shown.
                     FamilySwitcherChip()

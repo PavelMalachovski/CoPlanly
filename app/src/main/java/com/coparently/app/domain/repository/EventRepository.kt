@@ -45,11 +45,6 @@ interface EventRepository {
     suspend fun fetchRemoteEvent(id: String): Event?
 
     /**
-     * Gets events for a specific parent owner.
-     */
-    fun getEventsByParent(parentOwner: String): Flow<List<Event>>
-
-    /**
      * Inserts a new event.
      *
      * @param announce Whether the co-parent's chat gets an activity card for it. False only for
@@ -76,19 +71,4 @@ interface EventRepository {
      * Deletes an event by ID.
      */
     suspend fun deleteEventById(id: String)
-
-    /**
-     * Syncs events with Firestore.
-     */
-    /**
-     * Uploads what is pending and pulls the remote side once, then **returns**.
-     *
-     * Named for the shape rather than for the subject (CQ-10). This was `syncWithFirestore()`
-     * on all seven repositories, and on three of them it meant the opposite: an endless
-     * snapshot listener that never returns. `SyncService.performFullSync()` already awaits the
-     * pet one, so adding an expense call beside it by analogy — which is exactly what the old
-     * name invited — would have made `performFullSync()` hang, `SyncWorker` be killed at
-     * WorkManager's ten-minute ceiling, and sync stop entirely, with no exception and no log.
-     */
-    suspend fun pullOnce()
 }

@@ -30,7 +30,7 @@ import org.junit.Test
  * Before this method existed, nothing in the app ever wrote `name` or `email` into
  * `users/{uid}`: Firebase Auth creates the account only, the FCM registration merges a
  * lone `fcmToken` key (which is how the document came to exist at all), the pairing Cloud
- * Function adds `partnerId`/`pairedAt`, and `pullOnce` only reads. The co-parent's
+ * Function adds `partnerId`/`pairedAt`, and the app itself only read it. The co-parent's
  * pairing card reads `name`/`email` from that document, so it showed
  * "Unknown"/"Email unavailable" for a perfectly valid pairing.
  *
@@ -494,7 +494,7 @@ class UserRepositoryEnsureProfileTest {
 
     @Test
     fun `seeds the id so a later firestore sync does not mint a random one`() = runTest {
-        // `pullOnce` maps the document back through `id`, defaulting to a random
+        // A read of the document maps it back through `id`, defaulting to a random
         // UUID — a document without one would produce a local row nothing can find again.
         signedIn(displayName = "Alice Novak", email = "alice@example.com")
         coEvery { firestoreUserDataSource.getUserById(UID) } returns mapOf("fcmToken" to "t")

@@ -1,15 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="event_list_title">Události</string>
-    <string name="event_list_back">Zpět</string>
-    <string name="event_list_add">Přidat událost</string>
-    <string name="event_list_loading">Načítání…</string>
-    <string name="event_list_error">Chyba: %1$s</string>
-    <string name="event_list_empty_title">Zatím žádné události</string>
-    <string name="event_list_empty_description">Vytvořte první událost a začněte plánovat společnou péči.</string>
-    <string name="event_list_empty_action">Přidat událost</string>
-    <string name="event_list_date">Datum: %1$s</string>
-    <string name="event_list_parent">Rodič: %1$s</string>
     <string name="event_delete">Smazat</string>
 
     <string name="event_form_title_new">Nová událost</string>

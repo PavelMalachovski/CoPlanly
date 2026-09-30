@@ -103,14 +103,3 @@ enum class ExpenseCategory {
             OTHER -> "more_horiz"
         }
 }
-
-/**
- * Summary of expenses for a specific period or category.
- */
-data class ExpenseSummary(
-    val totalAmount: Double,
-    val currency: String = "USD",
-    val expenseCount: Int,
-    val byCategory: Map<ExpenseCategory, Double> = emptyMap(),
-    val byPayer: Map<String, Double> = emptyMap()
-)

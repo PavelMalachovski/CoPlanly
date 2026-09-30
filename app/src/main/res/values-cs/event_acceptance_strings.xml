@@ -10,7 +10,5 @@
     <string name="event_acceptance_accept">Přijmout</string>
     <string name="event_acceptance_decline">Odmítnout</string>
     <string name="event_acceptance_withdraw">Stáhnout</string>
-    <string name="event_acceptance_waiting_strip">Vašich událostí čeká na druhého rodiče: %1$d</string>
-    <string name="event_acceptance_waiting_strip_one">Jedna vaše událost čeká na druhého rodiče</string>
     <string name="event_acceptance_hidden_note">Do žádného kalendáře se nedostane, dokud neodpoví.</string>
 </resources>

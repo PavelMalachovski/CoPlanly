@@ -728,11 +728,11 @@ class SyncService @Inject constructor(
      *
      * `role` is refreshed here, alongside the fields this already downloaded, because this is
      * the only path in the app that periodically re-reads the signed-in user's own document —
-     * `UserRepositoryImpl.pullOnce()` would also refresh it, but nothing calls that
-     * method. Before this, a slot flipped server-side (a `backfillParentSlots` run for a pair
-     * that accepted long ago — see `functions/index.js`) was never noticed by a running app:
-     * this device would keep stamping new records with the slot it already had, while Firestore
-     * held the new one, and every record it had ever created would start reading as its
+     * `UserRepositoryImpl.pullOnce()` would also have refreshed it, but nothing called that
+     * method, and it has since been deleted. Before this, a slot flipped server-side (a
+     * `backfillParentSlots` run for a pair that accepted long ago — see `functions/index.js`) was
+     * never noticed by a running app: this device would keep stamping new records with the slot
+     * it already had, while Firestore held the new one, and every record it had ever created would start reading as its
      * co-parent's the moment anyone compared the two.
      *
      * [updatedUser]'s role is handed to [ParentSlotMigrator.reslotIfSlotChanged] as the incoming

@@ -4,27 +4,19 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.coparently.app.data.remote.firebase.PushPayload
 import com.coparently.app.data.sync.Tombstone
 import com.coparently.app.domain.family.FamilyKey
-import com.coparently.app.domain.model.Budget
 import com.coparently.app.domain.model.ChildInfo
 import com.coparently.app.domain.model.Event
-import com.coparently.app.domain.model.ExpenseCategory
 import com.coparently.app.domain.model.Medication
 import com.coparently.app.domain.model.Pet
 import com.coparently.app.domain.model.PetSpecies
 import com.coparently.app.domain.model.SchoolInfo
 import com.coparently.app.domain.model.Vaccination
-import com.google.firebase.firestore.FirebaseFirestoreException
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
-import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
-import org.junit.Assert.fail
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.time.LocalDate
@@ -33,13 +25,14 @@ import java.time.temporal.ChronoUnit
 import java.util.UUID
 
 /**
- * The family's own records between two phones: children, pets and budgets, and the two pushes the
- * child record and the pairing backfill produce.
+ * The family's own records between two phones: children and pets, and the two pushes the
+ * child record and the pairing backfill produce. (Budgets had a case here until their client was
+ * removed; the `budgets` rules are covered by `firestore-tests/` alone now.)
  *
  * Alice writes through the production repositories, stamped as `ChildInfoViewModel` and
  * `PetsViewModel` stamp a save (`createdByFirebaseUid`, `lastModifiedBy`); Bob reads through his
- * own repositories — `pullOnce()` for children and pets, `observeRemote()`'s `familyId` listener
- * for budgets — so what is checked is what lands in *his* Room, against the real `firestore.rules`.
+ * own repositories — `pullOnce()` for children and pets — so what is checked is what lands in
+ * *his* Room, against the real `firestore.rules`.
  * A deletion is a tombstone Bob's download answers by dropping the row (CLAUDE.md item 14, CQ-19).
  *
  * Two pushes. **`child_info_updated`** is queued by `SyncService` when it uploads a child edit
@@ -144,34 +137,6 @@ class TwoParentFamilyRecordsTest : TwoParentTest() {
     }
 
     @Test
-    fun aBudgetAliceSetsReachesBobWhoMayEditItAndAStrangerCannotReadIt() = runBlocking<Unit> {
-        val budget = Budget(
-            id = UUID.randomUUID().toString(),
-            category = ExpenseCategory.EDUCATION,
-            monthlyLimit = LIMIT,
-            currency = "EUR"
-        )
-        alice.budgetRepository.addBudget(budget)
-
-        val onBobsPhone = awaitBudget(bob, budget.id) { true }
-        assertEquals(LIMIT, onBobsPhone.monthlyLimit, DELTA)
-        assertEquals(ExpenseCategory.EDUCATION, onBobsPhone.category)
-        assertEquals(FamilyKey.of(alice.uid, bob.uid), onBobsPhone.familyId)
-
-        // A budget is the pair's shared plan: the co-parent may change it, and Alice sees it.
-        bob.budgetRepository.updateBudget(onBobsPhone.copy(monthlyLimit = RAISED_LIMIT))
-        awaitBudget(alice, budget.id) { it.monthlyLimit == RAISED_LIMIT }
-
-        val carol = newParent("Carol")
-        try {
-            carol.firestore.collection("budgets").document(budget.id).get().await()
-            fail("A stranger read the family's budget")
-        } catch (e: FirebaseFirestoreException) {
-            assertEquals(FirebaseFirestoreException.Code.PERMISSION_DENIED, e.code)
-        }
-    }
-
-    @Test
     fun recordsMadeBeforePairingAreSharedWithTheNewCoParentAndAnnouncedOnce() = runBlocking<Unit> {
         val carol = newParent("Carol")
         val dan = newParent("Dan")
@@ -203,24 +168,6 @@ class TwoParentFamilyRecordsTest : TwoParentTest() {
         carol.syncService.performFullSync().getOrThrow()
         val again = carol.queuedFor(dan.uid).count { dataOf(it)[PushPayload.TYPE] == PushPayload.RECORDS_SHARED }
         assertEquals(1, again)
-    }
-
-    /** Runs [parent]'s budget listener until [budgetId] is in their Room and satisfies [condition]. */
-    private suspend fun awaitBudget(
-        parent: EmulatorParent,
-        budgetId: String,
-        condition: (Budget) -> Boolean
-    ): Budget = coroutineScope {
-        val listener = launch { parent.budgetRepository.observeRemote() }
-        try {
-            withTimeout(EmulatorParent.WAIT_MS) {
-                parent.budgetRepository.getAllBudgets()
-                    .first { list -> list.any { it.id == budgetId && condition(it) } }
-                    .single { it.id == budgetId }
-            }
-        } finally {
-            listener.cancel()
-        }
     }
 
     /** The `data` payload of a queued push document. */
@@ -275,9 +222,6 @@ class TwoParentFamilyRecordsTest : TwoParentTest() {
     private fun now(): LocalDateTime = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS)
 
     private companion object {
-        const val LIMIT = 200.0
-        const val RAISED_LIMIT = 250.0
-        const val DELTA = 0.001
         const val BIRTH_YEAR = 2019
         const val BIRTH_MONTH = 5
         const val BIRTH_DAY = 4

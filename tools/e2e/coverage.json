@@ -136,9 +136,7 @@
       ]
     },
     "budgets": {
-      "e2e": [
-        "TwoParentFamilyRecordsTest#aBudgetAliceSetsReachesBobWhoMayEditItAndAStrangerCannotReadIt"
-      ]
+      "exempt": "Client writer removed (September 2026): this build creates, edits and reads no budget, so no two-phone run can reach the collection. The rule stays for older builds that may still write; firestore-tests/rules/budgets-change-requests.test.js covers it."
     },
     "calendar_friends": {
       "e2e": [

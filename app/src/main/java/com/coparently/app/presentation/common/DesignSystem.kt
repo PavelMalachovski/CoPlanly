@@ -362,7 +362,7 @@ fun PillChip(
  *
  * - **It takes a [modifier] and draws nothing outside it.** The old one hard-coded
  *   `fillMaxSize().padding(32.dp)`, so a caller could not apply its `Scaffold` padding and the
- *   text rendered under the top bar in Chat and Budgets.
+ *   text rendered under the top bar in Chat and the (since removed) budgets screen.
  * - **It scrolls when its height is bounded and it does not fit.** At the largest font scale a
  *   title, two lines of explanation and a button outgrow a landscape phone, and a column that
  *   cannot scroll clips the button — the one part a parent needs. Inside a parent that already

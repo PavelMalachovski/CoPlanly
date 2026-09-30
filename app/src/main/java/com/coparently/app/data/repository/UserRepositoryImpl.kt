@@ -188,8 +188,8 @@ class UserRepositoryImpl @Inject constructor(
      *
      * So the skip is narrowed from "write nothing" to "write everything except the name":
      * the email address and the avatar are real data the co-parent's pairing card renders,
-     * and `id`/`firebaseUid` are what keep [pullOnce] from minting a random local
-     * id later. Discarding them because one *other* field is unknown helped nobody.
+     * and `id`/`firebaseUid` are what keep a read of the document (`toUser`) from
+     * minting a random local id later. Discarding them because one *other* field is unknown helped nobody.
      *
      * A null [remote] is deliberately treated as "do not write remotely". It means either
      * "no document" — where the create rule would reject this patch — or "the read failed",
@@ -297,7 +297,7 @@ class UserRepositoryImpl @Inject constructor(
      * Merges the identity keys that are missing or stale into `users/{uid}`.
      *
      * `id` and `firebaseUid` are only added when the document does not carry them:
-     * [pullOnce] reads `id` back and would otherwise mint a random UUID for the
+     * `toUser` reads `id` back and would otherwise mint a random UUID for the
      * local row, and the `users` rules require `firebaseUid`, when present, to equal the
      * caller's UID.
      *
@@ -514,7 +514,7 @@ class UserRepositoryImpl @Inject constructor(
      * Firestore second, as a merge of the one key — a map when given, `FieldValue.delete()` when
      * withdrawn. The remote write is what makes the consent demonstrable and what a second device
      * reads back; offline, Firestore queues it and every later read on this device already sees
-     * it, so a [pullOnce] in between cannot restore a withdrawn consent. A failure is logged, not
+     * it, so a read of the document in between cannot restore a withdrawn consent. A failure is logged, not
      * thrown: the local answer stands and the next call retries.
      */
     override suspend fun setHealthConsent(consent: HealthConsent?) {
@@ -550,26 +550,6 @@ class UserRepositoryImpl @Inject constructor(
 
     override suspend fun deleteUser(id: String) {
         userDao.deleteUserById(id)
-    }
-
-    override suspend fun pullOnce() {
-        val firebaseUser = firebaseAuthService.getCurrentUser() ?: return
-
-        try {
-            // Fetch user data from Firestore
-            val firestoreData = firestoreUserDataSource.getUserById(firebaseUser.uid)
-            if (firestoreData == null) {
-                android.util.Log.w("UserRepository", "No user data found in Firestore for the signed-in user")
-                return
-            }
-
-            // Update local database
-            val user = firestoreData.toUser()
-            userDao.insertUser(user.toEntity())
-        } catch (e: Exception) {
-            android.util.Log.e("UserRepository", "Failed to sync user data from Firestore", e)
-            throw e
-        }
     }
 
     override suspend fun updateFcmToken(token: String) {

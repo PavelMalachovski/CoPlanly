@@ -78,7 +78,6 @@
     <string name="common_error">Ошибка</string>
     <string name="common_unknown">Неизвестно</string>
     <string name="common_save">Сохранить</string>
-    <string name="common_cancel">Отмена</string>
     <string name="common_delete">Удалить</string>
     <string name="common_edit">Изменить</string>
     <string name="common_add">Добавить</string>

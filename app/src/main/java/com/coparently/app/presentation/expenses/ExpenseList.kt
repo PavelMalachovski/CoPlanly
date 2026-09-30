@@ -81,7 +81,7 @@ private val TILE_SIZE = 40.dp
 private const val MOM_SLOT = "mom"
 
 /**
- * List of expenses for the period. Each row swipes left to delete, matching [EventListScreen].
+ * List of expenses for the period. Each row swipes left to delete ([SwipeToDeleteRow]).
  *
  * @param expenses Expenses to show, already ordered
  * @param roleByUid Map of payer uid to slot; a missing entry just omits the payer
@@ -350,7 +350,8 @@ fun ExpenseItem(
 private fun payerTint(color: Color): Color = color.copy(alpha = PAYER_TINT_ALPHA)
 
 /**
- * Wraps a row in a left-swipe delete gesture, same shape as `EventListScreen`'s.
+ * Wraps a row in a left-swipe delete gesture — the app's one swipe-to-delete (CLAUDE.md UX
+ * item 8); the removed events list used the same shape.
  *
  * Until now there was no way to remove an expense at all — `ExpenseViewModel.deleteExpense`
  * existed but nothing called it — so a mistyped amount was permanent.
