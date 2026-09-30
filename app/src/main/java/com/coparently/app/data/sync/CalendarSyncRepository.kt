@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.LocalTime
 import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -157,8 +158,12 @@ class CalendarSyncRepository @Inject constructor(
             ?: start?.date?.value?.let { utcMillisToLocalDate(it) }
             ?: LocalDateTime.now()
 
+        // A date-only end is *exclusive* in Google's model: a one-day event on the 14th ends on
+        // the 15th. Stored as the 15th at 00:00 it overlapped the 15th in every day query and was
+        // drawn a day too long. It is stored as the last minute of the day before instead, which
+        // is how `AllDayEvent` reads a day's close (and how the school import writes one).
         val endDateTime = end?.dateTime?.value?.let { epochMillisToLocal(it) }
-            ?: end?.date?.value?.let { utcMillisToLocalDate(it) }
+            ?: end?.date?.value?.let { lastMinuteBefore(utcMillisToLocalDate(it), startDateTime) }
 
         val importedAtMillis = System.currentTimeMillis()
         return EventEntity(
@@ -201,12 +206,27 @@ class CalendarSyncRepository @Inject constructor(
     private fun epochMillisToLocal(millis: Long): LocalDateTime =
         LocalDateTime.ofInstant(java.time.Instant.ofEpochMilli(millis), ZoneId.systemDefault())
 
+    /**
+     * The last minute before an exclusive all-day end ([exclusiveEnd], a midnight), never before
+     * [start]'s own day closes — a malformed end at or before the start still covers that day.
+     */
+    private fun lastMinuteBefore(exclusiveEnd: LocalDateTime, start: LocalDateTime): LocalDateTime {
+        val last = exclusiveEnd.minusMinutes(1)
+        val startDayClose = start.toLocalDate().atTime(LAST_MINUTE_OF_DAY)
+        return if (last.isBefore(startDayClose)) startDayClose else last
+    }
+
     /** An all-day event's UTC-midnight millis as the start of that calendar day. */
     private fun utcMillisToLocalDate(millis: Long): LocalDateTime =
         java.time.Instant.ofEpochMilli(millis)
             .atZone(java.time.ZoneOffset.UTC)
             .toLocalDate()
             .atStartOfDay()
+
+    private companion object {
+        /** Where an imported all-day event's last day closes; `AllDayEvent` reads it as such. */
+        val LAST_MINUTE_OF_DAY: LocalTime = LocalTime.of(23, 59)
+    }
 }
 
 /**
