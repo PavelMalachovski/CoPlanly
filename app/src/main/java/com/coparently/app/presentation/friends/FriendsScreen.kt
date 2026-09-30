@@ -67,7 +67,7 @@ fun FriendsScreen(
 ) {
     val friends by viewModel.friends.collectAsState()
     val invite by viewModel.invite.collectAsState()
-    val myGrant by viewModel.myGrant.collectAsState()
+    val myGrants by viewModel.myGrants.collectAsState()
     val redeem by viewModel.redeem.collectAsState()
 
     Scaffold(
@@ -97,10 +97,14 @@ fun FriendsScreen(
             // profile. A friend has no family friends to list and no invitations to mint, so
             // they see neither — the screen answers whichever side of the relationship is
             // signed in rather than showing controls that would be refused.
-            myGrant?.let { grant ->
-                val until = remember(grant.expiresAtMillis) {
+            if (myGrants.isNotEmpty()) {
+                // Soonest-ending first, so the date shown is the first access to end. With one
+                // family the row reads exactly as it always did; a friend of several families is
+                // told how many, since a single date would otherwise speak for all of them (L-5).
+                val firstEnding = myGrants.first().expiresAtMillis
+                val until = remember(firstEnding) {
                     DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).format(
-                        Instant.ofEpochMilli(grant.expiresAtMillis)
+                        Instant.ofEpochMilli(firstEnding)
                             .atZone(ZoneId.systemDefault()).toLocalDate()
                     )
                 }
@@ -108,7 +112,11 @@ fun FriendsScreen(
                     SectionRow(
                         icon = Icons.Default.Diversity3,
                         title = stringResource(R.string.friend_profile_title),
-                        supporting = stringResource(R.string.friend_access_until, until),
+                        supporting = if (myGrants.size == 1) {
+                            stringResource(R.string.friend_access_until, until)
+                        } else {
+                            stringResource(R.string.friend_access_several, myGrants.size, until)
+                        },
                         onClick = onOpenMyProfile,
                         trailing = {}
                     )

@@ -271,7 +271,8 @@ describe('event_versions', () => {
         'event_versions/v1': Object.assign(versionDoc(ALICE, {}), {
           recordedAt: Timestamp.fromMillis(1787000001000),
         }),
-        'calendar_friends/friend-uid': {
+        [`calendar_friends/${FAMILY}__${FRIEND}`]: {
+          friendUid: FRIEND,
           familyId: FAMILY,
           familyParents: [ALICE, BOB],
           expiresAtMillis: 4102444800000,

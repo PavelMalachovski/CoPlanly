@@ -52,4 +52,8 @@
     <string name="region_de_sn">Sasko</string>
     <string name="region_de_st">Sasko-Anhaltsko</string>
     <string name="region_de_th">Durynsko</string>
+    <string name="holiday_break_cz_summer">Hlavní prázdniny</string>
+    <string name="holiday_break_cz_christmas">Vánoční prázdniny</string>
+    <string name="holiday_break_cz_autumn">Podzimní prázdniny</string>
+    <string name="holiday_break_cz_easter">Velikonoční prázdniny</string>
 </resources>

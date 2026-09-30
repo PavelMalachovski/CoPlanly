@@ -62,4 +62,10 @@
     <string name="region_sk_ta" translatable="false">Trnavský kraj</string>
     <string name="region_sk_tc" translatable="false">Trenčiansky kraj</string>
     <string name="region_sk_zi" translatable="false">Žilinský kraj</string>
+
+    <!-- L-8: the nationwide Czech school breaks, named in the reader language (CzechSchoolBreak). -->
+    <string name="holiday_break_cz_summer">Summer vacation</string>
+    <string name="holiday_break_cz_christmas">Christmas vacation</string>
+    <string name="holiday_break_cz_autumn">Autumn vacation</string>
+    <string name="holiday_break_cz_easter">Easter vacation</string>
 </resources>

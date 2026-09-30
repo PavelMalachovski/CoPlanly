@@ -360,7 +360,11 @@ When touching the UI, keep these invariants:
    Compose BOM 2025.10 (Material 3 1.4 — whose public API has none of M3 Expressive:
    `ButtonGroup`, `LoadingIndicator`, `MotionScheme` and the rest are still alpha, in 1.5; this line
    used to say the BOM shipped them), Room 2.7.2 (2.6.x breaks on
-   Kotlin 2.x metadata), Hilt and Room on **KSP** (`2.1.0-1.0.29`; kapt is gone — move KSP with Kotlin), Navigation 2.9.3, Hilt 2.56.2, predictive back on.
+   Kotlin 2.x metadata), Hilt and Room on **KSP** (`2.1.0-1.0.29`; kapt is gone — move KSP with Kotlin), Navigation 2.9.3, Hilt 2.56.2, predictive back on. **Firebase BoM 34.4.0 with no `-ktx`
+   artifacts** (audit L-2): 34.0.0 removed them, and the Kotlin extensions (`Firebase`, `logEvent`,
+   `storageMetadata`, …) are imported from the product's own package
+   (`com.google.firebase.analytics.logEvent`, never `…analytics.ktx…`). `Task.await()` comes from the
+   explicitly declared `kotlinx-coroutines-play-services`, not from Firebase's transitive graph.
 3. **Calendar**: month view is a classic grid from the 1st with horizontal month paging
    (kizitonwose `HorizontalCalendar`); day/week use `HorizontalPager` with fling physics.
    Event chips are single-line (`softWrap = false` + ellipsis). School vacation is a thin
@@ -912,10 +916,22 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   (`theme/ParentPalette.kt`), defaulting to pink for slot 1 and blue for slot 2.
 - **A calendar friend sits beside the two slots and never occupies one** (item 16, Aug 2026).
   A guardian/friend/grandparent with their own account reads the family's calendar through a
-  **central** grant, `calendar_friends/{friendUid}` — never by being fanned out into every
-  event's `sharedWith`, so admitting or revoking one is a single write and no event document is
-  rewritten. The `events` read rule consults it in a **last** disjunct (a parent's own read
+  **central** grant, `calendar_friends/{familyId}__{friendUid}` — never by being fanned out into
+  every event's `sharedWith`, so admitting or revoking one is a single write and no event document
+  is rewritten. The `events` read rule consults it in a **last** disjunct (a parent's own read
   short-circuits before the `get()`), with expiry compared against `request.time`.
+  **One grant per family** (L-5, September 2026), keyed like a professional grant: the rule builds
+  the path from the event's own `familyId` and the reader, and the stored `familyId` and
+  `friendUid` must repeat it. A grandmother admitted by two families holds two grants, reads both
+  calendars and loses only the one that is revoked or lapses; the per-person id it replaced let
+  the second family's invitation overwrite the first. The friend lists their own grants with
+  `whereEqualTo("friendUid", uid)`, a parent with `whereArrayContains("familyParents", uid)`
+  kept to the family on screen, and `revokeFriend` deletes the on-screen family's grant only.
+  `friend_profiles/{uid}.familyParents` (the profile's read gate) holds every admitting family's
+  parents: the friend writes the union on create (`CalendarFriendPolicy.profileGate`), and the
+  callable adds a later family's two. **No rule fallback to the old `calendar_friends/{friendUid}`**
+  — `backfillRecordFamilyIds` re-keys those, and the callable re-keys the redeemer's own; run the
+  backfill right after the rules deploy.
   **The grant names one family, not one person** (M-6, Aug 2026): it carries the `familyId` it
   was issued for, and `isCalendarFriendOf` requires the event's own `familyId` to match *and* its
   creator to be one of that family's two parents. Keying on the creator alone is what leaked —
@@ -939,7 +955,7 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   an event falls on is a fact about custody. The friend's colour is `CoPlanlyColors.FriendTeal`
   — never a parent hue, and never the theme's neutral `secondary`, which is for controls.
   **Faces come from the Google account, never from an upload.** A friend's `photoUrl` is seeded
-  from Firebase Auth at their first profile save and copied into `calendar_friends/{uid}` by the
+  from Firebase Auth at their first profile save and copied into each of their grants by the
   callable, so the parents' list names *and* pictures them without a second read of a document
   that is not theirs; the parents' own faces come from `users/{uid}.profilePhotoUrl` through
   `NamedParent.photoUrl` and `ParentNames.photoForUid(uid)` — keyed on the uid, because a pair
@@ -973,8 +989,12 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   was the last place in the app insisting on exactly one of anything (`ChildInfoScreen`,
   `PetsScreen` and `ContactDirectory` were already plural). The calendar caught up in FAM-3:
   `Event.forMembers` names the children and pets an event is about, and the grid has a filter
-  strip that appears at two. What it still does not do is mark an *individual chip* — see
-  **FAM-5** before adding one, because the two obvious channels are both spoken for.
+  strip that appears at two. **FAM-5** (September 2026, owner decision) marks an *individual
+  chip* in Day and Week view: `EventMemberMark` puts the first named member's initial ("E", or
+  "E+" for several) on a neutral `surfaceVariant` disc at the chip's start, at two members and
+  never at one, and the chip's description names every member. It is a letter because both
+  obvious channels were spoken for — a prefix costs title, and every colour is taken — so don't
+  turn it into a hue, and don't add a second mark beside it. Month chips carry none.
 - **Who a record is about goes through `domain/family/FamilyMemberRef`** (FAM-2, Aug 2026) — one
   file defining the stored vocabulary, like `Tombstone.kt` and `PushPayload.kt`. Children *and*
   pets, because a vet's bill is an expense and the `Expense.childId` it replaced had nowhere to
@@ -1113,7 +1133,11 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
    two countries. The cost is that the school-vacation strips follow the viewer too, which is
    recorded rather than hidden. And **`Holiday.nameLocal` carries `localLanguage`** — the UI shows
    the local name when the device language matches and English otherwise, which is what
-   `MonthView` already did, hardcoded to `"cs"`. `CzechHolidays` itself is unchanged: pure,
+   `MonthView` already did, hardcoded to `"cs"`. **Since L-8 (September 2026) there is one
+   exception and one function**: a recurring Czech school break (`CzechSchoolBreak`, which the
+   table builds its names from) is worded from `country_strings.xml` in the reader's language, and
+   every screen names a holiday through `presentation/common/HolidayNames.kt`'s
+   `holidayDisplayName` — don't re-inline the language comparison. `CzechHolidays` itself is unchanged: pure,
    computed, Easter via computus (now shared as `gregorianEasterSunday`), the nationwide MŠMT
    vacations, and the district-dependent spring break still intentionally excluded.
    **A region sits under the country, and only where it changes the grid** (schema 35,
@@ -2333,7 +2357,9 @@ Ukrainian** (`values-cs/`, `values-de/`, `values-ru/`, `values-uk/`). Rules:
   every resume; code that can run without the activity — the widget, a reminder — passes
   `DateFormat.is24HourFormat(context)` itself. The one `"HH:mm"` left is a wire format
   (`ContactWindowCodec`), and the export's `RecordFormat` keeps its fixed `Locale.ROOT` patterns
-  on purpose.
+  on purpose. The Day and Week views' hour gutter follows the same clock through `hourLabel`
+  (L-7: "09" on 24 hours, "9 AM" on 12), and only a 12-hour clock widens it
+  (`Dimensions.hourGutterWidthFor`), so the 24-hour layout never moves.
 - There is no `values-en/` — base `values/` IS English; don't recreate it.
 - **English is written in sentence case** (October 2026 audit, D-21): "Event title", "Week on /
   week off", "Save changes" — only the first word and proper names (Google Calendar, CoPlanly)

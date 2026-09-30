@@ -235,14 +235,24 @@ class HomeViewModel @Inject constructor(
      * its master, dated to the first occurrence. The activity feed can name events outside the
      * dashboard's window, and those are read from Room.
      *
+     * Every occurrence of a recurring event shares the series' id, so a weekly event shows up in
+     * the week list more than once; matching by id alone opened the first of them whichever was
+     * tapped (audit L-6). [occurrenceStart] picks the tapped one, as the calendar's preview does,
+     * and the id alone is the fallback when it is null or no longer on the dashboard.
+     *
+     * @param occurrenceStart The tapped occurrence's start, or null when the tap named only the
+     *   event (the activity feed).
      * @param onMissing Called when there is no such event on this device, so the caller can fall
      *   back to the editor route, which reports that case itself.
      */
-    fun openPreview(eventId: String, onMissing: () -> Unit) {
+    fun openPreview(eventId: String, occurrenceStart: LocalDateTime? = null, onMissing: () -> Unit) {
         viewModelScope.launch {
             val dashboard = uiState.value as? HomeUiState.Dashboard
-            val onScreen = dashboard?.today?.events?.firstOrNull { it.id == eventId }
-                ?: dashboard?.week?.firstOrNull { it.event.id == eventId }?.event
+            val onDashboard = dashboard?.today?.events.orEmpty() +
+                dashboard?.week?.map { it.event }.orEmpty()
+            val onScreen = onDashboard.firstOrNull {
+                it.id == eventId && occurrenceStart != null && it.startDateTime == occurrenceStart
+            } ?: onDashboard.firstOrNull { it.id == eventId }
             val event = onScreen ?: runCatching { events.getEventById(eventId) }.getOrNull()
             if (event == null) onMissing() else _previewEvent.value = event
         }

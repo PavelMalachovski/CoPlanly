@@ -202,10 +202,16 @@ function fakeDb(seed, options) {
         delete(ref) {
           ops.push({ref, remove: true});
         },
+        set(ref, data) {
+          ops.push({ref, replace: data});
+        },
         async commit() {
           ops.forEach((op) => {
             if (op.remove) {
               if (docs[op.ref.collection]) delete docs[op.ref.collection][op.ref.id];
+            } else if (op.replace) {
+              docs[op.ref.collection] = docs[op.ref.collection] || {};
+              docs[op.ref.collection][op.ref.id] = Object.assign({}, op.replace);
             } else {
               applyUpdate(op.ref.collection, op.ref.id, op.update);
             }
@@ -505,8 +511,10 @@ describe('unpairCoParentImpl', () => {
           // to every event that still carries the ended family's id until the grant expired.
           const seed = seedWithCustodyModel();
           seed.calendar_friends = {
-            nina: {familyId: CUSTODY_KEY, familyParents: ['alice', 'bob'], expiresAtMillis: 9e12},
-            otto: {familyId: 'alice__carol', familyParents: ['alice', 'carol'],
+            [`${CUSTODY_KEY}__nina`]: {familyId: CUSTODY_KEY, familyParents: ['alice', 'bob'],
+              friendUid: 'nina', expiresAtMillis: 9e12},
+            'alice__carol__nina': {familyId: 'alice__carol', familyParents: ['alice', 'carol'],
+              friendUid: 'nina',
               expiresAtMillis: 9e12},
           };
           seed.professional_grants = {
@@ -517,7 +525,7 @@ describe('unpairCoParentImpl', () => {
 
           await unpairCoParentImpl(db, 'alice');
 
-          assert.deepStrictEqual(Object.keys(db._docs.calendar_friends), ['otto']);
+          assert.deepStrictEqual(Object.keys(db._docs.calendar_friends), ['alice__carol__nina']);
           assert.deepStrictEqual(
               Object.keys(db._docs.professional_grants), ['alice__carol__pro']);
         });
@@ -1113,12 +1121,41 @@ describe('backfillRecordFamilyIdsImpl', () => {
 
     const summary = await backfillRecordFamilyIdsImpl(db);
 
-    assert.strictEqual(db._docs.calendar_friends.nina.familyId, 'alice__bob');
+    // L-5: each legacy grant moves to `{familyId}__{friendUid}` and repeats both halves.
+    assert.strictEqual(db._docs.calendar_friends['alice__bob__nina'].familyId, 'alice__bob');
+    assert.strictEqual(db._docs.calendar_friends['alice__bob__nina'].friendUid, 'nina');
+    assert.strictEqual(db._docs.calendar_friends['bob__carol__olga'].familyId, 'bob__carol');
     assert.deepStrictEqual(
-        summary.calendarFriends, {stamped: 1, skipped: 1, alreadyStamped: 1});
+        summary.calendarFriends, {stamped: 1, skipped: 1, alreadyStamped: 1, rekeyed: 2});
     // A grant with no pair to name is left as it is: inventing a family for it would *grant*
     // access, and the direction this whole item moves in is withholding it.
+    assert.deepStrictEqual(
+        Object.keys(db._docs.calendar_friends).sort(),
+        ['alice__bob__nina', 'bob__carol__olga', 'broken']);
     assert.strictEqual(db._docs.calendar_friends.broken.familyId, undefined);
+  });
+
+  it('re-keys a calendar friend of two families without either overwriting the other', async () => {
+    // L-5. A legacy grant whose family already has a per-family grant (the friend redeemed that
+    // family again after the rules changed) is superseded, and a second run is a no-op.
+    const db = pairedDb({
+      calendar_friends: {
+        'nina': {familyParents: ['alice', 'bob'], familyId: 'alice__bob', expiresAtMillis: 1},
+        'alice__bob__nina': {familyParents: ['alice', 'bob'], familyId: 'alice__bob',
+          friendUid: 'nina', expiresAtMillis: 2},
+        'dave__erin__nina': {familyParents: ['dave', 'erin'], familyId: 'dave__erin',
+          friendUid: 'nina', expiresAtMillis: 3},
+      },
+    });
+
+    await backfillRecordFamilyIdsImpl(db);
+    const second = await backfillRecordFamilyIdsImpl(db);
+
+    assert.deepStrictEqual(
+        Object.keys(db._docs.calendar_friends).sort(), ['alice__bob__nina', 'dave__erin__nina']);
+    assert.strictEqual(db._docs.calendar_friends['alice__bob__nina'].expiresAtMillis, 2);
+    assert.deepStrictEqual(
+        second.calendarFriends, {stamped: 0, skipped: 0, alreadyStamped: 2, rekeyed: 0});
   });
 
   it('leaves a document that already names a family alone', async () => {

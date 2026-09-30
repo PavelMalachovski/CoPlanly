@@ -5,6 +5,7 @@
     <string name="friend_invite_action">Freund einladen</string>
     <string name="friend_invite_code_label">Gib diesen Code weiter</string>
     <string name="friend_access_until">Zugriff bis %1$s</string>
+    <string name="friend_access_several">Familien: %1$d · der erste Zugriff endet am %2$s</string>
     <string name="friend_revoke">Zugriff entziehen</string>
     <string name="friend_revoke_confirm_title">Zugriff für %1$s entziehen?</string>
     <string name="friend_revoke_confirm_message">Diese Person sieht den Familienkalender dann nicht mehr. Du kannst sie jederzeit erneut einladen.</string>

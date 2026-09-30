@@ -13,7 +13,8 @@ import java.time.LocalDateTime
  *   null when no arrangement answers for that date. It is deliberately *not* [Event.parentOwner]:
  *   the row's question is "whose day does this fall on", which is what a separated parent needs
  *   in order to know who is taking the child, and an event's owner is a different fact that the
- *   event's own screen already shows.
+ *   event's own screen already shows. It is shown as words only: the row's colour is the event's
+ *   owner, as on every calendar chip (UX-8, owner decision 2026-09-30).
  * @property key A stable list key. Recurring occurrences share the master event's id, so the id
  *   alone collides — two occurrences of the same series in one week would be one row, and which
  *   one survived would be up to the list.

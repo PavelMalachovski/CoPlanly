@@ -11,26 +11,58 @@ const sinon = require('sinon');
  * contract; that a narrowed audience actually revokes access is covered by
  * firestore-tests/rules/child-info.test.js.
  *
+ * Also serves the one range query the indexed sweep issues (`<=` on a field, which, as in
+ * Firestore, matches only documents whose field is a number) and the `ops/guestSweep` marker;
+ * `_queries` records whether a run scanned or queried.
+ *
  * @param {!Array<!Object>} childInfo Documents in the `child_info` collection.
- * @return {!Object} A fake with `_updates` and `_commits` recorders.
+ * @param {?Object=} marker The stored `ops/guestSweep` document, or absent.
+ * @return {!Object} A fake with `_updates`, `_commits`, `_queries` and `_marker` recorders.
  */
-function fakeDb(childInfo) {
+function fakeDb(childInfo, marker) {
   const updates = [];
   const commits = [];
+  const queries = [];
+  const snapshot = (docs, name) => ({
+    docs: docs.map((doc) => ({
+      id: doc.id,
+      data: () => doc,
+      ref: {id: doc.id, collection: name},
+    })),
+  });
 
-  return {
+  const db = {
     _updates: updates,
     _commits: commits,
+    _queries: queries,
+    _marker: marker,
     collection(name) {
+      const docs = name === 'child_info' ? childInfo : [];
       return {
         async get() {
-          const docs = name === 'child_info' ? childInfo : [];
+          queries.push({collection: name, kind: 'scan'});
+          return snapshot(docs, name);
+        },
+        where(field, op, value) {
+          assert.strictEqual(op, '<=', 'the sweep only ever asks for "ended by now"');
           return {
-            docs: docs.map((doc) => ({
-              id: doc.id,
-              data: () => doc,
-              ref: {id: doc.id, collection: name},
-            })),
+            async get() {
+              queries.push({collection: name, kind: 'range', field, value});
+              return snapshot(docs.filter((doc) =>
+                typeof doc[field] === 'number' && doc[field] <= value), name);
+            },
+          };
+        },
+        doc(id) {
+          assert.deepStrictEqual([name, id], ['ops', 'guestSweep']);
+          return {
+            async get() {
+              return {exists: db._marker !== undefined, data: () => db._marker};
+            },
+            async set(data, options) {
+              assert.deepStrictEqual(options, {merge: true});
+              db._marker = Object.assign({}, db._marker, data);
+            },
           };
         },
       };
@@ -48,6 +80,7 @@ function fakeDb(childInfo) {
       };
     },
   };
+  return db;
 }
 
 const NOW = Date.parse('2026-08-23T12:00:00Z');
@@ -124,6 +157,7 @@ describe('sweepExpiredGuests', () => {
       createdByFirebaseUid: 'alice',
       sharedWith: ['alice', 'nina'],
       guests: {nina: grant(ACTIVE)},
+      guestsMinExpiresAtMillis: ACTIVE,
     }]);
 
     const removed = await myFunctions.sweepExpiredGuestsImpl(db, NOW);
@@ -238,6 +272,211 @@ describe('sweepExpiredGuests', () => {
     ]);
 
     assert.strictEqual(await myFunctions.sweepExpiredGuestsImpl(db, NOW), 0);
+  });
+});
+
+describe('sweepExpiredGuests range index (L-10)', () => {
+  let myFunctions;
+  const INDEXED = {guestExpiryIndexVersion: 1};
+
+  before(() => {
+    myFunctions = require('../index');
+  });
+
+  it('scans once while the marker is missing, stamps as it goes, then writes the marker',
+      async () => {
+        // Records written before the field existed carry none; only a scan can find them.
+        const db = fakeDb([
+          {id: 'old', createdByFirebaseUid: 'alice', sharedWith: ['alice', 'nina'],
+            guests: {nina: grant(ACTIVE)}},
+          {id: 'none', createdByFirebaseUid: 'alice', sharedWith: ['alice']},
+        ]);
+
+        await myFunctions.sweepExpiredGuestsImpl(db, NOW);
+
+        assert.deepStrictEqual(db._queries.map((q) => q.kind), ['scan']);
+        assert.deepStrictEqual(db._updates,
+            [{id: 'old', update: {guestsMinExpiresAtMillis: ACTIVE}}],
+            'an active grant is stamped, untouched otherwise; a record without guests is left');
+        assert.strictEqual(db._marker.guestExpiryIndexVersion, 1);
+        assert.strictEqual(db._marker.backfilledAtMillis, NOW);
+      });
+
+  it('queries, never scans, once the marker says the backfill is done', async () => {
+    const db = fakeDb([
+      {id: 'due', createdByFirebaseUid: 'alice', sharedWith: ['alice', 'nina'],
+        guests: {nina: grant(ENDED)}, guestsMinExpiresAtMillis: ENDED},
+      {id: 'later', createdByFirebaseUid: 'alice', sharedWith: ['alice', 'otto'],
+        guests: {otto: grant(ACTIVE)}, guestsMinExpiresAtMillis: ACTIVE},
+    ], INDEXED);
+
+    assert.strictEqual(await myFunctions.sweepExpiredGuestsImpl(db, NOW), 1);
+
+    assert.deepStrictEqual(db._queries,
+        [{collection: 'child_info', kind: 'range', field: 'guestsMinExpiresAtMillis', value: NOW}]);
+    assert.deepStrictEqual(db._updates.map((u) => u.id), ['due']);
+  });
+
+  it('matches a grant ending exactly now, as the rule does', async () => {
+    const db = fakeDb([
+      {id: 'c', createdByFirebaseUid: 'alice', sharedWith: ['alice', 'nina'],
+        guests: {nina: grant(NOW)}, guestsMinExpiresAtMillis: NOW},
+    ], INDEXED);
+
+    assert.strictEqual(await myFunctions.sweepExpiredGuestsImpl(db, NOW), 1);
+  });
+
+  it('moves the index to the next grant to end, or deletes it with the last one', async () => {
+    const db = fakeDb([
+      {id: 'two', createdByFirebaseUid: 'alice', sharedWith: ['alice', 'nina', 'otto'],
+        guests: {nina: grant(ENDED), otto: grant(ACTIVE)}, guestsMinExpiresAtMillis: ENDED},
+      {id: 'one', createdByFirebaseUid: 'alice', sharedWith: ['alice', 'nina'],
+        guests: {nina: grant(ENDED)}, guestsMinExpiresAtMillis: ENDED},
+    ], INDEXED);
+
+    await myFunctions.sweepExpiredGuestsImpl(db, NOW);
+
+    const byId = {};
+    db._updates.forEach((u) => {
+      byId[u.id] = u.update;
+    });
+    assert.strictEqual(byId.two.guestsMinExpiresAtMillis, ACTIVE);
+    assert.notStrictEqual(typeof byId.one.guestsMinExpiresAtMillis, 'number',
+        'a record with no guest left must drop out of the index (a field delete)');
+  });
+
+  it('re-stamps a stale-low index without removing anything, so it stops matching', async () => {
+    // A dotted `guests.<uid>` delete (account deletion) leaves the old minimum behind until the
+    // trigger runs; the sweep then reads the record, finds nothing ended, and corrects it.
+    const db = fakeDb([
+      {id: 'c', createdByFirebaseUid: 'alice', sharedWith: ['alice', 'otto'],
+        guests: {otto: grant(ACTIVE)}, guestsMinExpiresAtMillis: ENDED},
+    ], INDEXED);
+
+    assert.strictEqual(await myFunctions.sweepExpiredGuestsImpl(db, NOW), 0);
+    assert.deepStrictEqual(db._updates,
+        [{id: 'c', update: {guestsMinExpiresAtMillis: ACTIVE}}]);
+  });
+
+  it('runs the full scan again when the marker is an older version', async () => {
+    const db = fakeDb([], {guestExpiryIndexVersion: 0});
+
+    await myFunctions.sweepExpiredGuestsImpl(db, NOW);
+
+    assert.deepStrictEqual(db._queries.map((q) => q.kind), ['scan']);
+    assert.strictEqual(db._marker.guestExpiryIndexVersion, 1);
+  });
+});
+
+describe('guestsMinExpiresAtMillis', () => {
+  let myFunctions;
+
+  before(() => {
+    myFunctions = require('../index');
+  });
+
+  it('is the earliest expiry, null for no guests, and 0 for a grant without one', () => {
+    const min = myFunctions.guestsMinExpiresAtMillis;
+    assert.strictEqual(min({a: grant(ACTIVE), b: grant(ENDED)}), ENDED);
+    assert.strictEqual(min({}), null);
+    assert.strictEqual(min(undefined), null);
+    assert.strictEqual(min(['nina']), null);
+    assert.strictEqual(min('nina'), null);
+    // Fail closed: an unusable expiry must fall inside `<= now`, never outside the range.
+    assert.strictEqual(min({a: grant(ACTIVE), b: grant(undefined)}), 0);
+    assert.strictEqual(min({a: grant('2099-01-01')}), 0);
+    assert.strictEqual(min({a: grant(-5)}), 0);
+    assert.strictEqual(min({a: null}), 0);
+  });
+});
+
+describe('maintainGuestExpiryIndex', () => {
+  let myFunctions;
+
+  before(() => {
+    myFunctions = require('../index');
+  });
+
+  /**
+   * A fake with one `child_info` document behind a transaction.
+   *
+   * @param {?Object} stored The stored document, or null when it does not exist.
+   * @return {!Object} The fake, with `_writes` and `_transactions`.
+   */
+  function txDb(stored) {
+    const db = {
+      _writes: [],
+      _transactions: 0,
+      collection(name) {
+        assert.strictEqual(name, 'child_info');
+        return {doc: (id) => ({id})};
+      },
+      async runTransaction(fn) {
+        db._transactions++;
+        return fn({
+          get: async () => ({exists: stored !== null, data: () => stored}),
+          update: (ref, update) => db._writes.push({id: ref.id, update}),
+        });
+      },
+    };
+    return db;
+  }
+
+  it('puts back the index a client\'s whole-document set() dropped', async () => {
+    // The app writes child_info with set() from Room, which knows nothing of the field.
+    const after = {sharedWith: ['alice', 'nina'], guests: {nina: grant(ACTIVE)}};
+    const db = txDb(after);
+
+    assert.strictEqual(await myFunctions.syncGuestExpiryIndexImpl(db, 'c', after), 'written');
+    assert.deepStrictEqual(db._writes, [{id: 'c', update: {guestsMinExpiresAtMillis: ACTIVE}}]);
+  });
+
+  it('reads nothing when the document already agrees, which ends its own loop', async () => {
+    const after = {guests: {nina: grant(ACTIVE)}, guestsMinExpiresAtMillis: ACTIVE};
+    const db = txDb(after);
+
+    assert.strictEqual(await myFunctions.syncGuestExpiryIndexImpl(db, 'c', after), 'unchanged');
+    assert.strictEqual(await myFunctions.syncGuestExpiryIndexImpl(db, 'c', {sharedWith: []}),
+        'unchanged', 'no guests and no field is already right');
+    assert.strictEqual(db._transactions, 0);
+  });
+
+  it('corrects a value a client wrote, from the guests map', async () => {
+    const after = {guests: {nina: grant(ENDED)}, guestsMinExpiresAtMillis: 9e15};
+    const db = txDb(after);
+
+    await myFunctions.syncGuestExpiryIndexImpl(db, 'c', after);
+
+    assert.strictEqual(db._writes[0].update.guestsMinExpiresAtMillis, ENDED);
+  });
+
+  it('removes the field once the last guest is gone', async () => {
+    const after = {guests: {}, guestsMinExpiresAtMillis: ACTIVE};
+    const db = txDb(after);
+
+    await myFunctions.syncGuestExpiryIndexImpl(db, 'c', after);
+
+    assert.strictEqual(db._writes.length, 1);
+    assert.notStrictEqual(typeof db._writes[0].update.guestsMinExpiresAtMillis, 'number');
+  });
+
+  it('computes from the stored document, not from a late event', async () => {
+    // The event says one thing, but a later write already corrected the document.
+    const stale = {guests: {nina: grant(ENDED)}};
+    const db = txDb({guests: {nina: grant(ENDED)}, guestsMinExpiresAtMillis: ENDED});
+
+    assert.strictEqual(await myFunctions.syncGuestExpiryIndexImpl(db, 'c', stale), 'unchanged');
+    assert.deepStrictEqual(db._writes, []);
+  });
+
+  it('does nothing for a deleted record', async () => {
+    assert.strictEqual(await myFunctions.syncGuestExpiryIndexImpl(txDb(null), 'c', null),
+        'absent');
+    const gone = txDb(null);
+    assert.strictEqual(
+        await myFunctions.syncGuestExpiryIndexImpl(gone, 'c', {guests: {n: grant(ACTIVE)}}),
+        'absent', 'deleted between the write and the transaction');
+    assert.deepStrictEqual(gone._writes, []);
   });
 });
 

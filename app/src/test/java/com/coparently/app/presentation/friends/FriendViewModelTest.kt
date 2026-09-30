@@ -45,9 +45,9 @@ class FriendViewModelTest {
     )
     private val repository = mockk<FriendRepository> {
         every { observeFamilyFriends() } returns flowOf(emptyList())
-        every { observeMyGrant() } returns flowOf(grant)
+        every { observeMyGrants() } returns flowOf(listOf(grant))
         every { observeMyProfile() } returns flowOf(null)
-        coEvery { myGrant() } returns grant
+        coEvery { myGrants() } returns listOf(grant)
     }
 
     @Before
@@ -86,7 +86,7 @@ class FriendViewModelTest {
 
     @Test
     fun `a profile saved where nothing collects the grant still carries the gate`() = runTest(dispatcher) {
-        // Item 17: `myGrant` is WhileSubscribed and the profile screen never collects it, so
+        // Item 17: `myGrants` is WhileSubscribed and the profile screen never collects it, so
         // reading its `.value` here would send an empty `familyParents` — the read gate itself.
         val saved = slot<FriendProfile>()
         coEvery { repository.saveMyProfile(capture(saved)) } returns Result.success(Unit)
@@ -105,6 +105,38 @@ class FriendViewModelTest {
         assertEquals("Grandma", saved.captured.name)
         assertEquals(listOf("123"), saved.captured.phones)
         assertNull(saved.captured.bloodGroup)
+    }
+
+    @Test
+    fun `a friend of two families creates a profile both families can read`() = runTest(dispatcher) {
+        // L-5: one grant per family. The gate is every parent of every family, each once, oldest
+        // grant first — a profile gated on the first grant alone would hide the friend's name and
+        // phone number from the second family that admitted her.
+        val second = grant.copy(
+            familyParents = listOf("u3", "u4"),
+            familyId = "u3__u4",
+            grantedAtMillis = 5L
+        )
+        coEvery { repository.myGrants() } returns listOf(second, grant)
+        val saved = slot<FriendProfile>()
+        coEvery { repository.saveMyProfile(capture(saved)) } returns Result.success(Unit)
+        val vm = FriendViewModel(repository)
+
+        vm.saveProfile("Grandma", FriendRole.GRANDPARENT, emptyList(), null, null)
+        advanceUntilIdle()
+
+        assertEquals(listOf("u1", "u2", "u3", "u4"), saved.captured.familyParents)
+    }
+
+    @Test
+    fun `a friend's grants in every family are exposed, not only one`() = runTest(dispatcher) {
+        val second = grant.copy(familyParents = listOf("u3", "u4"), familyId = "u3__u4")
+        every { repository.observeMyGrants() } returns flowOf(listOf(grant, second))
+        val vm = FriendViewModel(repository)
+        backgroundScope.launch { vm.myGrants.collect {} }
+        advanceUntilIdle()
+
+        assertEquals(listOf(grant, second), vm.myGrants.value)
     }
 
     @Test

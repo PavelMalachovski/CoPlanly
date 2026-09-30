@@ -660,20 +660,24 @@ async function acceptGuestInvitationImpl(db, acceptingUserId, acceptingEmail, re
           {reason: 'already-entitled'});
     }
 
+    // Written whole rather than through a `guests.<uid>` field path so the read and the
+    // write are the same transaction's view of the map — a dotted update would be a blind
+    // write over whatever a concurrent revoke had just done.
+    const nextGuests = Object.assign({}, guests, {
+      [acceptingUserId]: {
+        name: await guestName(accepterRef, acceptingEmail),
+        grantedBy: invite.fromUserId,
+        grantedAtMillis,
+        expiresAtMillis,
+      },
+    });
     tx.update(childRef, {
-      // Written whole rather than through a `guests.<uid>` field path so the read and the
-      // write are the same transaction's view of the map — a dotted update would be a blind
-      // write over whatever a concurrent revoke had just done.
-      guests: Object.assign({}, guests, {
-        [acceptingUserId]: {
-          name: await guestName(accepterRef, acceptingEmail),
-          grantedBy: invite.fromUserId,
-          grantedAtMillis,
-          expiresAtMillis,
-        },
-      }),
+      guests: nextGuests,
       sharedWith: sharedWith.indexOf(acceptingUserId) < 0 ?
         sharedWith.concat([acceptingUserId]) : sharedWith,
+      // The sweep's range index (L-10). `maintainGuestExpiryIndex` would set it after the
+      // write anyway; writing it here keeps the record consistent from the first commit.
+      [GUEST_EXPIRY_INDEX_FIELD]: guestsMinExpiresAtMillis(nextGuests),
     });
     tx.update(inviteRef, {
       status: 'accepted',
@@ -781,15 +785,70 @@ const FRIEND_INVITATION = 'friend';
 exports.FRIEND_INVITATION = FRIEND_INVITATION;
 
 /**
+ * The id of [friendUid]'s calendar-friend grant over [familyId] — `{familyId}__{friendUid}`
+ * (L-5), the shape `professional_grants` uses and the one `isCalendarFriendOf` in firestore.rules
+ * builds from the record's family and the caller. One document per family, so a friend admitted
+ * by a second family holds a second grant instead of losing the first.
+ *
+ * @param {string} familyId `FamilyKey.of` the family's two parents.
+ * @param {string} friendUid The friend's uid.
+ * @return {string} The document id.
+ */
+function calendarFriendGrantId(familyId, friendUid) {
+  return `${familyId}__${friendUid}`;
+}
+
+exports.calendarFriendGrantId = calendarFriendGrantId;
+
+/**
+ * What a grant stored under the pre-L-5 per-person id (`calendar_friends/{friendUid}`) becomes
+ * under the per-family id, or null when it names no family that can be stated honestly.
+ *
+ * A legacy id is recognised by carrying no `__` — a Firebase uid never does, and every per-family
+ * id does. The family comes from the stored `familyId`, else from `familyParents` (the two uids
+ * sorted and joined, exactly as [backfillCalendarFriendFamilyIds] always stamped it); a grant
+ * whose parents are not a pair names no family and is left for a person to decide, because
+ * inventing one would grant access rather than withhold it.
+ *
+ * @param {string} docId The stored document id.
+ * @param {!Object} data The stored document.
+ * @return {?{id: string, data: !Object}} The re-keyed id and data, or null.
+ */
+function rekeyedLegacyCalendarFriendGrant(docId, data) {
+  if (typeof docId !== 'string' || docId === '' || docId.includes('__')) return null;
+  const parents = Array.isArray(data.familyParents) ? data.familyParents : [];
+  if (parents.length !== 2 || parents[0] === parents[1] ||
+      !parents.every((uid) => typeof uid === 'string' && uid !== '')) {
+    return null;
+  }
+  const familyId = typeof data.familyId === 'string' && data.familyId !== '' ?
+    data.familyId : custodyModelKey(parents[0], parents[1]);
+  if (familyId !== custodyModelKey(parents[0], parents[1])) return null;
+  return {
+    id: calendarFriendGrantId(familyId, docId),
+    data: Object.assign({}, data, {familyId, friendUid: docId}),
+  };
+}
+
+exports.rekeyedLegacyCalendarFriendGrant = rekeyedLegacyCalendarFriendGrant;
+
+/**
  * Body of the `acceptCalendarFriendInvitation` callable — lets a trusted third person read the
  * family's calendar without occupying a parent slot.
  *
  * A third function beside the pairing and guest ones, for the reason stated on
  * `acceptGuestInvitationImpl`: paths that grant different things must not be one `kind` branch
- * apart. This one writes exactly one document — `calendar_friends/{friendUid}` — and touches no
- * user document, no event and no child record. **No event is ever rewritten to admit a friend**:
- * the events read rule consults this grant instead, so admitting or revoking is one write rather
- * than a fan-out over the family's whole history.
+ * apart. This one writes one grant — `calendar_friends/{familyId}__{friendUid}` ([calendarFriendGrantId],
+ * L-5) — and touches no user document, no event and no child record. **No event is ever rewritten
+ * to admit a friend**: the events read rule consults this grant instead, so admitting or revoking
+ * is one write rather than a fan-out over the family's whole history.
+ *
+ * **One grant per family.** A friend admitted by a second family gets a second document; the
+ * first family's grant is not touched (before L-5 both lived at `calendar_friends/{friendUid}` and
+ * the second redemption silently overwrote the first). Two housekeeping writes ride along: a
+ * per-person grant from before L-5 is re-keyed to its own family ([rekeyedLegacyCalendarFriendGrant]),
+ * and the friend's profile gate (`friend_profiles/{uid}.familyParents`) gains the new family's
+ * parents, so both families can read who she is.
  *
  * The inviter must be a **paired parent**: `partnerId` is what proves they hold a slot, and it
  * also supplies the second uid the grant records, so a friend admitted by one parent can read
@@ -799,7 +858,8 @@ exports.FRIEND_INVITATION = FRIEND_INVITATION;
  * @param {string} acceptingUserId The signed-in caller's UID.
  * @param {string} acceptingEmail The signed-in caller's email, or ''.
  * @param {{code: ?string, invitationId: ?string}} ref Exactly one identifier.
- * @return {Promise<{familyParents: !Array<string>, expiresAtMillis: number}>} The pair whose
+ * @return {Promise<{familyParents: !Array<string>, familyId: string,
+ *   expiresAtMillis: number}>} The pair whose
  *   calendar the caller may now read, and the instant their access ends.
  */
 async function acceptCalendarFriendInvitationImpl(db, acceptingUserId, acceptingEmail, ref) {
@@ -840,13 +900,20 @@ async function acceptCalendarFriendInvitationImpl(db, acceptingUserId, accepting
 
   const inviterRef = db.collection('users').doc(invite.fromUserId);
   const accepterRef = db.collection('users').doc(acceptingUserId);
-  const grantRef = db.collection('calendar_friends').doc(acceptingUserId);
+  // The per-person grant from before L-5, if this friend still holds one: re-keyed below so a
+  // friend who redeems a second family's code keeps the first family rather than depending on
+  // the operator's backfill having run.
+  const legacyGrantRef = db.collection('calendar_friends').doc(acceptingUserId);
+  const profileRef = db.collection('friend_profiles').doc(acceptingUserId);
   const grantedAtMillis = Date.now();
   let familyParents = [];
   let familyId = '';
 
   await db.runTransaction(async (tx) => {
-    const [inviterSnap, inviteSnap] = await Promise.all([tx.get(inviterRef), tx.get(inviteRef)]);
+    // Every read before any write, as a transaction requires.
+    const [inviterSnap, inviteSnap, legacySnap, profileSnap] = await Promise.all([
+      tx.get(inviterRef), tx.get(inviteRef), tx.get(legacyGrantRef), tx.get(profileRef),
+    ]);
     // Re-read inside the transaction: two devices redeeming one code would otherwise both pass
     // the check above and the second grant would overwrite the first's expiry.
     if (inviteSnap.data().status !== 'pending') {
@@ -895,17 +962,54 @@ async function acceptCalendarFriendInvitationImpl(db, acceptingUserId, accepting
     familyParents = [invite.fromUserId, partnerId].sort();
     familyId = custodyModelKey(invite.fromUserId, partnerId);
 
-    tx.set(grantRef, Object.assign({
-      familyParents,
-      // The field the events read rule keys on. `familyParents` alone answered "is the creator
-      // one of my two parents", which is true of the *person* in both of their families — see
-      // `isCalendarFriendOf` in firestore.rules for the calendar that leaked.
-      familyId,
-      name: await guestName(accepterRef, acceptingEmail),
-      grantedBy: invite.fromUserId,
-      grantedAtMillis,
-      expiresAtMillis,
-    }, await accepterPhoto(accepterRef)));
+    // A per-person grant from before L-5 over *another* family moves to its own per-family id,
+    // unless a grant already stands there; one over this same family is simply superseded by the
+    // grant written below. A lapsed one is only deleted — the sweep would have removed it anyway.
+    const legacy = legacySnap.exists ?
+      rekeyedLegacyCalendarFriendGrant(acceptingUserId, legacySnap.data() || {}) : null;
+    const legacyLive = legacy !== null && legacy.id !== calendarFriendGrantId(familyId, acceptingUserId) &&
+      typeof legacy.data.expiresAtMillis === 'number' && legacy.data.expiresAtMillis > Date.now();
+    const legacyTargetRef = legacyLive ? db.collection('calendar_friends').doc(legacy.id) : null;
+    const legacyTargetTaken = legacyTargetRef ? (await tx.get(legacyTargetRef)).exists : false;
+
+    const name = await guestName(accepterRef, acceptingEmail);
+    const photo = await accepterPhoto(accepterRef);
+
+    tx.set(db.collection('calendar_friends').doc(calendarFriendGrantId(familyId, acceptingUserId)),
+        Object.assign({
+          familyParents,
+          // The field the events read rule keys on. `familyParents` alone answered "is the
+          // creator one of my two parents", which is true of the *person* in both of their
+          // families — see `isCalendarFriendOf` in firestore.rules for the calendar that leaked.
+          familyId,
+          // Repeats the id's second half, so the rule never has to trust the id alone and the
+          // friend's own list query (`friendUid == me`) has a field to filter on.
+          friendUid: acceptingUserId,
+          name,
+          grantedBy: invite.fromUserId,
+          grantedAtMillis,
+          expiresAtMillis,
+        }, photo));
+    // A legacy grant that names no family honestly is left where it is, as the backfill leaves
+    // it: it admits nothing, and deciding what it meant is a person's call.
+    if (legacy !== null) {
+      if (legacyTargetRef && !legacyTargetTaken) {
+        tx.set(legacyTargetRef, legacy.data);
+      }
+      tx.delete(legacyGrantRef);
+    }
+    // The friend's profile is read by the parents listed in its `familyParents`, which the
+    // friend cannot change after creating it. A second family's parents are added here, so the
+    // grandmother both families admitted is a name and a phone number to both, not only to the
+    // first. Only ever widened, and only by the parents of a family that has just admitted her.
+    if (profileSnap.exists) {
+      const stored = Array.isArray((profileSnap.data() || {}).familyParents) ?
+        profileSnap.data().familyParents : [];
+      const widened = Array.from(new Set(stored.concat(familyParents)));
+      if (widened.length !== stored.length) {
+        tx.update(profileRef, {familyParents: widened});
+      }
+    }
     tx.update(inviteRef, {
       status: 'accepted', acceptedBy: acceptingUserId, acceptedAt: grantedAtMillis,
     });
@@ -1215,6 +1319,151 @@ function guestGrantExpired(grant, nowMillis) {
 exports.guestGrantExpired = guestGrantExpired;
 
 /**
+ * The denormalised field that makes "a record with an expired guest" a query (audit L-10).
+ *
+ * Firestore cannot filter on a value inside a map, so the sweep used to read the whole of
+ * `child_info` every day. This top-level number is the earliest `expiresAtMillis` among the
+ * record's grants, and absent when there are none; the sweep range-queries `<= now` on it.
+ * Server-only: nothing in the app reads or writes it, and the app's whole-document `set()`
+ * drops it, which is what `maintainGuestExpiryIndex` is for.
+ */
+const GUEST_EXPIRY_INDEX_FIELD = 'guestsMinExpiresAtMillis';
+
+exports.GUEST_EXPIRY_INDEX_FIELD = GUEST_EXPIRY_INDEX_FIELD;
+
+/**
+ * Where the sweep records that every record written before the index existed has been
+ * stamped. Absent, or an older version → the next run is a full scan that stamps as it
+ * sweeps, then writes the marker. Deleting the document forces one more full scan.
+ */
+const GUEST_SWEEP_MARKER = {collection: 'ops', doc: 'guestSweep'};
+
+/** Bump to make the sweep run its full, stamping scan once more (e.g. after a trigger outage). */
+const GUEST_EXPIRY_INDEX_VERSION = 1;
+
+exports.GUEST_EXPIRY_INDEX_VERSION = GUEST_EXPIRY_INDEX_VERSION;
+
+/**
+ * The value [GUEST_EXPIRY_INDEX_FIELD] should hold for a `guests` map: the smallest expiry
+ * among its grants, or null when there is no grant.
+ *
+ * Fails closed like [guestGrantExpired]: a grant without a positive numeric expiry counts as
+ * 0, so the record matches the sweep's `<= now` on the next run and the grant is removed —
+ * never kept because it fell outside the range.
+ *
+ * @param {*} guests The stored `guests` value, whatever shape it turned out to be.
+ * @return {?number} The earliest expiry, or null when the record names no guest.
+ */
+function guestsMinExpiresAtMillis(guests) {
+  if (!guests || typeof guests !== 'object' || Array.isArray(guests)) {
+    return null;
+  }
+  let min = null;
+  for (const uid of Object.keys(guests)) {
+    const grant = guests[uid];
+    const expiresAtMillis = grant && typeof grant.expiresAtMillis === 'number' &&
+      grant.expiresAtMillis > 0 ? grant.expiresAtMillis : 0;
+    if (min === null || expiresAtMillis < min) {
+      min = expiresAtMillis;
+    }
+  }
+  return min;
+}
+
+exports.guestsMinExpiresAtMillis = guestsMinExpiresAtMillis;
+
+/**
+ * Whether [data] already carries the index value [desired]: present and equal, or absent when
+ * [desired] is null.
+ *
+ * @param {!Object} data A `child_info` document.
+ * @param {?number} desired What [guestsMinExpiresAtMillis] says it should hold.
+ * @return {boolean} True when no write is needed.
+ */
+function guestExpiryIndexMatches(data, desired) {
+  const present = Object.prototype.hasOwnProperty.call(data, GUEST_EXPIRY_INDEX_FIELD);
+  return desired === null ? !present : present && data[GUEST_EXPIRY_INDEX_FIELD] === desired;
+}
+
+/**
+ * The value that stores [desired] in an `update()`: the number, or a field delete for null.
+ *
+ * @param {?number} desired The value to store.
+ * @return {*} A value for [GUEST_EXPIRY_INDEX_FIELD].
+ */
+function guestExpiryIndexValue(desired) {
+  return desired === null ? FieldValue.delete() : desired;
+}
+
+/**
+ * Body of the `maintainGuestExpiryIndex` trigger: brings a `child_info` record's
+ * [GUEST_EXPIRY_INDEX_FIELD] back in line with its `guests` map after any write.
+ *
+ * Why a trigger and not only the writers. The server's writers (`acceptGuestInvitation`, the
+ * sweep) set the field themselves, but the app saves a child record with a whole-document
+ * `set()` built from Room (`ChildInfoRepositoryImpl.toFirestoreMap`), which knows nothing of
+ * this field and so **drops it on every save** — and a build already installed will go on
+ * doing so. A client may also write any value there, since the update rule does not pin the
+ * keys. Recomputing from `guests` after every write covers all of that without teaching the
+ * app, the rules or the wire contract about a server-only column.
+ *
+ * Reads nothing when the written document already agrees — the common case, and the second
+ * invocation its own write causes, which is what ends the loop. Otherwise it re-reads in a
+ * transaction and computes from the stored map, so an invocation that arrives late cannot put
+ * back a value from an older version of the document.
+ *
+ * @param {FirebaseFirestore.Firestore} db Firestore instance.
+ * @param {string} childInfoId The written document's id.
+ * @param {?Object} after The document as the write left it, or null when it was deleted.
+ * @return {Promise<string>} `absent`, `unchanged` or `written`.
+ */
+async function syncGuestExpiryIndexImpl(db, childInfoId, after) {
+  if (!after) {
+    return 'absent';
+  }
+  if (guestExpiryIndexMatches(after, guestsMinExpiresAtMillis(after.guests))) {
+    return 'unchanged';
+  }
+  const ref = db.collection('child_info').doc(childInfoId);
+  return db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) {
+      return 'absent';
+    }
+    const data = snap.data();
+    const desired = guestsMinExpiresAtMillis(data.guests);
+    if (guestExpiryIndexMatches(data, desired)) {
+      return 'unchanged';
+    }
+    tx.update(ref, {[GUEST_EXPIRY_INDEX_FIELD]: guestExpiryIndexValue(desired)});
+    return 'written';
+  });
+}
+
+exports.syncGuestExpiryIndexImpl = syncGuestExpiryIndexImpl;
+
+/**
+ * Keeps `child_info/{id}.guestsMinExpiresAtMillis` true to the record's `guests` map (L-10).
+ * See [syncGuestExpiryIndexImpl] for why this is a trigger.
+ *
+ * Never throws: Functions would only retry into the same error. A stamp it missed is picked up
+ * by the sweep's full scan once [GUEST_EXPIRY_INDEX_VERSION] is bumped, and the read rule
+ * refuses an expired guest in the meantime — the sweep is cleanup, not enforcement.
+ */
+exports.maintainGuestExpiryIndex = regional.firestore
+    .document('child_info/{childInfoId}')
+    .onWrite(async (change, context) => {
+      const childInfoId = context.params.childInfoId;
+      try {
+        await syncGuestExpiryIndexImpl(admin.firestore(), childInfoId,
+            change.after.exists ? change.after.data() : null);
+      } catch (err) {
+        console.error(`maintainGuestExpiryIndex failed for ${childInfoId}`, err);
+      }
+      return null;
+    });
+
+/**
  * Body of the `sweepExpiredGuests` schedule — removes guest grants that have run out.
  *
  * The read rule refusing an expired guest is only half of the expiry. It stops the read, but
@@ -1223,13 +1472,14 @@ exports.guestGrantExpired = guestGrantExpired;
  * that actually ends it, and it writes both places: the grant leaves `guests` and the uid
  * leaves `sharedWith`.
  *
- * **Scans the whole collection**, because there is no query for it: Firestore cannot filter
- * on a field inside a map's values, so "any record with an expired guest" is not expressible.
- * A denormalised "earliest expiry" column would make it expressible, and is deliberately not
- * here — it would be a derived field that every one of the several places building a child
- * document has to remember to recompute, which is exactly the class of bug this codebase
- * keeps finding. `child_info` holds one document per child per family; revisit this if that
- * ever stops being small.
+ * **A range query on [GUEST_EXPIRY_INDEX_FIELD]** (audit L-10), not a scan: only records whose
+ * earliest grant has ended are read. The field is kept true by `maintainGuestExpiryIndex`, by
+ * `acceptGuestInvitation` and by this sweep, which rewrites it on every record it reads —
+ * including one whose value was stale-low and had nothing to remove, so it stops matching.
+ * Records written before the field existed carry none, so until `ops/guestSweep` records
+ * [GUEST_EXPIRY_INDEX_VERSION] a run reads the whole collection once, stamping every record
+ * with guests as it sweeps, and then writes the marker. A record written after that scan read
+ * it is stamped by the trigger.
  *
  * A uid is never removed from `sharedWith` of a document it created — the same rule
  * `revokeSharedAudience` follows, and for the same reason: `sharedWith` is what the parent's
@@ -1243,7 +1493,17 @@ exports.guestGrantExpired = guestGrantExpired;
  * @return {Promise<number>} How many grants were removed.
  */
 async function sweepExpiredGuestsImpl(db, nowMillis) {
-  const snap = await db.collection('child_info').get();
+  const markerRef = db.collection(GUEST_SWEEP_MARKER.collection).doc(GUEST_SWEEP_MARKER.doc);
+  const marker = await markerRef.get();
+  const markerData = marker.exists ? marker.data() || {} : {};
+  const indexed = typeof markerData.guestExpiryIndexVersion === 'number' &&
+    markerData.guestExpiryIndexVersion >= GUEST_EXPIRY_INDEX_VERSION;
+
+  const snap = indexed ?
+    await db.collection('child_info')
+        .where(GUEST_EXPIRY_INDEX_FIELD, '<=', nowMillis)
+        .get() :
+    await db.collection('child_info').get();
 
   let batch = db.batch();
   let pending = 0;
@@ -1255,9 +1515,6 @@ async function sweepExpiredGuestsImpl(db, nowMillis) {
       !Array.isArray(data.guests) ? data.guests : {};
     const expired = Object.keys(guests)
         .filter((uid) => guestGrantExpired(guests[uid], nowMillis));
-    if (expired.length === 0) {
-      continue;
-    }
 
     const kept = {};
     Object.keys(guests)
@@ -1265,11 +1522,19 @@ async function sweepExpiredGuestsImpl(db, nowMillis) {
         .forEach((uid) => {
           kept[uid] = guests[uid];
         });
+    const desired = guestsMinExpiresAtMillis(kept);
 
-    const update = {guests: kept};
-    const fromAudience = expired.filter((uid) => uid !== data.createdByFirebaseUid);
-    if (fromAudience.length > 0) {
-      update.sharedWith = FieldValue.arrayRemove(...fromAudience);
+    if (expired.length === 0 && guestExpiryIndexMatches(data, desired)) {
+      continue;
+    }
+
+    const update = {[GUEST_EXPIRY_INDEX_FIELD]: guestExpiryIndexValue(desired)};
+    if (expired.length > 0) {
+      update.guests = kept;
+      const fromAudience = expired.filter((uid) => uid !== data.createdByFirebaseUid);
+      if (fromAudience.length > 0) {
+        update.sharedWith = FieldValue.arrayRemove(...fromAudience);
+      }
     }
 
     batch.update(doc.ref, update);
@@ -1285,6 +1550,13 @@ async function sweepExpiredGuestsImpl(db, nowMillis) {
 
   if (pending > 0) {
     await batch.commit();
+  }
+
+  if (!indexed) {
+    await markerRef.set({
+      guestExpiryIndexVersion: GUEST_EXPIRY_INDEX_VERSION,
+      backfilledAtMillis: nowMillis,
+    }, {merge: true});
   }
 
   return removed;
@@ -2896,9 +3168,9 @@ exports.stampOwnBlankFamilyIds = stampOwnBlankFamilyIds;
  * one live, mutual co-parent and no trace of another relationship. Everything else is skipped
  * with a reason, and the blank records it leaves behind are summed into `unresolved`.
  *
- * It also stamps the calendar-friend grants (M-6) — see [backfillCalendarFriendFamilyIds]. Those
- * are in here rather than in a callable of their own so the ops runbook keeps four steps: a fifth
- * one is a step somebody skips.
+ * It also stamps and re-keys the calendar-friend grants (M-6, L-5) — see
+ * [backfillCalendarFriendFamilyIds]. Those are in here rather than in a callable of their own so
+ * the ops runbook keeps four steps: a fifth one is a step somebody skips.
  *
  * It also moves each resolved author's personal photos into the family's folder (L-4,
  * [recordPhotos.movePhotosToFamily]) when a bucket is given — the backstop for a photo whose
@@ -2910,7 +3182,8 @@ exports.stampOwnBlankFamilyIds = stampOwnBlankFamilyIds;
  *   unresolved: number, perCollection: !Object<string, number>, skippedReasons: {notMutual:
  *   number, missingAccount: number, unpaired: number, ambiguous: number,
  *   priorRelationship: number}, calendarFriends: {stamped: number, skipped: number,
- *   alreadyStamped: number}, photos: {moved: number, rewritten: number, missing: number}}>}
+ *   alreadyStamped: number, rekeyed: number}, photos: {moved: number, rewritten: number,
+ *   missing: number}}>}
  *   What the migration did.
  */
 async function backfillRecordFamilyIdsImpl(db, bucket) {
@@ -2924,7 +3197,7 @@ async function backfillRecordFamilyIdsImpl(db, bucket) {
     skippedReasons: {
       notMutual: 0, missingAccount: 0, unpaired: 0, ambiguous: 0, priorRelationship: 0,
     },
-    calendarFriends: {stamped: 0, skipped: 0, alreadyStamped: 0},
+    calendarFriends: {stamped: 0, skipped: 0, alreadyStamped: 0, rekeyed: 0},
     photos: {moved: 0, rewritten: 0, missing: 0},
   };
   FAMILY_SCOPED_COLLECTIONS.forEach(({name}) => {
@@ -3057,48 +3330,67 @@ exports.onFamilyCreated = regional.runWith({timeoutSeconds: 540}).firestore
     });
 
 /**
- * Stamps `familyId` on every calendar-friend grant that predates M-6.
+ * Moves every calendar-friend grant from before L-5 to its per-family id, stamping `familyId` on
+ * the way for a grant that also predates M-6.
  *
- * A pass of its own rather than part of the per-user loop above, because a grant needs no
- * lookup at all: `familyParents` already holds the two parents, and the family id *is* those
- * two uids sorted and joined. Nothing has to be derived from a live pairing, so a grant issued
- * by a pair who have since separated is stamped with the family it was actually issued for —
- * which is the honest answer, and the one the expiry then ends on schedule.
+ * A grant used to live at `calendar_friends/{friendUid}` — one per person, so a second family's
+ * invitation overwrote the first. Since L-5 it lives at `{familyId}__{friendUid}` and carries
+ * `friendUid`, and `isCalendarFriendOf` reads nothing else: **until this runs, a friend whose
+ * grant predates L-5 sees nothing.** Run it right after deploying the rules that read the new
+ * id. The callable also re-keys a redeemer's own legacy grant, so a friend who redeems a second
+ * code in between keeps the first family.
  *
- * **Until this runs, a friend sees nothing.** `isCalendarFriendOf` requires the grant's
- * `familyId` to equal the record's, and a missing one compares equal to nothing. That direction
- * is deliberate: the alternative — falling back to `familyParents` alone when the id is absent —
- * is the same softening that re-opened the expenses leak, since it restores exactly the check
- * M-6 removed.
+ * A pass of its own rather than part of the per-user loop above, because a grant needs no lookup
+ * at all: `familyParents` already holds the two parents, and the family id *is* those two uids
+ * sorted and joined ([rekeyedLegacyCalendarFriendGrant]). Nothing has to be derived from a live
+ * pairing, so a grant issued by a pair who have since separated keeps the family it was actually
+ * issued for — which is the honest answer, and the one the expiry then ends on schedule.
  *
- * A grant whose `familyParents` is not a pair is left alone and counted as skipped: there is no
- * family to name, and inventing one would grant access rather than withhold it.
+ * Deliberately no fallback to `familyParents` alone for a grant it cannot re-key: that is the
+ * same softening that re-opened the expenses leak (M-6). A grant whose `familyParents` is not a
+ * pair, or whose stored `familyId` disagrees with it, is left where it is and counted as skipped:
+ * there is no family to name, and inventing one would grant access rather than withhold it. A
+ * legacy grant whose per-family id is already taken (the friend redeemed that family again) is
+ * superseded and deleted. Idempotent: a second run finds only per-family ids.
  *
  * @param {FirebaseFirestore.Firestore} db Firestore instance.
- * @return {Promise<{stamped: number, skipped: number, alreadyStamped: number}>} What it did.
+ * @return {Promise<{stamped: number, skipped: number, alreadyStamped: number, rekeyed: number}>}
+ *   `stamped`: legacy grants that carried no `familyId`; `alreadyStamped`: grants that did;
+ *   `rekeyed`: legacy grants moved (or superseded); `skipped`: left alone.
  */
 async function backfillCalendarFriendFamilyIds(db) {
-  const result = {stamped: 0, skipped: 0, alreadyStamped: 0};
+  const result = {stamped: 0, skipped: 0, alreadyStamped: 0, rekeyed: 0};
   const grants = await db.collection('calendar_friends').get();
+  const existingIds = new Set(grants.docs.map((doc) => doc.id));
 
   let batch = db.batch();
   let pending = 0;
   for (const doc of grants.docs) {
     const data = doc.data() || {};
-    const stored = data.familyId;
-    if (typeof stored === 'string' && stored !== '') {
+    const hadFamily = typeof data.familyId === 'string' && data.familyId !== '';
+    if (doc.id.includes('__')) {
       result.alreadyStamped++;
       continue;
     }
-    const parents = Array.isArray(data.familyParents) ? data.familyParents : [];
-    if (parents.length !== 2 || parents[0] === parents[1]) {
+    const rekeyed = rekeyedLegacyCalendarFriendGrant(doc.id, data);
+    if (rekeyed === null) {
       result.skipped++;
       continue;
     }
-    batch.update(doc.ref, {familyId: custodyModelKey(parents[0], parents[1])});
+    if (!existingIds.has(rekeyed.id)) {
+      batch.set(db.collection('calendar_friends').doc(rekeyed.id), rekeyed.data);
+      existingIds.add(rekeyed.id);
+      pending++;
+    }
+    batch.delete(doc.ref);
     pending++;
-    result.stamped++;
-    if (pending === FAMILY_ID_BATCH_LIMIT) {
+    result.rekeyed++;
+    if (hadFamily) {
+      result.alreadyStamped++;
+    } else {
+      result.stamped++;
+    }
+    if (pending >= FAMILY_ID_BATCH_LIMIT) {
       await batch.commit();
       batch = db.batch();
       pending = 0;
@@ -4078,8 +4370,13 @@ async function deleteAccountDataImpl(db, uid, bucket, nowMillis) {
 
   // Both directions of the calendar-friend relationship: the grant this user holds over
   // somebody's family, and the grants their own family handed out.
+  // Since L-5 a friend holds one grant per family (`{familyId}__{uid}`, carrying `friendUid`), so
+  // their own side is a query too; the per-person id from before L-5 is deleted as well, in case
+  // the backfill has not re-keyed it yet.
   removed.calendar_friends = await deleteQueryInBatches(
       db, db.collection('calendar_friends').where('familyParents', 'array-contains', uid));
+  removed.calendar_friends += await deleteQueryInBatches(
+      db, db.collection('calendar_friends').where('friendUid', '==', uid));
   await db.collection('calendar_friends').doc(uid).delete();
   await db.collection('friend_profiles').doc(uid).delete();
 

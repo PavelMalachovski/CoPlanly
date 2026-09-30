@@ -190,8 +190,11 @@ fun HomeScreen(
     }
 
     // An event tapped anywhere on the dashboard opens its preview first, like the calendar.
-    val openEvent: (String) -> Unit = { eventId ->
-        viewModel.openPreview(eventId, onMissing = { onOpenEvent(eventId) })
+    // The tapped occurrence's start travels with the id (audit L-6): every occurrence of a
+    // recurring event shares its series' id, so the id alone previewed the first one on screen.
+    // Edit still opens the series by id, as the calendar's preview does.
+    val openEvent: (String, LocalDateTime?) -> Unit = { eventId, occurrenceStart ->
+        viewModel.openPreview(eventId, occurrenceStart, onMissing = { onOpenEvent(eventId) })
     }
     val previewEvent by viewModel.previewEvent.collectAsState()
     previewEvent?.let { event ->
@@ -381,7 +384,7 @@ private fun PairingInvitation(
  * @param state Everything the page draws
  * @param parentNames Resolves a slot to that parent's name
  * @param contentPadding The scaffold's own insets
- * @param onOpenEvent Opens an event by id
+ * @param onOpenEvent Opens an event by id, with the tapped occurrence's start when there is one
  * @param onOpenChangeRequests Opens the change-request inbox
  * @param onOpenContacts Opens the contacts list
  * @param onOpenChildInfo Opens the child records
@@ -399,7 +402,7 @@ private fun Dashboard(
     parentNames: ParentNames,
     hasPendingProposal: Boolean,
     contentPadding: PaddingValues,
-    onOpenEvent: (String) -> Unit,
+    onOpenEvent: (String, LocalDateTime?) -> Unit,
     onOpenChangeRequests: () -> Unit,
     onOpenContacts: () -> Unit,
     onOpenChildInfo: () -> Unit,
@@ -499,7 +502,7 @@ private fun Dashboard(
                 events = state.today.events,
                 custody = state.today.dayParent,
                 parentNames = parentNames,
-                onEventClick = onOpenEvent,
+                onEventClick = { event -> onOpenEvent(event.id, event.startDateTime) },
                 contactWindows = state.today.contactWindows
             )
         }
@@ -531,7 +534,7 @@ private fun Dashboard(
                     entry = entry,
                     parentNames = parentNames,
                     isLast = index == state.week.lastIndex,
-                    onClick = { onOpenEvent(entry.event.id) }
+                    onClick = { onOpenEvent(entry.event.id, entry.event.startDateTime) }
                 )
             }
         }
@@ -569,7 +572,8 @@ private fun Dashboard(
                 ActivityGroup(
                     items = state.recentChanges,
                     onOpenChangeRequests = onOpenChangeRequests,
-                    onOpenEvent = onOpenEvent
+                    // A change names the event, not one occurrence of it.
+                    onOpenEvent = { eventId -> onOpenEvent(eventId, null) }
                 )
             }
         }
@@ -882,11 +886,12 @@ private fun StatTile(
  * One row of the child's week: a parent-coloured node on a vertical rail, with the event beside
  * it and an exclamation mark when the co-parent is expected.
  *
- * **The colour and the words name the same parent** — the one whose custody day the event falls
- * on, which is the question this row exists to answer. When no arrangement answers for that date
- * the row falls back to the event's own owner rather than going colourless: a rail of grey dots
- * says nothing, and the owner is a fact the app does hold. The words drop the "'s day" clause in
- * that case, because that is the part that would be a guess.
+ * **The node's colour is whose event it is** (`Event.parentOwner`), as on every calendar chip and
+ * the today card's bar (UX-8, owner decision 2026-09-30: colour = whose event). Whose custody day
+ * the event falls on is a separate fact, and the row keeps it as words in the meta line
+ * ("… · Alex's day"); it is dropped when no arrangement answers for that date, because that is
+ * the part that would be a guess. The row used to colour from the day's parent, falling back to
+ * the owner, so one visual channel meant two things on adjacent cards.
  *
  * Internal rather than private so the JVM screenshot tests (`ScreenshotMatrix` and its
  * subclasses under `app/src/test`) can render it on its own.
@@ -905,7 +910,6 @@ internal fun TimelineRow(
     onClick: () -> Unit
 ) {
     val event = entry.event
-    val dotSlot = entry.dayParent ?: event.parentOwner
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -921,7 +925,7 @@ internal fun TimelineRow(
                     .padding(top = Spacing.XS)
                     .size(12.dp)
                     .clip(CircleShape)
-                    .background(ParentColors.fill(dotSlot))
+                    .background(ParentColors.fill(event.parentOwner))
             )
             if (!isLast) {
                 Box(

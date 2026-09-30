@@ -48,6 +48,7 @@
 
     <string name="calendar_time_slot_description">Zeitfenster um %1$s am %2$s. Tippen, um einen Termin hinzuzufügen.</string>
     <string name="calendar_event_chip_description">Termin „%1$s“. %2$s</string>
+    <string name="calendar_event_chip_description_members">Termin „%1$s“. Betrifft: %2$s. %3$s</string>
     <string name="calendar_event_dragging">Wird gezogen</string>
     <string name="calendar_event_resizing_start">Startzeit wird auf %1$s geändert</string>
     <string name="calendar_event_resizing_end">Endzeit wird auf %1$s geändert</string>

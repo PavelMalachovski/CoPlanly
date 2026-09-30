@@ -5,6 +5,7 @@
     <string name="friend_invite_action">Pozvat přítele</string>
     <string name="friend_invite_code_label">Předejte jim tento kód</string>
     <string name="friend_access_until">Přístup do %1$s</string>
+    <string name="friend_access_several">Rodiny: %1$d · první přístup končí %2$s</string>
     <string name="friend_revoke">Odebrat přístup</string>
     <string name="friend_revoke_confirm_title">Odebrat přístup: %1$s?</string>
     <string name="friend_revoke_confirm_message">Přestanou vidět rodinný kalendář. Kdykoli je můžete pozvat znovu.</string>

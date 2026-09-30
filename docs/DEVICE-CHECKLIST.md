@@ -330,6 +330,14 @@ Preconditions: `adb uninstall app.coplanly`, set the system to **dark** theme
     then `adb shell pm clear-permission-flags app.coplanly android.permission.POST_NOTIFICATIONS user-set user-fixed`.
   - **If it fails:** `presentation/common/NotificationPermission.kt`, `SettingsScreen.kt`,
     `AddEditEventScreen.kt`.
+- [ ] **After the Firebase BoM 34 move (audit L-2)**: every Firebase SDK moved a major version
+      at once (`-ktx` artifacts gone, BoM 33.7 → 34.4). CI compiles and runs the emulator suites
+      against them, but not a real project, Google sign-in or FCM.
+  - **Expected:** Google sign-in and email sign-in both complete; a sync brings the co-parent's
+    events; a push arrives (a chat message from the second phone); a photo upload succeeds (a
+    receipt or an event image — record photos need `firebase deploy --only storage` first).
+  - **If it fails:** `app/build.gradle.kts`'s Firebase block, `di/FirebaseModule.kt`; logcat for
+    `NoSuchMethodError`/`ClassNotFoundException` under `com.google.firebase`.
 - [ ] **Onboarding, co-parent first** (CLAUDE.md item 22). The wizard opens on the co-parent
       step. "Next" and "Not now" behave the same, which is a known open item (AUDIT §4.2).
 
@@ -1136,6 +1144,39 @@ Which occurrence a reminder is for is pinned on the JVM (`ReminderPlannerTest`,
   `domain/notification/ReminderPlanner.kt`, `SyncService.rearmReminder`; `adb shell dumpsys jobscheduler`
   lists the pending work, tagged `event_reminder`.
 
+### 3.24 Owner decisions of 30 September · 1P, banner check needs a custody schedule
+
+Four small calls the owner made on 30 September 2026 (L-7, L-8, UX-8, FAM-5). The rules are
+pinned on the JVM (`HourLabelTest`, `HolidayNamesTest`, `EventMemberMarkTest`); what is left is how
+they read at their real size.
+
+- [ ] **12-hour hour gutter (L-7).** Settings → System → Date & time → turn **Use 24-hour format**
+      off, come back to the app, and open the calendar's Day and then Week view. The gutter reads
+      "9 AM", "1 PM" (English), "1 odp." (Czech) — never "13" — on one line, not clipped, and the
+      day columns and events still line up with their day headers. Turn 24-hour back on: the gutter
+      is "09", "13" again and exactly as narrow as before. Repeat once at the largest font size.
+- [ ] **Czech school breaks in the reader's language (L-8).** With the country set to Czechia,
+      switch the app language (Settings → Language) to **Deutsch** and open Day view on
+      24 December (or any day of the Christmas vacation), then on a July day: the label reads
+      "Weihnachtsferien", "Sommerferien". In **Русский**: "Рождественские каникулы", "Летние
+      каникулы". In Čeština the Czech names are unchanged ("Vánoční prázdniny"). With TalkBack
+      on, a month cell in that range speaks the same translated name.
+- [ ] **A chip's colour is whose event it is (UX-8).** With a custody schedule active, create an
+      event owned by the co-parent on a day that is **yours**. On Home, the week row's node and the
+      today card's bar are in the **co-parent's** colour, the same as the event's chip on the
+      calendar; the week row's words still say whose day it is ("… · <your name>'s day"), and the
+      grid's cell background still shows your day.
+- [ ] **Who an event is about, on the chip (FAM-5).** With **two** children (or a child and a
+      pet), create an event for one child and one for both. In Day and Week view the first chip
+      starts with a small grey disc carrying the child's initial, the second with "E+"-style
+      initial and plus; the title still ends in an ellipsis rather than wrapping, and the disc is
+      not coloured. TalkBack on a chip reads the member names ("About: Emma, Leo"). Delete the
+      second child: no chip carries a disc any more.
+- **If it fails:** `utils/LocalizedDates.kt` (`hourLabel`), `theme/WindowSize.kt`
+  (`hourGutterWidthFor`), `presentation/common/HolidayNames.kt`, `domain/holidays/CzechSchoolBreak.kt`,
+  `presentation/home/HomeScreen.kt` (`TimelineRow`), `presentation/calendar/EventMemberMark.kt` and
+  `DayWeekView.kt` (`MemberInitialDisc`).
+
 ---
 
 ## 4. Release-build checks
@@ -1380,6 +1421,33 @@ the screens, the pickers, the camera, a viewer app and a real network.
 - **If it fails:** tag `FamilyDocuments` / `ChatAttachments` / `MessageRepo`; `storage.rules`
   (`isOneOfPair`, `isAcceptableSharedFile`), `firestore.rules` `family_documents`,
   `data/files/`, `data/chat/ChatAttachmentOutbox.kt`.
+
+---
+
+### 5.6 A calendar friend of two families (L-5) · 5A, 2P or 1P fallback
+
+Needs the rules **and** functions deploys, then `backfillRecordFamilyIds` once (it re-keys grants
+from before L-5 to `calendar_friends/{familyId}__{friendUid}`; until it runs, an old grant admits
+nothing). Accounts: A and B paired, D and E paired (a second, unrelated family), F the friend.
+
+> **[CI e2e]** `TwoParentAccessTest#aCalendarFriendOfTwoFamiliesReadsBothAndLosesOnlyTheOneThatRevokes`
+> runs the mechanism: two grants, both families' events read, both families listing F and reading
+> her profile, one revoke leaving the other family standing. What a phone adds is the screens.
+
+- [ ] A: Settings → Family → **Friend with calendar access** → Invite. F redeems the code (Settings
+      → the same row → enter the code). F's row reads "Access until {date}", exactly as before.
+- [ ] D invites F too; F redeems. F's row now reads "Families: 2 · the first access ends {date}",
+      the earlier of the two ends. Nothing about the first family changed.
+- [ ] F opens her profile and saves it. A **and** D each open Friends → F: her name, role and
+      phone show on both.
+- [ ] B lists F under the A–B family only; E under the D–E family only. On a parent in two
+      families (M-8), switching family shows each family's friends under that family.
+- [ ] B → F → **Remove access**. F's row returns to "Access until {date}" for the D–E family; D and
+      E still list her.
+- **Fallback (1P, 2P):** do the steps signing in and out as each account; the rows update on the
+  next open rather than live.
+- **If it fails:** tag `FriendRepository`; `presentation/friends/`, `firestore.rules`
+  `isCalendarFriendOf`, `functions/index.js` `acceptCalendarFriendInvitationImpl`.
 
 ---
 

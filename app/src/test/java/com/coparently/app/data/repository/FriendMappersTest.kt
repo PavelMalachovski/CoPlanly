@@ -1,5 +1,6 @@
 package com.coparently.app.data.repository
 
+import com.coparently.app.domain.friends.CalendarFriendGrant
 import com.coparently.app.domain.friends.FriendProfile
 import com.coparently.app.domain.friends.FriendRole
 import org.junit.Test
@@ -18,6 +19,8 @@ class FriendMappersTest {
 
     private val goodGrant = mapOf<String, Any?>(
         "familyParents" to listOf("mom", "dad"),
+        "familyId" to FAMILY_ID,
+        "friendUid" to "friend",
         "name" to "Babushka",
         "grantedBy" to "mom",
         "grantedAtMillis" to 1L,
@@ -26,10 +29,36 @@ class FriendMappersTest {
 
     @Test
     fun `a well-formed grant decodes`() {
-        val grant = FriendMappers.grantFrom("friend", goodGrant)
+        val grant = FriendMappers.grantFrom(GRANT_ID, goodGrant)
         assertEquals("friend", grant?.friendUid)
+        assertEquals(FAMILY_ID, grant?.familyId)
         assertEquals(listOf("mom", "dad"), grant?.familyParents)
         assertEquals(99L, grant?.expiresAtMillis)
+    }
+
+    @Test
+    fun `the grant id is the family and the friend, as the callable and the rule build it`() {
+        assertEquals("dad__mom__friend", CalendarFriendGrant.documentId(FAMILY_ID, "friend"))
+    }
+
+    @Test
+    fun `a grant whose id does not spell its own family and friend is dropped`() {
+        // L-5: the rule reads `{event familyId}__{reader}` and requires the stored fields to
+        // repeat it. A document that disagrees with its own path admits nothing, so listing it
+        // would show access that does not exist.
+        assertNull(FriendMappers.grantFrom("other__family__friend", goodGrant))
+        assertNull(FriendMappers.grantFrom(GRANT_ID, goodGrant + ("friendUid" to "someone")))
+        assertNull(FriendMappers.grantFrom(GRANT_ID, goodGrant + ("familyId" to "x__y")))
+        assertNull(FriendMappers.grantFrom(GRANT_ID, goodGrant - "friendUid"))
+        assertNull(FriendMappers.grantFrom(GRANT_ID, goodGrant - "familyId"))
+    }
+
+    @Test
+    fun `a per-person grant from before L-5 is not shown`() {
+        // `calendar_friends/{friendUid}`, no `friendUid` field: the rule admits nothing through
+        // it and a revoke by family would miss it. The operator's backfill re-keys it.
+        assertNull(FriendMappers.grantFrom("friend", goodGrant - "friendUid"))
+        assertNull(FriendMappers.grantFrom("friend", goodGrant))
     }
 
     @Test
@@ -40,39 +69,39 @@ class FriendMappersTest {
         assertEquals(
             "https://lh3.googleusercontent.com/a/x",
             FriendMappers.grantFrom(
-                "friend",
+                GRANT_ID,
                 goodGrant + ("photoUrl" to "https://lh3.googleusercontent.com/a/x")
             )?.photoUrl
         )
-        assertNull(FriendMappers.grantFrom("friend", goodGrant)?.photoUrl)
-        assertNull(FriendMappers.grantFrom("friend", goodGrant + ("photoUrl" to "  "))?.photoUrl)
+        assertNull(FriendMappers.grantFrom(GRANT_ID, goodGrant)?.photoUrl)
+        assertNull(FriendMappers.grantFrom(GRANT_ID, goodGrant + ("photoUrl" to "  "))?.photoUrl)
     }
 
     @Test
     fun `a grant naming other than two parents is dropped`() {
         // The events query is a `whereIn` over this list: one uid under-fetches, three reach
         // past the family. Neither is a grant.
-        assertNull(FriendMappers.grantFrom("friend", goodGrant + ("familyParents" to listOf("mom"))))
+        assertNull(FriendMappers.grantFrom(GRANT_ID, goodGrant + ("familyParents" to listOf("mom"))))
         assertNull(
             FriendMappers.grantFrom(
-                "friend",
+                GRANT_ID,
                 goodGrant + ("familyParents" to listOf("mom", "dad", "x"))
             )
         )
-        assertNull(FriendMappers.grantFrom("friend", goodGrant - "familyParents"))
+        assertNull(FriendMappers.grantFrom(GRANT_ID, goodGrant - "familyParents"))
     }
 
     @Test
     fun `a grant with no expiry is dropped rather than treated as forever`() {
-        assertNull(FriendMappers.grantFrom("friend", goodGrant - "expiresAtMillis"))
-        assertNull(FriendMappers.grantFrom("friend", goodGrant + ("expiresAtMillis" to 0L)))
+        assertNull(FriendMappers.grantFrom(GRANT_ID, goodGrant - "expiresAtMillis"))
+        assertNull(FriendMappers.grantFrom(GRANT_ID, goodGrant + ("expiresAtMillis" to 0L)))
     }
 
     @Test
     fun `a grant whose parents are the wrong type is dropped`() {
-        assertNull(FriendMappers.grantFrom("friend", goodGrant + ("familyParents" to "mom,dad")))
+        assertNull(FriendMappers.grantFrom(GRANT_ID, goodGrant + ("familyParents" to "mom,dad")))
         assertNull(
-            FriendMappers.grantFrom("friend", goodGrant + ("familyParents" to listOf(1, 2)))
+            FriendMappers.grantFrom(GRANT_ID, goodGrant + ("familyParents" to listOf(1, 2)))
         )
     }
 
@@ -117,5 +146,13 @@ class FriendMappersTest {
             familyParents = listOf("mom", "dad")
         )
         assertEquals(profile, FriendMappers.profileFrom("f", FriendMappers.profileToMap(profile)))
+    }
+
+    private companion object {
+        /** `FamilyKey.of("mom", "dad")` — the two uids sorted and joined. */
+        const val FAMILY_ID = "dad__mom"
+
+        /** The friend's grant over that family: `{familyId}__{friendUid}` (L-5). */
+        const val GRANT_ID = "dad__mom__friend"
     }
 }

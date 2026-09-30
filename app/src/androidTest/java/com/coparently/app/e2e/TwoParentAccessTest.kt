@@ -13,6 +13,8 @@ import com.coparently.app.domain.export.ExportFingerprint
 import com.coparently.app.domain.export.ExportFormat
 import com.coparently.app.domain.export.RecordId
 import com.coparently.app.domain.family.FamilyKey
+import com.coparently.app.domain.friends.CalendarFriendGrant
+import com.coparently.app.domain.friends.CalendarFriendPolicy
 import com.coparently.app.domain.friends.FriendProfile
 import com.coparently.app.domain.friends.FriendRole
 import com.coparently.app.domain.model.ChildInfo
@@ -86,10 +88,16 @@ class TwoParentAccessTest : TwoParentTest() {
         assertEquals(listOf(alice.uid, bob.uid).sorted(), accepted.familyParents.sorted())
         assertEquals(invite.grantExpiresAtMillis, accepted.expiresAtMillis)
 
-        // The grant names the one family it was issued for (M-6), and the friend can read it.
-        val grant = checkNotNull(grandma.friendRepository.myGrant()) { "Grandma cannot read her own grant" }
-        val stored = grandma.firestore.collection("calendar_friends").document(grandma.uid).get().await()
+        // The grant names the one family it was issued for (M-6), under that family's own id
+        // (L-5), and the friend can read it.
+        val grant = checkNotNull(grandma.friendRepository.myGrants().singleOrNull()) {
+            "Grandma cannot read her own grant"
+        }
+        assertEquals(familyId, grant.familyId)
+        val grantId = CalendarFriendGrant.documentId(familyId, grandma.uid)
+        val stored = grandma.firestore.collection("calendar_friends").document(grantId).get().await()
         assertEquals(familyId, stored.getString("familyId"))
+        assertEquals(grandma.uid, stored.getString("friendUid"))
         // Bob, who did not send the invitation, sees the friend in his list too.
         withTimeout(EmulatorParent.WAIT_MS) {
             bob.friendRepository.observeFamilyFriends().first { list -> list.any { it.friendUid == grandma.uid } }
@@ -115,14 +123,80 @@ class TwoParentAccessTest : TwoParentTest() {
         EmulatorEnvironment.step("Grandma reads the family's events, and cannot extend her own grant")
         assertTrue(event.id in friendsEventIds(grandma, familyId, grant.familyParents))
         assertRefused("a friend extending her own grant") {
-            grandma.firestore.collection("calendar_friends").document(grandma.uid)
+            grandma.firestore.collection("calendar_friends").document(grantId)
                 .update("expiresAtMillis", Long.MAX_VALUE).await()
         }
 
         EmulatorEnvironment.step("Bob revokes the grant")
         bob.friendRepository.revokeFriend(grandma.uid).getOrThrow()
-        assertNull(grandma.friendRepository.myGrant())
+        assertTrue(grandma.friendRepository.myGrants().isEmpty())
         assertRefused("a revoked friend's event query") { friendsEventIds(grandma, familyId, grant.familyParents) }
+    }
+
+    /**
+     * L-5: a grandmother admitted by two unrelated families holds one grant in each, reads both
+     * calendars, is a name to both, and loses only the family that revokes her. Before L-5 both
+     * grants lived at `calendar_friends/{friendUid}` and the second redemption silently replaced
+     * the first.
+     */
+    @Test
+    fun aCalendarFriendOfTwoFamiliesReadsBothAndLosesOnlyTheOneThatRevokes() = runBlocking<Unit> {
+        val dave = newParent("Dave")
+        val erin = newParent("Erin")
+        pair(inviter = dave, accepter = erin)
+        val aliceFamily = FamilyKey.of(alice.uid, bob.uid)
+        val daveFamily = FamilyKey.of(dave.uid, erin.uid)
+        val aliceParents = listOf(alice.uid, bob.uid)
+        val daveParents = listOf(dave.uid, erin.uid)
+        val aliceEvent = insertEvent(alice, "Swimming lesson")
+        val daveEvent = insertEvent(dave, "Piano recital")
+
+        EmulatorEnvironment.step("Both families invite Grandma; she redeems both codes")
+        val grandma = newParent("Grandma")
+        val first = alice.friendRepository.inviteFriend(System.currentTimeMillis() + MONTH_MS).getOrThrow()
+        grandma.friendRepository.acceptFriendInvite(first.code).getOrThrow()
+        val second = dave.friendRepository.inviteFriend(System.currentTimeMillis() + MONTH_MS).getOrThrow()
+        grandma.friendRepository.acceptFriendInvite(second.code).getOrThrow()
+        val grants = grandma.friendRepository.myGrants()
+        assertEquals(setOf(aliceFamily, daveFamily), grants.map { it.familyId }.toSet())
+
+        EmulatorEnvironment.step("She reads both calendars, each through its own grant")
+        assertTrue(aliceEvent.id in friendsEventIds(grandma, aliceFamily, aliceParents))
+        assertTrue(daveEvent.id in friendsEventIds(grandma, daveFamily, daveParents))
+
+        EmulatorEnvironment.step("Each family lists her under itself, and can read her profile")
+        withTimeout(EmulatorParent.WAIT_MS) {
+            erin.friendRepository.observeFamilyFriends().first { list ->
+                list.any { it.friendUid == grandma.uid && it.familyId == daveFamily }
+            }
+        }
+        withTimeout(EmulatorParent.WAIT_MS) {
+            bob.friendRepository.observeFamilyFriends().first { list ->
+                list.any { it.friendUid == grandma.uid && it.familyId == aliceFamily }
+            }
+        }
+        grandma.friendRepository.saveMyProfile(
+            FriendProfile(
+                uid = grandma.uid,
+                name = grandma.name,
+                role = FriendRole.GRANDPARENT,
+                familyParents = CalendarFriendPolicy.profileGate(grants)
+            )
+        ).getOrThrow()
+        withTimeout(EmulatorParent.WAIT_MS) {
+            erin.friendRepository.observeFriendProfile(grandma.uid).first { it != null }
+        }
+        withTimeout(EmulatorParent.WAIT_MS) {
+            bob.friendRepository.observeFriendProfile(grandma.uid).first { it != null }
+        }
+
+        EmulatorEnvironment.step("Bob revokes; the Dave–Erin grant stands")
+        bob.friendRepository.revokeFriend(grandma.uid).getOrThrow()
+        assertEquals(listOf(daveFamily), grandma.friendRepository.myGrants().map { it.familyId })
+        assertRefused("the revoked family's event query") {
+            friendsEventIds(grandma, aliceFamily, aliceParents)
+        }
+        assertTrue(daveEvent.id in friendsEventIds(grandma, daveFamily, daveParents))
     }
 
     @Test

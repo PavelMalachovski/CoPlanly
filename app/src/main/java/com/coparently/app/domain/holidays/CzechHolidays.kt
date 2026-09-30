@@ -65,18 +65,18 @@ object CzechHolidays : HolidayProvider {
         return listOf(
             // Summer vacation (1 July – 31 August, fixed every year)
             on(year, "--07-01")..on(year, "--08-31") to
-                ("Summer vacation" to "Hlavní prázdniny"),
+                CzechSchoolBreak.SUMMER.names,
             // Christmas vacation (approx. 23 Dec – 2 Jan; nationwide)
             on(year, "--12-23")..on(year, "--12-31") to
-                ("Christmas vacation" to "Vánoční prázdniny"),
+                CzechSchoolBreak.CHRISTMAS.names,
             on(year, "--01-01")..on(year, "--01-02") to
-                ("Christmas vacation" to "Vánoční prázdniny"),
+                CzechSchoolBreak.CHRISTMAS.names,
             // Autumn vacation (around 29–30 October, adjacent to 28 Oct holiday)
             on(year, "--10-29")..on(year, "--10-30") to
-                ("Autumn vacation" to "Podzimní prázdniny"),
+                CzechSchoolBreak.AUTUMN.names,
             // Easter vacation (Thursday before Good Friday)
             easterVacationStart..easterVacationStart to
-                ("Easter vacation" to "Velikonoční prázdniny")
+                CzechSchoolBreak.EASTER.names
         )
     }
 

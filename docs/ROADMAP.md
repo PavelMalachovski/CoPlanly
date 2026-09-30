@@ -83,7 +83,7 @@ invocation is yours.
 | **MON-5** | The plan ships; swapping in the Ministry's own wording needs the form itself | P1 | S |
 | **MON-6b** | Contact windows ship (schema 36), on the grid and on Home's today card; left: verifying the mixed-version path on two phones | P2 | S |
 | **MON-8** | Bakaláři import **built**; EduPage waits for one real capture from a parent account | P2 | L |
-| **MON-11** | Payments (MVP 3) — the entitlement model, after MON-1 decides the price | P2 | L |
+| **MON-11** | Payments (MVP 3) — the entitlement model; MON-1 is decided (per family, 129 CZK / 1,190 CZK, 14-day trial from pairing) | P2 | L |
 | **MON-12** | **Server half built** (September 2026): the `aiAssist` callable — reply suggestion and month summary, Claude on Vertex AI in an EU region, consent-gated, quota'd, off until configured; left: the Android client behind its flag, the owner's Vertex set-up and retention check, counsel on ROPA P15 | P3 | M |
 | **MON-13** | The tables, Germany's Länder, Slovakia's kraje and sourced school vacations (Slovakia nationwide and per kraj, Austria nationwide, Germany per Land) are done — left: Austria's per-Land breaks (not final in the source), Slovakia's half-year day (not in the dataset), and whether Austria's patron-saint days are drawn at all | P2 | M |
 | **FAM-4** | **Built** (schema 42, PR #101: per-child overrides in the one custody document, rules and rules tests, grid band behind the one-child filter, Home hero, custody-setup section; feed stays family); left: the rules deploy and a look on one and two phones — see DEVICE-CHECKLIST §3.13 | P2 | — |
@@ -110,9 +110,8 @@ invocation is yours.
 | --- | --- | --- |
 | **SEC-1 §1 (superseded by L-4)** | Storage rules keyed on Firestore state were the plan; L-4 (PR #117) made the path the gate instead — every photo prefix is family-keyed and checked by `isOneOfPair`, which the Storage emulator runs (`storage-record-photos.test.js`), so no cross-service rule and no staging bucket are needed | Only the deploy: `firebase deploy --only storage`, then `purgeLegacyPhotoPaths` once, and a photo attached on a device (DEVICE-CHECKLIST). The cost is written down: a path does not narrow at unpair. |
 | **SEC-5 (built, unseen)** | `EncryptedPreferences` seals its own file with the Keystore key; the alpha `security-crypto` only reads the old store once | `EncryptedPreferencesMigrationTest` copies an old store on the emulators; only a phone upgraded over a previous build shows Calendar still connected (DEVICE-CHECKLIST, "SEC-5 upgrade"). |
-| **UX-8** | The second half: two surfaces colour a chip from two different sources | An owner's answer to "what does a chip's colour mean" — the event's owner, or whose day it falls on. |
 | **UX-13** | Light theme is no longer unverifiable: CI's `screenshots` job renders the main screens' pieces in light and dark on every Android PR (night window background and previews done before it) | Whether a dark cold start still flashes: only a device shows the window before Compose's first frame. |
-| **FAM-5** | The event chip does not say who it is about | Chips are single-line with ellipsis and every colour channel is spent. Worth an owner's eye on a real device rather than a treatment invented blind. |
+| **FAM-5 (built, unseen)** | Day and Week chips carry the initial of the member an event is about, on a neutral disc, at two members | Whether the disc reads at chip height in a ~50 dp week column, and TalkBack naming the members (DEVICE-CHECKLIST §3.24). |
 | **MON-16 (shipped, unseen)** | A registered export: the record ID on the PDF's face and footer, the offline "not registered" dialog, and `web/verify/` answering for a real file | Export once online and once in flight mode; open the PDF (every page's footer names the record, or says "not registered"); upload the online one to the hosted `web/verify/` and see a match, then re-save it from a PDF viewer and see it fail. Only a device renders the footer, and only a deploy answers the page. |
 | **MON-3 (shipped, unseen)** | The PDF export and the share sheet | `PdfDocument` drawing, Cyrillic and Czech glyphs in the default typeface, page breaks, and whether the share sheet hands the file to a mail app — the layout is unit-tested, the drawing is not. |
 | **M-4 (shipped, unseen)** | The colour palette, the family switcher, the second-co-parent invite | Kotlin compiled in CI; nobody has looked at it. |
@@ -144,7 +143,7 @@ invocation is yours.
 | **REL-7** | Install a release build and confirm a child's medical profile reaches the co-parent non-empty | The one test CI cannot run: a green `assembleRelease` proves R8 ran, not that Gson still finds its field names. |
 | **CQ-16** | Digital Asset Links | Needs a domain you own — the same one REL-4 needs. |
 | **CQ-18** | Cross-time-zone chat on two phones — **what is drawn only** | The logic now runs end to end in CI (`e2e` job, `TwoParentChatTest`: UTC+14 and UTC−11, unread → DELIVERED → READ). Left for the phones: the badge and ticks as rendered, the displayed times, and the push. |
-| **MON-1** | Price, unit (family, not seat), and what the free tier contains | A decision, and it shapes the code that follows. |
+| **MON-1** | ~~Price, unit and free tier~~ **Decided 2026-09-30** — see MON-1 | Left: the Play merchant account and the tax set-up before MON-11 ships. |
 | **MON-9** | Distribution: mediators, Cochem courts, OSPOD, NGOs | Phone calls and meetings. A session can draft the material; it cannot make the call. |
 | **MON-8 (input)** | A Bakaláři login to run `DEVICE-CHECKLIST.md` §3.18; one EduPage capture (timetable, children, one event) | Bakaláři was built from published samples; EduPage has none anywhere. |
 
@@ -1030,6 +1029,7 @@ changing.
 | `androidx.security:security-crypto` | 1.1.0-alpha06 | **Read-only since SEC-5** — it opens the pre-SEC-5 store once to migrate it and writes nothing. Remove, don't bump. |
 | `play-services-auth` | 21.2.0, deprecated | **Left.** Not a version bump: `CredentialManagerService` still calls `GoogleSignIn`/`GoogleSignInClient` for the Calendar scope, so dropping it means moving that flow to `AuthorizationClient` — a sign-in change only a device can judge. Both it and Credential Manager stay in the graph until then. |
 | `google-api-services-calendar` | `v3-rev20220715` | **Tried and reverted** (September 2026, PR #101). Maven Central was reachable: the current revision (`v3-rev20260708-2.0.0`) needs `google-api-client` **2.7.2**, and moving `google-api-client-android` there with it compiled — but the 2.7 line brings `google-auth-library` (two JARs with the same `META-INF/INDEX.LIST`), full `protobuf-java` and `google-http-client` 1.45, and R8 then failed on `io.grpc.InternalGlobalInterceptors`, referenced from `grpc-core`: the Calendar client's dependencies had moved part of the gRPC family Firestore runs on. A `-dontwarn` would turn that into a runtime failure in Firestore's channel. The bump needs the gRPC and protobuf families pinned to what the Firebase BoM resolves (or the Calendar client's transitive auth/protobuf excluded) and a device run of sync *and* one Calendar import and export — not a blind move. |
+| Firebase Android BoM | **34.4.0** (was 33.7.0 with `-ktx` artifacts) | **Done** (September 2026, audit L-2). 34.0.0 removed the `-ktx` modules; the seven artifacts now name the main modules, whose packages every import already used. `kotlinx-coroutines-play-services` (`Task.await()`) is declared rather than inherited. A version contemporary with the rest of the toolchain, not the newest 34.x — move it with `./gradlew :app:dependencies` on a machine that reaches Google Maven. Sign-in, sync, a push and a photo upload are a device check (`DEVICE-CHECKLIST.md` §2.2). |
 | `firebase-functions` / `firebase-admin` (Node) | firebase-functions **^6.6.0** (was ^4.5.0, lockfile 4.9.0), firebase-admin **^13.10.0** (was ^12.0.0, lockfile 12.7.0); gen-1 API through `firebase-functions/v1` | **Done** (September 2026, audit L-3). 4.x's peer range stopped at firebase-admin 12; 6.1.1 is the first to admit 13. `index.js` now requires `firebase-functions/v1`, the same gen-1 API — no function changed how it is declared. Functions (459), rules (807) and web (22) suites and the e2e pairing smoke pass on the emulators; a `firebase deploy --only functions` is still what proves it live. Left: the 9 moderate `uuid` advisories under `google-gax`/`gaxios`/`teeny-request`, which only firebase-admin 14 clears; firebase-functions 7 / the v2 API (redeploys every function as gen 2); ESLint 8 → 9 (flat config). |
 
 *(`retrofit` left the graph with the AI subsystem — MON-7.)*
@@ -1113,17 +1113,18 @@ The theme layer is genuinely good: contrast documented pair by pair, `ParentColo
 fill-versus-text problem properly, Settings and the month grid exemplary. The gap is between that
 layer and the screens.
 
-### UX-8 · **PARTLY DONE** · P3 · S · Two surfaces colour a chip from two different sources
+### UX-8 · **DONE** · P3 · S · Two surfaces colour a chip from two different sources
 
-**Where:** 👁 the remaining half is an owner's answer, not code.
+**Where:** ☁️ cloud.
 
-The loud half is fixed: "whose day is it" is its own line at `titleMedium` in that parent's colour
-through `ParentColors.text`, rather than a 12sp grey suffix on the date.
+The loud half was fixed first: "whose day is it" is its own line at `titleMedium` in that parent's
+colour through `ParentColors.text`, rather than a 12sp grey suffix on the date.
 
-**Left open:** `CalendarBanners` colours from `entry.dayParent ?: event.parentOwner` while the event
-chip colours from `event.parentOwner`, so one visual channel carries two meanings on adjacent
-cards. That is a question about what a chip's colour *means* — the event's owner, or whose day it
-falls on — and it wants an answer before either call site changes.
+**Done (owner decision 2026-09-30: colour = whose event).** An event's colour means whose event it
+is (`Event.parentOwner`) on every surface: the calendar's chips, the today card's bar
+(`DayAgendaCard`) and Home's week, whose node used to colour from `entry.dayParent ?:
+event.parentOwner`. Whose day it is is shown by the cell background on the grid and as words
+elsewhere (the today card's line, the week row's "… · Alex's day"), never by an event's colour.
 
 ### UX-9 · **DONE** · P2 · M · Five different empty-state anatomies
 
@@ -1357,9 +1358,25 @@ strings across five locales. Two things it does not do, both deliberate:
 model, no paywall. Everything below assumes that gets built; **MON-1** is the decision that shapes
 it, and it should be made before the code.
 
-### MON-1 · P0 · decision · Pricing, and who pays
+### MON-1 · **DECIDED 2026-09-30** · P0 · decision · Pricing, and who pays
 
 **Where:** 💻 yours — it is a decision. Everything after it is cloud work.
+
+**Decided (owner, 30 September 2026):**
+
+- **The unit is the family.** One subscription per `familyId`; both parents of that family get the
+  paid features, whoever pays. A parent with a second family pays for it separately — the
+  entitlement does not follow the payer across families.
+- **129 CZK a month or 1,190 CZK a year**, one family subscription, the second parent free.
+- **A 14-day trial that starts when both parents are linked**, not at install: a fortnightly
+  pattern needs one full cycle before it is worth paying for.
+- **Free for ever:** the calendar, custody schedule, swaps and proposals, chat, expenses with
+  receipts and the balance, children, pets and contacts, a read-only calendar friend, all five
+  languages, offline. **Paid:** the export and its verification, event history, the document vault,
+  the Bakaláři import, professional access, and expense export with receipts.
+- The closed test and its testers stay free; testers get the first year free after launch.
+
+The analysis that led there follows; MON-11 builds it.
 
 The audit's recommendation (§10.4), for a Czech-first launch:
 
@@ -2643,19 +2660,24 @@ who stays with one parent — which is why it came last rather than never.
 2. `firebase deploy --only firestore:rules`, without which the live rules refuse every proposal or
    swap write that carries `childOverrides` and the repository falls back to a local save.
 3. A look on a phone, and the two-phone proposal round (§3.13).
-4. Not built, on purpose: per-child seasonal layers and per-child swaps (design §3), and a marker
-   on an individual event chip (FAM-5).
+4. Not built, on purpose: per-child seasonal layers and per-child swaps (design §3). The marker on
+   an individual event chip shipped separately as FAM-5.
 
-### FAM-5 · P2 · S · The event chip does not say who it is about
+### FAM-5 · **DONE** · P2 · S · The event chip does not say who it is about
 
-**Where:** 👁 the treatment is an owner's call on a real device; the code is small once decided.
+**Where:** ☁️ cloud (built); 👁 how it reads at chip height is the device check §3.24.
 
-Only reachable in an unfiltered day or week view, and only for a family with two or more members.
-The constraints are the interesting part: `softWrap = false` plus ellipsis means a prefix costs
-title, and pink/blue/teal/grey are taken by the parent slots, a calendar friend and the weekend —
-and M-4 spent two more hues (purple, orange) on chosen parent colours, so the colour channel is now
-comprehensively unavailable. An initial-letter avatar at chip height is the obvious candidate; so is
-doing nothing and leaving the filter to answer it.
+**Done (owner decision 2026-09-30: an initial on a neutral disc).** In Day and Week view a chip
+whose event names members (`Event.forMembers`) starts with a small disc carrying the first named
+member's initial, and "+" when it names more than one ("E", "E+"): `EventMemberMark` decides it,
+`MemberInitialDisc` draws it on `surfaceVariant` under `onSurfaceVariant` at `IconSizes.Inline`.
+It appears at two members and never at one, and never for an event naming nobody (the whole
+family) or only references this family does not hold. It is a name, never a colour — every hue on
+the grid is already spent. The chip's description names every member ("About: Emma, Leo"), and
+the disc itself is hidden from TalkBack. The members come from the list the filter strip already
+reads (`EventViewModel.familyMembers`), so no listener was added. The title keeps its ellipsis.
+Not done: month-view chips, whose single-line cells have no room to spare; the filter strip
+answers the question there.
 
 ---
 
@@ -2706,8 +2728,18 @@ keeping:
   never trusts the id it is sent: it checks it against the inviter's live co-parents and falls
   back to the family they are showing, which is also what an invitation from an older build gets.
 
-**Lapsed grants are swept** (September 2026): `sweepLapsedCalendarFriends` deletes
-`calendar_friends/{uid}` daily at 05:00 UTC once `expiresAtMillis` has passed. Nothing leaked
+**One grant per family** (L-5, September 2026, `docs/AUDIT-2026-09-30.md` §3). M-6 scoped the
+grant to one family but still stored it at `calendar_friends/{friendUid}`, one per person, so a
+grandmother admitted by a second family silently lost the first. Grants now live at
+`calendar_friends/{familyId}__{friendUid}` and repeat both halves, the professional-grant shape:
+the rule builds the path from the event's family and the reader, the friend lists their grants
+with `where('friendUid', '==', uid)`, a parent revokes only the family on screen, and the friend's
+profile gate gains each admitting family's parents. The rule keeps no fallback to the per-person
+id; `backfillRecordFamilyIds` re-keys those, and the callable re-keys the redeemer's own. Device
+check §5.6.
+
+**Lapsed grants are swept** (September 2026): `sweepLapsedCalendarFriends` deletes a grant
+daily at 05:00 UTC once `expiresAtMillis` has passed. Nothing leaked
 before it — the rule refuses an expired read at `request.time` — but the row lingered in the
 parents' list. A grant with no positive numeric expiry is never swept: the callable does not write
 one, and the rule admits nothing through it.
@@ -3042,8 +3074,8 @@ in `docs/AUDIT-2026-08.md` under the § numbers cited.
   trip** as `Unknown`.
 - **FAM-3 · Events know who they are about.** `Event.forMembers`, empty meaning "the whole family",
   and a filter strip that appears at two members and not at one. `firestore.rules` needed no change
-  — the `events` block validates with `keys().hasAll([...])`, presence-based. What it left is
-  **FAM-5**.
+  — the `events` block validates with `keys().hasAll([...])`, presence-based. What it left,
+  **FAM-5**, is done too (September 2026).
 - **M-1 … M-4 · A parent can co-parent with more than one other adult.** `families/{id}` keyed by
   `FamilyKey.of(a, b)`; `familyId` on the six shared collections, stamped at create and never
   re-derived, with null meaning "mine alone"; the slot and `caresFor` moved onto the family (`slots`

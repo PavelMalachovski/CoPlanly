@@ -32,11 +32,12 @@ import com.coparently.app.presentation.common.GroupLabel
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
+import com.coparently.app.presentation.common.displayName
+import com.coparently.app.presentation.common.holidayDisplayName
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
-import java.util.Locale
 
 /** The two schema slots, in the order every summary line lists them. */
 private val SLOTS = listOf("mom", "dad")
@@ -161,17 +162,10 @@ private fun occasionLabel(occasion: FairnessOccasion): String = when (occasion) 
     FairnessOccasion.NewYearsDay -> stringResource(R.string.fairness_new_year)
     FairnessOccasion.Easter -> stringResource(R.string.fairness_easter)
     is FairnessOccasion.Birthday -> stringResource(R.string.fairness_birthday, occasion.childName)
-    is FairnessOccasion.PublicHoliday -> localName(
-        occasion.holiday.localLanguage,
-        occasion.holiday.nameLocal,
-        occasion.holiday.nameEn
-    )
-    is FairnessOccasion.SchoolVacation -> localName(occasion.localLanguage, occasion.nameLocal, occasion.nameEn)
+    is FairnessOccasion.PublicHoliday -> occasion.holiday.displayName()
+    is FairnessOccasion.SchoolVacation ->
+        holidayDisplayName(occasion.nameEn, occasion.nameLocal, occasion.localLanguage)
 }
-
-/** The local name when the device speaks its language, English otherwise — `MonthView`'s rule. */
-private fun localName(language: String, local: String, english: String): String =
-    if (Locale.getDefault().language == language) local else english
 
 private fun datesLabel(row: FairnessRow): String {
     val format = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)

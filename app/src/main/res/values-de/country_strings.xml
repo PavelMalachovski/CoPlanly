@@ -52,4 +52,8 @@
     <string name="region_de_sn">Sachsen</string>
     <string name="region_de_st">Sachsen-Anhalt</string>
     <string name="region_de_th">Thüringen</string>
+    <string name="holiday_break_cz_summer">Sommerferien</string>
+    <string name="holiday_break_cz_christmas">Weihnachtsferien</string>
+    <string name="holiday_break_cz_autumn">Herbstferien</string>
+    <string name="holiday_break_cz_easter">Osterferien</string>
 </resources>

@@ -71,6 +71,8 @@
     <string name="calendar_time_slot_description">Time slot at %1$s on %2$s. Tap to add event.</string>
     <!-- %1$s = event title, %2$s = current interaction state -->
     <string name="calendar_event_chip_description">%1$s event. %2$s</string>
+    <!-- FAM-5: the chip names who the event is about, as its initial disc shows. -->
+    <string name="calendar_event_chip_description_members">%1$s event. About: %2$s. %3$s</string>
     <string name="calendar_event_dragging">Dragging</string>
     <!-- %1$s = time like 08:15 -->
     <string name="calendar_event_resizing_start">Resizing start time to %1$s</string>

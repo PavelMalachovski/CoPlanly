@@ -15,7 +15,6 @@
     <ID>CyclomaticComplexMethod:ChangeRequestsScreen.kt$@Suppress("LongMethod") // Compose screen: empty state + two list sections @OptIn(ExperimentalMaterial3Api::class) @Composable fun ChangeRequestsScreen( onBack: () -&gt; Unit, onOpenEvent: (String) -&gt; Unit, linkedEventId: String? = null, viewModel: ChangeRequestViewModel = hiltViewModel() )</ID>
     <ID>CyclomaticComplexMethod:ConflictResolver.kt$ConflictResolver$private fun countNonNullFields(childInfo: ChildInfoEntity): Int</ID>
     <ID>CyclomaticComplexMethod:CustodySetupScreen.kt$@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class) @Composable fun CustodySetupScreen( onNavigateBack: () -&gt; Unit, viewModel: CustodySetupViewModel = hiltViewModel() )</ID>
-    <ID>CyclomaticComplexMethod:DayWeekView.kt$@Composable private fun EventChip( event: Event, onClick: () -&gt; Unit, columnWidthPx: Float, hourHeightPx: Float, baseDate: LocalDate, baseHour: Int, parentNames: ParentNames, onDragDrop: ((String, LocalDate, Int) -&gt; Unit)?, onResize: ((String, LocalDateTime?, LocalDateTime?) -&gt; Unit)? = null, onDelete: ((String) -&gt; Unit)? = null, onLongPressStart: ((String) -&gt; Unit)? = null, onLongPressEnd: (() -&gt; Unit)? = null, onDragOverDeleteButton: ((Boolean) -&gt; Unit)? = null, // Visible segment of the event within the current day (differs from the real event // times for multi-day / overnight events, which are clamped to each day). displayStart: LocalDateTime = event.startDateTime, displayEnd: LocalDateTime = event.endDateTime ?: event.startDateTime.plusHours(1), // Continuation segments of multi-day events are not resizable/movable (ambiguous). resizable: Boolean = true, draggable: Boolean = true, // Day view spells the time out under the title; week view leaves it to the block's // vertical position and spends the row on the title instead. showTime: Boolean = true )</ID>
     <ID>CyclomaticComplexMethod:DayWeekView.kt$private fun layoutDayEvents(events: List&lt;Event&gt;, date: LocalDate): List&lt;EventSegment&gt;</ID>
     <ID>CyclomaticComplexMethod:MessagesList.kt$@Composable // Already over detekt's LongMethod threshold before this task added the clickable chevron (the // codebase's own baseline records that); explicit like the other screen composables that carry // the same suppression rather than relying on a baseline entry keyed to an exact signature. @Suppress("LongMethod") fun MessageItem( message: Message, isCurrentUser: Boolean, startsGroup: Boolean = true, endsGroup: Boolean = true, onEventLinkClick: ((String) -&gt; Unit)? = null, onOpenInbox: (() -&gt; Unit)? = null, onRetryFailed: (() -&gt; Unit)? = null )</ID>
     <ID>CyclomaticComplexMethod:PairingFunctions.kt$PairingFunctions.Companion$fun toPairingError(e: Throwable): PairingError</ID>
@@ -33,9 +32,6 @@
     <ID>LongMethod:AddExpenseScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun AddExpenseScreen( onBack: () -&gt; Unit, expenseId: String? = null, viewModel: ExpenseViewModel = hiltViewModel() )</ID>
     <ID>LongMethod:AllergyEditor.kt$@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class) @Composable fun AllergyEditor( allergies: List&lt;String&gt;, onAdd: (String) -&gt; Unit, onRemove: (Int) -&gt; Unit, modifier: Modifier = Modifier )</ID>
     <ID>LongMethod:AuthScreen.kt$@Composable fun AuthScreen( onAuthSuccess: () -&gt; Unit, onViewModelReady: ((AuthViewModel) -&gt; Unit)? = null, viewModel: AuthViewModel = hiltViewModel() )</ID>
-    <ID>LongMethod:BudgetItem.kt$@Composable fun BudgetItem( budget: Budget, spentAmount: Double, onClick: () -&gt; Unit )</ID>
-    <ID>LongMethod:BudgetScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun BudgetScreen( onBack: (() -&gt; Unit)? = null, viewModel: BudgetViewModel = hiltViewModel() )</ID>
-    <ID>LongMethod:BudgetSheet.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun BudgetSheet( onDismiss: () -&gt; Unit, onSave: ( category: ExpenseCategory, monthlyLimit: Double, forMembers: List&lt;FamilyMemberRef&gt; ) -&gt; Unit, members: List&lt;FamilyMember&gt; = emptyList(), existing: Budget? = null, onDelete: () -&gt; Unit = {} )</ID>
     <ID>LongMethod:CalendarFilters.kt$@OptIn(ExperimentalMaterial3Api::class, FoundationExperimentalLayoutApi::class) @Composable fun EventTypeFilterSheet( allEventTypes: List&lt;String&gt;, hiddenEventTypes: Set&lt;String&gt;, showHolidays: Boolean, parentFilter: ParentFilter, parentNames: ParentNames, friendName: String?, onParentFilterChange: (ParentFilter) -&gt; Unit, onToggleType: (String) -&gt; Unit, onAddCustomType: (String) -&gt; Unit, onShowHolidaysChange: (Boolean) -&gt; Unit, onDismiss: () -&gt; Unit, sheetState: SheetState )</ID>
     <ID>LongMethod:CalendarSyncRepository.kt$CalendarSyncRepository$suspend fun syncFromGoogle( startDate: LocalDateTime? = null, endDate: LocalDateTime? = null ): Flow&lt;SyncResult&gt;</ID>
     <ID>LongMethod:ChangeRequestsScreen.kt$@Composable private fun DaySwapCard( group: DaySwapGroup, currentUserId: String, parentNames: ParentNames, onAccept: () -&gt; Unit, onDecline: () -&gt; Unit )</ID>
@@ -44,9 +40,7 @@
     <ID>LongMethod:CustodySetupScreen.kt$@Composable private fun MidweekContactSection( uiState: CustodySetupUiState, onEnabledChange: (Boolean) -&gt; Unit, onDayChange: (DayOfWeek) -&gt; Unit, onEveryWeekChange: (Boolean) -&gt; Unit )</ID>
     <ID>LongMethod:CustodySetupScreen.kt$@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class) @Composable fun CustodySetupScreen( onNavigateBack: () -&gt; Unit, viewModel: CustodySetupViewModel = hiltViewModel() )</ID>
     <ID>LongMethod:DaySwapSheet.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun DaySwapSheet( dates: List&lt;LocalDate&gt;, custodyFor: (LocalDate) -&gt; String?, parentNames: ParentNames, onOffer: (dates: List&lt;LocalDate&gt;, note: String?) -&gt; Unit, onDismiss: () -&gt; Unit )</ID>
-    <ID>LongMethod:DayWeekView.kt$@Composable private fun EventChip( event: Event, onClick: () -&gt; Unit, columnWidthPx: Float, hourHeightPx: Float, baseDate: LocalDate, baseHour: Int, parentNames: ParentNames, onDragDrop: ((String, LocalDate, Int) -&gt; Unit)?, onResize: ((String, LocalDateTime?, LocalDateTime?) -&gt; Unit)? = null, onDelete: ((String) -&gt; Unit)? = null, onLongPressStart: ((String) -&gt; Unit)? = null, onLongPressEnd: (() -&gt; Unit)? = null, onDragOverDeleteButton: ((Boolean) -&gt; Unit)? = null, // Visible segment of the event within the current day (differs from the real event // times for multi-day / overnight events, which are clamped to each day). displayStart: LocalDateTime = event.startDateTime, displayEnd: LocalDateTime = event.endDateTime ?: event.startDateTime.plusHours(1), // Continuation segments of multi-day events are not resizable/movable (ambiguous). resizable: Boolean = true, draggable: Boolean = true, // Day view spells the time out under the title; week view leaves it to the block's // vertical position and spends the row on the title instead. showTime: Boolean = true )</ID>
     <ID>LongMethod:EmergencyContactEditor.kt$@Composable private fun EmergencyContactForm( contact: EmergencyContact? = null, onSave: (EmergencyContact) -&gt; Unit, onCancel: () -&gt; Unit )</ID>
-    <ID>LongMethod:EventListScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun EventListScreen( onEventClick: (String) -&gt; Unit, onAddEventClick: () -&gt; Unit, onNavigateUp: () -&gt; Unit, viewModel: EventViewModel = hiltViewModel() )</ID>
     <ID>LongMethod:FriendDetailScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun FriendDetailScreen( friendUid: String, onNavigateUp: () -&gt; Unit, onRevoked: () -&gt; Unit, viewModel: FriendViewModel = hiltViewModel() )</ID>
     <ID>LongMethod:FriendInviteSheet.kt$@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class) @Composable fun FriendInviteSheet( state: FriendInviteState, onChooseDuration: (GuestAccessDuration) -&gt; Unit, onCreate: () -&gt; Unit, onDismiss: () -&gt; Unit )</ID>
     <ID>LongMethod:FriendProfileScreen.kt$@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class) @Composable fun FriendProfileScreen( onNavigateUp: () -&gt; Unit, viewModel: FriendViewModel = hiltViewModel() )</ID>
@@ -62,7 +56,6 @@
     <ID>LongParameterList:AddEditPetScreen.kt$( name: String, onName: (String) -&gt; Unit, species: PetSpecies, onSpecies: (PetSpecies) -&gt; Unit, breed: String, onBreed: (String) -&gt; Unit, dateOfBirth: LocalDateTime?, onPickDate: () -&gt; Unit, enabled: Boolean )</ID>
     <ID>LongParameterList:AddExpenseScreen.kt$( agreedRatio: SplitRatio, shared: Boolean, onSharedChange: (Boolean) -&gt; Unit, overrideMomPercent: Int?, onOverrideChange: (Int?) -&gt; Unit, enabled: Boolean )</ID>
     <ID>LongParameterList:CalendarFilters.kt$( allEventTypes: List&lt;String&gt;, hiddenEventTypes: Set&lt;String&gt;, showHolidays: Boolean, parentFilter: ParentFilter, parentNames: ParentNames, friendName: String?, onParentFilterChange: (ParentFilter) -&gt; Unit, onToggleType: (String) -&gt; Unit, onAddCustomType: (String) -&gt; Unit, onShowHolidaysChange: (Boolean) -&gt; Unit, onDismiss: () -&gt; Unit, sheetState: SheetState )</ID>
-    <ID>LongParameterList:DayWeekView.kt$( event: Event, onClick: () -&gt; Unit, columnWidthPx: Float, hourHeightPx: Float, baseDate: LocalDate, baseHour: Int, parentNames: ParentNames, onDragDrop: ((String, LocalDate, Int) -&gt; Unit)?, onResize: ((String, LocalDateTime?, LocalDateTime?) -&gt; Unit)? = null, onDelete: ((String) -&gt; Unit)? = null, onLongPressStart: ((String) -&gt; Unit)? = null, onLongPressEnd: (() -&gt; Unit)? = null, onDragOverDeleteButton: ((Boolean) -&gt; Unit)? = null, // Visible segment of the event within the current day (differs from the real event // times for multi-day / overnight events, which are clamped to each day). displayStart: LocalDateTime = event.startDateTime, displayEnd: LocalDateTime = event.endDateTime ?: event.startDateTime.plusHours(1), // Continuation segments of multi-day events are not resizable/movable (ambiguous). resizable: Boolean = true, draggable: Boolean = true, // Day view spells the time out under the title; week view leaves it to the block's // vertical position and spends the row on the title instead. showTime: Boolean = true )</ID>
     <ID>LongParameterList:EventViewModel.kt$EventViewModel$( private val eventUseCases: com.coparently.app.domain.usecase.EventUseCases, private val errorHandler: com.coparently.app.domain.error.ErrorHandler, private val encryptedPreferences: EncryptedPreferences, private val gson: Gson, private val photoStorage: RecordPhotoStorage, private val parentsSource: ParentsSource, familyMembersSource: FamilyMembersSource )</ID>
     <ID>LongParameterList:EventViewModel.kt$EventViewModel$( title: String, description: String, parentOwner: String, eventType: String, startDate: LocalDate, startTime: LocalTime, endTime: LocalTime )</ID>
     <ID>LongParameterList:ExpenseAnalytics.kt$( title: String, titleColor: androidx.compose.ui.graphics.Color, expenses: List&lt;Expense&gt;, currency: String, modifier: Modifier = Modifier, photoUrl: String? = null )</ID>
@@ -88,8 +81,6 @@
     <ID>MagicNumber:AddEditEventScreen.kt$500</ID>
     <ID>MagicNumber:AuthScreen.kt$1.5f</ID>
     <ID>MagicNumber:AuthScreen.kt$2000</ID>
-    <ID>MagicNumber:BudgetItem.kt$100</ID>
-    <ID>MagicNumber:BudgetScreen.kt$100</ID>
     <ID>MagicNumber:CalendarHeader.kt$20</ID>
     <ID>MagicNumber:CalendarHeader.kt$2026</ID>
     <ID>MagicNumber:CalendarHeader.kt$7</ID>
@@ -140,7 +131,6 @@
     <ID>MagicNumber:EventViewModel.kt$EventViewModel$2000</ID>
     <ID>MagicNumber:EventViewModel.kt$EventViewModel$24</ID>
     <ID>MagicNumber:EventViewModel.kt$EventViewModel$60</ID>
-    <ID>MagicNumber:FeatureManager.kt$FeatureManager$3600</ID>
     <ID>MagicNumber:FirebaseAuthService.kt$FirebaseAuthService$10</ID>
     <ID>MagicNumber:FirebaseAuthService.kt$FirebaseAuthService$100</ID>
     <ID>MagicNumber:GuestAccessDuration.kt$GuestAccessDuration.QUARTER$90</ID>
@@ -231,10 +221,8 @@
     <ID>ReturnCount:FamilySettingsRepository.kt$FamilySettingsRepository$suspend fun withdrawProposal(): Result&lt;Unit&gt;</ID>
     <ID>ReturnCount:FirestoreCustodyDataSource.kt$FirestoreCustodyDataSource$private fun Map&lt;*, *&gt;.toDayOverride(): DayOverride?</ID>
     <ID>ReturnCount:FirestoreFamilySettingsDataSource.kt$FirestoreFamilySettingsDataSource$private fun Map&lt;String, Any?&gt;.toSettings(): FamilySettings?</ID>
-    <ID>ReturnCount:FriendMappers.kt$FriendMappers$fun grantFrom(friendUid: String, data: Map&lt;String, Any?&gt;?): CalendarFriendGrant?</ID>
     <ID>ReturnCount:HandoverCalculator.kt$HandoverCalculator$fun nextHandoverFrom( model: CustodyModel, today: LocalDate, overrides: Map&lt;String, DayOverride&gt; = emptyMap() ): HandoverInfo?</ID>
     <ID>ReturnCount:RecurrenceExpander.kt$RecurrenceExpander$private fun firstIndexEndingAtOrAfter( start: LocalDateTime, pattern: String, rangeStart: LocalDateTime, duration: Duration? ): Long</ID>
-    <ID>ReturnCount:ReminderWorker.kt$ReminderWorker$override suspend fun doWork(): Result</ID>
     <ID>TooGenericExceptionCaught:AddEditEventScreen.kt$e: Exception</ID>
     <ID>TooGenericExceptionCaught:CalendarSyncRepository.kt$CalendarSyncRepository$e: Exception</ID>
     <ID>TooGenericExceptionCaught:ChildInfoViewModel.kt$ChildInfoViewModel$e: Exception</ID>
@@ -246,7 +234,6 @@
     <ID>TooGenericExceptionCaught:EncryptionManager.kt$EncryptionManager$e: Exception</ID>
     <ID>TooGenericExceptionCaught:EventViewModel.kt$EventViewModel$e: Exception</ID>
     <ID>TooGenericExceptionCaught:FcmService.kt$FcmService$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:FeatureManager.kt$FeatureManager$e: Exception</ID>
     <ID>TooGenericExceptionCaught:FirebaseAuthService.kt$FirebaseAuthService$e: Exception</ID>
     <ID>TooGenericExceptionCaught:FirestoreChildInfoDataSource.kt$FirestoreChildInfoDataSource$e: Exception</ID>
     <ID>TooGenericExceptionCaught:FirestoreEventDataSource.kt$FirestoreEventDataSource$e: Exception</ID>
@@ -265,7 +252,6 @@
     <ID>TooManyFunctions:DatabaseModule.kt$DatabaseModule</ID>
     <ID>TooManyFunctions:EncryptedPreferences.kt$EncryptedPreferences</ID>
     <ID>TooManyFunctions:EventDao.kt$EventDao</ID>
-    <ID>TooManyFunctions:EventRepository.kt$EventRepository</ID>
     <ID>TooManyFunctions:EventViewModel.kt$EventViewModel : ViewModel</ID>
     <ID>TooManyFunctions:Extensions.kt$com.coparently.app.utils.Extensions.kt</ID>
     <ID>TooManyFunctions:OnboardingScreen.kt$com.coparently.app.presentation.onboarding.OnboardingScreen.kt</ID>

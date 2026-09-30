@@ -52,4 +52,8 @@
     <string name="region_de_sn">Саксония</string>
     <string name="region_de_st">Саксония-Анхальт</string>
     <string name="region_de_th">Тюрингия</string>
+    <string name="holiday_break_cz_summer">Летние каникулы</string>
+    <string name="holiday_break_cz_christmas">Рождественские каникулы</string>
+    <string name="holiday_break_cz_autumn">Осенние каникулы</string>
+    <string name="holiday_break_cz_easter">Пасхальные каникулы</string>
 </resources>

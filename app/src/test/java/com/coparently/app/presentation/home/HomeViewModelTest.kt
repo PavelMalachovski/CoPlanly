@@ -5,6 +5,7 @@ import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.CustodyModelType
+import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.model.PairingState
 import com.coparently.app.domain.model.PartnerSummary
 import com.coparently.app.domain.money.SupportedCurrency
@@ -57,6 +58,9 @@ class HomeViewModelTest {
     private val dispatcher = StandardTestDispatcher()
     private lateinit var pairingState: MutableStateFlow<PairingState>
     private val activeModel = MutableStateFlow<CustodyModel?>(null)
+
+    /** What the agenda's range query answers: expanded occurrences, as the repository returns. */
+    private val agendaEvents = MutableStateFlow<List<Event>>(emptyList())
     private lateinit var viewModel: HomeViewModel
 
     @Before
@@ -65,7 +69,7 @@ class HomeViewModelTest {
 
         val eventRepository = mockk<EventRepository> {
             every { getAllEvents() } returns flowOf(emptyList())
-            every { getEventsByDateRange(any(), any()) } returns flowOf(emptyList())
+            every { getEventsByDateRange(any(), any()) } returns agendaEvents
             coEvery { getEventById("e1") } returns storedEvent
             coEvery { getEventById("gone") } returns null
         }
@@ -276,5 +280,60 @@ class HomeViewModelTest {
             dispatcher.scheduler.advanceUntilIdle()
             assertEquals(null, viewModel.previewEvent.value)
             assertEquals("gone", missing)
+        }
+
+    @Test
+    fun `a tapped occurrence of a recurring event previews that occurrence, not the first`() =
+        runTest(dispatcher) {
+            // Audit L-6. Every occurrence shares the series' id, so the week list holds "weekly"
+            // twice; matching by id alone previewed tomorrow's whichever row was tapped.
+            val tomorrow = LocalDate.now().plusDays(1).atTime(9, 0)
+            val first = storedEvent.copy(
+                id = "weekly",
+                title = "Swimming",
+                startDateTime = tomorrow,
+                endDateTime = tomorrow.plusHours(1),
+                isRecurring = true,
+                recurrencePattern = "daily"
+            )
+            val second = first.copy(
+                startDateTime = tomorrow.plusDays(1),
+                endDateTime = tomorrow.plusDays(1).plusHours(1)
+            )
+            agendaEvents.value = listOf(first, second)
+
+            viewModel.uiState.test {
+                assertEquals(HomeUiState.Loading, awaitItem())
+                pairingState.value = PairingState.Paired(
+                    PartnerSummary(
+                        id = "partner-1",
+                        name = "Alex",
+                        email = "alex@example.com",
+                        pairedSinceMillis = null
+                    )
+                )
+                dispatcher.scheduler.advanceUntilIdle()
+                val dashboard = expectMostRecentItem() as HomeUiState.Dashboard
+                assertEquals(listOf(first, second), dashboard.week.map { it.event })
+
+                var missing = false
+                viewModel.openPreview("weekly", second.startDateTime, onMissing = { missing = true })
+                dispatcher.scheduler.advanceUntilIdle()
+                assertEquals(second, viewModel.previewEvent.value)
+                assertFalse(missing)
+
+                // The activity feed names the event, not an occurrence: the first one on screen.
+                viewModel.openPreview("weekly", onMissing = { missing = true })
+                dispatcher.scheduler.advanceUntilIdle()
+                assertEquals(first, viewModel.previewEvent.value)
+
+                // An occurrence that has since left the dashboard falls back to the id alone.
+                viewModel.openPreview("weekly", tomorrow.plusDays(30), onMissing = { missing = true })
+                dispatcher.scheduler.advanceUntilIdle()
+                assertEquals(first, viewModel.previewEvent.value)
+                assertFalse(missing)
+
+                cancelAndIgnoreRemainingEvents()
+            }
         }
 }

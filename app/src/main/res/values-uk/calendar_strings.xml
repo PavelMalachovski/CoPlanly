@@ -50,6 +50,7 @@
 
     <string name="calendar_time_slot_description">Час %1$s, %2$s. Натисніть, щоб додати подію.</string>
     <string name="calendar_event_chip_description">Подія %1$s. %2$s</string>
+    <string name="calendar_event_chip_description_members">Подія %1$s. Стосується: %2$s. %3$s</string>
     <string name="calendar_event_dragging">Перетягування</string>
     <string name="calendar_event_resizing_start">Зміна часу початку на %1$s</string>
     <string name="calendar_event_resizing_end">Зміна часу завершення на %1$s</string>

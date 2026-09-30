@@ -4,6 +4,7 @@ import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.coparently.app.domain.friends.CalendarFriendGrant
+import com.coparently.app.domain.friends.CalendarFriendPolicy
 import com.coparently.app.domain.friends.FriendProfile
 import com.coparently.app.domain.friends.FriendRole
 import com.coparently.app.domain.guests.GuestAccessDuration
@@ -68,7 +69,7 @@ data class FriendRedeemState(
  *
  * One ViewModel for both sides because they are one relationship seen from its two ends, and the
  * flows are disjoint: a parent's device has grants and no profile of its own, a friend's device
- * has a profile and one grant.
+ * has a profile and a grant per family that admitted them (L-5).
  */
 @HiltViewModel
 class FriendViewModel @Inject constructor(
@@ -79,9 +80,12 @@ class FriendViewModel @Inject constructor(
     val friends: StateFlow<List<CalendarFriendGrant>> = friendRepository.observeFamilyFriends()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())
 
-    /** This account's own grant, when the signed-in user is a friend rather than a parent. */
-    val myGrant: StateFlow<CalendarFriendGrant?> = friendRepository.observeMyGrant()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), null)
+    /**
+     * This account's own grants, when the signed-in user is a friend rather than a parent — one
+     * per family that admitted them (L-5), soonest-ending first. Empty for a parent.
+     */
+    val myGrants: StateFlow<List<CalendarFriendGrant>> = friendRepository.observeMyGrants()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())
 
     /** The friend's own profile, or null before they have written one. */
     val myProfile: StateFlow<FriendProfile?> = friendRepository.observeMyProfile()
@@ -204,13 +208,13 @@ class FriendViewModel @Inject constructor(
         photoUrl: String?
     ) {
         viewModelScope.launch {
-            // Read on the save path, not from `myGrant.value` — invariant 17. `myGrant` is a
+            // Read on the save path, not from `myGrants.value` — invariant 17. `myGrants` is a
             // `WhileSubscribed` StateFlow and `FriendProfileScreen` is its own route that never
-            // collects it, so `.value` was the initial `null` for every save this instance made
-            // and the profile went out with an empty `familyParents` — the very gate the parents
-            // read it through. `myProfile` stays a fallback: the screen does collect it, and on a
-            // re-save it already holds the gate the first write established.
-            val grant = friendRepository.myGrant()
+            // collects it, so `.value` was the initial empty value for every save this instance
+            // made and the profile went out with an empty `familyParents` — the very gate the
+            // parents read it through. `myProfile` stays a fallback: the screen does collect it,
+            // and on a re-save it already holds the gate the first write established.
+            val grants = friendRepository.myGrants()
             friendRepository.saveMyProfile(
                 FriendProfile(
                     uid = "",
@@ -222,9 +226,10 @@ class FriendViewModel @Inject constructor(
                     // The **stored** gate first, then the grant. `friend_profiles`' update rule
                     // requires `familyParents` to equal what the document already holds, so
                     // preferring a live grant that has since changed gets the write refused; the
-                    // grant is for the create, where there is no stored profile to match.
+                    // grant is for the create, where there is no stored profile to match — every
+                    // family's parents when more than one family admitted this friend (L-5).
                     familyParents = myProfile.value?.familyParents?.takeIf { it.isNotEmpty() }
-                        ?: grant?.familyParents.orEmpty()
+                        ?: CalendarFriendPolicy.profileGate(grants)
                 )
             ).onFailure { e -> _saveError.value = errorRes(e) }
         }

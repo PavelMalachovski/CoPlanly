@@ -14,7 +14,7 @@ plugins {
 // applying them would fail — the Crashlytics plugin's release mapping-upload task
 // errors with "Google-Services plugin not configured properly".
 // Apply both plugins only when the file is present. Runtime Crashlytics still works
-// everywhere via the firebase-crashlytics-ktx SDK dependency; only build-time mapping
+// everywhere via the firebase-crashlytics SDK dependency; only build-time mapping
 // upload is skipped when the config is absent.
 val hasGoogleServicesJson =
     file("google-services.json").exists() ||
@@ -438,19 +438,30 @@ dependencies {
     // the version is the one Coil already brings, so the graph does not change.
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
-    // Firebase - Updated to latest BOM
-    val firebaseBom = platform("com.google.firebase:firebase-bom:33.7.0")
+    // Firebase BoM 34 (audit L-2). 34.0.0 removed the `-ktx` modules; their Kotlin extensions
+    // (`Firebase`, `logEvent`, `storageMetadata`, …) have lived in the main modules under the
+    // product's own package since BoM 32.5, which is where every import in `app/src` already
+    // points. Don't add a `-ktx` artifact back: it no longer resolves. 34.4.0 rather than the
+    // newest 34.x because it is contemporary with the rest of this toolchain (Compose BOM
+    // 2025.10, AGP 8.10, Kotlin 2.1); move it on a machine that can run
+    // `./gradlew :app:dependencies`.
+    val firebaseBom = platform("com.google.firebase:firebase-bom:34.4.0")
     implementation(firebaseBom)
-    implementation("com.google.firebase:firebase-auth-ktx")
-    implementation("com.google.firebase:firebase-firestore-ktx")
-    implementation("com.google.firebase:firebase-messaging-ktx")
-    implementation("com.google.firebase:firebase-analytics-ktx")
-    implementation("com.google.firebase:firebase-crashlytics-ktx")
-    implementation("com.google.firebase:firebase-storage-ktx")
+    implementation("com.google.firebase:firebase-auth")
+    implementation("com.google.firebase:firebase-firestore")
+    implementation("com.google.firebase:firebase-messaging")
+    implementation("com.google.firebase:firebase-analytics")
+    implementation("com.google.firebase:firebase-crashlytics")
+    implementation("com.google.firebase:firebase-storage")
 
     // Callable Cloud Functions — pairing accept/unpair write both parents'
     // user documents, which is only safe server-side.
-    implementation("com.google.firebase:firebase-functions-ktx")
+    implementation("com.google.firebase:firebase-functions")
+
+    // `Task.await()` (kotlinx.coroutines.tasks), which the data layer calls throughout. It used
+    // to arrive only transitively through the Firebase modules; declared so a BoM move cannot
+    // take it away. Same version as kotlinx-coroutines-android above.
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.9.0")
 
     // Coil for async image loading in Compose (receipt photos)
     implementation("io.coil-kt:coil-compose:2.7.0")
