@@ -259,7 +259,8 @@ fun CustodyChangedBanner(byName: String, onDismiss: () -> Unit, modifier: Modifi
  * @param events That day's events, in start order
  * @param custody The day's custody slot, or null when no custody model applies
  * @param parentNames Resolves a slot to that parent's name
- * @param onEventClick Opens an event
+ * @param onEventClick Opens the tapped event. The event itself, not its id: every occurrence of
+ *   a recurring event shares one id, and only the occurrence's start says which one was tapped
  * @param modifier Modifier for the card
  * @param contactWindows The day's contact windows (MON-6b), earliest first — already filtered by
  *   `CustodyResolver.contactWindowsResolver`, the lookup the calendar grid draws its bands from,
@@ -274,7 +275,7 @@ fun DayAgendaCard(
     events: List<Event>,
     custody: String?,
     parentNames: ParentNames,
-    onEventClick: (String) -> Unit,
+    onEventClick: (Event) -> Unit,
     modifier: Modifier = Modifier,
     contactWindows: List<ContactWindow> = emptyList()
 ) {
@@ -332,7 +333,7 @@ fun DayAgendaCard(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable(role = Role.Button) { onEventClick(event.id) }
+                        .clickable(role = Role.Button) { onEventClick(event) }
                         .heightIn(min = LayoutConstants.MIN_TOUCH_TARGET),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(Spacing.S)

@@ -190,8 +190,11 @@ fun HomeScreen(
     }
 
     // An event tapped anywhere on the dashboard opens its preview first, like the calendar.
-    val openEvent: (String) -> Unit = { eventId ->
-        viewModel.openPreview(eventId, onMissing = { onOpenEvent(eventId) })
+    // The tapped occurrence's start travels with the id (audit L-6): every occurrence of a
+    // recurring event shares its series' id, so the id alone previewed the first one on screen.
+    // Edit still opens the series by id, as the calendar's preview does.
+    val openEvent: (String, LocalDateTime?) -> Unit = { eventId, occurrenceStart ->
+        viewModel.openPreview(eventId, occurrenceStart, onMissing = { onOpenEvent(eventId) })
     }
     val previewEvent by viewModel.previewEvent.collectAsState()
     previewEvent?.let { event ->
@@ -381,7 +384,7 @@ private fun PairingInvitation(
  * @param state Everything the page draws
  * @param parentNames Resolves a slot to that parent's name
  * @param contentPadding The scaffold's own insets
- * @param onOpenEvent Opens an event by id
+ * @param onOpenEvent Opens an event by id, with the tapped occurrence's start when there is one
  * @param onOpenChangeRequests Opens the change-request inbox
  * @param onOpenContacts Opens the contacts list
  * @param onOpenChildInfo Opens the child records
@@ -399,7 +402,7 @@ private fun Dashboard(
     parentNames: ParentNames,
     hasPendingProposal: Boolean,
     contentPadding: PaddingValues,
-    onOpenEvent: (String) -> Unit,
+    onOpenEvent: (String, LocalDateTime?) -> Unit,
     onOpenChangeRequests: () -> Unit,
     onOpenContacts: () -> Unit,
     onOpenChildInfo: () -> Unit,
@@ -499,7 +502,7 @@ private fun Dashboard(
                 events = state.today.events,
                 custody = state.today.dayParent,
                 parentNames = parentNames,
-                onEventClick = onOpenEvent,
+                onEventClick = { event -> onOpenEvent(event.id, event.startDateTime) },
                 contactWindows = state.today.contactWindows
             )
         }
@@ -531,7 +534,7 @@ private fun Dashboard(
                     entry = entry,
                     parentNames = parentNames,
                     isLast = index == state.week.lastIndex,
-                    onClick = { onOpenEvent(entry.event.id) }
+                    onClick = { onOpenEvent(entry.event.id, entry.event.startDateTime) }
                 )
             }
         }
@@ -569,7 +572,8 @@ private fun Dashboard(
                 ActivityGroup(
                     items = state.recentChanges,
                     onOpenChangeRequests = onOpenChangeRequests,
-                    onOpenEvent = onOpenEvent
+                    // A change names the event, not one occurrence of it.
+                    onOpenEvent = { eventId -> onOpenEvent(eventId, null) }
                 )
             }
         }
