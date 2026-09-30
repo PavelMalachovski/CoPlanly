@@ -83,7 +83,7 @@ invocation is yours.
 | **MON-5** | The plan ships; swapping in the Ministry's own wording needs the form itself | P1 | S |
 | **MON-6b** | Contact windows ship (schema 36), on the grid and on Home's today card; left: verifying the mixed-version path on two phones | P2 | S |
 | **MON-8** | Bakaláři import **built**; EduPage waits for one real capture from a parent account | P2 | L |
-| **MON-11** | Payments (MVP 3) — the entitlement model, after MON-1 decides the price | P2 | L |
+| **MON-11** | Payments (MVP 3) — the entitlement model; MON-1 is decided (per family, 129 CZK / 1,190 CZK, 14-day trial from pairing) | P2 | L |
 | **MON-12** | **Server half built** (September 2026): the `aiAssist` callable — reply suggestion and month summary, Claude on Vertex AI in an EU region, consent-gated, quota'd, off until configured; left: the Android client behind its flag, the owner's Vertex set-up and retention check, counsel on ROPA P15 | P3 | M |
 | **MON-13** | The tables, Germany's Länder, Slovakia's kraje and sourced school vacations (Slovakia nationwide and per kraj, Austria nationwide, Germany per Land) are done — left: Austria's per-Land breaks (not final in the source), Slovakia's half-year day (not in the dataset), and whether Austria's patron-saint days are drawn at all | P2 | M |
 | **FAM-4** | **Built** (schema 42, PR #101: per-child overrides in the one custody document, rules and rules tests, grid band behind the one-child filter, Home hero, custody-setup section; feed stays family); left: the rules deploy and a look on one and two phones — see DEVICE-CHECKLIST §3.13 | P2 | — |
@@ -143,7 +143,7 @@ invocation is yours.
 | **REL-7** | Install a release build and confirm a child's medical profile reaches the co-parent non-empty | The one test CI cannot run: a green `assembleRelease` proves R8 ran, not that Gson still finds its field names. |
 | **CQ-16** | Digital Asset Links | Needs a domain you own — the same one REL-4 needs. |
 | **CQ-18** | Cross-time-zone chat on two phones — **what is drawn only** | The logic now runs end to end in CI (`e2e` job, `TwoParentChatTest`: UTC+14 and UTC−11, unread → DELIVERED → READ). Left for the phones: the badge and ticks as rendered, the displayed times, and the push. |
-| **MON-1** | Price, unit (family, not seat), and what the free tier contains | A decision, and it shapes the code that follows. |
+| **MON-1** | ~~Price, unit and free tier~~ **Decided 2026-09-30** — see MON-1 | Left: the Play merchant account and the tax set-up before MON-11 ships. |
 | **MON-9** | Distribution: mediators, Cochem courts, OSPOD, NGOs | Phone calls and meetings. A session can draft the material; it cannot make the call. |
 | **MON-8 (input)** | A Bakaláři login to run `DEVICE-CHECKLIST.md` §3.18; one EduPage capture (timetable, children, one event) | Bakaláři was built from published samples; EduPage has none anywhere. |
 
@@ -1358,9 +1358,25 @@ strings across five locales. Two things it does not do, both deliberate:
 model, no paywall. Everything below assumes that gets built; **MON-1** is the decision that shapes
 it, and it should be made before the code.
 
-### MON-1 · P0 · decision · Pricing, and who pays
+### MON-1 · **DECIDED 2026-09-30** · P0 · decision · Pricing, and who pays
 
 **Where:** 💻 yours — it is a decision. Everything after it is cloud work.
+
+**Decided (owner, 30 September 2026):**
+
+- **The unit is the family.** One subscription per `familyId`; both parents of that family get the
+  paid features, whoever pays. A parent with a second family pays for it separately — the
+  entitlement does not follow the payer across families.
+- **129 CZK a month or 1,190 CZK a year**, one family subscription, the second parent free.
+- **A 14-day trial that starts when both parents are linked**, not at install: a fortnightly
+  pattern needs one full cycle before it is worth paying for.
+- **Free for ever:** the calendar, custody schedule, swaps and proposals, chat, expenses with
+  receipts and the balance, children, pets and contacts, a read-only calendar friend, all five
+  languages, offline. **Paid:** the export and its verification, event history, the document vault,
+  the Bakaláři import, professional access, and expense export with receipts.
+- The closed test and its testers stay free; testers get the first year free after launch.
+
+The analysis that led there follows; MON-11 builds it.
 
 The audit's recommendation (§10.4), for a Czech-first launch:
 

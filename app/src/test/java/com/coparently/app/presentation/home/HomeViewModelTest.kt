@@ -3,9 +3,9 @@ package com.coparently.app.presentation.home
 import app.cash.turbine.test
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.domain.custody.ContactWindow
-import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.CustodyModelType
+import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.model.PairingState
 import com.coparently.app.domain.model.PartnerSummary
 import com.coparently.app.domain.money.SupportedCurrency
