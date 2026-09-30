@@ -1659,9 +1659,11 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     knows nothing of layers, and without that every fortnight edit would propose deleting the
     summer. And **a layer change is a pattern change**: `submitSeasonalLayers` goes through
     `submitPattern`, so a paired family gets a proposal, never an overwrite, and the section
-    refuses to send while the co-parent's own proposal waits (the repository's fallback there is
-    a local save). The grid shows a layer only through the custody band it already draws — **no
-    new colour, and no per-month banner** (the variable-height strip `CalendarScreen` removed for
+    refuses to send while the co-parent's own proposal waits — and so does the repository: a pair
+    with a shared document never falls back to `saveAndActivate`, which would push the pattern
+    over the agreed one and the waiting proposal; it answers `COPARENT_PROPOSAL_WAITING` or
+    `NOT_SENT` and writes nothing. The grid shows a layer only through the custody band it
+    already draws — **no new colour, and no per-month banner** (the variable-height strip `CalendarScreen` removed for
     school vacations). `functions/calendar-feed.js` ports the codec and the precedence; change the
     Kotlin, change the fixture both suites share. **Holiday fairness (MON-20) only counts**:
     `HolidayFairnessCalculator` reads the same resolver, so swaps and layers count as drawn and a

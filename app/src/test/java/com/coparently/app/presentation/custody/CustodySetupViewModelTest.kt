@@ -186,6 +186,39 @@ class CustodySetupViewModelTest {
     }
 
     @Test
+    fun `a save refused for the co-parent's waiting proposal says so and stays open`() = runTest(dispatcher) {
+        coEvery { repository.createWeekOnWeekOff(any(), any()) } returns
+            PatternSubmission.COPARENT_PROPOSAL_WAITING
+        val vm = viewModel()
+        advanceUntilIdle()
+        var succeeded = false
+
+        vm.save { succeeded = true }
+        advanceUntilIdle()
+
+        val state = vm.uiState.value
+        assertEquals(UiText.Res(R.string.custody_setup_answer_pending_first), state.error)
+        assertFalse(state.isSaved)
+        assertFalse(state.isLoading)
+        assertFalse(succeeded)
+    }
+
+    @Test
+    fun `a proposal that could not be sent reads as a failed save`() = runTest(dispatcher) {
+        coEvery { repository.createWeekOnWeekOff(any(), any()) } returns PatternSubmission.NOT_SENT
+        val vm = viewModel()
+        advanceUntilIdle()
+        var succeeded = false
+
+        vm.save { succeeded = true }
+        advanceUntilIdle()
+
+        assertEquals(UiText.Res(R.string.custody_setup_save_failed), vm.uiState.value.error)
+        assertFalse(vm.uiState.value.isSaved)
+        assertFalse(succeeded)
+    }
+
+    @Test
     fun `opened from the agreed custody answer, the form quotes it and the save cites it`() =
         runTest(dispatcher) {
             coEvery { planReferences.referenceFor("care_weekday") } returns custodyReference

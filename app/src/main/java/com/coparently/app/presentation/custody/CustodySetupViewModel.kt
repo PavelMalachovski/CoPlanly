@@ -308,6 +308,17 @@ class CustodySetupViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val submission = custodyModelRepository.submitFor(state, citation, followFamily)
+                // A refusal wrote nothing: the form stays open, as it was, with the reason.
+                val refusal = when (submission) {
+                    PatternSubmission.COPARENT_PROPOSAL_WAITING ->
+                        UiText.Res(R.string.custody_setup_answer_pending_first)
+                    PatternSubmission.NOT_SENT -> UiText.Res(R.string.custody_setup_save_failed)
+                    PatternSubmission.ACTIVATED, PatternSubmission.PROPOSED -> null
+                }
+                if (refusal != null) {
+                    _uiState.value = state.copy(isLoading = false, error = refusal)
+                    return@launch
+                }
                 _uiState.value = state.copy(
                     isLoading = false,
                     isSaved = true,

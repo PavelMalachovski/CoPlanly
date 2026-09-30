@@ -268,6 +268,10 @@ class SeasonalScheduleViewModel @Inject constructor(
             else -> when (custodyModelRepository.submitSeasonalLayers(next, planCitation)) {
                 PatternSubmission.PROPOSED -> UiText.Res(R.string.seasonal_sent_for_approval)
                 PatternSubmission.ACTIVATED -> UiText.Res(R.string.seasonal_saved)
+                // The repository's own refusals: the check above can race a proposal that lands
+                // in between, and a document that cannot be read or written sends nothing.
+                PatternSubmission.COPARENT_PROPOSAL_WAITING -> UiText.Res(R.string.seasonal_answer_pending_first)
+                PatternSubmission.NOT_SENT -> UiText.Res(R.string.seasonal_save_failed)
                 null -> UiText.Res(R.string.seasonal_needs_base_pattern)
             }
         }
@@ -275,7 +279,8 @@ class SeasonalScheduleViewModel @Inject constructor(
 
     /**
      * Whether the co-parent's proposal is waiting for this parent. Refused rather than sent: the
-     * repository cannot put a second proposal over theirs, and its fallback is a local save.
+     * repository cannot put a second proposal over theirs and refuses one too
+     * ([PatternSubmission.COPARENT_PROPOSAL_WAITING]); asking first saves the round trip.
      */
     private suspend fun coParentProposalWaiting(): Boolean {
         val read = custodyModelRepository.readShared() as? SharedCustodyRead.Found ?: return false

@@ -79,6 +79,7 @@
 
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
     <string name="custody_setup_save_failed">Der Plan konnte nicht gespeichert werden. Versuch es erneut.</string>
+    <string name="custody_setup_answer_pending_first">Der Vorschlag des anderen Elternteils wartet auf deine Antwort — beantworte ihn, bevor du einen neuen Plan vorschlägst.</string>
 
     <!-- MON-6b: contact windows over the whole-day pattern. -->
     <string name="custody_windows_title">Umgangszeiten</string>

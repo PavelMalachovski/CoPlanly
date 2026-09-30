@@ -81,6 +81,7 @@
 
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
     <string name="custody_setup_save_failed">Графік не вдалося зберегти. Спробуйте ще раз.</string>
+    <string name="custody_setup_answer_pending_first">Пропозиція другого з батьків чекає вашої відповіді — дайте відповідь, перш ніж пропонувати новий графік.</string>
 
     <!-- MON-6b: contact windows over the whole-day pattern. -->
     <string name="custody_windows_title">Періоди спілкування</string>

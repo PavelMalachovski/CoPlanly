@@ -81,6 +81,7 @@
 
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
     <string name="custody_setup_save_failed">Rozvrh se nepodařilo uložit. Zkuste to znovu.</string>
+    <string name="custody_setup_answer_pending_first">Na návrh druhého rodiče čeká vaše odpověď — odpovězte na něj, než navrhnete nový rozvrh.</string>
 
     <!-- MON-6b: contact windows over the whole-day pattern. -->
     <string name="custody_windows_title">Časy styku</string>

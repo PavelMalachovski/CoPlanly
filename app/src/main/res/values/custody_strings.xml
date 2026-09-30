@@ -88,6 +88,7 @@
 
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
     <string name="custody_setup_save_failed">The schedule could not be saved. Try again.</string>
+    <string name="custody_setup_answer_pending_first">Your co-parent’s proposal is waiting — answer it before proposing a new schedule.</string>
 
     <!-- MON-6b: contact windows over the whole-day pattern. -->
     <string name="custody_windows_title">Contact windows</string>

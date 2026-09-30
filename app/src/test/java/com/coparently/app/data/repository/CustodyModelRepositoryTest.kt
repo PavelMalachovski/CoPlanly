@@ -7,6 +7,7 @@ import com.coparently.app.domain.activity.ActivityAnnouncer
 import com.coparently.app.domain.activity.ActivityKind
 import com.coparently.app.domain.custody.ChildOverrideCodec
 import com.coparently.app.domain.custody.ContactWindow
+import com.coparently.app.domain.custody.CustodyProposal
 import com.coparently.app.domain.custody.CustodyTimestamp
 import com.coparently.app.domain.custody.SeasonalLayer
 import com.coparently.app.domain.custody.SharedCustody
@@ -59,6 +60,9 @@ import java.util.concurrent.atomic.AtomicInteger
  * scheduler, so what is collected is [CustodyModelRepository.observeShared] itself — the real
  * shared flow, `shareIn` and all — with backoff delays elapsing on virtual time.
  */
+// One class because every case needs the same paired-repository fixture on one scheduler;
+// splitting it by theme would copy that fixture, not shrink it (as `SyncServiceTest` says).
+@Suppress("LargeClass")
 @OptIn(ExperimentalCoroutinesApi::class)
 class CustodyModelRepositoryTest {
 
@@ -718,6 +722,77 @@ class CustodyModelRepositoryTest {
         }
 
     private fun baby() = requireNotNull(ChildOverrideCodec.decode(BABY_WIRE))
+
+    // ---- refusals: a paired schedule changes only by proposal --------------
+
+    @Test
+    fun `a change while the co-parent's proposal waits is refused, and nothing is written`() =
+        runTest(dispatcher) {
+            // The old fallback activated the pattern locally and pushed it over the document:
+            // the agreed schedule and the co-parent's pending proposal were both gone.
+            val theirs = CustodyProposal(
+                model = localModel().copy(id = "their-proposal"),
+                repeatYearly = true,
+                proposedBy = PARTNER_UID,
+                proposedAt = "2026-08-05T10:00:00"
+            )
+            coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID) } returns
+                remoteCustody().copy(proposal = theirs)
+
+            val result = repository.createWeekOnWeekOff(START_DATE)
+
+            assertEquals(PatternSubmission.COPARENT_PROPOSAL_WAITING, result)
+            coVerify(exactly = 0) { firestoreCustodyDataSource.setCustody(any(), any(), any()) }
+            coVerify(exactly = 0) { custodyModelDao.insertModel(any()) }
+            coVerify(exactly = 0) { custodyModelDao.deactivateAllModels() }
+        }
+
+    @Test
+    fun `a proposal that cannot be written is not sent, and nothing is activated instead`() =
+        runTest(dispatcher) {
+            coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID) } returns remoteCustody()
+            coEvery { firestoreCustodyDataSource.setCustody(any(), any(), any()) } throws permissionDenied()
+
+            val result = repository.createWeekOnWeekOff(START_DATE)
+
+            assertEquals(PatternSubmission.NOT_SENT, result)
+            // One write — the proposal — and no second one pushing the pattern over the document.
+            coVerify(exactly = 1) { firestoreCustodyDataSource.setCustody(any(), any(), any()) }
+            coVerify(exactly = 0) { custodyModelDao.insertModel(any()) }
+        }
+
+    @Test
+    fun `a pair whose document cannot be read gets no proposal and no overwrite`() =
+        runTest(dispatcher) {
+            // Unguarded, this read threw out of the caller's coroutine; and a failed read is not
+            // an absent document, so it must not be answered by activating the pattern.
+            coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID) } throws permissionDenied()
+
+            val result = repository.createWeekOnWeekOff(START_DATE)
+
+            assertEquals(PatternSubmission.NOT_SENT, result)
+            coVerify(exactly = 0) { firestoreCustodyDataSource.setCustody(any(), any(), any()) }
+            coVerify(exactly = 0) { custodyModelDao.insertModel(any()) }
+        }
+
+    @Test
+    fun `an unpaired parent's pattern still applies at once`() = runTest(dispatcher) {
+        pairedWith(partnerUid = null)
+
+        val result = repository.createWeekOnWeekOff(START_DATE)
+
+        assertEquals(PatternSubmission.ACTIVATED, result)
+        coVerify(exactly = 1) { custodyModelDao.insertModel(any()) }
+    }
+
+    @Test
+    fun `a pair's first schedule, with no document yet, applies at once`() = runTest(dispatcher) {
+        val result = repository.createWeekOnWeekOff(START_DATE)
+
+        assertEquals(PatternSubmission.ACTIVATED, result)
+        coVerify(exactly = 1) { custodyModelDao.insertModel(any()) }
+        coVerify(exactly = 1) { firestoreCustodyDataSource.setCustody(DOCUMENT_ID, any(), any()) }
+    }
 
     // ---- parenting-plan citation (MON-21) -----------------------------------
 
