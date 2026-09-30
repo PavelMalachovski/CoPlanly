@@ -886,11 +886,12 @@ private fun StatTile(
  * One row of the child's week: a parent-coloured node on a vertical rail, with the event beside
  * it and an exclamation mark when the co-parent is expected.
  *
- * **The colour and the words name the same parent** — the one whose custody day the event falls
- * on, which is the question this row exists to answer. When no arrangement answers for that date
- * the row falls back to the event's own owner rather than going colourless: a rail of grey dots
- * says nothing, and the owner is a fact the app does hold. The words drop the "'s day" clause in
- * that case, because that is the part that would be a guess.
+ * **The node's colour is whose event it is** (`Event.parentOwner`), as on every calendar chip and
+ * the today card's bar (UX-8, owner decision 2026-09-30: colour = whose event). Whose custody day
+ * the event falls on is a separate fact, and the row keeps it as words in the meta line
+ * ("… · Alex's day"); it is dropped when no arrangement answers for that date, because that is
+ * the part that would be a guess. The row used to colour from the day's parent, falling back to
+ * the owner, so one visual channel meant two things on adjacent cards.
  *
  * Internal rather than private so the JVM screenshot tests (`ScreenshotMatrix` and its
  * subclasses under `app/src/test`) can render it on its own.
@@ -909,7 +910,6 @@ internal fun TimelineRow(
     onClick: () -> Unit
 ) {
     val event = entry.event
-    val dotSlot = entry.dayParent ?: event.parentOwner
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -925,7 +925,7 @@ internal fun TimelineRow(
                     .padding(top = Spacing.XS)
                     .size(12.dp)
                     .clip(CircleShape)
-                    .background(ParentColors.fill(dotSlot))
+                    .background(ParentColors.fill(event.parentOwner))
             )
             if (!isLast) {
                 Box(

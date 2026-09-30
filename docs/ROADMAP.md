@@ -110,7 +110,6 @@ invocation is yours.
 | --- | --- | --- |
 | **SEC-1 §1 (superseded by L-4)** | Storage rules keyed on Firestore state were the plan; L-4 (PR #117) made the path the gate instead — every photo prefix is family-keyed and checked by `isOneOfPair`, which the Storage emulator runs (`storage-record-photos.test.js`), so no cross-service rule and no staging bucket are needed | Only the deploy: `firebase deploy --only storage`, then `purgeLegacyPhotoPaths` once, and a photo attached on a device (DEVICE-CHECKLIST). The cost is written down: a path does not narrow at unpair. |
 | **SEC-5 (built, unseen)** | `EncryptedPreferences` seals its own file with the Keystore key; the alpha `security-crypto` only reads the old store once | `EncryptedPreferencesMigrationTest` copies an old store on the emulators; only a phone upgraded over a previous build shows Calendar still connected (DEVICE-CHECKLIST, "SEC-5 upgrade"). |
-| **UX-8** | The second half: two surfaces colour a chip from two different sources | An owner's answer to "what does a chip's colour mean" — the event's owner, or whose day it falls on. |
 | **UX-13** | Light theme is no longer unverifiable: CI's `screenshots` job renders the main screens' pieces in light and dark on every Android PR (night window background and previews done before it) | Whether a dark cold start still flashes: only a device shows the window before Compose's first frame. |
 | **FAM-5** | The event chip does not say who it is about | Chips are single-line with ellipsis and every colour channel is spent. Worth an owner's eye on a real device rather than a treatment invented blind. |
 | **MON-16 (shipped, unseen)** | A registered export: the record ID on the PDF's face and footer, the offline "not registered" dialog, and `web/verify/` answering for a real file | Export once online and once in flight mode; open the PDF (every page's footer names the record, or says "not registered"); upload the online one to the hosted `web/verify/` and see a match, then re-save it from a PDF viewer and see it fail. Only a device renders the footer, and only a deploy answers the page. |
@@ -1114,17 +1113,18 @@ The theme layer is genuinely good: contrast documented pair by pair, `ParentColo
 fill-versus-text problem properly, Settings and the month grid exemplary. The gap is between that
 layer and the screens.
 
-### UX-8 · **PARTLY DONE** · P3 · S · Two surfaces colour a chip from two different sources
+### UX-8 · **DONE** · P3 · S · Two surfaces colour a chip from two different sources
 
-**Where:** 👁 the remaining half is an owner's answer, not code.
+**Where:** ☁️ cloud.
 
-The loud half is fixed: "whose day is it" is its own line at `titleMedium` in that parent's colour
-through `ParentColors.text`, rather than a 12sp grey suffix on the date.
+The loud half was fixed first: "whose day is it" is its own line at `titleMedium` in that parent's
+colour through `ParentColors.text`, rather than a 12sp grey suffix on the date.
 
-**Left open:** `CalendarBanners` colours from `entry.dayParent ?: event.parentOwner` while the event
-chip colours from `event.parentOwner`, so one visual channel carries two meanings on adjacent
-cards. That is a question about what a chip's colour *means* — the event's owner, or whose day it
-falls on — and it wants an answer before either call site changes.
+**Done (owner decision 2026-09-30: colour = whose event).** An event's colour means whose event it
+is (`Event.parentOwner`) on every surface: the calendar's chips, the today card's bar
+(`DayAgendaCard`) and Home's week, whose node used to colour from `entry.dayParent ?:
+event.parentOwner`. Whose day it is is shown by the cell background on the grid and as words
+elsewhere (the today card's line, the week row's "… · Alex's day"), never by an event's colour.
 
 ### UX-9 · **DONE** · P2 · M · Five different empty-state anatomies
 
