@@ -290,7 +290,10 @@ class ExpenseRepositoryImpl @Inject constructor(
             val tombstoned = firestoreExpenseDataSource.tombstoneExpense(
                 expenseId = entity.id,
                 deletedAtMillis = deletedAtMillis,
-                deletedBy = entity.createdByFirebaseUid ?: userId
+                // Whoever is deleting — this device's signed-in parent — not the expense's
+                // creator: the co-parent may be the one who deleted it, and `deleteExpense` names
+                // the deleter too, so a retry of the same deletion must not name somebody else.
+                deletedBy = userId
             )
             if (tombstoned.isSuccess) {
                 expenseDao.deleteExpense(entity.id)
