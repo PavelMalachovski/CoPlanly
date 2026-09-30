@@ -4,7 +4,7 @@
  * Обрабатывает отправку push-уведомлений при создании записей в notification_queue
  */
 
-const functions = require('firebase-functions');
+const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
 // The sentinels and `Timestamp` come from the modular entry point, never through
 // `admin.firestore.FieldValue`. They are the same classes — `instanceof` against either holds, so
