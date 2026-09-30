@@ -126,6 +126,9 @@ class ChildInfoViewModel @Inject constructor(
     /** The live [loadChildInfoById] collector, so opening another child replaces it. */
     private var childObservation: Job? = null
 
+    /** The list screen's collector, cancelled before [loadChildInfo] starts another. */
+    private var listObservation: Job? = null
+
     /** Why a photograph did not make it on or off the record, or null when nothing is wrong. */
     private val _photoError = MutableStateFlow<MedicalPhotoError?>(null)
     val photoError: StateFlow<MedicalPhotoError?> = _photoError.asStateFlow()
@@ -261,12 +264,17 @@ class ChildInfoViewModel @Inject constructor(
      * values and whatever child B's fields held.
      */
     fun loadChildInfo() {
-        viewModelScope.launch {
+        // One list collector at a time: the screen calls this again on every return to it.
+        listObservation?.cancel()
+        listObservation = viewModelScope.launch {
             _uiState.value = ChildInfoUiState.Loading
             try {
                 childInfoRepository.getAllChildInfo().collect { childInfoList ->
                     _uiState.value = ChildInfoUiState.Success(childInfoList)
                 }
+            } catch (e: CancellationException) {
+                // The previous collector, replaced above: not a failure to show.
+                throw e
             } catch (e: Exception) {
                 Log.w(TAG, "Loading child info failed", e)
                 _uiState.value = ChildInfoUiState.Error(UiText.Res(R.string.childinfo_load_failed))
