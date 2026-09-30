@@ -32,17 +32,7 @@ Firebase Cloud Functions для обработки push-уведомлений �
 
 **Триггер:** Каждый день в 2:00 UTC
 
-### 3. onEventCreated
-Автоматически создает уведомление для партнера при создании нового события.
-
-**Триггер:** onCreate в `events/{eventId}`
-
-### 4. onChildInfoUpdated
-Автоматически создает уведомление для партнера при обновлении информации о ребенке.
-
-**Триггер:** onUpdate в `child_info/{childInfoId}`
-
-### 5. recordServerEventRevision
+### 3. recordServerEventRevision
 Records an `event_versions` revision (`recordedBy: 'server'`, id `srv_<eventId>_<commit time>`) for
 an event write no phone recorded — an older build's save (MON-4). Skips writes that leave the
 write key unchanged, removed documents and private ones. See `event-revisions.js` and
@@ -442,6 +432,41 @@ the privacy policy: check Firestore → Settings in the console before release.
    `NOT_FOUND` from every callable (pairing, deletion, exports) until it updates.
 4. Calendar-feed links minted before the move name `us-central1` and stop working; the parent
    creates a new link. Before release there are none worth keeping.
+
+## Removed functions: delete them from the live project
+
+A deploy creates and updates functions but never deletes one that `index.js` no longer exports, so
+a removed trigger keeps running in production until somebody deletes it by hand. Two are pending:
+
+| function | removed | why |
+| --- | --- | --- |
+| `onEventCreated` | September 2026 | Queued an English `title`/`body` push carrying the author's e-mail address to `users/{author}.partnerId` — the family the author was *showing*, not the event's — on every event create, school imports included. The chat activity card and `SyncService` already announce events in typed pushes. |
+| `onChildInfoUpdated` | September 2026 | The same for every `child_info` update; `SyncService` queues the typed `child_info_updated`. |
+
+At the next deploy of functions:
+
+```bash
+firebase functions:delete onEventCreated onChildInfoUpdated --region europe-west3 --force
+# and, if the region move above has not been done yet, the us-central1 copies as well:
+firebase functions:delete onEventCreated onChildInfoUpdated --region us-central1 --force
+```
+
+`firebase functions:list` afterwards should name neither.
+
+## Deploying the September 2026 rules and functions (order matters)
+
+The `firestore.rules` of this change reads `families/{id}` for every co-parent read of `expenses`
+and `budgets` (`isLiveFamilyMember`): a pair with no family document loses the other parent's money
+records. Pairing has written one since M-1, but check before deploying the rules:
+
+1. Run `backfillFamilyDocuments` (below, step 2 of the multi-family migration) and confirm it
+   reports nothing left to create.
+2. `firebase deploy --only functions` — the unpair, account-deletion, calendar-friend and
+   calendar-feed changes; then delete the two removed triggers (above).
+3. `firebase deploy --only firestore:rules`.
+
+Nothing else needs a migration. Existing conversations with a non-canonical id and existing
+`users/{uid}` documents are untouched: the new pins apply to creates, deletes and updates only.
 
 ## Admin operations
 

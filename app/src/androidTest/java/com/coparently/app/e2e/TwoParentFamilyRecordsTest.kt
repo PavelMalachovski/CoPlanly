@@ -15,7 +15,6 @@ import com.coparently.app.domain.model.SchoolInfo
 import com.coparently.app.domain.model.Vaccination
 import com.google.firebase.firestore.FirebaseFirestoreException
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -43,10 +42,10 @@ import java.util.UUID
  * for budgets — so what is checked is what lands in *his* Room, against the real `firestore.rules`.
  * A deletion is a tombstone Bob's download answers by dropping the row (CLAUDE.md item 14, CQ-19).
  *
- * Two pushes. **`child_info_updated`** has two producers: `SyncService` queues it when it uploads
- * a child edit that had not reached the server, and the `onChildInfoUpdated` trigger in
- * `functions/index.js` queues one on every update of a `child_info` document. Both are exercised,
- * each where only it can have written the document. **`records_shared`** is the one push a
+ * Two pushes. **`child_info_updated`** is queued by `SyncService` when it uploads a child edit
+ * that had not reached the server. (A second producer, the legacy `onChildInfoUpdated` trigger,
+ * queued English text with the editor's e-mail address to whichever family the creator was
+ * showing, and was deleted.) **`records_shared`** is the one push a
  * pairing backfill sends (item 22): records a parent made before pairing are re-uploaded for the
  * new co-parent silently, and announced once.
  *
@@ -101,8 +100,7 @@ class TwoParentFamilyRecordsTest : TwoParentTest() {
 
         alice.syncService.performFullSync().getOrThrow()
 
-        // The client's own document: `FcmService` stamps `createdAt` as epoch millis, the
-        // functions as a server timestamp, so this cannot be the trigger's copy of the same edit.
+        // The client's own document: `FcmService` stamps `createdAt` as epoch millis.
         val push = alice.queuedFor(bob.uid).firstOrNull { doc ->
             doc["createdAt"] is Long && dataOf(doc)[PushPayload.TYPE] == PushPayload.CHILD_INFO_UPDATED &&
                 dataOf(doc)[PushPayload.CHILD_INFO_ID] == child.id
@@ -115,24 +113,6 @@ class TwoParentFamilyRecordsTest : TwoParentTest() {
 
         val remote = checkNotNull(bob.firestore.collection("child_info").document(child.id).get().await().data)
         assertEquals("Inhaler before sport", remote["medicalNotes"])
-    }
-
-    @Test
-    fun anUpdatedChildDocumentMakesTheServerQueueChildInfoUpdatedForBob() = runBlocking<Unit> {
-        val child = newChild(alice, "Ava")
-        alice.childInfoRepository.upsertChildInfo(child)
-        // A second save is an update of the document, which is what `onChildInfoUpdated` watches.
-        // No sync runs here, so nothing on the client queues a push: whatever arrives is the
-        // trigger's.
-        alice.childInfoRepository.upsertChildInfo(
-            child.copy(allergies = listOf("Peanuts", "Penicillin"), updatedAt = now())
-        )
-
-        val push = awaitPush(alice, bob) { doc ->
-            dataOf(doc)[PushPayload.TYPE] == PushPayload.CHILD_INFO_UPDATED &&
-                dataOf(doc)[PushPayload.CHILD_INFO_ID] == child.id
-        }
-        assertEquals(bob.uid, push[PushPayload.TARGET_USER_ID])
     }
 
     @Test
@@ -243,23 +223,6 @@ class TwoParentFamilyRecordsTest : TwoParentTest() {
         }
     }
 
-    /**
-     * Polls the pushes queued for [receiver] until one satisfies [predicate] — for a push a Cloud
-     * Function writes, which lands some time after the write that triggered it.
-     */
-    private suspend fun awaitPush(
-        sender: EmulatorParent,
-        receiver: EmulatorParent,
-        predicate: (Map<String, Any?>) -> Boolean
-    ): Map<String, Any?> = withTimeout(EmulatorParent.WAIT_MS) {
-        var found = sender.queuedFor(receiver.uid).firstOrNull(predicate)
-        while (found == null) {
-            delay(POLL_MS)
-            found = sender.queuedFor(receiver.uid).firstOrNull(predicate)
-        }
-        found
-    }
-
     /** The `data` payload of a queued push document. */
     private fun dataOf(doc: Map<String, Any?>): Map<*, *> = doc["data"] as? Map<*, *> ?: emptyMap<String, Any?>()
 
@@ -315,7 +278,6 @@ class TwoParentFamilyRecordsTest : TwoParentTest() {
         const val LIMIT = 200.0
         const val RAISED_LIMIT = 250.0
         const val DELTA = 0.001
-        const val POLL_MS = 500L
         const val BIRTH_YEAR = 2019
         const val BIRTH_MONTH = 5
         const val BIRTH_DAY = 4

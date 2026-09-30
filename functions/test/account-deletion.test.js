@@ -19,7 +19,7 @@ const assert = require('assert');
 function fakeDb(collections) {
   const store = {};
   Object.keys(collections).forEach((name) => {
-    store[name] = collections[name].map((doc) => Object.assign({}, doc));
+    store[name] = collections[name].map((doc) => JSON.parse(JSON.stringify(doc)));
   });
 
   const docsOf = (name) => (store[name] = store[name] || []);
@@ -43,10 +43,17 @@ function fakeDb(collections) {
   });
 
   const applyUpdate = (name, id, update) => {
-    const doc = docsOf(name).find((d) => d.id === id);
-    if (!doc) return;
-    Object.keys(update).forEach((key) => {
-      const value = update[key];
+    const root = docsOf(name).find((d) => d.id === id);
+    if (!root) return;
+    Object.keys(update).forEach((path) => {
+      const value = update[path];
+      // A dotted key is a field path into a map, as the Admin SDK's `update` reads it.
+      const parts = path.split('.');
+      const key = parts.pop();
+      const doc = parts.reduce((node, part) => {
+        if (!node[part] || typeof node[part] !== 'object') node[part] = {};
+        return node[part];
+      }, root);
       // Real `FieldValue` sentinels, applied rather than stored. They arrive as
       // `ArrayRemoveTransform` / `DeleteTransform` instances from firebase-admin; storing one
       // verbatim would replace the array with an opaque object and quietly pass a test that
@@ -438,6 +445,83 @@ describe('deleteAccountDataImpl', () => {
     assert.deepStrictEqual(db._store.parenting_plans, []);
     assert.deepStrictEqual(db._store.google_oauth.map((d) => d.id), [BOB]);
   });
+
+  it('takes the departing parent\'s half out of a former family\'s plan', async () => {
+    // Alice and Carol unpaired long ago; unpair leaves the plan, so Alice's answers sat in it
+    // under her uid. Found through the accepted invitation, the only index of former co-parents.
+    const seed = family();
+    seed.users.push({id: 'carol', name: 'Carol', partnerId: ''});
+    seed.invitations.push(
+        {id: 'inv-old', fromUserId: 'carol', acceptedBy: ALICE, status: 'accepted',
+          toEmail: 'alice@example.com'});
+    seed.parenting_plans = [
+      {id: `${ALICE}__${BOB}`, answers: {[ALICE]: {}, [BOB]: {}}},
+      {
+        id: `${ALICE}__carol`,
+        answers: {[ALICE]: {care_weekday: 'Mine'}, carol: {care_weekday: 'Hers'}},
+        agreedTo: {[ALICE]: {care_weekday: 'Hers'}, carol: {}},
+        catalogueVersions: {[ALICE]: 1, carol: 1},
+        updatedAt: {[ALICE]: 5, carol: 6},
+      },
+      {id: 'carol__dave', answers: {carol: {}, dave: {}}},
+    ];
+    const db = fakeDb(seed);
+
+    const result = await myFunctions.deleteAccountDataImpl(db, ALICE);
+
+    assert.deepStrictEqual(db._store.parenting_plans, [
+      {
+        id: `${ALICE}__carol`,
+        answers: {carol: {care_weekday: 'Hers'}},
+        agreedTo: {carol: {}},
+        catalogueVersions: {carol: 1},
+        updatedAt: {carol: 6},
+      },
+      {id: 'carol__dave', answers: {carol: {}, dave: {}}},
+    ]);
+    assert.strictEqual(result.parenting_plans, 1);
+    assert.strictEqual(result.parenting_plans_scrubbed, 1);
+  });
+
+  it('blanks the address on invitations the parent accepted, and keeps the invitation',
+      async () => {
+        // `acceptedBy` stays: it is Carol's evidence of an earlier relationship
+        // (`hadAnotherCoParent`). The e-mail Carol typed to reach Alice goes.
+        const seed = family();
+        seed.invitations.push(
+            {id: 'inv-old', fromUserId: 'carol', acceptedBy: ALICE, status: 'accepted',
+              toEmail: 'alice@example.com'},
+            {id: 'inv-else', fromUserId: 'carol', acceptedBy: 'dave', status: 'accepted',
+              toEmail: 'dave@example.com'});
+        const db = fakeDb(seed);
+
+        const result = await myFunctions.deleteAccountDataImpl(db, ALICE);
+
+        const byId = Object.fromEntries(db._store.invitations.map((i) => [i.id, i]));
+        assert.strictEqual(byId['inv-1'], undefined, 'Alice\'s own invitation is deleted');
+        assert.strictEqual(byId['inv-old'].toEmail, '');
+        assert.strictEqual(byId['inv-old'].acceptedBy, ALICE);
+        assert.strictEqual(byId['inv-else'].toEmail, 'dave@example.com');
+        assert.strictEqual(result.invitations_scrubbed, 1);
+        assert.strictEqual(await myFunctions.hadAnotherCoParent(db, 'carol', 'dave'), true);
+      });
+
+  it('removes the departing guest from a child record\'s guests as well as its audience',
+      async () => {
+        const seed = family();
+        seed.child_info.push({
+          id: 'ch-2', createdByFirebaseUid: BOB, sharedWith: [BOB, 'nina'],
+          guests: {nina: {name: 'Nina', expiresAtMillis: NOW + DAY}, otto: {name: 'Otto'}},
+        });
+        seed.users.push({id: 'nina', name: 'Nina'});
+        const db = fakeDb(seed);
+
+        await myFunctions.deleteAccountDataImpl(db, 'nina');
+
+        const child = db._store.child_info.find((c) => c.id === 'ch-2');
+        assert.deepStrictEqual(child.sharedWith, [BOB]);
+        assert.deepStrictEqual(child.guests, {otto: {name: 'Otto'}});
+      });
 
   it('deletes the AI assist quota and only the departing parent\'s', async () => {
     const seed = family();

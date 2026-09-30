@@ -278,11 +278,11 @@
     },
     "event_created": {
       "e2e": [
-        "TwoParentRequestsAndEventPushesTest#anEventAliceCreatesQueuesEventCreatedForBobFromTheServer"
+        "TwoParentRequestsAndEventPushesTest#anEventTheSyncUploadsQueuesEventCreatedForBob"
       ]
     },
     "event_updated": {
-      "exempt": "Nothing produces it: SyncService.notifyEventUpdate is only called with \"created\", and the only event trigger in functions/ writes event_created. It survives in PushPayload, PUSH_TEXT and the rules allow-list for older builds."
+      "exempt": "Nothing produces it: SyncService.notifyEventUpdate is only called with \"created\", and no function writes event pushes any more. It survives in PushPayload, PUSH_TEXT and the rules allow-list for older builds."
     },
     "event_deleted": {
       "exempt": "Nothing produces it: no client path or function queues it. It survives in PushPayload, PUSH_TEXT and the rules allow-list for older builds."
@@ -334,8 +334,7 @@
     },
     "child_info_updated": {
       "e2e": [
-        "TwoParentFamilyRecordsTest#aChildEditTheSyncUploadsQueuesChildInfoUpdatedForBob",
-        "TwoParentFamilyRecordsTest#anUpdatedChildDocumentMakesTheServerQueueChildInfoUpdatedForBob"
+        "TwoParentFamilyRecordsTest#aChildEditTheSyncUploadsQueuesChildInfoUpdatedForBob"
       ]
     },
     "records_shared": {

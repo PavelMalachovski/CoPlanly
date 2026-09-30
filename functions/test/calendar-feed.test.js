@@ -590,6 +590,23 @@ describe('calendar feed: callables and serving', () => {
     assert.deepStrictEqual(db._docs.calendar_feeds, {});
   });
 
+  it('stops serving a cached render the moment the family ends', async () => {
+    const seed = pairedUsers();
+    seed.events = {'ev-1': event()};
+    const db = fakeDb(seed);
+    await createCalendarFeedImpl(db, ALICE, FAMILY, 'en', NOW, TOKEN);
+    const cache = feed.ttlCache(60000);
+    assert.strictEqual((await serveCalendarFeedImpl(db, TOKEN, NOW, cache, noLimit)).status, 200);
+
+    // Unpaired a second later, well inside the cache's minute.
+    db._docs.users[BOB].partnerIds = [];
+    db._docs.users[BOB].partnerId = '';
+    const result = await serveCalendarFeedImpl(db, TOKEN, NOW + 1000, cache, noLimit);
+    assert.strictEqual(result.status, 404);
+    assert.deepStrictEqual(db._docs.calendar_feeds, {});
+    assert.strictEqual(cache.get(feed.feedTokenHash(TOKEN), NOW + 1000), undefined);
+  });
+
   it('rate-limits one token before touching Firestore', async () => {
     const db = fakeDb(pairedUsers());
     const limiter = feed.rateLimiter(2, 60000);

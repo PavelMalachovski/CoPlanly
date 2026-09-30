@@ -269,23 +269,42 @@ describe('the grant is scoped to one family (M-6)', () => {
     assert.deepStrictEqual(result.familyParents, ['alice', 'carol']);
   });
 
-  it('ignores a family the inviter is no longer part of', async () => {
+  it('refuses a family the inviter is no longer part of', async () => {
     // The relationship ended between generating the code and redeeming it. The id is a claim,
-    // not proof: it is checked against the inviter's live co-parents and falls back to the
-    // family they are actually showing.
+    // not proof: it is checked against the inviter's live co-parents — and a stale one is
+    // refused rather than re-pointed at whichever family the inviter happens to be showing,
+    // which would hand the friend a household nobody invited them into.
     const db = seeded({familyId: 'alice__dave'}, twoFamilies);
 
-    await myFunctions.acceptCalendarFriendInvitationImpl(db, 'nina', 'nina@example.com', ref);
-
-    assert.strictEqual(db._docs.calendar_friends.nina.familyId, 'alice__bob');
+    await assert.rejects(
+        () => myFunctions.acceptCalendarFriendInvitationImpl(db, 'nina', 'nina@example.com', ref),
+        (err) => err.code === 'failed-precondition' && err.details.reason === 'inviter-not-paired');
+    assert.strictEqual((db._docs.calendar_friends || {}).nina, undefined);
+    assert.strictEqual(db._docs.invitations.inv1.status, 'pending');
   });
 
-  it('ignores a family the inviter is not even named in', async () => {
+  it('refuses a family the inviter is not even named in', async () => {
     const db = seeded({familyId: 'bob__carol'}, twoFamilies);
 
-    await myFunctions.acceptCalendarFriendInvitationImpl(db, 'nina', 'nina@example.com', ref);
+    await assert.rejects(
+        () => myFunctions.acceptCalendarFriendInvitationImpl(db, 'nina', 'nina@example.com', ref),
+        (err) => err.code === 'failed-precondition' && err.details.reason === 'inviter-not-paired');
+    assert.strictEqual((db._docs.calendar_friends || {}).nina, undefined);
+  });
 
-    assert.strictEqual(db._docs.calendar_friends.nina.familyId, 'alice__bob');
+  it('refuses a stale family even when the inviter still has another one', async () => {
+    // Alice unpaired from Carol after making the code in that family; Bob's family is still
+    // live and on her screen. The friend must not land in it.
+    const aliceWithBobOnly = Object.assign({}, twoFamilies, {
+      alice: {id: 'alice', name: 'Alice', role: 'mom', partnerId: 'bob', partnerIds: ['bob']},
+      carol: {id: 'carol', name: 'Carol', role: 'dad', partnerId: '', partnerIds: []},
+    });
+    const db = seeded({familyId: 'alice__carol'}, aliceWithBobOnly);
+
+    await assert.rejects(
+        () => myFunctions.acceptCalendarFriendInvitationImpl(db, 'nina', 'nina@example.com', ref),
+        (err) => err.code === 'failed-precondition');
+    assert.strictEqual((db._docs.calendar_friends || {}).nina, undefined);
   });
 
   it('falls back for an invitation made by a build that predates M-6', async () => {
