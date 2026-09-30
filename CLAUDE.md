@@ -1117,7 +1117,11 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
    two countries. The cost is that the school-vacation strips follow the viewer too, which is
    recorded rather than hidden. And **`Holiday.nameLocal` carries `localLanguage`** — the UI shows
    the local name when the device language matches and English otherwise, which is what
-   `MonthView` already did, hardcoded to `"cs"`. `CzechHolidays` itself is unchanged: pure,
+   `MonthView` already did, hardcoded to `"cs"`. **Since L-8 (September 2026) there is one
+   exception and one function**: a recurring Czech school break (`CzechSchoolBreak`, which the
+   table builds its names from) is worded from `country_strings.xml` in the reader's language, and
+   every screen names a holiday through `presentation/common/HolidayNames.kt`'s
+   `holidayDisplayName` — don't re-inline the language comparison. `CzechHolidays` itself is unchanged: pure,
    computed, Easter via computus (now shared as `gregorianEasterSunday`), the nationwide MŠMT
    vacations, and the district-dependent spring break still intentionally excluded.
    **A region sits under the country, and only where it changes the grid** (schema 35,

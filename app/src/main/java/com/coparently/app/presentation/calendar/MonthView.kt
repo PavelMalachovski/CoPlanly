@@ -68,6 +68,7 @@ import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.holidays.Holiday
 import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.common.ParentNames
+import com.coparently.app.presentation.common.displayName
 import com.coparently.app.presentation.common.monthPagingTween
 import com.coparently.app.presentation.common.rememberToday
 import com.coparently.app.presentation.theme.CoPlanlyColors
@@ -518,6 +519,7 @@ private fun DayCell(
     }
     // Spoken only when the holiday's own name does not already say it: on a vacation day the name
     // *is* the vacation ("Summer vacation"), on Christmas Eve inside the break it is not.
+    val holidayLabel = holiday?.displayName()
     val vacationLabel = if (fill.schoolVacation && holiday?.isSchoolVacation != true) {
         stringResource(R.string.calendar_day_desc_school_vacation)
     } else {
@@ -550,9 +552,9 @@ private fun DayCell(
             append(", ")
             append(outsideMonthLabel)
         }
-        holiday?.let {
+        holidayLabel?.let {
             append(", ")
-            append(if (Locale.getDefault().language == it.localLanguage) it.nameLocal else it.nameEn)
+            append(it)
         }
         vacationLabel?.let {
             append(", ")

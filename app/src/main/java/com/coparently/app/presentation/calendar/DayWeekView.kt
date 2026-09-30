@@ -93,6 +93,7 @@ import com.coparently.app.R
 import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.common.ParentNames
+import com.coparently.app.presentation.common.displayName
 import com.coparently.app.presentation.common.rememberToday
 import com.coparently.app.presentation.theme.CoPlanlyColors
 import com.coparently.app.presentation.theme.CoPlanlyCorners
@@ -417,13 +418,7 @@ private fun DayWeekPage(
                                     )
                                     // Holiday name shown in single-day view where there is room
                                     if (holiday != null && daysCount == 1) {
-                                        val holidayName = if (
-                                            Locale.getDefault().language == holiday.localLanguage
-                                        ) {
-                                            holiday.nameLocal
-                                        } else {
-                                            holiday.nameEn
-                                        }
+                                        val holidayName = holiday.displayName()
                                         Text(
                                             text = holidayName,
                                             style = MaterialTheme.typography.labelSmall,

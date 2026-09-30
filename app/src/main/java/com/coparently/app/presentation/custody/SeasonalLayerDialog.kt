@@ -28,12 +28,12 @@ import com.coparently.app.domain.parentingplan.PlanReference
 import com.coparently.app.presentation.common.LocalDatePickerDialog
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.PillChip
+import com.coparently.app.presentation.common.holidayDisplayName
 import com.coparently.app.presentation.parentingplan.PlanReferenceCard
 import com.coparently.app.presentation.parentingplan.coParentLabel
 import com.coparently.app.presentation.theme.Spacing
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
-import java.util.Locale
 
 /** Which end of the range the date picker is open on. */
 private enum class RangeEnd { FROM, TO }
@@ -144,12 +144,12 @@ private fun LayerEditorBody(
         )
         LayerRange(draft = draft, onPick = onPick)
         if (suggestions.isNotEmpty()) {
-            LayerSuggestions(suggestions) { suggestion ->
+            LayerSuggestions(suggestions) { suggestion, name ->
                 onChange(
                     draft.copy(
                         from = suggestion.dates.start,
                         to = suggestion.dates.endInclusive,
-                        name = draft.name.ifBlank { suggestion.displayName() }
+                        name = draft.name.ifBlank { name }
                     )
                 )
             }
@@ -182,7 +182,10 @@ private fun LayerRange(draft: SeasonalLayerDraft, onPick: (RangeEnd) -> Unit) {
 /** "Fill from school holidays": one chip per upcoming break. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun LayerSuggestions(suggestions: List<VacationSuggestion>, onPick: (VacationSuggestion) -> Unit) {
+private fun LayerSuggestions(
+    suggestions: List<VacationSuggestion>,
+    onPick: (VacationSuggestion, String) -> Unit
+) {
     val format = DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT)
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.S)) {
         Text(
@@ -194,10 +197,11 @@ private fun LayerSuggestions(suggestions: List<VacationSuggestion>, onPick: (Vac
             verticalArrangement = Arrangement.spacedBy(Spacing.S)
         ) {
             suggestions.forEach { suggestion ->
+                val name = suggestion.displayName()
                 PillChip(
-                    label = "${suggestion.displayName()} ${suggestion.dates.start.format(format)}" +
+                    label = "$name ${suggestion.dates.start.format(format)}" +
                         "–${suggestion.dates.endInclusive.format(format)}",
-                    onClick = { onPick(suggestion) }
+                    onClick = { onPick(suggestion, name) }
                 )
             }
         }
@@ -253,9 +257,9 @@ private fun LayerShape.label(): Int = when (this) {
     LayerShape.SPLIT_IN_HALF -> R.string.seasonal_shape_half
 }
 
-/** The break's name in the device language when it is the calendar's own, English otherwise. */
-private fun VacationSuggestion.displayName(): String =
-    if (Locale.getDefault().language == localLanguage) nameLocal else nameEn
+/** The break's name as every holiday is named on screen (`holidayDisplayName`, L-8). */
+@Composable
+private fun VacationSuggestion.displayName(): String = holidayDisplayName(nameEn, nameLocal, localLanguage)
 
 /** Longer input than a layer name may hold is cut rather than refused mid-word by validation. */
 private const val MAX_NAME_INPUT = 80
