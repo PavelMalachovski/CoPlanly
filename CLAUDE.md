@@ -1131,8 +1131,15 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
    `GermanState`'s KDoc says why. The Room schema JSON for v36 (which carries this column) is exported by the Regenerate
    workflow, not by hand.
 9. **Reminders** are scheduled through the `ReminderScheduler` domain interface
-   (WorkManager impl `EventReminderScheduler`), hooked into the event use cases —
-   schedule on create/update, cancel on delete.
+   (WorkManager impl `EventReminderScheduler`, one unique work per event id, `REPLACE`, tag
+   `event_reminder`), hooked into the event use cases — schedule on create/update, cancel on
+   delete — **and into the sync's event download** (`SyncService.rearmReminder`: the co-parent's
+   events remind too, a downloaded tombstone cancels). A reminder is for **one occurrence**:
+   `domain/notification/ReminderPlanner` picks the next one whose reminder time is still ahead
+   through `RecurrenceExpander`, and `ReminderWorker` re-checks it against Room when due
+   (`ReminderPlanner.isOccurrence`) and then schedules the next, so a weekly event reminds every
+   week. `cancelAll()` runs at sign-out, account switch and deletion, because the worker reads the
+   title from Room and Room survives sign-out; `null` `reminderMinutes` is "no reminder".
 10. **Receipt OCR is on-device only** (`ReceiptTextRecognizer`/ML Kit, parsed by
     `ReceiptParser`, wired up in `AddExpenseScreen`/`ExpenseViewModel.scanReceipt`) — no
     receipt text or photo may be sent to a model or any other remote service without an

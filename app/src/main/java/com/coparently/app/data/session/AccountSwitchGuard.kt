@@ -6,6 +6,7 @@ import com.coparently.app.data.local.CoPlanlyDatabase
 import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.local.preferences.PreferenceKeys
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
+import com.coparently.app.domain.notification.ReminderScheduler
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
@@ -42,7 +43,8 @@ class AccountSwitchGuard @Inject constructor(
     @ApplicationContext private val context: Context,
     private val database: CoPlanlyDatabase,
     private val authService: FirebaseAuthService,
-    private val encryptedPreferences: EncryptedPreferences
+    private val encryptedPreferences: EncryptedPreferences,
+    private val reminderScheduler: ReminderScheduler
 ) {
     private val mutex = Mutex()
 
@@ -62,6 +64,9 @@ class AccountSwitchGuard @Inject constructor(
             if (lastUid != null && lastUid != uid) {
                 Log.i(TAG, "Different account signed in; clearing local data")
                 withContext(Dispatchers.IO) { database.clearAllTables() }
+                // The previous account's pending event reminders, which would otherwise wake for
+                // rows that are gone (and find nothing) or, worse, announce its titles.
+                reminderScheduler.cancelAll()
                 // The Google Calendar credential, the cached expense split and the sync cursors
                 // all belong to the previous account too. Room alone used to be wiped, so the
                 // next account found Settings "connected as" the previous one's Google account

@@ -24,6 +24,7 @@ import com.coparently.app.domain.professionals.ProfessionalGrant
 import com.coparently.app.domain.professionals.ProfessionalGrantPolicy
 import com.coparently.app.domain.professionals.ProfessionalGrantStatus
 import com.coparently.app.domain.professionals.ProfessionalRole
+import com.coparently.app.testing.NoReminders
 import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.functions.FirebaseFunctions
 import kotlinx.coroutines.Dispatchers
@@ -324,7 +325,8 @@ class TwoParentAccessTest : TwoParentTest() {
             functions = FirebaseFunctions.getInstance(bob.app, FirebaseModule.FUNCTIONS_REGION),
             database = bob.database,
             encryptedPreferences = bob.encryptedPreferences,
-            fcmService = bob.fcmService
+            fcmService = bob.fcmService,
+            reminderScheduler = NoReminders
         ).deleteAccount().getOrThrow()
 
         assertFalse("Bob's profile survived", EmulatorEnvironment.documentExists("users/$bobUid"))
@@ -361,7 +363,8 @@ class TwoParentAccessTest : TwoParentTest() {
             functions = FirebaseFunctions.getInstance(bob.app, FirebaseModule.FUNCTIONS_REGION),
             database = bob.database,
             encryptedPreferences = bob.encryptedPreferences,
-            fcmService = bob.fcmService
+            fcmService = bob.fcmService,
+            reminderScheduler = NoReminders
         ).deleteAccount().getOrThrow()
         awaitNotPaired(alice)
 

@@ -19,6 +19,7 @@ import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.ParentSlotMigrator
 import com.coparently.app.data.session.AccountSwitchGuard
 import com.coparently.app.domain.events.EventTimestamp
+import com.coparently.app.domain.notification.ReminderScheduler
 import com.coparently.app.domain.repository.PetRepository
 import com.google.firebase.auth.FirebaseUser
 import com.google.gson.Gson
@@ -90,6 +91,7 @@ class SyncServiceTest {
     private lateinit var petRepository: PetRepository
     private lateinit var accountSwitchGuard: AccountSwitchGuard
     private lateinit var custodyModelRepository: CustodyModelRepository
+    private val reminderScheduler: ReminderScheduler = mockk(relaxed = true)
     private lateinit var syncService: SyncService
 
     @Before
@@ -136,8 +138,7 @@ class SyncServiceTest {
         coEvery { firestoreEventDataSource.tombstoneEvent(any(), any(), any()) } returns Result.success(Unit)
         coEvery { firestoreChildInfoDataSource.upsertChildInfo(any(), any()) } returns Result.success(Unit)
         coEvery { firestoreChildInfoDataSource.updateChildInfo(any(), any()) } returns Result.success(Unit)
-        coEvery { firestoreChildInfoDataSource.tombstoneChildInfo(any(), any(), any()) } returns
-            Result.success(Unit)
+        coEvery { firestoreChildInfoDataSource.tombstoneChildInfo(any(), any(), any()) } returns Result.success(Unit)
 
         syncService = SyncService(
             eventDao,
@@ -169,7 +170,8 @@ class SyncServiceTest {
             accountSwitchGuard,
             custodyModelRepository,
             // The revision outbox (MON-4); its own suite covers it.
-            mockk(relaxed = true)
+            mockk(relaxed = true),
+            reminderScheduler
         )
     }
 
@@ -872,6 +874,62 @@ class SyncServiceTest {
 
         assertTrue(result.isSuccess, "one bad document must not fail the sync")
         assertEquals(listOf("event-2"), inserted.map { it.id })
+    }
+
+    @Test
+    fun `a downloaded event with a reminder is armed on this phone too`() = runTest {
+        // The event use cases schedule only what this phone saves, so the co-parent's event with a
+        // reminder never reminded here, and their move left the old reminder armed.
+        pairWith(partnerId = BOB)
+        val remote = eventEntity(createdByFirebaseUid = BOB, sharedWith = listOf(ALICE, BOB))
+        coEvery { eventDao.getEventById(EVENT_ID) } returns null
+        every { firestoreEventDataSource.observeEventsSharedWith(ALICE, any()) } returns flowOf(
+            EventDownload(listOf(eventDocument(remote, listOf(ALICE, BOB)) + ("reminderMinutes" to 30L)), null)
+        )
+
+        syncService.performFullSync()
+
+        verify(exactly = 1) {
+            reminderScheduler.schedule(
+                match { it.id == EVENT_ID && it.reminderMinutes == 30 && it.title == remote.title }
+            )
+        }
+    }
+
+    @Test
+    fun `a downloaded event without a reminder cancels only one this phone had armed`() = runTest {
+        pairWith(partnerId = BOB)
+        val remote = eventEntity(createdByFirebaseUid = BOB, sharedWith = listOf(ALICE, BOB))
+            .copy(syncedToFirestore = true)
+        every { firestoreEventDataSource.observeEventsSharedWith(ALICE, any()) } returns
+            flowOf(EventDownload(listOf(eventDocument(remote, listOf(ALICE, BOB))), null))
+
+        // Never had one: nothing to schedule and nothing to cancel.
+        coEvery { eventDao.getEventById(EVENT_ID) } returns remote
+        syncService.performFullSync()
+        verify(exactly = 0) { reminderScheduler.schedule(any()) }
+        verify(exactly = 0) { reminderScheduler.cancel(any()) }
+
+        // The co-parent removed the reminder this phone had armed.
+        coEvery { eventDao.getEventById(EVENT_ID) } returns remote.copy(reminderMinutes = 30)
+        syncService.performFullSync()
+        verify(exactly = 1) { reminderScheduler.cancel(EVENT_ID) }
+        verify(exactly = 0) { reminderScheduler.schedule(any()) }
+    }
+
+    @Test
+    fun `a downloaded tombstone cancels the event's reminder`() = runTest {
+        pairWith(partnerId = BOB)
+        val remote = eventEntity(createdByFirebaseUid = BOB, sharedWith = listOf(ALICE, BOB))
+        every { firestoreEventDataSource.observeEventsSharedWith(ALICE, any()) } returns flowOf(
+            EventDownload(listOf(eventDocument(remote, listOf(ALICE, BOB)) + ("deletedAtMillis" to 1L)), null)
+        )
+
+        syncService.performFullSync()
+
+        coVerify(exactly = 1) { eventDao.deleteEventById(EVENT_ID) }
+        verify(exactly = 1) { reminderScheduler.cancel(EVENT_ID) }
+        verify(exactly = 0) { reminderScheduler.schedule(any()) }
     }
 
     @Test

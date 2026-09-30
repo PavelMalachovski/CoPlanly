@@ -1110,6 +1110,32 @@ few messages from both, a custody schedule and a couple of expenses this month. 
   `data/ai/AiAssistErrors.kt`, `presentation/ai/`, `presentation/chat/ReplySuggestion*`,
   `presentation/review/`; server side `firebase functions:log --only aiAssist`.
 
+### 3.23 Event reminders · 1P, co-parent check 2P
+
+Preconditions: notifications allowed for the app. WorkManager's delays are not exact on a phone in
+Doze: allow a few minutes' slack, and keep the screen on or the phone charging while you wait.
+Which occurrence a reminder is for is pinned on the JVM (`ReminderPlannerTest`,
+`ReminderWorkerTest`, `SyncServiceTest`); what is left is that the phone actually posts it.
+
+- [ ] **A weekly event reminds every week.** Create a **weekly** event whose first occurrence was
+      last week, starting 15 minutes from now today, with a 10-minute reminder. It reminds in about
+      5 minutes. Right after, Android Studio's App Inspection → Background Task Inspector (debug
+      build) shows a new `ReminderWorker`, tagged `event_reminder`, enqueued for the same time next
+      week. (Moving the phone's clock does not speed WorkManager up; for an end-to-end check, use a
+      **daily** event and look again tomorrow.)
+- [ ] **The co-parent's event reminds here.** On the co-parent's phone, create an event starting
+      30 minutes from now with a 10-minute reminder. On this phone, pull a sync (open the calendar,
+      or wait for the tick) and wait: the reminder appears with the co-parent's title. Have them
+      move it an hour later: the reminder comes an hour later, not at the old time. Have them
+      delete another such event: no reminder for it.
+- [ ] **Sign-out clears.** Create an event 20 minutes ahead with a 10-minute reminder, then
+      Settings → Account → **Sign out**. Nothing appears at the reminder time. Sign in again with
+      the same account: the event's reminder comes back once the next full sync has delivered it
+      (at most a day; editing the event re-arms it at once).
+- **If it fails:** `data/notification/EventReminderScheduler.kt`, `data/notification/ReminderWorker.kt`,
+  `domain/notification/ReminderPlanner.kt`, `SyncService.rearmReminder`; `adb shell dumpsys jobscheduler`
+  lists the pending work, tagged `event_reminder`.
+
 ---
 
 ## 4. Release-build checks

@@ -8,6 +8,7 @@ import com.coparently.app.data.local.dao.UserDao
 import com.coparently.app.data.local.entity.EventEntity
 import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.local.preferences.PreferenceKeys
+import com.coparently.app.data.notification.toReminderEvent
 import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestoreChildInfoDataSource
@@ -25,6 +26,7 @@ import com.coparently.app.data.versions.EventVersionRecorder
 import com.coparently.app.domain.events.EventTimestamp
 import com.coparently.app.domain.family.FamilyAudience
 import com.coparently.app.domain.guests.GuestGrantPolicy
+import com.coparently.app.domain.notification.ReminderScheduler
 import com.coparently.app.domain.repository.ChangeRequestRepository
 import com.coparently.app.domain.repository.MessageRepository
 import com.coparently.app.domain.repository.PetRepository
@@ -73,7 +75,8 @@ class SyncService @Inject constructor(
     private val selectedFamilySource: SelectedFamilySource,
     private val accountSwitchGuard: AccountSwitchGuard,
     private val custodyModelRepository: CustodyModelRepository,
-    private val eventVersionRecorder: EventVersionRecorder
+    private val eventVersionRecorder: EventVersionRecorder,
+    private val reminderScheduler: ReminderScheduler
 ) {
     // `LocalDate::class.java` needs the same adapter `ChildInfoRepositoryImpl` and
     // `UserRepositoryImpl` register: `Vaccination.date` is a `LocalDate`, and a document read
@@ -283,6 +286,7 @@ class SyncService @Inject constructor(
                 // whereas an edit that loses is simply gone.
                 if (Tombstone.isDeleted(firestoreData)) {
                     eventDao.deleteEventById(remoteId)
+                    reminderScheduler.cancel(remoteId)
                     continue
                 }
 
@@ -369,15 +373,18 @@ class SyncService @Inject constructor(
                         is ConflictResolution.UseRemote -> {
                             // Use remote version
                             eventDao.insertEvent(remoteEntity.copy(syncedToFirestore = true))
+                            rearmReminder(remoteEntity, localEntity)
                         }
                         is ConflictResolution.Merged -> {
                             // Future: handle merged data
                             eventDao.insertEvent(resolution.data.copy(syncedToFirestore = true))
+                            rearmReminder(resolution.data, localEntity)
                         }
                     }
                 } else {
                     // No conflict - just insert/update
                     eventDao.insertEvent(remoteEntity.copy(syncedToFirestore = true))
+                    rearmReminder(remoteEntity, localEntity)
                 }
             }
 
@@ -396,6 +403,21 @@ class SyncService @Inject constructor(
             }
         }
         return requeued
+    }
+
+    /**
+     * Arms the reminder of an event the download just wrote — the co-parent's new or edited
+     * event, or this phone's own coming back — as a save on this phone would have: the event use
+     * cases schedule only what this phone saves, so a synced event used to remind never, and a
+     * synced move or removal left the old reminder armed. Idempotent (the scheduler replaces the
+     * event's one unique work), so a full sweep that re-delivers every document changes nothing.
+     * An event without a reminder only costs a cancel when the row it replaced had one.
+     */
+    private fun rearmReminder(stored: EventEntity, previous: EventEntity?) {
+        when {
+            stored.reminderMinutes != null -> reminderScheduler.schedule(stored.toReminderEvent())
+            previous?.reminderMinutes != null -> reminderScheduler.cancel(stored.id)
+        }
     }
 
     /**

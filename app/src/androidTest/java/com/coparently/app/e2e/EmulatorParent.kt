@@ -66,6 +66,7 @@ import com.coparently.app.domain.model.Message
 import com.coparently.app.domain.model.PairingState
 import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.testing.NoFcm
+import com.coparently.app.testing.NoReminders
 import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.UserProfileChangeRequest
@@ -362,9 +363,16 @@ class EmulatorParent private constructor(
             encryptedPreferences = encryptedPreferences
         ),
         selectedFamilySource = selectedFamilySource,
-        accountSwitchGuard = AccountSwitchGuard(fileContext, database, authService, encryptedPreferences),
+        accountSwitchGuard = AccountSwitchGuard(
+            fileContext,
+            database,
+            authService,
+            encryptedPreferences,
+            NoReminders
+        ),
         custodyModelRepository = custodyRepository,
-        eventVersionRecorder = eventVersionRecorder
+        eventVersionRecorder = eventVersionRecorder,
+        reminderScheduler = NoReminders
     )
 
     val calendarFeedRepository = CalendarFeedRepositoryImpl(functions)
