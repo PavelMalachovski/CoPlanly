@@ -613,7 +613,7 @@ jobs:
       - uses: actions/setup-node@v4
         if: always()
         with:
-          node-version: '20'
+          node-version: '22'
 
       # One page, filterable by component, status, language, theme, font scale and palette, over
       # the baselines (or, in record mode, what was just recorded) plus any diffs. Staged in its own
@@ -936,7 +936,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: npm
           cache-dependency-path: |
             functions/package-lock.json
@@ -1167,7 +1167,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -1332,7 +1332,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       # No `npm ci`: the script has no dependencies, deliberately. It reads XML and Kotlin as
       # text, so it needs neither an Android SDK nor a parser, which is what lets it run here
@@ -1377,7 +1377,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: npm
           cache-dependency-path: functions/package-lock.json
 
@@ -1446,7 +1446,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: npm
           cache-dependency-path: |
             functions/package-lock.json
@@ -1539,7 +1539,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: npm
           cache-dependency-path: firestore-tests/package-lock.json
 
@@ -1604,7 +1604,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       # No test results is a real state (a docs-only PR skips the Android jobs), not an error.
       - name: Download test results
