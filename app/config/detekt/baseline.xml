@@ -74,8 +74,6 @@
     <ID>LongParameterList:PairingRepositoryImpl.kt$PairingRepositoryImpl$( private val firestore: FirebaseFirestore, private val authService: FirebaseAuthService, private val pairingFunctions: PairingFunctions, private val postPairingConversationSetup: PostPairingConversationSetup, private val userDao: UserDao, private val selectedFamilySource: SelectedFamilySource, private val syncRequester: SyncRequester, // Application context only, for the localized conversation-title fallback. This is a // repository, not a ViewModel, so it is allowed to resolve resources directly. @ApplicationContext private val context: Context )</ID>
     <ID>LongParameterList:ParentLabels.kt$( slot: String, me: NamedParent?, coParent: NamedParent?, youFallback: String, coParentFallback: String, unknownFallback: String )</ID>
     <ID>LongParameterList:SettingsViewModel.kt$SettingsViewModel$( private val fcmService: FcmService, private val accountDeletionService: AccountDeletionService, private val userRepository: UserRepository, private val preferencesRepository: PreferencesRepository, private val analyticsManager: AnalyticsManager, signedInAccountSource: SignedInAccountSource, private val familyKindSource: FamilyKindSource, parentsSource: ParentsSource, private val familySettingsRepository: FamilySettingsRepository )</ID>
-    <ID>LoopWithTooManyJumpStatements:ChildInfoRepositoryImpl.kt$ChildInfoRepositoryImpl$for</ID>
-    <ID>LoopWithTooManyJumpStatements:PetRepositoryImpl.kt$PetRepositoryImpl$for</ID>
     <ID>LoopWithTooManyJumpStatements:RecurrenceExpander.kt$RecurrenceExpander$while</ID>
     <ID>LoopWithTooManyJumpStatements:SyncService.kt$SyncService$for</ID>
     <ID>MagicNumber:AdaptiveDimensions.kt$0.8f</ID>
