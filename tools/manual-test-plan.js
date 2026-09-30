@@ -195,6 +195,14 @@ const RULES = [
       'K/data/session/AccountSwitchGuard.kt', 'K/data/session/AccountDeletionService.kt'],
   },
   {
+    sections: ['3.24'],
+    why: 'the hour gutter\'s clock, holiday names, an event\'s colour on Home, or a chip\'s member initial',
+    paths: ['K/utils/LocalizedDates.kt', 'K/presentation/theme/WindowSize.kt',
+      'K/presentation/common/HolidayNames.kt', 'K/domain/holidays/CzechSchoolBreak.kt',
+      'K/presentation/calendar/EventMemberMark.kt', 'K/presentation/calendar/DayWeekView.kt',
+      'K/presentation/home/HomeScreen.kt'],
+  },
+  {
     sections: ['3.6', '4.2'],
     why: 'strings, locales or the language picker',
     paths: ['app/src/main/res/values*/**', 'app/src/main/res/xml/locales_config.xml',
