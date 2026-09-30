@@ -15,6 +15,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
@@ -152,6 +153,49 @@ class ChildInfoRepositoryImplTest {
             firestoreChildInfoDataSource.tombstoneChildInfo(any(), any(), any())
         }
         coVerify(exactly = 0) { childInfoDao.deleteChildInfoById(any()) }
+    }
+
+    @Test
+    fun `a pull keeps an edit that has not gone up instead of replacing it with the server's copy`() =
+        runTest {
+            coEvery { userDao.getUserById(ALICE) } returns userEntity(partnerId = BOB)
+            val edited = with(repository) {
+                childInfo(createdByFirebaseUid = ALICE).copy(childName = "Ema (edited)").toEntity()
+            }
+            // The upload half runs first and fails, so the edit is still unsynced when the
+            // download half meets the older document.
+            coEvery { childInfoDao.getUnsyncedChildInfo() } returns listOf(edited)
+            coEvery { firestoreChildInfoDataSource.upsertChildInfo(any(), any()) } returns
+                Result.failure(IOException("offline"))
+            coEvery { childInfoDao.getChildInfoById(CHILD_ID) } returns edited
+            val document = with(repository) {
+                childInfo(createdByFirebaseUid = ALICE).toFirestoreMap(listOf(ALICE, BOB))
+            }
+            every { firestoreChildInfoDataSource.getChildInfoForParent(ALICE) } returns
+                flowOf(listOf(document))
+
+            repository.pullOnce()
+
+            coVerify(exactly = 0) { childInfoDao.insertChildInfo(any()) }
+        }
+
+    @Test
+    fun `a pull skips a document that does not parse and takes the rest`() = runTest {
+        coEvery { userDao.getUserById(ALICE) } returns userEntity(partnerId = BOB)
+        coEvery { childInfoDao.getUnsyncedChildInfo() } returns emptyList()
+        coEvery { childInfoDao.getChildInfoById(any()) } returns null
+        val document = with(repository) {
+            childInfo(createdByFirebaseUid = BOB).toFirestoreMap(listOf(ALICE, BOB))
+        }
+        every { firestoreChildInfoDataSource.getChildInfoForParent(ALICE) } returns flowOf(
+            listOf(document + ("childName" to 42L), document + ("id" to "child-2"))
+        )
+        val inserted = mutableListOf<ChildInfoEntity>()
+        coEvery { childInfoDao.insertChildInfo(capture(inserted)) } returns Unit
+
+        repository.pullOnce()
+
+        assertEquals(listOf("child-2"), inserted.map { it.id })
     }
 
     @Test

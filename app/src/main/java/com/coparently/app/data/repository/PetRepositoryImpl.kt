@@ -162,23 +162,45 @@ class PetRepositoryImpl @Inject constructor(
             .catch { e -> android.util.Log.w("PetRepo", "Pet sync failed", e) }
             .collect { firestoreList ->
                 for (firestoreData in firestoreList) {
-                    // A tombstone is the co-parent telling this device the pet is gone. Answered
-                    // from the raw document, before it is mapped: a deletion must not depend on
-                    // the rest of the document still parsing.
-                    if (Tombstone.isDeleted(firestoreData)) {
-                        petDao.deletePetById(firestoreData["id"] as? String ?: continue)
-                        continue
+                    if (applyDownloaded(firestoreData)) {
+                        repairAudience(firebaseUser.uid, partnerId, firestoreData)
                     }
-                    val pet = firestoreData.toPet()
-                    // The mirror image: this device deleted the pet and the deletion has not been
-                    // written yet, so the document is still alive remotely.
-                    if (petDao.getPetById(pet.id)?.deletedAtMillis != null) {
-                        continue
-                    }
-                    petDao.insertPet(pet.toEntity().copy(syncedToFirestore = true))
-                    repairAudience(firebaseUser.uid, partnerId, firestoreData)
                 }
             }
+    }
+
+    /**
+     * Takes one downloaded pet document into Room, unless this device's row must win.
+     *
+     * @return true when the document was taken in as a live pet.
+     */
+    private suspend fun applyDownloaded(firestoreData: Map<String, Any?>): Boolean {
+        // A tombstone is the co-parent telling this device the pet is gone. Answered from the raw
+        // document, before it is mapped: a deletion must not depend on the rest of the document
+        // still parsing.
+        if (Tombstone.isDeleted(firestoreData)) {
+            (firestoreData["id"] as? String)?.let { petDao.deletePetById(it) }
+            return false
+        }
+        // One document that does not parse must not end the whole pull: it is logged by id
+        // (never by content) and skipped, as `ExpenseRepositoryImpl` does.
+        val pet = runCatching { firestoreData.toPet() }
+            .onFailure { e ->
+                android.util.Log.w(
+                    "PetRepo",
+                    "Pet document ${firestoreData["id"]} could not be read " +
+                        "(${e.javaClass.simpleName}); skipped"
+                )
+            }
+            .getOrNull() ?: return false
+        val local = petDao.getPetById(pet.id)
+        // Two local states the server's copy must not replace. A pending tombstone: this device
+        // deleted the pet and the deletion has not been written yet. And an unsynced edit: the
+        // upload half ran first and failed, so replacing the row would erase the edit before it
+        // was ever sent — it stays queued for the next pull.
+        val localWins = local != null && (local.deletedAtMillis != null || !local.syncedToFirestore)
+        if (!localWins) petDao.insertPet(pet.toEntity().copy(syncedToFirestore = true))
+        return !localWins
     }
 
     /**
