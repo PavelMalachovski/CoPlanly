@@ -66,6 +66,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -126,6 +127,7 @@ import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
+import java.time.temporal.ChronoUnit
 import java.util.UUID
 
 /**
@@ -265,6 +267,12 @@ fun AddEditEventScreen(
         )
     }
 
+    // The form edits one date, so an edited event keeps the days its end lies after its start
+    // (a weekend away, an overnight stay) and, while the end time is untouched, an end it never
+    // had. Saving `startDate` with the end time used to cut a multi-day event to one day.
+    var endDaySpan by rememberSaveable { mutableIntStateOf(0) }
+    var keepNoEnd by rememberSaveable { mutableStateOf(false) }
+
     var showDatePicker by remember { mutableStateOf(false) }
     var showStartTimePicker by remember { mutableStateOf(false) }
     var showEndTimePicker by remember { mutableStateOf(false) }
@@ -327,11 +335,11 @@ fun AddEditEventScreen(
     }
 
     // Time validation effect
-    LaunchedEffect(startTime, endTime, startDate) {
+    LaunchedEffect(startTime, endTime, startDate, endDaySpan, keepNoEnd) {
         val startDateTime = LocalDateTime.of(startDate, startTime)
-        val endDateTime = LocalDateTime.of(startDate, endTime)
+        val endDateTime = formEndDateTime(startDate, endTime, endDaySpan, keepNoEnd)
 
-        if (endDateTime.isBefore(startDateTime) || endDateTime.isEqual(startDateTime)) {
+        if (endDateTime != null && !endDateTime.isAfter(startDateTime)) {
             showTimeValidationError = true
             timeValidationMessage = endBeforeStartMessage
         } else {
@@ -389,6 +397,8 @@ fun AddEditEventScreen(
                     startDate = it.startDateTime.toLocalDate()
                     startTime = it.startDateTime.toLocalTime()
                     endTime = it.endDateTime?.toLocalTime() ?: startTime.plusHours(1)
+                    endDaySpan = endDaySpanOf(it)
+                    keepNoEnd = it.endDateTime == null
                     recurrencePattern = if (it.isRecurring) it.recurrencePattern else null
                     recurrenceEndDate = it.recurrenceEndDate
                     reminderMinutes = it.reminderMinutes
@@ -560,7 +570,7 @@ fun AddEditEventScreen(
                     title = title,
                     description = description.ifEmpty { null },
                     startDateTime = LocalDateTime.of(startDate, startTime),
-                    endDateTime = LocalDateTime.of(startDate, endTime),
+                    endDateTime = formEndDateTime(startDate, endTime, endDaySpan, keepNoEnd),
                     eventType = eventType,
                     parentOwner = ownerSlot,
                     isRecurring = recurrencePattern != null,
@@ -1588,8 +1598,9 @@ fun AddEditEventScreen(
             initialTime = startTime,
             onTimeSelected = { selectedTime ->
                 startTime = selectedTime
-                // Auto-adjust end time if it's before start time
-                if (endTime.isBefore(startTime)) {
+                // Auto-adjust end time if it's before start time (on a same-day event: an
+                // overnight one ends earlier in the day than it starts)
+                if (endDaySpan == 0 && endTime.isBefore(startTime)) {
                     endTime = startTime.plusHours(1)
                 }
             },
@@ -1603,6 +1614,7 @@ fun AddEditEventScreen(
             initialTime = endTime,
             onTimeSelected = { selectedTime ->
                 endTime = selectedTime
+                keepNoEnd = false
             },
             onDismiss = { showEndTimePicker = false }
         )
@@ -1673,6 +1685,28 @@ fun AddEditEventScreen(
         )
     }
 }
+
+/**
+ * The end the event form saves and validates: [endTime] on the day [endDaySpan] days after
+ * [startDate], or none while [keepNoEnd] (an event loaded without an end whose end time the
+ * parent has not set). A new event has a span of 0, so an end at or before its start is still
+ * refused rather than read as the next day.
+ */
+internal fun formEndDateTime(
+    startDate: LocalDate,
+    endTime: LocalTime,
+    endDaySpan: Int,
+    keepNoEnd: Boolean
+): LocalDateTime? =
+    if (keepNoEnd) null else LocalDateTime.of(startDate.plusDays(endDaySpan.toLong()), endTime)
+
+/** How many days [event]'s end lies after its start date; 0 for a same-day event or no end. */
+internal fun endDaySpanOf(event: Event): Int =
+    event.endDateTime
+        ?.let { ChronoUnit.DAYS.between(event.startDateTime.toLocalDate(), it.toLocalDate()) }
+        ?.coerceIn(0L, Int.MAX_VALUE.toLong())
+        ?.toInt()
+        ?: 0
 
 /**
  * The values the event form edits, compared to tell whether leaving would drop an edit (D-11).
