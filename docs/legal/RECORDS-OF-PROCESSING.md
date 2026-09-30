@@ -56,7 +56,7 @@ only what is specific to it.
 | Data | Events (title, time, place, notes, photo), custody schedule, swaps, seasonal layers, contact windows, expenses and budgets (amount, currency, category, receipt photo), parenting plan answers, change requests |
 | Legal basis | Art. 6(1)(b) |
 | Recipients | The co-parent; a calendar friend (calendar only, time-limited); a professional with both parents' consent (calendar, custody, plan; ≤ 180 days); whoever holds a calendar-feed link a parent created |
-| Retention | Life of the account. An individual deletion is a tombstone for **90 days** (so the other phone learns of it), then swept |
+| Retention | Life of the account. An individual deletion is a tombstone for **90 days** (so the other phone learns of it), then swept. On account deletion the departing parent's half of the parenting plan is also removed from the plans of families they had already left (found through accepted invitations); the former co-parent's half stays. At unpair a co-parent loses read access to the family's expenses and budgets at once (the family document is deleted) |
 | Where | `events`, `custody_models`, `expenses`, `budgets`, `parenting_plans`, `change_requests`, `family_settings`; Storage `event_images/{familyId}/…`, `receipts/{familyId}/…` (photos: the two parents only — not calendar friends or professionals; `solo_{uid}/…` for the uploader alone before pairing) |
 
 ### P3. Event revision history
@@ -125,7 +125,7 @@ only what is specific to it.
 | Data subjects | Guests, friends, professionals (each with their own account) |
 | Data | Their profile (name, email, Google photo), the grant, its expiry, consents (professionals) |
 | Legal basis | Art. 6(1)(b) (the invited person's own account and the parent's instruction) |
-| Retention | Until the grant expires or is revoked, then swept daily; invitations never accepted are swept 30 days after expiry (90 days after creation if they have none); accepted co-parent invitations kept for the life of the account — they prevent records being assigned to the wrong household (Art. 5(1)(d)) |
+| Retention | Until the grant expires or is revoked, then swept daily; a calendar friend's and a professional's grant also end when the family's two parents unpair; invitations never accepted are swept 30 days after expiry (90 days after creation if they have none); accepted co-parent invitations kept for the life of the account — they prevent records being assigned to the wrong household (Art. 5(1)(d)). When the person who *accepted* an invitation deletes their account, the invitation stays with its sender but its `toEmail` is blanked, and a departing guest is removed from the child record's `guests` map as well as its audience |
 | Where | `invitations`, `calendar_friends`, `friend_profiles`, `professional_grants` |
 
 ### P9. Calendar-feed links

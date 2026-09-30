@@ -651,9 +651,11 @@ Open, in the order they matter:
 - [ ] Invite-code redemption has no rate limit and no App Check. Space is 31⁶ and codes expire in
       24 h, so this is a growing risk, not a live one; `enforceAppCheck` needs the client wired
       to Play Integrity first.
-- [ ] `onEventCreated`/`onChildInfoUpdated` still compose English `title`/`body` server-side and
-      notify only the first co-parent; `guest_accepted`/`calendar_friend_accepted` have no client
-      wording and are dropped on arrival (item 15's four-way rule).
+- [ ] ~~`onEventCreated`/`onChildInfoUpdated` still compose English `title`/`body` server-side and
+      notify only the first co-parent~~ — **removed (September 2026)**; the deployed copies still
+      have to be deleted by hand (`functions/README.md`, "Removed functions"). Still open:
+      `guest_accepted`/`calendar_friend_accepted` have no client wording and are dropped on
+      arrival (item 15's four-way rule).
 - [ ] The Firebase SDK's offline cache, WorkManager's input data (reminder titles) and Coil's
       image cache are plaintext files under Android's file-based encryption only; the privacy
       policy now says so rather than claiming otherwise.
