@@ -660,20 +660,24 @@ async function acceptGuestInvitationImpl(db, acceptingUserId, acceptingEmail, re
           {reason: 'already-entitled'});
     }
 
+    // Written whole rather than through a `guests.<uid>` field path so the read and the
+    // write are the same transaction's view of the map — a dotted update would be a blind
+    // write over whatever a concurrent revoke had just done.
+    const nextGuests = Object.assign({}, guests, {
+      [acceptingUserId]: {
+        name: await guestName(accepterRef, acceptingEmail),
+        grantedBy: invite.fromUserId,
+        grantedAtMillis,
+        expiresAtMillis,
+      },
+    });
     tx.update(childRef, {
-      // Written whole rather than through a `guests.<uid>` field path so the read and the
-      // write are the same transaction's view of the map — a dotted update would be a blind
-      // write over whatever a concurrent revoke had just done.
-      guests: Object.assign({}, guests, {
-        [acceptingUserId]: {
-          name: await guestName(accepterRef, acceptingEmail),
-          grantedBy: invite.fromUserId,
-          grantedAtMillis,
-          expiresAtMillis,
-        },
-      }),
+      guests: nextGuests,
       sharedWith: sharedWith.indexOf(acceptingUserId) < 0 ?
         sharedWith.concat([acceptingUserId]) : sharedWith,
+      // The sweep's range index (L-10). `maintainGuestExpiryIndex` would set it after the
+      // write anyway; writing it here keeps the record consistent from the first commit.
+      [GUEST_EXPIRY_INDEX_FIELD]: guestsMinExpiresAtMillis(nextGuests),
     });
     tx.update(inviteRef, {
       status: 'accepted',
@@ -1215,6 +1219,151 @@ function guestGrantExpired(grant, nowMillis) {
 exports.guestGrantExpired = guestGrantExpired;
 
 /**
+ * The denormalised field that makes "a record with an expired guest" a query (audit L-10).
+ *
+ * Firestore cannot filter on a value inside a map, so the sweep used to read the whole of
+ * `child_info` every day. This top-level number is the earliest `expiresAtMillis` among the
+ * record's grants, and absent when there are none; the sweep range-queries `<= now` on it.
+ * Server-only: nothing in the app reads or writes it, and the app's whole-document `set()`
+ * drops it, which is what `maintainGuestExpiryIndex` is for.
+ */
+const GUEST_EXPIRY_INDEX_FIELD = 'guestsMinExpiresAtMillis';
+
+exports.GUEST_EXPIRY_INDEX_FIELD = GUEST_EXPIRY_INDEX_FIELD;
+
+/**
+ * Where the sweep records that every record written before the index existed has been
+ * stamped. Absent, or an older version → the next run is a full scan that stamps as it
+ * sweeps, then writes the marker. Deleting the document forces one more full scan.
+ */
+const GUEST_SWEEP_MARKER = {collection: 'ops', doc: 'guestSweep'};
+
+/** Bump to make the sweep run its full, stamping scan once more (e.g. after a trigger outage). */
+const GUEST_EXPIRY_INDEX_VERSION = 1;
+
+exports.GUEST_EXPIRY_INDEX_VERSION = GUEST_EXPIRY_INDEX_VERSION;
+
+/**
+ * The value [GUEST_EXPIRY_INDEX_FIELD] should hold for a `guests` map: the smallest expiry
+ * among its grants, or null when there is no grant.
+ *
+ * Fails closed like [guestGrantExpired]: a grant without a positive numeric expiry counts as
+ * 0, so the record matches the sweep's `<= now` on the next run and the grant is removed —
+ * never kept because it fell outside the range.
+ *
+ * @param {*} guests The stored `guests` value, whatever shape it turned out to be.
+ * @return {?number} The earliest expiry, or null when the record names no guest.
+ */
+function guestsMinExpiresAtMillis(guests) {
+  if (!guests || typeof guests !== 'object' || Array.isArray(guests)) {
+    return null;
+  }
+  let min = null;
+  for (const uid of Object.keys(guests)) {
+    const grant = guests[uid];
+    const expiresAtMillis = grant && typeof grant.expiresAtMillis === 'number' &&
+      grant.expiresAtMillis > 0 ? grant.expiresAtMillis : 0;
+    if (min === null || expiresAtMillis < min) {
+      min = expiresAtMillis;
+    }
+  }
+  return min;
+}
+
+exports.guestsMinExpiresAtMillis = guestsMinExpiresAtMillis;
+
+/**
+ * Whether [data] already carries the index value [desired]: present and equal, or absent when
+ * [desired] is null.
+ *
+ * @param {!Object} data A `child_info` document.
+ * @param {?number} desired What [guestsMinExpiresAtMillis] says it should hold.
+ * @return {boolean} True when no write is needed.
+ */
+function guestExpiryIndexMatches(data, desired) {
+  const present = Object.prototype.hasOwnProperty.call(data, GUEST_EXPIRY_INDEX_FIELD);
+  return desired === null ? !present : present && data[GUEST_EXPIRY_INDEX_FIELD] === desired;
+}
+
+/**
+ * The value that stores [desired] in an `update()`: the number, or a field delete for null.
+ *
+ * @param {?number} desired The value to store.
+ * @return {*} A value for [GUEST_EXPIRY_INDEX_FIELD].
+ */
+function guestExpiryIndexValue(desired) {
+  return desired === null ? FieldValue.delete() : desired;
+}
+
+/**
+ * Body of the `maintainGuestExpiryIndex` trigger: brings a `child_info` record's
+ * [GUEST_EXPIRY_INDEX_FIELD] back in line with its `guests` map after any write.
+ *
+ * Why a trigger and not only the writers. The server's writers (`acceptGuestInvitation`, the
+ * sweep) set the field themselves, but the app saves a child record with a whole-document
+ * `set()` built from Room (`ChildInfoRepositoryImpl.toFirestoreMap`), which knows nothing of
+ * this field and so **drops it on every save** — and a build already installed will go on
+ * doing so. A client may also write any value there, since the update rule does not pin the
+ * keys. Recomputing from `guests` after every write covers all of that without teaching the
+ * app, the rules or the wire contract about a server-only column.
+ *
+ * Reads nothing when the written document already agrees — the common case, and the second
+ * invocation its own write causes, which is what ends the loop. Otherwise it re-reads in a
+ * transaction and computes from the stored map, so an invocation that arrives late cannot put
+ * back a value from an older version of the document.
+ *
+ * @param {FirebaseFirestore.Firestore} db Firestore instance.
+ * @param {string} childInfoId The written document's id.
+ * @param {?Object} after The document as the write left it, or null when it was deleted.
+ * @return {Promise<string>} `absent`, `unchanged` or `written`.
+ */
+async function syncGuestExpiryIndexImpl(db, childInfoId, after) {
+  if (!after) {
+    return 'absent';
+  }
+  if (guestExpiryIndexMatches(after, guestsMinExpiresAtMillis(after.guests))) {
+    return 'unchanged';
+  }
+  const ref = db.collection('child_info').doc(childInfoId);
+  return db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) {
+      return 'absent';
+    }
+    const data = snap.data();
+    const desired = guestsMinExpiresAtMillis(data.guests);
+    if (guestExpiryIndexMatches(data, desired)) {
+      return 'unchanged';
+    }
+    tx.update(ref, {[GUEST_EXPIRY_INDEX_FIELD]: guestExpiryIndexValue(desired)});
+    return 'written';
+  });
+}
+
+exports.syncGuestExpiryIndexImpl = syncGuestExpiryIndexImpl;
+
+/**
+ * Keeps `child_info/{id}.guestsMinExpiresAtMillis` true to the record's `guests` map (L-10).
+ * See [syncGuestExpiryIndexImpl] for why this is a trigger.
+ *
+ * Never throws: Functions would only retry into the same error. A stamp it missed is picked up
+ * by the sweep's full scan once [GUEST_EXPIRY_INDEX_VERSION] is bumped, and the read rule
+ * refuses an expired guest in the meantime — the sweep is cleanup, not enforcement.
+ */
+exports.maintainGuestExpiryIndex = regional.firestore
+    .document('child_info/{childInfoId}')
+    .onWrite(async (change, context) => {
+      const childInfoId = context.params.childInfoId;
+      try {
+        await syncGuestExpiryIndexImpl(admin.firestore(), childInfoId,
+            change.after.exists ? change.after.data() : null);
+      } catch (err) {
+        console.error(`maintainGuestExpiryIndex failed for ${childInfoId}`, err);
+      }
+      return null;
+    });
+
+/**
  * Body of the `sweepExpiredGuests` schedule — removes guest grants that have run out.
  *
  * The read rule refusing an expired guest is only half of the expiry. It stops the read, but
@@ -1223,13 +1372,14 @@ exports.guestGrantExpired = guestGrantExpired;
  * that actually ends it, and it writes both places: the grant leaves `guests` and the uid
  * leaves `sharedWith`.
  *
- * **Scans the whole collection**, because there is no query for it: Firestore cannot filter
- * on a field inside a map's values, so "any record with an expired guest" is not expressible.
- * A denormalised "earliest expiry" column would make it expressible, and is deliberately not
- * here — it would be a derived field that every one of the several places building a child
- * document has to remember to recompute, which is exactly the class of bug this codebase
- * keeps finding. `child_info` holds one document per child per family; revisit this if that
- * ever stops being small.
+ * **A range query on [GUEST_EXPIRY_INDEX_FIELD]** (audit L-10), not a scan: only records whose
+ * earliest grant has ended are read. The field is kept true by `maintainGuestExpiryIndex`, by
+ * `acceptGuestInvitation` and by this sweep, which rewrites it on every record it reads —
+ * including one whose value was stale-low and had nothing to remove, so it stops matching.
+ * Records written before the field existed carry none, so until `ops/guestSweep` records
+ * [GUEST_EXPIRY_INDEX_VERSION] a run reads the whole collection once, stamping every record
+ * with guests as it sweeps, and then writes the marker. A record written after that scan read
+ * it is stamped by the trigger.
  *
  * A uid is never removed from `sharedWith` of a document it created — the same rule
  * `revokeSharedAudience` follows, and for the same reason: `sharedWith` is what the parent's
@@ -1243,7 +1393,17 @@ exports.guestGrantExpired = guestGrantExpired;
  * @return {Promise<number>} How many grants were removed.
  */
 async function sweepExpiredGuestsImpl(db, nowMillis) {
-  const snap = await db.collection('child_info').get();
+  const markerRef = db.collection(GUEST_SWEEP_MARKER.collection).doc(GUEST_SWEEP_MARKER.doc);
+  const marker = await markerRef.get();
+  const markerData = marker.exists ? marker.data() || {} : {};
+  const indexed = typeof markerData.guestExpiryIndexVersion === 'number' &&
+    markerData.guestExpiryIndexVersion >= GUEST_EXPIRY_INDEX_VERSION;
+
+  const snap = indexed ?
+    await db.collection('child_info')
+        .where(GUEST_EXPIRY_INDEX_FIELD, '<=', nowMillis)
+        .get() :
+    await db.collection('child_info').get();
 
   let batch = db.batch();
   let pending = 0;
@@ -1255,9 +1415,6 @@ async function sweepExpiredGuestsImpl(db, nowMillis) {
       !Array.isArray(data.guests) ? data.guests : {};
     const expired = Object.keys(guests)
         .filter((uid) => guestGrantExpired(guests[uid], nowMillis));
-    if (expired.length === 0) {
-      continue;
-    }
 
     const kept = {};
     Object.keys(guests)
@@ -1265,11 +1422,19 @@ async function sweepExpiredGuestsImpl(db, nowMillis) {
         .forEach((uid) => {
           kept[uid] = guests[uid];
         });
+    const desired = guestsMinExpiresAtMillis(kept);
 
-    const update = {guests: kept};
-    const fromAudience = expired.filter((uid) => uid !== data.createdByFirebaseUid);
-    if (fromAudience.length > 0) {
-      update.sharedWith = FieldValue.arrayRemove(...fromAudience);
+    if (expired.length === 0 && guestExpiryIndexMatches(data, desired)) {
+      continue;
+    }
+
+    const update = {[GUEST_EXPIRY_INDEX_FIELD]: guestExpiryIndexValue(desired)};
+    if (expired.length > 0) {
+      update.guests = kept;
+      const fromAudience = expired.filter((uid) => uid !== data.createdByFirebaseUid);
+      if (fromAudience.length > 0) {
+        update.sharedWith = FieldValue.arrayRemove(...fromAudience);
+      }
     }
 
     batch.update(doc.ref, update);
@@ -1285,6 +1450,13 @@ async function sweepExpiredGuestsImpl(db, nowMillis) {
 
   if (pending > 0) {
     await batch.commit();
+  }
+
+  if (!indexed) {
+    await markerRef.set({
+      guestExpiryIndexVersion: GUEST_EXPIRY_INDEX_VERSION,
+      backfilledAtMillis: nowMillis,
+    }, {merge: true});
   }
 
   return removed;

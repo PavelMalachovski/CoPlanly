@@ -40,6 +40,15 @@ write key unchanged, removed documents and private ones. See `event-revisions.js
 
 **Триггер:** onWrite в `events/{eventId}`
 
+### 4. maintainGuestExpiryIndex
+Keeps `child_info/{id}.guestsMinExpiresAtMillis` — the earliest guest-grant expiry, absent with no
+guests — true to the record's `guests` map, so `sweepExpiredGuests` can range-query it instead of
+reading the whole collection (audit L-10). A trigger because the app saves child records with a
+whole-document `set()` that drops a server-only field. Writes only when the value differs, so its own
+write ends the loop.
+
+**Триггер:** onWrite в `child_info/{childInfoId}`
+
 ## Установка
 
 ### 1. Установить Firebase CLI
@@ -638,7 +647,7 @@ Seven daily jobs, spread so they never contend (all UTC):
 | time | function | what it removes |
 | --- | --- | --- |
 | 02:00 | `cleanupOldNotifications` | `notification_queue` entries older than 30 days |
-| 03:00 | `sweepExpiredGuests` | expired guest grants on `child_info` (from `guests` and `sharedWith`) |
+| 03:00 | `sweepExpiredGuests` | expired guest grants on `child_info` (from `guests` and `sharedWith`); a range query on `guestsMinExpiresAtMillis`, after one full scan that stamps older records and writes `ops/guestSweep` (bump `GUEST_EXPIRY_INDEX_VERSION` to scan again) |
 | 04:00 | `sweepDeletedDocuments` | tombstones older than 90 days, with their files (do not shorten — CLAUDE.md item 14) |
 | 04:30 | `sweepIdleCalendarFeeds` | `calendar_feeds` links not fetched for 90 days (`FEED_IDLE_EXPIRY_DAYS`, MON-17) |
 | 05:00 | `sweepLapsedCalendarFriends` | `calendar_friends/{uid}` grants whose `expiresAtMillis` has passed |

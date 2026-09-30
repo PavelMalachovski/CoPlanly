@@ -152,6 +152,8 @@ describe('acceptGuestInvitation', () => {
     assert.strictEqual(child.guests.nina.expiresAtMillis, GRANT_ENDS);
     assert.ok(child.guests.nina.grantedAtMillis > 0, 'the grant must record when it was made');
     assert.deepStrictEqual(result, {childInfoId: 'child1', expiresAtMillis: GRANT_ENDS});
+    assert.strictEqual(child.guestsMinExpiresAtMillis, GRANT_ENDS,
+        'the grant must be findable by the sweep\'s range query from the first commit');
   });
 
   it('puts the guest in sharedWith, keeping both parents', async () => {
