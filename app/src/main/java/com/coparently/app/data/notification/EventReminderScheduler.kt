@@ -45,6 +45,8 @@ class EventReminderScheduler @Inject constructor(
                 workDataOf(
                     ReminderWorker.KEY_EVENT_ID to event.id,
                     ReminderWorker.KEY_TITLE to event.title,
+                    // What the worker checks the stored event against when the reminder is due.
+                    ReminderWorker.KEY_START_AT to event.startDateTime.toString(),
                     ReminderWorker.KEY_START_TIME to
                         // The reader's clock (release audit R-9), read here: no activity need
                         // have run in the process that schedules a reminder.
