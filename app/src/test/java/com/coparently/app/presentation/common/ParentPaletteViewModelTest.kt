@@ -56,13 +56,16 @@ class ParentPaletteViewModelTest {
     fun `starts on the default and then draws what the two parents chose`() = runTest {
         val viewModel = ParentPaletteViewModel(testParentsSource(me = me, partner = partner))
 
+        // The first frame, before anything collects the parents: what the app always drew.
+        assertEquals(ParentPalette.Default, viewModel.palette.value)
+
         viewModel.palette.test {
-            // The first frame, before the parents load: what the app always drew.
-            assertEquals(ParentPalette.Default, awaitItem())
-            assertEquals(
-                ParentPalette(ParentColorChoice.ORANGE, ParentColorChoice.PURPLE),
-                awaitItem()
-            )
+            // Whether the collector still sees the default depends on how fast `stateIn` reaches
+            // the parents on this scheduler, so the default is allowed and skipped, not required;
+            // the value it settles on is the one that matters.
+            var palette = awaitItem()
+            if (palette == ParentPalette.Default) palette = awaitItem()
+            assertEquals(ParentPalette(ParentColorChoice.ORANGE, ParentColorChoice.PURPLE), palette)
             cancelAndIgnoreRemainingEvents()
         }
     }
