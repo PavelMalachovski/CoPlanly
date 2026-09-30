@@ -977,8 +977,12 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   was the last place in the app insisting on exactly one of anything (`ChildInfoScreen`,
   `PetsScreen` and `ContactDirectory` were already plural). The calendar caught up in FAM-3:
   `Event.forMembers` names the children and pets an event is about, and the grid has a filter
-  strip that appears at two. What it still does not do is mark an *individual chip* — see
-  **FAM-5** before adding one, because the two obvious channels are both spoken for.
+  strip that appears at two. **FAM-5** (September 2026, owner decision) marks an *individual
+  chip* in Day and Week view: `EventMemberMark` puts the first named member's initial ("E", or
+  "E+" for several) on a neutral `surfaceVariant` disc at the chip's start, at two members and
+  never at one, and the chip's description names every member. It is a letter because both
+  obvious channels were spoken for — a prefix costs title, and every colour is taken — so don't
+  turn it into a hue, and don't add a second mark beside it. Month chips carry none.
 - **Who a record is about goes through `domain/family/FamilyMemberRef`** (FAM-2, Aug 2026) — one
   file defining the stored vocabulary, like `Tombstone.kt` and `PushPayload.kt`. Children *and*
   pets, because a vet's bill is an expense and the `Expense.childId` it replaced had nowhere to

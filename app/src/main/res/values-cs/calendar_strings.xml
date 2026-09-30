@@ -63,6 +63,7 @@
     <!-- Day/week grid accessibility -->
     <string name="calendar_time_slot_description">Časový blok %1$s dne %2$s. Klepnutím přidáte událost.</string>
     <string name="calendar_event_chip_description">Událost %1$s. %2$s</string>
+    <string name="calendar_event_chip_description_members">Událost %1$s. Týká se: %2$s. %3$s</string>
     <string name="calendar_event_dragging">Přesouvání</string>
     <string name="calendar_event_resizing_start">Změna začátku na %1$s</string>
     <string name="calendar_event_resizing_end">Změna konce na %1$s</string>

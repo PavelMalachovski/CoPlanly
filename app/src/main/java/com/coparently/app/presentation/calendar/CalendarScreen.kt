@@ -901,7 +901,10 @@ fun CalendarScreen(
                                     deleteTargetBounds = deleteTarget,
                                     // A child's own band (FAM-4) is not the schedule a swap moves.
                                     onOfferDay = offerDayFromDayView?.takeIf { grid.followsFamily },
-                                    holidays = holidays
+                                    holidays = holidays,
+                                    // FAM-5: the members the filter strip already lists, so a chip
+                                    // can say who it is about; no listener of its own.
+                                    familyMembers = familyMembers
                                 )
                             }
                             CalendarViewMode.MONTH -> {

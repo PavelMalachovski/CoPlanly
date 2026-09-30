@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -78,6 +79,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.onClick
@@ -92,6 +94,7 @@ import androidx.compose.ui.unit.dp
 import com.coparently.app.R
 import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.model.Event
+import com.coparently.app.presentation.common.FamilyMember
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.displayName
 import com.coparently.app.presentation.common.rememberToday
@@ -165,7 +168,8 @@ fun DayWeekView(
     onDragOverDeleteButton: ((Boolean) -> Unit)? = null,
     deleteTargetBounds: () -> Rect? = { null },
     onOfferDay: ((LocalDate) -> Unit)? = null,
-    holidays: Map<LocalDate, com.coparently.app.domain.holidays.Holiday> = emptyMap()
+    holidays: Map<LocalDate, com.coparently.app.domain.holidays.Holiday> = emptyMap(),
+    familyMembers: List<FamilyMember> = emptyList()
 ) {
     // The pager is anchored at a fixed date; each page offsets it by daysCount.
     // External date changes (Today button, month picker) re-anchor the pager.
@@ -235,7 +239,8 @@ fun DayWeekView(
                 onEventLongPressEnd = onEventLongPressEnd,
                 onDragOverDeleteButton = onDragOverDeleteButton,
                 onOfferDay = onOfferDay,
-                holidays = holidays
+                holidays = holidays,
+                familyMembers = familyMembers
             )
         }
     }
@@ -267,7 +272,8 @@ private fun DayWeekPage(
     onEventLongPressEnd: (() -> Unit)? = null,
     onDragOverDeleteButton: ((Boolean) -> Unit)? = null,
     onOfferDay: ((LocalDate) -> Unit)? = null,
-    holidays: Map<LocalDate, com.coparently.app.domain.holidays.Holiday> = emptyMap()
+    holidays: Map<LocalDate, com.coparently.app.domain.holidays.Holiday> = emptyMap(),
+    familyMembers: List<FamilyMember> = emptyList()
 ) {
     val dims = dimensions()
     // The reader's clock (L-7): a 12-hour label carries its day-period marker, and only then is
@@ -724,7 +730,11 @@ private fun DayWeekPage(
                                         // this occurrence's times onto the whole series.
                                         resizable = !seg.clamped && !seg.event.isRecurring,
                                         draggable = !seg.clamped && !seg.event.isRecurring,
-                                        showTime = daysCount == 1
+                                        showTime = daysCount == 1,
+                                        // FAM-5: who it is about, at two members and not at one.
+                                        memberMark = remember(seg.event.forMembers, familyMembers) {
+                                            EventMemberMark.of(seg.event.forMembers, familyMembers)
+                                        }
                                     )
                                 }
                             }
@@ -824,6 +834,40 @@ private fun ContactWindowBand(
     }
 }
 
+/**
+ * The initial of the member an event is about (FAM-5), on a neutral disc at the start of its chip.
+ *
+ * Neutral on purpose — `surfaceVariant` under `onSurfaceVariant` — because a member is a name,
+ * never a colour: every hue on the grid already means a parent, a calendar friend or the weekend.
+ * Hidden from the accessibility tree, since the chip's own description names the members in full.
+ * A fixed size like the chip's other marks, with a minimum rather than an exact width so "E+"
+ * becomes a pill instead of being clipped.
+ */
+@Composable
+private fun MemberInitialDisc(initial: String) {
+    Box(
+        modifier = Modifier
+            .padding(end = Spacing.XXS)
+            .sizeIn(minWidth = IconSizes.Inline, minHeight = IconSizes.Inline)
+            .clip(CircleShape)
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .clearAndSetSemantics { },
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = initial,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            softWrap = false,
+            modifier = Modifier.padding(horizontal = Spacing.XXS)
+        )
+    }
+}
+
+// The chip's size and complexity were baselined under its old signature; FAM-5's `memberMark`
+// changed the signature, not the body's shape. Splitting it further is tracked separately.
+@Suppress("LongParameterList", "LongMethod", "CyclomaticComplexMethod")
 @Composable
 private fun EventChip(
     event: Event,
@@ -848,7 +892,9 @@ private fun EventChip(
     draggable: Boolean = true,
     // Day view spells the time out under the title; week view leaves it to the block's
     // vertical position and spends the row on the title instead.
-    showTime: Boolean = true
+    showTime: Boolean = true,
+    // Who the event is about (FAM-5), or null when nothing is to be marked.
+    memberMark: EventMemberMark? = null
 ) {
     val density = LocalDensity.current
     val hapticFeedback = LocalHapticFeedback.current
@@ -963,11 +1009,20 @@ private fun EventChip(
     }
     val deleteActionLabel = stringResource(R.string.event_preview_delete)
     val openChip = onClick
-    val chipDescription = stringResource(
-        R.string.calendar_event_chip_description,
-        event.title,
-        chipStateDescription
-    )
+    val chipDescription = if (memberMark != null) {
+        stringResource(
+            R.string.calendar_event_chip_description_members,
+            event.title,
+            memberMark.names.joinToString(", "),
+            chipStateDescription
+        )
+    } else {
+        stringResource(
+            R.string.calendar_event_chip_description,
+            event.title,
+            chipStateDescription
+        )
+    }
     val resizeStartDescription = stringResource(R.string.calendar_resize_start_handle)
     val resizeEndDescription = stringResource(R.string.calendar_resize_end_handle)
     val endLaterLabel = stringResource(R.string.calendar_action_end_later)
@@ -1228,6 +1283,9 @@ private fun EventChip(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                if (memberMark != null) {
+                    MemberInitialDisc(initial = memberMark.initial)
+                }
                 if (event.isPrivate) {
                     Icon(
                         imageVector = Icons.Default.Lock,

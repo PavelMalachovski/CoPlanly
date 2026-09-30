@@ -50,6 +50,7 @@
 
     <string name="calendar_time_slot_description">Время %1$s, %2$s. Нажмите, чтобы добавить событие.</string>
     <string name="calendar_event_chip_description">Событие %1$s. %2$s</string>
+    <string name="calendar_event_chip_description_members">Событие %1$s. Касается: %2$s. %3$s</string>
     <string name="calendar_event_dragging">Перетаскивание</string>
     <string name="calendar_event_resizing_start">Изменение времени начала на %1$s</string>
     <string name="calendar_event_resizing_end">Изменение времени окончания на %1$s</string>

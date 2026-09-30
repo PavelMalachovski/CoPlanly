@@ -111,7 +111,7 @@ invocation is yours.
 | **SEC-1 §1 (superseded by L-4)** | Storage rules keyed on Firestore state were the plan; L-4 (PR #117) made the path the gate instead — every photo prefix is family-keyed and checked by `isOneOfPair`, which the Storage emulator runs (`storage-record-photos.test.js`), so no cross-service rule and no staging bucket are needed | Only the deploy: `firebase deploy --only storage`, then `purgeLegacyPhotoPaths` once, and a photo attached on a device (DEVICE-CHECKLIST). The cost is written down: a path does not narrow at unpair. |
 | **SEC-5 (built, unseen)** | `EncryptedPreferences` seals its own file with the Keystore key; the alpha `security-crypto` only reads the old store once | `EncryptedPreferencesMigrationTest` copies an old store on the emulators; only a phone upgraded over a previous build shows Calendar still connected (DEVICE-CHECKLIST, "SEC-5 upgrade"). |
 | **UX-13** | Light theme is no longer unverifiable: CI's `screenshots` job renders the main screens' pieces in light and dark on every Android PR (night window background and previews done before it) | Whether a dark cold start still flashes: only a device shows the window before Compose's first frame. |
-| **FAM-5** | The event chip does not say who it is about | Chips are single-line with ellipsis and every colour channel is spent. Worth an owner's eye on a real device rather than a treatment invented blind. |
+| **FAM-5 (built, unseen)** | Day and Week chips carry the initial of the member an event is about, on a neutral disc, at two members | Whether the disc reads at chip height in a ~50 dp week column, and TalkBack naming the members (DEVICE-CHECKLIST §3.24). |
 | **MON-16 (shipped, unseen)** | A registered export: the record ID on the PDF's face and footer, the offline "not registered" dialog, and `web/verify/` answering for a real file | Export once online and once in flight mode; open the PDF (every page's footer names the record, or says "not registered"); upload the online one to the hosted `web/verify/` and see a match, then re-save it from a PDF viewer and see it fail. Only a device renders the footer, and only a deploy answers the page. |
 | **MON-3 (shipped, unseen)** | The PDF export and the share sheet | `PdfDocument` drawing, Cyrillic and Czech glyphs in the default typeface, page breaks, and whether the share sheet hands the file to a mail app — the layout is unit-tested, the drawing is not. |
 | **M-4 (shipped, unseen)** | The colour palette, the family switcher, the second-co-parent invite | Kotlin compiled in CI; nobody has looked at it. |
@@ -2644,19 +2644,24 @@ who stays with one parent — which is why it came last rather than never.
 2. `firebase deploy --only firestore:rules`, without which the live rules refuse every proposal or
    swap write that carries `childOverrides` and the repository falls back to a local save.
 3. A look on a phone, and the two-phone proposal round (§3.13).
-4. Not built, on purpose: per-child seasonal layers and per-child swaps (design §3), and a marker
-   on an individual event chip (FAM-5).
+4. Not built, on purpose: per-child seasonal layers and per-child swaps (design §3). The marker on
+   an individual event chip shipped separately as FAM-5.
 
-### FAM-5 · P2 · S · The event chip does not say who it is about
+### FAM-5 · **DONE** · P2 · S · The event chip does not say who it is about
 
-**Where:** 👁 the treatment is an owner's call on a real device; the code is small once decided.
+**Where:** ☁️ cloud (built); 👁 how it reads at chip height is the device check §3.24.
 
-Only reachable in an unfiltered day or week view, and only for a family with two or more members.
-The constraints are the interesting part: `softWrap = false` plus ellipsis means a prefix costs
-title, and pink/blue/teal/grey are taken by the parent slots, a calendar friend and the weekend —
-and M-4 spent two more hues (purple, orange) on chosen parent colours, so the colour channel is now
-comprehensively unavailable. An initial-letter avatar at chip height is the obvious candidate; so is
-doing nothing and leaving the filter to answer it.
+**Done (owner decision 2026-09-30: an initial on a neutral disc).** In Day and Week view a chip
+whose event names members (`Event.forMembers`) starts with a small disc carrying the first named
+member's initial, and "+" when it names more than one ("E", "E+"): `EventMemberMark` decides it,
+`MemberInitialDisc` draws it on `surfaceVariant` under `onSurfaceVariant` at `IconSizes.Inline`.
+It appears at two members and never at one, and never for an event naming nobody (the whole
+family) or only references this family does not hold. It is a name, never a colour — every hue on
+the grid is already spent. The chip's description names every member ("About: Emma, Leo"), and
+the disc itself is hidden from TalkBack. The members come from the list the filter strip already
+reads (`EventViewModel.familyMembers`), so no listener was added. The title keeps its ellipsis.
+Not done: month-view chips, whose single-line cells have no room to spare; the filter strip
+answers the question there.
 
 ---
 
@@ -3043,8 +3048,8 @@ in `docs/AUDIT-2026-08.md` under the § numbers cited.
   trip** as `Unknown`.
 - **FAM-3 · Events know who they are about.** `Event.forMembers`, empty meaning "the whole family",
   and a filter strip that appears at two members and not at one. `firestore.rules` needed no change
-  — the `events` block validates with `keys().hasAll([...])`, presence-based. What it left is
-  **FAM-5**.
+  — the `events` block validates with `keys().hasAll([...])`, presence-based. What it left,
+  **FAM-5**, is done too (September 2026).
 - **M-1 … M-4 · A parent can co-parent with more than one other adult.** `families/{id}` keyed by
   `FamilyKey.of(a, b)`; `familyId` on the six shared collections, stamped at create and never
   re-derived, with null meaning "mine alone"; the slot and `caresFor` moved onto the family (`slots`
