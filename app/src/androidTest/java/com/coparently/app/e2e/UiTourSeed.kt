@@ -45,6 +45,7 @@ import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
+import java.time.ZoneId
 import java.time.temporal.TemporalAdjusters
 import java.util.UUID
 import javax.inject.Inject
@@ -303,7 +304,11 @@ class UiTourSeed @Inject constructor(
 
     // ---- money ----------------------------------------------------------------------------------
 
-    /** A 60/40 split agreed first, then a month of expenses in crowns and euros. */
+    /**
+     * A 60/40 split agreed first, then a month of expenses in crowns and euros. Every date is kept
+     * inside the current month, so a tour run in a month's first days still shows the whole list on
+     * the Expenses screen, which opens on this month; on the 1st they all fall on the 1st.
+     */
     private suspend fun seedMoney(family: Family) {
         splits.submitRatio(SplitRatio(SPLIT_BASIS_POINTS)).getOrThrow()
         val both = listOf(family.alice, family.bob.uid)
@@ -316,7 +321,7 @@ class UiTourSeed @Inject constructor(
                 category = category,
                 paidBy = family.alice,
                 splitBetween = both,
-                date = family.today.minusDays(daysAgo),
+                date = maxOf(family.today.minusDays(daysAgo), family.today.withDayOfMonth(1)),
                 createdByFirebaseUid = family.alice,
                 splitBasisPoints = SPLIT_BASIS_POINTS,
                 familyId = family.id
@@ -357,17 +362,26 @@ class UiTourSeed @Inject constructor(
         )
     }
 
-    /** Eight messages between the two, the last of Bob's carrying a PDF. */
+    /**
+     * Eight messages between the two, the last of Bob's carrying a PDF. They are dated yesterday
+     * evening, a few minutes apart, rather than at the moment the tour happens to run: a tour that
+     * ran after midnight printed "12:20 AM" on every bubble of a screenshot that becomes a store
+     * image. The rules do not bind a message's time, so the seed may choose it.
+     */
     private suspend fun seedChat(family: Family) {
         val thread = ConversationKey.of(family.alice, family.bob.uid)
         val chat = family.content.chat
-        chat.lines.forEach { (fromAlice, text) ->
+        val evening = family.today.minusDays(1).atTime(CHAT_HOUR, CHAT_MINUTE)
+            .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        fun sentAt(index: Int) = evening + index * CHAT_GAP_MS
+        chat.lines.forEachIndexed { index, (fromAlice, text) ->
             val message = Message(
                 id = UUID.randomUUID().toString(),
                 conversationId = thread,
                 senderId = if (fromAlice) family.alice else family.bob.uid,
                 senderName = if (fromAlice) ALICE else family.bob.name,
-                content = text
+                content = text,
+                sentAtMillis = sentAt(index)
             )
             if (fromAlice) messages.sendMessage(message) else family.bob.messageRepository.sendMessage(message)
         }
@@ -384,7 +398,8 @@ class UiTourSeed @Inject constructor(
                 senderId = family.bob.uid,
                 senderName = family.bob.name,
                 content = chat.attachmentCaption,
-                attachments = listOf(ChatAttachmentCodec.encode(attachment))
+                attachments = listOf(ChatAttachmentCodec.encode(attachment)),
+                sentAtMillis = sentAt(chat.lines.size)
             )
         )
     }
@@ -449,6 +464,9 @@ class UiTourSeed @Inject constructor(
         private const val ALL_DAY_MINUTES = 23L * 60 + 59
         private const val TRIP_MINUTES = 2L * 24 * 60 + 10 * 60
         private const val SPLIT_BASIS_POINTS = 6_000
+        private const val CHAT_HOUR = 18
+        private const val CHAT_MINUTE = 5
+        private const val CHAT_GAP_MS = 4L * 60 * 1_000
         private const val CARE_WEEKDAY = "care_weekday"
         private const val HOLIDAYS_SCHOOL = "holidays_school"
     }
