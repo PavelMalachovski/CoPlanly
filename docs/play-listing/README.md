@@ -8,7 +8,7 @@ generator only adds a headline and a device frame around what the app drew.
 | File | Size | What it is |
 | --- | --- | --- |
 | `cs/01.png` … `cs/08.png` | 1080 × 1920 | Phone screenshots, Czech listing |
-| `en/01.png` … `en/08.png` | 1080 × 1920 | Phone screenshots, English listing, from a `light-en-100` tour (`6f538838`) |
+| `en/01.png` … `en/08.png` | 1080 × 1920 | Phone screenshots, English listing, from a `light-en-100` tour (`ebca9853`, 1 October 2026, after PR #125) |
 | `feature-graphic-cs.png` | 1024 × 500 | Feature graphic, Czech listing |
 | `feature-graphic-en.png` | 1024 × 500 | Feature graphic, English listing |
 | `icon-512.png` | 512 × 512, 32-bit PNG | The Play Store icon, both listings. Made from `icon-512.svg` |
@@ -51,6 +51,13 @@ brand indigo (`CoPlanlyColors.BrandPrimary`, `#4F46E5`). The two parent colours 
 soft glows in the background and as the two dots on the feature graphic. The screenshot is scaled,
 never stretched. The status bar is painted over in the app bar's own colour, and the system
 navigation bar is cropped.
+
+### Run the tour in daytime UTC
+
+The seed sends the chat at the moment the tour runs (after the events and expenses, so the thread
+opens on the conversation and not on their activity cards), and the emulator's clock is UTC. A tour
+run after midnight prints "12:20 AM" on every bubble. Expenses are kept inside the current month,
+so a tour on the 1st still shows all five.
 
 ### Both languages come from a tour in their own language
 
