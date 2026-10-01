@@ -45,7 +45,6 @@ import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
-import java.time.ZoneId
 import java.time.temporal.TemporalAdjusters
 import java.util.UUID
 import javax.inject.Inject
@@ -363,25 +362,21 @@ class UiTourSeed @Inject constructor(
     }
 
     /**
-     * Eight messages between the two, the last of Bob's carrying a PDF. They are dated yesterday
-     * evening, a few minutes apart, rather than at the moment the tour happens to run: a tour that
-     * ran after midnight printed "12:20 AM" on every bubble of a screenshot that becomes a store
-     * image. The rules do not bind a message's time, so the seed may choose it.
+     * Eight messages between the two, the last of Bob's carrying a PDF. They are sent now, after the
+     * events and expenses, so the thread opens on the conversation rather than on the activity
+     * cards those writes post; a store-image tour should therefore run in daytime UTC, or every
+     * bubble reads "12:20 AM".
      */
     private suspend fun seedChat(family: Family) {
         val thread = ConversationKey.of(family.alice, family.bob.uid)
         val chat = family.content.chat
-        val evening = family.today.minusDays(1).atTime(CHAT_HOUR, CHAT_MINUTE)
-            .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
-        fun sentAt(index: Int) = evening + index * CHAT_GAP_MS
-        chat.lines.forEachIndexed { index, (fromAlice, text) ->
+        chat.lines.forEach { (fromAlice, text) ->
             val message = Message(
                 id = UUID.randomUUID().toString(),
                 conversationId = thread,
                 senderId = if (fromAlice) family.alice else family.bob.uid,
                 senderName = if (fromAlice) ALICE else family.bob.name,
-                content = text,
-                sentAtMillis = sentAt(index)
+                content = text
             )
             if (fromAlice) messages.sendMessage(message) else family.bob.messageRepository.sendMessage(message)
         }
@@ -398,8 +393,7 @@ class UiTourSeed @Inject constructor(
                 senderId = family.bob.uid,
                 senderName = family.bob.name,
                 content = chat.attachmentCaption,
-                attachments = listOf(ChatAttachmentCodec.encode(attachment)),
-                sentAtMillis = sentAt(chat.lines.size)
+                attachments = listOf(ChatAttachmentCodec.encode(attachment))
             )
         )
     }
@@ -464,9 +458,6 @@ class UiTourSeed @Inject constructor(
         private const val ALL_DAY_MINUTES = 23L * 60 + 59
         private const val TRIP_MINUTES = 2L * 24 * 60 + 10 * 60
         private const val SPLIT_BASIS_POINTS = 6_000
-        private const val CHAT_HOUR = 18
-        private const val CHAT_MINUTE = 5
-        private const val CHAT_GAP_MS = 4L * 60 * 1_000
         private const val CARE_WEEKDAY = "care_weekday"
         private const val HOLIDAYS_SCHOOL = "holidays_school"
     }
