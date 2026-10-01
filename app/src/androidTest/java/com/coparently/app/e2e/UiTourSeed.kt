@@ -303,7 +303,11 @@ class UiTourSeed @Inject constructor(
 
     // ---- money ----------------------------------------------------------------------------------
 
-    /** A 60/40 split agreed first, then a month of expenses in crowns and euros. */
+    /**
+     * A 60/40 split agreed first, then a month of expenses in crowns and euros. Every date is kept
+     * inside the current month, so a tour run in a month's first days still shows the whole list on
+     * the Expenses screen, which opens on this month; on the 1st they all fall on the 1st.
+     */
     private suspend fun seedMoney(family: Family) {
         splits.submitRatio(SplitRatio(SPLIT_BASIS_POINTS)).getOrThrow()
         val both = listOf(family.alice, family.bob.uid)
@@ -316,7 +320,7 @@ class UiTourSeed @Inject constructor(
                 category = category,
                 paidBy = family.alice,
                 splitBetween = both,
-                date = family.today.minusDays(daysAgo),
+                date = maxOf(family.today.minusDays(daysAgo), family.today.withDayOfMonth(1)),
                 createdByFirebaseUid = family.alice,
                 splitBasisPoints = SPLIT_BASIS_POINTS,
                 familyId = family.id
@@ -357,7 +361,12 @@ class UiTourSeed @Inject constructor(
         )
     }
 
-    /** Eight messages between the two, the last of Bob's carrying a PDF. */
+    /**
+     * Eight messages between the two, the last of Bob's carrying a PDF. They are sent now, after the
+     * events and expenses, so the thread opens on the conversation rather than on the activity
+     * cards those writes post; a store-image tour should therefore run in daytime UTC, or every
+     * bubble reads "12:20 AM".
+     */
     private suspend fun seedChat(family: Family) {
         val thread = ConversationKey.of(family.alice, family.bob.uid)
         val chat = family.content.chat
