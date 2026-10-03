@@ -511,7 +511,10 @@ firebase deploy --only firestore:rules    # 4. turn the isolation on
 ```
 
 Steps 2 and 3 are invoked as callables (from the app, a script, or the Firebase console's
-functions shell), not from the CLI:
+functions shell), not from the CLI — or, simplest, from an operator's machine with
+`node tools/ops/run-migration.js <step> --yes`, which calls the same `*Impl` the callable wraps
+under the operator's own `gcloud auth application-default login` (the script's header has the
+setup and the step names):
 
 | step | callable | what it writes |
 | --- | --- | --- |
