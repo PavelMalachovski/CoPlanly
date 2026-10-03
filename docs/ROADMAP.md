@@ -296,12 +296,15 @@ does anything until this runs.
 Everything server-side from both audits is **inert until this runs** — including the fix for a live
 full-calendar disclosure (audit §2.1) and the whole of PR #76's family isolation.
 
-**The multi-family ops sequence, in this order** (`functions/README.md` has the detail):
+**The multi-family ops sequence, in this order** (`functions/README.md` has the detail). **Done 2026-10-03.** Functions in
+`europe-west3`, both backfills through `tools/ops/run-migration.js` (seven accounts, all unpaired: nothing
+to stamp), rules and indexes, storage, `purgeLegacyPhotoPaths` (nothing to purge). The rules went out a few
+minutes before the backfills; with no pairs in the project that cost nothing.
 
-1. [ ] `firebase deploy --only functions`
-2. [ ] Invoke `backfillFamilyDocuments` — every live pair gets `members`, `slots`, `caresFor`
-3. [ ] Invoke `backfillRecordFamilyIds` — every record gets its `familyId`
-4. [ ] `firebase deploy --only firestore:rules,firestore:indexes`
+1. [x] `firebase deploy --only functions`
+2. [x] Invoke `backfillFamilyDocuments` — every live pair gets `members`, `slots`, `caresFor`
+3. [x] Invoke `backfillRecordFamilyIds` — every record gets its `familyId`
+4. [x] `firebase deploy --only firestore:rules,firestore:indexes`
 
 Step 1 also ships the MON-17 calendar feed (`calendarFeed`, `createCalendarFeed`,
 `listCalendarFeeds`, `revokeCalendarFeed`, `sweepIdleCalendarFeeds`); step 4 closes
@@ -318,7 +321,7 @@ is lost, since Room is the source of truth, but it is alarming to watch.
 
 **Separately, and it fixes a live bug:**
 
-- [ ] `firebase deploy --only storage`. The bucket still runs its July 2026 rules, which cover
+- [x] `firebase deploy --only storage` — **Done 2026-10-03.** Until then the bucket ran its July 2026 rules, which cover
       `receipts/` and `event_images/` only, so `pet_photos/**` and `medical_photos/**` fall through
       to the catch-all `allow read, write: if false` and **every pet and medical photo upload is
       refused today**. The client path is sound and was ruled out end to end. The ruleset *in the

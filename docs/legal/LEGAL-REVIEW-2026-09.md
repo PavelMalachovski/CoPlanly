@@ -228,12 +228,10 @@ families (Art. 34), because the data is health data about children.
    #117).
 2. Download as the reader rather than through URLs. **Done** (PR #117).
 3. Migrate the existing objects. **Replaced** by owner decision: before release they are test
-   data, so `purgeLegacyPhotoPaths` deletes them instead. **Ops, pending.**
-4. Deploy `storage.rules`. The live bucket still runs its July 2026 rules; see `CLAUDE.md` known
-   issues. **Ops, pending.**
+   data, so `purgeLegacyPhotoPaths` deletes them instead. **Done 2026-10-03** (nothing to delete).
+4. Deploy `storage.rules`. **Done 2026-10-03**; until then the bucket ran its July 2026 rules.
 
-The code half is fixed; the finding **still blocks the public release** until the deploy and the
-purge have run (§3, §4).
+Both halves are done; the finding no longer blocks the release.
 
 ### L-5. The chat after one parent deletes their account (High, fixed)
 
@@ -422,8 +420,8 @@ TOTP and SMS multi-factor on the Identity Platform tier. Recommended before grow
 
 ## 3. What blocks a public release, legally
 
-1. **L-4**: fixed in code (photos behind rules, not URLs). Still needed: `storage.rules`
-   deployed and `purgeLegacyPhotoPaths` run (§4).
+1. ~~**L-4**~~: fixed in code, and since 2026-10-03 deployed: `storage.rules` live and
+   `purgeLegacyPhotoPaths` run (it found nothing to delete).
 2. **L-3 Ops**: Firestore location confirmed in the EU, or a new EU project.
 3. **The controller's identity** filled in the policy and terms: the s.r.o.'s name, registered
    office, IČO and a monitored privacy address. Google Play also shows the developer's address
@@ -456,16 +454,16 @@ Everything else in §2 is fixed in this change or is a decision that does not bl
       says so.
 - [ ] Cloud Logging: keep the default 30-day `_Default` bucket, and do not route logs to a longer
       sink. Functions log uids, not names or emails; keep it that way.
-- [ ] Move the functions to `europe-west3` (`functions/README.md`, "Region").
-- [ ] `firebase deploy --only storage` (L-4: the family-keyed photo blocks; also what lets the
+- [x] Move the functions to `europe-west3` (`functions/README.md`, "Region").
+- [x] `firebase deploy --only storage` (L-4: the family-keyed photo blocks; also what lets the
       vault and chat attachments upload at all).
-- [ ] Deploy the functions carrying L-4 (`onFamilyCreated` moves pre-pairing photos), then run
+- [x] Deploy the functions carrying L-4 (`onFamilyCreated` moves pre-pairing photos), then run
       `purgeLegacyPhotoPaths` once, as an operator (the allow-list in `backfillAdminUids`), after
       the storage deploy. It deletes every object under the flat layouts from before L-4
       (`receipts/{id}.jpg`, `event_images/{id}.jpg`, `medical_photos/{childId}/…`,
       `pet_photos/{petId}/…`) and clears the download URLs and paths the records still carry.
       Idempotent; its summary (`objectsDeleted`, `recordsCleared`) goes in the ops log.
-- [ ] Then run `backfillRecordFamilyIds` once more: it moves any pre-pairing photo whose record
+- [x] Then run `backfillRecordFamilyIds` once more: it moves any pre-pairing photo whose record
       reached the server after its family was created.
 - [ ] Run `purgeParentHealthFields` once after the app build carrying L-1 is out (L-1).
 - [ ] Host `web/privacy/`, `web/terms/`, `web/delete-account/` and `web/verify/`, then set the URLs

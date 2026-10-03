@@ -1785,7 +1785,7 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     **Account deletion reaches both**: the departing parent's vault documents and their folders
     (`AUTHORED_FILES.family_documents`, keyed on the stored `familyId`, never a blank prefix), and
     every conversation's `chat_attachments/{id}/` with the thread.
-    None of it works live until `firebase deploy --only storage` — the known issue below.
+    The storage rules that make it work were deployed on 2026-10-03 (the known issue below, now struck).
     **Record photos follow the same shape since L-4** (Legal item 8): the same `SharedFileStorage`
     and `SharedFileCache`, a `ph1|` reference instead of `att1|`, and `solo_{uid}` folders before a
     family exists.
@@ -2035,7 +2035,7 @@ below hold what it fixed in place.
      records plus their `solo_` folders (`AUTHORED_FILES`); a photo they added to the co-parent's
      record stays with that record.
    The cost is MON-23's: a path does not narrow at unpair. A new Storage prefix follows this shape.
-   None of it is live until `firebase deploy --only storage`, then `purgeLegacyPhotoPaths` once.
+   Live since 2026-10-03: `storage.rules` deployed and `purgeLegacyPhotoPaths` run (it found nothing).
 9. **Erasure reaches the families a parent already left** (September 2026). Unpair leaves a
    `parenting_plans/{familyId}` in place, so `deleteAccountDataImpl` finds former co-parents
    through accepted co-parent invitations (`coParentsByInvitation`, the same evidence
@@ -2084,26 +2084,19 @@ whatever you were doing; a stale "known issue" costs more than a missing one.
   *first* in onboarding that branch is the second parent's ordinary path, not a corner. The rule
   the entry gave still holds: never route the first agreement through `propose`.
 
-- **`storage.rules` has never been deployed past its July 2026 state, and that is why attaching a
-  photo to a pet fails** — and why the MON-23 vault and chat attachments (item 31) and every
-  record photo since L-4 (Legal item 8) cannot upload anything live yet. The file in this repo
-  covers `receipts/`, `event_images/`, `medical_photos/` and `pet_photos/` under family-keyed
-  paths, plus `family_documents/` and `chat_attachments/`; the live bucket, on the evidence, still
-  covers only flat `receipts/` and `event_images/`, so `pet_photos/**` falls through to
-  `match /{allPaths=**} { allow read, write: if false; }` and every pet — and, silently, every
-  medical — photo upload is refused. The client
-  path is sound and was ruled out end to end. **The fix is an ops action nobody has taken:
-  `firebase deploy --only storage`**, which also closes the still-unchecked box at
-  `docs/REVIEW-2026-07-23.md:65`. Nothing caught this for a long time: `firebase.json` configured a
-  Firestore emulator only, and Storage rules had no test coverage at all. They do now
-  (`firestore-tests/rules/storage-record-photos.test.js`, September 2026) — and the suite passes, which is
-  the point worth understanding rather than a contradiction. It exercises the ruleset **in
-  this repository**, where `pet_photos/**` is present and correct; the failure is that the
-  bucket enforces an older deploy. A test can prove the file is right and still not tell you
-  it was shipped. Deleting the `pet_photos` block does turn the suite red, so the coverage is
-  real — it just cannot substitute for the deploy. The upload handlers now write a
-  `Log.e` line so the next occurrence is at least diagnosable on a device — they reported only
-  through Crashlytics before, which writes nothing to logcat.
+- ~~**`storage.rules` has never been deployed past its July 2026 state, and that is why attaching a
+  photo to a pet fails.**~~ **Fixed by deploy (2026-10-03)**, together with the move of every
+  function to `europe-west3`, `firebase deploy --only firestore:rules,firestore:indexes`, the
+  multi-family backfills and `purgeLegacyPhotoPaths` (all run through
+  `tools/ops/run-migration.js`; at the time the project held seven unpaired accounts, so they
+  stamped, moved and purged nothing). Kept for the lesson: the Storage suite
+  (`firestore-tests/rules/storage-record-photos.test.js`, `storage-shared-files.test.js`) proves
+  the ruleset **in this repository** and cannot tell you it was shipped — the live bucket ran its
+  July rules for months, refusing every pet and medical photo, while that suite stayed green.
+  `gcloud`'s REST call to `firebaserules.googleapis.com/v1/projects/<id>/releases` shows each
+  release's `updateTime`; check it rather than assume. The pairing symptom of the same gap — an
+  app calling `europe-west3` before the functions were there, which read as "no invitation
+  matches that code" — now has its own message (`PairingError.ServiceUnavailable`).
 
 - **The expense split is agreed per pair, and each expense is priced at the split in force when it
   was recorded.** `family_settings/{pairId}` (same derived id as `custody_models`) holds the agreed

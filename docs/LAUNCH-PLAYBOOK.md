@@ -127,7 +127,8 @@ completes — nothing is lost, since Room is the source of truth, but it is alar
 
 **Separately, and it fixes a live bug today:**
 
-6. `firebase deploy --only storage`. The bucket still runs its July 2026 rules, which cover
+6. **Done 2026-10-03** (as were steps 1–5, through `tools/ops/run-migration.js`). `firebase deploy
+   --only storage`. Until then the bucket ran its July 2026 rules, which cover
    `receipts/` and `event_images/` only, so `pet_photos/**` and `medical_photos/**` fall through to
    the catch-all `allow read, write: if false` and **every pet and medical photo upload is refused
    right now.** The client path is sound and was ruled out end to end. Since L-4 the repository's
