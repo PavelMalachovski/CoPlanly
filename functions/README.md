@@ -451,7 +451,10 @@ the privacy policy: check Firestore → Settings in the console before release.
    for each one listed there.
 2. `firebase deploy --only functions` — creates them in `europe-west3`.
 3. Ship an app build carrying this change. An older build calls `us-central1` and gets
-   `NOT_FOUND` from every callable (pairing, deletion, exports) until it updates.
+   `NOT_FOUND` from every callable (pairing, deletion, exports) until it updates. The reverse —
+   a build calling `europe-west3` before step 2 has run — fails the same way; the pairing screen
+   says "the pairing service is not reachable" for it (`PairingError.ServiceUnavailable`, a
+   NOT_FOUND with no `reason`), not "no invitation matches that code".
 4. Calendar-feed links minted before the move name `us-central1` and stop working; the parent
    creates a new link. Before release there are none worth keeping.
 

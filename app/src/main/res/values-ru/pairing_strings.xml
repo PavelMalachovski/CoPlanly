@@ -27,6 +27,7 @@
     <string name="pairing_error_already_paired">Один из аккаунтов уже связан со вторым родителем.</string>
     <string name="pairing_error_wrong_recipient">Приглашение отправлено на другой адрес.</string>
     <string name="pairing_error_network">Нет соединения. Проверьте интернет и попробуйте снова.</string>
+    <string name="pairing_error_service_unavailable">Сервис связи аккаунтов сейчас недоступен. С кодом всё в порядке — попробуйте позже или обновите приложение.</string>
     <string name="pairing_error_unknown">Что-то пошло не так. Попробуйте ещё раз.</string>
     <string name="pairing_error_code_incomplete">Введите все 6 символов кода.</string>
 

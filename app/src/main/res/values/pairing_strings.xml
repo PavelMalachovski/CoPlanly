@@ -30,6 +30,7 @@
     <string name="pairing_error_already_paired">One of the accounts already has a co-parent.</string>
     <string name="pairing_error_wrong_recipient">That invitation was sent to a different email address.</string>
     <string name="pairing_error_network">No connection. Check your internet and try again.</string>
+    <string name="pairing_error_service_unavailable">The pairing service is not reachable right now. Your code is fine — try again later or update the app.</string>
     <string name="pairing_error_unknown">Something went wrong. Please try again.</string>
     <string name="pairing_error_code_incomplete">Enter all 6 characters of the code.</string>
 

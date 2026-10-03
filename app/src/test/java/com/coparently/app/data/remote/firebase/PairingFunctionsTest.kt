@@ -144,9 +144,11 @@ class PairingFunctionsTest {
     }
 
     @Test
-    fun `a bare NOT_FOUND code without a reason still maps to NotFound`() {
+    fun `a bare NOT_FOUND code without a reason is a missing callable, not a missing invitation`() {
+        // Every pairing callable's own not-found names a reason; a reason-less NOT_FOUND is the
+        // platform saying the function is not deployed where this build calls it.
         assertEquals(
-            PairingError.NotFound,
+            PairingError.ServiceUnavailable,
             PairingFunctions.toPairingError(
                 functionsException(code = FirebaseFunctionsException.Code.NOT_FOUND)
             )

@@ -27,6 +27,7 @@
     <string name="pairing_error_already_paired">Один з акаунтів уже зʼєднано з кимось із батьків.</string>
     <string name="pairing_error_wrong_recipient">Це запрошення надіслано на іншу електронну адресу.</string>
     <string name="pairing_error_network">Немає зʼєднання. Перевірте інтернет і спробуйте ще раз.</string>
+    <string name="pairing_error_service_unavailable">Сервіс звʼязку акаунтів зараз недоступний. З кодом усе гаразд — спробуйте пізніше або оновіть застосунок.</string>
     <string name="pairing_error_unknown">Щось пішло не так. Спробуйте ще раз.</string>
     <string name="pairing_error_code_incomplete">Введіть усі 6 символів коду.</string>
 

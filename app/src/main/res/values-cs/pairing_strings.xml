@@ -27,6 +27,7 @@
     <string name="pairing_error_already_paired">Jeden z účtů už je propojený s druhým rodičem.</string>
     <string name="pairing_error_wrong_recipient">Tato pozvánka byla odeslána na jinou e-mailovou adresu.</string>
     <string name="pairing_error_network">Žádné připojení. Zkontrolujte internet a zkuste to znovu.</string>
+    <string name="pairing_error_service_unavailable">Služba pro propojení teď není dostupná. Váš kód je v pořádku — zkuste to později nebo aktualizujte aplikaci.</string>
     <string name="pairing_error_unknown">Něco se pokazilo. Zkuste to prosím znovu.</string>
     <string name="pairing_error_code_incomplete">Zadejte všech 6 znaků kódu.</string>
 

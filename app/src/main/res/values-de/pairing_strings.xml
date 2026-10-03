@@ -27,6 +27,7 @@
     <string name="pairing_error_already_paired">Eines der Konten ist bereits mit einem anderen Elternteil verknüpft.</string>
     <string name="pairing_error_wrong_recipient">Diese Einladung wurde an eine andere E-Mail-Adresse gesendet.</string>
     <string name="pairing_error_network">Keine Verbindung. Prüfe dein Internet und versuche es erneut.</string>
+    <string name="pairing_error_service_unavailable">Der Verknüpfungsdienst ist gerade nicht erreichbar. Dein Code ist in Ordnung – versuche es später erneut oder aktualisiere die App.</string>
     <string name="pairing_error_unknown">Etwas ist schiefgelaufen. Bitte versuche es erneut.</string>
     <string name="pairing_error_code_incomplete">Gib alle 6 Zeichen des Codes ein.</string>
 

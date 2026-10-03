@@ -27,6 +27,7 @@ fun Throwable.pairingMessageRes(): Int {
         PairingError.AlreadyPaired -> R.string.pairing_error_already_paired
         PairingError.WrongRecipient -> R.string.pairing_error_wrong_recipient
         PairingError.Network -> R.string.pairing_error_network
+        PairingError.ServiceUnavailable -> R.string.pairing_error_service_unavailable
         else -> kindMessageRes(error)
     }
 }

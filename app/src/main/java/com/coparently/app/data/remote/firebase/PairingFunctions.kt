@@ -248,7 +248,12 @@ class PairingFunctions @Inject constructor(
                 else -> when ((e as? FirebaseFunctionsException)?.code) {
                     FirebaseFunctionsException.Code.UNAVAILABLE,
                     FirebaseFunctionsException.Code.DEADLINE_EXCEEDED -> PairingError.Network
-                    FirebaseFunctionsException.Code.NOT_FOUND -> PairingError.NotFound
+                    // No reason: the callable is missing, not the invitation (see
+                    // PairingError.ServiceUnavailable).
+                    FirebaseFunctionsException.Code.NOT_FOUND -> {
+                        Log.e(TAG, "Callable not found in the configured region", e)
+                        PairingError.ServiceUnavailable
+                    }
                     else -> PairingError.Unknown(e.message)
                 }
             }

@@ -80,6 +80,15 @@ sealed interface PairingError {
      */
     data object AlreadyEntitled : PairingError
 
+    /**
+     * The backend answered that the callable itself does not exist — a NOT_FOUND carrying no
+     * `reason`, which no pairing function ever throws (every one of their `not-found` errors
+     * names a reason). In practice: the functions are not deployed in the region this build
+     * calls (`FirebaseModule.FUNCTIONS_REGION`). Kept apart from [NotFound] because telling the
+     * parent their code is wrong sends them re-typing a perfectly good code.
+     */
+    data object ServiceUnavailable : PairingError
+
     /** Offline, timeout or an unreachable backend. */
     data object Network : PairingError
 
