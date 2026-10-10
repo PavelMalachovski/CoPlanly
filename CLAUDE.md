@@ -821,7 +821,7 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   emulator's `crashpad_handler`, which outlives it and holds the output pipe the action reads (on
   PR #103 the e2e job's emulator stopped at 09:27 and the action waited on that handler until the
   job's 50-minute limit). The `e2e` job has the same status file and backstop since. The step keeps
-  `continue-on-error` and a 10-minute limit as the backstop, and "The instrumented tests finished
+  `continue-on-error` and a 15-minute limit as the backstop, and "The instrumented tests finished
   and passed" fails the job unless the status file exists and says 0. When the suite outgrows the
   limit that step says "did not finish" — raise the limit. **The APKs compile while the emulator
   boots** (`tools/ci-background-build.sh start` before the AVD restores, `wait` as the script's
