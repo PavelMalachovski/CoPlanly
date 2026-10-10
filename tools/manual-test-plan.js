@@ -266,6 +266,13 @@ const RULES = [
       'K/data/repository/**', 'K/data/remote/**', 'firestore.rules', 'functions/**'],
   },
   {
+    sections: ['5.7'],
+    why: 'the pairing link, its web page, or the name a code shows before linking',
+    paths: ['K/domain/pairing/**', 'K/presentation/pairing/**', 'K/presentation/MainActivity.kt',
+      'K/data/remote/firebase/PairingFunctions.kt', 'web/pair/**',
+      'app/src/main/res/values*/pairing_strings.xml'],
+  },
+  {
     sections: ['5.6'],
     why: 'a calendar friend, whose grants are one per family',
     paths: ['K/presentation/friends/**', 'K/domain/friends/**', 'K/data/repository/Friend*',

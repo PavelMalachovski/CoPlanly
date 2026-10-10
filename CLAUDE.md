@@ -733,7 +733,10 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   file against another record ID, the ID as people retype it, an unknown ID and a bare reservation
   (not found), Czech and English, 375 px with no sideways scroll, and — on every answer — no uid,
   `familyId`, e-mail or name on the page or in the response, and nothing but the fingerprint in the
-  request. `calendar-feed.spec.js` validates `.ics` as a client would, not as `calendar-feed.js`
+  request. `pair-page.spec.js` drives `web/pair/` (item 37) through `firebase.json`'s own rewrite
+  and headers, which `support/static-server.js` reads: the code from the address, the Android
+  `intent:` link, the iPhone and computer notes, a bad link, five languages, no request leaving the
+  page and no name on it. `calendar-feed.spec.js` validates `.ics` as a client would, not as `calendar-feed.js`
   intends: `buildFeed` in all five languages and the real `calendarFeed` endpoint behind a link
   `createCalendarFeed` minted, through `ical.js` plus our own octet-level RFC 5545 check (CRLF,
   75-octet folds never inside a UTF-8 character, TEXT escaping, required properties, DTEND after
@@ -1946,6 +1949,34 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
       account) is the only thing written. `test/ai-assist.test.js` pins each of these.
     Not AI, and not to be confused with it: `ToneCheck` (item 28), on-device receipt OCR (item 10)
     and on-device voice-to-text — none of them may start calling this function.
+
+37. **A pairing code names its inviter before it is redeemed, and the link is a web address only
+    once its page exists** (October 2026; beta testers could neither tap the link nor tell whose
+    code they held). Every way a code arrives — typed, scanned, a link — goes through
+    `PairingViewModel.redeemCode`, which calls `previewPairingInvitation` and opens one dialog,
+    "Link with {first name}?"; only its yes (`answerConfirmation`) calls the accept. Five things
+    not to undo.
+    - **The preview refuses what the accept refuses.** `assertRedeemableCoParentInvite` holds the
+      invitation checks both callables run, and the preview adds the already-paired and slot
+      (`assertAccepterKeepsSlot`) refusals, so a dialog that names somebody is never followed by a
+      refusal. It writes nothing.
+    - **A first name, never an address.** `previewFirstName` keeps the first word and drops one
+      containing `@`; nothing else about the inviter is returned. The preview is signed-in only and
+      rate-limited per account (20 per ten minutes per instance, ten instances), because a code is
+      a bearer credential and the preview must not become a cheaper way to sweep codes.
+    - **A preview that says nothing still asks.** `PairingError.Unknown` — a backend without the
+      callable (a `NOT_FOUND` with no reason, which `PairingFunctions.previewInvitation` tells apart
+      from a missing invitation) or its rate limit — opens the old nameless dialog and lets the
+      accept decide. Every other failure goes on the field with no dialog.
+    - **The web link is shared only behind `BuildConfig.PAIRING_WEB_LINK`** (`publishedPairingWebLink`,
+      false until `web/pair/` is hosted), through `pairingLinkFor`, so the share text and the QR
+      never disagree. `PairingUri` *reads* both forms always, and `MainActivity` accepts the https
+      one only on `PairingUri.WEB_HOST` under `/pair/`. The manifest's `autoVerify` filter opens the
+      app directly once `web/.well-known/assetlinks.json` names its signing key (`web/README.md`).
+    - **The page never names anybody and makes no request** (`web/pair/index.html`): it is public,
+      and the name is the app's to show to a signed-in account. Its Android button is an `intent:`
+      link bound to `app.coplanly` with Google Play as the fallback; its links are absolute, because
+      the rewrite serves it at `/pair/CODE/`.
 
 ## Legal and GDPR (September 2026) — keep consistent
 

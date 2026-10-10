@@ -141,7 +141,7 @@ invocation is yours.
 | **REL-4 (legal)** | Fill the "Owner must fill" tables (identity, contact, Firestore region, dates, liability, law); a lawyer reads the drafts; the three pages get hosted; the URL goes into `publishedPrivacyPolicyUrl` | This app processes a child's health data. No template survives that unread. |
 | **REL-6** | Play Console: Data Safety, listing, screenshots, content rating, a closed track with **real co-parent pairs** | This product cannot be tested by one person. |
 | **REL-7** | Install a release build and confirm a child's medical profile reaches the co-parent non-empty | The one test CI cannot run: a green `assembleRelease` proves R8 ran, not that Gson still finds its field names. |
-| **CQ-16** | Digital Asset Links | Needs a domain you own — the same one REL-4 needs. |
+| **CQ-16** | Digital Asset Links | The pairing link's App Link is declared on the Firebase Hosting domain (October 2026); left is `web/.well-known/assetlinks.json` with the release key's fingerprint (REL-1), and Credential Manager's half, which wants the same file. |
 | **CQ-18** | Cross-time-zone chat on two phones — **what is drawn only** | The logic now runs end to end in CI (`e2e` job, `TwoParentChatTest`: UTC+14 and UTC−11, unread → DELIVERED → READ). Left for the phones: the badge and ticks as rendered, the displayed times, and the push. |
 | **MON-1** | ~~Price, unit and free tier~~ **Decided 2026-09-30** — see MON-1 | Left: the Play merchant account and the tax set-up before MON-11 ships. |
 | **MON-9** | Distribution: mediators, Cochem courts, OSPOD, NGOs | Phone calls and meetings. A session can draft the material; it cannot make the call. |
@@ -1011,8 +1011,16 @@ was checked for a caller first, and had none:
 **Where:** 💻 yours — it needs a domain and the release fingerprint.
 
 `CredManMissingDal` is disabled in `app/build.gradle.kts` with that rationale. Credential Manager's
-password sign-in cannot share a credential with a website, and the pairing deep link stays a custom
-scheme rather than a verified App Link. Both need the domain **REL-4** needs for hosting.
+password sign-in cannot share a credential with a website. Both halves need a domain, and the
+project already has one: the Firebase Hosting site, `coparently-a39c9.web.app`.
+
+**The pairing half is built** (October 2026): invitations can be shared as
+`https://coparently-a39c9.web.app/pair/CODE` (`web/pair/`, behind `publishedPairingWebLink`), and
+the manifest declares that address with `autoVerify`. What is left is a file and a key:
+`web/.well-known/assetlinks.json` with the Play App Signing fingerprint, once REL-1 has made one
+(`web/README.md` has the template). Until then the link opens the page, whose button hands the
+code to the app. The Credential Manager half needs the same file with a `get_login_creds` relation,
+and the lint check switched back on.
 
 ### CQ-17 · P3 · S · Dependencies worth moving
 

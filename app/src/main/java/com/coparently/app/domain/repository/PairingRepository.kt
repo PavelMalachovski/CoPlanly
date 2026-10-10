@@ -1,5 +1,6 @@
 package com.coparently.app.domain.repository
 
+import com.coparently.app.domain.model.InvitePreview
 import com.coparently.app.domain.model.PairingInvite
 import com.coparently.app.domain.model.PairingState
 import kotlinx.coroutines.flow.Flow
@@ -35,6 +36,13 @@ interface PairingRepository {
      * [createOrReuseInviteCode] returns) so that code stops working.
      */
     suspend fun revokeActiveInvite(): Result<Unit>
+
+    /**
+     * Names the person behind [code] without redeeming it, so the screen can ask "Link with
+     * Alice?" rather than "Link with this code?" before anything is linked. Fails with the
+     * `PairingError` the redeem would fail with; writes nothing.
+     */
+    suspend fun previewInvite(code: String): Result<InvitePreview>
 
     /**
      * Redeems an invitation by its short [code].

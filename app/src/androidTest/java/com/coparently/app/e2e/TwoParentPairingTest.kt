@@ -1,8 +1,10 @@
 package com.coparently.app.e2e
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.coparently.app.data.remote.firebase.PairingException
 import com.coparently.app.domain.chat.ConversationKey
 import com.coparently.app.domain.family.FamilyKey
+import com.coparently.app.domain.model.PairingError
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
 import org.junit.Assert.assertEquals
@@ -71,5 +73,32 @@ class TwoParentPairingTest : TwoParentTest() {
         assertNotNull(alice.database.messageDao().getConversationById(conversationId))
         assertNotNull(bob.database.messageDao().getConversationById(conversationId))
         assertTrue(EmulatorEnvironment.documentExists("conversations/$conversationId"))
+    }
+
+    @Test
+    fun aCodeNamesItsInviterBeforeAnythingIsLinked() = runBlocking<Unit> {
+        // previewPairingInvitation: the app asks "Link with Alice?" before redeeming. Carol is a
+        // third account with no family yet, so the only answer is Alice's first name — and the
+        // code must still be pending afterwards, because a preview links nothing.
+        val carol = newParent("Carol")
+        val invite = alice.pairingRepository.createOrReuseInviteCode().getOrThrow()
+
+        val preview = carol.pairingRepository.previewInvite(invite.code).getOrThrow()
+
+        assertEquals(alice.name.split(" ").first(), preview.inviterName)
+        val stored = alice.firestore.collection("invitations").document(invite.id).get().await()
+        assertEquals("pending", stored.getString("status"))
+        assertTrue(carol.userRepository.getRemoteUserProfile(carol.uid)?.partnerId.isNullOrEmpty())
+    }
+
+    @Test
+    fun aPreviewRefusesWhatTheAcceptWouldRefuse() = runBlocking<Unit> {
+        // Bob is already Alice's co-parent: the preview says so rather than naming her and letting
+        // the confirmation end in a refusal.
+        val invite = alice.pairingRepository.createOrReuseInviteCode().getOrThrow()
+
+        val refused = bob.pairingRepository.previewInvite(invite.code).exceptionOrNull()
+
+        assertEquals(PairingError.AlreadyPaired, (refused as PairingException).error)
     }
 }

@@ -564,3 +564,147 @@ describe('pairing with more than one co-parent', () => {
     assert.deepStrictEqual(result, {partnerId: 'alice', role: 'dad'});
   });
 });
+
+describe('previewPairingInvitation', () => {
+  let myFunctions;
+
+  before(() => {
+    myFunctions = require('../index');
+  });
+
+  /**
+   * One pending co-parent invitation from Alice, and the two profiles behind it.
+   *
+   * @param {!Object=} overrides Fields to change on the invitation.
+   * @param {!Object=} users Profiles to use instead of the default two.
+   * @return {!Object} The fake Firestore.
+   */
+  function seeded(overrides = {}, users = null) {
+    return fakeDb({
+      invitations: {
+        inv1: Object.assign(
+            {id: 'inv1', status: 'pending', fromUserId: 'alice', toEmail: ''}, overrides),
+      },
+      users: users || {
+        alice: {id: 'alice', name: 'Alice Novak', role: 'mom'},
+        bob: {id: 'bob', name: 'Bob'},
+      },
+    });
+  }
+
+  it('rejects an unauthenticated caller', async () => {
+    const wrapped = test.wrap(myFunctions.previewPairingInvitation);
+    await assert.rejects(
+        () => wrapped({code: '4F7K2M'}, {}),
+        (err) => err.code === 'unauthenticated',
+    );
+  });
+
+  it('requires a code', async () => {
+    const wrapped = test.wrap(myFunctions.previewPairingInvitation);
+    await assert.rejects(
+        () => wrapped({}, {auth: {uid: 'bob', token: {}}}),
+        (err) => err.code === 'invalid-argument',
+    );
+  });
+
+  it('names the inviter by first name and changes nothing', async () => {
+    const db = seeded();
+
+    const result = await myFunctions.previewPairingInvitationImpl(
+        db, 'bob', '', {code: null, invitationId: 'inv1'});
+
+    assert.deepStrictEqual(result, {inviterName: 'Alice'});
+    assert.strictEqual(db._docs.invitations.inv1.status, 'pending');
+    assert.strictEqual(db._docs.users.bob.partnerId, undefined);
+    assert.strictEqual(db._docs.families, undefined);
+  });
+
+  it('never answers with an email kept as a name', async () => {
+    const db = seeded({}, {
+      alice: {id: 'alice', name: 'alice@example.com'},
+      bob: {id: 'bob', name: 'Bob'},
+    });
+
+    const result = await myFunctions.previewPairingInvitationImpl(
+        db, 'bob', '', {code: null, invitationId: 'inv1'});
+
+    assert.deepStrictEqual(result, {inviterName: ''});
+  });
+
+  it('answers with an empty name when the inviter has none', async () => {
+    const db = seeded({}, {alice: {id: 'alice'}, bob: {id: 'bob'}});
+
+    const result = await myFunctions.previewPairingInvitationImpl(
+        db, 'bob', '', {code: null, invitationId: 'inv1'});
+
+    assert.deepStrictEqual(result, {inviterName: ''});
+  });
+
+  // The preview refuses what the accept refuses, so a confirmation that names somebody is
+  // never followed by a refusal.
+  const refusals = [
+    ['an expired code', {expiresAt: Date.now() - 1000}, 'bob', 'invitation-expired'],
+    ['a spent code', {status: 'accepted'}, 'bob', 'invitation-not-pending'],
+    ['the caller\'s own code', {}, 'alice', 'self-pairing'],
+    ['a guest code', {kind: 'guest'}, 'bob', 'guest-invitation'],
+    ['a friend code', {kind: 'friend'}, 'bob', 'friend-invitation'],
+    ['a professional code', {kind: 'professional'}, 'bob', 'professional-invitation'],
+    ['a code addressed to somebody else', {toEmail: 'carol@example.com'}, 'bob', 'wrong-recipient'],
+  ];
+  refusals.forEach(([what, overrides, caller, reason]) => {
+    it(`refuses ${what} with the accept's reason`, async () => {
+      const db = seeded(overrides);
+      await assert.rejects(
+          () => myFunctions.previewPairingInvitationImpl(
+              db, caller, 'bob@example.com', {code: null, invitationId: 'inv1'}),
+          (err) => err.details && err.details.reason === reason);
+    });
+  });
+
+  it('refuses a code that matches no invitation', async () => {
+    await assert.rejects(
+        () => myFunctions.previewPairingInvitationImpl(
+            seeded(), 'bob', '', {code: null, invitationId: 'missing'}),
+        (err) => err.code === 'not-found' && err.details.reason === 'not-found');
+  });
+
+  it('refuses a repeat of the same pair', async () => {
+    const db = seeded({}, {
+      alice: {id: 'alice', name: 'Alice', role: 'mom', partnerIds: ['bob'], partnerId: 'bob'},
+      bob: {id: 'bob', name: 'Bob', role: 'dad', partnerIds: ['alice'], partnerId: 'alice'},
+    });
+    await assert.rejects(
+        () => myFunctions.previewPairingInvitationImpl(
+            db, 'bob', '', {code: null, invitationId: 'inv1'}),
+        (err) => err.details && err.details.reason === 'already-paired');
+  });
+
+  it('says which way round works before anybody confirms', async () => {
+    // Bob already co-parents as mom elsewhere; Alice keeps mom, so accepting would move him.
+    const db = seeded({}, {
+      alice: {id: 'alice', name: 'Alice', role: 'mom'},
+      bob: {id: 'bob', name: 'Bob', role: 'mom', partnerIds: ['carol'], partnerId: 'carol'},
+    });
+    await assert.rejects(
+        () => myFunctions.previewPairingInvitationImpl(
+            db, 'bob', '', {code: null, invitationId: 'inv1'}),
+        (err) => err.details && err.details.reason === 'enter-their-code');
+  });
+
+  it('leaves a caller with no profile yet to the accept', async () => {
+    const db = seeded({}, {alice: {id: 'alice', name: 'Alice', role: 'mom'}});
+
+    const result = await myFunctions.previewPairingInvitationImpl(
+        db, 'bob', '', {code: null, invitationId: 'inv1'});
+
+    assert.deepStrictEqual(result, {inviterName: 'Alice'});
+  });
+
+  it('keeps only the first word of a name', () => {
+    assert.strictEqual(myFunctions.previewFirstName('  Jana   Nováková '), 'Jana');
+    assert.strictEqual(myFunctions.previewFirstName(''), '');
+    assert.strictEqual(myFunctions.previewFirstName(null), '');
+    assert.strictEqual(myFunctions.previewFirstName('x'.repeat(60)).length, 40);
+  });
+});

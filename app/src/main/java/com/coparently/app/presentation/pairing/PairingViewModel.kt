@@ -7,12 +7,15 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.coparently.app.R
 import com.coparently.app.data.analytics.AnalyticsManager
+import com.coparently.app.data.remote.firebase.PairingException
 import com.coparently.app.data.remote.firebase.QRCodeService
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.ParentSlotMigrator
 import com.coparently.app.data.session.SignedInAccountSource
 import com.coparently.app.domain.custody.SharedCustodyRead
 import com.coparently.app.domain.model.AccountSummary
+import com.coparently.app.domain.model.InvitePreview
+import com.coparently.app.domain.model.PairingError
 import com.coparently.app.domain.model.PairingState
 import com.coparently.app.domain.model.activeInviteOrNull
 import com.coparently.app.domain.pairing.InviteCodeGenerator
@@ -63,8 +66,19 @@ data class PairingFormState(
      * says the invitation is out and the code can be handed over directly if it does not.
      */
     @StringRes val actionInfoRes: Int? = null,
-    val qrBitmap: Bitmap? = null
+    val qrBitmap: Bitmap? = null,
+    /** A code waiting for the parent's yes before it is redeemed; see [PairingViewModel.redeemCode]. */
+    val confirmation: InviteConfirmation? = null
 )
+
+/**
+ * A code the parent is about to link with, waiting for their yes.
+ *
+ * @property code The code that is redeemed on confirmation.
+ * @property inviterName Who the server says is behind it, or null when it could not say — the
+ *   dialog then asks about the code itself, as it did before the server could name anybody.
+ */
+data class InviteConfirmation(val code: String, val inviterName: String?)
 
 /**
  * One-shot signals the pairing screen acts on once and does not keep.
@@ -177,12 +191,16 @@ class PairingViewModel @Inject constructor(
     }
 
     /**
-     * Redeems the code currently in the input field.
+     * Starts linking with the code in the input field: asks the server who is behind it and
+     * holds the answer in [PairingFormState.confirmation] for the screen to confirm. Nothing is
+     * redeemed until [answerConfirmation] says yes.
      *
-     * Reaches the same `acceptPairingInvitation` callable as [acceptIncoming] — manual code
-     * entry, QR scan and deep link all funnel into [PairingRepository.redeem] — so it can
-     * flip this device's parent slot the same way and needs the same re-stamp; see
-     * [withSlotReslot].
+     * Every way a code arrives — typed, scanned, carried by a link — comes through here, so every
+     * one of them asks "Link with Alice?" first. Beta testers could not tell whose code they were
+     * entering; and a shared link may have been forwarded on. A refusal the accept would make
+     * lands on the field, as it always did. A preview that could not be answered at all (a
+     * backend without the callable, its rate limit) still asks, without a name, and leaves the
+     * decision to the accept — see [afterPreview].
      */
     fun redeemCode() {
         val code = _form.value.codeInput
@@ -190,6 +208,26 @@ class PairingViewModel @Inject constructor(
             _form.value = _form.value.copy(codeErrorRes = R.string.pairing_error_code_incomplete)
             return
         }
+        _form.value = _form.value.copy(isBusy = true, codeErrorRes = null, confirmation = null)
+        viewModelScope.launch {
+            val preview = pairingRepository.previewInvite(code)
+            _form.value = _form.value.afterPreview(code, preview)
+        }
+    }
+
+    /**
+     * The parent's answer to [PairingFormState.confirmation]: [link] redeems the code, anything
+     * else closes the question and leaves the code in the field.
+     *
+     * The redeem reaches the same `acceptPairingInvitation` callable as [acceptIncoming] — manual
+     * code entry, QR scan and deep link all funnel into [PairingRepository.redeem] — so it can
+     * flip this device's parent slot the same way and needs the same re-stamp; see
+     * [withSlotReslot].
+     */
+    fun answerConfirmation(link: Boolean) {
+        val code = _form.value.confirmation?.code ?: return
+        _form.value = _form.value.copy(confirmation = null)
+        if (!link) return
         launchAction(
             onError = { res -> _form.value = _form.value.copy(codeErrorRes = res) }
         ) { withSlotReslot { pairingRepository.redeem(code) } }
@@ -437,7 +475,7 @@ class PairingViewModel @Inject constructor(
     fun showQr() {
         val invite = state.value.activeInviteOrNull ?: return
         viewModelScope.launch {
-            val bitmap = qrCodeService.generatePairingQRCode(content = PairingUri.build(invite.code))
+            val bitmap = qrCodeService.generatePairingQRCode(content = pairingLinkFor(invite.code))
             _form.value = _form.value.copy(qrBitmap = bitmap)
         }
     }
@@ -467,15 +505,9 @@ class PairingViewModel @Inject constructor(
             val result = action()
             _form.value = _form.value.copy(isBusy = false)
             val failure = result.exceptionOrNull()
-            if (failure != null) onError(messageFor(failure)) else onSuccess()
+            if (failure != null) onError(failure.pairingMessageRes()) else onSuccess()
         }
     }
-
-    // Extracted to `PairingErrorText` so the guest and calendar-friend flows, which fail in the
-    // same ways, share one `when` rather than each keeping a copy for a new PairingError to go
-    // unhandled in.
-    @StringRes
-    private fun messageFor(throwable: Throwable): Int = throwable.pairingMessageRes()
 
     private companion object {
         const val TAG = "PairingViewModel"
@@ -487,5 +519,26 @@ class PairingViewModel @Inject constructor(
          * is not delivering at all, and then the accept must not hang behind it.
          */
         const val PAIRING_VISIBLE_TIMEOUT_MS = 5_000L
+    }
+}
+
+/**
+ * The form once the server has answered who is behind [code]: a confirmation to show, or the
+ * refusal on the field.
+ *
+ * Only an answer that says nothing about the code — [PairingError.Unknown], which is what a
+ * backend without `previewPairingInvitation` or its rate limit comes back as — still asks, and
+ * then without a name; the accept makes the decision the preview could not. Every other failure
+ * is the reason the accept would give too (an expired code, the parent's own, no connection), so
+ * asking first would only make the parent tap "Link" to be told it.
+ */
+private fun PairingFormState.afterPreview(code: String, preview: Result<InvitePreview>): PairingFormState {
+    val failure = preview.exceptionOrNull()
+        ?: return copy(isBusy = false, confirmation = InviteConfirmation(code, preview.getOrNull()?.inviterName))
+    val error = (failure as? PairingException)?.error
+    return if (error == null || error is PairingError.Unknown) {
+        copy(isBusy = false, confirmation = InviteConfirmation(code, inviterName = null))
+    } else {
+        copy(isBusy = false, codeErrorRes = failure.pairingMessageRes())
     }
 }

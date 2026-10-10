@@ -10,6 +10,7 @@ import com.coparently.app.data.remote.firebase.PairingException
 import com.coparently.app.data.remote.firebase.PairingFunctions
 import com.coparently.app.data.sync.SyncRequester
 import com.coparently.app.domain.model.FamilyKind
+import com.coparently.app.domain.model.InvitePreview
 import com.coparently.app.domain.model.PairingError
 import com.coparently.app.domain.model.PairingInvite
 import com.coparently.app.domain.model.PairingState
@@ -162,11 +163,15 @@ class PairingRepositoryImpl @Inject constructor(
             .forEach { it.reference.update("status", STATUS_CANCELLED).await() }
     }
 
+    override suspend fun previewInvite(code: String): Result<InvitePreview> {
+        val normalized = normalizedInviteCode(code)
+            ?: return Result.failure(PairingException(PairingError.NotFound))
+        return pairingFunctions.previewInvitation(normalized)
+    }
+
     override suspend fun redeem(code: String): Result<String?> {
-        val normalized = code.trim().uppercase()
-        if (!InviteCodeGenerator.isValid(normalized)) {
-            return Result.failure(PairingException(PairingError.NotFound))
-        }
+        val normalized = normalizedInviteCode(code)
+            ?: return Result.failure(PairingException(PairingError.NotFound))
         // Conversation creation deliberately does NOT hang off this call: it is driven by the
         // observed Paired transition in [onPairingStateObserved] instead, so the inviter's
         // phone — which never calls anything — ends up with a thread too.
@@ -451,19 +456,6 @@ class PairingRepositoryImpl @Inject constructor(
     private fun requireUser() = authService.getCurrentUser()
         ?: throw PairingException(PairingError.Unknown("Not signed in"))
 
-    private fun DocumentSnapshot.toInvite(): PairingInvite? {
-        val code = getString("code") ?: return null
-        return PairingInvite(
-            id = getString("id") ?: id,
-            code = code,
-            fromUserId = getString("fromUserId").orEmpty(),
-            fromUserName = getString("fromUserName").orEmpty(),
-            fromUserEmail = getString("fromUserEmail").orEmpty(),
-            toEmail = getString("toEmail").orEmpty(),
-            expiresAtMillis = getLong("expiresAt") ?: 0L
-        )
-    }
-
     /**
      * Narrows a batch of invitation documents down to the code/QR/link invites (as
      * opposed to email invitations) that have not yet expired, newest first.
@@ -531,3 +523,24 @@ class PairingRepositoryImpl @Inject constructor(
  * co-parent code (which the accept callable then refuses), and "New code" cancelled it.
  */
 private fun DocumentSnapshot.isCoParentInvite(): Boolean = getString("kind").isNullOrEmpty()
+
+/** An invitation document as the domain sees it, or null for one carrying no code. */
+private fun DocumentSnapshot.toInvite(): PairingInvite? {
+    val code = getString("code") ?: return null
+    return PairingInvite(
+        id = getString("id") ?: id,
+        code = code,
+        fromUserId = getString("fromUserId").orEmpty(),
+        fromUserName = getString("fromUserName").orEmpty(),
+        fromUserEmail = getString("fromUserEmail").orEmpty(),
+        toEmail = getString("toEmail").orEmpty(),
+        expiresAtMillis = getLong("expiresAt") ?: 0L
+    )
+}
+
+/**
+ * [code] trimmed and upper-cased, or null when it cannot be a code at all — refused here as
+ * [PairingError.NotFound] rather than spending a callable on it.
+ */
+private fun normalizedInviteCode(code: String): String? =
+    code.trim().uppercase().takeIf { InviteCodeGenerator.isValid(it) }

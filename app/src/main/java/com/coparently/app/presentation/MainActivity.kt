@@ -399,7 +399,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * Extracts a pairing code from a `coplanly://pair?code=…` intent.
+     * Extracts a pairing code from a pairing link in either form — `coplanly://pair?code=…`, or
+     * `https://coparently-a39c9.web.app/pair/…` once that opens the app (see [PairingUri]).
      *
      * The code is only pre-filled on the pairing screen — redeeming it still
      * needs an explicit confirmation, because a share link may have been
@@ -419,7 +420,7 @@ class MainActivity : AppCompatActivity() {
      */
     private fun readPairingCode(intent: Intent?) {
         val data = intent?.data ?: return
-        if (!PairingUri.isPairingUri(data.scheme, data.host)) return
+        if (!PairingUri.isPairingUri(data.scheme, data.host, data.path)) return
         _pendingPairingCode.value = PairingUri.extractCode(data.toString()).orEmpty()
     }
 

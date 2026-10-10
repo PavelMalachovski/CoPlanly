@@ -15,6 +15,7 @@ import com.coparently.app.domain.custody.SharedCustodyRead
 import com.coparently.app.domain.model.AccountSummary
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.CustodyModelType
+import com.coparently.app.domain.model.InvitePreview
 import com.coparently.app.domain.model.PairingError
 import com.coparently.app.domain.model.PairingInvite
 import com.coparently.app.domain.model.PairingState
@@ -85,7 +86,17 @@ class PairingViewModelTest {
         signedInAccountSource = mockk(relaxed = true)
         every { signedInAccountSource.observe() } returns flowOf(ACCOUNT)
         qrCodeService = mockk(relaxed = true)
+        coEvery { repository.previewInvite(any()) } returns Result.success(InvitePreview("Alice"))
         buildViewModel()
+    }
+
+    /** Enters [code], lets the preview answer, and says yes to linking — the whole redeem path. */
+    private fun linkWith(code: String) {
+        viewModel.onCodeInputChange(code)
+        viewModel.redeemCode()
+        dispatcher.scheduler.advanceUntilIdle()
+        viewModel.answerConfirmation(link = true)
+        dispatcher.scheduler.advanceUntilIdle()
     }
 
     /**
@@ -148,14 +159,91 @@ class PairingViewModelTest {
         coVerify(exactly = 0) { repository.redeem(any()) }
     }
 
+    // ---- the confirmation that names the inviter ----------------------------
+
+    @Test
+    fun `a code is previewed and nothing is redeemed until the parent says yes`() = runTest(dispatcher) {
+        viewModel.onCodeInputChange("4F7K2M")
+        viewModel.redeemCode()
+        dispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(InviteConfirmation("4F7K2M", "Alice"), viewModel.form.value.confirmation)
+        assertFalse(viewModel.form.value.isBusy)
+        coVerify(exactly = 0) { repository.redeem(any()) }
+    }
+
+    @Test
+    fun `saying yes redeems the code that was named`() = runTest(dispatcher) {
+        // A relaxed mock cannot make a Result<String?>: it hands back an Object that fails the cast.
+        coEvery { repository.redeem("4F7K2M") } returns Result.success(null)
+
+        linkWith("4F7K2M")
+
+        coVerify(exactly = 1) { repository.redeem("4F7K2M") }
+        assertNull(viewModel.form.value.confirmation)
+    }
+
+    @Test
+    fun `saying no redeems nothing and keeps the code in the field`() = runTest(dispatcher) {
+        viewModel.onCodeInputChange("4F7K2M")
+        viewModel.redeemCode()
+        dispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.answerConfirmation(link = false)
+        dispatcher.scheduler.advanceUntilIdle()
+
+        assertNull(viewModel.form.value.confirmation)
+        assertEquals("4F7K2M", viewModel.form.value.codeInput)
+        coVerify(exactly = 0) { repository.redeem(any()) }
+    }
+
+    @Test
+    fun `a code the server refuses is reported without asking`() = runTest(dispatcher) {
+        coEvery { repository.previewInvite("4F7K2M") } returns
+            Result.failure(PairingException(PairingError.EnterTheirCode))
+
+        viewModel.onCodeInputChange("4F7K2M")
+        viewModel.redeemCode()
+        dispatcher.scheduler.advanceUntilIdle()
+
+        assertNull(viewModel.form.value.confirmation)
+        assertEquals(R.string.pairing_error_enter_their_code, viewModel.form.value.codeErrorRes)
+        coVerify(exactly = 0) { repository.redeem(any()) }
+    }
+
+    @Test
+    fun `no connection is reported rather than asked about`() = runTest(dispatcher) {
+        coEvery { repository.previewInvite("4F7K2M") } returns
+            Result.failure(PairingException(PairingError.Network))
+
+        viewModel.onCodeInputChange("4F7K2M")
+        viewModel.redeemCode()
+        dispatcher.scheduler.advanceUntilIdle()
+
+        assertNull(viewModel.form.value.confirmation)
+        assertEquals(R.string.pairing_error_network, viewModel.form.value.codeErrorRes)
+    }
+
+    @Test
+    fun `a preview that says nothing about the code still asks, without a name`() = runTest(dispatcher) {
+        // A backend without the callable, or its rate limit: the accept decides instead.
+        coEvery { repository.previewInvite("4F7K2M") } returns
+            Result.failure(PairingException(PairingError.Unknown("previewPairingInvitation unavailable")))
+
+        viewModel.onCodeInputChange("4F7K2M")
+        viewModel.redeemCode()
+        dispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(InviteConfirmation("4F7K2M", inviterName = null), viewModel.form.value.confirmation)
+        assertNull(viewModel.form.value.codeErrorRes)
+    }
+
     @Test
     fun `an already-paired failure maps to its own message under the code field`() = runTest(dispatcher) {
         coEvery { repository.redeem("4F7K2M") } returns
             Result.failure(PairingException(PairingError.AlreadyPaired))
 
-        viewModel.onCodeInputChange("4F7K2M")
-        viewModel.redeemCode()
-        dispatcher.scheduler.advanceUntilIdle()
+        linkWith("4F7K2M")
 
         assertEquals(R.string.pairing_error_already_paired, viewModel.form.value.codeErrorRes)
     }
@@ -178,9 +266,7 @@ class PairingViewModelTest {
         cases.forEach { (error, expectedRes) ->
             coEvery { repository.redeem("4F7K2M") } returns Result.failure(PairingException(error))
 
-            viewModel.onCodeInputChange("4F7K2M")
-            viewModel.redeemCode()
-            dispatcher.scheduler.advanceUntilIdle()
+            linkWith("4F7K2M")
 
             assertEquals("mapping for $error", expectedRes, viewModel.form.value.codeErrorRes)
         }
@@ -190,9 +276,7 @@ class PairingViewModelTest {
     fun `a non-pairing exception falls back to the unknown-error message`() = runTest(dispatcher) {
         coEvery { repository.redeem("4F7K2M") } returns Result.failure(RuntimeException("boom"))
 
-        viewModel.onCodeInputChange("4F7K2M")
-        viewModel.redeemCode()
-        dispatcher.scheduler.advanceUntilIdle()
+        linkWith("4F7K2M")
 
         assertEquals(R.string.pairing_error_unknown, viewModel.form.value.codeErrorRes)
     }
@@ -399,9 +483,7 @@ class PairingViewModelTest {
             coEvery { userRepository.getCurrentUser() } returns userWithRole("mom")
             coEvery { repository.redeem("4F7K2M") } returns Result.success("dad")
 
-            viewModel.onCodeInputChange("4F7K2M")
-            viewModel.redeemCode()
-            dispatcher.scheduler.advanceUntilIdle()
+            linkWith("4F7K2M")
 
             coVerify(exactly = 1) {
                 parentSlotMigrator.reslot(from = "mom", to = "dad", myUid = "user-a")
@@ -414,9 +496,7 @@ class PairingViewModelTest {
             coEvery { userRepository.getCurrentUser() } returns userWithRole("mom")
             coEvery { repository.redeem("4F7K2M") } returns Result.success("mom")
 
-            viewModel.onCodeInputChange("4F7K2M")
-            viewModel.redeemCode()
-            dispatcher.scheduler.advanceUntilIdle()
+            linkWith("4F7K2M")
 
             coVerify(exactly = 0) { parentSlotMigrator.reslot(any(), any(), any()) }
         }
@@ -427,9 +507,7 @@ class PairingViewModelTest {
         coEvery { repository.redeem("4F7K2M") } returns
             Result.failure(PairingException(PairingError.NotFound))
 
-        viewModel.onCodeInputChange("4F7K2M")
-        viewModel.redeemCode()
-        dispatcher.scheduler.advanceUntilIdle()
+        linkWith("4F7K2M")
 
         coVerify(exactly = 0) { parentSlotMigrator.reslot(any(), any(), any()) }
     }

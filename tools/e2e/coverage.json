@@ -373,6 +373,15 @@
         "TwoParentPairingTest"
       ]
     },
+    "previewPairingInvitation": {
+      "e2e": [
+        "TwoParentPairingTest#aCodeNamesItsInviterBeforeAnythingIsLinked",
+        "TwoParentPairingTest#aPreviewRefusesWhatTheAcceptWouldRefuse"
+      ],
+      "checklist": [
+        "5.7"
+      ]
+    },
     "exchangeGoogleAuthCode": {
       "exempt": "Needs a real Google authorization code; functions/test covers the exchange and the refresh-token hash."
     },

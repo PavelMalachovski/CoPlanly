@@ -1,6 +1,7 @@
 package com.coparently.app.data.remote.firebase
 
 import android.util.Log
+import com.coparently.app.domain.model.InvitePreview
 import com.coparently.app.domain.model.PairingError
 import com.google.firebase.functions.FirebaseFunctions
 import com.google.firebase.functions.FirebaseFunctionsException
@@ -66,6 +67,31 @@ class PairingFunctions @Inject constructor(
                 },
                 role = role
             )
+        }
+    }
+
+    /**
+     * Asks who is behind [code] without redeeming it (`previewPairingInvitation`).
+     *
+     * Fails with the [PairingError] the accept would fail with, so a code that cannot be linked
+     * is refused before the parent is asked to confirm. A `NOT_FOUND` that carries no reason is
+     * not a missing invitation — the server always names one — but the callable itself missing,
+     * on a backend not yet redeployed. That comes back as [PairingError.Unknown], so the caller
+     * can still ask without a name and leave the decision to the accept.
+     *
+     * @return the inviter's first name, or null when the server has none to show.
+     */
+    suspend fun previewInvitation(code: String): Result<InvitePreview> {
+        val result = call("previewPairingInvitation", mapOf("code" to code)) { data ->
+            InvitePreview(inviterName = (data["inviterName"] as? String)?.trim()?.takeIf { it.isNotEmpty() })
+        }
+        val failure = result.exceptionOrNull() as? PairingException ?: return result
+        val callableMissing = failure.error == PairingError.NotFound && reasonOf(failure.cause) == null
+        return if (callableMissing) {
+            val unavailable = PairingError.Unknown("previewPairingInvitation unavailable")
+            Result.failure(PairingException(unavailable, failure.cause))
+        } else {
+            result
         }
     }
 
@@ -224,11 +250,13 @@ class PairingFunctions @Inject constructor(
     companion object {
         private const val TAG = "PairingFunctions"
 
+        /** The `reason` a callable put in its error's details, or null when it named none. */
+        private fun reasonOf(e: Throwable?): String? =
+            ((e as? FirebaseFunctionsException)?.details as? Map<*, *>)?.get("reason") as? String
+
         /** Maps a callable failure to the matching [PairingError]. */
         fun toPairingError(e: Throwable): PairingError {
-            val reason = ((e as? FirebaseFunctionsException)?.details as? Map<*, *>)
-                ?.get("reason") as? String
-            return when (reason) {
+            return when (reasonOf(e)) {
                 "not-found" -> PairingError.NotFound
                 "invitation-expired" -> PairingError.Expired
                 "invitation-not-pending" -> PairingError.NotPending

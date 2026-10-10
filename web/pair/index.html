@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<title>You're invited to CoPlanly</title>
+<meta name="description" content="An invitation to share a calendar, a chat and expenses with your co-parent in CoPlanly.">
+<!--
+  The page a pairing link opens: https://coparently-a39c9.web.app/pair/CODE, which `firebase.json`
+  rewrites to this file. It is what makes the invitation clickable in a messenger — the old
+  `coplanly://pair?code=` link was plain text in WhatsApp — and it is what somebody without the
+  app lands on.
+
+  Once `web/.well-known/assetlinks.json` names the app's signing key, Android opens the app
+  straight from the link and this page is never seen on a phone that has it. Until then, and
+  without the app, it shows the code and one button: on Android an `intent://` link that hands the
+  code to the app through the custom scheme, or falls back to Google Play.
+
+  What it must never do:
+  - **Say who invited you.** The page is public and needs only the link; the inviter's name is
+    shown by the app, to a signed-in account, by `previewPairingInvitation`. Anyone holding a
+    forwarded link would otherwise read a name off it.
+  - **Send the code anywhere.** No request, no analytics, no external asset (like every page in
+    web/). The code is read from the address in the browser. `Referrer-Policy: no-referrer` (the
+    meta tag above and the header in firebase.json) keeps it out of the Play Store's logs when the
+    button is followed.
+  - **Link by a relative path.** The rewrite serves this file at /pair/CODE/, where `../privacy/`
+    would be /pair/privacy/.
+
+  web-tests/pair-page.spec.js drives it in Chromium. The texts mirror the app's own wording in
+  `pairing_strings.xml`; keep the five languages in step, as there.
+-->
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #ffffff;
+    --fg: #1b1b21;
+    --muted: #55555f;
+    --rule: #e2e2e8;
+    --accent: #4f46b8;
+    --on-accent: #ffffff;
+    --warn-bg: #fdf3f3;
+    --warn-fg: #7a2020;
+    --field: #f4f4f8;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1b1b21;
+      --fg: #ecebf0;
+      --muted: #a9a8b3;
+      --rule: #33333c;
+      --accent: #c2c1ff;
+      --on-accent: #1b1b21;
+      --warn-bg: #3a2224;
+      --warn-fg: #ffb4ab;
+      --field: #26262e;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 1.5rem 1rem 4rem;
+    background: var(--bg);
+    color: var(--fg);
+    font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  main { max-width: 32rem; margin: 0 auto; }
+  h1 { font-size: 1.6rem; line-height: 1.25; margin: 0 0 .5rem; }
+  h2 { font-size: 1.15rem; margin: 2rem 0 .5rem; }
+  p, ol { margin: .5rem 0; }
+  ol { padding-left: 1.4rem; }
+  li { margin: .35rem 0; }
+  a { color: var(--accent); }
+  .lede { color: var(--muted); margin-bottom: 1.25rem; }
+  .lang { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0 .25rem; font-size: .875rem; margin-bottom: 1rem; }
+  .lang button { background: none; border: 0; color: var(--accent); cursor: pointer; font: inherit; padding: .2rem .3rem; }
+  .lang button[aria-pressed="true"] { color: var(--fg); font-weight: 600; cursor: default; }
+  .panel { background: var(--field); border-radius: 1rem; padding: 1.25rem 1.1rem; margin: 1rem 0; text-align: center; }
+  .label { color: var(--muted); font-size: .875rem; margin: 0; }
+  .code {
+    font: 600 2.1rem/1.2 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    letter-spacing: .3em;
+    margin: .35rem 0 .75rem;
+    padding-left: .3em; /* balances the trailing letter-spacing so the code sits centred */
+    overflow-wrap: anywhere;
+  }
+  .hint { color: var(--muted); font-size: .875rem; }
+  .button {
+    display: block; width: 100%; text-align: center; text-decoration: none;
+    background: var(--accent); color: var(--on-accent); border: 0; border-radius: 999px;
+    padding: .8rem 1.2rem; font: inherit; font-weight: 600; cursor: pointer; margin: 1.25rem 0 .35rem;
+  }
+  .secondary {
+    background: none; border: 1px solid var(--rule); color: var(--fg); border-radius: 999px;
+    padding: .4rem 1rem; font: inherit; font-size: .9rem; cursor: pointer;
+  }
+  .note { background: var(--field); border-radius: .75rem; padding: .9rem 1.1rem; margin: 1rem 0; }
+  .bad { background: var(--warn-bg); color: var(--warn-fg); border-radius: .75rem; padding: .9rem 1.1rem; margin: 1rem 0; }
+  .bad h2 { margin: 0 0 .35rem; font-size: 1.05rem; }
+  footer { color: var(--muted); font-size: .875rem; margin-top: 2.5rem; border-top: 1px solid var(--rule); padding-top: 1rem; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <div class="lang" role="group" aria-label="Language">
+    <button type="button" data-lang="en" aria-pressed="true">English</button>
+    <button type="button" data-lang="cs" aria-pressed="false">Čeština</button>
+    <button type="button" data-lang="de" aria-pressed="false">Deutsch</button>
+    <button type="button" data-lang="ru" aria-pressed="false">Русский</button>
+    <button type="button" data-lang="uk" aria-pressed="false">Українська</button>
+  </div>
+
+  <h1 data-t="title">You're invited to CoPlanly</h1>
+  <p class="lede" data-t="lede"></p>
+
+  <noscript>
+    <p class="note">Your invitation code is the last part of this page's address. Open CoPlanly and enter it there.</p>
+  </noscript>
+
+  <section id="invite" hidden>
+    <div class="panel">
+      <p class="label" data-t="codeLabel"></p>
+      <p id="code" class="code" translate="no"></p>
+      <button id="copy" class="secondary" type="button" data-t="copy"></button>
+      <p class="hint" data-t="expiry"></p>
+    </div>
+
+    <div id="android" hidden>
+      <a id="open" class="button" data-t="open"></a>
+      <p class="hint" data-t="openHint"></p>
+    </div>
+
+    <div id="ios" class="note" hidden>
+      <p><strong data-t="iosHead"></strong> <span data-t="iosBody"></span></p>
+    </div>
+
+    <div id="desktop" class="note" hidden>
+      <p data-t="desktopBody"></p>
+    </div>
+
+    <div id="install">
+      <h2 data-t="noAppHead"></h2>
+      <ol>
+        <li><span data-t="step1"></span> <a id="play" data-t="playLink"></a></li>
+        <li data-t="step2"></li>
+        <li data-t="step3"></li>
+      </ol>
+    </div>
+  </section>
+
+  <section id="bad" class="bad" role="alert" hidden>
+    <h2 data-t="badHead"></h2>
+    <p data-t="badBody"></p>
+  </section>
+
+  <p class="hint" data-t="privacyNote"></p>
+
+  <footer>
+    <a href="/privacy/" data-t="privacyLink"></a>
+  </footer>
+</main>
+
+<script>
+'use strict';
+
+/** InviteCodeGenerator.ALPHABET and LENGTH: no 0/O, 1/I/L, so a code read aloud is unambiguous. */
+const CODE = /^[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{6}$/;
+
+/** The app's applicationId, which the intent link names so no other app can answer it. */
+const PACKAGE = 'app.coplanly';
+
+/** Where somebody without the app gets it; the same address the app's share text used. */
+const PLAY_URL = 'https://play.google.com/store/apps/details?id=' + PACKAGE;
+
+const TEXT = {
+  en: {
+    pageTitle: 'You’re invited to CoPlanly',
+    title: 'You’re invited to CoPlanly',
+    lede: 'The person who sent you this link invites you to share a calendar, a chat and expenses for your children in CoPlanly.',
+    codeLabel: 'Invitation code',
+    copy: 'Copy code',
+    copied: 'Copied',
+    expiry: 'A code works for 24 hours. If it has run out, ask for a new one.',
+    open: 'Open in CoPlanly',
+    openHint: 'The app shows who invited you and asks before linking anything.',
+    iosHead: 'On an iPhone?',
+    iosBody: 'CoPlanly is only on Android for now. Ask the person who invited you for the link to your shared calendar — it opens in Apple Calendar.',
+    desktopBody: 'Open this link on your Android phone, or type the code into the app there.',
+    noAppHead: 'Don’t have CoPlanly yet?',
+    step1: 'Install it from Google Play:',
+    playLink: 'CoPlanly on Google Play',
+    step2: 'Open it and sign in.',
+    step3: 'Come back here and tap “Open in CoPlanly”, or type the code above into the app.',
+    badHead: 'This link is incomplete',
+    badBody: 'There is no valid code in it. Ask the person who sent it for a new link, or for the six-character code.',
+    privacyNote: 'This page sends nothing anywhere. Your browser reads the code straight from the link.',
+    privacyLink: 'Privacy policy',
+  },
+  cs: {
+    pageTitle: 'Pozvánka do CoPlanly',
+    title: 'Pozvánka do CoPlanly',
+    lede: 'Kdo vám poslal tento odkaz, vás zve ke společnému kalendáři, chatu a výdajům za děti v CoPlanly.',
+    codeLabel: 'Kód pozvánky',
+    copy: 'Kopírovat kód',
+    copied: 'Zkopírováno',
+    expiry: 'Kód platí 24 hodin. Pokud už neplatí, požádejte o nový.',
+    open: 'Otevřít v CoPlanly',
+    openHint: 'Aplikace ukáže, kdo vás zve, a před propojením se zeptá.',
+    iosHead: 'Máte iPhone?',
+    iosBody: 'CoPlanly je zatím jen pro Android. Požádejte toho, kdo vás zve, o odkaz na váš společný kalendář – otevře se v Kalendáři Apple.',
+    desktopBody: 'Otevřete tento odkaz v telefonu s Androidem, nebo tam kód zadejte do aplikace.',
+    noAppHead: 'Ještě nemáte CoPlanly?',
+    step1: 'Nainstalujte si ji z Google Play:',
+    playLink: 'CoPlanly na Google Play',
+    step2: 'Otevřete ji a přihlaste se.',
+    step3: 'Vraťte se sem a klepněte na „Otevřít v CoPlanly“, nebo kód výše zadejte v aplikaci.',
+    badHead: 'Odkaz je neúplný',
+    badBody: 'Není v něm platný kód. Požádejte odesílatele o nový odkaz nebo o kód o šesti znacích.',
+    privacyNote: 'Tato stránka nikam nic neodesílá. Kód čte váš prohlížeč přímo z odkazu.',
+    privacyLink: 'Zásady ochrany osobních údajů',
+  },
+  de: {
+    pageTitle: 'Einladung zu CoPlanly',
+    title: 'Einladung zu CoPlanly',
+    lede: 'Wer dir diesen Link geschickt hat, lädt dich ein, in CoPlanly einen Kalender, einen Chat und die Ausgaben für eure Kinder zu teilen.',
+    codeLabel: 'Einladungscode',
+    copy: 'Code kopieren',
+    copied: 'Kopiert',
+    expiry: 'Ein Code gilt 24 Stunden. Ist er abgelaufen, bitte um einen neuen.',
+    open: 'In CoPlanly öffnen',
+    openHint: 'Die App zeigt, wer dich eingeladen hat, und fragt, bevor sie etwas verknüpft.',
+    iosHead: 'Du hast ein iPhone?',
+    iosBody: 'CoPlanly gibt es vorerst nur für Android. Bitte die Person, die dich eingeladen hat, um den Link zu eurem gemeinsamen Kalender – er öffnet sich im Apple-Kalender.',
+    desktopBody: 'Öffne diesen Link auf deinem Android-Handy oder gib den Code dort in der App ein.',
+    noAppHead: 'Du hast CoPlanly noch nicht?',
+    step1: 'Installiere die App bei Google Play:',
+    playLink: 'CoPlanly bei Google Play',
+    step2: 'Öffne sie und melde dich an.',
+    step3: 'Komm hierher zurück und tippe auf „In CoPlanly öffnen“ – oder gib den Code oben in der App ein.',
+    badHead: 'Dieser Link ist unvollständig',
+    badBody: 'Er enthält keinen gültigen Code. Bitte die Person, die ihn geschickt hat, um einen neuen Link oder um den sechsstelligen Code.',
+    privacyNote: 'Diese Seite sendet nichts. Dein Browser liest den Code direkt aus dem Link.',
+    privacyLink: 'Datenschutzerklärung',
+  },
+  ru: {
+    pageTitle: 'Приглашение в CoPlanly',
+    title: 'Приглашение в CoPlanly',
+    lede: 'Тот, кто прислал вам эту ссылку, приглашает вас вести в CoPlanly общий календарь, чат и расходы на детей.',
+    codeLabel: 'Код приглашения',
+    copy: 'Скопировать код',
+    copied: 'Скопировано',
+    expiry: 'Код действует 24 часа. Если он уже не работает, попросите новый.',
+    open: 'Открыть в CoPlanly',
+    openHint: 'Приложение покажет, кто вас пригласил, и спросит, прежде чем что-то связывать.',
+    iosHead: 'У вас iPhone?',
+    iosBody: 'CoPlanly пока есть только для Android. Попросите пригласившего ссылку на ваш общий календарь — она откроется в Календаре Apple.',
+    desktopBody: 'Откройте эту ссылку на телефоне с Android или введите там код в приложении.',
+    noAppHead: 'Ещё нет CoPlanly?',
+    step1: 'Установите приложение из Google Play:',
+    playLink: 'CoPlanly в Google Play',
+    step2: 'Откройте его и войдите.',
+    step3: 'Вернитесь сюда и нажмите «Открыть в CoPlanly» — или введите код выше в приложении.',
+    badHead: 'Ссылка неполная',
+    badBody: 'В ней нет действительного кода. Попросите отправителя прислать новую ссылку или код из шести символов.',
+    privacyNote: 'Эта страница ничего никуда не отправляет. Код ваш браузер читает прямо из ссылки.',
+    privacyLink: 'Политика конфиденциальности',
+  },
+  uk: {
+    pageTitle: 'Запрошення до CoPlanly',
+    title: 'Запрошення до CoPlanly',
+    lede: 'Той, хто надіслав вам це посилання, запрошує вас вести в CoPlanly спільний календар, чат і витрати на дітей.',
+    codeLabel: 'Код запрошення',
+    copy: 'Скопіювати код',
+    copied: 'Скопійовано',
+    expiry: 'Код діє 24 години. Якщо він уже не працює, попросіть новий.',
+    open: 'Відкрити в CoPlanly',
+    openHint: 'Застосунок покаже, хто вас запросив, і запитає, перш ніж щось зʼєднувати.',
+    iosHead: 'У вас iPhone?',
+    iosBody: 'CoPlanly поки є лише для Android. Попросіть того, хто вас запросив, посилання на ваш спільний календар — воно відкриється в Календарі Apple.',
+    desktopBody: 'Відкрийте це посилання на телефоні з Android або введіть там код у застосунку.',
+    noAppHead: 'Ще немає CoPlanly?',
+    step1: 'Встановіть застосунок із Google Play:',
+    playLink: 'CoPlanly в Google Play',
+    step2: 'Відкрийте його та увійдіть.',
+    step3: 'Поверніться сюди й натисніть «Відкрити в CoPlanly» — або введіть код вище в застосунку.',
+    badHead: 'Посилання неповне',
+    badBody: 'У ньому немає дійсного коду. Попросіть відправника надіслати нове посилання або код із шести символів.',
+    privacyNote: 'Ця сторінка нічого нікуди не надсилає. Код ваш браузер читає просто з посилання.',
+    privacyLink: 'Політика конфіденційності',
+  },
+};
+
+/**
+ * The code this page was opened for: the path segment after /pair/ (the form the app shares), or
+ * a `?code=` parameter (what a hand-typed address might carry). Null unless it is a valid code.
+ *
+ * @return {?string} The upper-cased code.
+ */
+function codeFromAddress() {
+  const fromPath = /\/pair\/([^/?#]+)/i.exec(location.pathname);
+  const raw = fromPath ? fromPath[1] : new URLSearchParams(location.search).get('code');
+  let decoded = '';
+  try {
+    decoded = decodeURIComponent(raw || '');
+  } catch (e) {
+    return null; // a malformed escape is not a code
+  }
+  const code = decoded.trim().toUpperCase();
+  return CODE.test(code) ? code : null;
+}
+
+/** @return {string} 'android', 'ios' or 'desktop'. */
+function platform() {
+  const ua = navigator.userAgent || '';
+  if (/Android/i.test(ua)) return 'android';
+  // iPadOS reports itself as a Mac; a touch screen is what gives it away.
+  if (/iPhone|iPad|iPod/i.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)) return 'ios';
+  return 'desktop';
+}
+
+/**
+ * The link the Android button follows: Chrome's `intent:` form of `coplanly://pair?code=…`, bound
+ * to this app's package, falling back to Google Play when the app is not installed. The app then
+ * asks the server who sent the code and shows the name before linking anything.
+ *
+ * @param {string} code A valid code.
+ * @return {string} The intent URL.
+ */
+function intentUrl(code) {
+  return 'intent://pair?code=' + code +
+    '#Intent;scheme=coplanly;package=' + PACKAGE +
+    ';S.browser_fallback_url=' + encodeURIComponent(PLAY_URL) + ';end';
+}
+
+/** @return {string} The first of the reader's languages this page speaks, else English. */
+function preferredLanguage() {
+  const wanted = (navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || 'en'])
+      .map((l) => String(l).toLowerCase().slice(0, 2));
+  for (const l of wanted) {
+    if (TEXT[l]) return l;
+    if (l === 'sk') return 'cs';
+  }
+  return 'en';
+}
+
+let lang = preferredLanguage();
+const code = codeFromAddress();
+
+/** Writes every text in the current language. Text only: nothing here is read as HTML. */
+function render() {
+  const t = TEXT[lang];
+  document.documentElement.lang = lang;
+  document.title = t.pageTitle;
+  document.querySelectorAll('[data-t]').forEach((el) => {
+    el.textContent = t[el.dataset.t];
+  });
+  document.querySelectorAll('[data-lang]').forEach((b) => {
+    b.setAttribute('aria-pressed', String(b.dataset.lang === lang));
+  });
+}
+
+document.querySelectorAll('[data-lang]').forEach((b) => {
+  b.addEventListener('click', () => {
+    lang = b.dataset.lang;
+    render();
+  });
+});
+
+if (code) {
+  const where = platform();
+  document.getElementById('invite').hidden = false;
+  document.getElementById('code').textContent = code;
+  document.getElementById('play').href = PLAY_URL;
+  document.getElementById('open').href = intentUrl(code);
+  document.getElementById('android').hidden = where !== 'android';
+  document.getElementById('ios').hidden = where !== 'ios';
+  document.getElementById('desktop').hidden = where !== 'desktop';
+  // There is nothing to install on an iPhone, so the steps would only send them to a dead end.
+  document.getElementById('install').hidden = where === 'ios';
+
+  const copy = document.getElementById('copy');
+  if (navigator.clipboard && window.isSecureContext) {
+    copy.addEventListener('click', () => {
+      navigator.clipboard.writeText(code).then(() => {
+        copy.textContent = TEXT[lang].copied;
+      }, () => {});
+    });
+  } else {
+    copy.hidden = true;
+  }
+} else {
+  document.getElementById('bad').hidden = false;
+}
+
+render();
+</script>
+</body>
+</html>
