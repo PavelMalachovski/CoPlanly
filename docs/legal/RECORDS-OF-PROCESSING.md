@@ -43,7 +43,7 @@ only what is specific to it.
 | Data subjects | Parents |
 | Data | Name, email, optional profile photo (Google), optional date of birth and phone, auth identifier, parent slot, partner uids, FCM token, country and region, onboarding state, whether the family cares for children, pets or both (`caresFor`), health-data consent record `{version, atMillis}`, AI-assist consent record `{version, grantedAt}` (P15) |
 | Legal basis | Art. 6(1)(b) contract; the consent record is kept under Art. 7(1) to demonstrate consent |
-| Recipients | The linked co-parent (name, slot, photo) |
+| Recipients | The linked co-parent (name, slot, photo); before linking, a signed-in person entering the inviter's code sees the inviter's **first name** only (`previewPairingInvitation`, rate-limited per account, writes nothing) |
 | Retention | Life of the account; deleted at once on account deletion |
 | Where | `users/{uid}`, `families/{id}`, Firebase Auth, Room `users` |
 

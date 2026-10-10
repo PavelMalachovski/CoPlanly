@@ -4,7 +4,8 @@ Two things Google Play requires of CoPlanly are URLs, not screens: a privacy pol
 delete an account that works **without the app installed**. This directory holds both, plus the
 terms of service: `delete-account/`, `privacy/` and `terms/`, one self-contained `index.html`
 each. A fourth page, `verify/`, is not a Play requirement but belongs with them: it is where a
-lawyer or a court checks an exported record (MON-16). The legal texts are still drafts (REL-4) — every page carries a banner saying so until the
+lawyer or a court checks an exported record (MON-16). A fifth, `pair/`, is where a co-parent's
+invitation link lands. The legal texts are still drafts (REL-4) — every page carries a banner saying so until the
 last `{{PLACEHOLDER}}` is gone — but the pages exist so that hosting them is one command once a
 lawyer has been through the markdown.
 
@@ -114,6 +115,56 @@ Once hosted, its URL goes into `publishedExportVerifyUrl` in `app/build.gradle.k
 registered export printed after that carries it. Until then a registered export prints its record
 ID without an address — deliberately, rather than a link that does not resolve.
 
+## `pair/index.html` — where an invitation link lands
+
+The app shares an invitation as `https://coparently-a39c9.web.app/pair/CODE` once
+`publishedPairingWebLink` in `app/build.gradle.kts` is true (it is false until this page is hosted;
+`-PCOPLANLY_PAIRING_WEB_LINK=true` tries it for one build). The custom-scheme link it replaces,
+`coplanly://pair?code=`, opens the app but is plain text in WhatsApp and most messengers — beta
+testers could not tap it. `firebase.json` rewrites `/pair/**` to this one file and sends it with
+`Referrer-Policy: no-referrer` and `X-Robots-Tag: noindex`.
+
+- **On Android** the page shows the code and **Open in CoPlanly**, an `intent://` link that hands
+  the code to the app through the custom scheme, bound to `app.coplanly`, and falls back to Google
+  Play when the app is not installed. The app then asks "Link with {first name}?" — the name comes
+  from `previewPairingInvitation`, after sign-in, never from this page.
+- **On an iPhone** it says the app is Android-only and to ask for the calendar link (MON-17); **on a
+  computer**, to open the link on the phone. Five languages, following the browser.
+- **It never names the inviter and makes no request.** The page is public and anyone with a
+  forwarded link can open it; the code is read from the address in the browser.
+- **Links are absolute** (`/privacy/`): the rewrite serves the file at `/pair/CODE/`.
+- **Tested** by `web-tests/pair-page.spec.js` in the `web` job, through `firebase.json`'s own
+  rewrite and headers (`web-tests/support/static-server.js` reads them).
+- **It cannot go live alone.** `firebase deploy --only hosting` publishes the whole directory, so
+  hosting this page publishes the draft legal pages beside it (with their banners) — a decision
+  for the owner, below. Until then the app keeps sharing the custom-scheme link.
+
+### Opening the app straight from the link (App Links)
+
+The manifest declares the link with `android:autoVerify="true"`. Android opens the app directly,
+without this page, once `https://coparently-a39c9.web.app/.well-known/assetlinks.json` names the
+SHA-256 fingerprint of the key the installed app is signed with. Until then the page is the step in
+between. The file is not committed because the release key does not exist yet (REL-1); when it
+does, add `web/.well-known/assetlinks.json`:
+
+```json
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "app.coplanly",
+    "sha256_cert_fingerprints": ["AA:BB:…"]
+  }
+}]
+```
+
+with the **Play App Signing** key's fingerprint (Play Console → Test and release → App integrity),
+and the upload or debug key's too if testers install builds signed with it
+(`keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android`).
+`firebase.json`'s `"**/.*"` ignore does **not** drop it: the pinned CLI (`firestore-tests/`)
+lists `.well-known/assetlinks.json` for upload under that pattern, which was checked against its
+own `listFiles` before this was written. Android re-verifies on install, so reinstall to test.
+
 ### Hosting
 
 Anything that serves a static file. `firebase.json` now carries a `hosting` block that serves
@@ -124,8 +175,8 @@ exists in the Firebase project:
 firebase deploy --only hosting
 ```
 
-puts the four pages at `https://<site>/delete-account/`, `https://<site>/privacy/`,
-`https://<site>/terms/` and `https://<site>/verify/`. **Nothing has been deployed yet**, and deploying is a decision, not a
+puts the five pages at `https://<site>/delete-account/`, `https://<site>/privacy/`,
+`https://<site>/terms/`, `https://<site>/verify/` and `https://<site>/pair/`. **Nothing has been deployed yet**, and deploying is a decision, not a
 build step: the privacy policy in particular must not go live with a draft banner on it. The
 URLs then go in **three** places: the Play Console's data-deletion and privacy-policy fields,
 `{{WEB_DELETION_URL}}` and `{{PRIVACY_POLICY_URL}}` in the legal documents, and

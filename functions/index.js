@@ -309,23 +309,20 @@ exports.recordServerEventRevision = regional.firestore
 // the caller, and a co-parent on an older build may still hold one that was addressed by email.
 
 /**
- * Body of the `acceptPairingInvitation` callable. Takes `db` as a parameter for the same
- * reason `unpairCoParentImpl` does: it is the only way to exercise the transaction and the
- * returned slot without a live Firestore.
+ * Refuses an invitation that `acceptPairingInvitation` must not redeem for this caller: another
+ * kind of invitation, one no longer pending or expired, the caller's own, or one addressed to
+ * somebody else.
  *
- * @param {FirebaseFirestore.Firestore} db Firestore instance.
- * @param {string} acceptingUserId The signed-in caller's UID.
- * @param {string} acceptingEmail The signed-in caller's email, or ''.
- * @param {{code: ?string, invitationId: ?string}} ref Exactly one identifier.
- * @return {Promise<{partnerId: string, role: string}>} The UID the caller is now paired
- *   with, and the parent slot (`assignSlots`) this device was just assigned — the client
- *   compares it to its own last-known slot to decide whether records created before pairing
- *   need re-stamping (see `ParentSlotMigrator` on the Android side).
+ * Shared by [acceptPairingInvitationImpl] and [previewPairingInvitationImpl], so the preview
+ * refuses exactly what the accept would refuse — a confirmation naming somebody, followed by a
+ * refusal, would be worse than no name at all.
+ *
+ * @param {!Object} invite The invitation document's data.
+ * @param {string} acceptingUserId The caller's UID.
+ * @param {string} acceptingEmail The caller's verified email, or ''.
+ * @throws {functions.https.HttpsError} With a `reason` the client maps to a `PairingError`.
  */
-async function acceptPairingInvitationImpl(db, acceptingUserId, acceptingEmail, ref) {
-  const inviteRef = await findInvitation(db, ref);
-  const invite = (await inviteRef.get()).data();
-
+function assertRedeemableCoParentInvite(invite, acceptingUserId, acceptingEmail) {
   // The dangerous direction of the two-callable split. A guest invitation redeemed here
   // would run `assignSlots` and write `partnerId` on both users, turning a grandmother into
   // a co-parent with a parent colour and a full view of the family. Refused outright rather
@@ -372,6 +369,27 @@ async function acceptPairingInvitationImpl(db, acceptingUserId, acceptingEmail, 
         'permission-denied', 'This invitation is addressed to somebody else',
         {reason: 'wrong-recipient'});
   }
+}
+
+/**
+ * Body of the `acceptPairingInvitation` callable. Takes `db` as a parameter for the same
+ * reason `unpairCoParentImpl` does: it is the only way to exercise the transaction and the
+ * returned slot without a live Firestore.
+ *
+ * @param {FirebaseFirestore.Firestore} db Firestore instance.
+ * @param {string} acceptingUserId The signed-in caller's UID.
+ * @param {string} acceptingEmail The signed-in caller's email, or ''.
+ * @param {{code: ?string, invitationId: ?string}} ref Exactly one identifier.
+ * @return {Promise<{partnerId: string, role: string}>} The UID the caller is now paired
+ *   with, and the parent slot (`assignSlots`) this device was just assigned — the client
+ *   compares it to its own last-known slot to decide whether records created before pairing
+ *   need re-stamping (see `ParentSlotMigrator` on the Android side).
+ */
+async function acceptPairingInvitationImpl(db, acceptingUserId, acceptingEmail, ref) {
+  const inviteRef = await findInvitation(db, ref);
+  const invite = (await inviteRef.get()).data();
+
+  assertRedeemableCoParentInvite(invite, acceptingUserId, acceptingEmail);
 
   const inviterRef = db.collection('users').doc(invite.fromUserId);
   const accepterRef = db.collection('users').doc(acceptingUserId);
@@ -532,6 +550,113 @@ exports.acceptPairingInvitation = regional.https.onCall(async (data, context) =>
   return acceptPairingInvitationImpl(
       admin.firestore(), context.auth.uid, verifiedEmailOf(context), {code, invitationId});
 });
+
+/** Previews one account may ask for per window, per function instance. */
+const PAIRING_PREVIEW_RATE_LIMIT = 20;
+
+/** The preview's rate-limit window. */
+const PAIRING_PREVIEW_WINDOW_MS = 10 * 60 * 1000;
+
+/**
+ * The instance cap `previewPairingInvitation` is deployed with, which turns the per-instance
+ * limiter into a bound on the service, as `exportReceipts.MAX_INSTANCES` does for its two.
+ */
+const PAIRING_PREVIEW_MAX_INSTANCES = 10;
+
+const pairingPreviewLimiter = exportReceipts.rateLimiter(
+    PAIRING_PREVIEW_RATE_LIMIT, PAIRING_PREVIEW_WINDOW_MS);
+
+/**
+ * The part of a profile name a preview shows: the first word, and nothing that looks like an
+ * address. `users/{uid}.name` is what the person typed or what Google gave them; some accounts
+ * carry an email there, and the preview must never be a way to read one.
+ *
+ * @param {*} name The stored name.
+ * @return {string} The first name, or '' when there is none to show.
+ */
+function previewFirstName(name) {
+  const first = String(name || '').trim().split(/\s+/)[0] || '';
+  if (first.includes('@')) return '';
+  return first.slice(0, 40);
+}
+
+exports.previewFirstName = previewFirstName;
+
+/**
+ * Body of the `previewPairingInvitation` callable: who sent this code, before the caller links.
+ *
+ * Beta testers did not know whose code they were entering, and the confirmation could only say
+ * "the person who sent you this code". This answers with the inviter's first name and nothing
+ * else — no uid, no email, no family — after the same refusals the accept would make, so a
+ * confirmation that names somebody is one the accept can honour. It writes nothing: the
+ * invitation stays pending and nobody is told.
+ *
+ * The caller's own profile is read only for the two refusals that depend on it (a repeat of the
+ * pair, a slot the pairing would move); a caller with no profile yet is left to the accept, which
+ * refuses it with its own reason.
+ *
+ * @param {FirebaseFirestore.Firestore} db Firestore instance.
+ * @param {string} callerId The signed-in caller's UID.
+ * @param {string} callerEmail The caller's verified email, or ''.
+ * @param {{code: ?string, invitationId: ?string}} ref Exactly one identifier.
+ * @return {Promise<{inviterName: string}>} The inviter's first name, '' when they have none.
+ */
+async function previewPairingInvitationImpl(db, callerId, callerEmail, ref) {
+  const inviteRef = await findInvitation(db, ref);
+  const invite = (await inviteRef.get()).data();
+  assertRedeemableCoParentInvite(invite, callerId, callerEmail);
+
+  const [inviterSnap, callerSnap] = await Promise.all([
+    db.collection('users').doc(invite.fromUserId).get(),
+    db.collection('users').doc(callerId).get(),
+  ]);
+  if (!inviterSnap.exists) {
+    throw new functions.https.HttpsError(
+        'not-found', 'User profile missing', {reason: 'not-found'});
+  }
+  if (callerSnap.exists) {
+    if (partnersOf(inviterSnap.data()).includes(callerId) ||
+        partnersOf(callerSnap.data()).includes(invite.fromUserId)) {
+      throw new functions.https.HttpsError(
+          'failed-precondition', 'You are already co-parenting with this person',
+          {reason: 'already-paired'});
+    }
+    assertAccepterKeepsSlot(
+        inviterSnap.data(), callerSnap.data(), assignSlots(inviterSnap.data().role));
+  }
+  return {inviterName: previewFirstName(inviterSnap.data().name)};
+}
+
+exports.previewPairingInvitationImpl = previewPairingInvitationImpl;
+
+/**
+ * Names the person behind a pairing code, so the app can ask "Link with Alice?" rather than
+ * "Link with this code?" — see [previewPairingInvitationImpl].
+ *
+ * Signed-in callers only, by code only, and rate-limited per account: a valid code is a bearer
+ * credential for a whole family, and a preview must not become a cheaper way to sweep codes than
+ * the accept already is. A limited caller is refused without a reason; the app then asks without
+ * a name and lets the accept decide, so the limit never stops a real parent from linking.
+ *
+ * @param {{code: string}} data The code as typed, scanned or carried by a link.
+ * @return {Promise<{inviterName: string}>} See [previewPairingInvitationImpl].
+ */
+exports.previewPairingInvitation = regional
+    .runWith({maxInstances: PAIRING_PREVIEW_MAX_INSTANCES})
+    .https.onCall(async (data, context) => {
+      if (!context.auth) {
+        throw new functions.https.HttpsError('unauthenticated', 'Sign in first');
+      }
+      const code = data && data.code ? String(data.code).trim().toUpperCase() : null;
+      if (!code) {
+        throw new functions.https.HttpsError('invalid-argument', 'Provide a code');
+      }
+      if (!pairingPreviewLimiter.allow(context.auth.uid, Date.now())) {
+        throw new functions.https.HttpsError('resource-exhausted', 'Too many previews; try again later');
+      }
+      return previewPairingInvitationImpl(
+          admin.firestore(), context.auth.uid, verifiedEmailOf(context), {code, invitationId: null});
+    });
 
 /**
  * The `kind` marking an invitation as a guest invitation rather than a co-parent one.

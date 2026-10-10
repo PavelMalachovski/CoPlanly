@@ -62,4 +62,42 @@ class PairingUriTest {
         assertFalse(PairingUri.isPairingUri("coplanly", null))
         assertFalse(PairingUri.isPairingUri(null, null))
     }
+
+    // ---- the web form --------------------------------------------------------
+
+    @Test
+    fun `buildWeb produces the hosted page's address`() {
+        assertEquals("https://coparently-a39c9.web.app/pair/4F7K2M", PairingUri.buildWeb("4F7K2M"))
+    }
+
+    @Test
+    fun `extractCode reads the web form, with or without a trailing slash`() {
+        assertEquals("4F7K2M", PairingUri.extractCode("https://coparently-a39c9.web.app/pair/4F7K2M"))
+        assertEquals("4F7K2M", PairingUri.extractCode("https://coparently-a39c9.web.app/pair/4f7k2m/"))
+    }
+
+    @Test
+    fun `extractCode reads the web form out of pasted share text`() {
+        val shared = "Pavel invites you to CoPlanly: https://coparently-a39c9.web.app/pair/4F7K2M\nCode: 4F7K2M"
+        assertEquals("4F7K2M", PairingUri.extractCode(shared))
+    }
+
+    @Test
+    fun `extractCode does not cut a code out of a longer segment`() {
+        assertNull(PairingUri.extractCode("https://coparently-a39c9.web.app/pair/4F7K2MX"))
+    }
+
+    @Test
+    fun `extractCode ignores a pair path on another site`() {
+        assertNull(PairingUri.extractCode("https://example.com/pair/4F7K2M"))
+    }
+
+    @Test
+    fun `isPairingUri accepts the web form only on its host and path`() {
+        assertTrue(PairingUri.isPairingUri("https", "coparently-a39c9.web.app", "/pair/4F7K2M"))
+        assertFalse(PairingUri.isPairingUri("https", "coparently-a39c9.web.app", "/verify/"))
+        assertFalse(PairingUri.isPairingUri("https", "coparently-a39c9.web.app", null))
+        assertFalse(PairingUri.isPairingUri("https", "example.com", "/pair/4F7K2M"))
+        assertFalse(PairingUri.isPairingUri("http", "coparently-a39c9.web.app", "/pair/4F7K2M"))
+    }
 }

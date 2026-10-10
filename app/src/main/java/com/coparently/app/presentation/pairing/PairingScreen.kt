@@ -56,11 +56,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.coparently.app.BuildConfig
 import com.coparently.app.R
 import com.coparently.app.domain.model.PairingInvite
 import com.coparently.app.domain.model.PairingState
 import com.coparently.app.domain.model.activeInviteOrNull
-import com.coparently.app.domain.pairing.PairingUri
 import com.coparently.app.presentation.common.ConfirmationDialog
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
@@ -141,7 +141,7 @@ fun PairingScreen(
     // user hasn't made yet, and keyed on prefilledCode so a second deep link
     // re-arms the consent dialog instead of being swallowed by a stale value.
     // Held as MutableState (rather than `by`-delegated vars) so they can be
-    // passed by reference into UnpairFlow/DeepLinkFlow below.
+    // passed by reference into UnpairFlow/DeepLinkPreview below.
     val showUnpairConfirm = rememberSaveable { mutableStateOf(false) }
     // Blocking from the chat is unpairing: open the same two-step confirmation, once the screen
     // knows there is a co-parent to unpair from, and only once.
@@ -213,7 +213,8 @@ fun PairingScreen(
     }
 
     UnpairFlow(state, showUnpairConfirm, viewModel::unpair)
-    DeepLinkFlow(pendingDeepLinkCode, viewModel::redeemCode)
+    DeepLinkPreview(pendingDeepLinkCode, viewModel)
+    form.confirmation?.let { InviteConfirmationDialog(it, viewModel::answerConfirmation) }
 }
 
 /**
@@ -285,21 +286,23 @@ private fun UnpairFlow(state: PairingState, visible: MutableState<Boolean>, onUn
 }
 
 /**
- * Confirms redeeming a code carried by a `coplanly://pair` deep link. A
- * shared link may have been forwarded by a third party — never redeem it
- * without the user saying yes.
+ * Asks the server who is behind a code carried by a link, once, as the screen opens. The answer
+ * comes back as [InviteConfirmationDialog] — a link may have been forwarded by a third party, so
+ * it is never redeemed without the parent saying yes.
+ *
+ * [pendingCode] is saveable and cleared here, so a rotation does not ask a second time about a
+ * code the parent has already answered for.
  */
 @Composable
-private fun DeepLinkFlow(pendingCode: MutableState<String?>, onRedeem: () -> Unit) {
-    val code = pendingCode.value ?: return
-    DeepLinkConfirmationDialog(
-        code = code,
-        onConfirm = {
-            onRedeem()
-            pendingCode.value = null
-        },
-        onDismiss = { pendingCode.value = null }
-    )
+private fun DeepLinkPreview(pendingCode: MutableState<String?>, viewModel: PairingViewModel) {
+    LaunchedEffect(pendingCode.value) {
+        val code = pendingCode.value ?: return@LaunchedEffect
+        pendingCode.value = null
+        if (code.isNotEmpty()) {
+            viewModel.onCodeInputChange(code)
+            viewModel.redeemCode()
+        }
+    }
 }
 
 /**
@@ -388,15 +391,30 @@ private fun rememberNotPairedActions(
  */
 private const val PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=app.coplanly"
 
-/** Builds the share-sheet intent for an outstanding invite. */
+/**
+ * Builds the share-sheet intent for an outstanding invite.
+ *
+ * With the web link the message is short: the page it opens carries the Play Store link and the
+ * iPhone answer, and the code stays in the text for typing by hand. With the app-only link the
+ * message has to carry both itself.
+ */
 private fun shareIntent(context: Context, invite: PairingInvite): Intent {
-    val message = context.getString(
-        R.string.pairing_share_message,
-        invite.fromUserName,
-        invite.code,
-        PairingUri.build(invite.code),
-        PLAY_STORE_URL
-    )
+    val message = if (BuildConfig.PAIRING_WEB_LINK) {
+        context.getString(
+            R.string.pairing_share_message_web,
+            invite.fromUserName,
+            pairingLinkFor(invite.code),
+            invite.code
+        )
+    } else {
+        context.getString(
+            R.string.pairing_share_message,
+            invite.fromUserName,
+            invite.code,
+            pairingLinkFor(invite.code),
+            PLAY_STORE_URL
+        )
+    }
     val sendIntent = Intent(Intent.ACTION_SEND).apply {
         type = "text/plain"
         putExtra(Intent.EXTRA_TEXT, message)
@@ -718,24 +736,30 @@ private fun UnpairConfirmationDialog(
 }
 
 /**
- * Confirms redeeming a code carried by a `coplanly://pair` deep link. The
- * sender's identity isn't known until the code is actually redeemed, so this
- * uses its own code-specific copy rather than the name/email pair used
- * elsewhere on this screen — filling that pair with the code and an empty
- * string produced a malformed sentence ("4F7K2M () will see...").
+ * Asks before linking with a code — typed, scanned or carried by a link — and names the person
+ * behind it when the server could say who that is ("Link with Alice?").
+ *
+ * Without a name it falls back to asking about the code itself, in its own code-specific copy
+ * rather than the name/email pair used elsewhere on this screen — filling that pair with the code
+ * and an empty string produced a malformed sentence ("4F7K2M () will see...").
  */
 @Composable
-private fun DeepLinkConfirmationDialog(
-    code: String,
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit
-) {
+private fun InviteConfirmationDialog(confirmation: InviteConfirmation, onAnswer: (Boolean) -> Unit) {
+    val name = confirmation.inviterName
     ConfirmationDialog(
-        title = stringResource(R.string.pairing_deep_link_confirm_title),
-        message = stringResource(R.string.pairing_deep_link_confirm_message, code),
+        title = if (name != null) {
+            stringResource(R.string.pairing_confirm_named_title, name)
+        } else {
+            stringResource(R.string.pairing_deep_link_confirm_title)
+        },
+        message = if (name != null) {
+            stringResource(R.string.pairing_confirm_named_message)
+        } else {
+            stringResource(R.string.pairing_deep_link_confirm_message, confirmation.code)
+        },
         confirmText = stringResource(R.string.pairing_link_accounts),
         dismissText = stringResource(R.string.pairing_cancel),
-        onConfirm = onConfirm,
-        onDismiss = onDismiss
+        onConfirm = { onAnswer(true) },
+        onDismiss = { onAnswer(false) }
     )
 }

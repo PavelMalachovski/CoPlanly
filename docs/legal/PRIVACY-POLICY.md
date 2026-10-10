@@ -169,9 +169,12 @@ or have deleted what was recorded about them — or an adult who was that child 
 
 ### People you invite
 
-- **Your co-parent**: nothing, until they accept. An invitation is a code you pass on
-  yourself; it carries your name and email address so that the person redeeming it can see who
-  invited them, and we never ask for theirs.
+- **Your co-parent**: nothing, until they accept. An invitation is a code, or a link carrying
+  it, that you pass on yourself. We store it with your name and email address; before anything
+  is linked, the person entering your code is shown your **first name** only, so they can check
+  who invited them, and never your email address. The web page an invitation link opens shows the
+  code and nothing about you, and sends nothing to us. We never ask for the other person's
+  details.
 - **A guest** (for example a grandparent) whom you grant time-limited access to one child's
   record — without its photographs.
 - **A calendar friend** whom you grant time-limited read access to the family calendar.

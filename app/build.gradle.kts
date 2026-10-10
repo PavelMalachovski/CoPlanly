@@ -91,6 +91,16 @@ val publishedTermsUrl = ""
 val publishedExportVerifyUrl = ""
 
 /**
+ * Whether an invitation is shared as `https://coparently-a39c9.web.app/pair/CODE` (`web/pair/`, a
+ * link messengers make clickable, which opens the app or says how to get it) rather than
+ * `coplanly://pair?code=CODE`, which they leave as text. False until `firebase deploy --only
+ * hosting` has run: a link to a page that is not there is worse than one that is not clickable.
+ * The app reads both forms either way. Pass -PCOPLANLY_PAIRING_WEB_LINK=true to try it without
+ * committing.
+ */
+val publishedPairingWebLink = false
+
+/**
  * Where a parent reports a chat message (Play's user-generated content policy; play-final audit
  * F-10): the support or privacy mailbox somebody reads. Empty until the owner names one, and empty
  * hides the chat's "Report message" action, since a report with nowhere to go is the affordance
@@ -166,6 +176,13 @@ android {
             ?.trim()
             ?: publishedExportVerifyUrl
         buildConfigField("String", "EXPORT_VERIFY_URL", "\"$exportVerifyUrl\"")
+
+        // Which pairing link the share sheet and the QR carry (see publishedPairingWebLink).
+        val pairingWebLink = (project.findProperty("COPLANLY_PAIRING_WEB_LINK") as String?)
+            ?.trim()
+            ?.toBoolean()
+            ?: publishedPairingWebLink
+        buildConfigField("boolean", "PAIRING_WEB_LINK", "$pairingWebLink")
 
         // F-10. The chat's report address; blank hides the action (see publishedSupportEmail).
         val supportEmail = (project.findProperty("COPLANLY_SUPPORT_EMAIL") as String?)

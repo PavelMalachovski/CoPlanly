@@ -73,13 +73,30 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-            <!-- Pairing deep link. A custom scheme, not an App Link: the project
-                 owns no domain, so https links could never be verified. -->
+            <!-- Pairing deep link, app-only form: opens the app wherever it is installed,
+                 and is what web/pair/'s button hands the code over with. Messengers do not
+                 make a custom scheme clickable, which is why the web form below exists. -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="coplanly" android:host="pair" />
+            </intent-filter>
+
+            <!-- Pairing deep link, web form: https://coparently-a39c9.web.app/pair/CODE, the
+                 project's own Firebase Hosting domain (PairingUri.WEB_HOST). An App Link: it
+                 opens the app straight away once web/.well-known/assetlinks.json names this
+                 app's signing key (web/README.md); until then, and wherever the app is not
+                 installed, the link opens the page. A separate filter, like the others below,
+                 so its <data> attributes do not cross with the custom scheme's. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="https"
+                    android:host="coparently-a39c9.web.app"
+                    android:pathPrefix="/pair/" />
             </intent-filter>
 
             <!-- Guest-access deep link. A separate host from `pair`, not a query

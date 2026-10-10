@@ -10,6 +10,7 @@ import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.PairingException
 import com.coparently.app.data.remote.firebase.PairingFunctions
 import com.coparently.app.data.sync.SyncRequester
+import com.coparently.app.domain.model.InvitePreview
 import com.coparently.app.domain.model.PairingError
 import com.coparently.app.domain.model.PairingState
 import com.coparently.app.domain.model.PartnerSummary
@@ -287,6 +288,27 @@ class PairingRepositoryImplTest {
         }
 
         coVerify(exactly = 0) { userDao.updateUser(any()) }
+    }
+
+    // ---- previewInvite --------------------------------------------------
+
+    @Test
+    fun `previewInvite rejects a malformed code without calling the backend`() = runTest {
+        val result = repository.previewInvite("nope")
+
+        assertEquals(PairingError.NotFound, (result.exceptionOrNull() as PairingException).error)
+        coVerify(exactly = 0) { pairingFunctions.previewInvitation(any()) }
+    }
+
+    @Test
+    fun `previewInvite normalizes the code and passes the name through`() = runTest {
+        coEvery { pairingFunctions.previewInvitation("4F7K2M") } returns
+            Result.success(InvitePreview(inviterName = "Alice"))
+
+        val result = repository.previewInvite("  4f7k2m ")
+
+        assertEquals(InvitePreview(inviterName = "Alice"), result.getOrNull())
+        coVerify(exactly = 0) { pairingFunctions.acceptInvitation(any(), any()) }
     }
 
     // ---- redeem ---------------------------------------------------------

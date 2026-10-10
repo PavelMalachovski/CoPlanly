@@ -100,7 +100,7 @@ so.
 
 | Test (`app/src/androidTest/.../e2e/`) | Covers between the two parents | What only phones still add |
 | --- | --- | --- |
-| `TwoParentPairingTest` | Pairing on both phones, both slots, one conversation, `pairing_accepted` queued | The QR scan, the pairing screens |
+| `TwoParentPairingTest` | Pairing on both phones, both slots, one conversation, `pairing_accepted` queued; a code naming its inviter before anything is linked, and refusing what the accept would (§5.7) | The QR scan, the pairing screens, the link opening the app |
 | `TwoParentEventsTest`, `MultiFamilyTest` | Events through the sync's own query, a private event never on the server, tombstones; a second family's audience (§5.2) | The grid as drawn |
 | `TwoParentChatTest`, `OneParentOnScreenTest` | Chat across the date line to unread, DELIVERED, READ; one parent's real screens (§5.1) | Two screens at once, displayed times, the push |
 | `TwoParentAttachmentsTest` | Chat attachments and the vault, bytes and digests, a stranger refused (§5.5) | A viewer app opening the file |
@@ -1462,6 +1462,43 @@ nothing). Accounts: A and B paired, D and E paired (a second, unrelated family),
   next open rather than live.
 - **If it fails:** tag `FriendRepository`; `presentation/friends/`, `firestore.rules`
   `isCalendarFriendOf`, `functions/index.js` `acceptCalendarFriendInvitationImpl`.
+
+### 5.7 The pairing link and the inviter's name · 2P, 1P + a second account fallback
+
+Needs the functions deploy (`previewPairingInvitation`). The web link needs `firebase deploy --only
+hosting` **and** a build with `PAIRING_WEB_LINK` on (`-PCOPLANLY_PAIRING_WEB_LINK=true`, or
+`publishedPairingWebLink` in `app/build.gradle.kts`); the direct opening of the app needs
+`web/.well-known/assetlinks.json` with the installed build's signing key (`web/README.md`).
+A is signed in and not paired; B is signed in on another phone, with no family.
+
+> **[CI e2e]** `TwoParentPairingTest#aCodeNamesItsInviterBeforeAnythingIsLinked` and
+> `#aPreviewRefusesWhatTheAcceptWouldRefuse` run the callable against the real rules: a third
+> account reads the inviter's first name and the code stays pending; a co-parent already paired is
+> refused. `web-tests/pair-page.spec.js` drives the page in Chromium (Android, iPhone, computer,
+> five languages, a bad link, no request leaving the page). What a phone adds is the dialog as
+> drawn, the messenger and the hand-over from the browser to the app.
+
+- [ ] **The name.** B types A's code (or scans A's QR): before anything is linked, a dialog asks
+      "Link with {A's first name}?". **Cancel** leaves the code in the field and A unpaired; **Link
+      accounts** pairs them as before.
+- [ ] B types A's code **while already paired with A**, or A types A's own code: the field shows
+      the refusal at once, with no dialog in front of it.
+- [ ] An account whose name is an e-mail address shares a code: the dialog on the other phone asks
+      "Link with this invite code?" — no address is ever shown.
+- [ ] **The web link.** A shares the invitation to WhatsApp (or any messenger). The message carries
+      `https://coparently-a39c9.web.app/pair/CODE`, and it is **clickable**.
+- [ ] B, with the app installed and before `assetlinks.json` exists: the link opens the page in the
+      browser; **Open in CoPlanly** opens the app on the pairing screen and the same named dialog
+      appears. With `assetlinks.json` in place (a reinstall re-verifies): the link opens the app
+      directly, with no page.
+- [ ] B without the app: the page shows the code, **Open in CoPlanly** goes to Google Play.
+      On an iPhone the page says the app is Android-only; on a computer, to open it on the phone.
+- [ ] The page in the phone's language (cs, de, ru, uk, en), and in dark mode.
+- **Fallback (1P):** sign in as B on the same phone after A has shared; open the link from the
+  messenger there. The dialog and the page are the same; only the two screens at once are lost.
+- **If it fails:** tag `PairingViewModel`, `PairingFunctions`; `presentation/pairing/`,
+  `domain/pairing/PairingUri.kt`, `functions/index.js` `previewPairingInvitationImpl`,
+  `web/pair/index.html`, the App Link filter in `AndroidManifest.xml`.
 
 ---
 

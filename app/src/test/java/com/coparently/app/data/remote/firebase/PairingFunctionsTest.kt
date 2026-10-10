@@ -1,6 +1,8 @@
 package com.coparently.app.data.remote.firebase
 
+import com.coparently.app.domain.model.InvitePreview
 import com.coparently.app.domain.model.PairingError
+import com.google.android.gms.tasks.Task
 import com.google.android.gms.tasks.Tasks
 import com.google.firebase.functions.FirebaseFunctions
 import com.google.firebase.functions.FirebaseFunctionsException
@@ -71,6 +73,62 @@ class PairingFunctionsTest {
         val outcome = pairingFunctions.acceptInvitation(invitationId = "invite-1")
 
         assertTrue(outcome.isFailure)
+    }
+
+    // ---- previewInvitation -------------------------------------------------
+
+    @Test
+    fun `previewInvitation reads the inviter's first name`() = runTest {
+        stubPreview(Tasks.forResult(callableResult(mapOf("inviterName" to " Alice "))))
+
+        val outcome = pairingFunctions.previewInvitation("4F7K2M")
+
+        assertEquals(InvitePreview(inviterName = "Alice"), outcome.getOrNull())
+    }
+
+    @Test
+    fun `previewInvitation reads an empty name as no name`() = runTest {
+        stubPreview(Tasks.forResult(callableResult(mapOf("inviterName" to ""))))
+
+        assertEquals(InvitePreview(inviterName = null), pairingFunctions.previewInvitation("4F7K2M").getOrNull())
+    }
+
+    @Test
+    fun `previewInvitation keeps the accept's reasons`() = runTest {
+        stubPreview(Tasks.forException(functionsException(FirebaseFunctionsException.Code.NOT_FOUND, "not-found")))
+        assertEquals(PairingError.NotFound, previewError())
+
+        stubPreview(
+            Tasks.forException(
+                functionsException(FirebaseFunctionsException.Code.FAILED_PRECONDITION, "invitation-expired")
+            )
+        )
+        assertEquals(PairingError.Expired, previewError())
+    }
+
+    @Test
+    fun `a missing preview callable is not a missing invitation`() = runTest {
+        // A backend not yet redeployed answers 404 with no reason. Reading that as "no such code"
+        // would refuse every code until the deploy; it comes back as Unknown instead, and the
+        // screen asks without a name.
+        stubPreview(Tasks.forException(functionsException(FirebaseFunctionsException.Code.NOT_FOUND)))
+
+        assertTrue(previewError() is PairingError.Unknown)
+    }
+
+    private fun stubPreview(task: Task<HttpsCallableResult>) {
+        val previewRef = mockk<HttpsCallableReference>()
+        every { functions.getHttpsCallable("previewPairingInvitation") } returns previewRef
+        every { previewRef.call(any()) } returns task
+    }
+
+    private suspend fun previewError(): PairingError? =
+        (pairingFunctions.previewInvitation("4F7K2M").exceptionOrNull() as? PairingException)?.error
+
+    private fun callableResult(data: Map<String, Any?>): HttpsCallableResult {
+        val result = mockk<HttpsCallableResult>()
+        every { result.getData() } returns data
+        return result
     }
 
     private fun stubResponse(data: Map<String, Any?>) {

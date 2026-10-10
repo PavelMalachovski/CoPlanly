@@ -40,9 +40,10 @@
     <string name="pairing_expires_in_hours">Platný ještě %1$d h %2$d min</string>
     <string name="pairing_expires_in_minutes">Platný ještě %1$d min</string>
     <string name="pairing_code_expired_generate">Kód vypršel – klepněte na „Nový kód“</string>
-    <string name="pairing_share_message">%1$s vás zve do CoPlanly. Kód: %2$s · %3$s
-Nemáte aplikaci? %4$s
-Máte iPhone? Požádejte mě o odkaz na náš kalendář, otevře se v Kalendáři Apple.</string>
+    <string name="pairing_share_message">%1$s vás zve do CoPlanly. Kód: %2$s · %3$s\nNemáte aplikaci? %4$s\nMáte iPhone? Požádejte mě o odkaz na náš kalendář, otevře se v Kalendáři Apple.</string>
+    <!-- The share text once the pairing link is a web address (BuildConfig.PAIRING_WEB_LINK):
+         %1$s inviter, %2$s the link, %3$s the code for typing by hand -->
+    <string name="pairing_share_message_web">%1$s vás zve do CoPlanly, sdíleného kalendáře pro rodiče: %2$s\nKód, kdybyste ho potřebovali: %3$s</string>
     <!-- Code entry -->
     <string name="pairing_have_a_code">Mám kód</string>
     <string name="pairing_code_field_label">Kód pozvánky</string>
@@ -61,6 +62,10 @@ Máte iPhone? Požádejte mě o odkaz na náš kalendář, otevře se v Kalendá
     <!-- Deep link confirmation from a bare code (no sender identity known yet) -->
     <string name="pairing_deep_link_confirm_title">Propojit pomocí tohoto kódu pozvánky?</string>
     <string name="pairing_deep_link_confirm_message">%1$s – osoba, která vám tento kód poslala, uvidí váš sdílený kalendář, chat a výdaje.</string>
+    <!-- The confirmation once the server has named who is behind the code; %1$s is their
+         first name. The nameless pair above is the fallback when it could not say. -->
+    <string name="pairing_confirm_named_title">Zve vás %1$s</string>
+    <string name="pairing_confirm_named_message">Propojit účty? Oba pak uvidíte sdílený kalendář, chat a výdaje. Propojte je jen tehdy, když víte, kdo vám kód poslal.</string>
     <!-- Fallback conversation title when the co-parent has no display name yet -->
     <string name="pairing_default_partner_name">Spolurodič</string>
 

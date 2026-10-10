@@ -19,7 +19,28 @@
       "**/.*"
     ],
     "cleanUrls": true,
-    "trailingSlash": true
+    "trailingSlash": true,
+    "rewrites": [
+      {
+        "source": "/pair/**",
+        "destination": "/pair/index.html"
+      }
+    ],
+    "headers": [
+      {
+        "source": "/pair/**",
+        "headers": [
+          {
+            "key": "Referrer-Policy",
+            "value": "no-referrer"
+          },
+          {
+            "key": "X-Robots-Tag",
+            "value": "noindex"
+          }
+        ]
+      }
+    ]
   },
   "emulators": {
     "auth": {
