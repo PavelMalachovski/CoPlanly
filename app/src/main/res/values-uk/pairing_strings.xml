@@ -29,6 +29,8 @@
     <string name="pairing_error_network">Немає зʼєднання. Перевірте інтернет і спробуйте ще раз.</string>
     <string name="pairing_error_unknown">Щось пішло не так. Спробуйте ще раз.</string>
     <string name="pairing_error_code_incomplete">Введіть усі 6 символів коду.</string>
+    <string name="pairing_error_enter_their_code">Ви вже зʼєднані з кимось із батьків, тож зробіть навпаки: відкрийте «Додати ще одного з батьків», покажіть свій код, і нехай інша людина його введе.</string>
+    <string name="pairing_error_slot_conflict">Ви обидва вже зʼєднані з кимось іншим із батьків, а два такі акаунти поки що не можна зʼєднати.</string>
 
     <!-- Invite code hero card -->
     <string name="pairing_your_code_title">Ваш код запрошення</string>

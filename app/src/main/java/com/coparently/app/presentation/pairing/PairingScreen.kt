@@ -8,6 +8,7 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -162,6 +163,11 @@ fun PairingScreen(
     // Same one-shot shape as the error above: sending an email invitation reported
     // nothing at all before, so a delivered and an undelivered invitation looked alike.
     ActionErrorSnackbar(form.actionInfoRes, snackbarHostState, context, viewModel::consumeActionInfo)
+    // A paired account has no code field (see shareOnlySection), but a deep link or an
+    // invitation can still be redeemed from here, and its refusal needs somewhere to show.
+    if (state is PairingState.Paired) {
+        ActionErrorSnackbar(form.codeErrorRes, snackbarHostState, context, viewModel::clearError)
+    }
 
     Scaffold(
         topBar = { PairingTopBar(onNavigateBack) },
@@ -191,11 +197,17 @@ fun PairingScreen(
                         form = form,
                         viewModel = viewModel,
                         actions = actions,
-                        mode = mode,
                         addingAnother = addingAnother
                     ) { showUnpairConfirm.value = true }
                 is PairingState.NotPaired ->
-                    notPairedSection(current, form, viewModel, actions, mode)
+                    inviteSection(
+                        activeInvite = current.activeInvite,
+                        incoming = current.incoming,
+                        form = form,
+                        viewModel = viewModel,
+                        actions = actions,
+                        mode = mode
+                    )
             }
         }
     }
@@ -418,7 +430,6 @@ private fun LazyListScope.pairedSection(
     form: PairingFormState,
     viewModel: PairingViewModel,
     actions: NotPairedActions,
-    mode: MutableState<PairingMode>,
     addingAnother: MutableState<Boolean>,
     onUnpairClick: () -> Unit
 ) {
@@ -441,20 +452,19 @@ private fun LazyListScope.pairedSection(
                 onClick = {
                     addingAnother.value = !addingAnother.value
                     // A paired account gets no code on entry, so opening this row mints one.
-                    if (addingAnother.value) viewModel.refreshInvite()
+                    if (addingAnother.value) viewModel.inviteAnotherCoParent()
                 }
             )
         }
     }
 
     if (addingAnother.value) {
-        inviteSection(
+        shareOnlySection(
             activeInvite = current.activeInvite,
             incoming = current.incoming,
             form = form,
             viewModel = viewModel,
-            actions = actions,
-            mode = mode
+            actions = actions
         )
     }
 
@@ -475,40 +485,10 @@ private fun LazyListScope.pairedSection(
 }
 
 /**
- * The not-paired state: a mode toggle, then whichever of the two jobs the user picked, then
- * the trust panel and any incoming invitations.
+ * Everything an unpaired account needs to bring a co-parent in: share a code, or enter theirs.
  *
- * @param current The unpaired state, carrying this user's own invite and any incoming ones
- * @param form Local form state
- * @param viewModel Pairing actions
- * @param actions Screen-level side effects the form cannot perform itself
- * @param mode Which of the two pairing jobs is showing
- */
-@Suppress("LongParameterList") // section state, split out of the screen body for readability
-private fun LazyListScope.notPairedSection(
-    current: PairingState.NotPaired,
-    form: PairingFormState,
-    viewModel: PairingViewModel,
-    actions: NotPairedActions,
-    mode: MutableState<PairingMode>
-) {
-    inviteSection(
-        activeInvite = current.activeInvite,
-        incoming = current.incoming,
-        form = form,
-        viewModel = viewModel,
-        actions = actions,
-        mode = mode
-    )
-}
-
-/**
- * Everything needed to bring one more co-parent in: share a code, or enter theirs.
- *
- * Shared verbatim by both states rather than duplicated, and that is the point — an unpaired
- * account and a paired one adding a second relationship are doing the *same* job, so a second
- * copy would be two invite flows to keep in step, and the one behind the "add another" row is
- * exactly the one nobody would remember to update.
+ * A paired account adding a second relationship gets [shareOnlySection] instead: entering a code
+ * would move its parent slot in the family it already has.
  *
  * @param activeInvite This user's own outstanding invite, if any.
  * @param incoming Invitations addressed to this user's email.
@@ -561,6 +541,54 @@ private fun LazyListScope.inviteSection(
                 onReject = { viewModel.rejectIncoming(invite.id) }
             )
         }
+    }
+}
+
+/**
+ * Bringing a second co-parent in, for an account that already has one: share a code, never enter
+ * one.
+ *
+ * A parent slot is still one per person, and whoever *enters* a code takes the slot opposite the
+ * inviter's — so a parent who already co-parents with somebody would be moved in that first family
+ * too. The server refuses that (`assertAccepterKeepsSlot`); this screen does not offer it, so the
+ * direction that always works is the only one on it: this parent shares, the newcomer enters.
+ *
+ * @param activeInvite This user's own outstanding invite, or null while the row's code is minted.
+ * @param incoming Invitations addressed to this user's email.
+ * @param form Local form state.
+ * @param viewModel Pairing actions.
+ * @param actions Screen-level side effects the form cannot perform itself.
+ */
+private fun LazyListScope.shareOnlySection(
+    activeInvite: PairingInvite?,
+    incoming: List<PairingInvite>,
+    form: PairingFormState,
+    viewModel: PairingViewModel,
+    actions: NotPairedActions
+) {
+    item {
+        if (activeInvite != null) {
+            InviteCodeCard(
+                invite = activeInvite,
+                qrBitmap = form.qrBitmap,
+                onCopy = { actions.onCopyCode(activeInvite.code) },
+                onShare = { actions.onShareInvite(activeInvite) },
+                onRegenerate = viewModel::regenerateInvite
+            )
+        } else {
+            // Opening the row mints the code; the listener brings it here a moment later.
+            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(Modifier.padding(Spacing.XXL))
+            }
+        }
+    }
+    item { TrustPanel() }
+    items(incoming, key = { it.id }) { invite ->
+        IncomingInviteCard(
+            invite = invite,
+            onAccept = { viewModel.acceptIncoming(invite.id) },
+            onReject = { viewModel.rejectIncoming(invite.id) }
+        )
     }
 }
 

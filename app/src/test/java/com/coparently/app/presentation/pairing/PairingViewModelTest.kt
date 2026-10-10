@@ -169,6 +169,8 @@ class PairingViewModelTest {
             PairingError.SelfPairing to R.string.pairing_error_self_pairing,
             PairingError.AlreadyPaired to R.string.pairing_error_already_paired,
             PairingError.WrongRecipient to R.string.pairing_error_wrong_recipient,
+            PairingError.EnterTheirCode to R.string.pairing_error_enter_their_code,
+            PairingError.SlotConflict to R.string.pairing_error_slot_conflict,
             PairingError.Network to R.string.pairing_error_network,
             PairingError.Unknown("boom") to R.string.pairing_error_unknown
         )
@@ -227,11 +229,23 @@ class PairingViewModelTest {
 
             coVerify(exactly = 0) { repository.createOrReuseInviteCode() }
 
-            viewModel.refreshInvite()
+            viewModel.inviteAnotherCoParent()
             dispatcher.scheduler.advanceUntilIdle()
 
             coVerify(exactly = 1) { repository.createOrReuseInviteCode() }
         }
+
+    @Test
+    fun `a code that could not be made for another co-parent is reported`() = runTest(dispatcher) {
+        // The row shows nothing but this code, so a silent failure would leave it spinning.
+        coEvery { repository.createOrReuseInviteCode() } returns
+            Result.failure(PairingException(PairingError.Network))
+
+        viewModel.inviteAnotherCoParent()
+        dispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(R.string.pairing_error_network, viewModel.form.value.actionErrorRes)
+    }
 
     @Test
     fun `a paired account's invite is drawn as a QR`() = runTest(dispatcher) {

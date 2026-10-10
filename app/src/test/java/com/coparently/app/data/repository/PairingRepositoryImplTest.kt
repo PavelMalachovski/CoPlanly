@@ -526,7 +526,7 @@ class PairingRepositoryImplTest {
     @Test
     fun `createOrReuseInviteCode never reuses a guest, friend or professional code`() = runTest {
         val others = listOf("guest", "friend", "professional").map { kind ->
-            pendingInviteDoc(code = kind.take(6).uppercase().padEnd(6, 'X'), toEmail = "", kind = kind)
+            pendingInviteDoc(code = kind.take(6).uppercase().padEnd(6, 'X'), toEmail = "").ofKind(kind)
         }
         stubOwnInvitesQuery(*others.toTypedArray())
         val newInviteRef = mockk<DocumentReference>(relaxed = true)
@@ -571,7 +571,7 @@ class PairingRepositoryImplTest {
         every { codeInviteRef.update("status", "cancelled") } returns Tasks.forResult<Void>(null)
         val otherRefs = List(3) { mockk<DocumentReference>(relaxed = true) }
         val others = listOf("guest", "friend", "professional").zip(otherRefs) { kind, ref ->
-            pendingInviteDoc(code = "GHJKMN", toEmail = "", reference = ref, kind = kind)
+            pendingInviteDoc(code = "GHJKMN", toEmail = "", reference = ref).ofKind(kind)
         }
         stubOwnInvitesQuery(codeInvite, *others.toTypedArray())
 
@@ -697,11 +697,9 @@ class PairingRepositoryImplTest {
         toEmail: String,
         expiresAt: Long = System.currentTimeMillis() + HOUR_MILLIS,
         createdAt: Long = System.currentTimeMillis(),
-        reference: DocumentReference = mockk(relaxed = true),
-        kind: String? = null
+        reference: DocumentReference = mockk(relaxed = true)
     ): DocumentSnapshot {
         val doc = mockk<DocumentSnapshot>(relaxed = true)
-        every { doc.getString("kind") } returns kind
         every { doc.getString("code") } returns code
         every { doc.getString("toEmail") } returns toEmail
         every { doc.getString("fromUserId") } returns "user-a"
@@ -711,6 +709,11 @@ class PairingRepositoryImplTest {
         every { doc.getLong("createdAt") } returns createdAt
         every { doc.reference } returns reference
         return doc
+    }
+
+    /** Marks a pending invitation as another kind than a co-parent code (`guest`, `friend`, …). */
+    private fun DocumentSnapshot.ofKind(kind: String): DocumentSnapshot = apply {
+        every { this@ofKind.getString("kind") } returns kind
     }
 
     private companion object {

@@ -412,6 +412,7 @@ async function acceptPairingInvitationImpl(db, acceptingUserId, acceptingEmail, 
           {reason: 'already-paired'});
     }
     slots = assignSlots(inviterSnap.data().role);
+    assertAccepterKeepsSlot(inviterSnap.data(), accepterSnap.data(), slots);
 
     // The relationship itself, as a document. Its id is `FamilyKey.of` — the same string
     // `custody_models`, `family_settings` and `conversations` are already keyed by — and its
@@ -2504,6 +2505,46 @@ function assignSlots(inviterRole) {
   return {inviterRole: inviter, accepterRole: inviter === 'mom' ? 'dad' : 'mom'};
 }
 exports.assignSlots = assignSlots;
+
+/**
+ * Refuses a pairing that would move an accepter who already co-parents with somebody else to the
+ * other slot.
+ *
+ * A slot is still stored once per person (`users/{uid}.role`), and every client reads it from
+ * there for every family that person is in — `families/{id}.slots` is written but not yet read.
+ * [assignSlots] keeps the inviter's slot and gives the accepter the other one, so an accepter who
+ * already held a slot with their first co-parent could be moved: the two parents of that family
+ * would then share a colour, and the accepter's phone would re-stamp every record it holds and
+ * invert its custody pattern for the new slot. Refused rather than repaired, because no slot
+ * fits both families while it is one per person.
+ *
+ * Only an accepter with a live co-parent and a stored slot is protected. One with no other family
+ * gives up a slot nobody else reads, which is the ordinary first pairing and what the client's
+ * re-stamp is for.
+ *
+ * @param {?Object} inviter The inviter's user document.
+ * @param {?Object} accepter The accepter's user document.
+ * @param {{inviterRole: string, accepterRole: string}} slots What [assignSlots] decided.
+ * @throws {functions.https.HttpsError} `failed-precondition` with reason `enter-their-code` when
+ *     the inviter has no other family (the other way round works: the accepter shares their code
+ *     and keeps their slot), or `slot-conflict` when both already co-parent in the same slot.
+ */
+function assertAccepterKeepsSlot(inviter, accepter, slots) {
+  const held = (accepter || {}).role;
+  const holdsSlot = held === 'mom' || held === 'dad';
+  if (!holdsSlot || partnersOf(accepter).length === 0 || held === slots.accepterRole) {
+    return;
+  }
+  if (partnersOf(inviter).length === 0) {
+    throw new functions.https.HttpsError(
+        'failed-precondition',
+        'The accepter already co-parents in the other slot; the inviter should enter their code',
+        {reason: 'enter-their-code'});
+  }
+  throw new functions.https.HttpsError(
+      'failed-precondition', 'Both parents already co-parent in the same slot',
+      {reason: 'slot-conflict'});
+}
 
 /**
  * The update that removes exactly one co-parent from a user document.

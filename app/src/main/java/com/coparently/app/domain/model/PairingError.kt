@@ -25,6 +25,16 @@ sealed interface PairingError {
     data object WrongRecipient : PairingError
 
     /**
+     * The accepter already co-parents with somebody else, and accepting would move them to the
+     * other parent slot — which every family they are in reads. The other way round works: they
+     * share their code and the inviter enters it.
+     */
+    data object EnterTheirCode : PairingError
+
+    /** Both accounts already co-parent with somebody else, in the same slot; neither may move. */
+    data object SlotConflict : PairingError
+
+    /**
      * A guest invitation was offered to the co-parent pairing path.
      *
      * Not a malformed code: it is a perfectly good invitation of the other kind, and the

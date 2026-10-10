@@ -29,6 +29,8 @@
     <string name="pairing_error_network">Keine Verbindung. Prüfe dein Internet und versuche es erneut.</string>
     <string name="pairing_error_unknown">Etwas ist schiefgelaufen. Bitte versuche es erneut.</string>
     <string name="pairing_error_code_incomplete">Gib alle 6 Zeichen des Codes ein.</string>
+    <string name="pairing_error_enter_their_code">Du bist schon mit einem Co-Elternteil verknüpft, also geht es andersherum: Öffne „Weiteren Co-Elternteil hinzufügen“, zeig deinen Code und lass die andere Person ihn eingeben.</string>
+    <string name="pairing_error_slot_conflict">Ihr seid beide schon mit einem anderen Co-Elternteil verknüpft, und zwei solche Konten lassen sich noch nicht verknüpfen.</string>
 
     <!-- Invite code hero card -->
     <string name="pairing_your_code_title">Dein Einladungscode</string>

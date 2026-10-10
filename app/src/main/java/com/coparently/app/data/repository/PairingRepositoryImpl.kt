@@ -486,18 +486,6 @@ class PairingRepositoryImpl @Inject constructor(
     }
 
     /**
-     * Whether this invitation is a co-parent code, which is the only kind that writes no `kind`
-     * field (`firestore.rules`' `validInvitationKind`: absent, or `guest`, `friend` or
-     * `professional`).
-     *
-     * Excluding the guest kind alone was not enough: a calendar friend's and a professional's
-     * codes also have an empty `toEmail`, and both are issued by a *paired* parent — exactly the
-     * one who opens "Add another co-parent". They were handed the grandmother's code as their
-     * co-parent code (which the accept callable then refuses), and "New code" cancelled it.
-     */
-    private fun DocumentSnapshot.isCoParentInvite(): Boolean = getString("kind").isNullOrEmpty()
-
-    /**
      * Runs a Firestore block and normalizes any failure into a [PairingException].
      *
      * The lambda is `suspend` because every body calls `await()`; an inline
@@ -531,3 +519,15 @@ class PairingRepositoryImpl @Inject constructor(
         val EMAIL_REGEX = Regex("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")
     }
 }
+
+/**
+ * Whether this invitation is a co-parent code, which is the only kind that writes no `kind`
+ * field (`firestore.rules`' `validInvitationKind`: absent, or `guest`, `friend` or
+ * `professional`).
+ *
+ * Excluding the guest kind alone was not enough: a calendar friend's and a professional's
+ * codes also have an empty `toEmail`, and both are issued by a *paired* parent — exactly the
+ * one who opens "Add another co-parent". They were handed the grandmother's code as their
+ * co-parent code (which the accept callable then refuses), and "New code" cancelled it.
+ */
+private fun DocumentSnapshot.isCoParentInvite(): Boolean = getString("kind").isNullOrEmpty()

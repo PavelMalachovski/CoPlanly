@@ -235,6 +235,8 @@ class PairingFunctions @Inject constructor(
                 "self-pairing" -> PairingError.SelfPairing
                 "already-paired" -> PairingError.AlreadyPaired
                 "wrong-recipient" -> PairingError.WrongRecipient
+                "enter-their-code" -> PairingError.EnterTheirCode
+                "slot-conflict" -> PairingError.SlotConflict
                 "guest-invitation" -> PairingError.GuestInvitation
                 "not-a-guest-invitation" -> PairingError.NotGuestInvitation
                 "friend-invitation" -> PairingError.FriendInvitation

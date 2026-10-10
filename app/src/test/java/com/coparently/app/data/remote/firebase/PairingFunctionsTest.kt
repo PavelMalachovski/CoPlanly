@@ -110,14 +110,22 @@ class PairingFunctionsTest {
     }
 
     @Test
-    fun `the six reason strings map to six distinct errors`() {
+    fun `a pairing that would move a paired accepter's slot says which way round works`() {
+        assertEquals(PairingError.EnterTheirCode, mapReason("enter-their-code"))
+        assertEquals(PairingError.SlotConflict, mapReason("slot-conflict"))
+    }
+
+    @Test
+    fun `the pairing reason strings map to distinct errors`() {
         val reasons = listOf(
             "not-found",
             "invitation-expired",
             "invitation-not-pending",
             "self-pairing",
             "already-paired",
-            "wrong-recipient"
+            "wrong-recipient",
+            "enter-their-code",
+            "slot-conflict"
         )
 
         assertEquals(reasons.size, reasons.map { mapReason(it) }.toSet().size)

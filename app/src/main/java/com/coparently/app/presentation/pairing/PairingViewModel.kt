@@ -130,8 +130,8 @@ class PairingViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             // Only mint a code on entry once the account is known to be unpaired. A paired
-            // account gets one only when it asks to invite another co-parent ([refreshInvite]
-            // from the "Add another co-parent" row): the callable accepts a second pairing, so
+            // account gets one only when it asks to invite another co-parent
+            // ([inviteAnotherCoParent]): the callable accepts a second pairing, so
             // a code minted on every visit would be a live 24-hour invitation to the family
             // that nobody meant to hand out.
             state.first { it !is PairingState.Loading }
@@ -146,6 +146,14 @@ class PairingViewModel @Inject constructor(
     fun refreshInvite() {
         viewModelScope.launch { pairingRepository.createOrReuseInviteCode() }
     }
+
+    /**
+     * Gives a paired account the code it shares to bring in another co-parent, from the "Add
+     * another co-parent" row. The same reuse-or-mint as [refreshInvite], but a failure is
+     * reported through [PairingFormState.actionErrorRes]: the row shows nothing but this code,
+     * so a silent failure would leave it spinning with no way to tell why.
+     */
+    fun inviteAnotherCoParent() = launchAction { pairingRepository.createOrReuseInviteCode() }
 
     /**
      * Withdraws the current code and issues a fresh one. Has no field of its

@@ -29,6 +29,8 @@
     <string name="pairing_error_network">Žádné připojení. Zkontrolujte internet a zkuste to znovu.</string>
     <string name="pairing_error_unknown">Něco se pokazilo. Zkuste to prosím znovu.</string>
     <string name="pairing_error_code_incomplete">Zadejte všech 6 znaků kódu.</string>
+    <string name="pairing_error_enter_their_code">Už jste propojeni s druhým rodičem, takže postupujte obráceně: otevřete „Přidat dalšího rodiče“, ukažte svůj kód a druhá osoba ho zadá.</string>
+    <string name="pairing_error_slot_conflict">Oba už jste propojeni s jiným rodičem a dva takové účty zatím propojit nejde.</string>
 
     <!-- Invite code hero card -->
     <string name="pairing_your_code_title">Váš kód pozvánky</string>
