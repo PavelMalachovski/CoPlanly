@@ -1287,6 +1287,16 @@ Preconditions: A and B are paired, and each phone has its own account signed in.
 
 Preconditions: A is paired with **both** B and C (two families). Invite C from Settings → Family.
 
+- [ ] **Inviting the second co-parent.** On A, paired with B only: Settings → Family → the pairing
+      screen → **Add another co-parent**.
+  - Opening the row shows **Share my code / Enter a code**, with A's own code and its **QR**
+    under "Share my code" — not only a field for somebody else's code (the defect fixed in
+    October 2026: a paired account was never given a code).
+  - Closing and reopening the row shows the **same** code, not a new one.
+  - If A has a calendar-friend or professional invitation outstanding, the code shown is
+    **not** that one, and **New code** leaves it working.
+  - C enters the code (or scans the QR) and A ends up with two families.
+
 - [ ] Home and Expenses show a **switcher chip** beside the gear.
   - It names the family on screen by its co-parent.
   - It is absent on Calendar and Chat.

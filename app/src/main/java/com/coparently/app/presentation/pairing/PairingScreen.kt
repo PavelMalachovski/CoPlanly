@@ -58,6 +58,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.domain.model.PairingInvite
 import com.coparently.app.domain.model.PairingState
+import com.coparently.app.domain.model.activeInviteOrNull
 import com.coparently.app.domain.pairing.PairingUri
 import com.coparently.app.presentation.common.ConfirmationDialog
 import com.coparently.app.presentation.common.SectionGroup
@@ -223,7 +224,8 @@ private fun PairingSideEffects(
     }
     // The QR renders inline now, so it is generated as soon as there is a code to encode
     // rather than waiting for a button. Keyed on the code so regenerating rebuilds it.
-    val activeCode = (state as? PairingState.NotPaired)?.activeInvite?.code
+    // Paired accounts included: inviting a second co-parent shows the same card.
+    val activeCode = state.activeInviteOrNull?.code
     LaunchedEffect(activeCode) {
         if (activeCode != null) viewModel.showQr()
     }
@@ -436,7 +438,11 @@ private fun LazyListScope.pairedSection(
                 icon = Icons.Default.PersonAdd,
                 title = stringResource(R.string.pairing_add_another_title),
                 supporting = stringResource(R.string.pairing_add_another_description),
-                onClick = { addingAnother.value = !addingAnother.value }
+                onClick = {
+                    addingAnother.value = !addingAnother.value
+                    // A paired account gets no code on entry, so opening this row mints one.
+                    if (addingAnother.value) viewModel.refreshInvite()
+                }
             )
         }
     }

@@ -35,6 +35,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -517,6 +518,29 @@ class PairingRepositoryImplTest {
             verify(exactly = 0) { invitationsCollection.document(any()) }
         }
 
+    /**
+     * A calendar friend's and a professional's codes are written by a paired parent with an
+     * empty `toEmail`, like a co-parent code. Reusing one handed that parent the grandmother's
+     * code under "Add another co-parent", which the pairing callable then refuses.
+     */
+    @Test
+    fun `createOrReuseInviteCode never reuses a guest, friend or professional code`() = runTest {
+        val others = listOf("guest", "friend", "professional").map { kind ->
+            pendingInviteDoc(code = kind.take(6).uppercase().padEnd(6, 'X'), toEmail = "", kind = kind)
+        }
+        stubOwnInvitesQuery(*others.toTypedArray())
+        val newInviteRef = mockk<DocumentReference>(relaxed = true)
+        every { invitationsCollection.document(any()) } returns newInviteRef
+        every { newInviteRef.set(any()) } returns Tasks.forResult<Void>(null)
+
+        val result = repository.createOrReuseInviteCode()
+
+        assertTrue(result.isSuccess)
+        val code = result.getOrNull()?.code.orEmpty()
+        assertFalse(code in setOf("GUESTX", "FRIEND", "PROFES"))
+        verify { newInviteRef.set(any()) }
+    }
+
     // ---- revokeActiveInvite -------------------------------------------------
 
     @Test
@@ -538,6 +562,24 @@ class PairingRepositoryImplTest {
         assertTrue(result.isSuccess)
         verify { codeInviteRef.update("status", "cancelled") }
         verify(exactly = 0) { emailInviteRef.update(any<String>(), any()) }
+    }
+
+    @Test
+    fun `revokeActiveInvite leaves guest, friend and professional codes alone`() = runTest {
+        val codeInviteRef = mockk<DocumentReference>(relaxed = true)
+        val codeInvite = pendingInviteDoc(code = "ABCDEF", toEmail = "", reference = codeInviteRef)
+        every { codeInviteRef.update("status", "cancelled") } returns Tasks.forResult<Void>(null)
+        val otherRefs = List(3) { mockk<DocumentReference>(relaxed = true) }
+        val others = listOf("guest", "friend", "professional").zip(otherRefs) { kind, ref ->
+            pendingInviteDoc(code = "GHJKMN", toEmail = "", reference = ref, kind = kind)
+        }
+        stubOwnInvitesQuery(codeInvite, *others.toTypedArray())
+
+        val result = repository.revokeActiveInvite()
+
+        assertTrue(result.isSuccess)
+        verify { codeInviteRef.update("status", "cancelled") }
+        otherRefs.forEach { ref -> verify(exactly = 0) { ref.update(any<String>(), any()) } }
     }
 
     // ---- runPairing error normalization -------------------------------------
@@ -655,9 +697,11 @@ class PairingRepositoryImplTest {
         toEmail: String,
         expiresAt: Long = System.currentTimeMillis() + HOUR_MILLIS,
         createdAt: Long = System.currentTimeMillis(),
-        reference: DocumentReference = mockk(relaxed = true)
+        reference: DocumentReference = mockk(relaxed = true),
+        kind: String? = null
     ): DocumentSnapshot {
         val doc = mockk<DocumentSnapshot>(relaxed = true)
+        every { doc.getString("kind") } returns kind
         every { doc.getString("code") } returns code
         every { doc.getString("toEmail") } returns toEmail
         every { doc.getString("fromUserId") } returns "user-a"

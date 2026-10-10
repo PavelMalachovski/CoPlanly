@@ -158,7 +158,7 @@ class PairingRepositoryImpl @Inject constructor(
             .await()
             .documents
             .filter { it.getString("toEmail").orEmpty().isEmpty() }
-            .filter { it.getString("kind") != KIND_GUEST }
+            .filter { it.isCoParentInvite() }
             .forEach { it.reference.update("status", STATUS_CANCELLED).await() }
     }
 
@@ -479,11 +479,23 @@ class PairingRepositoryImpl @Inject constructor(
         val now = System.currentTimeMillis()
         return this
             .filter { it.getString("toEmail").orEmpty().isEmpty() }
-            .filter { it.getString("kind") != KIND_GUEST }
+            .filter { it.isCoParentInvite() }
             .filter { (it.getLong("expiresAt") ?: 0L) > now }
             .sortedByDescending { it.getLong("createdAt") ?: 0L }
             .mapNotNull { it.toInvite() }
     }
+
+    /**
+     * Whether this invitation is a co-parent code, which is the only kind that writes no `kind`
+     * field (`firestore.rules`' `validInvitationKind`: absent, or `guest`, `friend` or
+     * `professional`).
+     *
+     * Excluding the guest kind alone was not enough: a calendar friend's and a professional's
+     * codes also have an empty `toEmail`, and both are issued by a *paired* parent — exactly the
+     * one who opens "Add another co-parent". They were handed the grandmother's code as their
+     * co-parent code (which the accept callable then refuses), and "New code" cancelled it.
+     */
+    private fun DocumentSnapshot.isCoParentInvite(): Boolean = getString("kind").isNullOrEmpty()
 
     /**
      * Runs a Firestore block and normalizes any failure into a [PairingException].
@@ -517,17 +529,5 @@ class PairingRepositoryImpl @Inject constructor(
         const val CODE_TTL_MILLIS = 24L * 60 * 60 * 1000
         const val EMAIL_TTL_MILLIS = 7L * 24 * 60 * 60 * 1000
         val EMAIL_REGEX = Regex("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")
-
-        /**
-         * Wire value marking a guest invitation, matching `GuestRepositoryImpl.KIND_GUEST`.
-         *
-         * A co-parent code invite writes no `kind` field at all, so a guest invitation — which
-         * also has an empty `toEmail` — is the only pending invite that must be excluded from
-         * the "current co-parent code" lookups. Without this filter, `createOrReuseInviteCode`
-         * handed a co-parent the grandparent's guest code (which the accept callable then
-         * rejects), the pairing screen showed it as "your invite", and `revokeActiveInvite`
-         * silently cancelled the outstanding guest invitation too.
-         */
-        const val KIND_GUEST = "guest"
     }
 }
