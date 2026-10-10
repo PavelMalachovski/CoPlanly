@@ -32,6 +32,10 @@
     <string name="pairing_error_network">No connection. Check your internet and try again.</string>
     <string name="pairing_error_unknown">Something went wrong. Please try again.</string>
     <string name="pairing_error_code_incomplete">Enter all 6 characters of the code.</string>
+    <!-- An account that already has a co-parent may only be given the slot it holds (a slot is
+         one per person, read by every family it is in): the server says which way round works. -->
+    <string name="pairing_error_enter_their_code">You already have a co-parent here, so link the other way round: open “Add another co-parent”, show your code and let the other person enter it.</string>
+    <string name="pairing_error_slot_conflict">You both already have a co-parent here, and two such accounts cannot be linked yet.</string>
 
     <!-- Invite code hero card -->
     <string name="pairing_your_code_title">Your invite code</string>

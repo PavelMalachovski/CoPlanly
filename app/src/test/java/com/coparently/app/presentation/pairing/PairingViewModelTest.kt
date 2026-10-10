@@ -16,12 +16,15 @@ import com.coparently.app.domain.model.AccountSummary
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.CustodyModelType
 import com.coparently.app.domain.model.PairingError
+import com.coparently.app.domain.model.PairingInvite
 import com.coparently.app.domain.model.PairingState
 import com.coparently.app.domain.model.PartnerSummary
 import com.coparently.app.domain.model.User
+import com.coparently.app.domain.pairing.PairingUri
 import com.coparently.app.domain.repository.PairingRepository
 import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.utils.ValidationUtils
+import io.mockk.clearMocks
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.coVerifyOrder
@@ -29,6 +32,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
+import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
@@ -55,6 +59,7 @@ class PairingViewModelTest {
     private lateinit var custodyModelRepository: CustodyModelRepository
     private lateinit var pendingCustodyConflict: PendingCustodyConflict
     private lateinit var signedInAccountSource: SignedInAccountSource
+    private lateinit var qrCodeService: QRCodeService
     private lateinit var viewModel: PairingViewModel
 
     @Before
@@ -79,6 +84,7 @@ class PairingViewModelTest {
             flowOf(PairingState.NotPaired())
         signedInAccountSource = mockk(relaxed = true)
         every { signedInAccountSource.observe() } returns flowOf(ACCOUNT)
+        qrCodeService = mockk(relaxed = true)
         buildViewModel()
     }
 
@@ -94,7 +100,7 @@ class PairingViewModelTest {
     private fun buildViewModel() {
         viewModel = PairingViewModel(
             pairingRepository = repository,
-            qrCodeService = mockk<QRCodeService>(relaxed = true),
+            qrCodeService = qrCodeService,
             analyticsManager = analyticsManager,
             userRepository = userRepository,
             parentSlotMigrator = parentSlotMigrator,
@@ -163,6 +169,8 @@ class PairingViewModelTest {
             PairingError.SelfPairing to R.string.pairing_error_self_pairing,
             PairingError.AlreadyPaired to R.string.pairing_error_already_paired,
             PairingError.WrongRecipient to R.string.pairing_error_wrong_recipient,
+            PairingError.EnterTheirCode to R.string.pairing_error_enter_their_code,
+            PairingError.SlotConflict to R.string.pairing_error_slot_conflict,
             PairingError.Network to R.string.pairing_error_network,
             PairingError.Unknown("boom") to R.string.pairing_error_unknown
         )
@@ -198,6 +206,68 @@ class PairingViewModelTest {
             repository.revokeActiveInvite()
             repository.createOrReuseInviteCode()
         }
+    }
+
+    // ---- inviting a second co-parent ---------------------------------------
+
+    @Test
+    fun `an unpaired account gets a code on entry`() = runTest(dispatcher) {
+        dispatcher.scheduler.advanceUntilIdle()
+
+        coVerify(exactly = 1) { repository.createOrReuseInviteCode() }
+    }
+
+    @Test
+    fun `a paired account gets no code until it asks to invite another co-parent`() =
+        runTest(dispatcher) {
+            // setUp's unpaired ViewModel mints its own code on entry; let it, then forget it.
+            dispatcher.scheduler.advanceUntilIdle()
+            clearMocks(repository, answers = false)
+            coEvery { repository.observePairingState() } returns flowOf(PairingState.Paired(partner = PARTNER))
+            buildViewModel()
+            dispatcher.scheduler.advanceUntilIdle()
+
+            coVerify(exactly = 0) { repository.createOrReuseInviteCode() }
+
+            viewModel.inviteAnotherCoParent()
+            dispatcher.scheduler.advanceUntilIdle()
+
+            coVerify(exactly = 1) { repository.createOrReuseInviteCode() }
+        }
+
+    @Test
+    fun `a code that could not be made for another co-parent is reported`() = runTest(dispatcher) {
+        // The row shows nothing but this code, so a silent failure would leave it spinning.
+        coEvery { repository.createOrReuseInviteCode() } returns
+            Result.failure(PairingException(PairingError.Network))
+
+        viewModel.inviteAnotherCoParent()
+        dispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(R.string.pairing_error_network, viewModel.form.value.actionErrorRes)
+    }
+
+    @Test
+    fun `a paired account's invite is drawn as a QR`() = runTest(dispatcher) {
+        // The "Add another co-parent" row shows the same code card as an unpaired account,
+        // QR included. The QR used to be drawn for an unpaired account's invite only.
+        val invite = PairingInvite(
+            id = "invite-2",
+            code = "4F7K2M",
+            fromUserId = "user-a",
+            fromUserName = "Alice",
+            fromUserEmail = "alice@example.com",
+            expiresAtMillis = Long.MAX_VALUE
+        )
+        coEvery { repository.observePairingState() } returns
+            flowOf(PairingState.Paired(partner = PARTNER, activeInvite = invite))
+        buildViewModel()
+        dispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.showQr()
+        dispatcher.scheduler.advanceUntilIdle()
+
+        verify(exactly = 1) { qrCodeService.generatePairingQRCode(content = PairingUri.build("4F7K2M")) }
     }
 
     // ---- acceptIncoming / slot re-stamping --------------------------------
@@ -704,6 +774,13 @@ class PairingViewModelTest {
             name = "Alice Novak",
             email = "alice@example.com",
             photoUrl = "https://lh3.googleusercontent.com/a/alice"
+        )
+
+        val PARTNER = PartnerSummary(
+            id = "user-b",
+            name = "Bob Novak",
+            email = "bob@example.com",
+            pairedSinceMillis = null
         )
     }
 }

@@ -75,3 +75,17 @@ sealed interface PairingState {
         val incoming: List<PairingInvite> = emptyList()
     ) : PairingState
 }
+
+/**
+ * This user's own outstanding invite, whichever state carries it, or null while [PairingState.Loading].
+ *
+ * Paired and unpaired accounts show the same code card, so whatever draws that card (the QR above
+ * all) reads the invite through here rather than from [PairingState.NotPaired] alone — which is how
+ * a paired parent inviting a second co-parent was shown a card with no QR to scan.
+ */
+val PairingState.activeInviteOrNull: PairingInvite?
+    get() = when (this) {
+        PairingState.Loading -> null
+        is PairingState.NotPaired -> activeInvite
+        is PairingState.Paired -> activeInvite
+    }

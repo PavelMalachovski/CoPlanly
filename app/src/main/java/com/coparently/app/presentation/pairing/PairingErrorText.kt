@@ -26,6 +26,8 @@ fun Throwable.pairingMessageRes(): Int {
         PairingError.SelfPairing -> R.string.pairing_error_self_pairing
         PairingError.AlreadyPaired -> R.string.pairing_error_already_paired
         PairingError.WrongRecipient -> R.string.pairing_error_wrong_recipient
+        PairingError.EnterTheirCode -> R.string.pairing_error_enter_their_code
+        PairingError.SlotConflict -> R.string.pairing_error_slot_conflict
         PairingError.Network -> R.string.pairing_error_network
         else -> kindMessageRes(error)
     }

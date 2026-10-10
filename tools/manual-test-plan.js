@@ -249,9 +249,10 @@ const RULES = [
   },
   {
     sections: ['5.2'],
-    why: 'families and the family switcher',
+    why: 'families, the family switcher, or inviting a second co-parent',
     paths: ['K/presentation/common/FamilySwitcher*', 'K/domain/family/**', 'K/data/family/**',
-      'K/presentation/common/ParentsSource.kt'],
+      'K/presentation/common/ParentsSource.kt', 'K/presentation/pairing/**',
+      'K/data/repository/PairingRepositoryImpl.kt'],
   },
   {
     sections: ['5.3'],

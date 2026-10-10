@@ -799,13 +799,15 @@ jobs:
       # So the script now stops the emulator itself, synchronously, once the status is written
       # (STOP_EMULATOR, tools/stop-emulator.sh), and the timeout below is only the backstop.
       #
-      # 10 minutes: the step measured ~6 on API 26 with the build inside it (boot ~1, build ~3,
-      # tests ~2), and the build now runs in the background before it. When the tests outgrow it,
-      # the next step says so in plain words — "did not finish" — and the answer is to raise this
-      # number, not to split the suite.
+      # 15 minutes: the step measured ~6 on API 26 with the build inside it (boot ~1, build ~3,
+      # tests ~2), and the build now runs in the background before it — but the step still waits
+      # for that build. On PR #127, which changed both the app and androidTest, the wait took ~8
+      # minutes, and the API 30 leg passed all 155 tests and was stopped two seconds later at the
+      # old 10-minute limit. When the tests outgrow it, the next step says so in plain words —
+      # "did not finish" — and the answer is to raise this number, not to split the suite.
       - name: Run instrumented tests
         id: tests
-        timeout-minutes: 10
+        timeout-minutes: 15
         continue-on-error: true
         env:
           STATUS_FILE: ${{ runner.temp }}/instrumented-status

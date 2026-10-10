@@ -821,7 +821,7 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   emulator's `crashpad_handler`, which outlives it and holds the output pipe the action reads (on
   PR #103 the e2e job's emulator stopped at 09:27 and the action waited on that handler until the
   job's 50-minute limit). The `e2e` job has the same status file and backstop since. The step keeps
-  `continue-on-error` and a 10-minute limit as the backstop, and "The instrumented tests finished
+  `continue-on-error` and a 15-minute limit as the backstop, and "The instrumented tests finished
   and passed" fails the job unless the status file exists and says 0. When the suite outgrows the
   limit that step says "did not finish" — raise the limit. **The APKs compile while the emulator
   boots** (`tools/ci-background-build.sh start` before the AVD restores, `wait` as the script's
@@ -1350,6 +1350,17 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     flows this project has already had to optimise twice for that. `ParentSlotMigrator` cannot
     take its `familyId` scope yet either: a row whose backfill has not run carries null, so
     scoping the re-stamp on it would silently skip exactly the rows that need it.
+    **So a slot is one per person in practice, and a second family must not move it** (October
+    2026). `assignSlots` keeps the inviter's slot and gives the accepter the other, so an accepter
+    who already co-parents could be moved in their first family too — both parents of it on one
+    colour, every record re-stamped, the custody pattern inverted. `acceptPairingInvitation`
+    refuses that (`assertAccepterKeepsSlot`: `enter-their-code` when the other way round works,
+    `slot-conflict` when both already hold the same slot), and a paired account's "Add another
+    co-parent" only *shares* a code (`shareOnlySection`), never offers a field for somebody else's.
+    Don't put a code field back there, or drop the guard, before the clients read
+    `families/{id}.slots`. `OnScreenFamiliesTest` takes the second family's code from that screen,
+    because every test used to take it from the repository while the screen gave a paired account
+    no code at all.
 20. **The database file is encrypted, and the passphrase is the one piece of state that must never
     be re-minted** (SEC-2, Aug 2026). Room opens through SQLCipher: `EncryptedDatabase` builds the
     open helper and converts an existing plaintext file on the way, `DatabaseKey` holds 256 random

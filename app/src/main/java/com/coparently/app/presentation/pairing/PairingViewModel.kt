@@ -14,6 +14,7 @@ import com.coparently.app.data.session.SignedInAccountSource
 import com.coparently.app.domain.custody.SharedCustodyRead
 import com.coparently.app.domain.model.AccountSummary
 import com.coparently.app.domain.model.PairingState
+import com.coparently.app.domain.model.activeInviteOrNull
 import com.coparently.app.domain.pairing.InviteCodeGenerator
 import com.coparently.app.domain.pairing.PairingUri
 import com.coparently.app.domain.repository.PairingRepository
@@ -128,19 +129,31 @@ class PairingViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            // Only mint a code once the account is known to be unpaired. Minting one
-            // unconditionally left an already-paired account holding a live 24-hour invite:
-            // harmless while the callable rejects it, but the document stays redeemable and
-            // becomes live again the moment the user unpairs.
+            // Only mint a code on entry once the account is known to be unpaired. A paired
+            // account gets one only when it asks to invite another co-parent
+            // ([inviteAnotherCoParent]): the callable accepts a second pairing, so
+            // a code minted on every visit would be a live 24-hour invitation to the family
+            // that nobody meant to hand out.
             state.first { it !is PairingState.Loading }
             if (state.value is PairingState.NotPaired) refreshInvite()
         }
     }
 
-    /** Ensures an invite code exists so the hero card always has one to show. */
+    /**
+     * Ensures an invite code exists so the hero card always has one to show. Reuses an
+     * outstanding code rather than minting another, so calling it again is harmless.
+     */
     fun refreshInvite() {
         viewModelScope.launch { pairingRepository.createOrReuseInviteCode() }
     }
+
+    /**
+     * Gives a paired account the code it shares to bring in another co-parent, from the "Add
+     * another co-parent" row. The same reuse-or-mint as [refreshInvite], but a failure is
+     * reported through [PairingFormState.actionErrorRes]: the row shows nothing but this code,
+     * so a silent failure would leave it spinning with no way to tell why.
+     */
+    fun inviteAnotherCoParent() = launchAction { pairingRepository.createOrReuseInviteCode() }
 
     /**
      * Withdraws the current code and issues a fresh one. Has no field of its
@@ -422,7 +435,7 @@ class PairingViewModel @Inject constructor(
      * screen, so this is called as soon as there is a code to encode rather than on a tap.
      */
     fun showQr() {
-        val invite = (state.value as? PairingState.NotPaired)?.activeInvite ?: return
+        val invite = state.value.activeInviteOrNull ?: return
         viewModelScope.launch {
             val bitmap = qrCodeService.generatePairingQRCode(content = PairingUri.build(invite.code))
             _form.value = _form.value.copy(qrBitmap = bitmap)
