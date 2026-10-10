@@ -174,6 +174,9 @@ class PairingViewModelTest {
 
     @Test
     fun `saying yes redeems the code that was named`() = runTest(dispatcher) {
+        // A relaxed mock cannot make a Result<String?>: it hands back an Object that fails the cast.
+        coEvery { repository.redeem("4F7K2M") } returns Result.success(null)
+
         linkWith("4F7K2M")
 
         coVerify(exactly = 1) { repository.redeem("4F7K2M") }
