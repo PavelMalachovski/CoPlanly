@@ -21,7 +21,6 @@
 > | `{{LEGAL_ENTITY_NAME}}`, `{{REGISTERED_ADDRESS}}`, `{{COMPANY_ID}}` | The controller: a person or a company, its address, and its registration number (IČO) |
 > | `{{PRIVACY_CONTACT_EMAIL}}` | An address somebody actually reads — it is the only route for a person who has uninstalled the app |
 > | `{{FIRESTORE_REGION}}` | The Firestore and Cloud Storage location of the production project, from the Firebase console (Firestore → Settings). It must be an EU location — see `LEGAL-REVIEW-2026-09.md` L-3. The functions' region is already stated (`europe-west3`) |
-> | `{{WEB_DELETION_URL}}` | Where `web/delete-account/` is hosted |
 > | `{{AI_VERTEX_REGION}}` | The Vertex AI region the writing help runs in (`AI_VERTEX_REGION` in `functions/.env`, an EU region such as `europe-west1`) — see "Writing help (AI)". Remove the section instead if the feature is not offered at publication |
 > | `{{AI_PROVIDER_RETENTION}}` | What Google keeps of a writing-help request on its side (prompt caching, abuse monitoring) under the project's Vertex AI settings, once the owner has checked and configured them — see `functions/README.md`, "AI assist" |
 >
@@ -438,7 +437,7 @@ signed in on.
 
 If you no longer have the app installed, write to {{PRIVACY_CONTACT_EMAIL}} from the address
 your account uses and we will delete the account for you within 30 days. The same steps are on
-our account-deletion page: {{WEB_DELETION_URL}}.
+our account-deletion page: https://coparently-a39c9.web.app/delete-account/.
 
 ## Your rights
 

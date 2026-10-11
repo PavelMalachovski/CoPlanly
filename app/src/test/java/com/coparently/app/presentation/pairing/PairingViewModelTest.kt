@@ -21,7 +21,6 @@ import com.coparently.app.domain.model.PairingInvite
 import com.coparently.app.domain.model.PairingState
 import com.coparently.app.domain.model.PartnerSummary
 import com.coparently.app.domain.model.User
-import com.coparently.app.domain.pairing.PairingUri
 import com.coparently.app.domain.repository.PairingRepository
 import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.utils.ValidationUtils
@@ -351,7 +350,7 @@ class PairingViewModelTest {
         viewModel.showQr()
         dispatcher.scheduler.advanceUntilIdle()
 
-        verify(exactly = 1) { qrCodeService.generatePairingQRCode(content = PairingUri.build("4F7K2M")) }
+        verify(exactly = 1) { qrCodeService.generatePairingQRCode(content = pairingLinkFor("4F7K2M")) }
     }
 
     // ---- acceptIncoming / slot re-stamping --------------------------------

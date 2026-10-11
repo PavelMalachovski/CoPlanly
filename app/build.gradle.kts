@@ -72,33 +72,37 @@ val canSignRelease = run {
 }
 
 /**
- * The published privacy policy (REL-4). Empty until the owner hosts `web/privacy/` — see
- * `web/README.md` — and then the one line to change.
+ * The published privacy policy (REL-4), `web/privacy/` — see `web/README.md`. Set in October 2026
+ * when hosting went live, on the owner's decision, while the page is still the draft with its
+ * banner: the closed test needs the link in the app, and the page is regenerated in place when
+ * counsel's pass lands, so the URL does not change. Empty hides the Settings row and the consent
+ * screen's button.
  */
-val publishedPrivacyPolicyUrl = ""
+val publishedPrivacyPolicyUrl = "https://coparently-a39c9.web.app/privacy/"
 
 /**
- * The published terms of service, `web/terms/` once hosted. Empty until then, and empty hides the
- * sign-in screen's and Settings' links to it, as with the privacy policy.
+ * The published terms of service, `web/terms/` — set with the privacy policy, and a draft in the
+ * same way. Empty hides the sign-in screen's and Settings' links to it.
  */
-val publishedTermsUrl = ""
+val publishedTermsUrl = "https://coparently-a39c9.web.app/terms/"
 
 /**
- * The export verification page (MON-16), `web/verify/` once hosted — printed on every exported
- * file beside its record id. Empty until `firebase deploy --only hosting` has run; while it is,
- * a registered file prints its record id without an address rather than one that does not resolve.
+ * The export verification page (MON-16), `web/verify/` — printed on every exported file beside its
+ * record id. Hosted since October 2026 (`firebase deploy --only hosting`); before that it was empty,
+ * and a registered file printed its record id without an address rather than one that did not
+ * resolve.
  */
-val publishedExportVerifyUrl = ""
+val publishedExportVerifyUrl = "https://coparently-a39c9.web.app/verify/"
 
 /**
  * Whether an invitation is shared as `https://coparently-a39c9.web.app/pair/CODE` (`web/pair/`, a
  * link messengers make clickable, which opens the app or says how to get it) rather than
- * `coplanly://pair?code=CODE`, which they leave as text. False until `firebase deploy --only
- * hosting` has run: a link to a page that is not there is worse than one that is not clickable.
- * The app reads both forms either way. Pass -PCOPLANLY_PAIRING_WEB_LINK=true to try it without
- * committing.
+ * `coplanly://pair?code=CODE`, which they leave as text. On since `web/pair/` was hosted (October
+ * 2026); it was false until then, because a link to a page that is not there is worse than one
+ * that is not clickable. The app reads both forms either way. -PCOPLANLY_PAIRING_WEB_LINK=false
+ * turns it off for one build.
  */
-val publishedPairingWebLink = false
+val publishedPairingWebLink = true
 
 /**
  * Where a parent reports a chat message (Play's user-generated content policy; play-final audit

@@ -89,7 +89,7 @@ invocation is yours.
 | **FAM-4** | **Built** (schema 42, PR #101: per-child overrides in the one custody document, rules and rules tests, grid band behind the one-child filter, Home hero, custody-setup section; feed stays family); left: the rules deploy and a look on one and two phones — see DEVICE-CHECKLIST §3.13 | P2 | — |
 | **MON-14** | **Built** (schema 38, `38.json` committed; rules, feed port, custody screen); left: the rules deploy and a look at the grid — see the 👁 table | P1 | — |
 | **MON-15 (FTS)** | **Measured and not adopted** (PR #101): token-prefix matching and `unicode61`'s narrower fold would drop messages the search accepts; chat search stays on `LIKE` plus the Kotlin fold. No action | P3 | — |
-| **MON-16** | **Built** (callables, closed rules, record ID on every export, `web/verify/`); left: the functions, rules and hosting deploys, then `publishedExportVerifyUrl` | P1 | — |
+| **MON-16** | **Built** (callables, closed rules, record ID on every export, `web/verify/`); functions and hosting deployed and `publishedExportVerifyUrl` set (October 2026); left: the rules deploy | P1 | — |
 | **MON-17** | **Built** (functions, rules, Settings screen); left: the deploy and a subscription from a real iPhone — see the 👁 table | P1 | — |
 | **MON-18** | **Built** (fourth callable, two-consent rules, screens); left: the functions and rules deploys and a three-account run — see the 👁 table | P1 | — |
 | **MON-20** | **Built** (read-only card in custody settings, pure calculator); left: a look on a phone | P2 | — |

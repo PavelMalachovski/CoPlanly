@@ -40,7 +40,6 @@ Fill the same placeholders the legal documents use, so one pass covers all three
 | Placeholder | What goes in |
 | --- | --- |
 | `{{PRIVACY_CONTACT_EMAIL}}` | The address that will actually be read. It is the only route for somebody who has uninstalled the app. |
-| `{{PRIVACY_POLICY_URL}}` | Where the privacy policy ends up. |
 | `{{LEGAL_ENTITY_NAME}}` | The controller. |
 | `{{REGISTERED_ADDRESS}}` | The controller's address — also required for EU trader status. |
 
@@ -111,15 +110,16 @@ Czech behind a two-button switch, following the browser's language.
   format, the size, and "one of the family's parents" — never a name. Every value is written with
   `textContent`. `docs/DESIGN-court-record.md` §10 says why each field is or is not there.
 
-Once hosted, its URL goes into `publishedExportVerifyUrl` in `app/build.gradle.kts`, and every
-registered export printed after that carries it. Until then a registered export prints its record
-ID without an address — deliberately, rather than a link that does not resolve.
+Its URL is in `publishedExportVerifyUrl` in `app/build.gradle.kts` since hosting went live (October
+2026), so every registered export printed by a build after that carries it. Before, a registered
+export printed its record ID without an address — deliberately, rather than a link that did not
+resolve.
 
 ## `pair/index.html` — where an invitation link lands
 
 The app shares an invitation as `https://coparently-a39c9.web.app/pair/CODE` once
-`publishedPairingWebLink` in `app/build.gradle.kts` is true (it is false until this page is hosted;
-`-PCOPLANLY_PAIRING_WEB_LINK=true` tries it for one build). The custom-scheme link it replaces,
+`publishedPairingWebLink` in `app/build.gradle.kts` is true — it is, since this page was hosted
+(October 2026); `-PCOPLANLY_PAIRING_WEB_LINK=false` turns it off for one build. The custom-scheme link it replaces,
 `coplanly://pair?code=`, opens the app but is plain text in WhatsApp and most messengers — beta
 testers could not tap it. `firebase.json` rewrites `/pair/**` to this one file and sends it with
 `Referrer-Policy: no-referrer` and `X-Robots-Tag: noindex`.
@@ -136,8 +136,8 @@ testers could not tap it. `firebase.json` rewrites `/pair/**` to this one file a
 - **Tested** by `web-tests/pair-page.spec.js` in the `web` job, through `firebase.json`'s own
   rewrite and headers (`web-tests/support/static-server.js` reads them).
 - **It cannot go live alone.** `firebase deploy --only hosting` publishes the whole directory, so
-  hosting this page publishes the draft legal pages beside it (with their banners) — a decision
-  for the owner, below. Until then the app keeps sharing the custom-scheme link.
+  hosting this page published the draft legal pages beside it (with their banners). The owner
+  made that call in October 2026 and linked the drafts from the app as well; see below.
 
 ### Opening the app straight from the link (App Links)
 
@@ -176,11 +176,14 @@ firebase deploy --only hosting
 ```
 
 puts the five pages at `https://<site>/delete-account/`, `https://<site>/privacy/`,
-`https://<site>/terms/`, `https://<site>/verify/` and `https://<site>/pair/`. **Nothing has been deployed yet**, and deploying is a decision, not a
-build step: the privacy policy in particular must not go live with a draft banner on it. The
-URLs then go in **three** places: the Play Console's data-deletion and privacy-policy fields,
-`{{WEB_DELETION_URL}}` and `{{PRIVACY_POLICY_URL}}` in the legal documents, and
-`publishedPrivacyPolicyUrl` at the top of `app/build.gradle.kts`.
+`https://<site>/terms/`, `https://<site>/verify/` and `https://<site>/pair/`. **Deployed in October
+2026** to `https://coparently-a39c9.web.app/`, on the owner's decision, with the privacy policy and
+terms still drafts under their banner — a closed test needs them linked, and a page regenerated in
+place keeps its URL. The deletion and policy URLs are filled into the legal documents and the
+deletion page, and `publishedPrivacyPolicyUrl`, `publishedTermsUrl`, `publishedExportVerifyUrl` and
+`publishedPairingWebLink` at the top of `app/build.gradle.kts` are set. Left for the Play Console:
+the data-deletion field (`/delete-account/`) and the privacy-policy field (`/privacy/`). A page
+changed in this directory is live only after the next `firebase deploy --only hosting`.
 
 **The app links the policy, but only once that value is set.** Settings → Account has a
 "Privacy policy" row and the telemetry consent screen a "Read the privacy policy" button, both
