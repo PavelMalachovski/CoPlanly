@@ -1466,8 +1466,8 @@ nothing). Accounts: A and B paired, D and E paired (a second, unrelated family),
 ### 5.7 The pairing link and the inviter's name · 2P, 1P + a second account fallback
 
 Needs the functions deploy (`previewPairingInvitation`). The web link needs `firebase deploy --only
-hosting` **and** a build with `PAIRING_WEB_LINK` on (`-PCOPLANLY_PAIRING_WEB_LINK=true`, or
-`publishedPairingWebLink` in `app/build.gradle.kts`); the direct opening of the app needs
+hosting` **and** a build with `PAIRING_WEB_LINK` on (`publishedPairingWebLink`, on since October
+2026); the direct opening of the app needs
 `web/.well-known/assetlinks.json` with the installed build's signing key (`web/README.md`).
 A is signed in and not paired; B is signed in on another phone, with no family.
 
