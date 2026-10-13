@@ -3,7 +3,11 @@
   "firestore": {
     "users": {
       "e2e": [
-        "TwoParentPairingTest#bothProfilesNameTheOtherParentAndTheFamilyHasTwoSlots"
+        "TwoParentPairingTest#bothProfilesNameTheOtherParentAndTheFamilyHasTwoSlots",
+        "TwoParentPairingTest#aColourTheCoParentPicksReachesThisPhoneWhileItIsOpen"
+      ],
+      "checklist": [
+        "3.3"
       ]
     },
     "families": {

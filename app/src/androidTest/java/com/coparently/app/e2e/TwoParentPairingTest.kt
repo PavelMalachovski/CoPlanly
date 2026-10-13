@@ -5,8 +5,15 @@ import com.coparently.app.data.remote.firebase.PairingException
 import com.coparently.app.domain.chat.ConversationKey
 import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.model.PairingError
+import com.coparently.app.presentation.theme.ParentColor
+import com.coparently.app.presentation.theme.ParentColorCode
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
@@ -76,6 +83,32 @@ class TwoParentPairingTest : TwoParentTest() {
     }
 
     @Test
+    fun aColourTheCoParentPicksReachesThisPhoneWhileItIsOpen() = runBlocking<Unit> {
+        // The pairing state used to read the co-parent's profile once, so Bob's new colour waited
+        // for Alice to open the app again (October 2026). One subscription on Alice's side, held
+        // open across Bob's save, and nothing of hers changes: only a listener can deliver it.
+        val picked = ParentColorCode.custom(SKY_BLUE)
+        val listening = CompletableDeferred<Unit>()
+        val seen = async {
+            withTimeout(EmulatorParent.WAIT_MS) {
+                alice.parentsSource.observe()
+                    .onEach { if (it.coParent?.uid == bob.uid) listening.complete(Unit) }
+                    .first { it.coParent?.colorCode == picked }
+            }
+        }
+        withTimeout(EmulatorParent.WAIT_MS) { listening.await() }
+
+        // Bob saves the way Settings does (`SettingsViewModel.setParentColor`).
+        val bobsRow = checkNotNull(bob.userRepository.getCurrentUser())
+        bob.userRepository.updateUser(bobsRow.copy(colorCode = picked))
+
+        // What Alice's calendar draws Bob in: his pick, on her phone, without a restart.
+        val parents = seen.await()
+        val bobOnAlicesPhone = checkNotNull(parents.coParent)
+        assertEquals(ParentColor.custom(SKY_BLUE), parents.palette.of(bobOnAlicesPhone.slot))
+    }
+
+    @Test
     fun aCodeNamesItsInviterBeforeAnythingIsLinked() = runBlocking<Unit> {
         // previewPairingInvitation: the app asks "Link with Alice?" before redeeming. Carol is a
         // third account with no family yet, so the only answer is Alice's first name — and the
@@ -100,5 +133,10 @@ class TwoParentPairingTest : TwoParentTest() {
         val refused = bob.pairingRepository.previewInvite(invite.code).exceptionOrNull()
 
         assertEquals(PairingError.AlreadyPaired, (refused as PairingException).error)
+    }
+
+    private companion object {
+        /** A custom hue, between the presets' (the owner's "blue, bright"). */
+        const val SKY_BLUE = 200
     }
 }
