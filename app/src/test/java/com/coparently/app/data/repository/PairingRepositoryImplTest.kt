@@ -838,16 +838,15 @@ class PairingRepositoryImplTest {
         photoUrl: String? = null,
         role: String? = null,
         colorCode: String? = null
-    ): DocumentSnapshot {
-        val snapshot = mockk<DocumentSnapshot>(relaxed = true)
-        every { snapshot.getString(any()) } returns null
-        every { snapshot.getString("name") } returns name
-        every { snapshot.getString("email") } returns email
-        every { snapshot.getString("profilePhotoUrl") } returns photoUrl
-        every { snapshot.getString("role") } returns role
-        every { snapshot.getString("colorCode") } returns colorCode
-        return snapshot
-    }
+    ): DocumentSnapshot = fakeDocument(
+        mapOf(
+            "name" to name,
+            "email" to email,
+            "profilePhotoUrl" to photoUrl,
+            "role" to role,
+            "colorCode" to colorCode
+        )
+    )
 
     private fun userEntity(partnerId: String?) = UserEntity(
         id = "user-a",

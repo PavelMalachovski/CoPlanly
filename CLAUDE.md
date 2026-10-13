@@ -210,7 +210,9 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     the co-parent's own `users/{uid}` (`data/repository/PartnerProfileFlow.kt`) for as long as the
     link names them; it used to read it once, so their rename or new colour waited for the app to
     be reopened. A failed listener keeps the profile already read and reports the bare partner only
-    when nothing was read.
+    when nothing was read. The document is the co-parent's to write and the rules type only its
+    name, so every field is read as `get(...) as? String`, never `getString`, which throws inside
+    the listener on a number and took the other phone down on every launch.
 13. **The family switcher is one state and one dialog, and it appears at two** (M-8, September
     2026). `presentation/common/FamilySwitcher.kt` holds `FamilySwitcherChip` (Home and Expenses
     top bars, beside the gear) and `FamilySwitcherDialog`, which the Settings row opens too; both

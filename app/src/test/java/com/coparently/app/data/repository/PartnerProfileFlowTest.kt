@@ -16,6 +16,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 
 /**
  * The co-parent's profile as a live stream (October 2026).
@@ -83,6 +84,25 @@ class PartnerProfileFlowTest {
     }
 
     @Test
+    fun `a field of another type reads as absent, and the rest of the profile still arrives`() = runTest {
+        firestore.partnerProfile(PARTNER, PAIRED_AT).test {
+            // The co-parent writes their own profile, and the rules type only its name: a number
+            // where the colour belongs must read as "not chosen" — read with `getString`, it threw
+            // inside the listener, on the main thread, on every launch.
+            listeners.last().onEvent(
+                fakeDocument(mapOf("name" to "Bob", "colorCode" to 42L, "email" to true)),
+                null
+            )
+
+            val summary = awaitItem()
+            assertEquals("Bob", summary.name)
+            assertNull(summary.colorCode)
+            assertEquals("", summary.email)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
     fun `a failure before anything was read reports the bare partner`() = runTest {
         firestore.partnerProfile(PARTNER, PAIRED_AT).test {
             listeners.last().onEvent(null, failure())
@@ -140,23 +160,22 @@ class PartnerProfileFlowTest {
         verify(exactly = 1) { registration.remove() }
     }
 
-    /** A profile document; a field not given is absent, as `getString` reports it. */
+    /** A profile document; a field not given is absent. */
     private fun profile(
         name: String? = null,
         email: String? = null,
         photoUrl: String? = null,
         role: String? = null,
         colorCode: String? = null
-    ): DocumentSnapshot {
-        val snapshot = mockk<DocumentSnapshot>(relaxed = true)
-        every { snapshot.getString(any()) } returns null
-        every { snapshot.getString("name") } returns name
-        every { snapshot.getString("email") } returns email
-        every { snapshot.getString("profilePhotoUrl") } returns photoUrl
-        every { snapshot.getString("role") } returns role
-        every { snapshot.getString("colorCode") } returns colorCode
-        return snapshot
-    }
+    ): DocumentSnapshot = fakeDocument(
+        mapOf(
+            "name" to name,
+            "email" to email,
+            "profilePhotoUrl" to photoUrl,
+            "role" to role,
+            "colorCode" to colorCode
+        )
+    )
 
     private fun failure() = mockk<FirebaseFirestoreException>(relaxed = true)
 

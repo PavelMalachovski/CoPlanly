@@ -67,36 +67,46 @@ internal fun FirebaseFirestore.partnerProfile(partnerId: String, pairedAt: Long?
 /**
  * A co-parent's profile document as the pairing state carries it. A document that does not
  * exist — an offline first read with nothing cached — reads as the bare partner, every field
- * absent.
+ * absent, and so does a field of the wrong type (see [text]).
  */
 internal fun DocumentSnapshot?.toPartnerSummary(partnerId: String, pairedAt: Long?): PartnerSummary =
     PartnerSummary(
         id = partnerId,
-        name = this?.getString("name").orEmpty(),
-        email = this?.getString("email").orEmpty(),
+        name = text("name").orEmpty(),
+        email = text("email").orEmpty(),
         pairedSinceMillis = pairedAt,
         // Written by the co-parent's own `ensureProfile`, so it stays null until their
         // phone runs a build that stores one — the card falls back to the initial.
         // Blank is normalized to null: the legacy full-profile write stores "" for a
         // missing photo, and an empty URL must read as "no photo", not as a broken one.
-        photoUrl = this?.getString("profilePhotoUrl")?.takeIf { it.isNotBlank() },
+        photoUrl = text("profilePhotoUrl")?.takeIf { it.isNotBlank() },
         // The co-parent's slot, written by `assignSlots` when the pairing was accepted.
         // Room holds a `users` row for the signed-in user only, so this read is the app's
         // one source for which slot the other parent occupies — every screen that shows
         // their name depends on it. Blank normalizes to null for the same reason as the
         // photo: a pair created before slot assignment shipped has no slot here, and
         // "unknown" must not be dressed up as an answer.
-        role = this?.getString("role")?.takeIf { it.isNotBlank() },
+        role = text("role")?.takeIf { it.isNotBlank() },
         // Their answer to "children, pets or both". Absent on a build that never wrote it,
         // which reads as "contributes nothing" rather than "everything" — one parent's real
         // answer must not be widened by the other's silence.
-        caresFor = FamilyKind.fromStored(this?.getString("caresFor")),
+        caresFor = FamilyKind.fromStored(text("caresFor")),
         // The colour they chose for themselves — a preset's code or a custom hue. Blank
         // normalizes to null for the same reason the photo does: the legacy full-profile write
         // stores "" for a missing value, and "" must read as "has not chosen" rather than as an
         // unknown colour.
-        colorCode = this?.getString("colorCode")?.takeIf { it.isNotBlank() }
+        colorCode = text("colorCode")?.takeIf { it.isNotBlank() }
     )
+
+/**
+ * [field] as text, or null when it is absent or holds anything but a string.
+ *
+ * Not `getString`, which throws on a value of another type: this runs inside the snapshot
+ * listener, on the main thread, over a document the co-parent writes, and `firestore.rules` types
+ * only its name. A number where the colour belongs read that way took the other parent's app down
+ * on every launch while they were paired; read this way it is a colour not chosen.
+ */
+private fun DocumentSnapshot?.text(field: String): String? = this?.get(field) as? String
 
 /** The partner known only by the link: no name, no photo, no slot, no colour. */
 private fun bareSummary(partnerId: String, pairedAt: Long?) =
