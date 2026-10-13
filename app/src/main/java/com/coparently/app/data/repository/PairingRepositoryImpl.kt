@@ -498,7 +498,6 @@ class PairingRepositoryImpl @Inject constructor(
         const val STATUS_REJECTED = "rejected"
         const val STATUS_CANCELLED = "cancelled"
         const val CODE_TTL_MILLIS = 24L * 60 * 60 * 1000
-
         const val EMAIL_TTL_MILLIS = 7L * 24 * 60 * 60 * 1000
         val EMAIL_REGEX = Regex("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")
     }

@@ -92,7 +92,8 @@ class ParentColorsTest {
         listOf(false, true).forEach { dark ->
             assertTrue(CoPlanlyColors.proposalTintAlpha(dark) < CoPlanlyColors.custodyTintAlpha(dark))
         }
-        assertTrue(CoPlanlyColors.custodyTintAlpha(darkTheme = true) > CoPlanlyColors.custodyTintAlpha(darkTheme = false))
+        val dark = CoPlanlyColors.custodyTintAlpha(darkTheme = true)
+        assertTrue(dark > CoPlanlyColors.custodyTintAlpha(darkTheme = false))
     }
 
     @Test
