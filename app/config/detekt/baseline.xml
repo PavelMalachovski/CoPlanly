@@ -2,6 +2,9 @@
 <SmellBaseline>
   <ManuallySuppressedIssues></ManuallySuppressedIssues>
   <CurrentIssues>
+    <ID>ArgumentListWrapping:TodayWidgetTextTest.kt$TodayWidgetTextTest$("15:00–19:00 · contact with Sam", ParentColorChoice.ORANGE.color)</ID>
+    <ID>ArgumentListWrapping:TodayWidgetTextTest.kt$TodayWidgetTextTest$(WidgetLine("15:00–19:00 · contact with Sam", ParentColorChoice.ORANGE.color))</ID>
+    <ID>ArgumentListWrapping:TodayWidgetTextTest.kt$TodayWidgetTextTest$(listOf(WidgetLine("15:00–19:00 · contact with Sam", ParentColorChoice.ORANGE.color)), lines.windows)</ID>
     <ID>ComplexCondition:ChangeRequestsScreen.kt$incoming.isEmpty() &amp;&amp; outgoing.isEmpty() &amp;&amp; daySwapGroups.isEmpty() &amp;&amp; eventsAwaitingMe.isEmpty() &amp;&amp; pendingProposal == null</ID>
     <ID>ComplexCondition:DayWeekView.kt$onDragDrop != null &amp;&amp; draggable &amp;&amp; columnWidthPx &gt; 0f &amp;&amp; hourHeightPx &gt; 0f</ID>
     <ID>ComplexCondition:DayWeekView.kt$showTime &amp;&amp; totalMinutes &gt;= 45 || isResizingStart || isResizingEnd</ID>
@@ -168,9 +171,11 @@
     <ID>MaxLineLength:CalendarScreen.kt$onEventResize</ID>
     <ID>MaxLineLength:DatabaseMigrations.kt$DatabaseMigrations.&lt;no name provided&gt;$"CREATE INDEX IF NOT EXISTS index_events_parentOwner_startDateTime ON events(parentOwner, startDateTime)"</ID>
     <ID>MaxLineLength:SyncService.kt$SyncService$"emergencyContacts" to gson.fromJson(localEntity.emergencyContactsJson, List::class.java)</ID>
+    <ID>MaxLineLength:TodayWidgetTextTest.kt$TodayWidgetTextTest$assertEquals(listOf(WidgetLine("15:00–19:00 · contact with Sam", ParentColorChoice.ORANGE.color)), lines.windows)</ID>
     <ID>MaximumLineLength:CalendarScreen.kt$ </ID>
     <ID>MaximumLineLength:DatabaseMigrations.kt$DatabaseMigrations.&lt;no name provided&gt;$ </ID>
     <ID>MaximumLineLength:SyncService.kt$SyncService$ </ID>
+    <ID>MaximumLineLength:TodayWidgetTextTest.kt$TodayWidgetTextTest$ </ID>
     <ID>NestedBlockDepth:SyncService.kt$SyncService$private suspend fun syncEvents(userId: String): Int</ID>
     <ID>NoWildcardImports:ActivityEditor.kt$import androidx.compose.foundation.layout.*</ID>
     <ID>NoWildcardImports:ActivityEditor.kt$import androidx.compose.material3.*</ID>
