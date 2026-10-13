@@ -63,11 +63,11 @@ class ParentColorsTest {
         // a ring of the cell's own base (MonthView), so this is also what the dot is measured on.
         everyColour.forEach { colour ->
             surfaces(dark = false).forEach { (name, surface) ->
-                val ratio = ParentColors.contrastRatio(ParentColors.fillFor(colour, dark = false), surface)
+                val ratio = ParentColors.contrastRatio(colour.fillIn(darkTheme = false), surface)
                 assertTrue(ratio >= NON_TEXT_MINIMUM, "${colour.storedCode} on light $name: $ratio")
             }
             surfaces(dark = true).forEach { (name, surface) ->
-                val ratio = ParentColors.contrastRatio(ParentColors.fillFor(colour, dark = true), surface)
+                val ratio = ParentColors.contrastRatio(colour.fillIn(darkTheme = true), surface)
                 assertTrue(ratio >= NON_TEXT_MINIMUM, "${colour.storedCode} on dark $name: $ratio")
             }
         }
@@ -78,7 +78,7 @@ class ParentColorsTest {
         everyColour.forEach { colour ->
             listOf(false, true).forEach { dark ->
                 surfaces(dark).forEach { (name, surface) ->
-                    val ratio = ParentColors.contrastRatio(ParentColors.textFor(colour, dark), surface)
+                    val ratio = ParentColors.contrastRatio(colour.textIn(dark), surface)
                     assertTrue(ratio >= AA_NORMAL_TEXT, "${colour.storedCode} text on ${theme(dark)} $name: $ratio")
                 }
             }
@@ -90,9 +90,9 @@ class ParentColorsTest {
         // The owner's "bright" (October 2026): 0.14 in both themes read as a murky maroon on the
         // dark surface. A proposal must stay visibly less than the thing it only asks for.
         listOf(false, true).forEach { dark ->
-            assertTrue(ParentColors.proposalTintAlpha(dark) < ParentColors.custodyTintAlpha(dark))
+            assertTrue(CoPlanlyColors.proposalTintAlpha(dark) < CoPlanlyColors.custodyTintAlpha(dark))
         }
-        assertTrue(ParentColors.custodyTintAlpha(dark = true) > ParentColors.custodyTintAlpha(dark = false))
+        assertTrue(CoPlanlyColors.custodyTintAlpha(darkTheme = true) > CoPlanlyColors.custodyTintAlpha(darkTheme = false))
     }
 
     @Test
@@ -117,7 +117,7 @@ class ParentColorsTest {
         // A custody preview cell and the custody setup grid write the parent's text tone on the
         // parent's own wash.
         forEveryWash { colour, dark, base, wash ->
-            val ratio = ParentColors.contrastRatio(ParentColors.textFor(colour, dark), wash)
+            val ratio = ParentColors.contrastRatio(colour.textIn(dark), wash)
             assertTrue(ratio >= AA_NORMAL_TEXT, "${colour.storedCode} ${theme(dark)} $base: $ratio")
         }
     }
@@ -128,11 +128,12 @@ class ParentColorsTest {
         // whoever's day it is, carries the title in the theme's onSurface.
         forEveryWash { colour, dark, base, wash ->
             presetColours.forEach { owner ->
-                val block = ParentColors.washTone(owner, dark)
+                val block = owner.washIn(dark)
                     .copy(alpha = CoPlanlyColors.EVENT_BLOCK_TINT_ALPHA)
                     .compositeOver(wash)
                 val ratio = ParentColors.contrastRatio(onSurface(dark), block)
-                assertTrue(ratio >= AA_NORMAL_TEXT, "${owner.storedCode} on ${colour.storedCode} ${theme(dark)} $base: $ratio")
+                val where = "${owner.storedCode} on ${colour.storedCode} ${theme(dark)} $base"
+                assertTrue(ratio >= AA_NORMAL_TEXT, "$where: $ratio")
             }
         }
     }
@@ -141,11 +142,12 @@ class ParentColorsTest {
     fun `a day number reads at AA under a pending proposal`() {
         forEveryWash { colour, dark, base, wash ->
             presetColours.forEach { proposed ->
-                val previewed = ParentColors.washTone(proposed, dark)
-                    .copy(alpha = ParentColors.proposalTintAlpha(dark))
+                val previewed = proposed.washIn(dark)
+                    .copy(alpha = CoPlanlyColors.proposalTintAlpha(dark))
                     .compositeOver(wash)
                 val ratio = ParentColors.contrastRatio(onSurface(dark), previewed)
-                assertTrue(ratio >= AA_NORMAL_TEXT, "${proposed.storedCode} over ${colour.storedCode} ${theme(dark)} $base: $ratio")
+                val where = "${proposed.storedCode} over ${colour.storedCode} ${theme(dark)} $base"
+                assertTrue(ratio >= AA_NORMAL_TEXT, "$where: $ratio")
             }
         }
     }
@@ -167,8 +169,8 @@ class ParentColorsTest {
         everyColour.forEach { colour ->
             listOf(false, true).forEach { dark ->
                 dayBases(dark).forEach { (name, base) ->
-                    val wash = ParentColors.washTone(colour, dark)
-                        .copy(alpha = ParentColors.custodyTintAlpha(dark))
+                    val wash = colour.washIn(dark)
+                        .copy(alpha = CoPlanlyColors.custodyTintAlpha(dark))
                         .compositeOver(base)
                     check(colour, dark, name, wash)
                 }

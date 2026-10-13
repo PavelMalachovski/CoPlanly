@@ -77,6 +77,14 @@ object CoPlanlyColors {
      */
     const val ADJACENT_MONTH_TINT_SCALE = 0.6f
 
+    /** The custody wash's alpha for a theme; `ParentColors.custodyTintAlpha` reads it on screen. */
+    fun custodyTintAlpha(darkTheme: Boolean): Float =
+        if (darkTheme) CUSTODY_TINT_ALPHA_DARK else CUSTODY_TINT_ALPHA_LIGHT
+
+    /** The pending-proposal wash's alpha for a theme; always under [custodyTintAlpha]. */
+    fun proposalTintAlpha(darkTheme: Boolean): Float =
+        if (darkTheme) PROPOSAL_TINT_ALPHA_DARK else PROPOSAL_TINT_ALPHA_LIGHT
+
     /**
      * Threshold for `MaterialTheme.colorScheme.surface.luminance()` when choosing between the
      * light- and dark-theme member of a text-grade colour pair. Below this the rendered theme

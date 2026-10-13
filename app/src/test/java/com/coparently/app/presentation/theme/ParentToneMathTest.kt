@@ -94,7 +94,8 @@ class ParentToneMathTest {
         // A parent who picks teal-blue must not be drawn turquoise in one theme and blue in the other.
         forEveryHue { hue, tones ->
             listOf(tones.fill, tones.darkFill, tones.light, tones.dark).forEach { tone ->
-                assertTrue(hueDistance(hue.toFloat(), ParentToneMath.hueOf(tone)) <= HUE_TOLERANCE, "hue $hue drifted to ${ParentToneMath.hueOf(tone)}")
+                val drawn = ParentToneMath.hueOf(tone)
+                assertTrue(hueDistance(hue.toFloat(), drawn) <= HUE_TOLERANCE, "hue $hue drifted to $drawn")
             }
         }
     }

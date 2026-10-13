@@ -99,7 +99,7 @@ internal object ParentToneMath {
      */
     fun capLuminance(argb: Int, cap: Double): Int {
         if (luminance(argb) <= cap) return argb
-        val (hue, saturation) = hslOf(argb)
+        val (hue, saturation) = hueAndSaturationOf(argb)
         return hsl(hue, saturation, lightnessFor(hue, saturation, cap, atLeast = false))
     }
 
@@ -117,30 +117,7 @@ internal object ParentToneMath {
     }
 
     /** The HSL hue of [argb] in degrees, `[0, 360)`; 0 for a grey, which has none. */
-    fun hueOf(argb: Int): Float = hslOf(argb).first
-
-    /**
-     * An opaque colour from HSL, every channel rounded to 8 bits.
-     *
-     * @param hue Degrees; any value is brought onto the wheel.
-     * @param saturation 0..1.
-     * @param lightness 0..1.
-     */
-    fun hsl(hue: Float, saturation: Float, lightness: Float): Int {
-        val chroma = (1f - abs(2f * lightness - 1f)) * saturation
-        val sector = normalizedHue(hue) / SECTOR_DEGREES
-        val second = chroma * (1f - abs(sector % 2f - 1f))
-        val (r, g, b) = when (sector.toInt()) {
-            0 -> Triple(chroma, second, 0f)
-            1 -> Triple(second, chroma, 0f)
-            2 -> Triple(0f, chroma, second)
-            3 -> Triple(0f, second, chroma)
-            4 -> Triple(second, 0f, chroma)
-            else -> Triple(chroma, 0f, second)
-        }
-        val offset = lightness - chroma / 2f
-        return argb(r + offset, g + offset, b + offset)
-    }
+    fun hueOf(argb: Int): Float = hueAndSaturationOf(argb).first
 
     /**
      * The lightness at which [hue] and [saturation] reach [target] luminance.
@@ -159,55 +136,87 @@ internal object ParentToneMath {
         }
         return if (atLeast) high else low
     }
-
-    /** Hue and saturation of [argb] (lightness is not needed by any caller). */
-    private fun hslOf(argb: Int): Pair<Float, Float> {
-        val r = (argb shr RED_SHIFT and CHANNEL) / CHANNEL_MAX
-        val g = (argb shr GREEN_SHIFT and CHANNEL) / CHANNEL_MAX
-        val b = (argb and CHANNEL) / CHANNEL_MAX
-        val maxChannel = max(r, max(g, b))
-        val minChannel = min(r, min(g, b))
-        val delta = maxChannel - minChannel
-        if (delta == 0f) return 0f to 0f
-        val lightness = (maxChannel + minChannel) / 2f
-        val saturation = delta / (1f - abs(2f * lightness - 1f))
-        val hue = when (maxChannel) {
-            r -> SECTOR_DEGREES * (((g - b) / delta) % SECTOR_COUNT)
-            g -> SECTOR_DEGREES * ((b - r) / delta + 2f)
-            else -> SECTOR_DEGREES * ((r - g) / delta + 4f)
-        }
-        return normalizedHue(hue) to saturation.coerceIn(0f, 1f)
-    }
-
-    private fun normalizedHue(hue: Float): Float = ((hue % FULL_TURN) + FULL_TURN) % FULL_TURN
-
-    private fun linear(channel: Int): Double {
-        val c = channel / CHANNEL_MAX.toDouble()
-        return if (c <= SRGB_KNEE) c / SRGB_LINEAR_SLOPE else ((c + SRGB_OFFSET) / (1 + SRGB_OFFSET)).pow(SRGB_GAMMA)
-    }
-
-    private fun argb(r: Float, g: Float, b: Float): Int =
-        OPAQUE or (channel(r) shl RED_SHIFT) or (channel(g) shl GREEN_SHIFT) or channel(b)
-
-    private fun channel(value: Float): Int = (value.coerceIn(0f, 1f) * CHANNEL_MAX).roundToInt()
-
-    private const val FULL = 1f
-    private const val HALF = 0.5f
-    private const val FULL_TURN = 360f
-    private const val SECTOR_DEGREES = 60f
-    private const val SECTOR_COUNT = 6f
-    private const val SEARCH_STEPS = 32
-    private const val CHANNEL = 0xFF
-    private const val CHANNEL_MAX = 255f
-    private const val OPAQUE = -0x1000000 // 0xFF000000
-    private const val RED_SHIFT = 16
-    private const val GREEN_SHIFT = 8
-    private const val RED_WEIGHT = 0.2126
-    private const val GREEN_WEIGHT = 0.7152
-    private const val BLUE_WEIGHT = 0.0722
-    private const val SRGB_KNEE = 0.04045
-    private const val SRGB_LINEAR_SLOPE = 12.92
-    private const val SRGB_OFFSET = 0.055
-    private const val SRGB_GAMMA = 2.4
-    private const val WCAG_FLARE = 0.05
 }
+
+/**
+ * An opaque colour from HSL, every channel rounded to 8 bits — the CSS Color 4 conversion, each
+ * channel a phase of the same clipped triangle wave.
+ *
+ * @param hue Degrees; any value is brought onto the wheel.
+ * @param saturation 0..1.
+ * @param lightness 0..1.
+ */
+private fun hsl(hue: Float, saturation: Float, lightness: Float): Int {
+    val h = normalizedHue(hue)
+    val amount = saturation * min(lightness, 1f - lightness)
+    fun component(phase: Float): Float {
+        val k = (phase + h / DEGREES_PER_PHASE) % PHASES
+        return lightness - amount * max(-1f, min(min(k - PHASE_RISE, PHASE_FALL - k), 1f))
+    }
+    return OPAQUE or
+        (eightBit(component(RED_PHASE)) shl RED_SHIFT) or
+        (eightBit(component(GREEN_PHASE)) shl GREEN_SHIFT) or
+        eightBit(component(BLUE_PHASE))
+}
+
+/** Hue and saturation of [argb] (lightness is not needed by any caller). */
+private fun hueAndSaturationOf(argb: Int): Pair<Float, Float> {
+    val r = (argb shr RED_SHIFT and CHANNEL) / CHANNEL_MAX
+    val g = (argb shr GREEN_SHIFT and CHANNEL) / CHANNEL_MAX
+    val b = (argb and CHANNEL) / CHANNEL_MAX
+    val maxChannel = max(r, max(g, b))
+    val minChannel = min(r, min(g, b))
+    val delta = maxChannel - minChannel
+    if (delta == 0f) return 0f to 0f
+    val lightness = (maxChannel + minChannel) / 2f
+    val saturation = delta / (1f - abs(2f * lightness - 1f))
+    val hue = when (maxChannel) {
+        r -> DEGREES_PER_SECTOR * (((g - b) / delta) % SECTORS)
+        g -> DEGREES_PER_SECTOR * ((b - r) / delta + GREEN_SECTOR)
+        else -> DEGREES_PER_SECTOR * ((r - g) / delta + BLUE_SECTOR)
+    }
+    return normalizedHue(hue) to saturation.coerceIn(0f, 1f)
+}
+
+private fun normalizedHue(hue: Float): Float = ((hue % FULL_TURN) + FULL_TURN) % FULL_TURN
+
+/** An 8-bit sRGB channel, decoded to linear light (the sRGB transfer Compose uses). */
+private fun linear(channel: Int): Double {
+    val c = channel / CHANNEL_MAX.toDouble()
+    return if (c <= SRGB_KNEE) c / SRGB_LINEAR_SLOPE else ((c + SRGB_OFFSET) / (1 + SRGB_OFFSET)).pow(SRGB_GAMMA)
+}
+
+private fun eightBit(value: Float): Int = (value.coerceIn(0f, 1f) * CHANNEL_MAX).roundToInt()
+
+private const val FULL = 1f
+private const val HALF = 0.5f
+private const val FULL_TURN = 360f
+private const val SEARCH_STEPS = 32
+private const val CHANNEL = 0xFF
+private const val CHANNEL_MAX = 255f
+private const val OPAQUE = -0x1000000 // 0xFF000000
+private const val RED_SHIFT = 16
+private const val GREEN_SHIFT = 8
+private const val RED_WEIGHT = 0.2126
+private const val GREEN_WEIGHT = 0.7152
+private const val BLUE_WEIGHT = 0.0722
+private const val SRGB_KNEE = 0.04045
+private const val SRGB_LINEAR_SLOPE = 12.92
+private const val SRGB_OFFSET = 0.055
+private const val SRGB_GAMMA = 2.4
+private const val WCAG_FLARE = 0.05
+
+// HSL to RGB: each channel is the same wave at its own phase, twelve phases to the turn.
+private const val DEGREES_PER_PHASE = 30f
+private const val PHASES = 12f
+private const val PHASE_RISE = 3f
+private const val PHASE_FALL = 9f
+private const val RED_PHASE = 0f
+private const val GREEN_PHASE = 8f
+private const val BLUE_PHASE = 4f
+
+// RGB to hue: six sectors of sixty degrees, green's starting at the second and blue's at the fourth.
+private const val DEGREES_PER_SECTOR = 60f
+private const val SECTORS = 6f
+private const val GREEN_SECTOR = 2f
+private const val BLUE_SECTOR = 4f

@@ -50,10 +50,10 @@ enum class ParentColorChoice(
     @StringRes val labelRes: Int
 ) {
     /** Material Pink 500, Pink A200 in the dark theme. The app's original slot-1 colour. */
-    PINK("#E91E63", 0xFFE91E63, 0xFFFF4081, 0xFFFF99BB, 0xFFA0124F, R.string.parent_color_pink),
+    PINK("#E91E63", PINK_500, PINK_A200, PINK_TEXT_ON_DARK, PINK_TEXT_ON_LIGHT, R.string.parent_color_pink),
 
     /** Material Blue A400, Blue A200 in the dark theme. The original slot-2 colour, brighter. */
-    BLUE("#1976D2", 0xFF2979FF, 0xFF448AFF, 0xFF9EC2FF, 0xFF1550C0, R.string.parent_color_blue),
+    BLUE("#1976D2", BLUE_A400, BLUE_A200, BLUE_TEXT_ON_DARK, BLUE_TEXT_ON_LIGHT, R.string.parent_color_blue),
 
     /**
      * Material Purple A700, Purple A200 in the dark theme.
@@ -63,10 +63,17 @@ enum class ParentColorChoice(
      * that collided with either would undo what `DayCellFills` protects. (A parent may still
      * pick a green on the wheel; teal stays out of reach — see [CustomHueRange].)
      */
-    PURPLE("#7B1FA2", 0xFFAA00FF, 0xFFE040FB, 0xFFEEA2FF, 0xFF7B1FA2, R.string.parent_color_purple),
+    PURPLE("#7B1FA2", PURPLE_A700, PURPLE_A200, PURPLE_TEXT_ON_DARK, PURPLE_700, R.string.parent_color_purple),
 
     /** Material Deep Orange 700, Deep Orange A200 in the dark theme. */
-    ORANGE("#D84315", 0xFFE64A19, 0xFFFF6E40, 0xFFFFA98F, 0xFFA02F00, R.string.parent_color_orange);
+    ORANGE(
+        "#D84315",
+        DEEP_ORANGE_700,
+        DEEP_ORANGE_A200,
+        DEEP_ORANGE_TEXT_ON_DARK,
+        DEEP_ORANGE_TEXT_ON_LIGHT,
+        R.string.parent_color_orange
+    );
 
     /** This preset as the palette draws it. */
     val color: ParentColor by lazy {
@@ -150,6 +157,18 @@ class ParentColor private constructor(
      * nearly white in luminance, and washed over a day it would take the day number under AA.
      */
     val darkWash: Color = Color(ParentToneMath.capLuminance(tones.darkFill, ParentToneMath.DARK_WASH_MAX_LUMINANCE))
+
+    /**
+     * The full hue for a theme — [fill], or [darkFill] in the dark — without the composition, for
+     * a test or a draw lambda that has already resolved the theme; `ParentColors.fill` reads it.
+     */
+    fun fillIn(darkTheme: Boolean): Color = if (darkTheme) darkFill else fill
+
+    /** The text-grade tone for a theme: [dark] on a light surface, [light] on a dark one. */
+    fun textIn(darkTheme: Boolean): Color = if (darkTheme) light else dark
+
+    /** What a wash of this colour is made of in a theme, before its alpha: [fill], or [darkWash]. */
+    fun washIn(darkTheme: Boolean): Color = if (darkTheme) darkWash else fill
 
     /**
      * Whether [other] would read as the same colour beside this one: under [MIN_HUE_DISTANCE]
@@ -264,3 +283,23 @@ data class ParentPalette(
         }
     }
 }
+
+// The presets' tones as ARGB, named after their Material steps where they are one. The text tones
+// are placed between steps on purpose: deep enough (light theme) or light enough (dark theme) to
+// hold AA on the parent's own custody wash, which `ParentColorsTest` checks.
+private const val PINK_500 = 0xFFE91E63
+private const val PINK_A200 = 0xFFFF4081
+private const val PINK_TEXT_ON_DARK = 0xFFFF99BB
+private const val PINK_TEXT_ON_LIGHT = 0xFFA0124F
+private const val BLUE_A400 = 0xFF2979FF
+private const val BLUE_A200 = 0xFF448AFF
+private const val BLUE_TEXT_ON_DARK = 0xFF9EC2FF
+private const val BLUE_TEXT_ON_LIGHT = 0xFF1550C0
+private const val PURPLE_A700 = 0xFFAA00FF
+private const val PURPLE_A200 = 0xFFE040FB
+private const val PURPLE_TEXT_ON_DARK = 0xFFEEA2FF
+private const val PURPLE_700 = 0xFF7B1FA2
+private const val DEEP_ORANGE_700 = 0xFFE64A19
+private const val DEEP_ORANGE_A200 = 0xFFFF6E40
+private const val DEEP_ORANGE_TEXT_ON_DARK = 0xFFFFA98F
+private const val DEEP_ORANGE_TEXT_ON_LIGHT = 0xFFA02F00

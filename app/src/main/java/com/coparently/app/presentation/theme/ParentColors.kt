@@ -84,7 +84,7 @@ object ParentColors {
      */
     @Composable
     @ReadOnlyComposable
-    fun choiceFill(colour: ParentColor): Color = fillFor(colour, isDarkTheme)
+    fun choiceFill(colour: ParentColor): Color = colour.fillIn(isDarkTheme)
 
     /** [choiceFill] for one of the four presets, as the onboarding swatches hold them. */
     @Composable
@@ -97,12 +97,12 @@ object ParentColors {
      */
     val custodyTintAlpha: Float
         @Composable @ReadOnlyComposable
-        get() = custodyTintAlpha(isDarkTheme)
+        get() = CoPlanlyColors.custodyTintAlpha(isDarkTheme)
 
     /** The pending-proposal wash's alpha in the theme on screen; always under [custodyTintAlpha]. */
     val proposalTintAlpha: Float
         @Composable @ReadOnlyComposable
-        get() = proposalTintAlpha(isDarkTheme)
+        get() = CoPlanlyColors.proposalTintAlpha(isDarkTheme)
 
     /**
      * The parent's identity hue as a **text-grade** foreground for the current theme.
@@ -113,7 +113,7 @@ object ParentColors {
     @Composable
     @ReadOnlyComposable
     fun text(parent: String, palette: ParentPalette = LocalParentPalette.current): Color =
-        textFor(palette.of(parent), isDarkTheme)
+        palette.of(parent).textIn(isDarkTheme)
 
     /**
      * A **solid** parent fill that carries text on top of it — a labelled custody band, a chip
@@ -191,27 +191,7 @@ object ParentColors {
         parent: String,
         alpha: Float = custodyTintAlpha,
         palette: ParentPalette = LocalParentPalette.current
-    ): Color = washTone(palette.of(parent), isDarkTheme).copy(alpha = alpha)
-
-    /**
-     * The full hue of [colour] for a theme — [fill] and [choiceFill] without the composition,
-     * for a test or a draw lambda that has already resolved the theme.
-     */
-    fun fillFor(colour: ParentColor, dark: Boolean): Color = if (dark) colour.darkFill else colour.fill
-
-    /** The text-grade tone of [colour] for a theme; see [text]. */
-    fun textFor(colour: ParentColor, dark: Boolean): Color = if (dark) colour.light else colour.dark
-
-    /** What [colour] is washed in for a theme, before its alpha; see [container]. */
-    fun washTone(colour: ParentColor, dark: Boolean): Color = if (dark) colour.darkWash else colour.fill
-
-    /** The custody wash's alpha for a theme; see [custodyTintAlpha]. */
-    fun custodyTintAlpha(dark: Boolean): Float =
-        if (dark) CoPlanlyColors.CUSTODY_TINT_ALPHA_DARK else CoPlanlyColors.CUSTODY_TINT_ALPHA_LIGHT
-
-    /** The pending-proposal wash's alpha for a theme; see [proposalTintAlpha]. */
-    fun proposalTintAlpha(dark: Boolean): Float =
-        if (dark) CoPlanlyColors.PROPOSAL_TINT_ALPHA_DARK else CoPlanlyColors.PROPOSAL_TINT_ALPHA_LIGHT
+    ): Color = palette.of(parent).washIn(isDarkTheme).copy(alpha = alpha)
 
     /** The 0.05 WCAG adds to both luminances, standing in for ambient flare on a screen. */
     private const val WCAG_FLARE = 0.05f
