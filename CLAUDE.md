@@ -186,11 +186,31 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     colour uses `chipFill` (the deep tone) with `ParentColors.onFill(...)` for the text, never
     white on the full hue (4.35:1 on pink). The picker (Settings → Family, onboarding profile
     step) was hidden behind `PARENT_COLOUR_PICKER_ENABLED` until this landed; the flag is gone.
-    `ParentColors.fill` is theme-aware. In the dark theme it draws the choice's `darkFill`, which
-    differs only where the hue falls under 3:1 on a dark surface: purple, 2.09:1, now Purple 300.
-    `ParentColors.choiceFill` is the same for a picker's swatch. `ParentColorsTest` holds every
-    choice to 3:1 on the four surfaces it is drawn on in each theme, so **a new colour choice
-    arrives with a dark fill that passes it**.
+    `ParentColors.fill` is theme-aware: in the dark theme it draws the colour's `darkFill`, a
+    brighter partner of the light-theme hue. `ParentColors.choiceFill` is the same for a picker's
+    swatch. **Bright, and any colour at all, since October 2026** (owner decision: "the colours
+    look dull; make them bright, and let me pick my own"). A colour is a `ParentColor` — one of
+    four presets (`ParentColorChoice`, Material accents now: Pink 500/A200, Blue A400/A200,
+    Purple A700/A200, Deep Orange 700/A200) or a hue picked on the wheel (`ParentColor.custom`).
+    Four things not to undo. **A custom colour is stored as `hue1|<degrees>`** in the same
+    `users/{uid}.colorCode` (`ParentColorCode`), never as a bare hex: every profile an older build
+    saved holds `#FF4081` for "not chosen", and a hex reader would turn those parents pink. An older
+    build reads `hue1|…` as "not chosen" and draws its slot default — honest for a colour it cannot
+    draw. The presets' stored codes are identifiers and kept their old hex when the tones
+    brightened. **A custom colour's tones are placed by WCAG luminance** (`ParentToneMath`), so
+    `ParentColorsTest` holds all 360 hues to what the presets clear — 3:1 fills, AA text, AA chips,
+    and AA on the custody wash for the day number, a holiday's red number, an event block's title
+    and the colour's own text. Change a target there, not a test. **The calendar friend's teal
+    is out of reach**: `CustomHueRange.RESERVED` (158°–188°) is not on the picker's strip, and a
+    stored hue inside it is drawn at the band's edge. **Two colours under 30° apart are one
+    colour** (`ParentColor.closeTo`): slot 2 is drawn in the first preset clear of slot 1, as for
+    two identical presets. The picker is `presentation/settings/ParentColorDialog.kt`; onboarding
+    keeps the four presets.
+    **The co-parent's colour arrives live.** `PairingRepositoryImpl.observePairingState` listens to
+    the co-parent's own `users/{uid}` (`data/repository/PartnerProfileFlow.kt`) for as long as the
+    link names them; it used to read it once, so their rename or new colour waited for the app to
+    be reopened. A failed listener keeps the profile already read and reports the bare partner only
+    when nothing was read.
 13. **The family switcher is one state and one dialog, and it appears at two** (M-8, September
     2026). `presentation/common/FamilySwitcher.kt` holds `FamilySwitcherChip` (Home and Expenses
     top bars, beside the gear) and `FamilySwitcherDialog`, which the Settings row opens too; both
@@ -292,7 +312,7 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     Firestore alone, so the app remembers the parents for the widget while `MainActivity` is
     started (`TodayWidgetRefresher.followParents` → `TodayWidgetNames`, in `EncryptedPreferences`,
     cleared with them and refused for another uid). Never attach `ParentsSource` from a widget
-    update, which would cost three Firestore listeners for a label. **Every redraw has a trigger**:
+    update, which would cost four Firestore listeners for a label. **Every redraw has a trigger**:
     a Room write to `events` or `custody_models` (the invalidation tracker, debounced), a change
     of names, a unique periodic work a minute past midnight, and hourly `updatePeriodMillis` as the
     backstop. A table the widget starts to read joins `WATCHED_TABLES`. **Nothing the schema does
@@ -382,9 +402,15 @@ When touching the UI, keep these invariants:
    indigo (`CoPlanlyColors.Neutral*`), so generic Material selected states (FilterChips)
    are neutral — never wire pink through `colorScheme.secondary`. **Saturation rule** (so
    the day-cell wash and the event chip read as one system, not two pinks): a custody
-   *day background* is the parent hue at ~14% alpha (`MomPink.copy(alpha = 0.14f)`), while
-   a *chip / dot / marker* is the same hue at full strength. Same token, different alpha —
-   intentional, keep it that way.
+   *day background* is the parent hue at a low alpha, while a *chip / dot / marker* is the same
+   hue at full strength. Same token, different alpha — intentional, keep it that way. **The
+   alpha is per theme since October 2026** (owner decision, "the colours look dull"):
+   `ParentColors.custodyTintAlpha`, 20 % light and 30 % dark (it was 14 % in both, which read as
+   maroon and brown on the dark surface), with the proposal wash at three-fifths of it. The dark
+   theme washes `ParentColor.darkWash`, the dark fill capped at luminance 0.30, so a yellow parent
+   does not wash a day number out; a month cell's event dot sits in a ring of the day's base so it
+   keeps 3:1 on its own parent's wash. `ParentColorsTest` holds what sits on the wash to AA — don't
+   raise an alpha without it.
 7. **Notification permission** is requested contextually via
    `rememberNotificationPermissionRequester()` (push toggle, reminder selection), never on
    cold start.
@@ -758,12 +784,13 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   screenshots/` — Home's cards, the month grid with every `DayCellFills` layer, the calendar
   banners, a Settings group, `EmptyState`, `ErrorState`, `InlineBanner`, `StickyActionBar`, the
   offline banner, the Expenses summary header and its collapsed line, a chat thread, the event
-  preview body, the consent screen and the family switcher chip — over a variant matrix of theme,
+  preview body, the consent screen, the family switcher chip and the "My colour" picker — over a
+  variant matrix of theme,
   the five languages, 1.0×/1.5×/2.0× font scale (2.0× in German only, added after the October 2026
   audit found money cut off at sizes the matrix never rendered) and the default vs a purple/orange
   parent palette (`ScreenshotVariants`: ten variants for text-heavy components, four for the rest,
   and high contrast in both themes for the month grid, a Settings group and a banner
-  (`ContrastScreenshots`, design item 17); 200 images — the count the committed baselines hold).
+  (`ContrastScreenshots`, design item 17); 210 images — the count the committed baselines hold).
   **To view:** open the run's `screenshots` artefact, unzip, open `index.html`
   (`tools/screenshot-gallery.js`, no dependencies, filters by component/language/theme/scale/
   palette/contrast). Locally: `./gradlew recordRoborazziDebug` writes into `app/src/test/screenshots/` — don't commit what a laptop records (below).
@@ -916,7 +943,8 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   is part of the schema `EventRepositoryImpl.toFirestoreMap()` defines, and a co-parent on an
   older build must keep reading it. Pairing assigns the slots (`functions/index.js`,
   `assignSlots`), nobody chooses one; the *colour* is each person's own choice
-  (`theme/ParentPalette.kt`), defaulting to pink for slot 1 and blue for slot 2.
+  (`theme/ParentPalette.kt` — a preset or any hue on the wheel), defaulting to pink for slot 1
+  and blue for slot 2.
 - **A calendar friend sits beside the two slots and never occupies one** (item 16, Aug 2026).
   A guardian/friend/grandparent with their own account reads the family's calendar through a
   **central** grant, `calendar_friends/{familyId}__{friendUid}` — never by being fanned out into

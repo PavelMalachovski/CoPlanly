@@ -459,7 +459,11 @@ zone back to automatic afterwards.
 
 ### 3.3 Parent colour reaches every screen (UX-15) · 1P, full check 2P
 
-Settings → Family → **My colour** → choose a **non-default** colour (purple or orange).
+Settings → Family → **My colour** → choose a **non-default** colour (purple or orange), then
+once more with **Custom**: the hue strip under it has no teal (that is the calendar friend's), and
+the swatch beside "Custom" follows the slider. Since October 2026 the colours are brighter: the
+custody wash is about 20 % in the light theme and 30 % in the dark one, and every event dot sits
+in a ring of the day's own grey.
 
 **(screenshots)** The `purpleorange` images already show the month grid (wash, dots, handover
 triangle, contact-window corner), Home's today card, week timeline and handover hero, the event
@@ -468,7 +472,9 @@ bug, found without a phone. Spend the device time on the surfaces the screenshot
 Day/Week, the event form, Filters, Custody setup and the onboarding picker.
 
 - [ ] Every surface below shows the new colour, not pink or blue:
-  - [ ] Month grid: the custody wash (about 14% alpha), event dots, handover triangle.
+  - [ ] Month grid: the custody wash (about 20 % light, 30 % dark), event dots in their ring,
+        handover triangle. **Dark theme:** a day reads as clearly pink, blue, purple or orange —
+        not maroon or brown — and a holiday's red number is still easy to read on it.
   - [ ] Day/Week: hour-cell wash, event blocks (fill, border, accent), and the **custody band**,
         whose label must be readable. The band uses the deep tone, with black or white text
         chosen by contrast.
@@ -481,8 +487,13 @@ Day/Week, the event form, Filters, Custody setup and the onboarding picker.
 - [ ] Known and not a failure: the white day numbers on Custody setup's 14-day preview sit on
       the hue at 70% and may be hard to read. Write down how it looks.
 - [ ] **2P:** B picks a *different* non-default colour. Each phone then shows both parents'
-      chosen colours. If both picked the same colour, one of them is resolved to its partner
-      colour (`ParentPalette.of`).
+      chosen colours. If both picked the same colour — or two custom hues less than 30° apart —
+      one of them is resolved to a preset clear of the other (`ParentPalette.of`).
+- [ ] **2P, live:** with both phones open on the calendar, B changes their colour (a preset, then
+      a custom hue). A's calendar, Home and Settings → Expense split follow **within seconds,
+      without reopening the app**. Then A changes theirs and B's phone follows the same way. It
+      used to wait for the app to be reopened: the co-parent's profile was read once, not listened
+      to.
   - **Fallback (1P, after §2 is done):** sign in as B on the same phone, pick a colour, sign
     back in as A. A's screens now show B's choice for B.
 - **If it fails:** a raw `CoPlanlyColors.MomPink`/`DadBlue` in that screen is the bug

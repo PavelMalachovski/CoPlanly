@@ -69,3 +69,7 @@ tour-fixes 2026-09-25T12:12:26Z
 requested: 2026-09-30 — screenshot baselines with the pinned fixture date (audit PR #123)
 requested: 2026-09-30 — again, after the branch moved during the first run
 requested: 2026-10-11 — the consent screen gains its privacy-policy link (published URLs set)
+requested: 2026-10-13 — bright and custom parent colours: every image with a parent colour moves (brighter
+           presets, a stronger custody wash, event dots in a ring of the day's base), the holiday reds moved a step,
+           and the "My colour" picker gets its first baselines (settings_parent_color_picker); no schema change and
+           no new detekt finding is expected, so the baseline half should be empty
