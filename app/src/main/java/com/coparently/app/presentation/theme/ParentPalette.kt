@@ -260,27 +260,37 @@ data class ParentPalette(
          * **Two parents who chose the same colour are not drawn the same**, and resolving that
          * is this function's real job: the whole point of a parent colour is telling the two
          * apart, so a family where both picked blue — or two blues a few degrees apart on the
-         * wheel ([ParentColor.closeTo]) — must not have a calendar in one hue. Slot 1 keeps their
-         * choice and slot 2 is moved to the first preset clear of it — not silently reassigned in
-         * storage, only drawn differently, so the parent's own setting still says what they
-         * picked and stops being overridden the moment the other one changes theirs.
+         * wheel ([ParentColor.closeTo]) — must not have a calendar in one hue. One of the two is
+         * moved to the first preset clear of the other — not silently reassigned in storage, only
+         * drawn differently, so the parent's own setting still says what they picked and stops
+         * being overridden the moment the other one changes theirs.
          *
-         * Slot 1 wins rather than "whoever chose first" because there is no reliable record of
-         * who chose first: `colorCode` carries no timestamp, and inventing an order from two
-         * profile documents that sync independently would pick a different winner on each
-         * device.
+         * **A pick beats a default.** When only one parent has chosen, the one who has not is
+         * moved: their colour is a default nobody decided on, and moving the pick instead would
+         * draw that parent in a colour their own settings never showed them. When both chose,
+         * slot 1 keeps theirs rather than "whoever chose first", because there is no reliable
+         * record of who chose first: `colorCode` carries no timestamp, and inventing an order
+         * from two profile documents that sync independently would pick a different winner on
+         * each device. Both rules read only the two codes, so both phones draw the same.
          *
          * @param slot1Code `colorCode` of the parent in slot 1, or null when unknown.
          * @param slot2Code `colorCode` of the parent in slot 2, or null when unknown.
          */
         fun of(slot1Code: String?, slot2Code: String?): ParentPalette {
-            val first = ParentColor.fromStored(slot1Code) ?: ParentColorChoice.defaultFor("mom").color
-            val second = ParentColor.fromStored(slot2Code) ?: ParentColorChoice.defaultFor("dad").color
-            if (!first.closeTo(second)) return ParentPalette(first, second)
-            val free = ParentColorChoice.entries.map { it.color }.firstOrNull { !it.closeTo(first) }
-                ?: ParentColorChoice.BLUE.color
-            return ParentPalette(first, free)
+            val chosen1 = ParentColor.fromStored(slot1Code)
+            val chosen2 = ParentColor.fromStored(slot2Code)
+            val first = chosen1 ?: ParentColorChoice.defaultFor("mom").color
+            val second = chosen2 ?: ParentColorChoice.defaultFor("dad").color
+            return when {
+                !first.closeTo(second) -> ParentPalette(first, second)
+                chosen1 == null && chosen2 != null -> ParentPalette(firstPresetClearOf(second), second)
+                else -> ParentPalette(first, firstPresetClearOf(first))
+            }
         }
+
+        private fun firstPresetClearOf(colour: ParentColor): ParentColor =
+            ParentColorChoice.entries.map { it.color }.firstOrNull { !it.closeTo(colour) }
+                ?: ParentColorChoice.BLUE.color
     }
 }
 

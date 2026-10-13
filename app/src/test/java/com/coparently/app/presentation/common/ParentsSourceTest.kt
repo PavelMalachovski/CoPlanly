@@ -6,6 +6,8 @@ import com.coparently.app.domain.model.PartnerSummary
 import com.coparently.app.domain.model.User
 import com.coparently.app.domain.repository.PairingRepository
 import com.coparently.app.domain.repository.UserRepository
+import com.coparently.app.presentation.theme.ParentColorChoice
+import com.coparently.app.presentation.theme.ParentColorCode
 import io.mockk.Called
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -157,6 +159,27 @@ class ParentsSourceTest {
         // whether it is a real answer - otherwise a gate like AddEditEventScreen's selector
         // cannot tell "nobody to choose between" from "we don't know yet".
         assertEquals(false, Parents().loaded)
+    }
+
+    @Test
+    fun `both phones draw one palette, whichever of the two parents is holding the phone`() {
+        // Each phone is `me` to itself, so the same two people arrive the other way round on the
+        // other phone. Two near-identical hues, and a pick against the other slot's unchosen
+        // default, are the collisions that have to resolve the same on both.
+        val alex = NamedParent("u1", "mom", "Alex", colorCode = ParentColorCode.custom(30))
+        val sam = NamedParent("u2", "dad", "Sam", colorCode = ParentColorCode.custom(40))
+        val families = listOf(
+            alex to sam,
+            alex.copy(colorCode = null) to sam.copy(colorCode = ParentColorChoice.PINK.storedCode)
+        )
+
+        families.forEach { (a, b) ->
+            assertEquals(
+                Parents(me = a, coParent = b, isPaired = true, loaded = true).palette,
+                Parents(me = b, coParent = a, isPaired = true, loaded = true).palette,
+                "${a.colorCode} and ${b.colorCode}"
+            )
+        }
     }
 
     @Test

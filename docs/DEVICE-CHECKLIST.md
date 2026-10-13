@@ -488,7 +488,8 @@ Day/Week, the event form, Filters, Custody setup and the onboarding picker.
       the hue at 70% and may be hard to read. Write down how it looks.
 - [ ] **2P:** B picks a *different* non-default colour. Each phone then shows both parents'
       chosen colours. If both picked the same colour — or two custom hues less than 30° apart —
-      one of them is resolved to a preset clear of the other (`ParentPalette.of`).
+      one of them is drawn in a preset clear of the other (`ParentPalette.of`): the parent in
+      slot 2, or, when only one of them ever chose, the one who did not. Both phones agree.
 - [ ] **2P, live:** with both phones open on the calendar, B changes their colour (a preset, then
       a custom hue). A's calendar, Home and Settings → Expense split follow **within seconds,
       without reopening the app**. Then A changes theirs and B's phone follows the same way. It

@@ -96,14 +96,32 @@ class ParentPaletteTest {
     }
 
     @Test
-    fun `the collision is resolved the same way on both phones`() {
-        // Slot 1 wins rather than "whoever chose first": `colorCode` carries no timestamp, and
-        // an order invented from two independently-syncing documents would pick a different
-        // winner on each device — which is two parents seeing the calendar differently.
-        val onePhone = ParentPalette.of(ParentColorCode.custom(30), ParentColorCode.custom(40))
-        val theOther = ParentPalette.of(ParentColorCode.custom(30), ParentColorCode.custom(40))
+    fun `a parent's own pick beats a default the other parent never chose`() {
+        // Slot 1 never chose, so they are drawn in the default pink; slot 2 picked a red on the
+        // wheel. The pick is a decision and the pink is not: moving the pick would draw that
+        // parent in a colour their own settings never showed them, for a sixth of the wheel.
+        val red = ParentColorCode.custom(355)
+        val palette = ParentPalette.of(slot1Code = null, slot2Code = red)
 
-        assertEquals(onePhone, theOther)
+        assertEquals(ParentColor.fromStored(red), palette.of("dad"))
+        assertEquals(ParentColorChoice.BLUE.color, palette.of("mom"), "the first preset clear of the pick")
+    }
+
+    @Test
+    fun `the parent who never chose is the one who moves, whichever slot they hold`() {
+        val sky = ParentColorCode.custom(205)
+        val palette = ParentPalette.of(slot1Code = sky, slot2Code = null)
+
+        assertEquals(ParentColor.fromStored(sky), palette.of("mom"))
+        assertEquals(ParentColorChoice.PINK.color, palette.of("dad"), "the first preset clear of the pick")
+    }
+
+    @Test
+    fun `a preset picked against the other slot's unchosen default is kept too`() {
+        val palette = ParentPalette.of(slot1Code = null, slot2Code = ParentColorChoice.PINK.storedCode)
+
+        assertEquals(ParentColorChoice.PINK.color, palette.of("dad"))
+        assertEquals(ParentColorChoice.BLUE.color, palette.of("mom"))
     }
 
     @Test

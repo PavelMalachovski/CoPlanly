@@ -203,9 +203,10 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     and the colour's own text. Change a target there, not a test. **The calendar friend's teal
     is out of reach**: `CustomHueRange.RESERVED` (158°–188°) is not on the picker's strip, and a
     stored hue inside it is drawn at the band's edge. **Two colours under 30° apart are one
-    colour** (`ParentColor.closeTo`): slot 2 is drawn in the first preset clear of slot 1, as for
-    two identical presets. The picker is `presentation/settings/ParentColorDialog.kt`; onboarding
-    keeps the four presets.
+    colour** (`ParentColor.closeTo`), **and a pick beats a default**: a parent who never chose is
+    drawn in the first preset clear of one who did, and when both chose, slot 2 yields to slot 1,
+    as for two identical presets — two codes in, so both phones draw the same. The picker is
+    `presentation/settings/ParentColorDialog.kt`; onboarding keeps the four presets.
     **The co-parent's colour arrives live.** `PairingRepositoryImpl.observePairingState` listens to
     the co-parent's own `users/{uid}` (`data/repository/PartnerProfileFlow.kt`) for as long as the
     link names them; it used to read it once, so their rename or new colour waited for the app to
