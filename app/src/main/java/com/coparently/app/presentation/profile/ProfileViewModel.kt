@@ -139,8 +139,10 @@ class ProfileViewModel @Inject constructor(
 
     /**
      * Loads the co-parent's remote profile whenever the pairing state reports a (possibly new)
-     * co-parent uid, and clears it on unpair. One-shot per uid change, not a live listener —
-     * the same tradeoff [PairingRepository]'s own partner-summary read makes.
+     * co-parent uid, and clears it on unpair. One-shot per uid change, not a live listener: it
+     * reads the whole profile through [UserRepository.getRemoteUserProfile], more than the live
+     * partner summary [PairingRepository] has carried since October 2026, so a change the
+     * co-parent makes reaches this card when the screen is next opened.
      */
     private fun observeCoParent() {
         viewModelScope.launch {

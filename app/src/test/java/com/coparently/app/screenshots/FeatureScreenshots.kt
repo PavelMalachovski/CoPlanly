@@ -183,7 +183,7 @@ class FeatureScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant)
         private const val MESSAGE_HOUR = 9
         private const val MINUTE_MS = 60_000L
 
-        /** A sky blue: the owner's "blue, bright", and far from both default parent colours. */
+        /** A sky blue: the owner's "blue, bright", on the strip between the presets' hues. */
         private const val CUSTOM_HUE = 200
         private val BUBBLE_GAP = 4.dp
 

@@ -200,7 +200,9 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     brightened. **A custom colour's tones are placed by WCAG luminance** (`ParentToneMath`), so
     `ParentColorsTest` holds all 360 hues to what the presets clear — 3:1 fills, AA text, AA chips,
     and AA on the custody wash for the day number, a holiday's red number, an event block's title
-    and the colour's own text. Change a target there, not a test. **The calendar friend's teal
+    and the colour's own text. Change a target there, not a test. Not held yet: a pending
+    proposal's preview over the wash, where a holiday's red number can fall to about 3.9:1 and, in
+    the dark theme, an event block's title to about 4.3:1. **The calendar friend's teal
     is out of reach**: `CustomHueRange.RESERVED` (158°–188°) is not on the picker's strip, and a
     stored hue inside it is drawn at the band's edge. **Two colours under 30° apart are one
     colour** (`ParentColor.closeTo`), **and a pick beats a default**: a parent who never chose is

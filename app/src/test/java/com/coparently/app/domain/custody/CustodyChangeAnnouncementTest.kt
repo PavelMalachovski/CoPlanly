@@ -127,7 +127,7 @@ class CustodyChangeAnnouncementTest {
     fun `nothing is announced before parents has loaded, even for a genuine remote change`() {
         // Parents starts every fresh subscription from a synthetic "nobody is known yet", and
         // CustodyModelRepository's pair resolution (Room-only) is reliably faster than Parents
-        // resolving three Firestore pairing listeners. So the echo of this device's own
+        // resolving its Firestore pairing listeners. So the echo of this device's own
         // just-made write can arrive before myUid is known - treating "not loaded" as "definitely
         // not mine" would announce the user's own edit as the co-parent's.
         val shared = custodyOf(lastModifiedBy = CO_PARENT_UID)

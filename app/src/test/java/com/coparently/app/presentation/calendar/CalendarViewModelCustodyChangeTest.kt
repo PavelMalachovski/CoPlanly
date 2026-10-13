@@ -243,7 +243,7 @@ class CalendarViewModelCustodyChangeTest {
         runTest(testDispatcher) {
             // Parents starts every fresh subscription from a synthetic "nobody is known yet".
             // CustodyModelRepository's pair resolution is Room-only and reliably faster than
-            // Parents resolving three Firestore pairing listeners, so a real change can arrive
+            // Parents resolving its Firestore pairing listeners, so a real change can arrive
             // before this device's own uid is known.
             val parentsFlow = MutableStateFlow(Parents())
             val viewModel = viewModelWithParents(parentsFlow)

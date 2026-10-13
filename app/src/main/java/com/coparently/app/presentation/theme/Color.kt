@@ -59,6 +59,8 @@ object CoPlanlyColors {
      * Alpha of an event block's background in Week and Day view, in its owner's colour over a
      * column already washed in whoever's day it is. `ParentColorsTest` holds the block's title to
      * AA over every parent's day, so the block cannot quietly get stronger than its text allows.
+     * Not yet under a pending proposal's preview too, where the dark theme's can fall to about
+     * 4.3:1.
      */
     const val EVENT_BLOCK_TINT_ALPHA = 0.3f
 
@@ -184,7 +186,8 @@ object CoPlanlyColors {
     // only on the plain surface; Red 700/400 fell to 3.35:1/3.58:1 there (docs/AUDIT-2026-10-design.md
     // D-14). When the custody wash got brighter (October 2026) Red 900 and Red A100 fell under AA
     // on it too, so the light theme's red is a step deeper and the dark theme's a step lighter;
-    // `ParentColorsTest` now holds the number to AA on every parent colour's wash.
+    // `ParentColorsTest` now holds the number to AA on every parent colour's wash — not yet under a
+    // pending proposal's preview layered over it, where it can fall to about 3.9:1, as it could before.
     val HolidayRed = Color(0xFFA31515) // 7.85:1 on white / 6.66:1 on the weekend grey (light theme)
     val HolidayRedDark = Color(0xFFFFA8A0) // 9.27:1 on DarkSurface / 7.71:1 on the weekend grey (dark theme)
     val VacationTint = Color(0xFF26A69A) // Teal 400 - 3.00:1 on white / 5.72:1 on DarkSurface (dark theme)

@@ -776,7 +776,7 @@ private fun DayWeekPage(
  * One contact window (MON-6b) as an hour band over its day column: the window parent's custody
  * tint over the cell's own base, and a full-hue edge — the saturation rule's two strengths of one
  * hue, the tint for the stretch of time and the edge as its marker. Drawn on its own base first
- * so the two parents' 14% tints are not stacked into a third colour, the reasoning `MonthView`'s
+ * so the two parents' custody tints are not stacked into a third colour, the reasoning `MonthView`'s
  * handover diagonal already follows.
  *
  * Not clickable: an empty hour inside the band still creates an event through the cell beneath,

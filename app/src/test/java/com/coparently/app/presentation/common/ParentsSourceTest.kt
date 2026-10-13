@@ -110,8 +110,8 @@ class ParentsSourceTest {
 
     @Test
     fun `two collectors share one upstream subscription`() = runTest {
-        // observePairingState attaches three Firestore snapshot listeners per subscription and
-        // re-reads the partner document on every emission, so a per-collector copy is expensive.
+        // observePairingState attaches four Firestore snapshot listeners per subscription while
+        // paired, the co-parent's profile among them, so a per-collector copy is expensive.
         // Five ViewModels expose `parents`; without sharing, opening a second tab doubled it.
         val pairing = pairingRepository()
         val source = ParentsSource(userRepository(), pairing)

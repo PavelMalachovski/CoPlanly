@@ -50,11 +50,12 @@ class FamilyKindSource @Inject constructor(
      * The two raw answers, **shared once**, before either question is asked of them.
      *
      * `shareIn`, not a cold flow per caller, and the KDoc this replaces was wrong about why it
-     * did not need one: [PairingRepository.observePairingState] attaches *three* Firestore
-     * snapshot listeners per subscription and calls `loadPartner()` — a `users/{partnerId}` read
-     * — inside its combine transform. It is not riding anything warm. Every ViewModel exposing
-     * `caresFor` stood up its own copy, and splitting this class into two questions was about to
-     * double that again.
+     * did not need one: [PairingRepository.observePairingState] attaches *four* Firestore
+     * snapshot listeners per subscription while paired — the account's own document, its two
+     * invitation queries and, since October 2026, the co-parent's `users/{partnerId}`, which it
+     * used to read once inside its combine transform. It is not riding anything warm. Every
+     * ViewModel exposing `caresFor` stood up its own copy, and splitting this class into two
+     * questions was about to double that again.
      *
      * `replay = 1` so a screen opening later gets the last real answer rather than a synthetic
      * "nobody has answered"; `replayExpirationMillis = 0` so that cache is dropped once the last

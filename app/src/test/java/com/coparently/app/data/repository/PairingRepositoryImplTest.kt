@@ -748,7 +748,9 @@ class PairingRepositoryImplTest {
     // ---- test helpers ---------------------------------------------------
 
     /**
-     * Handles for driving the three snapshot listeners `observePairingState` registers.
+     * Handles for driving the four snapshot listeners `observePairingState` registers while
+     * paired: the account's own document, its two invitation queries and the co-parent's
+     * profile.
      *
      * The repository reads pairing state from realtime listeners, so a test can only move it
      * by invoking the captured [EventListener]s directly — there is no request/response to
