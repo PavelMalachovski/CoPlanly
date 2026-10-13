@@ -21,7 +21,7 @@ import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.presentation.common.UiError
 import com.coparently.app.presentation.common.UiState
-import com.coparently.app.presentation.theme.ParentColorChoice
+import com.coparently.app.presentation.theme.ParentColor
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
@@ -183,19 +183,22 @@ class SettingsViewModel @Inject constructor(
      * the union — a control that appears to do nothing is what CLAUDE.md's design item 8 forbids.
      */
     /**
-     * Records the colour this parent wants to be drawn in.
+     * Records the colour this parent wants to be drawn in — a preset, or a hue picked on the wheel.
      *
      * Their own choice and nobody else's: the co-parent's colour is on the co-parent's profile,
      * and the two are reconciled at draw time by [ParentPalette.of] when they happen to collide.
      * That is why this writes and returns without checking what the other parent holds — a
      * "that one is taken" refusal would need the two phones to agree on an order they have no
      * way to establish, and would make one parent's setting depend on the other's.
+     *
+     * The write lands on this parent's `users/{uid}`, which the co-parent's phone listens to
+     * (`PairingRepositoryImpl.observePairingState`), so it reaches them within seconds.
      */
-    fun setParentColor(choice: ParentColorChoice) {
+    fun setParentColor(colour: ParentColor) {
         viewModelScope.launch {
             val fresh = userRepository.getCurrentUser() ?: return@launch
-            if (fresh.colorCode == choice.storedCode) return@launch
-            userRepository.updateUser(fresh.copy(colorCode = choice.storedCode))
+            if (fresh.colorCode == colour.storedCode) return@launch
+            userRepository.updateUser(fresh.copy(colorCode = colour.storedCode))
         }
     }
 

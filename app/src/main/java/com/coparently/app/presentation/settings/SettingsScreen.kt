@@ -141,6 +141,7 @@ import com.coparently.app.presentation.sync.GoogleCalendarSyncState
 import com.coparently.app.presentation.sync.SyncViewModel
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Motion
+import com.coparently.app.presentation.theme.ParentColor
 import com.coparently.app.presentation.theme.ParentColorChoice
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
@@ -316,10 +317,10 @@ fun SettingsScreen(
     }
     if (showColorPicker) {
         ParentColorDialog(
-            selected = ParentColorChoice.fromStored(parents.me?.colorCode),
-            fallback = ParentColorChoice.defaultFor(parents.me?.slot.orEmpty()),
-            onConfirm = { choice ->
-                settingsViewModel.setParentColor(choice)
+            selected = ParentColor.fromStored(parents.me?.colorCode),
+            fallback = ParentColorChoice.defaultFor(parents.me?.slot.orEmpty()).color,
+            onConfirm = { colour ->
+                settingsViewModel.setParentColor(colour)
                 showColorPicker = false
             },
             onDismiss = { showColorPicker = false }
@@ -546,10 +547,10 @@ fun SettingsScreen(
                                     .clip(CircleShape)
                                     .background(
                                         ParentColors.choiceFill(
-                                            ParentColorChoice.fromStored(parents.me?.colorCode)
+                                            ParentColor.fromStored(parents.me?.colorCode)
                                                 ?: ParentColorChoice.defaultFor(
                                                     parents.me?.slot.orEmpty()
-                                                )
+                                                ).color
                                         )
                                     )
                             )
@@ -1553,71 +1554,6 @@ private fun caresForSummary(kinds: Set<FamilyKind>): String {
         FamilyKind.PETS in kinds -> pets
         else -> children
     }
-}
-
-@Composable
-private fun ParentColorDialog(
-    selected: ParentColorChoice?,
-    fallback: ParentColorChoice,
-    onConfirm: (ParentColorChoice) -> Unit,
-    onDismiss: () -> Unit
-) {
-    // Seeded from what this parent actually chose, falling back to the colour their slot has
-    // been drawn in all along — never from the co-parent's answer. The same rule the family-kind
-    // dialog follows: a control whose Save writes this parent's own record must not open with
-    // somebody else's words in it.
-    var chosen by rememberSaveable(selected) { mutableStateOf((selected ?: fallback).name) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.settings_parent_color)) },
-        text = {
-            Column {
-                ParentColorChoice.entries.forEach { choice ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .selectable(selected = chosen == choice.name, role = Role.RadioButton) {
-                                chosen = choice.name
-                            }
-                            .padding(vertical = Spacing.S),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = chosen == choice.name,
-                            onClick = null
-                        )
-                        Box(
-                            modifier = Modifier
-                                .size(20.dp)
-                                .clip(CircleShape)
-                                .background(ParentColors.choiceFill(choice))
-                        )
-                        Spacer(modifier = Modifier.width(Spacing.M))
-                        // Named, not just shown: a swatch alone is unusable to anyone who cannot
-                        // tell two of them apart, and a screen reader has nothing to announce.
-                        Text(stringResource(choice.labelRes))
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    onConfirm(
-                        ParentColorChoice.entries.first { it.name == chosen }
-                    )
-                }
-            ) {
-                Text(stringResource(R.string.settings_family_kind_save))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.settings_family_kind_cancel))
-            }
-        }
-    )
 }
 
 /**

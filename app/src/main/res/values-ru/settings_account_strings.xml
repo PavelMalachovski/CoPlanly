@@ -13,6 +13,8 @@
     <string name="parent_color_blue">Синий</string>
     <string name="parent_color_purple">Фиолетовый</string>
     <string name="parent_color_orange">Оранжевый</string>
+    <string name="parent_color_custom">Свой</string>
+    <string name="parent_color_custom_hue">Оттенок</string>
     <string name="settings_signed_in_as">Вы вошли как: %1$s</string>
     <string name="settings_gcal_not_signed_in">Вход не выполнен</string>
     <string name="settings_unknown">Неизвестно</string>
