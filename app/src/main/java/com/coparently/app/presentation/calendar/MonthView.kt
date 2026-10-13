@@ -448,7 +448,7 @@ private fun DayCell(
     // One alpha for the whole custody channel of this cell, so the band and the handover
     // triangle cannot come out at different strengths. A day borrowed from a neighbouring month
     // keeps the band and gets it recessively — see `ADJACENT_MONTH_TINT_SCALE`.
-    val custodyAlpha = CoPlanlyColors.CUSTODY_TINT_ALPHA * adjacentScale(fill.isAdjacentMonth)
+    val custodyAlpha = ParentColors.custodyTintAlpha * adjacentScale(fill.isAdjacentMonth)
     val overlayColor = when (fill.overlay) {
         DayCellOverlay.CUSTODY_MOM -> ParentColors.container("mom", alpha = custodyAlpha)
         DayCellOverlay.CUSTODY_DAD -> ParentColors.container("dad", alpha = custodyAlpha)
@@ -471,8 +471,8 @@ private fun DayCell(
     // the honest rendering of a day nobody has agreed on; the cell's description says so in
     // words.
     val proposalColor = when (fill.pendingProposalFor) {
-        DayCellOverlay.CUSTODY_MOM -> ParentColors.container("mom", alpha = CoPlanlyColors.PROPOSAL_TINT_ALPHA)
-        DayCellOverlay.CUSTODY_DAD -> ParentColors.container("dad", alpha = CoPlanlyColors.PROPOSAL_TINT_ALPHA)
+        DayCellOverlay.CUSTODY_MOM -> ParentColors.container("mom", alpha = ParentColors.proposalTintAlpha)
+        DayCellOverlay.CUSTODY_DAD -> ParentColors.container("dad", alpha = ParentColors.proposalTintAlpha)
         else -> null
     }
 

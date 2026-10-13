@@ -24,8 +24,8 @@ import com.coparently.app.domain.model.User
  *   initial-letter fallback in `AccountAvatar` stays load-bearing rather than decorative.
  * @property colorCode The colour this parent chose for themselves, or null when they have not.
  *   Null is a real answer and not a gap: it means "draw the default for their slot", which is
- *   what every account looked like before anyone could choose. See
- *   [com.coparently.app.presentation.theme.ParentColorChoice].
+ *   what every account looked like before anyone could choose. A preset's code or a custom hue
+ *   (`hue1|<degrees>`); see [com.coparently.app.presentation.theme.ParentColor.fromStored].
  */
 data class NamedParent(
     val uid: String,

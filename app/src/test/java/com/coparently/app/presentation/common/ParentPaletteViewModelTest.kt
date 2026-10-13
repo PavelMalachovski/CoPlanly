@@ -65,7 +65,7 @@ class ParentPaletteViewModelTest {
             // the value it settles on is the one that matters.
             var palette = awaitItem()
             if (palette == ParentPalette.Default) palette = awaitItem()
-            assertEquals(ParentPalette(ParentColorChoice.ORANGE, ParentColorChoice.PURPLE), palette)
+            assertEquals(ParentPalette(ParentColorChoice.ORANGE.color, ParentColorChoice.PURPLE.color), palette)
             cancelAndIgnoreRemainingEvents()
         }
     }

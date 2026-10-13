@@ -562,12 +562,12 @@ private fun DayWeekPage(
                                         DayCellOverlay.CUSTODY_MOM ->
                                             ParentColors.container(
                                                 "mom",
-                                                alpha = CoPlanlyColors.PROPOSAL_TINT_ALPHA
+                                                alpha = ParentColors.proposalTintAlpha
                                             )
                                         DayCellOverlay.CUSTODY_DAD ->
                                             ParentColors.container(
                                                 "dad",
-                                                alpha = CoPlanlyColors.PROPOSAL_TINT_ALPHA
+                                                alpha = ParentColors.proposalTintAlpha
                                             )
                                         else -> Color.Transparent
                                     }

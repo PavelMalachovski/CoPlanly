@@ -20,25 +20,50 @@ import androidx.compose.ui.graphics.Color
  */
 object CoPlanlyColors {
     /**
-     * Alpha for the custody background tint on calendar cells (month) and columns (week/day).
-     * Kept as one constant so the views cannot drift apart again: week/day used to tint at
-     * 0.03f, which over [DarkSurface] is about one RGB step and made custody invisible.
-     */
-    const val CUSTODY_TINT_ALPHA = 0.14f
-
-    /**
-     * Alpha for the wash over a day a **pending** custody proposal would move.
+     * Alpha for the custody background tint on calendar cells (month) and columns (week/day) in
+     * the light theme. Kept as one constant per theme so the views cannot drift apart again:
+     * week/day used to tint at 0.03f, which over [DarkSurface] is about one RGB step and made
+     * custody invisible. Read it through `ParentColors.custodyTintAlpha`, which picks the theme.
      *
-     * Below [CUSTODY_TINT_ALPHA] on purpose: an agreed day and a proposed one are the same hue,
-     * and what separates them is how much of it there is. Raising this to match custody would
-     * make a proposal indistinguishable from the thing it is only asking for. It lives beside
-     * [CUSTODY_TINT_ALPHA] for the same reason that one is here — the month grid and the
-     * week/day columns both draw it, and two copies is how they drifted apart last time.
+     * **Raised from 0.14 in October 2026, on the owner's word that the colours looked dull.** At
+     * 0.14, and with the light-theme hue washed over the dark surface, a pink day read as murky
+     * maroon and an orange one as brown. What sits on the wash is held to AA on it by
+     * `ParentColorsTest` — the day number, a holiday's red number, an event block's title, the
+     * colour's own text — for every preset and every hue a parent can pick.
      */
-    const val PROPOSAL_TINT_ALPHA = 0.09f
+    const val CUSTODY_TINT_ALPHA_LIGHT = 0.20f
 
     /**
-     * What fraction of [CUSTODY_TINT_ALPHA] a day borrowed from a neighbouring month is tinted at.
+     * The same in the dark theme, stronger because the same alpha over a near-black surface shows
+     * far less of the hue. The wash there is the colour's dark fill capped at a luminance ceiling
+     * (`ParentColor.darkWash`), so a bright yellow parent does not wash the day number out.
+     */
+    const val CUSTODY_TINT_ALPHA_DARK = 0.30f
+
+    /**
+     * Alpha for the wash over a day a **pending** custody proposal would move, light theme.
+     *
+     * Below [CUSTODY_TINT_ALPHA_LIGHT] on purpose: an agreed day and a proposed one are the same
+     * hue, and what separates them is how much of it there is. Raising this to match custody
+     * would make a proposal indistinguishable from the thing it is only asking for. It lives
+     * beside the custody alpha for the same reason that one is here — the month grid and the
+     * week/day columns both draw it, and two copies is how they drifted apart last time. It moved
+     * with the custody wash (October 2026) and keeps the same three-fifths of it.
+     */
+    const val PROPOSAL_TINT_ALPHA_LIGHT = 0.12f
+
+    /** The proposal wash in the dark theme; see [PROPOSAL_TINT_ALPHA_LIGHT]. */
+    const val PROPOSAL_TINT_ALPHA_DARK = 0.18f
+
+    /**
+     * Alpha of an event block's background in Week and Day view, in its owner's colour over a
+     * column already washed in whoever's day it is. `ParentColorsTest` holds the block's title to
+     * AA over every parent's day, so the block cannot quietly get stronger than its text allows.
+     */
+    const val EVENT_BLOCK_TINT_ALPHA = 0.3f
+
+    /**
+     * What fraction of the custody alpha a day borrowed from a neighbouring month is tinted at.
      *
      * Those cells used to carry no tint at all, so the custody band stopped in the middle of a
      * grid row and a reader had no rule to infer the rest of the pattern from. They carry it now,
@@ -47,8 +72,8 @@ object CoPlanlyColors {
      * A scale rather than an alpha of its own, so it cannot drift away from the value it is a
      * fraction of. It is deliberately higher than the 0.3 the day number and the 0.4 the event
      * dots are dimmed to: those are foregrounds against the cell, while this is a wash that is
-     * only 14 % of itself to begin with, and taking the same fraction off it would leave nothing
-     * to see. Same subjective step down, different arithmetic.
+     * only a fifth to a third of itself to begin with, and taking the same fraction off it would
+     * leave little to see. Same subjective step down, different arithmetic.
      */
     const val ADJACENT_MONTH_TINT_SCALE = 0.6f
 
@@ -60,22 +85,26 @@ object CoPlanlyColors {
      */
     const val DARK_LUMINANCE_THRESHOLD = 0.5f
 
-    // Parent colors — product-level identity (mom = pink, dad = blue), do not repurpose.
+    // Parent colors — the PINK and BLUE presets' tones (`ParentColorChoice`; `ParentPaletteTest`
+    // holds the two equal). A parent's colour is drawn through `ParentColors` and the family's
+    // palette, never from these directly: a raw MomPink in a screen draws pink for a parent who
+    // chose purple. Brighter since October 2026 (the owner's "bright colours"): Blue A400 for
+    // Blue 700, and text tones a step deeper or lighter so they hold AA on the brighter wash.
     // FILL-ONLY: custody tints, identity borders, legend dots. Neither clears 4.5:1 as text
     // in either theme, so never use these as a foreground colour — see the *Text pairs below.
-    val MomPink = Color(0xFFE91E63) // Material Pink 700 - 4.35:1 on white / 3.94:1 on DarkSurface
-    val DadBlue = Color(0xFF1976D2) // Material Blue 700 - 4.60:1 on white / 3.72:1 on DarkSurface
+    val MomPink = Color(0xFFE91E63) // Material Pink 500 - 4.35:1 on white / 3.94:1 on DarkSurface
+    val DadBlue = Color(0xFF2979FF) // Material Blue A400 - 3.98:1 on white / 4.30:1 on DarkSurface
 
     // Parent colors as TEXT-GRADE foregrounds, paired by theme.
     // Light theme reads the Dark variants; dark theme reads the Light variants.
-    val MomPinkLight = Color(0xFFFFC1E3) // Pink 100 - 1.50:1 on white / 11.42:1 on DarkSurface (text-grade in dark)
-    val MomPinkDark = Color(0xFFC2185B) // Pink 800 - 5.87:1 on white / 2.92:1 on DarkSurface (text-grade in light)
-    val DadBlueLight = Color(0xFF90CAF9) // Blue 200 - 1.75:1 on white / 9.79:1 on DarkSurface (text-grade in dark)
-    val DadBlueDark = Color(0xFF0D47A1) // Blue 900 - 8.63:1 on white / 1.99:1 on DarkSurface (text-grade in light)
+    val MomPinkLight = Color(0xFFFF99BB) // 2.00:1 on white / 8.59:1 on DarkSurface (text-grade in dark)
+    val MomPinkDark = Color(0xFFA0124F) // 7.79:1 on white / 2.20:1 on DarkSurface (text-grade in light)
+    val DadBlueLight = Color(0xFF9EC2FF) // 1.81:1 on white / 9.48:1 on DarkSurface (text-grade in dark)
+    val DadBlueDark = Color(0xFF1550C0) // 7.14:1 on white / 2.40:1 on DarkSurface (text-grade in light)
 
     // Solid parent fills carrying WHITE text (month event chips). Solid MomPink is only
     // 4.35:1 under white text and fails AA, so the chip fill uses the Dark variants:
-    // white on MomPinkDark is 5.87:1, white on DadBlueDark is 8.63:1.
+    // white on MomPinkDark is 7.79:1, white on DadBlueDark is 7.14:1.
     val MomChipFill = MomPinkDark
     val DadChipFill = DadBlueDark
 
@@ -144,11 +173,12 @@ object CoPlanlyColors {
     // Both are used as day-number TEXT, so each needs a theme-aware partner: no single red
     // or teal clears 4.5:1 against both white and DarkSurface.
     // A holiday's day number sits on the weekend grey and on the custody and holiday tints, not
-    // only on the plain surface; Red 700/400 fell to 3.35:1/3.58:1 there. Red 900 in the light
-    // theme and Red A100 in the dark keep it at or near AA on every one of them
-    // (docs/AUDIT-2026-10-design.md D-14).
-    val HolidayRed = Color(0xFFB71C1C) // Red 900 - 6.57:1 on white / 5.57:1 on the weekend grey (light theme)
-    val HolidayRedDark = Color(0xFFFF8A80) // Red A100 - 7.51:1 on DarkSurface / 6.24:1 on the weekend grey (dark theme)
+    // only on the plain surface; Red 700/400 fell to 3.35:1/3.58:1 there (docs/AUDIT-2026-10-design.md
+    // D-14). When the custody wash got brighter (October 2026) Red 900 and Red A100 fell under AA
+    // on it too, so the light theme's red is a step deeper and the dark theme's a step lighter;
+    // `ParentColorsTest` now holds the number to AA on every parent colour's wash.
+    val HolidayRed = Color(0xFFA31515) // 7.85:1 on white / 6.66:1 on the weekend grey (light theme)
+    val HolidayRedDark = Color(0xFFFFA8A0) // 9.27:1 on DarkSurface / 7.71:1 on the weekend grey (dark theme)
     val VacationTint = Color(0xFF26A69A) // Teal 400 - 3.00:1 on white / 5.72:1 on DarkSurface (dark theme)
     val VacationTintLight = Color(0xFF00796B) // Teal 700 - 5.32:1 on white / 3.22:1 on DarkSurface (light theme)
 }
