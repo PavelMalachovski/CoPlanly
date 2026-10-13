@@ -839,7 +839,13 @@ private fun DayCell(
                     events.take(MAX_EVENT_DOTS).forEach { event ->
                         Box(
                             modifier = Modifier
-                                .size(EVENT_DOT_SIZE)
+                                // A ring of the cell's own base around the dot. Since the custody
+                                // wash got brighter (October 2026) a dot in the day parent's hue
+                                // sinks into it — 2.5:1 at worst — while against the base it keeps
+                                // the 3:1 `ParentColorsTest` holds every fill to.
+                                .size(EVENT_DOT_SIZE + EVENT_DOT_HALO * 2)
+                                .background(color = baseColor, shape = CircleShape)
+                                .padding(EVENT_DOT_HALO)
                                 .background(
                                     color = eventDotColor(
                                         parentOwner = event.parentOwner,
@@ -940,6 +946,9 @@ private const val MAX_EVENT_DOTS = 3
 
 /** Diameter of an event dot in a month cell. */
 private val EVENT_DOT_SIZE = 6.dp
+
+/** Width of the ring of the cell's base around an event dot, which keeps it 3:1 on any wash. */
+private val EVENT_DOT_HALO = 1.dp
 
 /**
  * The pending-swap arrows. Small enough not to compete with the day number or the event dots —

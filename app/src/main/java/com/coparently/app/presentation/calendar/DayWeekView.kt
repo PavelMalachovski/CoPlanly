@@ -911,10 +911,11 @@ private fun EventChip(
     val totalMinutes = totalDuration.toMinutes().coerceAtLeast(15) // Minimum 15 minutes
     val eventHeightDp = with(density) { (hourHeightPx * totalMinutes / 60f).toDp() }
 
-    // Transparent background colors (more transparent)
+    // The owner's colour at the block alpha `ParentColorsTest` holds the title to AA on, over
+    // whoever's day the column is washed in.
     val backgroundColor = when (event.parentOwner) {
-        "mom", "dad" -> ParentColors.container(event.parentOwner, alpha = 0.3f)
-        else -> MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.3f)
+        "mom", "dad" -> ParentColors.container(event.parentOwner, alpha = CoPlanlyColors.EVENT_BLOCK_TINT_ALPHA)
+        else -> MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = CoPlanlyColors.EVENT_BLOCK_TINT_ALPHA)
     }
 
     val borderColor = when (event.parentOwner) {
