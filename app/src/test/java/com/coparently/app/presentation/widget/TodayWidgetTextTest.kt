@@ -68,7 +68,10 @@ class TodayWidgetTextTest {
 
         assertTrue(lines.title, lines.title.startsWith("Today · "))
         assertEquals(WidgetLine("Today with Alex", ParentColorChoice.PURPLE.color), lines.custody)
-        assertEquals(listOf(WidgetLine("15:00–19:00 · contact with Sam", ParentColorChoice.ORANGE.color)), lines.windows)
+        assertEquals(
+            listOf(WidgetLine("15:00–19:00 · contact with Sam", ParentColorChoice.ORANGE.color)),
+            lines.windows
+        )
         assertEquals(WidgetLine("Handover to Sam in 5 days", ParentColorChoice.ORANGE.color), lines.handover)
         assertEquals(
             listOf(
