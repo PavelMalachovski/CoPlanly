@@ -23,6 +23,7 @@ import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.EventListener
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
+import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.QuerySnapshot
 import io.mockk.coEvery
@@ -132,6 +133,7 @@ class PairingRepositoryImplTest {
             assertEquals(PairingState.NotPaired(activeInvite = null, incoming = emptyList()), awaitItem())
 
             listeners.emitUser(userDoc(partnerId = "u2", pairedAt = 123L))
+            listeners.emitPartner(partnerDoc())
             assertEquals(
                 PairingState.Paired(
                     PartnerSummary(id = "u2", name = "", email = "", pairedSinceMillis = 123L)
@@ -149,9 +151,6 @@ class PairingRepositoryImplTest {
         // accidental showing an initial next to a photo of you. It stays null until their
         // phone runs a build whose `ensureProfile` writes one, so the card keeps its
         // initial-letter fallback for as long as the other device is behind.
-        every { userSnapshot.getString("name") } returns "Bob Dvorak"
-        every { userSnapshot.getString("email") } returns "bob@example.com"
-        every { userSnapshot.getString("profilePhotoUrl") } returns PARTNER_PHOTO
         val listeners = stubRealtimeListeners()
 
         repository.observePairingState().test {
@@ -159,6 +158,9 @@ class PairingRepositoryImplTest {
             runCurrent()
             listeners.emitInvites()
             listeners.emitUser(userDoc(partnerId = "u2", pairedAt = 123L))
+            listeners.emitPartner(
+                partnerDoc(name = "Bob Dvorak", email = "bob@example.com", photoUrl = PARTNER_PHOTO)
+            )
 
             assertEquals(
                 PairingState.Paired(
@@ -194,6 +196,7 @@ class PairingRepositoryImplTest {
             runCurrent()
             listeners.emitInvites()
             listeners.emitUser(userDoc(partnerId = "u2", pairedAt = 123L))
+            listeners.emitPartner(partnerDoc())
             awaitItem()
             cancelAndIgnoreRemainingEvents()
         }
@@ -223,6 +226,7 @@ class PairingRepositoryImplTest {
             runCurrent()
             listeners.emitInvites()
             listeners.emitUser(userDoc(partnerId = "u2", pairedAt = 123L))
+            listeners.emitPartner(partnerDoc())
             awaitItem()
             cancelAndIgnoreRemainingEvents()
         }
@@ -288,6 +292,115 @@ class PairingRepositoryImplTest {
         }
 
         coVerify(exactly = 0) { userDao.updateUser(any()) }
+    }
+
+    @Test
+    fun `the co-parent's colour change reaches the paired state as it happens`() = runTest {
+        // The co-parent's profile used to be read once per change of *this* account's own
+        // listeners, so their new colour waited for something unrelated to happen here — in
+        // practice, for the app to restart. It is a listener of its own now.
+        val listeners = stubRealtimeListeners()
+
+        repository.observePairingState().test {
+            assertEquals(PairingState.Loading, awaitItem())
+            runCurrent()
+            listeners.emitInvites()
+            listeners.emitUser(userDoc(partnerId = "u2", pairedAt = 123L))
+            listeners.emitPartner(partnerDoc(name = "Bob", role = "dad", colorCode = "#1976D2"))
+            assertEquals("#1976D2", (awaitItem() as PairingState.Paired).partner.colorCode)
+
+            listeners.emitPartner(partnerDoc(name = "Bob", role = "dad", colorCode = "hue1|30"))
+
+            assertEquals("hue1|30", (awaitItem() as PairingState.Paired).partner.colorCode)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `a co-parent rename reaches the paired state as it happens`() = runTest {
+        val listeners = stubRealtimeListeners()
+
+        repository.observePairingState().test {
+            assertEquals(PairingState.Loading, awaitItem())
+            runCurrent()
+            listeners.emitInvites()
+            listeners.emitUser(userDoc(partnerId = "u2", pairedAt = 123L))
+            listeners.emitPartner(partnerDoc(name = "Bob", role = "dad"))
+            assertEquals("Bob", (awaitItem() as PairingState.Paired).partner.name)
+
+            listeners.emitPartner(partnerDoc(name = "Robert", role = "dad"))
+
+            assertEquals("Robert", (awaitItem() as PairingState.Paired).partner.name)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `a failed co-parent listener keeps the profile already read`() = runTest {
+        // A listener denied mid-unpair, a moment before this account's own document says the
+        // link ended, must not blank a name and a colour that were already on screen.
+        val listeners = stubRealtimeListeners()
+
+        repository.observePairingState().test {
+            assertEquals(PairingState.Loading, awaitItem())
+            runCurrent()
+            listeners.emitInvites()
+            listeners.emitUser(userDoc(partnerId = "u2", pairedAt = 123L))
+            listeners.emitPartner(partnerDoc(name = "Bob", role = "dad", colorCode = "#1976D2"))
+            assertEquals("Bob", (awaitItem() as PairingState.Paired).partner.name)
+
+            listeners.failPartner(mockk<FirebaseFirestoreException>(relaxed = true))
+
+            expectNoEvents()
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `a co-parent listener that fails before any read reports the bare partner`() = runTest {
+        // The same answer the one-shot read gave when it failed: the link is real, the profile
+        // is unknown, and the screens say "Parent" rather than waiting on Loading for ever.
+        val listeners = stubRealtimeListeners()
+
+        repository.observePairingState().test {
+            assertEquals(PairingState.Loading, awaitItem())
+            runCurrent()
+            listeners.emitInvites()
+            listeners.emitUser(userDoc(partnerId = "u2", pairedAt = 123L))
+
+            listeners.failPartner(mockk<FirebaseFirestoreException>(relaxed = true))
+
+            assertEquals(
+                PairingState.Paired(
+                    PartnerSummary(id = "u2", name = "", email = "", pairedSinceMillis = 123L)
+                ),
+                awaitItem()
+            )
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `the co-parent listener is detached when the link ends`() = runTest {
+        // One listener per co-parent, for as long as the link lasts — never one left behind per
+        // pairing transition.
+        val listeners = stubRealtimeListeners()
+
+        repository.observePairingState().test {
+            assertEquals(PairingState.Loading, awaitItem())
+            runCurrent()
+            listeners.emitInvites()
+            listeners.emitUser(userDoc(partnerId = "u2", pairedAt = 123L))
+            listeners.emitPartner(partnerDoc(name = "Bob", role = "dad"))
+            awaitItem()
+
+            listeners.emitUser(userDoc(partnerId = ""))
+
+            assertEquals(PairingState.NotPaired(activeInvite = null, incoming = emptyList()), awaitItem())
+            runCurrent()
+            verify(exactly = 1) { listeners.partnerRegistration.remove() }
+            cancelAndIgnoreRemainingEvents()
+        }
     }
 
     // ---- previewInvite --------------------------------------------------
@@ -645,11 +758,18 @@ class PairingRepositoryImplTest {
     private class RealtimeListeners(
         val user: () -> EventListener<DocumentSnapshot>,
         val ownInvites: () -> EventListener<QuerySnapshot>,
-        val incomingInvites: () -> EventListener<QuerySnapshot>
+        val incomingInvites: () -> EventListener<QuerySnapshot>,
+        val partner: () -> EventListener<DocumentSnapshot>,
+        val partnerRegistration: ListenerRegistration
     ) {
         fun emitUser(snapshot: DocumentSnapshot) = user().onEvent(snapshot, null)
 
         fun failUser(error: FirebaseFirestoreException) = user().onEvent(null, error)
+
+        /** The co-parent's own `users/u2` document, as their listener delivers it. */
+        fun emitPartner(snapshot: DocumentSnapshot) = partner().onEvent(snapshot, null)
+
+        fun failPartner(error: FirebaseFirestoreException) = partner().onEvent(null, error)
 
         fun emitInvites() {
             val empty = mockk<QuerySnapshot>(relaxed = true)
@@ -685,10 +805,22 @@ class PairingRepositoryImplTest {
         every { ownQuery.addSnapshotListener(capture(ownListener)) } returns mockk(relaxed = true)
         every { incomingQuery.addSnapshotListener(capture(incomingListener)) } returns mockk(relaxed = true)
 
+        // The co-parent "u2" has a listener of their own. Their document's one-shot `get()` stays
+        // stubbed as well: the post-pairing conversation still reads their name that way, and a
+        // relaxed Task never completes.
+        val partnerListener = slot<EventListener<DocumentSnapshot>>()
+        val partnerRegistration = mockk<ListenerRegistration>(relaxed = true)
+        val partnerDocument = mockk<DocumentReference>(relaxed = true)
+        every { usersCollection.document("u2") } returns partnerDocument
+        every { partnerDocument.get() } returns Tasks.forResult(userSnapshot)
+        every { partnerDocument.addSnapshotListener(capture(partnerListener)) } returns partnerRegistration
+
         return RealtimeListeners(
             user = { userListener.captured },
             ownInvites = { ownListener.captured },
-            incomingInvites = { incomingListener.captured }
+            incomingInvites = { incomingListener.captured },
+            partner = { partnerListener.captured },
+            partnerRegistration = partnerRegistration
         )
     }
 
@@ -696,6 +828,24 @@ class PairingRepositoryImplTest {
         val snapshot = mockk<DocumentSnapshot>(relaxed = true)
         every { snapshot.getString("partnerId") } returns partnerId
         every { snapshot.getLong("pairedAt") } returns pairedAt
+        return snapshot
+    }
+
+    /** The co-parent's profile document; every field absent unless given. */
+    private fun partnerDoc(
+        name: String? = null,
+        email: String? = null,
+        photoUrl: String? = null,
+        role: String? = null,
+        colorCode: String? = null
+    ): DocumentSnapshot {
+        val snapshot = mockk<DocumentSnapshot>(relaxed = true)
+        every { snapshot.getString(any()) } returns null
+        every { snapshot.getString("name") } returns name
+        every { snapshot.getString("email") } returns email
+        every { snapshot.getString("profilePhotoUrl") } returns photoUrl
+        every { snapshot.getString("role") } returns role
+        every { snapshot.getString("colorCode") } returns colorCode
         return snapshot
     }
 

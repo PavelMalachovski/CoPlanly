@@ -13,7 +13,7 @@ import javax.inject.Singleton
  * co-parent's name lives in Firestore alone: Room holds this device's own `users` row and nobody
  * else's (CLAUDE.md, "Only the signed-in user has a Room users row"). Attaching the pairing
  * listeners behind [com.coparently.app.presentation.common.ParentsSource] from a widget update
- * would pay three Firestore listeners and a document read for a label, so the app remembers the
+ * would pay four Firestore listeners for a label, so the app remembers the
  * last loaded [Parents] here while it is on screen, and the widget reads them back.
  *
  * Kept in [EncryptedPreferences], beside the account's other local state, and so cleared with it
