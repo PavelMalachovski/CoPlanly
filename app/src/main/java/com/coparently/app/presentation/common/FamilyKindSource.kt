@@ -1,7 +1,6 @@
 package com.coparently.app.presentation.common
 
 import com.coparently.app.domain.model.FamilyKind
-import com.coparently.app.domain.model.PairingState
 import com.coparently.app.domain.repository.PairingRepository
 import com.coparently.app.domain.repository.UserRepository
 import kotlinx.coroutines.CoroutineScope
@@ -61,19 +60,28 @@ class FamilyKindSource @Inject constructor(
      * "nobody has answered"; `replayExpirationMillis = 0` so that cache is dropped once the last
      * subscriber leaves, and the first collector on the next signed-in account cannot be handed
      * the previous one's — the account-switch trap [ParentsSource] documents at length.
+     *
+     * **The co-parent is the family on screen's** ([coParentOnScreen]), as in [ParentsSource]: it
+     * used to be the pairing listener's partner, the *first* co-parent whatever the family
+     * switcher said, so a parent showing their second family was shown the sections the first
+     * co-parent's answer opened.
      */
     private val answers: Flow<Answers> by lazy {
+        // Matched by uid, never "the only row": sign-out does not clear Room, so a device where
+        // two accounts have signed in holds two rows and picking by position answers for a
+        // stranger. The same rule `ParentsSource` documents at length.
+        val signedIn = userRepository.observeSignedInUser()
         combine(
-            userRepository.observeCurrentUserId(),
-            userRepository.getAllUsers(),
-            pairingRepository.observePairingState()
-        ) { uid, users, pairing ->
-            // Matched by uid, never "the only row": sign-out does not clear Room, so a device
-            // where two accounts have signed in holds two rows and picking by position answers
-            // for a stranger. The same rule `ParentsSource` documents at length.
+            signedIn,
+            coParentOnScreen(
+                pairing = pairingRepository.observePairingState(),
+                projectedPartnerUid = signedIn.map { it?.projectedCoParentUid() },
+                profileOf = pairingRepository::observeCoParentProfile
+            )
+        ) { me, coParent ->
             Answers(
-                mine = users.firstOrNull { it.id == uid }?.caresFor.orEmpty(),
-                theirs = (pairing as? PairingState.Paired)?.partner?.caresFor.orEmpty()
+                mine = me?.caresFor.orEmpty(),
+                theirs = (coParent as? CoParentOnScreen.Linked)?.profile?.caresFor.orEmpty()
             )
         }
             .distinctUntilChanged()
@@ -126,7 +134,8 @@ class FamilyKindSource @Inject constructor(
      * The two answers side by side, kept apart so each question can be asked of the right one.
      *
      * @property mine This device's signed-in parent's answer; empty when never answered.
-     * @property theirs The co-parent's; empty when unpaired, still loading, or unanswered.
+     * @property theirs The co-parent of the family on screen's; empty when unpaired, still
+     *   loading, or unanswered.
      */
     private data class Answers(
         val mine: Set<FamilyKind>,

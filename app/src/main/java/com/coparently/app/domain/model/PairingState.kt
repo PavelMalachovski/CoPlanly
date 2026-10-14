@@ -57,7 +57,14 @@ sealed interface PairingState {
     ) : PairingState
 
     /**
-     * Linked to [partner] — the co-parent of the family this device is showing.
+     * Linked to [partner] — the co-parent the server's link names (`users/{uid}.partnerId`).
+     *
+     * **Not necessarily the family on screen.** `acceptPairingInvitation` keeps that field on the
+     * *first* co-parent, so for a parent in two families this is the first one whatever the family
+     * switcher says. A screen that names the co-parent of the family it shows reads
+     * `presentation/common/CoParentOnScreen.kt` (names, colours) or `data/chat/ChatPartnerSource`
+     * (the thread), which take *which* co-parent from the switcher's projection and only *whether*
+     * there is one from here (tester report #11).
      *
      * **Being paired is no longer the end of the pairing screen's job.** A person may
      * co-parent with more than one other adult (docs/DESIGN-multi-family.md, M-4), so the
@@ -65,7 +72,8 @@ sealed interface PairingState {
      * [NotPaired]: without them the screen has nothing to render for "invite somebody else",
      * and the feature is unreachable however willing the server is.
      *
-     * @property partner The co-parent of the family currently on screen.
+     * @property partner The co-parent the server's link names; see above for why that is not
+     *   always the family on screen.
      * @property activeInvite This user's own outstanding invite, if any.
      * @property incoming Invitations addressed to this user's email.
      */

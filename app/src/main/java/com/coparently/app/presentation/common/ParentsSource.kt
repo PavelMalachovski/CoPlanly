@@ -1,7 +1,6 @@
 package com.coparently.app.presentation.common
 
 import android.util.Log
-import com.coparently.app.domain.model.PairingState
 import com.coparently.app.domain.repository.PairingRepository
 import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.presentation.theme.ParentPalette
@@ -12,6 +11,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.shareIn
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -23,7 +23,8 @@ import javax.inject.Singleton
  * account with no Room profile row at all — [UserRepositoryImpl][com.coparently.app.data.repository.UserRepositoryImpl]
  * never writes one for such an account, so [me] then stays null forever, not just until the
  * next emission — and a null [coParent] is nobody paired *or* a co-parent whose slot is not
- * known. Neither is ever filled in by inference — see [parentLabel]. Use [loaded] to tell "we
+ * known, or, for the moment after a family switch, one whose profile has not been read yet.
+ * Neither is ever filled in by inference — see [parentLabel]. Use [loaded] to tell "we
  * have a real answer, and it happens to be null" from "we have not asked yet".
  *
  * [isPaired] exists because [coParent] alone cannot answer "is there someone to choose between":
@@ -34,7 +35,8 @@ import javax.inject.Singleton
  * migration exists to serve — rather than from the family of one it was meant for.
  *
  * @property me The signed-in parent.
- * @property coParent The paired co-parent.
+ * @property coParent The co-parent of the family this device is showing — with two families, the
+ *   one the family switcher selected, never simply the first.
  * @property isPaired Whether this account is linked to a co-parent at all, independent of
  *   whether that co-parent's slot is known yet. Read the pairing state directly for this —
  *   never infer it from `coParent != null`.
@@ -99,9 +101,14 @@ data class Parents(
  *   Never "the only row": [UserRepository.deleteUser] is called from nowhere and sign-out does
  *   not clear Room, so a device where two accounts have signed in over time holds two rows and
  *   picking either by position would name the calendar after a stranger.
- * - **[coParent]** comes from the pairing listener's [PartnerSummary][com.coparently.app.domain.model.PartnerSummary],
- *   which reads their `users/{uid}` document directly. Room never stores a row for the other
- *   parent, which is why [UserRepository.getAllUsers] alone cannot answer this question.
+ * - **[coParent]** is the co-parent of the family on screen ([coParentOnScreen]): the server's
+ *   pairing state says *whether* there is one, the family switcher's projection on that same Room
+ *   row says *which* — the rule the chat follows — and their own `users/{uid}` document,
+ *   listened to, says what to call them. Room never stores a row for the other parent, which is
+ *   why [UserRepository.getAllUsers] alone cannot answer this question. It used to be the pairing
+ *   listener's partner alone, which is the *first* co-parent whatever the switcher says, so a
+ *   parent showing their second family saw the first one's name and colour on the event form,
+ *   over records that were the second family's, while [coParentUid] already named the second.
  */
 @Singleton
 class ParentsSource @Inject constructor(
@@ -151,17 +158,25 @@ class ParentsSource @Inject constructor(
      * repository. Nothing subscribes at construction either way — the underlying flows are cold
      * — but [signedInSlot] callers have no business touching the pairing side at all, and an
      * eager initialiser made that impossible to state or to test.
+     *
+     * A co-parent the pairing listener does not follow — the second family's, while it is on
+     * screen — adds one listener of its own, on their document ([coParentOnScreen]); the family
+     * the server's link names adds none.
      */
     private val shared: Flow<Parents> by lazy {
+        val signedIn = userRepository.observeSignedInUser()
         combine(
-            userRepository.observeCurrentUserId(),
-            userRepository.getAllUsers(),
-            pairingRepository.observePairingState()
-        ) { uid, users, pairing ->
+            signedIn,
+            coParentOnScreen(
+                pairing = pairingRepository.observePairingState(),
+                projectedPartnerUid = signedIn.map { it?.projectedCoParentUid() },
+                profileOf = pairingRepository::observeCoParentProfile
+            )
+        ) { me, coParent ->
             Parents(
-                me = uid?.let { id -> users.firstOrNull { it.id == id } }?.asNamedParent(),
-                coParent = (pairing as? PairingState.Paired)?.partner?.asNamedParent(),
-                isPaired = pairing is PairingState.Paired,
+                me = me?.asNamedParent(),
+                coParent = (coParent as? CoParentOnScreen.Linked)?.profile?.asNamedParent(),
+                isPaired = coParent is CoParentOnScreen.Linked,
                 loaded = true
             )
         }
@@ -176,8 +191,9 @@ class ParentsSource @Inject constructor(
     }
 
     /**
-     * Re-emits on sign-in, sign-out, account switch, any local profile edit, and every pairing
-     * transition — including the co-parent renaming themselves or being assigned a slot.
+     * Re-emits on sign-in, sign-out, account switch, any local profile edit, every pairing
+     * transition and every family switch — including the co-parent renaming themselves or being
+     * assigned a slot.
      */
     fun observe(): Flow<Parents> = shared
 

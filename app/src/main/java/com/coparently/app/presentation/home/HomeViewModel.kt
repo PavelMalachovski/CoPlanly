@@ -31,10 +31,14 @@ import com.coparently.app.domain.repository.MessageRepository
 import com.coparently.app.domain.repository.PairingRepository
 import com.coparently.app.domain.repository.PreferencesRepository
 import com.coparently.app.domain.repository.UserRepository
+import com.coparently.app.presentation.common.CoParentOnScreen
 import com.coparently.app.presentation.common.FamilyKindSource
 import com.coparently.app.presentation.common.FamilyMembersSource
 import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.ParentsSource
+import com.coparently.app.presentation.common.coParentOnScreen
+import com.coparently.app.presentation.common.observeSignedInUser
+import com.coparently.app.presentation.common.projectedCoParentUid
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
@@ -44,6 +48,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
@@ -102,10 +107,10 @@ data class MonthSpendDependencies @Inject constructor(
  * bundled into one constructor-injected value for the same reason as
  * [MonthSpendDependencies]: [HomeViewModel] was already at the constructor-parameter
  * limit, and task 9 (the realtime pairing CTA) needed [PairingRepository] alongside the
- * existing [UserRepository] — [UserRepository] feeds `_userId`/`_partnerId`, [PairingRepository]
- * feeds [HomeViewModel.paired], and neither is used anywhere else in the class. Bundling
- * keeps the real dependency count visible (no `@Suppress`, no widened detekt threshold)
- * rather than hiding it behind a wider limit.
+ * existing [UserRepository] — [UserRepository] feeds `_userId` and the family on screen,
+ * [PairingRepository] the pairing state and the co-parent's profile, and neither is used anywhere
+ * else in the class. Bundling keeps the real dependency count visible (no `@Suppress`, no widened
+ * detekt threshold) rather than hiding it behind a wider limit.
  *
  * Unlike [MonthSpendDependencies], the dependencies here don't feed one shared
  * computed value — they feed independent flows. The grouping is by usage locality
@@ -268,31 +273,47 @@ class HomeViewModel @Inject constructor(
         monthSpendDependencies.preferencesRepository.getDefaultCurrencyFlow()
             .stateIn(viewModelScope, SharingStarted.Eagerly, SupportedCurrency.DEFAULT)
 
-    private val _partnerId = MutableStateFlow<String?>(null)
     private val _userId = MutableStateFlow("")
 
     init {
         viewModelScope.launch {
-            val userRepository = homeIdentityDependencies.userRepository
-            val user = userRepository.getCurrentUser()
-            _userId.value = userRepository.getCurrentUserId().orEmpty()
-            _partnerId.value = user?.partnerId?.takeIf { it.isNotEmpty() }
+            _userId.value = homeIdentityDependencies.userRepository.getCurrentUserId().orEmpty()
         }
     }
 
-    /**
-     * Realtime pairing state, shared by [paired] and [partner] so one Firestore listener
-     * feeds both instead of two.
-     */
+    /** Realtime pairing state, for [uiState] and [coParent]. */
     private val pairingState = homeIdentityDependencies.pairingRepository.observePairingState()
 
     /**
-     * The linked co-parent, or null while unpaired. Names the activity feed ("Alex changed")
-     * and the chat tile, so the dashboard talks about a person rather than "the co-parent".
+     * The co-parent of the family on screen, with their profile: the one [partner] and
+     * [partnerId] both follow, so the changes header and the unread tile cannot name two
+     * different families.
+     *
+     * Not the pairing state's partner, which is the *first* co-parent whatever the family
+     * switcher says, and not the Room projection read once at construction, which is what the
+     * unread count and the changes feed used to key on: after a switch, both stayed on the family
+     * the parent had just left (tester report #11).
      */
-    private val partner: StateFlow<PartnerSummary?> = pairingState
-        .map { (it as? PairingState.Paired)?.partner }
+    private val coParent: StateFlow<CoParentOnScreen> = coParentOnScreen(
+        pairing = pairingState,
+        projectedPartnerUid = homeIdentityDependencies.userRepository.observeSignedInUser()
+            .map { it?.projectedCoParentUid() },
+        profileOf = homeIdentityDependencies.pairingRepository::observeCoParentProfile
+    ).stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), CoParentOnScreen.Resolving)
+
+    /**
+     * The co-parent of the family on screen, or null while unpaired. Names the activity feed
+     * ("Alex changed") and the chat tile, so the dashboard talks about a person rather than "the
+     * co-parent".
+     */
+    private val partner: StateFlow<PartnerSummary?> = coParent
+        .map { (it as? CoParentOnScreen.Linked)?.profile }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), null)
+
+    /** The uid of the co-parent of the family on screen, for the unread count and the changes feed. */
+    private val partnerId: Flow<String?> = coParent
+        .map { (it as? CoParentOnScreen.Linked)?.uid }
+        .distinctUntilChanged()
 
     /**
      * Whether a co-parent is linked. Driven by the pairing repository's realtime state, so
@@ -524,7 +545,7 @@ class HomeViewModel @Inject constructor(
      * now reads. It is the one subscription that has to stay, and CQ-8 explains why untangling
      * it is a separate job.
      */
-    private val unreadCount: StateFlow<Int> = combine(_userId, _partnerId) { userId, partnerId ->
+    private val unreadCount: StateFlow<Int> = combine(_userId, partnerId) { userId, partnerId ->
         userId to partnerId
     }
         .flatMapLatest { (userId, partnerId) ->
@@ -547,7 +568,7 @@ class HomeViewModel @Inject constructor(
     private val recentChanges: StateFlow<List<ActivityItem>> = combine(
         eventRepository.getAllEvents(),
         changeRequestRepository.getAllChangeRequests(),
-        _partnerId
+        partnerId
     ) { events, changeRequests, partnerId ->
         if (partnerId == null) return@combine emptyList()
 
