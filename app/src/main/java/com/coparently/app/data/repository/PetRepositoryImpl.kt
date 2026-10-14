@@ -7,7 +7,9 @@ import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestorePetDataSource
 import com.coparently.app.data.sync.PetAudience
 import com.coparently.app.data.sync.Tombstone
+import com.coparently.app.data.versions.EventVersionDocument
 import com.coparently.app.domain.events.EventTimestamp
+import com.coparently.app.domain.family.FamilyAudience
 import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.model.Medication
 import com.coparently.app.domain.model.Pet
@@ -65,12 +67,16 @@ class PetRepositoryImpl @Inject constructor(
 
     override suspend fun upsertPet(pet: Pet) {
         val firebaseUser = firebaseAuthService.getCurrentUser()
-        val partnerId = firebaseUser?.let { currentPartnerId(it.uid) }
+        val me = firebaseUser?.let { userDao.getUserById(it.uid) }
+        val selectedPartner = me?.partnerId?.takeIf { it.isNotBlank() }
+        val livePartners = EventVersionDocument.decodeAudience(me?.partnerIdsJson ?: "[]")
         // Which relationship this pet belongs to — see the same stamp in
         // [ChildInfoRepositoryImpl.upsertChildInfo]. Null while unpaired, and never
         // re-derived once set.
         val owned = pet.copy(
-            familyId = pet.familyId ?: FamilyKey.orNull(firebaseUser?.uid, partnerId)
+            familyId = pet.familyId ?: firebaseUser?.let { user ->
+                familyToStamp(pet.id, user.uid, livePartners, selectedPartner)
+            }
         )
         val entity = owned.toEntity()
         petDao.insertPet(entity)
@@ -79,7 +85,13 @@ class PetRepositoryImpl @Inject constructor(
             val audience = PetAudience.entitled(
                 userId = firebaseUser.uid,
                 creatorUid = owned.createdByFirebaseUid,
-                partnerId = partnerId
+                // The pet's own family's co-parent, never the family on screen in its place.
+                partnerId = FamilyAudience.recordPartnerFor(
+                    familyId = owned.familyId,
+                    myUid = firebaseUser.uid,
+                    livePartners = livePartners,
+                    selectedPartner = selectedPartner
+                )
             )
             val result = firestorePetDataSource.upsertPet(owned.id, owned.toFirestoreMap(audience))
 
@@ -132,7 +144,14 @@ class PetRepositoryImpl @Inject constructor(
 
     override suspend fun pullOnce() {
         val firebaseUser = firebaseAuthService.getCurrentUser() ?: return
-        val partnerId = currentPartnerId(firebaseUser.uid)
+        val me = userDao.getUserById(firebaseUser.uid)
+        val selectedPartner = me?.partnerId?.takeIf { it.isNotBlank() }
+        val livePartners = EventVersionDocument.decodeAudience(me?.partnerIdsJson ?: "[]")
+        // The co-parent a pet of [familyId] names: its own family's, the answer `upsertPet` and
+        // the child record's writers give from the same inputs.
+        val partnerFor = { familyId: String? ->
+            FamilyAudience.recordPartnerFor(familyId, firebaseUser.uid, livePartners, selectedPartner)
+        }
 
         // Deletions first — the half of this queue that used to have no path at all. A pending
         // tombstone is retried on every sync until the write lands, and only then does the row
@@ -150,7 +169,7 @@ class PetRepositoryImpl @Inject constructor(
             val audience = PetAudience.entitled(
                 userId = firebaseUser.uid,
                 creatorUid = entity.createdByFirebaseUid,
-                partnerId = partnerId
+                partnerId = partnerFor(entity.familyId)
             )
             val result = firestorePetDataSource.upsertPet(entity.id, pet.toFirestoreMap(audience))
             if (result.isSuccess) {
@@ -163,7 +182,8 @@ class PetRepositoryImpl @Inject constructor(
             .collect { firestoreList ->
                 for (firestoreData in firestoreList) {
                     if (applyDownloaded(firestoreData)) {
-                        repairAudience(firebaseUser.uid, partnerId, firestoreData)
+                        val familyId = (firestoreData["familyId"] as? String)?.takeIf { it.isNotEmpty() }
+                        repairAudience(firebaseUser.uid, partnerFor(familyId), firestoreData)
                     }
                 }
             }
@@ -213,6 +233,13 @@ class PetRepositoryImpl @Inject constructor(
      * re-arms on re-pairing, with no marker to key. Only this user's own documents are
      * touched, and only the one field, via `update()` — never a full `set()`, which could
      * overwrite the co-parent's newer edit of the record itself.
+     *
+     * **The only co-parent it ever adds is the pet's own family's** ([partnerId], from
+     * `FamilyAudience.recordPartnerFor`). It used to add the co-parent of the family on screen,
+     * on every pull: a parent in two families who switched to the second added its parent to
+     * every pet of the first.
+     *
+     * @param partnerId The co-parent of the pet's own family, or null when it must name none.
      */
     private suspend fun repairAudience(
         userId: String,
@@ -232,9 +259,22 @@ class PetRepositoryImpl @Inject constructor(
         }
     }
 
-    /** The signed-in user's current co-parent, or null when unpaired. */
-    private suspend fun currentPartnerId(userId: String): String? =
-        userDao.getUserById(userId)?.partnerId?.takeIf { it.isNotBlank() }
+    /**
+     * The family to stamp on a pet that names none, at save — the child record's rule
+     * (`ChildInfoRepositoryImpl.familyToStamp`): the family on screen for a pet being created now,
+     * or for any unstamped pet while there is exactly one co-parent; with two or more, a pet that
+     * already exists without a family keeps none, because nothing says which family it is.
+     */
+    private suspend fun familyToStamp(
+        id: String,
+        myUid: String,
+        livePartners: List<String>,
+        selectedPartner: String?
+    ): String? {
+        val ambiguous = FamilyAudience.coParents(myUid, livePartners, selectedPartner).size > 1
+        if (ambiguous && petDao.getPetById(id) != null) return null
+        return FamilyKey.orNull(myUid, selectedPartner)
+    }
 
     /**
      * Converts PetEntity to domain Pet.

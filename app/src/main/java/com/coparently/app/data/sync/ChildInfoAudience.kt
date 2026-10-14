@@ -20,6 +20,12 @@ object ChildInfoAudience {
      * copy, so deriving from live state gives the same protection for free. An ex-partner is
      * absent from the very next upload simply because [partnerId] is null.
      *
+     * **[partnerId] is the co-parent of the record's own family, never the family on screen.**
+     * Callers resolve it with `FamilyAudience.recordPartnerFor` from the record's `familyId`. The
+     * family on screen is what every caller used to pass, and for a parent in two families it
+     * handed the first family's children — health data included — to the second family's parent
+     * the moment the phone switched families and synced.
+     *
      * **Guests are part of the audience and must be passed in.** They are the one entry here
      * that is not derived from live pairing state: a guest is a fact about *this document*, so
      * an upload that forgot them would drop a grandparent out of `sharedWith` and end their
@@ -29,7 +35,8 @@ object ChildInfoAudience {
      *
      * @param userId The uploading user's Firebase UID
      * @param creatorUid The document's `createdByFirebaseUid`, or null if it never synced
-     * @param partnerId The uploader's **current** co-parent, or null when unpaired
+     * @param partnerId The co-parent of the record's own family while that relationship is live
+     *   (`FamilyAudience.recordPartnerFor`), or null when the record must name none
      * @param guestUids UIDs of guests whose grants are still active; empty when there are none
      * @return The UIDs to publish, de-duplicated, uploader first
      */
