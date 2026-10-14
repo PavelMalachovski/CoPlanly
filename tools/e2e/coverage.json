@@ -24,7 +24,8 @@
       "e2e": [
         "TwoParentEventsTest",
         "MultiFamilyTest",
-        "OneParentOnScreenTest"
+        "OneParentOnScreenTest",
+        "TwoParentAccessTest#aFamilyFriendSeesTheFamilysCalendarThroughTheApp"
       ],
       "checklist": [
         "5.2"
@@ -147,7 +148,8 @@
     "calendar_friends": {
       "e2e": [
         "TwoParentAccessTest#aCalendarFriendReadsTheFamilysEventsUntilAParentRevokesTheGrant",
-        "TwoParentAccessTest#aCalendarFriendOfTwoFamiliesReadsBothAndLosesOnlyTheOneThatRevokes"
+        "TwoParentAccessTest#aCalendarFriendOfTwoFamiliesReadsBothAndLosesOnlyTheOneThatRevokes",
+        "TwoParentAccessTest#aFamilyFriendSeesTheFamilysCalendarThroughTheApp"
       ],
       "checklist": [
         "5.6"
@@ -415,7 +417,8 @@
     "acceptCalendarFriendInvitation": {
       "e2e": [
         "TwoParentAccessTest#aCalendarFriendReadsTheFamilysEventsUntilAParentRevokesTheGrant",
-        "TwoParentAccessTest#aCalendarFriendOfTwoFamiliesReadsBothAndLosesOnlyTheOneThatRevokes"
+        "TwoParentAccessTest#aCalendarFriendOfTwoFamiliesReadsBothAndLosesOnlyTheOneThatRevokes",
+        "TwoParentAccessTest#aFamilyFriendSeesTheFamilysCalendarThroughTheApp"
       ],
       "checklist": [
         "5.6"
