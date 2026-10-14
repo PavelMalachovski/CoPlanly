@@ -273,7 +273,11 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     does not fit wraps. Pairs that sit side by side at the default size stack **from font scale
     1.3**: Home's two stat tiles, the Expenses total and its label, the paid-by amounts under the
     split bar, the balance sentence and Settle up, and the event preview's Delete and Edit. Each
-    reads `LocalDensity.current.fontScale` against a `STACK_*_FONT_SCALE` beside it. At 150 % the
+    reads `LocalDensity.current.fontScale` against a `STACK_*_FONT_SCALE` beside it. Text with a
+    chip beside it follows the same scale through `common/LargeFontLayout.kt` (`stacksAtLargeFont`;
+    a `SectionRow` opts in with `stackTrailingAtLargeFont`): the chip goes under the text rather than
+    squeezing it into a column a word wide — the Requests History row broke "Betreuungsplan" inside
+    the word at 150 % until it did, and `RequestHistoryGroupTest` measures both sizes. At 150 % the
     German label beside a total was squeezed to a word per line and the amount broke mid-number, at
     a size the screenshot matrix never rendered. That is why the matrix now renders the text-heavy
     components at 2.0× in German (see the `screenshots` job). Wrapping is not enough on its own: a
@@ -1053,7 +1057,10 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   professional too. A refused read is `FriendCalendarRead.AccessEnded`, and the grant leaving the
   friend's own list ends the screen too, because Firestore does not promise to end a live listener
   when another document revokes it; a grant that has not arrived yet is not an ended one. No
-  custody and no member chips: a friend reads neither `custody_models` nor `child_info`.
+  custody and no member chips: a friend reads neither `custody_models` nor `child_info`. Her side
+  of the Friends screen lists her families, her profile **and the row for another family's code**
+  (`FriendRedeemRow`, the one a parent's side shows before any grant): a friend of one family may be
+  sent a second's (L-5), and the invitation's message sends her there. `FriendsScreenTest` holds it.
   **The parents' first names ride on the grant**, `calendar_friends/{id}.parentNames`
   (`{uid: firstName}`), written by `acceptCalendarFriendInvitation` through `previewFirstName`
   (never an address; a parent with no name is left out, and with neither the key is not
