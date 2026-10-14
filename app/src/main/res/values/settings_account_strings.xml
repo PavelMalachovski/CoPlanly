@@ -24,8 +24,8 @@
     <string name="settings_account">Account</string>
     <string name="settings_account_description">Sign out of the app completely. This will require you to sign in again to access your account.</string>
     <string name="settings_account_sign_out">Sign out of app</string>
-    <string name="settings_pairing_title">Co-parent pairing</string>
-    <string name="settings_pairing_description">Invite or manage your co-parent</string>
+    <string name="settings_pairing_title">Co-parent</string>
+    <string name="settings_pairing_description">Your child\'s other parent: shared calendar, custody schedule, expenses and chat</string>
     <string name="settings_child_info_title">Child information</string>
     <string name="settings_child_info_description">Medications, activities, allergies</string>
     <string name="settings_pets_title">Pets</string>

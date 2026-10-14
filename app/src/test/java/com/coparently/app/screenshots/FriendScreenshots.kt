@@ -2,8 +2,13 @@ package com.coparently.app.screenshots
 
 import android.app.Application
 import com.coparently.app.domain.friends.CalendarFriendGrant
+import com.coparently.app.domain.guests.GuestAccessDuration
+import com.coparently.app.domain.guests.GuestInvite
 import com.coparently.app.presentation.friends.FriendAgendaDay
+import com.coparently.app.presentation.friends.FriendComparisonTable
 import com.coparently.app.presentation.friends.FriendEventDetails
+import com.coparently.app.presentation.friends.FriendInviteContent
+import com.coparently.app.presentation.friends.FriendInviteState
 import com.coparently.app.presentation.professionals.ProfessionalDay
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -12,9 +17,11 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * What a family friend reads (phase 2, spec §4.4): a day of the family's calendar, naming who
- * added each event and marking the one she takes part in, and an event's details. Text-heavy —
- * a long date, names and German at 2.0× — so the full [ScreenshotVariants.TEXT_HEAVY] set.
+ * Family friends (phase 2, spec §4): what a parent reads before inviting one — the comparison
+ * with a co-parent and the invite sheet with its code — and what the friend then reads: a day of
+ * the family's calendar, naming who added each event and marking the one she takes part in, and an
+ * event's details. Text-heavy — a table of words, names and German at 2.0× — so the full
+ * [ScreenshotVariants.TEXT_HEAVY] set.
  *
  * @param variant Language, theme, font scale and palette for this run
  */
@@ -22,6 +29,34 @@ import org.robolectric.annotation.GraphicsMode
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [SCREENSHOT_SDK], application = Application::class)
 class FriendScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant) {
+
+    /** Co-parent beside family friend, row by row — stacked into lines at 1.5× and 2.0×. */
+    @Test
+    fun comparison() = snap("friends_comparison") {
+        FriendComparisonTable()
+    }
+
+    /** The sheet once its code exists: what the friend will and won't see, the code, and Share. */
+    @Test
+    fun inviteSheet() = snap("friends_invite_sheet") {
+        FriendInviteContent(
+            state = FriendInviteState(
+                isOpen = true,
+                duration = GuestAccessDuration.MONTH,
+                invite = GuestInvite(
+                    id = "invite-1",
+                    code = "K7Q4-9P2M",
+                    childInfoId = "",
+                    inviteExpiresAtMillis = Long.MAX_VALUE,
+                    grantExpiresAtMillis = Long.MAX_VALUE
+                )
+            ),
+            onChooseDuration = {},
+            onCreate = {},
+            onShare = {},
+            onDone = {}
+        )
+    }
 
     /** Today with two events: the parents' handover, and a school play the friend takes part in. */
     @Test

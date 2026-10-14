@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="friend_section_title">Friend with calendar access</string>
-    <string name="friend_section_supporting">A guardian, friend or grandparent who can see the calendar</string>
-    <string name="friend_invite_action">Invite a friend</string>
+    <string name="friend_section_title">Family friends</string>
+    <string name="friend_section_supporting">A grandparent, nanny or friend who only views the calendar, for as long as you choose</string>
+    <string name="friend_invite_action">Invite a family friend</string>
     <string name="friend_invite_code_label">Give them this code</string>
     <string name="friend_access_until">Access until %1$s</string>
     <string name="friend_access_several">Families: %1$d · the first access ends %2$s</string>
@@ -32,4 +32,34 @@
     <string name="friend_calendar_you_take_part">You take part</string>
     <string name="friend_calendar_access_ended">Your access to this calendar has ended</string>
     <string name="friend_calendar_failed">The calendar couldn\'t be loaded</string>
+    <!-- Family friends (phase 2): who a family friend is, what they see beside a co-parent,
+         sharing their code, and the friend's own way into the calendar. -->
+    <string name="friend_intro">A family friend is a grandparent, nanny or friend who needs to know where the children are. They only view the calendar and can\'t change anything.</string>
+    <string name="friend_compare_column_coparent">Co-parent</string>
+    <string name="friend_compare_column_friend">Family friend</string>
+    <string name="friend_compare_calendar">Calendar</string>
+    <string name="friend_compare_custody">Custody schedule</string>
+    <string name="friend_compare_expenses">Expenses</string>
+    <string name="friend_compare_chat">Chat</string>
+    <string name="friend_compare_children">Children\'s records</string>
+    <string name="friend_compare_how_long">How long</string>
+    <string name="friend_compare_views_and_changes">Views and changes</string>
+    <string name="friend_compare_only_views">Only views</string>
+    <string name="friend_compare_yes">Yes</string>
+    <string name="friend_compare_no">No</string>
+    <string name="friend_compare_while_linked">While you are linked</string>
+    <string name="friend_compare_duration_choice">%1$s or %2$s</string>
+    <string name="friend_compare_row_desc">%1$s: co-parent %2$s, family friend %3$s</string>
+    <string name="friend_invite_will_see_lead">Will see</string>
+    <string name="friend_invite_will_see_body">the family\'s events in the calendar, except private ones. View only — they can\'t change anything.</string>
+    <string name="friend_invite_wont_see_lead">Won\'t see</string>
+    <string name="friend_invite_wont_see_body">the custody schedule, expenses, chat or children\'s records.</string>
+    <string name="friend_invite_where_to_enter">They enter it in their own CoPlanly: Settings → Family friends → I have a code from the parents.</string>
+    <string name="friend_invite_share">Share code</string>
+    <string name="friend_invite_done">Done</string>
+    <string name="friend_share_message">%1$s invited you to the family calendar in CoPlanly. Your code: %2$s. In CoPlanly, open Settings → Family friends → I have a code from the parents. Get the app: %3$s</string>
+    <string name="friend_redeem_row_title">I have a code from the parents</string>
+    <string name="friend_redeem_row_supporting">If you were invited as a family friend</string>
+    <string name="friend_redeem_open_calendar">Open the family calendar</string>
+    <string name="friend_calendar_row_supporting">%1$s and %2$s · access until %3$s</string>
 </resources>

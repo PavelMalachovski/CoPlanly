@@ -859,7 +859,10 @@ fun NavGraph(
                         onOpenFriend = { uid ->
                             navController.navigate(Screen.FriendDetail.createRoute(uid))
                         },
-                        onOpenMyProfile = { navController.navigate(Screen.FriendProfile.route) }
+                        onOpenMyProfile = { navController.navigate(Screen.FriendProfile.route) },
+                        onOpenFriendCalendar = { familyId ->
+                            navController.navigate(Screen.FriendCalendar.createRoute(familyId))
+                        }
                     )
                 }
 

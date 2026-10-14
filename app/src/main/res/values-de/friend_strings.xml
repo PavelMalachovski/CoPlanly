@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="friend_section_title">Freund mit Kalenderzugriff</string>
-    <string name="friend_section_supporting">Betreuungsperson, Freund oder Großeltern, die den Kalender sehen können</string>
-    <string name="friend_invite_action">Freund einladen</string>
+    <string name="friend_section_title">Freunde der Familie</string>
+    <string name="friend_section_supporting">Großeltern, Babysitter oder Freunde, die den Kalender nur ansehen – so lange, wie du festlegst</string>
+    <string name="friend_invite_action">Freund der Familie einladen</string>
     <string name="friend_invite_code_label">Gib diesen Code weiter</string>
     <string name="friend_access_until">Zugriff bis %1$s</string>
     <string name="friend_access_several">Familien: %1$d · der erste Zugriff endet am %2$s</string>
@@ -31,4 +31,32 @@
     <string name="friend_calendar_you_take_part">Du nimmst teil</string>
     <string name="friend_calendar_access_ended">Dein Zugang zu diesem Kalender ist beendet</string>
     <string name="friend_calendar_failed">Der Kalender konnte nicht geladen werden</string>
+    <string name="friend_intro">Freunde der Familie sind Großeltern, Babysitter oder Freunde, die wissen müssen, wo die Kinder sind. Sie sehen den Kalender nur an und können nichts ändern.</string>
+    <string name="friend_compare_column_coparent">Co-Elternteil</string>
+    <string name="friend_compare_column_friend">Freund der Familie</string>
+    <string name="friend_compare_calendar">Kalender</string>
+    <string name="friend_compare_custody">Betreuungsplan</string>
+    <string name="friend_compare_expenses">Ausgaben</string>
+    <string name="friend_compare_chat">Chat</string>
+    <string name="friend_compare_children">Informationen zu den Kindern</string>
+    <string name="friend_compare_how_long">Wie lange</string>
+    <string name="friend_compare_views_and_changes">Ansehen und ändern</string>
+    <string name="friend_compare_only_views">Nur ansehen</string>
+    <string name="friend_compare_yes">Ja</string>
+    <string name="friend_compare_no">Nein</string>
+    <string name="friend_compare_while_linked">Solange ihr verknüpft seid</string>
+    <string name="friend_compare_duration_choice">%1$s oder %2$s</string>
+    <string name="friend_compare_row_desc">%1$s: Co-Elternteil %2$s, Freund der Familie %3$s</string>
+    <string name="friend_invite_will_see_lead">Sieht</string>
+    <string name="friend_invite_will_see_body">die Termine der Familie im Kalender, außer privaten. Nur ansehen – ändern kann diese Person nichts.</string>
+    <string name="friend_invite_wont_see_lead">Sieht nicht</string>
+    <string name="friend_invite_wont_see_body">den Betreuungsplan, die Ausgaben, den Chat und die Informationen zu den Kindern.</string>
+    <string name="friend_invite_where_to_enter">Die Person gibt ihn in ihrer eigenen CoPlanly-App ein: Einstellungen → Freunde der Familie → Ich habe einen Code von den Eltern.</string>
+    <string name="friend_invite_share">Code teilen</string>
+    <string name="friend_invite_done">Fertig</string>
+    <string name="friend_share_message">%1$s lädt dich in den Familienkalender in CoPlanly ein. Dein Code: %2$s. Öffne in CoPlanly Einstellungen → Freunde der Familie → Ich habe einen Code von den Eltern. App: %3$s</string>
+    <string name="friend_redeem_row_title">Ich habe einen Code von den Eltern</string>
+    <string name="friend_redeem_row_supporting">Wenn du als Freund der Familie eingeladen wurdest</string>
+    <string name="friend_redeem_open_calendar">Familienkalender öffnen</string>
+    <string name="friend_calendar_row_supporting">%1$s und %2$s · Zugriff bis %3$s</string>
 </resources>

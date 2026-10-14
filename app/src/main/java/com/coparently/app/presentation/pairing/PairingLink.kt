@@ -10,3 +10,16 @@ import com.coparently.app.domain.pairing.PairingUri
  */
 internal fun pairingLinkFor(code: String, web: Boolean = BuildConfig.PAIRING_WEB_LINK): String =
     if (web) PairingUri.buildWeb(code) else PairingUri.build(code)
+
+/**
+ * Where a recipient without the app installed goes to get it — in the co-parent, professional and
+ * family-friend invitations alike.
+ *
+ * **This listing does not exist yet** (REL-6 in `docs/BACKLOG.md` is the Play Console work), so
+ * the link answers "item not found" until the app is published. Shipped anyway, on the owner's
+ * decision: the deep link alone strands exactly the person an invitation is for — someone who
+ * does not have the app — and the code in the same message still works by hand. When the listing
+ * goes live nothing here needs to change, which is why the URL is built from the applicationId
+ * rather than pasted.
+ */
+internal const val PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=app.coplanly"

@@ -31,6 +31,7 @@ import com.coparently.app.domain.professionals.ProfessionalRole
 import com.coparently.app.presentation.common.GroupLabel
 import com.coparently.app.presentation.common.InviteCodeText
 import com.coparently.app.presentation.common.PillChip
+import com.coparently.app.presentation.pairing.PLAY_STORE_URL
 import com.coparently.app.presentation.theme.Spacing
 
 /**
@@ -165,12 +166,6 @@ private fun InviteCode(code: String) {
         Text(stringResource(R.string.professional_invite_share))
     }
 }
-
-/**
- * The Play Store listing, for a professional who does not have the app yet — the same link the
- * co-parent invitation carries (`PairingScreen`).
- */
-private const val PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=app.coplanly"
 
 /** Builds the share-sheet intent for a professional code. */
 private fun shareIntent(context: Context, code: String): Intent {

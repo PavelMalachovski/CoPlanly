@@ -23,8 +23,8 @@
     <string name="settings_account">Účet</string>
     <string name="settings_account_description">Úplné odhlášení z aplikace. Pro přístup k účtu se budete muset znovu přihlásit.</string>
     <string name="settings_account_sign_out">Odhlásit se</string>
-    <string name="settings_pairing_title">Propojení s druhým rodičem</string>
-    <string name="settings_pairing_description">Pozvěte nebo spravujte druhého rodiče</string>
+    <string name="settings_pairing_title">Druhý rodič</string>
+    <string name="settings_pairing_description">Druhý rodič vašeho dítěte: společný kalendář, rozvrh péče, výdaje a chat</string>
     <string name="settings_child_info_title">Informace o dítěti</string>
     <string name="settings_child_info_description">Léky, kroužky, alergie</string>
     <string name="settings_pets_title">Mazlíčci</string>
