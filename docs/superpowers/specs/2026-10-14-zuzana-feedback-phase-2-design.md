@@ -199,8 +199,11 @@ built for that from the start, owner decision "one calendar, not two"):
   - a day swap of mine they decided (one row per swap group): "Accepted your day swap: %1$s" /
     "Declined your day swap: %1$s" (a date, or the first date and a count);
   - an event I created for them that they accepted / declined: "Accepted %1$s" / "Declined %1$s".
-  Each row's marker shows the outcome (check / cross on the existing status chip colours), not a
-  parent colour. Tapping one opens the inbox at History.
+  Each row's marker shows the outcome: a check or a cross on a neutral tonal disc
+  (`surfaceVariant` / `onSurfaceVariant`), not a parent colour. *(My call: the mockup's green and
+  red discs would need new theme roles, regenerated contrast schemes and their tests, and red
+  already means "holiday" and "error" in this app; the icon's shape carries the outcome, which
+  also holds for a reader who cannot tell red from green.)* Tapping one opens the inbox at History.
 - **"All requests and answers"**, a last row of the feed group whenever the group has items:
   opens the inbox scrolled to History.
 
@@ -214,9 +217,12 @@ when empty:
    custody proposal, events waiting on you (§5.1 cards), day swaps offered to you, incoming
    change requests. Answering works exactly as today.
 2. **Waiting for %1$s** (the co-parent's name) — what this parent sent and the co-parent has not
-   answered: my pending change requests (Withdraw, as today), events I created for them (§5.1
-   card, creator's view, with Withdraw — `event_acceptance_withdraw` exists), my day-swap offers
-   (no withdraw: the model has none, phase 3), my custody proposal (Withdraw, as today).
+   answered: my pending change requests (with Withdraw, as today), events I created for them
+   (§5.1 card, creator's view), my day-swap offers, my custody proposal. *(My call: no new
+   Withdraw in this phase. Only change requests can be withdrawn in the UI today.
+   `CustodyModelRepository.withdrawProposal` has no caller and tells the co-parent nothing, and
+   `EventAcceptanceTransition.cancel` has no caller and would delete the event, so either would be
+   a silent change on the other phone — a separate decision, not a layout one.)*
 3. **History** — everything answered or withdrawn, newest first by the time of the answer:
    - change requests ACCEPTED / DECLINED / CANCELLED (`respondedAt`; for a CANCELLED one without
      it, `createdAt`);
@@ -227,7 +233,8 @@ when empty:
      stored; older ones stay in the chat's activity cards).
    Each row: what it was ("New time for %1$s", "Day swap: %1$s", the event's title, "New custody
    schedule"), what was proposed when that applies ("Thu, 16 Oct, 18:30"), the outcome on the
-   existing status chips (Accepted / Declined / Withdrawn), and who answered when: "Your request ·
+   status chip the inbox already draws — one neutral colour for every outcome, as today, with the
+   check / cross / undo icon in it — (Accepted / Declined / Withdrawn), and who answered when: "Your request ·
    %1$s answered %2$s" / "%1$s's request · you answered %2$s" / "You withdrew it %1$s". Rows are
    not interactive. *(My call: no cap, no paging — a family's history is short; revisit if a
    device shows otherwise.)*
@@ -238,6 +245,25 @@ when empty:
   by event id keeps working.
 - A pure `RequestHistory` builder (domain or presentation, not in the composable) merges the four
   sources into rows, so it is tested on the JVM.
+
+### 6.3 Two families: the family on screen only
+
+The tester co-parents in two families, so every surface in this phase answers for **the family on
+screen** — the co-parent `CoParentOnScreen` resolves (phase 1) — and nothing else *(my call)*:
+
+- the inbox's three sections and History, the Home "Requests" row's line and count, and the
+  feed's answer items list a change request only when its other party (`requestedBy` /
+  `requestedTo`) is that co-parent; an event only when its `familyId` is that family's (an event
+  with no `familyId` only while the account has one co-parent); day swaps and the custody proposal
+  already come from that family's document (`CustodyModelRepository.currentPair()`);
+- today's inbox and Home count mix both families' requests and events; this narrows them, which is
+  the switcher's model: another family's waiting items are what its **dot** says (CLAUDE.md design
+  item 13, `OtherFamiliesSignals`), and switching shows them;
+- so "Waiting for %1$s" names one person, every History row's other party is that person, and the
+  mini month colours an event with its own family's custody days.
+
+A request or event from a family that has ended (an ex-partner) shows in no family's inbox — it
+is not answerable any more, and the export keeps the record.
 
 ## 7. Verification
 
@@ -277,6 +303,10 @@ My calls (check while reading):
   anyway).
 - The mini month has event dots (as in the chosen mockup) and no handover diagonal, holidays or
   swap arrows.
+- With two families, every surface here shows the family on screen only (§6.3).
+- No new Withdraw actions (§6.2): only change requests can be withdrawn, as today.
+- Outcome markers and chips stay neutral with a check / cross / undo icon, not green and red
+  (§6.1, §6.2).
 
 Left to the builder: the composable split and file placement, which ViewModel computes the mini
 month's inputs, the exact `MAX_ITEMS` interplay, detekt budgets, and wording polish in the four
