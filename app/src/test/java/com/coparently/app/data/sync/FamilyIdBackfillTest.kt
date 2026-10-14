@@ -65,7 +65,7 @@ class FamilyIdBackfillTest {
         every { preferences.getString(key) } returns null
         stubStamps()
 
-        backfill.run(ALICE, BOB)
+        backfill.run(ALICE, listOf(BOB))
 
         // Spelled out rather than built with `FamilyKey.of`: the id is the name of a stored
         // document, so a test that computed it the same way the code does would agree with any
@@ -85,7 +85,7 @@ class FamilyIdBackfillTest {
         every { preferences.getString(any()) } returns null
         stubStamps()
 
-        backfill.run(BOB, ALICE)
+        backfill.run(BOB, listOf(ALICE))
 
         coVerify { eventDao.stampFamilyId(FAMILY) }
     }
@@ -94,7 +94,7 @@ class FamilyIdBackfillTest {
     fun `a second pass for the same co-parent does nothing`() = runTest {
         every { preferences.getString(key) } returns BOB
 
-        backfill.run(ALICE, BOB)
+        backfill.run(ALICE, listOf(BOB))
 
         coVerify(exactly = 0) { eventDao.stampFamilyId(any()) }
         coVerify(exactly = 0) { changeRequestDao.stampFamilyId(any()) }
@@ -108,7 +108,7 @@ class FamilyIdBackfillTest {
         // stay unstamped for good.
         every { preferences.getString(key) } returns BOB
 
-        backfill.run(ALICE, null)
+        backfill.run(ALICE, emptyList())
 
         coVerify(exactly = 0) { eventDao.stampFamilyId(any()) }
         verify { preferences.putString(key, "") }
@@ -118,7 +118,7 @@ class FamilyIdBackfillTest {
     fun `an account that was never paired does not rewrite an already blank marker`() = runTest {
         every { preferences.getString(key) } returns ""
 
-        backfill.run(ALICE, null)
+        backfill.run(ALICE, emptyList())
 
         verify(exactly = 0) { preferences.putString(any(), any()) }
     }
@@ -130,7 +130,7 @@ class FamilyIdBackfillTest {
         every { preferences.getString(key) } returns ""
         stubStamps()
 
-        backfill.run(ALICE, BOB)
+        backfill.run(ALICE, listOf(BOB))
 
         coVerify { eventDao.stampFamilyId(FAMILY) }
         verify { preferences.putString(key, BOB) }
@@ -140,9 +140,57 @@ class FamilyIdBackfillTest {
     fun `a partner id equal to the signed-in uid is not a relationship`() = runTest {
         every { preferences.getString(key) } returns null
 
-        backfill.run(ALICE, ALICE)
+        backfill.run(ALICE, listOf(ALICE))
 
         coVerify(exactly = 0) { eventDao.stampFamilyId(any()) }
+    }
+
+    @Test
+    fun `with two co-parents nothing is stamped and the marker is left as it was`() = runTest {
+        // The guess this used to make: every unstamped row went into whichever family the phone
+        // was showing, and a switch armed the marker for the other co-parent and did it again. A
+        // child entered before Alice paired is not the Carol family's because Carol's family
+        // happens to be on screen — nothing on this phone says which family it is about.
+        every { preferences.getString(key) } returns BOB
+        stubStamps()
+
+        backfill.run(ALICE, listOf(BOB, CAROL))
+
+        coVerify(exactly = 0) { eventDao.stampFamilyId(any()) }
+        coVerify(exactly = 0) { expenseDao.stampFamilyId(any()) }
+        coVerify(exactly = 0) { budgetDao.stampFamilyId(any()) }
+        coVerify(exactly = 0) { childInfoDao.stampFamilyId(any()) }
+        coVerify(exactly = 0) { petDao.stampFamilyId(any()) }
+        coVerify(exactly = 0) { changeRequestDao.stampFamilyId(any()) }
+        verify(exactly = 0) { preferences.putString(any(), any()) }
+    }
+
+    @Test
+    fun `two co-parents on a phone that never stamped stamp nothing either`() = runTest {
+        // Paired twice before the first sync ran: the rows written while unpaired stay "mine
+        // alone", the value the server leaves them at too (`stampOwnBlankFamilyIds`, ambiguous).
+        every { preferences.getString(key) } returns null
+        stubStamps()
+
+        backfill.run(ALICE, listOf(CAROL, BOB))
+
+        coVerify(exactly = 0) { eventDao.stampFamilyId(any()) }
+        coVerify(exactly = 0) { childInfoDao.stampFamilyId(any()) }
+        verify(exactly = 0) { preferences.putString(any(), any()) }
+    }
+
+    @Test
+    fun `back to one co-parent, the rows are stamped for that family`() = runTest {
+        // Alice unpaired from Bob while Carol stayed: one family again, so the rows that stayed
+        // null are unambiguous once more — exactly the case a re-pairing is.
+        every { preferences.getString(key) } returns BOB
+        stubStamps()
+
+        backfill.run(ALICE, listOf(CAROL))
+
+        coVerify(exactly = 1) { eventDao.stampFamilyId(CAROL_FAMILY) }
+        coVerify(exactly = 1) { childInfoDao.stampFamilyId(CAROL_FAMILY) }
+        verify { preferences.putString(key, CAROL) }
     }
 
     @Test
@@ -153,7 +201,7 @@ class FamilyIdBackfillTest {
         stubStamps()
         coEvery { changeRequestDao.stampFamilyId(any()) } throws IllegalStateException("db gone")
 
-        runCatching { backfill.run(ALICE, BOB) }
+        runCatching { backfill.run(ALICE, listOf(BOB)) }
 
         verify(exactly = 0) { preferences.putString(any(), any()) }
     }
@@ -170,6 +218,8 @@ class FamilyIdBackfillTest {
     private companion object {
         const val ALICE = "alice-uid"
         const val BOB = "bob-uid"
+        const val CAROL = "carol-uid"
         const val FAMILY = "alice-uid__bob-uid"
+        const val CAROL_FAMILY = "alice-uid__carol-uid"
     }
 }

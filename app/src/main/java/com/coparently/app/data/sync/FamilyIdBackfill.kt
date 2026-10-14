@@ -22,10 +22,14 @@ import javax.inject.Singleton
  * (see `DatabaseMigrations.MIGRATION_29_30`). This turns the second kind into the first the
  * moment there *is* a relationship to name.
  *
- * **A device knows of exactly one relationship**, which is what makes an unstamped row
- * unambiguous. When that stops being true (M-4, the family switcher) this becomes a per-family
- * question with no local answer, and by then there will be nothing left for it to do — every row
- * either carries a stamp from its own creation or was stamped here.
+ * **It stamps only while the account has exactly one co-parent**, which is what makes an
+ * unstamped row unambiguous. With two or more (M-4, the family switcher) "which family is this
+ * row about" has no local answer, so nothing is stamped and the rows stay null — "mine alone",
+ * the honest value. It used to stamp them with whichever family the phone was showing, and run
+ * again on every switch, which moved a parent's unstamped records into a family they were never
+ * about; for a child's record that is health data in the wrong household. The server declines the
+ * same guess (`stampOwnBlankFamilyIds` answers `ambiguous`), and the audience of an unstamped
+ * child or pet names no co-parent while there are two (`FamilyAudience.recordPartnerFor`).
  *
  * Local only, and deliberately: it does not clear `syncedToFirestore`, so nothing is re-uploaded
  * for it. The remote copy picks the field up on the record's next ordinary write, and for events
@@ -61,12 +65,25 @@ class FamilyIdBackfill @Inject constructor(
 ) {
 
     /**
-     * Stamps every unstamped local row with [userId]'s family, once per co-parent.
+     * Stamps every unstamped local row with [userId]'s family, once per co-parent — while there
+     * is exactly one.
+     *
+     * With two or more co-parents it returns without stamping and without touching the marker:
+     * the rows stay null — the honest value — for as long as there is more than one family. The
+     * marker is left alone because nothing was done for anybody; it still names the one co-parent
+     * the rows were last stamped for, if any.
      *
      * @param userId The signed-in user's Firebase UID.
-     * @param partnerId The co-parent's Firebase UID, or null when unpaired.
+     * @param coParents Every co-parent [userId] has now (`FamilyAudience.coParents`); empty when
+     *   unpaired.
      */
-    suspend fun run(userId: String, partnerId: String?) {
+    suspend fun run(userId: String, coParents: Collection<String>) {
+        val partners = coParents.filter { it.isNotBlank() && it != userId }.distinct()
+        // Two families: an unstamped row belongs to one of them, and nothing on this phone says
+        // which. The family on screen is not an answer — it is a view, and it changes.
+        if (partners.size > 1) return
+        val partnerId = partners.singleOrNull()
+
         val key = "${PreferenceKeys.FAMILY_ID_BACKFILL_PREFIX}$userId"
         val familyId = FamilyKey.orNull(userId, partnerId)
 

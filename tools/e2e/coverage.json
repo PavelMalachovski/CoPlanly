@@ -130,13 +130,15 @@
         "TwoParentFamilyRecordsTest#aChildAliceSavesReachesBobIntactAndItsDeletionArrivesAsATombstone",
         "TwoParentFamilyRecordsTest#aChildEditTheSyncUploadsQueuesChildInfoUpdatedForBob",
         "TwoParentFamilyRecordsTest#recordsMadeBeforePairingAreSharedWithTheNewCoParentAndAnnouncedOnce",
-        "TwoParentAccessTest#aGuestReadsTheOneChildRecordSheWasInvitedToAndNothingElse"
+        "TwoParentAccessTest#aGuestReadsTheOneChildRecordSheWasInvitedToAndNothingElse",
+        "MultiFamilyRecordsTest#aBobFamilyChildStaysOutOfCarolsReadsAfterAliceSwitchesAndSyncs"
       ]
     },
     "pets": {
       "e2e": [
         "TwoParentFamilyRecordsTest#aPetAliceSavesReachesBobAndItsDeletionArrivesAsATombstone",
-        "TwoParentRecordPhotosTest#eachKindOfRecordPhotoOpensForBobWithItsDigestAndIsRefusedToAStranger"
+        "TwoParentRecordPhotosTest#eachKindOfRecordPhotoOpensForBobWithItsDigestAndIsRefusedToAStranger",
+        "MultiFamilyRecordsTest#aBobFamilyPetStaysOutOfCarolsReadsAfterAliceSwitchesAndSyncs"
       ]
     },
     "budgets": {

@@ -9,7 +9,9 @@ import com.coparently.app.data.sync.ChildInfoAudience
 import com.coparently.app.data.sync.ChildInfoGuests
 import com.coparently.app.data.sync.ChildInfoPhotos
 import com.coparently.app.data.sync.Tombstone
+import com.coparently.app.data.versions.EventVersionDocument
 import com.coparently.app.domain.events.EventTimestamp
+import com.coparently.app.domain.family.FamilyAudience
 import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.guests.GuestGrantPolicy
 import com.coparently.app.domain.model.ChildInfo
@@ -62,13 +64,17 @@ class ChildInfoRepositoryImpl @Inject constructor(
 
     override suspend fun upsertChildInfo(childInfo: ChildInfo) {
         val firebaseUser = firebaseAuthService.getCurrentUser()
-        val partnerId = firebaseUser?.let { currentPartnerId(it.uid) }
+        val me = firebaseUser?.let { userDao.getUserById(it.uid) }
+        val selectedPartner = me?.partnerId?.takeIf { it.isNotBlank() }
+        val livePartners = EventVersionDocument.decodeAudience(me?.partnerIdsJson ?: "[]")
         // Which relationship this child belongs to, and therefore whose family screens list
         // them. Null while the account is unpaired: the record is this parent's alone until
         // there is somebody to share it with. Kept once stamped, so a re-pairing to a
         // different co-parent cannot silently move a child between families.
         val owned = childInfo.copy(
-            familyId = childInfo.familyId ?: FamilyKey.orNull(firebaseUser?.uid, partnerId)
+            familyId = childInfo.familyId ?: firebaseUser?.let { user ->
+                familyToStamp(childInfo.id, user.uid, livePartners, selectedPartner)
+            }
         )
         val entity = owned.toEntity()
         childInfoDao.insertChildInfo(entity)
@@ -78,7 +84,15 @@ class ChildInfoRepositoryImpl @Inject constructor(
             val audience = ChildInfoAudience.entitled(
                 userId = firebaseUser.uid,
                 creatorUid = owned.createdByFirebaseUid,
-                partnerId = partnerId,
+                // The child's own family's co-parent — never the family on screen in its place,
+                // which for a parent in two families handed this record to the other family's
+                // parent (`FamilyAudience.recordPartnerFor`).
+                partnerId = FamilyAudience.recordPartnerFor(
+                    familyId = owned.familyId,
+                    myUid = firebaseUser.uid,
+                    livePartners = livePartners,
+                    selectedPartner = selectedPartner
+                ),
                 guestUids = activeGuestUids(owned)
             )
             val childInfoData = owned.toFirestoreMap(audience)
@@ -96,13 +110,26 @@ class ChildInfoRepositoryImpl @Inject constructor(
     }
 
     /**
-     * The signed-in user's current co-parent, or null when unpaired.
+     * The family to stamp on a record that names none, at save: the family on screen for a child
+     * being created now — it is created in that family — or, with exactly one co-parent, for any
+     * unstamped record, as `FamilyIdBackfill` would stamp it.
      *
-     * Shared by [upsertChildInfo] and [pullOnce] so both writers ask the same
-     * question the same way before handing the answer to [ChildInfoAudience.entitled].
+     * With two or more co-parents a record that **already exists** without a family stays
+     * without one. It was written before its parent paired, and nothing on this phone says which
+     * of the two families it is about; stamping the one on screen at the next edit would be the
+     * guess `FamilyIdBackfill` and the server both decline, and would hand its health details to
+     * that family's parent.
      */
-    private suspend fun currentPartnerId(userId: String): String? =
-        userDao.getUserById(userId)?.partnerId?.takeIf { it.isNotBlank() }
+    private suspend fun familyToStamp(
+        id: String,
+        myUid: String,
+        livePartners: List<String>,
+        selectedPartner: String?
+    ): String? {
+        val ambiguous = FamilyAudience.coParents(myUid, livePartners, selectedPartner).size > 1
+        if (ambiguous && childInfoDao.getChildInfoById(id) != null) return null
+        return FamilyKey.orNull(myUid, selectedPartner)
+    }
 
     /**
      * Deletes a child record in a way the co-parent can actually find out about (CQ-19).
@@ -152,7 +179,9 @@ class ChildInfoRepositoryImpl @Inject constructor(
 
     override suspend fun pullOnce() {
         val firebaseUser = firebaseAuthService.getCurrentUser() ?: return
-        val partnerId = currentPartnerId(firebaseUser.uid)
+        val me = userDao.getUserById(firebaseUser.uid)
+        val selectedPartner = me?.partnerId?.takeIf { it.isNotBlank() }
+        val livePartners = EventVersionDocument.decodeAudience(me?.partnerIdsJson ?: "[]")
 
         // Deletions first — they are the half of this queue that used to have no path at all.
         // A pending tombstone is retried here on every sync until the write lands, and only
@@ -164,13 +193,19 @@ class ChildInfoRepositoryImpl @Inject constructor(
             tombstoneRemotely(entity.id, entity.deletedAtMillis ?: continue, firebaseUser.uid)
         }
 
-        // Upload to Firestore
+        // Upload to Firestore, each child under its own family's audience — the same answer
+        // `upsertChildInfo` and `SyncService` give, from the same inputs.
         for (entity in unsyncedChildInfo) {
             val childInfo = entity.toDomain()
             val audience = ChildInfoAudience.entitled(
                 userId = firebaseUser.uid,
                 creatorUid = entity.createdByFirebaseUid,
-                partnerId = partnerId,
+                partnerId = FamilyAudience.recordPartnerFor(
+                    familyId = entity.familyId,
+                    myUid = firebaseUser.uid,
+                    livePartners = livePartners,
+                    selectedPartner = selectedPartner
+                ),
                 guestUids = activeGuestUids(childInfo)
             )
             val childInfoData = childInfo.toFirestoreMap(audience)
