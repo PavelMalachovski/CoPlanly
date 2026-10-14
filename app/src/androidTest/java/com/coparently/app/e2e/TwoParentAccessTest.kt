@@ -211,7 +211,11 @@ class TwoParentAccessTest : TwoParentTest() {
     @Test
     fun aFamilyFriendSeesTheFamilysCalendarThroughTheApp() = runBlocking<Unit> {
         val carol = newParent("Carol")
-        pair(inviter = alice, accepter = carol)
+        // Not `pair()`: Alice's pairing state keeps naming Bob, her first co-parent, so it can never
+        // name Carol. Her phone learns the second family from the set, as MultiFamilyTest waits for it.
+        val carolsCode = alice.pairingRepository.createOrReuseInviteCode().getOrThrow()
+        carol.pairingRepository.redeem(carolsCode.code).getOrThrow()
+        carol.awaitPairedWith(alice.uid)
         alice.awaitFamilyWith(carol.uid)
         val bobFamily = FamilyKey.of(alice.uid, bob.uid)
         val carolFamily = FamilyKey.of(alice.uid, carol.uid)
