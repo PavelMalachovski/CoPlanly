@@ -34,9 +34,10 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.LocalDateTime
 import javax.inject.Inject
@@ -102,20 +103,26 @@ class ChangeRequestViewModel @Inject constructor(
      * month, drawn with the family's custody and the family's visible events (spec §5.3).
      *
      * Computed off the main thread — every waiting event expands the family's recurring events
-     * over its own month's grid.
+     * over its own month's grid — but collected on the ViewModel's own: only the computation
+     * hops to `Dispatchers.Default`. A `flowOn` producer there kept [requests] subscribed from a
+     * background thread, and when the sharing stopped, that producer finished on its own thread
+     * and resumed this scope after its dispatcher had gone — in the unit tests, after `resetMain`,
+     * which surfaced as an uncaught exception in whichever test ran next.
      */
     val miniMonths: StateFlow<Map<String, MiniMonthModel>> = combine(
         requests,
         custodyModelRepository.getActiveModel(),
         custodyModelRepository.observeDayOverrides()
-    ) { state, model, overrides ->
-        val ready = state as? RequestsState.Ready ?: return@combine emptyMap()
-        val custodyFor = CustodyResolver.resolver(model, overrides, legacy = { null })
-        (ready.inbox.waitingOnMe.events + ready.inbox.waitingOnThem.events).associate { event ->
-            event.id to MiniMonthModel.forAwaitingEvent(event, ready.events, custodyFor)
+    ) { state, model, overrides -> Triple(state, model, overrides) }
+        .mapLatest { (state, model, overrides) ->
+            val ready = state as? RequestsState.Ready ?: return@mapLatest emptyMap()
+            withContext(Dispatchers.Default) {
+                val custodyFor = CustodyResolver.resolver(model, overrides, legacy = { null })
+                (ready.inbox.waitingOnMe.events + ready.inbox.waitingOnThem.events).associate { event ->
+                    event.id to MiniMonthModel.forAwaitingEvent(event, ready.events, custodyFor)
+                }
+            }
         }
-    }
-        .flowOn(Dispatchers.Default)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
     init {

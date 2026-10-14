@@ -25,6 +25,7 @@ import com.coparently.app.domain.model.PartnerSummary
 import com.coparently.app.domain.model.User
 import com.coparently.app.domain.repository.JournalRepository
 import com.coparently.app.domain.repository.UserRepository
+import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.testParentsSource
 import io.mockk.coEvery
@@ -37,6 +38,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -115,21 +118,38 @@ class ExportViewModelTest {
      * @param partnerOnScreen The co-parent of the family on screen.
      * @param serverPartner The co-parent the server's link names — the first one, which for a
      *   parent showing their second family is not [partnerOnScreen].
+     * @param parents The names, for a test that waits for them with [namesReady] first.
      */
     private fun viewModel(
         partnerOnScreen: PartnerSummary? = partner,
         thread: String? = null,
-        serverPartner: PartnerSummary? = partnerOnScreen
+        serverPartner: PartnerSummary? = partnerOnScreen,
+        parents: ParentsSource = testParentsSource(me, partner = serverPartner, onScreen = partnerOnScreen)
     ) = ExportViewModel(
         source,
         OptionalRecordSections(planSource, journal),
         writer,
         receipts,
-        testParentsSource(me, partner = serverPartner, onScreen = partnerOnScreen),
+        parents,
         userRepository,
         departedThreads,
         SavedStateHandle(listOfNotNull(thread?.let { ExportViewModel.ARG_THREAD to it }).toMap())
     ).also { viewModels += it }
+
+    /**
+     * Holds [parents] open and waits until it names [coParentUid], for a test that asserts the
+     * names a record is signed with.
+     *
+     * The export waits up to three seconds for the co-parent's name, on the test's virtual clock,
+     * which `runTest` moves on at once when nothing else is due — while [ParentsSource] answers
+     * from the real `Dispatchers.Default`. So the wait could time out before the name arrived and
+     * the record fell back to the parent alone (CI runs 353 and 354: `[Alice]` for
+     * `[Alice, Carol]`). Held open, the name is in its replay before the export asks.
+     */
+    private suspend fun TestScope.namesReady(parents: ParentsSource, coParentUid: String) {
+        backgroundScope.launch { parents.observe().collect {} }
+        parents.observe().first { it.coParent?.uid == coParentUid }
+    }
 
     /** Distinct bytes per verification state, so a test can tell which rendering was saved. */
     private fun bytesFor(record: CommunicationRecord): ByteArray = when (val v = record.verification) {
@@ -163,7 +183,9 @@ class ExportViewModelTest {
         val record = slot<CommunicationRecord>()
         val file = ExportedFile(mockk<Uri>(), "text/csv")
         coEvery { writer.save(any(), capture(record), ExportFormat.CSV) } returns file
-        val vm = viewModel()
+        val parents = testParentsSource(me, partner = partner)
+        namesReady(parents, coParentUid = "u2")
+        val vm = viewModel(parents = parents)
 
         vm.files.test {
             vm.export(ExportFormat.CSV, RecordFixtures.labels(), fallbacks)
@@ -197,7 +219,9 @@ class ExportViewModelTest {
         )
         val record = slot<CommunicationRecord>()
         coEvery { writer.save(any(), capture(record), any()) } returns ExportedFile(mockk<Uri>(), "text/csv")
-        val vm = viewModel(partnerOnScreen = carol, serverPartner = partner)
+        val parents = testParentsSource(me, partner = partner, onScreen = carol)
+        namesReady(parents, coParentUid = "u3")
+        val vm = viewModel(partnerOnScreen = carol, serverPartner = partner, parents = parents)
 
         vm.files.test {
             vm.export(ExportFormat.CSV, RecordFixtures.labels(), fallbacks)
