@@ -63,6 +63,10 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
      and returns on the way back and at the end (R-1). While it is shown, the screen pads its
      content by `clearance(...)`, a band the button floats in, so nothing is drawn under it even
      at rest (the UI tour found the first amount there before any scroll). Expenses uses it.
+   - `MiniMonth` (`presentation/calendar/components/`, built by `presentation/calendar/
+     MiniMonthModel`) is the one small calendar (October 2026, tester feedback phase 2): a month
+     with the custody wash, event dots and a ringed day, on the card of an event that waits for an
+     answer. Don't draw a second one; phase 3's day swaps reuse it.
 
    **Icon sizes come from `theme/IconSizes.kt`** (October 2026 audit, D-25): `Inline` 16 dp (a
    mark in a line of text), `Small` 18 (buttons, chips, banners, status lines — Material's own),
@@ -100,8 +104,9 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
    first: it is the product, and it used to sit below the sync cards that depend on it).
    Google Calendar's actions expand from its row rather than stacking buttons in a card.
 5. **Calendar header is one row**: title (which *is* the Month/Week/Day picker), Today,
-   Filters, gear. Change requests are inline banners over the grid
-   (`components/CalendarBanners.kt`), not a badged glyph. School vacation is neither a banner (it
+   Filters, gear. What waits on this parent's answer is an inline banner over the grid
+   (`components/CalendarBanners.kt`), not a badged glyph, and its number is the one Home's
+   **Requests** row shows (item 40 of "Things that are easy to get wrong"). School vacation is neither a banner (it
    changed the grid's height between months) nor the old teal strip: since MON-13 it is a thin
    neutral line along each vacation day's bottom edge (`DayCellFill.schoolVacation`, theme
    `outline`, no height). Month
@@ -415,8 +420,9 @@ When touching the UI, keep these invariants:
    openPreview`; Home passes `onDelete = null` because it has no delete-with-undo), and from a
    chat card about an event since October 2026 (`ChatEventCardHost`, `onDelete = null` for the same
    reason). Where a chat card leads is `ChatCardTarget`'s decision, from the message alone: a card
-   about an event opens its preview over the thread — or the inbox while it still waits on this
-   parent's answer (`AwaitingAnswers.eventAwaitsAnswerFrom`, the rule the inbox counts by), or says
+   about an event opens its preview over the thread — or the **Requests** inbox while it still
+   waits on this parent's answer (`AwaitingAnswers.eventAwaitsAnswerFrom`, the rule its *Waiting
+   on you* section applies), or says
    "That event no longer exists." — looked up in Room and then on the server, because a card
    reaches the thread before its event reaches Room; a change-request card still opens the inbox
    highlighted, a day-swap card the inbox unhighlighted, and an "Event removed", expense or custody
@@ -1034,6 +1040,25 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   refuses an expired read at `request.time`. It is a range query, so a grant with no positive
   numeric expiry is never deleted; the callable never writes one and the rule admits nothing
   through it, so do not "fix" the sweep into treating a missing expiry as expired or as permanent.
+  **The friend reads the calendar in the app since October 2026** (tester feedback phase 2; the
+  UI calls the role a **family friend**, Settings → Family → *Family friends*). `FriendCalendarScreen`
+  (`presentation/friends/`, route `friend_calendar/{familyId}`) is the professional's list agenda
+  (`ProfessionalAgenda`, `WindowPager`) over `FriendRepository.observeFamilyEvents`: a live
+  listener on the family-scoped query above, **no Room copy** (as for a professional, item 29),
+  decoded by `ProfessionalEvents.from`, which drops an event waiting for an answer or declined
+  (`CalendarVisibility`, before expansion) as well as private and deleted ones — for the
+  professional too. A refused read is `FriendCalendarRead.AccessEnded`, and the grant leaving the
+  friend's own list ends the screen too, because Firestore does not promise to end a live listener
+  when another document revokes it; a grant that has not arrived yet is not an ended one. No
+  custody and no member chips: a friend reads neither `custody_models` nor `child_info`.
+  **The parents' first names ride on the grant**, `calendar_friends/{id}.parentNames`
+  (`{uid: firstName}`), written by `acceptCalendarFriendInvitation` through `previewFirstName`
+  (never an address; a parent with no name is left out, and with neither the key is not
+  written); `FriendMappers.grantFrom` keeps only the family's two uids. They are the names at
+  redemption — the friend cannot read `users/{uid}`, so a later rename reaches her on the next
+  invitation. And the Friends screen's comparison table (`FriendComparisonTable`) states these
+  rules cell by cell: change a cell when a rule changes, and its "how long" comes from the invite
+  chips' own list.
 - **Only the signed-in user has a Room `users` row.** Nothing writes one for the co-parent, so
   `userRepository.getAllUsers()` can never answer "who is the other parent" — it returns one
   row, and on a device where two accounts have signed in over time it returns rows for accounts
@@ -2150,6 +2175,28 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
       asked, `PENDING_SWITCH_MILLIS`), and the `reconcile()` that brings the family applies it. A
       later `select` replaces it; a lapsed one, or another account's, is dropped; a family the
       account is not in never arrives, so nothing ever comes of it.
+
+40. **Requests are derived for the family on screen, through one source** (October 2026, tester
+    feedback phase 2). `presentation/changerequests/RequestsSource` scopes the change requests, day
+    swaps, events awaiting an answer and the custody proposal to the family the switcher shows
+    (`domain/changerequests/RequestScope`), and everything that speaks of requests reads it: the
+    inbox (`ChangeRequestsScreen`, titled **Requests**, in three sections — *Waiting on you*,
+    *Waiting on {co-parent}*, *History*), Home's **Requests** row and the co-parent's feed
+    (`RequestsRow`, `HomeFeed`), and the calendar banner — so the row's number and the banner's are
+    one figure (`RequestInbox`). Four things not to undo.
+    - **History is derived, never stored.** `RequestHistory` builds it from the records
+      themselves — a decided or withdrawn change request, an answered swap, an accepted or declined
+      event, a decided proposal — with who decided and when, and marks an answer this phone has not
+      sent yet as queued. A stored history would be a second copy of those facts, free to drift.
+    - **One flat list.** `InboxItems.of` is what the inbox draws *and* what a chat card's highlight
+      and the `section` route argument scroll by (`InboxItems.arrival`); an index computed from
+      anything else lands a card off, as the pending proposal once made it.
+    - **No new Withdraw.** Only a change request can be withdrawn in the UI, as before (spec §6.2):
+      `CustodyModelRepository.withdrawProposal` has no caller and tells the co-parent nothing.
+    - **The creator's words reach the answering parent.** The card of an event that waits shows
+      its description beside the creator's initial, its time on the reader's clock and a
+      `MiniMonth`; the event form says so while the event would wait (`descriptionReachesCoParent`,
+      which states `EventAcceptanceTransition.required`'s rule).
 
 ## Legal and GDPR (September 2026) — keep consistent
 

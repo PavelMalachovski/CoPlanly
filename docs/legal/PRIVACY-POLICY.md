@@ -110,7 +110,7 @@ parents of that family can download them; we never create a public link to one.
 **Photographs attached to a record** — an event's photo, a receipt, and the photographs on a
 child's medical notes or a pet's record — are stored the same way: in Cloud Storage under your
 family, with their size, type and SHA-256 fingerprint, downloadable by the two parents of that
-family only, and never through a public link. **A guest, a calendar friend or a professional
+family only, and never through a public link. **A guest, a family friend or a professional
 never sees them**, even where they can read the record itself. A photograph you add before you
 have linked a co-parent is stored in a folder only you can read; when you link, our server moves
 it into your family's folder so your co-parent can see it too.
@@ -179,7 +179,11 @@ or have deleted what was recorded about them — or an adult who was that child 
   details.
 - **A guest** (for example a grandparent) whom you grant time-limited access to one child's
   record — without its photographs.
-- **A calendar friend** whom you grant time-limited read access to the family calendar.
+- **A family friend** (for example a grandparent or a nanny) whom you grant time-limited read
+  access to the family calendar. In their own app they see the family's shared events — never
+  private ones, and none still waiting for the other parent's answer — and the two parents' first
+  names, which name the family and who added each event. They never see the custody schedule,
+  your messages, expenses or records about your child.
 - **A professional** — a mediator, lawyer, guardian ad litem or therapist — whom **both** parents
   let read the family calendar, custody schedule and parenting plan, read-only, for at most 180
   days. They never see your messages, expenses or records about your child. Access starts only
@@ -330,7 +334,7 @@ We do not sell personal data, and we do not use it for advertising.
 | Recipient | What they process | Why |
 | --- | --- | --- |
 | **Your co-parent** | Everything you share — which is most of it | The purpose of the service |
-| **Guests and calendar friends you invite** | Only the record or calendar you granted, until the grant expires — never its photographs | Because you granted it |
+| **Guests and family friends you invite** | A guest: only the child's record you granted. A family friend: the family's shared events and the two parents' first names. Each until the grant expires, never photographs | Because you granted it |
 | **Whoever holds a calendar link you created** | Custody days and shared events, read-only, until you revoke the link | Because you created and shared it |
 | **Anyone holding an export you made, or its record ID** | Whether it was registered, when, the period, the format and the size — never who made it | So the export can be verified |
 | **A professional both parents admit** | The calendar, custody schedule and parenting plan of that one family, read-only, until the grant expires | Because both of you consented |
@@ -369,7 +373,7 @@ daily on our servers, not by hand.
 | Your account and everything you entered | Until you delete it, or delete the record |
 | A single event, expense, child record, pet or family document you delete | Marked deleted at once, so your co-parent's phone learns of it; removed for good **90 days** later, with its file or photographs |
 | A photograph you remove or replace | Deleted from our servers when you save the change |
-| A guest's, calendar friend's or professional's access | Until the date set when it was granted, or until either parent ends it; professionals at most **180 days**. A calendar friend's or professional's access to a family also ends when its two parents unlink |
+| A guest's, family friend's or professional's access | Until the date set when it was granted, or until either parent ends it; professionals at most **180 days**. A family friend's or professional's access to a family also ends when its two parents unlink |
 | An invitation nobody accepted | Deleted **30 days** after it expired (**90 days** after it was made, if it had no expiry) |
 | A read-only calendar link | Until revoked; deleted after **90 days** without use |
 | Notifications waiting to be delivered | **30 days** |

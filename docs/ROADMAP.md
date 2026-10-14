@@ -2370,8 +2370,9 @@ In short:
   their profile, nothing else — so the professional gets a list-shaped agenda (four weeks at a
   time, whose day it is **named** rather than coloured, the family's shared events) and a
   read-only parenting plan with both halves side by side. Both read Firestore live and write
-  nothing to Room: a professional's phone holds no copy of the family. Building the friend's
-  view on the same pieces is now a small change.
+  nothing to Room: a professional's phone holds no copy of the family. *(October 2026: the friend's
+  view was then built on the same pieces — `FriendCalendarScreen`, phase 2 of the tester feedback,
+  §11 — and since then neither reader is shown an event still waiting for an answer or declined.)*
 - **A push, server-only**: `professional_access_requested` to both parents when a code is
   redeemed. It says consent is being asked for, never that access began.
 
@@ -2990,6 +2991,33 @@ through the app with the owner and left eleven notes; these are the defects amon
   value, which is always `Loading`, and returned. CLAUDE.md item 17.
 - **A chat card about an event opens that event** — its preview, the inbox while it waits on the
   reader, or "That event no longer exists." — rather than the change-request inbox. UX/UI item 5.
+
+**Tester feedback, phase 2** (PR #130; spec `docs/superpowers/specs/2026-10-14-zuzana-feedback-phase-2-design.md`,
+plan `docs/superpowers/plans/2026-10-14-zuzana-feedback-phase-2.md`). Three of the notes, built
+after the owner's answers:
+
+- **Family friends, and what they see** (item 1). Settings → Family names the two roles ("Co-parent",
+  "Family friends", each with a line saying what it is); the Friends screen says who a family
+  friend is and tabulates what each role can do, cell by cell from the rules; the invite sheet says
+  what the friend will and won't see and shares the code with the path to type it in. A family
+  friend now has a **calendar of her own** — four weeks of the family's agreed events, who added
+  each, "You take part" — read live from Firestore and never stored (`FriendCalendarScreen`), named
+  by the parents' first names the callable puts on her grant; a redeemed code opens it, a revoke
+  ends it. CLAUDE.md's calendar-friend rule; checklist §5.6.
+- **What the co-parent wrote, and on which day** (item 2). The card of an event waiting for an
+  answer shows the creator's words beside their initial, the time on the reader's clock and a
+  `MiniMonth` with the day ringed; the event form tells the creator their description will be read
+  there. Design item 1, CLAUDE.md item 40.
+- **Requests and their history** (item 3). One source for the family on screen feeds the inbox
+  (now **Requests**: waiting on you, waiting on the co-parent, History), Home's always-present
+  **Requests** row and the co-parent's answers in Home's feed, and the calendar banner — one number
+  everywhere, and a History derived from the records rather than stored. CLAUDE.md item 40;
+  checklist §5.8.
+
+Left: the device runs (§5.6, §5.8), the functions deploy (`parentNames` on new grants; existing
+grants name nobody until re-invited — no backfill, spec §4.4, the feature has only closed-test
+users), and phase 3 (day swaps, which
+reuse `MiniMonth`).
 
 **Still open**, found on the way and older than these fixes:
 

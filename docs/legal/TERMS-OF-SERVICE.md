@@ -45,7 +45,7 @@ to yourself. If you think someone else has used your account, change your passwo
 
 CoPlanly lets two linked accounts share a custody schedule, calendar events, expenses, records
 about a child, a document store and a private message thread, and export a record of them. You may
-also grant time-limited access to a guest, a calendar friend or — with both parents' consent — a
+also grant time-limited access to a guest, a family friend or — with both parents' consent — a
 professional.
 
 **Price.** CoPlanly is **free of charge**. In return you provide personal data, used only as the
