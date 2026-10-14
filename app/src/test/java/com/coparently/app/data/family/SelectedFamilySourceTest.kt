@@ -118,6 +118,62 @@ class SelectedFamilySourceTest {
     }
 
     @Test
+    fun `a switch asked for before this phone knows the family lands once the family arrives`() = runTest {
+        // The tap on a `pairing_accepted` push names the family the pairing just made, and can
+        // reach `select` before this phone's partner list holds it: the push goes out the moment
+        // the server writes the link, and the list learns it from the pairing listener or a sync,
+        // either of which may run after the tap. Refused outright, the tap opened on the family
+        // already on screen; it is now applied by the reconcile that brings the family in.
+        rowIs(partnerIds = listOf(BOB), partnerId = BOB)
+
+        assertNull(source.select("alice-uid__carol-uid"))
+        coVerify(exactly = 0) { userDao.updateUser(any()) }
+        coVerify(exactly = 0) { preferences.putString(any(), any()) }
+
+        rowIs(partnerIds = listOf(BOB, CAROL), partnerId = BOB)
+        every { preferences.getString(key) } returns "alice-uid__bob-uid"
+        val entity = slot<UserEntity>()
+        coEvery { userDao.updateUser(capture(entity)) } returns Unit
+        source.reconcile()
+
+        assertEquals(CAROL, entity.captured.partnerId)
+        coVerify { preferences.putString(key, "alice-uid__carol-uid") }
+    }
+
+    @Test
+    fun `a waiting switch survives a reconcile that does not know the family yet, and is spent once`() = runTest {
+        // A cached snapshot older than the pairing can reconcile first; the family arrives after.
+        rowIs(partnerIds = listOf(BOB), partnerId = BOB)
+        every { preferences.getString(key) } returns "alice-uid__bob-uid"
+        source.select("alice-uid__carol-uid")
+
+        source.reconcile()
+        coVerify(exactly = 0) { userDao.updateUser(any()) }
+
+        rowIs(partnerIds = listOf(BOB, CAROL), partnerId = BOB)
+        source.reconcile()
+        coVerify(exactly = 1) { userDao.updateUser(match { it.partnerId == CAROL }) }
+
+        // Spent: the parent who later switches back to Bob is not pulled to Carol again.
+        rowIs(partnerIds = listOf(BOB, CAROL), partnerId = BOB)
+        source.reconcile()
+        coVerify(exactly = 1) { userDao.updateUser(match { it.partnerId == CAROL }) }
+    }
+
+    @Test
+    fun `a later choice replaces a switch still waiting`() = runTest {
+        rowIs(partnerIds = listOf(BOB))
+        source.select("alice-uid__carol-uid")
+        assertEquals(FamilyOption("alice-uid__bob-uid", BOB), source.select("alice-uid__bob-uid"))
+
+        rowIs(partnerIds = listOf(BOB, CAROL), partnerId = BOB)
+        every { preferences.getString(key) } returns "alice-uid__bob-uid"
+        source.reconcile()
+
+        coVerify(exactly = 0) { userDao.updateUser(match { it.partnerId == CAROL }) }
+    }
+
+    @Test
     fun `switching stores the choice and re-points the row in one step`() = runTest {
         rowIs(partnerIds = listOf(BOB, CAROL))
 
