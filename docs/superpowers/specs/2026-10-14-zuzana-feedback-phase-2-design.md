@@ -192,8 +192,8 @@ Top to bottom (mockup "A · Мини-месяц"):
 4. **The mini month** (§5.3) of the event's start month, the event's start day ringed.
 5. The existing note "It stays out of both calendars until they answer." and Accept / Decline.
 
-The same card shows to the creator under "Waiting for <name>" (item 3), with Withdraw instead of
-Accept/Decline, so they see what they sent.
+The same card shows to the creator under "Waiting for <name>" (item 3), with no action — it says it
+is waiting for an answer (§6.2: no new Withdraw) — so they see what they sent.
 
 ### 5.2 The form hint
 
