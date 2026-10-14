@@ -21,7 +21,10 @@ import io.mockk.slot
 import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -58,17 +61,20 @@ class ParentingPlanViewModelTest {
     /**
      * @param shownPartnerUid The co-parent of the family on screen, as the family switcher projects
      *   it onto the signed-in row; null leaves the row unprojected, as right after a pairing.
+     * @param pairingStates What every collection of the pairing state emits; [pairing] alone unless
+     *   a test needs the order a real phone sees.
      */
     private fun viewModel(
         pairing: PairingState = PairingState.Paired(partner),
-        shownPartnerUid: String? = null
+        shownPartnerUid: String? = null,
+        pairingStates: Flow<PairingState> = flowOf(pairing)
     ): ParentingPlanViewModel {
         val userRepository = mockk<UserRepository> {
             every { observeCurrentUserId() } returns flowOf("u1")
             every { getAllUsers() } returns flowOf(listOf(signedInRow(shownPartnerUid)))
         }
         val pairingRepository = mockk<PairingRepository> {
-            every { observePairingState() } returns flowOf(pairing)
+            every { observePairingState() } returns pairingStates
         }
         return ParentingPlanViewModel(
             repository,
@@ -139,6 +145,31 @@ class ParentingPlanViewModelTest {
         vm.answer("q2", "  Alternate holidays ")
         advanceUntilIdle()
 
+        assertEquals(mapOf("q1" to "Weekends", "q2" to "Alternate holidays"), saved.captured.answers)
+    }
+
+    @Test
+    fun `an answer saved while the pairing listener is still loading is not dropped`() = runTest(dispatcher) {
+        // What a real phone sees: every collection of the pairing state starts at Loading and
+        // reaches Paired once Firestore answers. The save used to take the first family the scope
+        // built — the one from Loading, which is none — and returned without writing anything.
+        every { repository.observe(familyId, "u1") } returns flowOf(
+            ParentingPlanPair(yours = ParentingPlanEntry(answers = mapOf("q1" to "Weekends")), theirs = null)
+        )
+        val saved = slot<ParentingPlanEntry>()
+        coEvery { repository.save(familyId, "u1", capture(saved)) } returns Unit
+        val vm = viewModel(
+            pairingStates = flow {
+                emit(PairingState.Loading)
+                delay(PAIRING_ANSWERS_AFTER_MS)
+                emit(PairingState.Paired(partner))
+            }
+        )
+
+        vm.answer("q2", "Alternate holidays")
+        advanceUntilIdle()
+
+        assertTrue(saved.isCaptured, "the answer was never written")
         assertEquals(mapOf("q1" to "Weekends", "q2" to "Alternate holidays"), saved.captured.answers)
     }
 
@@ -255,5 +286,10 @@ class ParentingPlanViewModelTest {
 
         val ready = vm.uiState.value as ParentingPlanUiState.Ready
         assertTrue(ready.offersProposal("care_weekday"))
+    }
+
+    private companion object {
+        /** How long the pairing listener takes to answer in the test of a save made before it has. */
+        const val PAIRING_ANSWERS_AFTER_MS = 100L
     }
 }

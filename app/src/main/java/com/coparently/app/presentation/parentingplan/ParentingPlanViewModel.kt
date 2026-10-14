@@ -29,6 +29,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
@@ -36,6 +37,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 
 /** What the parenting-plan screen is showing. */
@@ -184,7 +186,16 @@ class ParentingPlanViewModel @Inject constructor(
     private fun edit(change: (ParentingPlanEntry, Long) -> ParentingPlanEntry) {
         viewModelScope.launch {
             try {
-                val planScope = scope.first() ?: return@launch
+                // The first family a fresh collection of [scope] builds is none: every collection
+                // of the pairing state starts at Loading, whatever the screen has already drawn.
+                // Taking that first value returned here on every save, before the pairing listener
+                // had answered, so answers and agreements were dropped without a word. Wait for the
+                // family instead; a phone that cannot learn it in time has nowhere to save to.
+                val planScope = withTimeoutOrNull(SCOPE_WAIT_MS) { scope.filterNotNull().first() }
+                if (planScope == null) {
+                    report("save parenting plan answer", IllegalStateException("No family to save the plan to"))
+                    return@launch
+                }
                 // The on-screen value when there is one; otherwise a fresh read, never an empty
                 // entry. `uiState` is `WhileSubscribed` (CLAUDE.md item 17): if an answer were
                 // saved before the plan had loaded, starting from `ParentingPlanEntry()` would
@@ -231,5 +242,8 @@ class ParentingPlanViewModel @Inject constructor(
 
         /** Matches the other shared sources, so a rotation does not tear the listener down. */
         private const val SUBSCRIPTION_TIMEOUT_MS = 5_000L
+
+        /** How long a save waits for the pairing state to name the family before giving up. */
+        private const val SCOPE_WAIT_MS = 10_000L
     }
 }
