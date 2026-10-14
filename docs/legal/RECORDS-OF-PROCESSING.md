@@ -78,7 +78,7 @@ only what is specific to it.
 | Data subjects | Children; third parties (doctors, teachers, emergency contacts) |
 | Data | Name, date of birth, school, activities, contacts; **medical profile**: allergies, medications, conditions, blood group, vaccinations, notes, medical document photos |
 | Legal basis | Art. 6(1)(b) for the record; **Art. 9(2)(a) explicit consent** of the parent, as the child's legal representative, for the medical profile — recorded with version and time (P1) |
-| Recipients | The co-parent; a guest the parent admits to that one child's record, until the grant expires |
+| Recipients | The other parent of the family the record belongs to — never a parent of another family when a parent co-parents in two (enforced in the app and by `firestore.rules` since October 2026; DPIA R20); a guest the parent admits to that one child's record, until the grant expires (a pet's record admits no guest). A record not assigned to a family is shared with no co-parent while its parent has two |
 | Retention | Life of the record; tombstone 90 days after deletion; on consent withdrawal the medical profile of records this parent created is cleared |
 | Where | `child_info`, `pets`; Storage `medical_photos/{familyId}/…`, `pet_photos/{familyId}/…` (`solo_{uid}/…` before pairing) |
 | Note | Photos: readable by the family's two parents only, never by a guest; no download URL is minted; digest-checked; swept with the record's tombstone after 90 days (LEGAL-REVIEW L-4, fixed September 2026). Photos stored before L-4 are deleted by the operator-run `purgeLegacyPhotoPaths` |

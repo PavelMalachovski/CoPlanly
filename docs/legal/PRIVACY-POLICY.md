@@ -120,10 +120,11 @@ with you (Art. 6(1)(b)).
 
 **Your child's health details** are health data (Art. 9 GDPR). We process them only with your
 **explicit consent** (Art. 9(2)(a)), which you give as your child's parent. The first time you
-open a child's medical section, the app tells you what it is, who will see it (your co-parent,
-and any guest you let see that child's record) and that it is optional, and asks you to agree. We
-record when you agreed and to which wording; if the wording changes, we ask again. The app works
-fully without these details.
+open a child's medical section, the app tells you what it is, who will see it (the child's other
+parent — the co-parent of the family the child belongs to, never a co-parent you have in another
+family — and any guest you let see that child's record) and that it is optional, and asks you to
+agree. We record when you agreed and to which wording; if the wording changes, we ask again. The
+app works fully without these details.
 
 You can **withdraw your consent** at any time in Settings. Withdrawing deletes the medical details
 of the children's records you created. Details your co-parent entered stay: they rest on your
@@ -158,8 +159,10 @@ an export remaining verifiable (Art. 6(1)(f)); see "How long we keep it".
 
 A child does not hold an account and never signs in. What is recorded about them is entered by
 a parent, and only their parents — and anyone a parent explicitly grants access to — can read
-it. CoPlanly is for adults: accounts are for people aged 18 or over, and the sign-in screen says
-so. We rely on the parents' authority to act for their child, not on the child's own consent.
+it. If you co-parent in two families, each child's and each pet's record is shared only with the
+other parent of the family it belongs to, never with your co-parent in the other family.
+CoPlanly is for adults: accounts are for people aged 18 or over, and the sign-in screen says so.
+We rely on the parents' authority to act for their child, not on the child's own consent.
 
 **The child's own rights.** The information is about the child, so the rights below are the
 child's. While the child is a minor, their parents exercise them. A young person who wants to see
