@@ -95,6 +95,20 @@ class SyncServiceTest {
     private val reminderScheduler: ReminderScheduler = mockk(relaxed = true)
     private lateinit var syncService: SyncService
 
+    /**
+     * Every remote write lands unless a test says otherwise: the service reads each `Result` now,
+     * and a relaxed mock's answer for one is not something to depend on.
+     */
+    private fun stubRemoteWritesLand() {
+        coEvery { firestoreEventDataSource.insertEvent(any(), any()) } returns Result.success(Unit)
+        coEvery { firestoreEventDataSource.updateEvent(any(), any()) } returns Result.success(Unit)
+        coEvery { firestoreEventDataSource.deleteEvent(any()) } returns Result.success(Unit)
+        coEvery { firestoreEventDataSource.tombstoneEvent(any(), any(), any()) } returns Result.success(Unit)
+        coEvery { firestoreChildInfoDataSource.upsertChildInfo(any(), any()) } returns Result.success(Unit)
+        coEvery { firestoreChildInfoDataSource.updateChildInfo(any(), any()) } returns Result.success(Unit)
+        coEvery { firestoreChildInfoDataSource.tombstoneChildInfo(any(), any(), any()) } returns Result.success(Unit)
+    }
+
     @Before
     fun setup() {
         eventDao = mockk(relaxed = true)
@@ -135,15 +149,7 @@ class SyncServiceTest {
             flowOf(EventDownload(emptyList(), null))
         every { firestoreChildInfoDataSource.getChildInfoForParent(any()) } returns
             flowOf(emptyList())
-        // Every remote write lands unless a test says otherwise: the service reads each `Result`
-        // now, and a relaxed mock's answer for one is not something to depend on.
-        coEvery { firestoreEventDataSource.insertEvent(any(), any()) } returns Result.success(Unit)
-        coEvery { firestoreEventDataSource.updateEvent(any(), any()) } returns Result.success(Unit)
-        coEvery { firestoreEventDataSource.deleteEvent(any()) } returns Result.success(Unit)
-        coEvery { firestoreEventDataSource.tombstoneEvent(any(), any(), any()) } returns Result.success(Unit)
-        coEvery { firestoreChildInfoDataSource.upsertChildInfo(any(), any()) } returns Result.success(Unit)
-        coEvery { firestoreChildInfoDataSource.updateChildInfo(any(), any()) } returns Result.success(Unit)
-        coEvery { firestoreChildInfoDataSource.tombstoneChildInfo(any(), any(), any()) } returns Result.success(Unit)
+        stubRemoteWritesLand()
 
         syncService = SyncService(
             eventDao,
