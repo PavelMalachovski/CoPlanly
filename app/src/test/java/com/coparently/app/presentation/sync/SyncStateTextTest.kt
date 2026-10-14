@@ -1,6 +1,7 @@
 package com.coparently.app.presentation.sync
 
 import com.coparently.app.R
+import com.coparently.app.data.remote.google.GoogleAccessFailure
 import com.coparently.app.data.sync.SyncFailure
 import com.coparently.app.data.sync.SyncResult
 import com.coparently.app.data.sync.SyncStage
@@ -73,6 +74,22 @@ class SyncStateTextTest {
             ((state as GoogleCalendarSyncState.Error).message as UiText.Res).id
         }
         assertEquals(ids.size, ids.toSet().size, "two failures share one sentence")
+    }
+
+    @Test
+    fun `a connection Google ended reads as one to reconnect, a blip as one to try again`() {
+        // #9: both used to read "Not connected to Google", which offered nothing to press.
+        assertEquals(SyncFailure.RECONNECT, SyncFailure.forAccess(GoogleAccessFailure.NEEDS_RECONNECT))
+        assertEquals(SyncFailure.GOOGLE_UNREACHABLE, SyncFailure.forAccess(GoogleAccessFailure.UNAVAILABLE))
+        assertEquals(SyncFailure.NOT_SIGNED_IN_GOOGLE, SyncFailure.forAccess(GoogleAccessFailure.NOT_CONNECTED))
+        assertEquals(
+            GoogleCalendarSyncState.Error(UiText.Res(R.string.sync_google_error_reconnect)),
+            SyncResult.Error(SyncFailure.RECONNECT).toSyncState()
+        )
+        assertEquals(
+            GoogleCalendarSyncState.Error(UiText.Res(R.string.sync_google_error_unreachable)),
+            SyncResult.Error(SyncFailure.GOOGLE_UNREACHABLE).toSyncState()
+        )
     }
 
     @Test

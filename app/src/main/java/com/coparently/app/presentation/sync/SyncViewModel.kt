@@ -5,7 +5,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.coparently.app.R
 import com.coparently.app.data.local.preferences.EncryptedPreferences
+import com.coparently.app.data.local.preferences.PreferenceKeys
 import com.coparently.app.data.remote.google.CredentialManagerService
+import com.coparently.app.data.remote.google.GoogleAccess
+import com.coparently.app.data.remote.google.GoogleCalendarConnection
 import com.coparently.app.data.sync.CalendarSyncRepository
 import com.coparently.app.data.sync.SyncFailure
 import com.coparently.app.data.sync.SyncResult
@@ -39,10 +42,21 @@ class SyncViewModel @Inject constructor(
     }
 
     // Google Calendar sync state
-    private val _isSignedIn = MutableStateFlow(false)
-    val isSignedIn: StateFlow<Boolean> = _isSignedIn.asStateFlow()
+    private val _connection = MutableStateFlow(GoogleCalendarConnection.NOT_CONNECTED)
+
+    /**
+     * Whether Google Calendar is connected on this device, needs a reconnect, or never was — read
+     * from what the device stores ([CredentialManagerService.connection]), so a connection whose
+     * access token has run out still reads as connected: its refresh token renews it.
+     */
+    val connection: StateFlow<GoogleCalendarConnection> = _connection.asStateFlow()
 
     private val _isSyncEnabled = MutableStateFlow(false)
+
+    /**
+     * The "Enable sync" switch, stored ([PreferenceKeys.GOOGLE_CALENDAR_SYNC_ENABLED]) rather than
+     * held here alone: it used to read off after every restart, which greyed the Sync button.
+     */
     val isSyncEnabled: StateFlow<Boolean> = _isSyncEnabled.asStateFlow()
 
     private val _syncState = MutableStateFlow<GoogleCalendarSyncState>(GoogleCalendarSyncState.Idle)
@@ -55,25 +69,33 @@ class SyncViewModel @Inject constructor(
     val firestoreSyncStatus: StateFlow<SyncStatus> = syncService.syncStatus
 
     init {
-        checkSignInStatus()
+        refreshConnection()
     }
 
     /**
-     * Проверяет текущий статус входа в Google.
+     * Re-reads the Google Calendar connection, its address and the sync switch from what this
+     * device stores.
+     *
+     * Settings calls it each time it opens: this ViewModel lives as long as the activity, and an
+     * account deleted or switched in the meantime changes the store behind its back.
      */
-    private fun checkSignInStatus() {
+    fun refreshConnection() {
         try {
-            _isSignedIn.value = credentialManagerService.isSignedIn()
+            _connection.value = credentialManagerService.connection()
             _userEmail.value = encryptedPreferences.getUserEmail()
+            _isSyncEnabled.value = encryptedPreferences.getBoolean(PreferenceKeys.GOOGLE_CALENDAR_SYNC_ENABLED, false)
         } catch (e: Exception) {
             Log.e(TAG, "Error checking sign-in status", e)
-            _isSignedIn.value = false
+            _connection.value = GoogleCalendarConnection.NOT_CONNECTED
             _userEmail.value = null
         }
     }
 
     /**
      * Создает Intent для запуска Google Sign-In flow через Credential Manager.
+     *
+     * The same flow connects for the first time and reconnects a connection Google ended
+     * ([GoogleCalendarConnection.NEEDS_RECONNECT]); either way it asks Google for a new refresh token.
      */
     fun createGoogleSignInIntent(): android.content.Intent? {
         return try {
@@ -118,35 +140,26 @@ class SyncViewModel @Inject constructor(
         // reads a localised sentence instead (CQ-14).
         val (account, error) = credentialManagerService.handleSignInResult(completedTask)
 
-        return if (account != null) {
-            _isSignedIn.value = true
-            _userEmail.value = account.email
-
+        val state = if (account != null) {
             // Проверяем, можем ли получить access token
-            val (token, tokenError) = credentialManagerService.getAccessToken()
-            if (token != null) {
-                val who = account.displayName ?: account.email.orEmpty()
-                val successState = GoogleCalendarSyncState.Success(
-                    UiText.Res(R.string.sync_google_signed_in_as, listOf(who))
-                )
-                _syncState.value = successState
-                successState
-            } else {
-                Log.w(TAG, "No Calendar access token: $tokenError")
-                val errorState = GoogleCalendarSyncState.Error(
-                    UiText.Res(R.string.sync_google_no_calendar_access)
-                )
-                _syncState.value = errorState
-                errorState
+            when (val access = credentialManagerService.accessToken()) {
+                is GoogleAccess.Granted -> {
+                    val who = account.displayName ?: account.email.orEmpty()
+                    GoogleCalendarSyncState.Success(UiText.Res(R.string.sync_google_signed_in_as, listOf(who)))
+                }
+                is GoogleAccess.Denied -> {
+                    Log.w(TAG, "No Calendar access token: ${access.failure}")
+                    GoogleCalendarSyncState.Error(UiText.Res(R.string.sync_google_no_calendar_access))
+                }
             }
         } else {
             Log.w(TAG, "Google sign-in failed: $error")
-            val errorState = GoogleCalendarSyncState.Error(
-                UiText.Res(R.string.sync_google_sign_in_failed)
-            )
-            _syncState.value = errorState
-            errorState
+            GoogleCalendarSyncState.Error(UiText.Res(R.string.sync_google_sign_in_failed))
         }
+        // A first connection and a reconnect alike: the row reads what is stored now.
+        refreshConnection()
+        _syncState.value = state
+        return state
     }
 
     /**
@@ -154,6 +167,8 @@ class SyncViewModel @Inject constructor(
      */
     fun toggleSync(enabled: Boolean) {
         _isSyncEnabled.value = enabled
+        // Stored, so the switch — and the Sync button it unlocks — read the same after a restart.
+        encryptedPreferences.putBoolean(PreferenceKeys.GOOGLE_CALENDAR_SYNC_ENABLED, enabled)
         if (enabled) {
             syncFromGoogle()
         }
@@ -161,33 +176,59 @@ class SyncViewModel @Inject constructor(
 
     /**
      * Синхронизирует события из Google Calendar.
+     *
+     * Starts only on a connection this device still holds; one that needs a reconnect says so
+     * instead of trying. The access token is renewed — or the connection ended — inside the import,
+     * by `CredentialProvider.withCredential`.
      */
     fun syncFromGoogle() {
-        if (!_isSignedIn.value) {
-            _syncState.value = GoogleCalendarSyncState.Error(SyncFailure.NOT_SIGNED_IN_GOOGLE.toUiText())
+        // Read again rather than trusted: the connection may have ended since this was created.
+        refreshConnection()
+        val refused = when (_connection.value) {
+            GoogleCalendarConnection.NOT_CONNECTED -> SyncFailure.NOT_SIGNED_IN_GOOGLE
+            GoogleCalendarConnection.NEEDS_RECONNECT -> SyncFailure.RECONNECT
+            GoogleCalendarConnection.CONNECTED -> null
+        }
+        if (refused != null) {
+            _syncState.value = GoogleCalendarSyncState.Error(refused.toUiText())
             return
         }
 
         viewModelScope.launch {
-            // Access token refresh is handled automatically in CredentialProvider
             calendarSyncRepository.syncFromGoogle().collect { result ->
                 _syncState.value = result.toSyncState()
             }
+            // An import that ended the connection changes the row now, not on the next launch.
+            refreshConnection()
         }
     }
 
     /**
-     * Выполняет выход из учетной записи Google.
+     * Signs this device out of Google entirely — the first half of "Sign out of app", which
+     * clears every stored preference ([CredentialManagerService.signOut]). Disconnecting Google
+     * Calendar alone is [disconnectGoogleCalendar].
      */
     suspend fun signOut(): Pair<Boolean, String?> {
         val (success, error) = credentialManagerService.signOut()
         if (success) {
-            _isSignedIn.value = false
+            _connection.value = GoogleCalendarConnection.NOT_CONNECTED
+            // The whole store was cleared, the switch's own key with it.
             _isSyncEnabled.value = false
             _syncState.value = GoogleCalendarSyncState.Idle
             _userEmail.value = null
         }
         return Pair(success, error)
+    }
+
+    /**
+     * Disconnects Google Calendar and nothing else ("Sign out from Calendar sync"): Google's own
+     * keys go, every other setting stays — the "Enable sync" switch included, so a reconnect finds
+     * it as it was left.
+     */
+    suspend fun disconnectGoogleCalendar() {
+        credentialManagerService.disconnect()
+        _syncState.value = GoogleCalendarSyncState.Idle
+        refreshConnection()
     }
 
     /**
@@ -239,12 +280,14 @@ internal fun SyncResult.toSyncState(): GoogleCalendarSyncState = when (this) {
 internal fun SyncFailure.toUiText(): UiText = UiText.Res(
     when (this) {
         SyncFailure.NOT_SIGNED_IN_GOOGLE -> R.string.sync_google_error_not_connected
+        SyncFailure.RECONNECT -> R.string.sync_google_error_reconnect
         SyncFailure.NOT_SIGNED_IN_APP -> R.string.sync_google_error_signed_out
         SyncFailure.AUTHENTICATION -> R.string.sync_google_error_authentication
         SyncFailure.ACCESS_DENIED -> R.string.sync_google_error_access_denied
         SyncFailure.CALENDAR_NOT_FOUND -> R.string.sync_google_error_calendar_not_found
         SyncFailure.RATE_LIMITED -> R.string.sync_google_error_rate_limited
         SyncFailure.SERVICE_UNAVAILABLE -> R.string.sync_google_error_unavailable
+        SyncFailure.GOOGLE_UNREACHABLE -> R.string.sync_google_error_unreachable
         SyncFailure.NETWORK -> R.string.sync_google_error_network
         SyncFailure.UNKNOWN -> R.string.sync_google_error_unknown
     }

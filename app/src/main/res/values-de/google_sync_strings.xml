@@ -27,12 +27,15 @@
         <item quantity="other">Nur die ersten %1$d Termine wurden synchronisiert (%2$s – %3$s). In diesem Zeitraum gibt es mehr, als ein Import aufnehmen kann.</item>
     </plurals>
     <string name="sync_google_error_not_connected">Nicht mit Google verbunden. Melde dich mit Google an, um zu synchronisieren.</string>
+    <string name="sync_google_error_reconnect">Der Zugriff auf Google Kalender ist abgelaufen oder wurde widerrufen. Verbinde ihn erneut, um weiter zu synchronisieren.</string>
     <string name="sync_google_error_signed_out">Du bist von CoPlanly abgemeldet. Melde dich an und versuche es erneut.</string>
     <string name="sync_google_error_authentication">Die Google-Anmeldung ist abgelaufen. Verbinde Google Kalender erneut.</string>
     <string name="sync_google_error_access_denied">CoPlanly hat keinen Zugriff auf deinen Google Kalender. Prüfe die Berechtigung in deinem Google-Konto.</string>
     <string name="sync_google_error_calendar_not_found">Dein Google Kalender wurde nicht gefunden.</string>
     <string name="sync_google_error_rate_limited">Google Kalender ist gerade ausgelastet. Versuche es in ein paar Minuten erneut.</string>
     <string name="sync_google_error_unavailable">Google Kalender ist gerade nicht verfügbar. Versuche es später erneut.</string>
+    <string name="sync_google_error_unreachable">Google ist gerade nicht erreichbar. Die Verbindung bleibt bestehen. Versuche es gleich noch einmal.</string>
     <string name="sync_google_error_network">Google Kalender ist nicht erreichbar. Prüfe deine Internetverbindung.</string>
     <string name="sync_google_error_unknown">Die Synchronisierung mit Google Kalender ist fehlgeschlagen. Bitte versuche es erneut.</string>
+    <string name="sync_google_reconnect">Google Kalender erneut verbinden</string>
 </resources>
