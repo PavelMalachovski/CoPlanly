@@ -2,7 +2,6 @@ package com.coparently.app.domain.changerequests
 
 import com.coparently.app.domain.custody.CustodyProposal
 import com.coparently.app.domain.custody.DayOverride
-import com.coparently.app.domain.custody.DayOverrideStatus
 import com.coparently.app.domain.custody.SharedCustody
 import com.coparently.app.domain.events.EventAcceptance
 import com.coparently.app.domain.model.ChangeRequest
