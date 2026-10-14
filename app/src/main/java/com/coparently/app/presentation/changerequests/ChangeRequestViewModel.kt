@@ -7,6 +7,7 @@ import com.coparently.app.R
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.domain.custody.CustodyPatternDiff
 import com.coparently.app.domain.custody.CustodyProposal
+import com.coparently.app.domain.custody.CustodyResolver
 import com.coparently.app.domain.custody.DayOverrideTransition
 import com.coparently.app.domain.custody.DaySwap
 import com.coparently.app.domain.custody.DaySwapGroup
@@ -20,11 +21,13 @@ import com.coparently.app.domain.repository.ChangeRequestRepository
 import com.coparently.app.domain.repository.EventRepository
 import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.domain.usecase.EventUseCases
+import com.coparently.app.presentation.calendar.MiniMonthModel
 import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.parentingplan.PlanReferenceSource
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -35,6 +38,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
@@ -64,7 +68,8 @@ class ChangeRequestViewModel @Inject constructor(
     private val userRepository: UserRepository,
     private val custodyModelRepository: CustodyModelRepository,
     parentsSource: ParentsSource,
-    private val planReferenceSource: PlanReferenceSource
+    private val planReferenceSource: PlanReferenceSource,
+    requestsSource: RequestsSource
 ) : ViewModel() {
 
     /**
@@ -107,15 +112,34 @@ class ChangeRequestViewModel @Inject constructor(
                 initialValue = emptyList()
             )
 
-    val pendingIncomingCount: StateFlow<Int> = _currentUserId
-        .flatMapLatest { userId ->
-            changeRequestRepository.getPendingIncomingCount(userId)
+    /**
+     * The family on screen's requests (phase 2): what the inbox draws in its three sections, and
+     * what the calendar's banner counts — one source, so the two cannot disagree with each other or
+     * with Home's Requests row.
+     */
+    val requests: StateFlow<RequestsState> = requestsSource.observe()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), RequestsState.Loading)
+
+    /**
+     * The mini month of every event waiting for an answer, either way, by event id: the event's
+     * month, drawn with the family's custody and the family's visible events (spec §5.3).
+     *
+     * Computed off the main thread — every waiting event expands the family's recurring events
+     * over its own month's grid.
+     */
+    val miniMonths: StateFlow<Map<String, MiniMonthModel>> = combine(
+        requests,
+        custodyModelRepository.getActiveModel(),
+        custodyModelRepository.observeDayOverrides()
+    ) { state, model, overrides ->
+        val ready = state as? RequestsState.Ready ?: return@combine emptyMap()
+        val custodyFor = CustodyResolver.resolver(model, overrides, legacy = { null })
+        (ready.inbox.waitingOnMe.events + ready.inbox.waitingOnThem.events).associate { event ->
+            event.id to MiniMonthModel.forAwaitingEvent(event, ready.events, custodyFor)
         }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = 0
-        )
+    }
+        .flowOn(Dispatchers.Default)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
     /**
      * The one-off day swaps worth showing, soonest first.

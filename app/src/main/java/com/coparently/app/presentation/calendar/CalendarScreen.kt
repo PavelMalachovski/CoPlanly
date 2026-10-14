@@ -60,7 +60,6 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.data.sync.SyncWorker
-import com.coparently.app.domain.changerequests.AwaitingAnswers
 import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.custody.CustodyResolver
 import com.coparently.app.domain.family.FamilyMemberRef
@@ -70,6 +69,7 @@ import com.coparently.app.presentation.calendar.components.ChangeRequestBanner
 import com.coparently.app.presentation.calendar.components.CustodyChangedBanner
 import com.coparently.app.presentation.calendar.components.DaySwapSheet
 import com.coparently.app.presentation.calendar.components.EventTypeFilterSheet
+import com.coparently.app.presentation.changerequests.RequestsState
 import com.coparently.app.presentation.common.FamilyMemberFilterStrip
 import com.coparently.app.presentation.common.LocalDatePickerDialog
 import com.coparently.app.presentation.common.rememberParentNames
@@ -511,18 +511,13 @@ fun CalendarScreen(
         }
     }
 
-    val pendingChangeRequests by changeRequestViewModel.pendingIncomingCount.collectAsState()
-
-    // Day swaps live on the custody document, not in `change_requests`, so the banner count
-    // must add them explicitly — an incoming swap used to raise no banner at all, leaving the
-    // co-parent no visible route to the inbox that answers it. Pending events count too, and a
-    // swap counts once per offer: the same number Home's "Awaiting your answer" row shows for the
-    // same inbox (`AwaitingAnswers`), where the banner used to say 2 beside Home's 6.
-    val inboxUserId by changeRequestViewModel.currentUserId.collectAsState()
-    val eventsAwaitingMe by changeRequestViewModel.eventsAwaitingMe.collectAsState()
-    val pendingInboxCount = remember(pendingChangeRequests, dayOverrides, eventsAwaitingMe, inboxUserId, today) {
-        AwaitingAnswers.count(pendingChangeRequests, dayOverrides, eventsAwaitingMe, inboxUserId, today)
-    }
+    // What waits on this parent in the family on screen: change requests, day swaps (they live on
+    // the custody document, not in `change_requests`, and count once per offer) and pending events.
+    // Read from the source Home's Requests row reads (`RequestsSource`), so the two never disagree;
+    // the custody proposal is left out because it draws a banner of its own below.
+    val inboxRequests by changeRequestViewModel.requests.collectAsState()
+    val pendingInboxCount =
+        (inboxRequests as? RequestsState.Ready)?.inbox?.waitingOnMe?.countWithoutProposal ?: 0
 
     // A custody-pattern proposal draws two different banners (item 7): the parent who must
     // answer gets a Review into the inbox; the one who proposed it gets a passive "waiting".

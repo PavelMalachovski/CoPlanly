@@ -12,9 +12,9 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
- * The one count Home's "Awaiting your answer" row and the calendar's change-request banner print
- * for the same inbox. The UI tour showed 6 on one and 2 on the other: the banner left out pending
- * events and counted swaps per day.
+ * The rules the inbox's count is built from, for Home's Requests row and the calendar's banner
+ * alike. The UI tour showed 6 on one and 2 on the other: the banner left out pending events and
+ * counted swaps per day.
  */
 class AwaitingAnswersTest {
 
@@ -52,7 +52,6 @@ class AwaitingAnswersTest {
         }
 
         assertEquals(1, AwaitingAnswers.swapOffers(week, me, today).size)
-        assertEquals(1, AwaitingAnswers.count(0, week, emptyList(), me, today))
     }
 
     @Test
@@ -82,7 +81,7 @@ class AwaitingAnswersTest {
     }
 
     @Test
-    fun `the count is requests, swap offers and pending events together`() {
+    fun `a swap offer waits on me only when the co-parent offered it and its days are ahead`() {
         val overrides = mapOf(
             "2026-10-04" to swap(),
             // Offered by me: the co-parent answers it, not me.
@@ -90,15 +89,18 @@ class AwaitingAnswersTest {
             // Already lived: history, not inbox.
             "2026-09-20" to swap()
         )
-        val events = (1..4).map { event("e$it", coParent, EventAcceptance.PENDING) }
 
-        assertEquals(6, AwaitingAnswers.count(1, overrides, events, me, today))
+        assertEquals(
+            listOf(LocalDate.of(2026, 10, 4)),
+            AwaitingAnswers.swapOffers(overrides, me, today).map { it.firstDate }
+        )
     }
 
     @Test
-    fun `nothing is counted before the signed-in uid is known`() {
+    fun `nothing waits before the signed-in uid is known`() {
         val events = listOf(event("theirs-pending", coParent, EventAcceptance.PENDING))
 
-        assertEquals(0, AwaitingAnswers.count(0, mapOf("2026-10-04" to swap()), events, "", today))
+        assertEquals(emptyList(), AwaitingAnswers.swapOffers(mapOf("2026-10-04" to swap()), "", today))
+        assertEquals(0, AwaitingAnswers.eventCount(events, ""))
     }
 }
