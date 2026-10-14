@@ -25,7 +25,7 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
-import com.coparently.app.presentation.theme.ParentColorChoice
+import com.coparently.app.presentation.theme.ParentColor
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.bodyMediumEmphasized
 import com.coparently.app.presentation.theme.labelMediumEmphasized
@@ -53,7 +53,7 @@ private val MARK_HEIGHT = 16.dp
  * is that card on the home screen.
  *
  * Colours are Material roles from [GlanceTheme], which the widget fills from the app's own
- * schemes, and the parent's chosen tones: [ParentColorChoice.dark] and [ParentColorChoice.light]
+ * schemes, and the parent's chosen tones: [ParentColor.dark] and [ParentColor.light]
  * as text (never the full hue, which fails AA as a foreground), the full hue only for the marks.
  *
  * @param lines What to draw.
@@ -144,11 +144,11 @@ private fun EventRow(line: WidgetEventLine, titleLines: Int) {
 }
 
 /** A parent's text-grade tone for each theme, or the neutral text colour. */
-private fun textColor(parent: ParentColorChoice?, neutral: ColorProvider): ColorProvider =
+private fun textColor(parent: ParentColor?, neutral: ColorProvider): ColorProvider =
     parent?.let { dayNight(day = it.dark, night = it.light) } ?: neutral
 
 /** A parent's full hue for each theme, for a mark, or the neutral outline. */
-private fun markColor(parent: ParentColorChoice?, neutral: ColorProvider): ColorProvider =
+private fun markColor(parent: ParentColor?, neutral: ColorProvider): ColorProvider =
     parent?.let { dayNight(day = it.fill, night = it.darkFill) } ?: neutral
 
 /**

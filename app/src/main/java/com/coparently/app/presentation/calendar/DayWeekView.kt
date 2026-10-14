@@ -562,12 +562,12 @@ private fun DayWeekPage(
                                         DayCellOverlay.CUSTODY_MOM ->
                                             ParentColors.container(
                                                 "mom",
-                                                alpha = CoPlanlyColors.PROPOSAL_TINT_ALPHA
+                                                alpha = ParentColors.proposalTintAlpha
                                             )
                                         DayCellOverlay.CUSTODY_DAD ->
                                             ParentColors.container(
                                                 "dad",
-                                                alpha = CoPlanlyColors.PROPOSAL_TINT_ALPHA
+                                                alpha = ParentColors.proposalTintAlpha
                                             )
                                         else -> Color.Transparent
                                     }
@@ -776,7 +776,7 @@ private fun DayWeekPage(
  * One contact window (MON-6b) as an hour band over its day column: the window parent's custody
  * tint over the cell's own base, and a full-hue edge — the saturation rule's two strengths of one
  * hue, the tint for the stretch of time and the edge as its marker. Drawn on its own base first
- * so the two parents' 14% tints are not stacked into a third colour, the reasoning `MonthView`'s
+ * so the two parents' custody tints are not stacked into a third colour, the reasoning `MonthView`'s
  * handover diagonal already follows.
  *
  * Not clickable: an empty hour inside the band still creates an event through the cell beneath,
@@ -911,10 +911,11 @@ private fun EventChip(
     val totalMinutes = totalDuration.toMinutes().coerceAtLeast(15) // Minimum 15 minutes
     val eventHeightDp = with(density) { (hourHeightPx * totalMinutes / 60f).toDp() }
 
-    // Transparent background colors (more transparent)
+    // The owner's colour at the block alpha `ParentColorsTest` holds the title to AA on, over
+    // whoever's day the column is washed in.
     val backgroundColor = when (event.parentOwner) {
-        "mom", "dad" -> ParentColors.container(event.parentOwner, alpha = 0.3f)
-        else -> MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.3f)
+        "mom", "dad" -> ParentColors.container(event.parentOwner, alpha = CoPlanlyColors.EVENT_BLOCK_TINT_ALPHA)
+        else -> MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = CoPlanlyColors.EVENT_BLOCK_TINT_ALPHA)
     }
 
     val borderColor = when (event.parentOwner) {

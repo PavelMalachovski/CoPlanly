@@ -11,9 +11,9 @@ import kotlin.test.assertNull
  */
 class CompactAtLargeTextTest {
 
-    private val custody = WidgetLine("Today with Alex", ParentColorChoice.PINK)
-    private val window = WidgetLine("15:00–19:00 · contact with Sam", ParentColorChoice.BLUE)
-    private val handover = WidgetLine("Handover to Sam in 5 days", ParentColorChoice.BLUE)
+    private val custody = WidgetLine("Today with Alex", ParentColorChoice.PINK.color)
+    private val window = WidgetLine("15:00–19:00 · contact with Sam", ParentColorChoice.BLUE.color)
+    private val handover = WidgetLine("Handover to Sam in 5 days", ParentColorChoice.BLUE.color)
 
     @Test
     fun `the handover is the third line when there is one`() {

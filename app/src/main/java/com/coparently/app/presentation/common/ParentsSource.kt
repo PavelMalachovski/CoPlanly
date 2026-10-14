@@ -122,11 +122,12 @@ class ParentsSource @Inject constructor(
      * `@Singleton` mean anything.
      *
      * Without sharing, each collector stood up its own copy — and this is not a cheap flow to
-     * duplicate. [PairingRepository.observePairingState] attaches *three* Firestore snapshot
-     * listeners per subscription and calls `loadPartner()` — a one-shot `users/{partnerId}`
-     * read — inside its combine transform, so it re-fetches the partner document on every
-     * emission of any of the three. With five ViewModels exposing `parents`, opening the
-     * Calendar tab alone used to stand up two more full subscriptions on top of Home's.
+     * duplicate. [PairingRepository.observePairingState] attaches *four* Firestore snapshot
+     * listeners per subscription — this account's document, its invitations both ways, and
+     * (since October 2026) the co-parent's own profile, so their rename or new colour arrives
+     * as it happens rather than at the next restart. With five ViewModels exposing `parents`,
+     * opening the Calendar tab alone used to stand up two more full subscriptions on top of
+     * Home's.
      *
      * `WhileSubscribed` rather than `Eagerly`: when every screen has gone away there is no
      * reason to keep Firestore listeners attached. `replay = 1` so a screen opening later gets

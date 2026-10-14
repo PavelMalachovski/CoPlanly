@@ -2,13 +2,18 @@ package com.coparently.app.presentation.theme
 
 import org.junit.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 /**
- * The parent colour, now that it is chosen rather than derived from the slot.
+ * The parent colour, now that it is chosen rather than derived from the slot — from four presets
+ * or, since October 2026, anywhere on the wheel.
  *
  * The case that matters most is the collision: the entire purpose of a parent colour is telling
- * the two apart, so a family where both picked blue must not end up with a calendar in one hue.
+ * the two apart, so a family where both picked blue — or two blues a few degrees apart — must not
+ * end up with a calendar in one hue.
  */
 class ParentPaletteTest {
 
@@ -17,8 +22,16 @@ class ParentPaletteTest {
         // An upgrade must change nothing until somebody actually picks something.
         val palette = ParentPalette.of(slot1Code = null, slot2Code = null)
 
-        assertEquals(ParentColorChoice.PINK, palette.of("mom"))
-        assertEquals(ParentColorChoice.BLUE, palette.of("dad"))
+        assertEquals(ParentColorChoice.PINK.color, palette.of("mom"))
+        assertEquals(ParentColorChoice.BLUE.color, palette.of("dad"))
+    }
+
+    @Test
+    fun `the default older builds stored for nobody's choice still reads as nobody's choice`() {
+        // Every profile an older build saved carries "#FF4081" whether or not the parent chose.
+        // Reading it as a chosen pink would turn every slot-2 parent who never chose pink.
+        assertEquals(ParentPalette.Default, ParentPalette.of(LEGACY_DEFAULT, LEGACY_DEFAULT))
+        assertNull(ParentColor.fromStored(LEGACY_DEFAULT))
     }
 
     @Test
@@ -28,8 +41,18 @@ class ParentPaletteTest {
             slot2Code = ParentColorChoice.PURPLE.storedCode
         )
 
-        assertEquals(ParentColorChoice.ORANGE, palette.of("mom"))
-        assertEquals(ParentColorChoice.PURPLE, palette.of("dad"))
+        assertEquals(ParentColorChoice.ORANGE.color, palette.of("mom"))
+        assertEquals(ParentColorChoice.PURPLE.color, palette.of("dad"))
+    }
+
+    @Test
+    fun `a colour picked on the wheel is drawn in the hue that was picked`() {
+        val palette = ParentPalette.of(slot1Code = ParentColorCode.custom(120), slot2Code = null)
+
+        val drawn = palette.of("mom")
+        assertEquals(120f, drawn.hue)
+        assertNull(drawn.preset)
+        assertEquals("hue1|120", drawn.storedCode)
     }
 
     @Test
@@ -41,25 +64,64 @@ class ParentPaletteTest {
             slot2Code = ParentColorChoice.BLUE.storedCode
         )
 
-        assertEquals(ParentColorChoice.BLUE, palette.of("mom"))
-        assertEquals(ParentColorChoice.PINK, palette.of("dad"), "slot 2 moves to a free colour")
+        assertEquals(ParentColorChoice.BLUE.color, palette.of("mom"))
+        assertEquals(ParentColorChoice.PINK.color, palette.of("dad"), "slot 2 moves to a free colour")
     }
 
     @Test
-    fun `the collision is resolved the same way on both phones`() {
-        // Slot 1 wins rather than "whoever chose first": `colorCode` carries no timestamp, and
-        // an order invented from two independently-syncing documents would pick a different
-        // winner on each device — which is two parents seeing the calendar differently.
-        val onePhone = ParentPalette.of(
-            ParentColorChoice.PURPLE.storedCode,
-            ParentColorChoice.PURPLE.storedCode
-        )
-        val theOther = ParentPalette.of(
-            ParentColorChoice.PURPLE.storedCode,
-            ParentColorChoice.PURPLE.storedCode
-        )
+    fun `two custom hues a few degrees apart count as the same colour`() {
+        // A sky blue and a slightly deeper sky blue are one colour to a parent glancing at a month.
+        val palette = ParentPalette.of(ParentColorCode.custom(210), ParentColorCode.custom(222))
 
-        assertEquals(onePhone, theOther)
+        assertEquals(210f, palette.of("mom").hue)
+        assertEquals(ParentColorChoice.PINK.color, palette.of("dad"))
+    }
+
+    @Test
+    fun `a custom hue beside a preset counts as that preset`() {
+        val palette = ParentPalette.of(ParentColorChoice.PINK.storedCode, ParentColorCode.custom(350))
+
+        assertEquals(ParentColorChoice.PINK.color, palette.of("mom"))
+        assertEquals(ParentColorChoice.BLUE.color, palette.of("dad"), "the first preset clear of pink")
+    }
+
+    @Test
+    fun `no two presets are close enough to collide`() {
+        // Pink and orange are the nearest pair (about 35 degrees apart); a family choosing them
+        // must see both.
+        val presets = ParentColorChoice.entries.map { it.color }
+        presets.forEach { a ->
+            presets.filter { it != a }.forEach { b -> assertFalse(a.closeTo(b), "${a.preset} and ${b.preset}") }
+        }
+    }
+
+    @Test
+    fun `a parent's own pick beats a default the other parent never chose`() {
+        // Slot 1 never chose, so they are drawn in the default pink; slot 2 picked a red on the
+        // wheel. The pick is a decision and the pink is not: moving the pick would draw that
+        // parent in a colour their own settings never showed them, for a sixth of the wheel.
+        val red = ParentColorCode.custom(355)
+        val palette = ParentPalette.of(slot1Code = null, slot2Code = red)
+
+        assertEquals(ParentColor.fromStored(red), palette.of("dad"))
+        assertEquals(ParentColorChoice.BLUE.color, palette.of("mom"), "the first preset clear of the pick")
+    }
+
+    @Test
+    fun `the parent who never chose is the one who moves, whichever slot they hold`() {
+        val sky = ParentColorCode.custom(205)
+        val palette = ParentPalette.of(slot1Code = sky, slot2Code = null)
+
+        assertEquals(ParentColor.fromStored(sky), palette.of("mom"))
+        assertEquals(ParentColorChoice.PINK.color, palette.of("dad"), "the first preset clear of the pick")
+    }
+
+    @Test
+    fun `a preset picked against the other slot's unchosen default is kept too`() {
+        val palette = ParentPalette.of(slot1Code = null, slot2Code = ParentColorChoice.PINK.storedCode)
+
+        assertEquals(ParentColorChoice.PINK.color, palette.of("dad"))
+        assertEquals(ParentColorChoice.BLUE.color, palette.of("mom"))
     }
 
     @Test
@@ -70,7 +132,16 @@ class ParentPaletteTest {
         val palette = ParentPalette.of(stored, stored)
 
         assertEquals(ParentColorChoice.PURPLE, ParentColorChoice.fromStored(stored))
-        assertEquals(ParentColorChoice.PURPLE, palette.of("mom"))
+        assertEquals(ParentColorChoice.PURPLE.color, palette.of("mom"))
+    }
+
+    @Test
+    fun `a hue stored inside the calendar friend's band is drawn outside it`() {
+        // Only this app's picker writes a custom hue, and it never offers the band — but the
+        // field is the co-parent's to write, so the reader holds the rule too.
+        val drawn = assertNotNull(ParentColor.fromStored("hue1|173"))
+
+        assertFalse(drawn.hue.toInt() in CustomHueRange.RESERVED, "drawn at ${drawn.hue}")
     }
 
     @Test
@@ -88,6 +159,7 @@ class ParentPaletteTest {
         assertNull(ParentColorChoice.fromStored("#123456"))
         assertNull(ParentColorChoice.fromStored(""))
         assertNull(ParentColorChoice.fromStored(null))
+        assertNull(ParentColor.fromStored("#123456"))
     }
 
     @Test
@@ -97,5 +169,39 @@ class ParentPaletteTest {
         val codes = ParentColorChoice.entries.map { it.storedCode.uppercase() }
 
         assertEquals(codes.size, codes.toSet().size)
+    }
+
+    @Test
+    fun `the stored codes are the ones two phones already compare`() {
+        // The tones moved (October 2026, "bright"); the identifiers on the wire must not, or every
+        // parent who chose would read as having chosen nothing.
+        assertEquals(
+            listOf("#E91E63", "#1976D2", "#7B1FA2", "#D84315"),
+            ParentColorChoice.entries.map { it.storedCode }
+        )
+    }
+
+    @Test
+    fun `pink and blue are the theme's parent tokens`() {
+        assertEquals(CoPlanlyColors.MomPink, ParentColorChoice.PINK.color.fill)
+        assertEquals(CoPlanlyColors.MomPinkLight, ParentColorChoice.PINK.color.light)
+        assertEquals(CoPlanlyColors.MomPinkDark, ParentColorChoice.PINK.color.dark)
+        assertEquals(CoPlanlyColors.DadBlue, ParentColorChoice.BLUE.color.fill)
+        assertEquals(CoPlanlyColors.DadBlueLight, ParentColorChoice.BLUE.color.light)
+        assertEquals(CoPlanlyColors.DadBlueDark, ParentColorChoice.BLUE.color.dark)
+    }
+
+    @Test
+    fun `a dark-theme wash is never brighter than its ceiling`() {
+        val colours = ParentColorChoice.entries.map { it.color } + (0 until 360).map { ParentColor.custom(it) }
+
+        colours.forEach { colour ->
+            val luminance = ParentToneMath.luminance(colour.darkWash.argb())
+            assertTrue(luminance <= ParentToneMath.DARK_WASH_MAX_LUMINANCE + 0.005, "${colour.storedCode}: $luminance")
+        }
+    }
+
+    private companion object {
+        const val LEGACY_DEFAULT = "#FF4081"
     }
 }

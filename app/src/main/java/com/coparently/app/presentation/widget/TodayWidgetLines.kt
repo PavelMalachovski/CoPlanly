@@ -8,7 +8,7 @@ import com.coparently.app.domain.events.AllDayEvent
 import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.Parents
-import com.coparently.app.presentation.theme.ParentColorChoice
+import com.coparently.app.presentation.theme.ParentColor
 import com.coparently.app.utils.localizedDate
 import com.coparently.app.utils.shortTime
 import java.time.format.DateTimeFormatter
@@ -20,7 +20,7 @@ import java.time.format.DateTimeFormatter
  * @property parent The parent the line is about, whose text-grade tone colours it; null draws it
  *   in the theme's neutral text colour.
  */
-data class WidgetLine(val text: String, val parent: ParentColorChoice? = null)
+data class WidgetLine(val text: String, val parent: ParentColor? = null)
 
 /**
  * One of today's events as the widget lists it.
@@ -30,7 +30,7 @@ data class WidgetLine(val text: String, val parent: ParentColorChoice? = null)
  * @property title The event's title.
  * @property parent The event owner's colour, for the mark beside it.
  */
-data class WidgetEventLine(val time: String, val title: String, val parent: ParentColorChoice?)
+data class WidgetEventLine(val time: String, val title: String, val parent: ParentColor?)
 
 /**
  * Everything the widget draws at one size, worded.

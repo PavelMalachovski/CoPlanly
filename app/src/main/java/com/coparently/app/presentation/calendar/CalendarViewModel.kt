@@ -195,14 +195,14 @@ class CalendarViewModel @Inject constructor(
      * uid, from [parents]) and anything already dismissed (by its instant). It also excludes
      * anything at all until [Parents.loaded] is true — [parents] starts from a synthetic
      * "nobody is known yet" on every fresh subscription, and `CustodyModelRepository`'s own pair
-     * resolution is Room-only and reliably faster than `Parents` resolving three Firestore
+     * resolution is Room-only and reliably faster than `Parents` resolving its Firestore
      * pairing listeners, so the echo of this device's own just-made write can otherwise arrive
      * before its own uid is known — announcing the user's own edit as the co-parent's, exactly
      * the failure this feature must not have, just pointed the other way.
      *
      * `WhileSubscribed`, like the banner below, and not an eager collector: [parents] itself only
      * subscribes to [ParentsSource]'s pairing listener while something is collecting it, and
-     * that stream is expensive to hold open (three Firestore listeners — see
+     * that stream is expensive to hold open (four Firestore listeners while paired — see
      * [ParentsSource.observe]'s own doc). An always-on collector here would keep it attached for
      * this ViewModel's entire lifetime regardless of whether any screen is showing the banner,
      * undoing the exact saving `WhileSubscribed` exists for.

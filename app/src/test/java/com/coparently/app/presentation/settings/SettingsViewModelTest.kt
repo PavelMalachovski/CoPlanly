@@ -2,10 +2,13 @@ package com.coparently.app.presentation.settings
 
 import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.domain.holidays.HolidayCountry
+import com.coparently.app.domain.model.User
 import com.coparently.app.domain.money.SupportedCurrency
 import com.coparently.app.domain.repository.PreferencesRepository
 import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.presentation.common.UiState
+import com.coparently.app.presentation.theme.ParentColor
+import com.coparently.app.presentation.theme.ParentColorChoice
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -44,10 +47,11 @@ class SettingsViewModelTest {
         coEvery { setPauseBeforeSending(any()) } answers { pauseBeforeSending.value = firstArg() }
     }
 
-    private fun viewModel(): SettingsViewModel {
-        val userRepository = mockk<UserRepository>(relaxed = true) {
+    private fun viewModel(
+        userRepository: UserRepository = mockk<UserRepository>(relaxed = true) {
             coEvery { getCurrentUser() } returns null
         }
+    ): SettingsViewModel {
         return SettingsViewModel(
             fcmService = fcmService,
             accountDeletionService = mockk(relaxed = true),
@@ -136,6 +140,41 @@ class SettingsViewModelTest {
     }
 
     @Test
+    fun `a colour picked on the wheel is saved as its hue`() = runTest(dispatcher) {
+        // Saved to this parent's own profile, which the co-parent's phone listens to: the colour
+        // reaches them as soon as this write lands.
+        val users = signedIn(colorCode = ParentColorChoice.PINK.storedCode)
+        val vm = viewModel(users)
+
+        vm.setParentColor(ParentColor.custom(200))
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) { users.updateUser(match { it.colorCode == "hue1|200" }) }
+    }
+
+    @Test
+    fun `a preset is saved as its stored code`() = runTest(dispatcher) {
+        val users = signedIn(colorCode = "hue1|200")
+        val vm = viewModel(users)
+
+        vm.setParentColor(ParentColorChoice.ORANGE.color)
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) { users.updateUser(match { it.colorCode == ParentColorChoice.ORANGE.storedCode }) }
+    }
+
+    @Test
+    fun `choosing the colour already saved writes nothing`() = runTest(dispatcher) {
+        val users = signedIn(colorCode = "hue1|200")
+        val vm = viewModel(users)
+
+        vm.setParentColor(ParentColor.custom(200))
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) { users.updateUser(any()) }
+    }
+
+    @Test
     fun `a country whose currency the app does not offer suggests none`() = runTest(dispatcher) {
         val vm = viewModel()
 
@@ -143,5 +182,16 @@ class SettingsViewModelTest {
         advanceUntilIdle()
 
         coVerify(exactly = 0) { preferences.suggestDefaultCurrency(any()) }
+    }
+
+    /** A user repository with a signed-in parent whose stored colour is [colorCode]. */
+    private fun signedIn(colorCode: String): UserRepository = mockk(relaxed = true) {
+        coEvery { getCurrentUser() } returns User(
+            id = "u1",
+            email = "pavel@example.com",
+            name = "Pavel",
+            role = "dad",
+            colorCode = colorCode
+        )
     }
 }

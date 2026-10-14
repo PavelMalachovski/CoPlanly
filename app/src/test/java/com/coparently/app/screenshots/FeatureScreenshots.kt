@@ -19,6 +19,8 @@ import com.coparently.app.presentation.expenses.CollapsedMonthSummary
 import com.coparently.app.presentation.expenses.ExpenseSummaryHeader
 import com.coparently.app.presentation.expenses.MonthNavigation
 import com.coparently.app.presentation.expenses.currencyFormat
+import com.coparently.app.presentation.settings.CUSTOM_COLOUR
+import com.coparently.app.presentation.settings.ParentColorPicker
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.flowOf
@@ -34,7 +36,8 @@ import java.util.Locale
 /**
  * One text-heavy surface from each remaining main area: the Expenses summary header and its
  * collapsed line, a chat thread (header plus an incoming, a read and a failed bubble), the event
- * preview sheet's body, and the telemetry consent screen — the first screen a fresh install shows.
+ * preview sheet's body, the telemetry consent screen — the first screen a fresh install shows —
+ * and the "My colour" picker with a colour of one's own.
  *
  * @param variant Language, theme, font scale and palette for this run
  */
@@ -122,6 +125,15 @@ class FeatureScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant)
         }
     }
 
+    /**
+     * "My colour" with Custom open: the four presets as the calendar draws them in this theme,
+     * the custom swatch, and the hue strip without the calendar friend's teal.
+     */
+    @Test
+    fun parentColorPicker() = snap("settings_parent_color_picker") {
+        ParentColorPicker(chosen = CUSTOM_COLOUR, customHue = CUSTOM_HUE, onChoose = {}, onCustomHue = {})
+    }
+
     /** An incoming message, one of mine the co-parent has read, and one of mine that failed. */
     private fun chatMessages(): List<Message> {
         val base = ScreenshotFixtures.TODAY.atTime(MESSAGE_HOUR, 0)
@@ -170,6 +182,9 @@ class FeatureScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant)
         private const val PREVIEW_HOUR = 15
         private const val MESSAGE_HOUR = 9
         private const val MINUTE_MS = 60_000L
+
+        /** A sky blue: the owner's "blue, bright", on the strip between the presets' hues. */
+        private const val CUSTOM_HUE = 200
         private val BUBBLE_GAP = 4.dp
 
         /** The variants this class runs over. */

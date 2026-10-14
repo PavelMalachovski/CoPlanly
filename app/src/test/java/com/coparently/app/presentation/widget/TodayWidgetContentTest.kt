@@ -13,12 +13,12 @@ class TodayWidgetContentTest {
 
     private val tall = TodayWidgetLines(
         title = "Today · Wed, Sep 2",
-        custody = WidgetLine("Today with Alex", ParentColorChoice.PINK),
-        windows = listOf(WidgetLine("15:00–19:00 · contact with Sam", ParentColorChoice.BLUE)),
-        handover = WidgetLine("Handover to Sam in 5 days", ParentColorChoice.BLUE),
+        custody = WidgetLine("Today with Alex", ParentColorChoice.PINK.color),
+        windows = listOf(WidgetLine("15:00–19:00 · contact with Sam", ParentColorChoice.BLUE.color)),
+        handover = WidgetLine("Handover to Sam in 5 days", ParentColorChoice.BLUE.color),
         events = listOf(
-            WidgetEventLine("09:00–10:00", "Dentist", ParentColorChoice.PINK),
-            WidgetEventLine("17:30", "Football", ParentColorChoice.BLUE)
+            WidgetEventLine("09:00–10:00", "Dentist", ParentColorChoice.PINK.color),
+            WidgetEventLine("17:30", "Football", ParentColorChoice.BLUE.color)
         ),
         footer = "+1 more"
     )

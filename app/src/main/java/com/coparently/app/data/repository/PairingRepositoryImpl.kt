@@ -9,7 +9,6 @@ import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.PairingException
 import com.coparently.app.data.remote.firebase.PairingFunctions
 import com.coparently.app.data.sync.SyncRequester
-import com.coparently.app.domain.model.FamilyKind
 import com.coparently.app.domain.model.InvitePreview
 import com.coparently.app.domain.model.PairingError
 import com.coparently.app.domain.model.PairingInvite
@@ -31,6 +30,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.tasks.await
@@ -80,29 +80,15 @@ class PairingRepositoryImpl @Inject constructor(
                     flowOf(PairingState.Loading)
                 } else {
                     combine(
-                        observeUserDocument(user.uid),
+                        observeLinkedPartner(user.uid),
                         observeOwnInvites(user.uid),
                         observeIncomingInvites(user.email.orEmpty())
-                    ) { userSnapshot, own, incoming ->
-                        val partnerId = userSnapshot?.getString("partnerId").orEmpty()
-                        if (partnerId.isEmpty()) {
+                    ) { partner, own, incoming ->
+                        if (partner == null) {
                             PairingState.NotPaired(activeInvite = own.firstOrNull(), incoming = incoming)
                         } else {
-                            val pairedAt = userSnapshot?.getLong("pairedAt")
                             PairingState.Paired(
-                                partner = runCatching { loadPartner(partnerId, pairedAt) }
-                                    .getOrElse {
-                                        // The UI renders a blank name identically whether the
-                                        // profile could not be read or genuinely has none; the
-                                        // log is what tells the two apart after the fact.
-                                        Log.w(TAG, "Could not read the partner profile", it)
-                                        PartnerSummary(
-                                            id = partnerId,
-                                            name = "",
-                                            email = "",
-                                            pairedSinceMillis = pairedAt
-                                        )
-                                    },
+                                partner = partner,
                                 // Carried into the paired state too, so the screen can offer a
                                 // second co-parent: a person may have more than one, and
                                 // without these the invite has nothing to render.
@@ -296,6 +282,41 @@ class PairingRepositoryImpl @Inject constructor(
     // ---- Firestore plumbing -------------------------------------------
 
     /**
+     * The co-parent this account's own document names, kept current: null while it names nobody,
+     * then their profile every time it changes — a rename, a new photo, a slot, a colour.
+     *
+     * **A listener on their `users/{uid}`, not a read** ([partnerProfile]). This used to be a
+     * one-shot `get()` inside the combine of this account's own listeners, so it was repeated only
+     * when *this* account's document or invitations changed. A co-parent's new colour or name
+     * therefore reached this phone only when something unrelated happened here — in practice,
+     * when the app was opened again.
+     *
+     * The listener follows the link: `distinctUntilChanged` keeps it attached while the own
+     * document moves for other reasons, and `flatMapLatest` swaps or removes it the moment the
+     * link names someone else or nobody, so there is never one left behind per transition.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private fun observeLinkedPartner(uid: String): Flow<PartnerSummary?> =
+        observeUserDocument(uid)
+            .map { snapshot ->
+                PartnerLink(
+                    partnerId = snapshot?.getString("partnerId").orEmpty(),
+                    pairedAt = snapshot?.getLong("pairedAt")
+                )
+            }
+            .distinctUntilChanged()
+            .flatMapLatest { link ->
+                if (link.partnerId.isEmpty()) {
+                    flowOf(null)
+                } else {
+                    firestore.partnerProfile(link.partnerId, link.pairedAt)
+                }
+            }
+
+    /** The link this account's own document names: who, and since when. */
+    private data class PartnerLink(val partnerId: String, val pairedAt: Long?)
+
+    /**
      * The user document, or nothing at all when the read fails.
      *
      * A failed read is deliberately *not* forwarded as a null snapshot. Downstream, a null
@@ -348,36 +369,6 @@ class PairingRepositoryImpl @Inject constructor(
                 }
             awaitClose { registration.remove() }
         }
-    }
-
-    private suspend fun loadPartner(partnerId: String, pairedAt: Long?): PartnerSummary {
-        val data = firestore.collection(USERS).document(partnerId).get().await()
-        return PartnerSummary(
-            id = partnerId,
-            name = data.getString("name").orEmpty(),
-            email = data.getString("email").orEmpty(),
-            pairedSinceMillis = pairedAt,
-            // Written by the co-parent's own `ensureProfile`, so it stays null until their
-            // phone runs a build that stores one — the card falls back to the initial.
-            // Blank is normalized to null: the legacy full-profile write stores "" for a
-            // missing photo, and an empty URL must read as "no photo", not as a broken one.
-            photoUrl = data.getString("profilePhotoUrl")?.takeIf { it.isNotBlank() },
-            // The co-parent's slot, written by `assignSlots` when the pairing was accepted.
-            // Room holds a `users` row for the signed-in user only, so this read is the app's
-            // one source for which slot the other parent occupies — every screen that shows
-            // their name depends on it. Blank normalizes to null for the same reason as the
-            // photo: a pair created before slot assignment shipped has no slot here, and
-            // "unknown" must not be dressed up as an answer.
-            role = data.getString("role")?.takeIf { it.isNotBlank() },
-            // Their answer to "children, pets or both". Absent on a build that never wrote it,
-            // which reads as "contributes nothing" rather than "everything" — one parent's real
-            // answer must not be widened by the other's silence.
-            caresFor = FamilyKind.fromStored(data.getString("caresFor")),
-            // The colour they chose for themselves. Blank normalizes to null for the same
-            // reason the photo does: the legacy full-profile write stores "" for a missing
-            // value, and "" must read as "has not chosen" rather than as an unknown colour.
-            colorCode = data.getString("colorCode")?.takeIf { it.isNotBlank() }
-        )
     }
 
     private suspend fun writeNewInvite(toEmail: String): PairingInvite {

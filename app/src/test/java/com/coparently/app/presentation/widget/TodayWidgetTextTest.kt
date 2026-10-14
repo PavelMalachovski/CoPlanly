@@ -67,13 +67,16 @@ class TodayWidgetTextTest {
         val lines = TodayWidgetText.lines(context, day, parents, maxEvents = 4)
 
         assertTrue(lines.title, lines.title.startsWith("Today · "))
-        assertEquals(WidgetLine("Today with Alex", ParentColorChoice.PURPLE), lines.custody)
-        assertEquals(listOf(WidgetLine("15:00–19:00 · contact with Sam", ParentColorChoice.ORANGE)), lines.windows)
-        assertEquals(WidgetLine("Handover to Sam in 5 days", ParentColorChoice.ORANGE), lines.handover)
+        assertEquals(WidgetLine("Today with Alex", ParentColorChoice.PURPLE.color), lines.custody)
+        assertEquals(
+            listOf(WidgetLine("15:00–19:00 · contact with Sam", ParentColorChoice.ORANGE.color)),
+            lines.windows
+        )
+        assertEquals(WidgetLine("Handover to Sam in 5 days", ParentColorChoice.ORANGE.color), lines.handover)
         assertEquals(
             listOf(
-                WidgetEventLine("09:00–10:00", "Dentist", ParentColorChoice.PURPLE),
-                WidgetEventLine("17:30", "Football", ParentColorChoice.ORANGE)
+                WidgetEventLine("09:00–10:00", "Dentist", ParentColorChoice.PURPLE.color),
+                WidgetEventLine("17:30", "Football", ParentColorChoice.ORANGE.color)
             ),
             lines.events
         )

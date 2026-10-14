@@ -45,7 +45,7 @@ class FamilyMembersSource @Inject constructor(
      * Re-emits whenever a child or a pet is added, renamed or removed.
      *
      * A cold flow, deliberately — no `shareIn` and no scope of its own, which is where
-     * [ParentsSource] differs and why. That one joins three Firestore *pairing listeners*, so
+     * [ParentsSource] differs and why. That one joins four Firestore *pairing listeners*, so
      * sharing one subscription across screens is worth a singleton scope. This one combines two
      * Room queries, which the invalidation tracker already multiplexes; a second collector costs
      * an observer, not a listener.

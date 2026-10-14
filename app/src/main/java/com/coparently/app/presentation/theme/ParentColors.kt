@@ -32,10 +32,11 @@ val LocalParentPalette = staticCompositionLocalOf { ParentPalette.Default }
  * which slot is decided in `functions/index.js` (`assignSlots`) and shown by name everywhere
  * else — see `presentation/common/ParentLabels.kt`.
  *
- * **Which colour a slot draws in is no longer fixed.** Each parent chooses their own
- * ([ParentColorChoice]), and the family's two answers arrive here as a [ParentPalette]. The
- * default is the pink and blue the app has always used, so a call site that does not have the
- * parents to hand — and a family where nobody has chosen — looks exactly as it did.
+ * **Which colour a slot draws in is no longer fixed.** Each parent chooses their own — one of
+ * four presets ([ParentColorChoice]) or any hue on the wheel ([ParentColor.custom]) — and the
+ * family's two answers arrive here as a [ParentPalette]. The default is the pink and blue the app
+ * has always used, so a call site that does not have the parents to hand — and a family where
+ * nobody has chosen — looks exactly as it did.
  *
  * `CoPlanlyColors.MomPink`/`DadBlue` are **fill-only** — neither clears 4.5:1 as a foreground
  * in either theme — so any screen that wants to write a parent's name in pink has to reach for
@@ -44,8 +45,9 @@ val LocalParentPalette = staticCompositionLocalOf { ParentPalette.Default }
  * copy-pasted into `MonthView` and `DayWeekView`. These helpers are the one place that decision
  * lives.
  *
- * The saturation rule is unchanged: a custody day background is the hue at ~14% alpha, a chip
- * or dot is the same hue at full strength.
+ * The saturation rule keeps its shape — a custody day background is the hue at a low alpha
+ * ([custodyTintAlpha]: 20 % light, 30 % dark since October 2026), a chip or dot is the same hue
+ * at full strength.
  *
  * The test is on `MaterialTheme.colorScheme.surface.luminance()`, never `isSystemInDarkTheme()`:
  * the in-app theme setting can force light while the system is dark, and the colour has to
@@ -62,8 +64,8 @@ object ParentColors {
      * The parent's identity hue at full strength, for **fills only** — dots, bars, borders,
      * custody tints. Never use as a text colour; use [text] for that.
      *
-     * In the dark theme this is the choice's [ParentColorChoice.darkFill], which differs only
-     * where the light-theme hue falls under 3:1 on a dark surface (purple).
+     * In the dark theme this is the colour's [ParentColor.darkFill], a brighter partner of the
+     * light-theme hue, which every colour has since October 2026.
      *
      * @param parent `"mom"` or `"dad"`; anything else falls back to slot 1.
      * @param palette The family's two chosen colours. Defaults to [LocalParentPalette], the
@@ -75,14 +77,32 @@ object ParentColors {
         choiceFill(palette.of(parent))
 
     /**
-     * A colour choice's fill for the theme on screen — what the pickers' swatches draw, so a
-     * swatch shows the hue the calendar will actually use.
+     * A colour's fill for the theme on screen — what the pickers' swatches draw, so a swatch
+     * shows the hue the calendar will actually use.
      *
-     * @param choice The colour a parent chose, or is about to.
+     * @param colour The colour a parent chose, or is about to.
      */
     @Composable
     @ReadOnlyComposable
-    fun choiceFill(choice: ParentColorChoice): Color = if (isDarkTheme) choice.darkFill else choice.fill
+    fun choiceFill(colour: ParentColor): Color = colour.fillIn(isDarkTheme)
+
+    /** [choiceFill] for one of the four presets, as the onboarding swatches hold them. */
+    @Composable
+    @ReadOnlyComposable
+    fun choiceFill(choice: ParentColorChoice): Color = choiceFill(choice.color)
+
+    /**
+     * The custody wash's alpha in the theme on screen: stronger in the dark theme, where the same
+     * alpha over a near-black surface shows far less of the hue (October 2026, "bright colours").
+     */
+    val custodyTintAlpha: Float
+        @Composable @ReadOnlyComposable
+        get() = CoPlanlyColors.custodyTintAlpha(isDarkTheme)
+
+    /** The pending-proposal wash's alpha in the theme on screen; always under [custodyTintAlpha]. */
+    val proposalTintAlpha: Float
+        @Composable @ReadOnlyComposable
+        get() = CoPlanlyColors.proposalTintAlpha(isDarkTheme)
 
     /**
      * The parent's identity hue as a **text-grade** foreground for the current theme.
@@ -93,7 +113,7 @@ object ParentColors {
     @Composable
     @ReadOnlyComposable
     fun text(parent: String, palette: ParentPalette = LocalParentPalette.current): Color =
-        palette.of(parent).let { if (isDarkTheme) it.light else it.dark }
+        palette.of(parent).textIn(isDarkTheme)
 
     /**
      * A **solid** parent fill that carries text on top of it — a labelled custody band, a chip
@@ -101,9 +121,9 @@ object ParentColors {
      *
      * Not [fill]: the full-strength hue is fill-only for a reason that holds *under* text as
      * well as beside it — white on the original pink is 4.35:1, under AA. The deep tone of each
-     * [ParentColorChoice] (the one [text] uses on a light surface) clears AA under white for all
-     * four choices, which is what `CoPlanlyColors.MomChipFill`/`DadChipFill` already said for
-     * pink and blue. Pair it with [onFill] rather than hard-coding white, so a future choice
+     * [ParentColor] (the one [text] uses on a light surface) clears AA under white for every
+     * preset and every hue on the wheel, which is what `CoPlanlyColors.MomChipFill`/`DadChipFill`
+     * already said for pink and blue. Pair it with [onFill] rather than hard-coding white, so a future choice
      * whose deep tone is light gets dark text instead of an unreadable label.
      *
      * @param parent `"mom"` or `"dad"`; anything else falls back to slot 1.
@@ -154,20 +174,24 @@ object ParentColors {
 
     /**
      * A soft container tint in the parent's hue, for chips and hero backgrounds that carry
-     * [text]-coloured content.
+     * [text]-coloured content — and the calendar's custody wash itself.
+     *
+     * Theme-aware since October 2026: the dark theme washes the colour's [ParentColor.darkWash]
+     * rather than the light theme's fill, which over a near-black surface read as maroon and
+     * brown. What sits on the wash is held to AA on it by `ParentColorsTest`.
      *
      * @param parent `"mom"` or `"dad"`; anything else falls back to mom.
-     * @param alpha Tint strength; the default matches the calendar's custody wash so a chip on
-     *   the dashboard and a day cell in the grid read as the same system.
+     * @param alpha Tint strength; the default is the calendar's custody wash, so a chip on the
+     *   dashboard and a day cell in the grid read as the same system.
      * @param palette Defaults to [LocalParentPalette]; see [fill].
      */
     @Composable
     @ReadOnlyComposable
     fun container(
         parent: String,
-        alpha: Float = CoPlanlyColors.CUSTODY_TINT_ALPHA,
+        alpha: Float = custodyTintAlpha,
         palette: ParentPalette = LocalParentPalette.current
-    ): Color = palette.of(parent).fill.copy(alpha = alpha)
+    ): Color = palette.of(parent).washIn(isDarkTheme).copy(alpha = alpha)
 
     /** The 0.05 WCAG adds to both luminances, standing in for ambient flare on a screen. */
     private const val WCAG_FLARE = 0.05f

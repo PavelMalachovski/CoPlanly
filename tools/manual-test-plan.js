@@ -123,10 +123,12 @@ const RULES = [
   },
   {
     sections: ['3.3'],
-    why: 'parent colours',
+    why: 'parent colours, a colour of one\'s own, and the co-parent\'s colour arriving live',
     paths: ['K/presentation/theme/ParentColors.kt', 'K/presentation/theme/ParentPalette.kt',
+      'K/presentation/theme/ParentToneMath.kt', 'K/presentation/theme/ParentColorCode.kt',
       'K/presentation/theme/Color.kt', 'K/presentation/common/ParentsSource.kt',
-      'K/presentation/common/ParentPalette*', 'K/presentation/calendar/**'],
+      'K/presentation/common/ParentPalette*', 'K/presentation/calendar/**',
+      'K/presentation/settings/ParentColorDialog.kt', 'K/data/repository/PartnerProfileFlow.kt'],
   },
   {
     sections: ['3.4'],

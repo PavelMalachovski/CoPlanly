@@ -13,6 +13,8 @@
     <string name="parent_color_blue">Blau</string>
     <string name="parent_color_purple">Lila</string>
     <string name="parent_color_orange">Orange</string>
+    <string name="parent_color_custom">Eigene</string>
+    <string name="parent_color_custom_hue">Farbton</string>
     <string name="settings_signed_in_as">Angemeldet als: %1$s</string>
     <string name="settings_gcal_not_signed_in">Nicht angemeldet</string>
     <string name="settings_unknown">Unbekannt</string>

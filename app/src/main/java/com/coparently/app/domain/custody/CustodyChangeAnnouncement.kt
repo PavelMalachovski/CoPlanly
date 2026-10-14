@@ -21,7 +21,7 @@ object CustodyChangeAnnouncement {
      * - [shared] itself is null — nothing has ever been shared.
      * - [parentsLoaded] is false — this device does not yet know its own uid, so it cannot rule
      *   out that the change is its own echo. `CustodyModelRepository`'s pair resolution is
-     *   Room-only and reliably faster than `Parents` resolving three Firestore pairing
+     *   Room-only and reliably faster than `Parents` resolving its Firestore pairing
      *   listeners, so on a fresh subscription (cold start, or reopening Calendar after the
      *   pairing listener has been torn down) the echo of this device's own just-made write can
      *   arrive before `myUid` is known. Treating "not loaded" as "definitely not mine" would

@@ -24,7 +24,7 @@ enum class ScreenshotLocale(val tag: String) {
  */
 enum class ScreenshotPalette(val palette: ParentPalette, val label: String) {
     DEFAULT(ParentPalette.Default, "pinkblue"),
-    CHOSEN(ParentPalette(ParentColorChoice.PURPLE, ParentColorChoice.ORANGE), "purpleorange")
+    CHOSEN(ParentPalette(ParentColorChoice.PURPLE.color, ParentColorChoice.ORANGE.color), "purpleorange")
 }
 
 /**
