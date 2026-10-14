@@ -131,8 +131,12 @@ private fun AgendaList(
     }
 }
 
+/**
+ * Previous and next four weeks, at either end of a row. Shared with a family friend's calendar
+ * (phase 2), which pages the same window.
+ */
 @Composable
-private fun WindowPager(onPrevious: () -> Unit, onNext: () -> Unit) {
+internal fun WindowPager(onPrevious: () -> Unit, onNext: () -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween

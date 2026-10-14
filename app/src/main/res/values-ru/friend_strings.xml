@@ -23,4 +23,12 @@
     <string name="friend_empty">Ни у кого вне семьи нет доступа к календарю.</string>
     <string name="friend_revoke_failed">Не удалось закрыть доступ. Проверьте подключение и попробуйте ещё раз.</string>
     <string name="friend_redeem_code_label">Введите полученный код</string>
+    <string name="friend_calendar_title">Календарь семьи</string>
+    <string name="friend_calendar_family">%1$s и %2$s</string>
+    <string name="friend_calendar_read_only">Только просмотр. Личные события никогда не передаются.</string>
+    <string name="friend_calendar_added_by">Добавлено: %1$s</string>
+    <string name="friend_calendar_event_supporting">%1$s · %2$s</string>
+    <string name="friend_calendar_you_take_part">Вы участвуете</string>
+    <string name="friend_calendar_access_ended">Ваш доступ к этому календарю закончился</string>
+    <string name="friend_calendar_failed">Не удалось загрузить календарь</string>
 </resources>

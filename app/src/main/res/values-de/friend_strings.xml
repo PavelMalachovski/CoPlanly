@@ -23,4 +23,12 @@
     <string name="friend_empty">Niemand außerhalb der Familie hat Kalenderzugriff.</string>
     <string name="friend_revoke_failed">Der Zugriff konnte nicht entfernt werden. Prüfe deine Verbindung und versuche es erneut.</string>
     <string name="friend_redeem_code_label">Gib den Code ein, den du bekommen hast</string>
+    <string name="friend_calendar_title">Familienkalender</string>
+    <string name="friend_calendar_family">%1$s und %2$s</string>
+    <string name="friend_calendar_read_only">Nur ansehen. Private Termine werden nie geteilt.</string>
+    <string name="friend_calendar_added_by">Hinzugefügt von %1$s</string>
+    <string name="friend_calendar_event_supporting">%1$s · %2$s</string>
+    <string name="friend_calendar_you_take_part">Du nimmst teil</string>
+    <string name="friend_calendar_access_ended">Dein Zugang zu diesem Kalender ist beendet</string>
+    <string name="friend_calendar_failed">Der Kalender konnte nicht geladen werden</string>
 </resources>

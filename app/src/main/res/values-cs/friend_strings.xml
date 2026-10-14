@@ -23,4 +23,12 @@
     <string name="friend_empty">Nikdo mimo rodinu nemá přístup ke kalendáři.</string>
     <string name="friend_revoke_failed">Přístup se nepodařilo odebrat. Zkontrolujte připojení a zkuste to znovu.</string>
     <string name="friend_redeem_code_label">Zadejte kód, který jste dostali</string>
+    <string name="friend_calendar_title">Kalendář rodiny</string>
+    <string name="friend_calendar_family">%1$s a %2$s</string>
+    <string name="friend_calendar_read_only">Jen k prohlížení. Soukromé události se nikdy nesdílejí.</string>
+    <string name="friend_calendar_added_by">Přidal(a) %1$s</string>
+    <string name="friend_calendar_event_supporting">%1$s · %2$s</string>
+    <string name="friend_calendar_you_take_part">Účastníte se</string>
+    <string name="friend_calendar_access_ended">Váš přístup k tomuto kalendáři skončil</string>
+    <string name="friend_calendar_failed">Kalendář se nepodařilo načíst</string>
 </resources>

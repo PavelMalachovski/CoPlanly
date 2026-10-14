@@ -888,6 +888,18 @@ fun NavGraph(
                     )
                 }
 
+                // A family friend's read-only calendar (phase 2), keyed by the family it reads.
+                pane(
+                    route = Screen.FriendCalendar.route,
+                    arguments = listOf(
+                        navArgument(Screen.FriendCalendar.ARG_FAMILY_ID) { type = NavType.StringType }
+                    )
+                ) {
+                    com.coparently.app.presentation.friends.FriendCalendarScreen(
+                        onNavigateUp = { navController.popBackStack() }
+                    )
+                }
+
                 // Professional access (MON-18): the parents' list and, on a professional's phone, the
                 // families they read. The two read-only views are detail routes keyed by grant id.
                 pane(route = Screen.Professionals.route) {
@@ -1667,6 +1679,15 @@ sealed class Screen(val route: String) {
 
     /** The friend's own profile, authored by them and read by the two parents. */
     data object FriendProfile : Screen("friend_profile")
+
+    /** A family friend's read-only calendar of one family, by family id (phase 2). */
+    data object FriendCalendar : Screen("friend_calendar/{familyId}") {
+        /** Which family; read by `FriendCalendarViewModel` from its `SavedStateHandle`. */
+        const val ARG_FAMILY_ID = "familyId"
+
+        /** Builds the route for [familyId]. */
+        fun createRoute(familyId: String): String = "friend_calendar/$familyId"
+    }
 
     /** Professional access (MON-18): the parents' grants and a professional's families. */
     data object Professionals : Screen("professionals")

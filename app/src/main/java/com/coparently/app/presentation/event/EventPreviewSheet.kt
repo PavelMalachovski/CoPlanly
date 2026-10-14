@@ -149,35 +149,7 @@ internal fun EventPreviewContent(
         }
 
         PreviewRow(icon = Icons.Default.Schedule) {
-            val dateFormat = localizedDate("yMMMEEEd")
-            val timeFormat = shortTime()
-            val dateText = event.startDateTime.format(dateFormat)
-            val timeText = buildString {
-                append(event.startDateTime.format(timeFormat))
-                event.endDateTime?.let { end ->
-                    append(" – ")
-                    // An overnight or multi-day event names its end day too; "22:00 – 07:00"
-                    // under the start date read as ending before it began.
-                    if (end.toLocalDate() != event.startDateTime.toLocalDate()) {
-                        append(end.format(dateFormat))
-                        append(' ')
-                    }
-                    append(end.format(timeFormat))
-                }
-            }
-            // An all-day event names its days and says "All day", never the "12:00 AM" its
-            // midnight start would print (`AllDayEvent`).
-            val allDayText = stringResource(R.string.event_all_day)
-            val lastDay = AllDayEvent.lastDay(event)
-            Text(
-                text = when {
-                    !AllDayEvent.isAllDay(event) -> "$dateText · $timeText"
-                    lastDay != event.startDateTime.toLocalDate() ->
-                        "$dateText – ${lastDay.format(dateFormat)} · $allDayText"
-                    else -> "$dateText · $allDayText"
-                },
-                style = MaterialTheme.typography.bodyMedium
-            )
+            Text(text = eventTimeLine(event), style = MaterialTheme.typography.bodyMedium)
         }
 
         PreviewRow(icon = Icons.Default.Person) {
@@ -307,6 +279,40 @@ private fun PreviewActions(onEdit: () -> Unit, onDelete: (() -> Unit)?) {
             if (onDelete != null) deleteButton(Modifier.weight(1f), onDelete)
             editButton(Modifier.weight(1f))
         }
+    }
+}
+
+/**
+ * When [event] is, as a sheet about it says so: its date and times, the end's own date when it
+ * ends on another day, or "All day". Shared by the parents' preview and a family friend's details
+ * (phase 2), so the two never word the same event's time differently.
+ */
+@Composable
+internal fun eventTimeLine(event: Event): String {
+    val dateFormat = localizedDate("yMMMEEEd")
+    val timeFormat = shortTime()
+    val dateText = event.startDateTime.format(dateFormat)
+    val timeText = buildString {
+        append(event.startDateTime.format(timeFormat))
+        event.endDateTime?.let { end ->
+            append(" – ")
+            // An overnight or multi-day event names its end day too; "22:00 – 07:00" under the
+            // start date read as ending before it began.
+            if (end.toLocalDate() != event.startDateTime.toLocalDate()) {
+                append(end.format(dateFormat))
+                append(' ')
+            }
+            append(end.format(timeFormat))
+        }
+    }
+    // An all-day event names its days and says "All day", never the "12:00 AM" its midnight
+    // start would print (`AllDayEvent`).
+    val allDayText = stringResource(R.string.event_all_day)
+    val lastDay = AllDayEvent.lastDay(event)
+    return when {
+        !AllDayEvent.isAllDay(event) -> "$dateText · $timeText"
+        lastDay != event.startDateTime.toLocalDate() -> "$dateText – ${lastDay.format(dateFormat)} · $allDayText"
+        else -> "$dateText · $allDayText"
     }
 }
 

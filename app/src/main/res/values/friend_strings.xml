@@ -23,4 +23,13 @@
     <string name="friend_empty">Nobody outside the family has calendar access.</string>
     <string name="friend_revoke_failed">Couldn\'t remove access. Check your connection and try again.</string>
     <string name="friend_redeem_code_label">Enter the code you were given</string>
+    <!-- A family friend's own read-only calendar of one family (phase 2). -->
+    <string name="friend_calendar_title">Family calendar</string>
+    <string name="friend_calendar_family">%1$s and %2$s</string>
+    <string name="friend_calendar_read_only">View only. Private events are never shared.</string>
+    <string name="friend_calendar_added_by">Added by %1$s</string>
+    <string name="friend_calendar_event_supporting">%1$s · %2$s</string>
+    <string name="friend_calendar_you_take_part">You take part</string>
+    <string name="friend_calendar_access_ended">Your access to this calendar has ended</string>
+    <string name="friend_calendar_failed">The calendar couldn\'t be loaded</string>
 </resources>
