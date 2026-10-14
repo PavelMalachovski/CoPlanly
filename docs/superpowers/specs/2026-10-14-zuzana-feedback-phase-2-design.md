@@ -56,11 +56,13 @@ Anti-goals (would be a failure even if it works):
 - **Order.** Build after the phase 1 branch that makes names and colours follow the selected
   family (`ParentsSource`, `HomeViewModel`) has merged: item 3 edits the same `HomeViewModel` and
   `HomeScreen`, and every name below is the selected family's co-parent.
-- **No new Room column, Firestore field, collection or push type.** Everything here is derived
-  from data both phones already hold: `change_requests`, `events.acceptance` / `acceptedBy` /
-  `acceptedAt`, `custody_models.dayOverridesJson`, and the custody document's `lastDecision`. So
-  no schema bump, no wire-contract fixture, no rules change and no `tools/e2e/coverage.json`
-  entry.
+- **No new Room column, collection or push type, and one new Firestore field.** Items 2 and 3 are
+  derived from data both phones already hold: `change_requests`, `events.acceptance` /
+  `acceptedBy` / `acceptedAt`, `custody_models.dayOverridesJson`, and the custody document's
+  `lastDecision`. The friend's calendar (§4.4) reads events the rules already admit and adds only
+  `parentNames` to a `calendar_friends` grant, which the callable writes as admin. So no schema
+  bump, no wire-contract fixture and no rules change; `tools/e2e/coverage.json` gains the friend
+  calendar's e2e test.
 - **Strings** in all five locales in the same commit, English in sentence case;
   `node tools/check-invariants.js` must pass. Text from a ViewModel is a `UiText`.
 - **Shared primitives** (CLAUDE.md design item 1): `SectionGroup` / `SectionRow` / `GroupLabel`
@@ -124,6 +126,56 @@ Below the code (drawn with `InviteCodeText`): "They enter it in their own CoPlan
 Family friends → I have a code from the parents." Actions: **Share code** (filled; the Android
 share sheet with a text naming the sender, the code and that path — one string with arguments)
 and **Done**. Today the sheet has no share action at all.
+
+### 4.4 The family friend's calendar (owner decision: built in this phase)
+
+**Today a friend has no calendar at all.** The rules let a friend read the family's events (the
+last disjunct of the `events` read rule, `isCalendarFriendOf`), but nothing in the app issues that
+read: a friend who redeems a code sees only "My profile" (the `myGrants` branch of
+`FriendsScreen`). `docs/ROADMAP.md` (MON-18) records it — "a friend's app shows their grant and
+their profile, nothing else … Building the friend's view on the same pieces is now a small
+change". Without it, §4.2's table and §4.3's "Will see" would promise what does not exist
+(design item 8), so the owner chose to build it now.
+
+- **Where it opens.** The friend's own view of "Family friends" lists **one row per live grant**:
+  title "Family calendar", supporting "%1$s and %2$s · access until %3$s" (the parents' first
+  names, §below, and the expiry), tap → the friend calendar for that grant. A friend of two
+  families sees two rows (L-5). Redeeming a code (§4.2's "Open the family calendar") opens the
+  calendar of the grant just made, so the button keeps its promise. "My profile" stays below.
+- **What it shows.** A read-only agenda built from the professional's pieces — the list-shaped
+  four-week agenda with paging (`ProfessionalAgenda.days`, `ProfessionalCalendarScreen`'s layout),
+  not the month grid: per day, each shared event's title and time, "Added by %1$s" when the
+  parents' names are known, and **"You take part"** with the friend's own colour
+  (`CoPlanlyColors.FriendTeal`) on events whose `friendParticipates` is this friend. No custody
+  colours and no "whose day": a friend cannot read `custody_models`, and the table in §4.2 says
+  "Custody schedule: no". No member chips: a friend cannot read `child_info`, so a child's
+  reference cannot be named. Tapping an event shows its details read-only (title, time,
+  description, takes part) — no Edit, no Delete, no Request change.
+- **Data.** A Firestore listener per open grant, with the query the rules are pinned to serve
+  (`firestore-tests/rules/friend-calendar.test.js`, "serves the family-scoped query a friend client
+  must run instead"): `whereEqualTo("familyId", grant.familyId)` and
+  `whereIn("createdByFirebaseUid", grant.familyParents)`, mapped as the professional's events are
+  (`ProfessionalEvents.from`: private and deleted events dropped, recurrences expanded for the
+  window). **Nothing is written to Room**: a friend's phone keeps no copy of somebody else's
+  family, as for a professional (CLAUDE.md item 29). Offline, Firestore's own cache answers; a
+  listener failure shows `ErrorState` with Retry, never an empty agenda posing as "no events".
+- **When access ends.** The grant listener the screen already has drops an expired or revoked
+  grant from the list. An open calendar whose grant has ended — the rule refuses the read at
+  `request.time`, so the listener fails with `PERMISSION_DENIED` — shows "Your access to this
+  calendar has ended" (an `EmptyState`), not the last events it saw.
+- **The parents' names.** `acceptCalendarFriendInvitation` copies the two parents' first names onto
+  the grant as `parentNames` (`{uid: firstName}`), as `acceptProfessionalInvitation` already does
+  for a professional; the client mapper reads the field with `get(...) as? Map<*, *>`. A grant
+  made before this has no names: its row reads "Family calendar · access until %1$s" and events
+  carry no "Added by" — *(my call: no backfill; the feature has only closed-test users)*.
+- **Tests.** Unit: the friend calendar ViewModel (loading, events, access ended, failure, retry)
+  and the event mapping (a private and a deleted event absent, a recurrence expanded, "You take
+  part"). Functions: `parentNames` on a friend grant. Two-phone e2e (`app/src/androidTest/.../e2e/`,
+  registered in `tools/e2e/coverage.json` under `calendar_friends` and `events`): a friend reads
+  the family's events through the production data source; a private event and the inviter's other
+  family's event are absent; after the parent revokes, the read is refused. Screenshot: an agenda
+  day with a "You take part" event. UI tour: the friend's family list and calendar. Rules: no
+  change (already pinned).
 
 ## 5. Item 2 — the creator's words and a mini calendar
 
@@ -291,6 +343,8 @@ Made by the owner in the conversation:
 - Home as in the mockup "Главная · строка «Запросы»": the always-present Requests row, answers in
   the co-parent's feed, "All requests and answers".
 - The comparison table on the Friends screen answers the tester's question.
+- A family friend gets a read-only calendar in this phase (§4.4), so the table and the invite tell
+  the truth.
 
 My calls (check while reading):
 - The push for a new event stays without the description.
@@ -303,6 +357,8 @@ My calls (check while reading):
   anyway).
 - The mini month has event dots (as in the chosen mockup) and no handover diagonal, holidays or
   swap arrows.
+- The friend's calendar is the professional's list agenda, not a month grid; no custody colours,
+  no member chips, read-only details; older grants without `parentNames` are not backfilled.
 - With two families, every surface here shows the family on screen only (§6.3).
 - No new Withdraw actions (§6.2): only change requests can be withdrawn, as today.
 - Outcome markers and chips stay neutral with a check / cross / undo icon, not green and red
