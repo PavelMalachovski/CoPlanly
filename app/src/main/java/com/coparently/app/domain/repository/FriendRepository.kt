@@ -2,9 +2,11 @@ package com.coparently.app.domain.repository
 
 import com.coparently.app.data.remote.firebase.AcceptCalendarFriendResult
 import com.coparently.app.domain.friends.CalendarFriendGrant
+import com.coparently.app.domain.friends.FriendCalendarRead
 import com.coparently.app.domain.friends.FriendProfile
 import com.coparently.app.domain.guests.GuestInvite
 import kotlinx.coroutines.flow.Flow
+import java.time.LocalDate
 
 /**
  * Letting a trusted third person read the family's calendar, and their own profile.
@@ -80,4 +82,15 @@ interface FriendRepository {
 
     /** A friend's profile as the two parents read it, or null when there is none. */
     fun observeFriendProfile(friendUid: String): Flow<FriendProfile?>
+
+    /**
+     * The calendar friend's read of [familyId]'s events between [from] and [to], inclusive, live
+     * (phase 2). Through the one query the rules admit a friend — the family's id and its two
+     * parents as creators — and never into Room. An event waiting for an answer, declined, private
+     * or deleted is not in it.
+     *
+     * A refused read ends the flow with [FriendCalendarRead.AccessEnded]; any other failure ends
+     * it with [FriendCalendarRead.Failed], and collecting again is the retry.
+     */
+    fun observeFamilyEvents(familyId: String, from: LocalDate, to: LocalDate): Flow<FriendCalendarRead>
 }
