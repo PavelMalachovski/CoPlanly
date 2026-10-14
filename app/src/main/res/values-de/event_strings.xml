@@ -89,4 +89,5 @@
     <!-- In place of a time for an event that starts at midnight and runs the whole day
          (domain/events/AllDayEvent.kt): Home, the today card, the event preview, the widget. -->
     <string name="event_all_day">Ganztägig</string>
+    <string name="event_form_description_coparent_hint">%1$s sieht das beim Antworten</string>
 </resources>

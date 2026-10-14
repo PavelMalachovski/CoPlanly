@@ -1,6 +1,10 @@
 package com.coparently.app.presentation.event
 
+import com.coparently.app.domain.events.EventAcceptanceTransition
+import com.coparently.app.domain.model.Event
 import org.junit.Test
+import java.time.LocalDateTime
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -85,5 +89,48 @@ class AddEditEventScreenTest {
                 currentUserSlot = null
             )
         )
+    }
+
+    /** One state of the form when the hint is decided. */
+    private data class HintCase(val isPaired: Boolean, val isPrivate: Boolean, val owner: String?, val mySlot: String?)
+
+    /** Every combination of the four, so nothing is left to the rule's own reading. */
+    private val hintCases: List<HintCase> =
+        listOf(true, false).flatMap { isPaired ->
+            listOf(true, false).flatMap { isPrivate ->
+                listOf("mom", "dad", null).flatMap { owner ->
+                    listOf("mom", null).map { mySlot -> HintCase(isPaired, isPrivate, owner, mySlot) }
+                }
+            }
+        }
+
+    @Test
+    fun `the description hint follows the rule that makes an event wait for an answer`() {
+        // Phase 2, spec §5.2: the hint promises the co-parent will read the description when they
+        // answer, so it may appear exactly when the event will wait for their answer.
+        val at = LocalDateTime.of(2026, 10, 21, 16, 0)
+        val event = Event(
+            id = "e1",
+            title = "Dentist",
+            startDateTime = at,
+            eventType = "medical",
+            parentOwner = "mom",
+            createdAt = at,
+            updatedAt = at
+        )
+        for (case in hintCases) {
+            val waits = EventAcceptanceTransition.required(
+                event.copy(isPrivate = case.isPrivate, parentOwner = case.owner ?: "mom"),
+                case.mySlot,
+                if (case.isPaired) "u2" else null
+            )
+            val newEvent = descriptionReachesCoParent(true, case.isPaired, case.isPrivate, case.owner, case.mySlot)
+
+            assertEquals(waits, newEvent, "$case")
+            if (case.owner == null) assertFalse(newEvent, "$case")
+            // An edit never asks again, so its description reaches nobody new.
+            val edit = descriptionReachesCoParent(false, case.isPaired, case.isPrivate, case.owner, case.mySlot)
+            assertFalse(edit, "$case")
+        }
     }
 }
