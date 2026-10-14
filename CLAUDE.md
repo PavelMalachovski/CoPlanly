@@ -824,13 +824,16 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   screenshots/` — Home's cards, the month grid with every `DayCellFills` layer, the calendar
   banners, a Settings group, `EmptyState`, `ErrorState`, `InlineBanner`, `StickyActionBar`, the
   offline banner, the Expenses summary header and its collapsed line, a chat thread, the event
-  preview body, the consent screen, the family switcher chip and the "My colour" picker — over a
-  variant matrix of theme,
+  preview body, the consent screen, the family switcher chip, the "My colour" picker, the requests
+  inbox's cards, mini month and history, and the family-friend comparison, invite sheet, agenda day
+  and event details — over a variant matrix of theme,
   the five languages, 1.0×/1.5×/2.0× font scale (2.0× in German only, added after the October 2026
   audit found money cut off at sizes the matrix never rendered) and the default vs a purple/orange
   parent palette (`ScreenshotVariants`: ten variants for text-heavy components, four for the rest,
   and high contrast in both themes for the month grid, a Settings group and a banner
-  (`ContrastScreenshots`, design item 17); 210 images — the count the committed baselines hold).
+  (`ContrastScreenshots`, design item 17); 290 images — the count the committed baselines hold).
+  The window is a phone's, 393 × 851 dp, so a component taller than that at 2.0× is cut at the
+  window's bottom edge (a Settings group in German, the friend comparison); the screen itself scrolls.
   **To view:** open the run's `screenshots` artefact, unzip, open `index.html`
   (`tools/screenshot-gallery.js`, no dependencies, filters by component/language/theme/scale/
   palette/contrast). Locally: `./gradlew recordRoborazziDebug` writes into `app/src/test/screenshots/` — don't commit what a laptop records (below).
