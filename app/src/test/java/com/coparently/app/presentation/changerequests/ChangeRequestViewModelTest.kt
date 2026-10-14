@@ -47,7 +47,6 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.YearMonth
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -214,20 +213,6 @@ class ChangeRequestViewModelTest {
         advanceUntilIdle()
 
         assertEquals(UiText.Res(R.string.change_request_error_proposal_decline_failed), vm.errorMessage.value)
-    }
-
-    @Test
-    fun `an empty inbox is told apart from one that has not loaded`() = runTest(dispatcher) {
-        val vm = viewModel()
-        backgroundScope.launch { vm.changeRequests.collect {} }
-        advanceUntilIdle()
-        assertFalse(vm.hasLoaded.value)
-
-        requests.emit(emptyList())
-        advanceUntilIdle()
-
-        assertTrue(vm.hasLoaded.value)
-        assertEquals(emptyList<ChangeRequest>(), vm.changeRequests.value)
     }
 
     @Test

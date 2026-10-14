@@ -416,11 +416,16 @@ fun NavGraph(
                     )
                 }
 
-                // Event change requests inbox (MVP 2)
+                // The requests inbox (MVP 2; three sections since phase 2)
                 pane(
                     route = Screen.ChangeRequests.route,
                     arguments = listOf(
                         navArgument(Screen.ChangeRequests.ARG_EVENT_ID) {
+                            type = NavType.StringType
+                            nullable = true
+                            defaultValue = null
+                        },
+                        navArgument(Screen.ChangeRequests.ARG_SECTION) {
                             type = NavType.StringType
                             nullable = true
                             defaultValue = null
@@ -439,7 +444,10 @@ fun NavGraph(
                         onOpenEvent = { eventId ->
                             navController.navigate(Screen.EditEvent.createRoute(eventId))
                         },
-                        linkedEventId = linkedEventId
+                        linkedEventId = linkedEventId,
+                        openSection = com.coparently.app.presentation.changerequests.InboxSection.fromRoute(
+                            backStackEntry.arguments?.getString(Screen.ChangeRequests.ARG_SECTION)
+                        )
                     )
                 }
 
@@ -1776,12 +1784,22 @@ sealed class Screen(val route: String) {
      */
     data object Contacts : Screen("contacts")
 
-    data object ChangeRequests : Screen("change_requests?eventId={eventId}") {
+    /**
+     * The requests inbox. The route keeps its old name; the screen holds more than change
+     * requests now (phase 2).
+     */
+    data object ChangeRequests : Screen("change_requests?eventId={eventId}&section={section}") {
         const val ARG_EVENT_ID = "eventId"
+        const val ARG_SECTION = "section"
 
-        /** @param eventId Event whose request should be highlighted, or null for the plain inbox. */
-        fun createRoute(eventId: String? = null): String =
-            "change_requests?eventId=${eventId ?: "null"}"
+        /**
+         * @param eventId Event whose request should be highlighted, or null for the plain inbox.
+         * @param section A section to scroll to on arrival, or null.
+         */
+        fun createRoute(
+            eventId: String? = null,
+            section: com.coparently.app.presentation.changerequests.InboxSection? = null
+        ): String = "change_requests?eventId=${eventId ?: "null"}&section=${section?.routeValue ?: "null"}"
     }
 
     /**

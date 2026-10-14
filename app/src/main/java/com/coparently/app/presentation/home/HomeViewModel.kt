@@ -611,8 +611,8 @@ class HomeViewModel @Inject constructor(
      * Day swaps still waiting for this parent's answer, soonest first.
      *
      * Same source and same filter as the inbox (`DaySwapInbox`), so the main page can never
-     * disagree with the screen that answers them. `LocalDate.now()` is read per emission for
-     * the reason `ChangeRequestViewModel.daySwaps` documents: this flow outlives midnight.
+     * disagree with the screen that answers them. `LocalDate.now()` is read per emission, as
+     * `RequestsSource` reads it: this flow outlives midnight.
      */
     private val awaitingSwaps: StateFlow<List<DaySwapGroup>> = combine(
         custodyModelRepository.observeDayOverrides(),
@@ -626,9 +626,9 @@ class HomeViewModel @Inject constructor(
     /**
      * Incoming change requests plus pending events still waiting for this parent's answer.
      *
-     * The event half mirrors the inbox's `eventsAwaitingMe`: `getAllEvents` is deliberately not
-     * acceptance-filtered, and only events this parent did not create count — the creator cannot
-     * decide their own.
+     * The event half follows the inbox's rule (`AwaitingAnswers.eventAwaitsAnswerFrom`):
+     * `getAllEvents` is deliberately not acceptance-filtered, and only events this parent did not
+     * create count — the creator cannot decide their own.
      */
     private val awaitingRequestCount: StateFlow<Int> = combine(
         _userId.flatMapLatest { uid ->

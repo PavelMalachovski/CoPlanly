@@ -103,4 +103,5 @@
     <string name="custody_window_add_confirm">Добавить</string>
     <string name="custody_diff_windows_only">Изменятся только периоды общения.</string>
     <string name="custody_diff_windows_too">Периоды общения тоже меняются.</string>
+    <string name="custody_proposal_inbox_body_yours">Вы предложили новый график опеки</string>
 </resources>

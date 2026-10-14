@@ -2,17 +2,15 @@
 <!-- Change-request inbox and form strings. Kept out of strings.xml because
      strings.xml is gitignored in this project (it holds local OAuth values). -->
 <resources>
-    <string name="change_request_inbox_title">Change requests</string>
+    <string name="change_request_inbox_title">Requests</string>
     <string name="change_request_back">Back</string>
-    <string name="change_request_empty_title">No change requests yet</string>
+    <string name="change_request_empty_title">No requests yet</string>
     <string name="change_request_empty_hint">Open an event and tap \"Request change\" to propose a new time to your co-parent.</string>
-    <string name="change_request_incoming">Incoming</string>
-    <string name="change_request_outgoing">Outgoing</string>
     <!-- Status chip labels (UI labels for ChangeRequestStatus). -->
     <string name="change_request_status_pending">Pending</string>
     <string name="change_request_status_accepted">Accepted</string>
     <string name="change_request_status_declined">Declined</string>
-    <string name="change_request_status_cancelled">Cancelled</string>
+    <string name="change_request_status_cancelled">Withdrawn</string>
     <string name="change_request_current">Current</string>
     <string name="change_request_proposed">Proposed</string>
     <!-- Requester's note rendered in quotation marks. -->
@@ -47,4 +45,22 @@
     <string name="change_request_error_signed_out">You\'re signed out. Sign in and try again.</string>
     <string name="change_request_error_not_paired">Pair with your co-parent first to send change requests.</string>
     <string name="change_request_error_send_failed">The change request could not be sent. Please try again.</string>
+    <!-- The inbox's three sections (phase 2). A heading is drawn in capitals by GroupLabel. -->
+    <string name="request_section_waiting_on_you">Waiting for your answer</string>
+    <string name="request_section_waiting_on_them">Waiting for %1$s</string>
+    <string name="request_section_history">History</string>
+    <!-- One History row: what it was, then who answered and when. The time is a part of its own
+         after " · ", never inside the sentence, so no language needs a preposition before it. -->
+    <string name="request_history_new_time">New time for %1$s</string>
+    <string name="request_history_day_swap">Day swap: %1$s</string>
+    <string name="request_history_custody">New custody schedule</string>
+    <string name="request_history_yours_answered">Your request · %1$s answered</string>
+    <string name="request_history_theirs_answered">%1$s\'s request · you answered</string>
+    <string name="request_history_withdrawn_by_you">You withdrew it</string>
+    <string name="request_history_withdrawn_by">%1$s withdrew it</string>
+    <string name="request_history_when">%1$s · %2$s</string>
+    <plurals name="request_swap_first_and_more">
+        <item quantity="one">%1$s and %2$d more day</item>
+        <item quantity="other">%1$s and %2$d more days</item>
+    </plurals>
 </resources>

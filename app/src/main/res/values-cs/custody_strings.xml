@@ -103,4 +103,5 @@
     <string name="custody_window_add_confirm">Přidat</string>
     <string name="custody_diff_windows_only">Změnily by se jen časy styku.</string>
     <string name="custody_diff_windows_too">Mění se i časy styku.</string>
+    <string name="custody_proposal_inbox_body_yours">Navrhli jste nový rozvrh péče</string>
 </resources>

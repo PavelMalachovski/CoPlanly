@@ -1,11 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="change_request_inbox_title">Запросы на изменение</string>
+    <string name="change_request_inbox_title">Запросы</string>
     <string name="change_request_back">Назад</string>
-    <string name="change_request_empty_title">Пока нет запросов на изменение</string>
+    <string name="change_request_empty_title">Пока нет запросов</string>
     <string name="change_request_empty_hint">Откройте событие и нажмите «Запросить изменение», чтобы предложить второму родителю новое время.</string>
-    <string name="change_request_incoming">Входящие</string>
-    <string name="change_request_outgoing">Исходящие</string>
     <string name="change_request_status_pending">Ожидает</string>
     <string name="change_request_status_accepted">Принят</string>
     <string name="change_request_status_declined">Отклонён</string>
@@ -42,4 +40,22 @@
     <string name="change_request_error_signed_out">Вы вышли из аккаунта. Войдите и попробуйте ещё раз.</string>
     <string name="change_request_error_not_paired">Чтобы отправлять запросы на изменение, сначала подключите второго родителя.</string>
     <string name="change_request_error_send_failed">Не удалось отправить запрос на изменение. Попробуйте ещё раз.</string>
+    <string name="request_section_waiting_on_you">Ждут вашего ответа</string>
+    <string name="request_section_waiting_on_them">Ждут ответа: %1$s</string>
+    <string name="request_section_history">История</string>
+    <string name="request_history_new_time">Новое время: %1$s</string>
+    <string name="request_history_day_swap">Обмен днями: %1$s</string>
+    <string name="request_history_custody">Новый график опеки</string>
+    <!-- Noun phrases and "вы", not "X ответил(а)": a name cannot agree with a gendered verb. -->
+    <string name="request_history_yours_answered">Ваш запрос · ответ: %1$s</string>
+    <string name="request_history_theirs_answered">Запрос: %1$s · вы ответили</string>
+    <string name="request_history_withdrawn_by_you">Вы отозвали запрос</string>
+    <string name="request_history_withdrawn_by">%1$s: запрос отозван</string>
+    <string name="request_history_when">%1$s · %2$s</string>
+    <plurals name="request_swap_first_and_more">
+        <item quantity="one">%1$s и ещё %2$d день</item>
+        <item quantity="few">%1$s и ещё %2$d дня</item>
+        <item quantity="many">%1$s и ещё %2$d дней</item>
+        <item quantity="other">%1$s и ещё %2$d дня</item>
+    </plurals>
 </resources>

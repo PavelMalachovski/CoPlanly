@@ -1,11 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="change_request_inbox_title">Žádosti o změnu</string>
+    <string name="change_request_inbox_title">Žádosti</string>
     <string name="change_request_back">Zpět</string>
-    <string name="change_request_empty_title">Zatím žádné žádosti o změnu</string>
+    <string name="change_request_empty_title">Zatím žádné žádosti</string>
     <string name="change_request_empty_hint">Otevřete událost a klepněte na „Požádat o změnu“, abyste druhému rodiči navrhli nový čas.</string>
-    <string name="change_request_incoming">Příchozí</string>
-    <string name="change_request_outgoing">Odchozí</string>
     <string name="change_request_status_pending">Čeká</string>
     <string name="change_request_status_accepted">Přijato</string>
     <string name="change_request_status_declined">Odmítnuto</string>
@@ -42,4 +40,21 @@
     <string name="change_request_error_signed_out">Jste odhlášeni. Přihlaste se a zkuste to znovu.</string>
     <string name="change_request_error_not_paired">Nejdřív se propojte s druhým rodičem, abyste mohli posílat žádosti o změnu.</string>
     <string name="change_request_error_send_failed">Žádost o změnu se nepodařilo odeslat. Zkuste to prosím znovu.</string>
+    <string name="request_section_waiting_on_you">Čekají na vaši odpověď</string>
+    <string name="request_section_waiting_on_them">Čekají na odpověď: %1$s</string>
+    <string name="request_section_history">Historie</string>
+    <string name="request_history_new_time">Nový čas: %1$s</string>
+    <string name="request_history_day_swap">Výměna dnů: %1$s</string>
+    <string name="request_history_custody">Nový rozvrh péče</string>
+    <string name="request_history_yours_answered">Vaše žádost · odpověď: %1$s</string>
+    <string name="request_history_theirs_answered">Žádost: %1$s · odpověděli jste</string>
+    <string name="request_history_withdrawn_by_you">Žádost jste stáhli</string>
+    <string name="request_history_withdrawn_by">%1$s: žádost stažena</string>
+    <string name="request_history_when">%1$s · %2$s</string>
+    <plurals name="request_swap_first_and_more">
+        <item quantity="one">%1$s a %2$d další den</item>
+        <item quantity="few">%1$s a %2$d další dny</item>
+        <item quantity="many">%1$s a %2$d dalšího dne</item>
+        <item quantity="other">%1$s a %2$d dalších dní</item>
+    </plurals>
 </resources>
