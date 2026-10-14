@@ -404,6 +404,9 @@
     "purgeParentHealthFields": {
       "exempt": "Operator-run one-off cleanup of the removed parent health keys, not a phone-to-phone feature; functions/test covers it."
     },
+    "repairChildAndPetAudiences": {
+      "exempt": "Operator-run one-off repair of child and pet audiences the cross-family leak widened, not a phone-to-phone feature; functions/test/child-pet-audience-repair.test.js covers it, and MultiFamilyRecordsTest covers the client writes it repairs."
+    },
     "backfillParentSlots": {
       "exempt": "Operator-only maintenance callable, not a phone-to-phone feature; functions/test covers it."
     },

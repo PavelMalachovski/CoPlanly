@@ -3703,6 +3703,172 @@ exports.purgeParentHealthFields = regional.runWith({timeoutSeconds: 540}).https.
 );
 
 /**
+ * The collections [repairChildAndPetAudiencesImpl] bounds to their own family. `child_info` and
+ * `pets` are the per-document audiences a phone used to widen with the co-parent of whichever
+ * family it was showing; events took their family's co-parent already (`FamilyAudience`).
+ */
+const FAMILY_BOUND_AUDIENCE_COLLECTIONS = ['child_info', 'pets'];
+
+/** Firestore caps a batched write at 500 operations; stay clear of the edge. */
+const AUDIENCE_REPAIR_BATCH_LIMIT = 400;
+
+/**
+ * The part of a child's or a pet's audience that may stay, given the two parents its family id
+ * names: every uid of `sharedWith` that is one of [members] or — on a child's record — a guest its
+ * `guests` map names, in stored order and once each. A pet has no guests, so a `guests` key on a
+ * pet document admits nobody.
+ *
+ * @param {string} collection `child_info` or `pets`.
+ * @param {!Object} data The record.
+ * @param {!Array<string>} members The family's two parents.
+ * @return {!Array<string>} The uids of `sharedWith` that may stay.
+ */
+function familyBoundAudience(collection, data, members) {
+  const guests = collection === 'child_info' && data.guests && typeof data.guests === 'object' &&
+    !Array.isArray(data.guests) ? Object.keys(data.guests) : [];
+  const stored = Array.isArray(data.sharedWith) ? data.sharedWith : [];
+  return Array.from(new Set(stored.filter((uid) =>
+    typeof uid === 'string' && (members.includes(uid) || guests.includes(uid)))));
+}
+
+/**
+ * Body of the `repairChildAndPetAudiences` callable — takes the parent of another family out of
+ * every child's and pet's record, and puts the record's own co-parent back where they were lost.
+ *
+ * **The leak it repairs.** A parent in two families (M-8) switched their phone to the second
+ * family, and the next sync re-uploaded every child they had entered for the first with
+ * `sharedWith: [them, the second family's parent]` — medical profile, allergies and medications
+ * readable by that parent, and gone from the first family's — while a pet's audience repair added
+ * the second family's parent beside the first's. `firestore.rules` let it through, because it bounded
+ * an audience by the writer's co-parents rather than by the record's family. The client and the
+ * rules no longer allow it; this pass undoes what was already written.
+ *
+ * For every `child_info` and `pets` document whose `familyId` names a family:
+ *
+ * - every uid of `sharedWith` that is neither one of the family's two parents — the id is
+ *   `FamilyKey.of`'s two uids sorted and joined — nor, on a child's record, a guest its `guests`
+ *   map names is dropped. A guest's grant is not judged here; `sweepExpiredGuests` does that.
+ * - the family's other parent is put back if missing — **only while the family is live**
+ *   ([liveFamily]: both profiles exist and name each other). An unpair's sweep narrowed the
+ *   record on purpose, and re-admitting an ex-partner is not a repair.
+ *
+ * What it never does: write anything but `sharedWith` — never a tombstone's deletion fields,
+ * never `updatedAt`, so no phone's conflict comparison changes its answer; touch a record whose
+ * family is blank (which of a parent's families it is about is exactly what the server cannot say
+ * — `stampOwnBlankFamilyIds` declines the same guess); or "repair" a record whose family does not
+ * name its own creator, which the create rule never admits and which is left for a person. A
+ * tombstone is repaired like any record: it keeps the record's data until the 90-day sweep.
+ *
+ * Idempotent: a second run finds every audience already inside its family and writes nothing.
+ *
+ * @param {FirebaseFirestore.Firestore} db Firestore instance.
+ * @param {{dryRun: (boolean|undefined)}=} options `dryRun` counts what would change and writes
+ *     nothing — the scope of the leak, for the breach assessment, before anything is touched.
+ * @return {!Promise<{scanned: number, repaired: number, removed: number, readded: number,
+ *     dryRun: boolean, perCollection: !Object<string, number>, skipped: {blankFamily: number,
+ *     malformedFamily: number, creatorOutsideFamily: number}}>} `repaired` counts records whose
+ *     audience changed (or would), `removed` the uids taken out, `readded` the records that got
+ *     their own co-parent back.
+ */
+async function repairChildAndPetAudiencesImpl(db, options) {
+  const dryRun = Boolean(options && options.dryRun === true);
+  const summary = {
+    scanned: 0,
+    repaired: 0,
+    removed: 0,
+    readded: 0,
+    dryRun,
+    perCollection: {},
+    skipped: {blankFamily: 0, malformedFamily: 0, creatorOutsideFamily: 0},
+  };
+  // One liveness check per family, however many of its records there are.
+  const liveness = new Map();
+  const isLive = (familyId, uid) => {
+    if (!liveness.has(familyId)) {
+      liveness.set(familyId, liveFamily(db, familyId, uid).then((family) => family !== null));
+    }
+    return liveness.get(familyId);
+  };
+
+  for (const collection of FAMILY_BOUND_AUDIENCE_COLLECTIONS) {
+    summary.perCollection[collection] = 0;
+    const snap = await db.collection(collection).get();
+    let batch = db.batch();
+    let pending = 0;
+
+    for (const doc of snap.docs) {
+      summary.scanned++;
+      const data = doc.data() || {};
+      if (isBlankFamilyId(data.familyId)) {
+        summary.skipped.blankFamily++;
+        continue;
+      }
+      const members = data.familyId.split('__');
+      if (members.length !== 2 || members.some((uid) => uid === '') || members[0] === members[1]) {
+        summary.skipped.malformedFamily++;
+        continue;
+      }
+      const creator = data.createdByFirebaseUid;
+      if (!members.includes(creator)) {
+        summary.skipped.creatorOutsideFamily++;
+        continue;
+      }
+
+      const stored = Array.isArray(data.sharedWith) ? data.sharedWith : [];
+      const next = familyBoundAudience(collection, data, members);
+      const removed = stored.filter((uid) => !next.includes(uid)).length;
+      const otherParent = members[0] === creator ? members[1] : members[0];
+      const readd = !next.includes(otherParent) && await isLive(data.familyId, creator);
+      if (readd) next.push(otherParent);
+      if (next.length === stored.length && next.every((uid, i) => uid === stored[i])) continue;
+
+      summary.repaired++;
+      summary.perCollection[collection]++;
+      summary.removed += removed;
+      if (readd) summary.readded++;
+      if (dryRun) continue;
+
+      batch.update(doc.ref, {sharedWith: next});
+      pending++;
+      if (pending === AUDIENCE_REPAIR_BATCH_LIMIT) {
+        await batch.commit();
+        batch = db.batch();
+        pending = 0;
+      }
+    }
+    if (pending > 0) await batch.commit();
+  }
+  return summary;
+}
+
+exports.repairChildAndPetAudiencesImpl = repairChildAndPetAudiencesImpl;
+
+/**
+ * Takes another family's parent out of every child's and pet's record — the server half of the
+ * cross-family leak's fix (see [repairChildAndPetAudiencesImpl]).
+ *
+ * Operator-only on the same allow-list as the other backfills, and 540 seconds for the same reason:
+ * one pass over two bounded collections. Run it with `{dryRun: true}` first — the counts are the
+ * scope of the leak — then without, once `firestore.rules` with the family bound on `child_info` and
+ * `pets` is deployed (from then on no client can write the leak again). Idempotent, so a second run
+ * is harmless. Logs the counts and nothing else: never a uid, a name or a record id.
+ *
+ * @return {!Promise<!Object>} See [repairChildAndPetAudiencesImpl].
+ */
+exports.repairChildAndPetAudiences = regional.runWith({timeoutSeconds: 540}).https.onCall(
+    async (data, context) => {
+      if (!isBackfillOperator(context)) {
+        throw new functions.https.HttpsError(
+            'permission-denied', 'Operator access only', {reason: 'not-operator'});
+      }
+      const summary = await repairChildAndPetAudiencesImpl(
+          admin.firestore(), {dryRun: Boolean(data && data.dryRun === true)});
+      console.log(`repairChildAndPetAudiences: ${JSON.stringify(summary)}`);
+      return summary;
+    },
+);
+
+/**
  * Creates the `families/{id}` document for pairs that formed before pairing wrote one.
  *
  * Operator-only on the same allow-list as [backfillParentSlots] and for the same reason, only
