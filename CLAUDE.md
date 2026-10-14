@@ -216,6 +216,18 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     when nothing was read. The document is the co-parent's to write and the rules type only its
     name, so every field is read as `get(...) as? String`, never `getString`, which throws inside
     the listener on a number and took the other phone down on every launch.
+    **Names and colours follow the family on screen** (October 2026, tester report #11).
+    `presentation/common/CoParentOnScreen.kt` resolves the co-parent by
+    `ChatPartnerSource.resolve`'s rule — the server says *whether* there is one, the switcher's
+    projection *which* — and keeps their profile live: from the pairing state while that family is
+    the one the server's link names, through `PairingRepository.observeCoParentProfile` otherwise,
+    keyed on the uid, and with no profile for a moment after a switch rather than the previous
+    family's. `ParentsSource`, `FamilyKindSource` and Home read it, the export through
+    `ParentsSource`, and the parenting plan's family applies the same rule with the file's helpers
+    (`observeSignedInUser`, `projectedCoParentUid`). **Never take a screen's co-parent from
+    `PairingState.Paired.partner`**: that is the server's `partnerId`, which
+    `acceptPairingInvitation` keeps on the *first* co-parent, and it is how the new-event form in a
+    parent's second family named the first family's co-parent, in their colour.
 13. **The family switcher is one state and one dialog, and it appears at two** (M-8, September
     2026). `presentation/common/FamilySwitcher.kt` holds `FamilySwitcherChip` (Home and Expenses
     top bars, beside the gear) and `FamilySwitcherDialog`, which the Settings row opens too; both
@@ -400,7 +412,17 @@ When touching the UI, keep these invariants:
    Don't read the legacy schedules directly in a view — model-based custody would vanish.
 5. **Event tap opens a preview bottom sheet** (`EventPreviewSheet`, details + Edit/Delete);
    the editor is the second step — on Home too since September 2026 (`HomeViewModel.
-   openPreview`; Home passes `onDelete = null` because it has no delete-with-undo). The event form has a sticky bottom Save button.
+   openPreview`; Home passes `onDelete = null` because it has no delete-with-undo), and from a
+   chat card about an event since October 2026 (`ChatEventCardHost`, `onDelete = null` for the same
+   reason). Where a chat card leads is `ChatCardTarget`'s decision, from the message alone: a card
+   about an event opens its preview over the thread — or the inbox while it still waits on this
+   parent's answer (`AwaitingAnswers.eventAwaitsAnswerFrom`, the rule the inbox counts by), or says
+   "That event no longer exists." — looked up in Room and then on the server, because a card
+   reaches the thread before its event reaches Room; a change-request card still opens the inbox
+   highlighted, a day-swap card the inbox unhighlighted, and an "Event removed", expense or custody
+   card nothing. `MessageItem` reads the opener from `LocalChatEventCard`, not a parameter,
+   because the detekt baseline keys two entries on its signature. The event form has a sticky
+   bottom Save button.
 6. **Color semantics**: Mom-pink/Dad-blue are parent identity ONLY, applied via
    `ParentColors` (which resolves the family's chosen palette — design refresh item 12), never
    `CoPlanlyColors.MomPink/DadBlue` directly in a screen. The theme's `secondary` slot is a neutral
@@ -583,7 +605,12 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   **across the date line** (UTC+14 and UTC−11) reaching unread, DELIVERED and READ on the right
   phones — **CQ-18's logic, closed as far as software can close it**; a shared expense that puts
   half the amount on the *other* parent's balance (the `splitBetween` class); and M-8's second
-  family keeping its audience, `familyId` and announcement thread. Since September 2026 also
+  family keeping its audience, `familyId` and announcement thread — the family reaching the
+  inviter's phone through her own pairing listener since October 2026, where `MultiFamilyTest`
+  used to copy the server's set into Room by hand (item 39) — and `MultiFamilyRecordsTest` pinning
+  the cross-family leak of item 38: a child and a pet of the first family keep its audience, and
+  are marked synced, after a switch to the second and a sync, and the second family's parent is
+  refused both. Since September 2026 also
   **files** (`TwoParentAttachmentsTest`, Storage emulator and the real `storage.rules`): a chat
   attachment stays off the server while its upload fails and arrives after the outbox retry, the
   co-parent's download matches its bytes, a stranger's is refused, and a vault document opens for
@@ -602,8 +629,10 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   `AliceOnScreenTest`, which two more classes share: `OnScreenAgreementsTest` (Bob's change request
   raising the calendar banner and accepted from the inbox; his custody proposal, day swaps and a
   seasonal layer popping up on Home and answered there, the layer then naming him in today's
-  month-cell description) and `OnScreenFamiliesTest` (a third parent's message dotting the family
-  switcher, the switch bringing her thread onto the Chat tab). They find everything through the
+  month-cell description) and `OnScreenFamiliesTest` (a third parent's family reaching Alice's
+  open phone with no sync run by hand and without taking over the screen, her message dotting the
+  family switcher, the switch making the new-event form name her rather than Bob and bringing her
+  thread onto the Chat tab). They find everything through the
   app's own string resources and content descriptions — no test tag was added for them — with
   the Compose clock paused and every wait bounded. Five things not to undo.
   **No `google-services.json`** here either, for the reason given above. **The tests skip
@@ -1327,13 +1356,21 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     clears `syncedToFirestore` as part of the slot re-stamp. The inviter keeps their slot
     (`PairingViewModel.withSlotReslot`), `ParentSlotMigrator.reslot` returns 0 on `from == to`,
     and their whole pre-pairing history — Google Calendar imports included — stayed private
-    forever. `SyncService.backfillAudienceForPartner` now re-queues this user's own non-private
-    events once per co-parent uid, from the sync path rather than from pairing, so it also
-    repairs pairs that already exist without them unpairing. Two rules for anything similar:
-    key the marker on the **partner uid**, not a boolean, or it never re-arms on re-pairing; and
-    exclude private rows **in the statement**, because a row with the flag cleared is a row
-    queued for upload. Rows whose `createdByFirebaseUid` is null are deliberately not matched —
-    nothing distinguishes this user's un-stamped event from anybody else's.
+    forever. `SyncService.backfillAudienceForPartner` (and its child-info twin) now re-queues this
+    user's own non-private rows when the account **gains** a co-parent, from the sync path rather
+    than from pairing, so it also repairs pairs that already exist without them unpairing. Three
+    rules for anything similar, stated once in `SyncService.backfillForNewCoParents`. **The marker
+    names the co-parent set**, sorted and comma-joined — never a boolean, which never re-arms on
+    re-pairing, and never the family on screen, which is what it named until October 2026: every
+    family switch then re-queued every own event and child and announced them again to the family
+    being looked at, and each child went back up under that family's audience (item 38). A set of
+    one is that uid alone, so a one-family install reads its old marker as done. **It re-queues
+    only when somebody arrived**: a co-parent who left only drops out of the marker, so re-pairing
+    with them re-arms it, and an unpaired account blanks it. `RECORDS_SHARED` goes only to the
+    arrived co-parents a quiet re-upload now names. And **exclude private rows in the statement**,
+    because a row with the flag cleared is a row queued for upload. Rows whose
+    `createdByFirebaseUid` is null are deliberately not matched — nothing distinguishes this user's
+    un-stamped event from anybody else's.
 17. **A save path never reads a `WhileSubscribed` StateFlow's `.value`.** Every ViewModel shares
     `ParentsSource`/`FamilyKindSource` with `SharingStarted.WhileSubscribed`, so in a ViewModel
     instance no screen has collected — which is exactly what a **form-only route** is — `.value`
@@ -1346,7 +1383,14 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     stream is for what the screen *renders*. Same reason a Settings dialog seeds from
     `FamilyKindSource.observeMine()` and not `observe()`: the union of both parents' answers is
     what the app *shows*, while the dialog *writes* this parent's row alone, so seeding it with
-    the union made every checkbox a lie.
+    the union made every checkbox a lie. **Nor does a save path take `.first()` of a flow built over
+    `observePairingState()`**: every collection of the pairing state starts at `Loading`, whatever
+    the screen has already drawn, so the first value says "no family". `ParentingPlanViewModel.
+    edit` took `scope.first()` and returned on the null, and every answer and agreement a parent
+    saved was dropped without a word (October 2026) — the unit tests fed an already-paired state
+    and never saw it. Wait for a non-null value under a timeout
+    (`withTimeoutOrNull(SCOPE_WAIT_MS) { scope.filterNotNull().first() }`) and report the timeout
+    rather than return quietly.
 18. **`familyId` names a relationship; nothing reads it yet, and that is deliberate.** Every
     shared record — event, expense, budget, child, pet, change request — carries the
     `FamilyKey.of(myUid, partnerUid)` id of the co-parenting relationship it belongs to (Room
@@ -1357,16 +1401,26 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     not move a child, an expense or a settled month into a different household — and **null is a
     value**, meaning "mine alone", which is what every record written before its owner paired
     honestly is. `FamilyIdBackfill` turns those nulls into a family once there is one to name,
-    locally, once per co-parent; it deliberately does **not** clear `syncedToFirestore`, because
-    re-queuing all six tables would put the co-parent's own downloaded rows into this device's
-    outbox where the create rule rejects them forever.
+    locally, once per co-parent — and **only while there is exactly one co-parent** (October
+    2026). With two, nothing on the phone says which family a null row is about, so it stamps
+    nothing and the rows stay "mine alone", the guess the server declines too
+    (`stampOwnBlankFamilyIds`, `ambiguous`); it used to stamp the family on screen, and again after
+    every switch. For the same reason a save leaves an existing unstamped child or pet unstamped
+    while there are two co-parents (`familyToStamp` in their repositories); a record created now is
+    stamped with the family on screen, because it is created in it. It deliberately does **not**
+    clear `syncedToFirestore`, because re-queuing all six tables would put the co-parent's own
+    downloaded rows into this device's outbox where the create rule rejects them forever.
     The field is not in `firestore.rules` and no query filters on it. That is the sequencing, not
     an omission: a read path keyed on `familyId` has to pin the field against a non-creator writer
     the way `sharedWith` is pinned, and pinning it while the two phones are still catching up
     denies the app's own writes — a device whose backfill has not run writes `familyId ?: ""` over
     a stamped document. See `docs/DESIGN-multi-family.md` M-2 for why the relaxed version of that
     pin is not a pin at all. The switch is M-4, where `familyId` **replaces** `sharedWith` rather
-    than joining it, after a server-side pass has stamped the documents themselves.
+    than joining it, after a server-side pass has stamped the documents themselves. *(This
+    paragraph predates M-4 and is kept for the order it argues. The rules read `familyId` now —
+    `familyIsMineOrBlank`, `isLiveFamilyMember` for expenses and budgets, whose query filters on it,
+    the vault, the friend and professional grants, and item 38's child and pet bound — so "nothing
+    reads it yet" is history, not a description.)*
 19. **The parent slot and `caresFor` belong to a relationship, not to a person** (M-3, Aug 2026).
     Both live on `families/{id}` as maps keyed by uid — `slots` written only by Cloud Functions,
     `caresFor` written by each parent for **their own key only**, which `firestore.rules` enforces
@@ -1455,11 +1509,12 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     made the second parent retype everything the first one had entered. Six things hold it up,
     and each closes a defect that was found by trying the flow end to end:
     - **`SyncRequester` asks for a sync on the Paired transition** (`PairingRepositoryImpl.
-      onPairingStateObserved`), on both phones. The mirror there says *that* the phone is paired;
-      the sync is what widens the inviter's audiences and downloads them on the accepter's side.
-      Before it both waited on the fifteen-minute tick. `SyncWorker.syncNow` also remembers a
-      request that lands mid-run and appends one more run — `ExistingWorkPolicy.KEEP` used to drop
-      it, and during pairing that was the normal case.
+      onPairingStateObserved`), on both phones — and, since October 2026, for every co-parent the
+      account's set gains, a second family included (item 39). The mirror there says *that* the
+      phone is paired; the sync is what widens the inviter's audiences and downloads them on the
+      accepter's side. Before it both waited on the fifteen-minute tick. `SyncWorker.syncNow` also
+      remembers a request that lands mid-run and appends one more run — `ExistingWorkPolicy.KEEP`
+      used to drop it, and during pairing that was the normal case.
     - **The wizard observes Room rather than reading once**, and the drafts take an emission only
       while every one of them is blank (`orStoredChildren`). That guard is the whole difference
       from the `ChildInfoViewModel` defect below: a form with anything typed into it is never
@@ -1492,9 +1547,11 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     showing), and no trace of an earlier relationship — an unfinished `pendingRevocationOf`, an
     accepted co-parent invitation with somebody else, or one of the author's records naming
     another family or adult. Anything else is skipped with a reason and its blanks counted as
-    `unresolved`; a stamp from an old household is exactly the move item 18 forbids. **It writes
-    only `familyId`, only where it is blank** — never a tombstone's deletion fields, never a
-    record that already names a family. And **it is not a per-record write trigger**: that would
+    `unresolved`; a stamp from an old household is exactly the move item 18 forbids. The phone
+    holds the same line: `FamilyIdBackfill` stamps only while the account has exactly one
+    co-parent, and nothing at all with two (item 18). **It writes only `familyId`, only where it
+    is blank** — never a tombstone's deletion fields, never a record that already names a family.
+    And **it is not a per-record write trigger**: that would
     bill every write, cannot help a record uploaded while unpaired, and races the budgets
     `familyId` pin. Still open, in `docs/ROADMAP.md`: the `ambiguous`/`priorRelationship` blanks,
     which only a person can assign.
@@ -1515,6 +1572,18 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     their own record until some other write tidies the list. `myAudience()` reads the caller's
     profile and treats a missing one as a family of one rather than as an error, because an
     erroring rule denies and the first upload can race `ensureProfile`.
+    **On `child_info` and `pets`, "the caller's family" is the record's own once it names one**
+    (October 2026; item 38). "Any of the caller's co-parents" let a parent in two families write
+    the second family's co-parent into the first family's children. So a write may add to
+    `sharedWith` only one of the two parents the stamped `familyId` names — read from the id, as the
+    vault does, no document read — or, on a child's record, a guest the same write names in
+    `guests` (a pet has none, so a `guests` map on a stamped pet admits nobody). The check runs
+    against the family named before **and** after the write, so re-stamping a record into the other
+    family does not walk around it, and an id must name exactly two people
+    (`onlyFamilyAddedToItsFamily`, `audienceWithinItsFamily` for a create's whole audience,
+    `withinFamily`). Removals stay allowed, for the reason above; a record that names no family
+    keeps the older bound alone. `firestore-tests/rules/child-pet-family-audience.test.js` pins both
+    the leak's writes and the legitimate ones.
     `messages` create additionally requires the pairing behind the thread to be
     live, and `notifyOfChatMessage` re-checks it and takes the sender's name from their profile
     — an unpaired ex could otherwise keep posting under any name and have it pushed. Client
@@ -1918,8 +1987,11 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
       another account. The refresh token rotates: `BakalariAuthorizer` holds a mutex and **stores
       the new token before using it**, and an `invalid_grant` means "ask for the password again",
       never "delete the connection". Sign-out, an account switch and deletion remove every
-      connection; a Google Calendar disconnect does **not** (the keys are exempt from
-      `EncryptedPreferences.clear()` like the slot markers, because that disconnect calls it).
+      connection, each through `SchoolConnectionStore.clearAll()`; a Google Calendar disconnect
+      does **not** — since October 2026 it removes Google's own keys and nothing else
+      (`EncryptedPreferences.removeGoogleCalendarAccount`). The keys stay exempt from
+      `EncryptedPreferences.clear()` like the slot markers, an exemption made while that disconnect
+      still called `clear()`; keep it, since the three explicit calls are what forget them.
     - **One connection is one child in one family, chosen explicitly.** The family is asked for at
       two or more and never pre-selected; the child is pre-selected only when there is exactly
       one. Imported events are `eventType = "school"`, not private, `forMembers = [child:<id>]`,
@@ -2010,6 +2082,74 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
       and the name is the app's to show to a signed-in account. Its Android button is an `intent:`
       link bound to `app.coplanly` with Google Play as the fallback; its links are absolute, because
       the rewrite serves it at `/pair/CODE/`.
+
+38. **A child's or a pet's audience is its own family's** (October 2026, tester feedback phase 0).
+    Every writer of a `child_info` or `pets` audience — `SyncService.syncChildInfo`,
+    `ChildInfoRepositoryImpl` (save and pull), `PetRepositoryImpl` (save, pull and
+    `repairAudience`) — names the co-parent through `FamilyAudience.recordPartnerFor`, never
+    `UserEntity.partnerId`, which since M-8 is only the family on screen. That is how a parent in
+    two families leaked one family's children to the other: switching to the second family and
+    syncing once re-uploaded every child of the first with `sharedWith: [me, the second family's
+    parent]` — medical profile, allergies, medications, GDPR Art. 9 data about a child, handed to an
+    adult it was never about and gone from its own family's — and every pet pull added that parent
+    beside the first. The rules let it through, because item 23's bound was "any of the caller's
+    co-parents". Four things not to undo.
+    - **A stamped record never falls back to the family on screen.** It names its own family's
+      other parent while they are one of this parent's co-parents, and nobody once that pairing has
+      ended. Events keep `FamilyAudience.partnerFor`, which does fall back; a child's record must
+      not, because a guess is a disclosure. The `child_info_updated` push follows the record too.
+    - **An unstamped record names nobody while there are two or more co-parents**, and the family
+      on screen while there is exactly one (unchanged). With two, nothing says which family it is
+      about: `FamilyIdBackfill` stamps nothing (item 18), `familyToStamp` leaves an existing one
+      unstamped at save, and the server declines the same guess (`ambiguous`). A child or pet
+      created now is stamped with the family on screen, because it is created in it.
+    - **The rules hold the same line** (item 23, `onlyFamilyAddedToItsFamily`), so an older build
+      that still leaks is refused once they are deployed. `MultiFamilyRecordsTest` (e2e) runs
+      Alice's real repositories and sync with the second family on screen and requires the first
+      family's audience **and** the row marked synced on her phone — the second half is what shows
+      her client computed an audience the rules accept, rather than the rules quietly refusing a
+      leaking client. `FamilyAudienceTest` and `child-pet-family-audience.test.js` pin the rest.
+    - **What was already written is repaired by an operator, not by a client.**
+      `repairChildAndPetAudiences` (`functions/index.js`, the `BACKFILL_ADMIN_UIDS` allow-list,
+      `functions/test/child-pet-audience-repair.test.js`) drops from every family-stamped child's
+      and pet's `sharedWith` whoever is neither of the family's two parents nor, on a child's
+      record, a guest its `guests` map names, and puts the family's other parent back only while
+      the family is live (both profiles name each other) — an unpair's narrowing is never undone.
+      It writes `sharedWith` and nothing else, skips a blank family, and logs counts only. Run it
+      with `{dryRun: true}` first — the counts are the leak's scope for the breach assessment
+      (`docs/legal/DPIA.md` R20) — and for real once the rules above are deployed.
+
+39. **A pairing transition is a change of the co-parent set** (October 2026, tester report #4).
+    `PairingRepositoryImpl.onPairingStateObserved` keys its applied marker (`AppliedPairing`) on the
+    uid and every co-parent the account's own document names — `partnerIds` ∪ `partnerId`, the
+    union `partnersOf` and `UserRepositoryImpl.partnerUids` follow — never on `partnerId` alone.
+    `acceptPairingInvitation` keeps `partnerId` on the *first* co-parent and adds a second only to
+    `partnerIds`, so a parent whose code a second co-parent redeemed saw nothing happen on their own
+    open phone — no sync, no family in the switcher, no thread — until a sync tick or the push came
+    along, while the accepter's phone, whose `partnerId` did move, had it at once. The set rides
+    beside the state (`ObservedPairing`), not on `PairingState`: only the mirror needs it, and a
+    change of the set alone must reach the mirror without re-emitting a state no screen draws
+    differently. Four things not to undo.
+    - **Each newcomer gets what the first pairing gets**: one `SyncRequester.requestSyncNow()`, a
+      place in Room's `partnerIdsJson` and the conversation. A process that has applied nothing yet
+      finds every co-parent new — still one sync request, and each thread ensured, which
+      `PostPairingConversationSetup` is built to repeat on every launch.
+    - **The Room list is additive.** A co-parent the server stopped naming is left for the sync to
+      drop (`SyncService.syncUserData` copies the server's set over it): an own document that is
+      not there at all — an offline first read with nothing cached — reads as no co-parents, and a
+      list emptied on that evidence would take every family off the switcher. Newcomers go at the
+      end, so the first family stays the first.
+    - **The selection is reconciled, never switched.** A new family joins the switcher; it does not
+      take over the screen (`MultiFamilyTest` and `OnScreenFamiliesTest` assert both). A failed or
+      cancelled mirror puts the marker back with `compareAndSet` to what was applied before,
+      unless another collector has moved it on, so the next emission retries.
+    - **A switch to a family this device does not know yet waits sixty seconds.** The tap on a
+      second family's `pairing_accepted` push can land before the listener or a sync brings that
+      family in, and `SelectedFamilySource.select` used to refuse it, opening on the family already
+      on screen. It now remembers the request (`pendingSwitch`, in memory, for the account that
+      asked, `PENDING_SWITCH_MILLIS`), and the `reconcile()` that brings the family applies it. A
+      later `select` replaces it; a lapsed one, or another account's, is dropped; a family the
+      account is not in never arrives, so nothing ever comes of it.
 
 ## Legal and GDPR (September 2026) — keep consistent
 
@@ -2245,6 +2385,16 @@ whatever you were doing; a stale "known issue" costs more than a missing one.
   listener per non-selected family and a **dot** on the switcher (design item 13) — so don't
   paper over it with a count. Unverified on two
   phones: see M-8's acceptance note.
+  **Names, colours, Home, the export and the parenting plan followed the first co-parent too,
+  until October 2026** (tester report #11): `ParentsSource`, `FamilyKindSource`, Home's changes
+  header, the export's names and the parenting plan's family took the co-parent from the pairing
+  state's partner, and Home's unread tile and changes feed from the Room projection read once at
+  construction. So a parent who switched to their second family was shown the first co-parent's
+  name and colour on the event form, over records that were rightly the second family's, and the
+  first family's plan beside the second family's custody proposal. They now share
+  `ChatPartnerSource.resolve`'s rule through `presentation/common/CoParentOnScreen.kt` (design
+  refresh item 12), and the export waits for the co-parent by uid, so a record is never signed with
+  the previous family's name.
 
 - **Cross-time-zone chat is verified between two clients, not yet on two screens.** The August
   2026 chat sync moved message times to epoch millis specifically so two parents in different
