@@ -4,6 +4,8 @@ import com.coparently.app.data.local.dao.EventDao
 import com.coparently.app.data.local.entity.EventEntity
 import com.coparently.app.data.remote.google.CalendarEvents
 import com.coparently.app.data.remote.google.CredentialProvider
+import com.coparently.app.data.remote.google.GoogleAccessException
+import com.coparently.app.data.remote.google.GoogleAccessFailure
 import com.coparently.app.data.remote.google.GoogleCalendarApi
 import com.coparently.app.domain.model.User
 import com.coparently.app.domain.repository.UserRepository
@@ -38,7 +40,7 @@ class CalendarSyncRepositoryTest {
 
     private val eventDao: EventDao = mockk(relaxed = true)
     private val googleCalendarApi: GoogleCalendarApi = mockk()
-    private val credentialProvider: CredentialProvider = mockk()
+    private var credentialProvider: CredentialProvider = GrantingCredentials(mockk())
     private val userRepository: UserRepository = mockk()
 
     private fun repository() = CalendarSyncRepository(
@@ -53,7 +55,7 @@ class CalendarSyncRepositoryTest {
     fun `an imported event is stamped with the signed-in user's slot, read through UserRepository`() =
         runTest {
             val credential = mockk<Credential>()
-            coEvery { credentialProvider.getCredential() } returns credential
+            credentialProvider = GrantingCredentials(credential)
             coEvery { userRepository.getCurrentUserId() } returns "u1"
             coEvery { userRepository.getUserById("u1") } returns User(
                 id = "u1",
@@ -96,7 +98,7 @@ class CalendarSyncRepositoryTest {
     fun `syncFromGoogle throws rather than stamping an event when nobody is signed in`() =
         runTest {
             val credential = mockk<Credential>()
-            coEvery { credentialProvider.getCredential() } returns credential
+            credentialProvider = GrantingCredentials(credential)
             coEvery { userRepository.getCurrentUserId() } returns null
 
             val results = repository().syncFromGoogle().toList()
@@ -123,7 +125,7 @@ class CalendarSyncRepositoryTest {
         // finished. The result carries the fact; `SyncStateTextTest` pins that the two facts are
         // worded differently.
         val credential = mockk<Credential>()
-        coEvery { credentialProvider.getCredential() } returns credential
+        credentialProvider = GrantingCredentials(credential)
         coEvery { userRepository.getCurrentUserId() } returns "u1"
         coEvery { userRepository.getUserById("u1") } returns User(
             id = "u1", email = "p@example.com", name = "Pavel", role = "dad", colorCode = "#2196F3"
@@ -153,7 +155,7 @@ class CalendarSyncRepositoryTest {
     @Test
     fun `the window the import actually read is reported, not left to be guessed`() = runTest {
         val credential = mockk<Credential>()
-        coEvery { credentialProvider.getCredential() } returns credential
+        credentialProvider = GrantingCredentials(credential)
         coEvery { userRepository.getCurrentUserId() } returns "u1"
         coEvery { userRepository.getUserById("u1") } returns User(
             id = "u1", email = "p@example.com", name = "Pavel", role = "dad", colorCode = "#2196F3"
@@ -184,7 +186,7 @@ class CalendarSyncRepositoryTest {
         // Google closes a one-day event on the 14th with `end.date` = the 15th. Stored as the 15th
         // at midnight it overlapped the 15th in every day query and was drawn a day too long.
         val credential = mockk<Credential>()
-        coEvery { credentialProvider.getCredential() } returns credential
+        credentialProvider = GrantingCredentials(credential)
         coEvery { userRepository.getCurrentUserId() } returns "u1"
         coEvery { userRepository.getUserById("u1") } returns User(
             id = "u1", email = "p@example.com", name = "Pavel", role = "dad", colorCode = "#2196F3"
@@ -206,6 +208,38 @@ class CalendarSyncRepositoryTest {
         assertEquals(LocalDateTime.of(2026, 9, 15, 23, 59), byId.getValue("two-days").endDateTime)
     }
 
+    @Test
+    fun `a connection Google ended asks for a reconnect and imports nothing`() = runTest {
+        // It used to say "Not connected to Google" — about a connection the row still showed.
+        credentialProvider = RefusingCredentials(GoogleAccessFailure.NEEDS_RECONNECT)
+        signedIn()
+
+        val result = repository().syncFromGoogle().toList().last()
+
+        assertEquals(SyncResult.Error(SyncFailure.RECONNECT), result)
+        coVerify(exactly = 0) { eventDao.insertEvents(any()) }
+    }
+
+    @Test
+    fun `a renewal that could not reach Google is told apart from no connection at all`() = runTest {
+        signedIn()
+
+        credentialProvider = RefusingCredentials(GoogleAccessFailure.UNAVAILABLE)
+        val unreachable = repository().syncFromGoogle().toList().last()
+        credentialProvider = RefusingCredentials(GoogleAccessFailure.NOT_CONNECTED)
+        val notConnected = repository().syncFromGoogle().toList().last()
+
+        assertEquals(SyncResult.Error(SyncFailure.GOOGLE_UNREACHABLE), unreachable)
+        assertEquals(SyncResult.Error(SyncFailure.NOT_SIGNED_IN_GOOGLE), notConnected)
+    }
+
+    private fun signedIn() {
+        coEvery { userRepository.getCurrentUserId() } returns "u1"
+        coEvery { userRepository.getUserById("u1") } returns User(
+            id = "u1", email = "p@example.com", name = "Pavel", role = "dad", colorCode = "#2196F3"
+        )
+    }
+
     private fun allDay(id: String, from: String, toExclusive: String) = GoogleEvent().apply {
         this.id = id
         summary = "Holiday"
@@ -219,4 +253,19 @@ class CalendarSyncRepositoryTest {
         from = LocalDateTime.of(2026, 8, 24, 0, 0),
         until = LocalDateTime.of(2027, 8, 24, 0, 0)
     )
+}
+
+/** A connected device whose Google accepts the one [credential] it holds. */
+private class GrantingCredentials(private val credential: Credential) : CredentialProvider {
+    override suspend fun getCredential(forceRefresh: Boolean): Credential = credential
+
+    override suspend fun <T> withCredential(call: suspend (Credential) -> T): T = call(credential)
+}
+
+/** A device with no usable Google connection, for the reason [failure] gives. */
+private class RefusingCredentials(private val failure: GoogleAccessFailure) : CredentialProvider {
+    override suspend fun getCredential(forceRefresh: Boolean): Credential = throw GoogleAccessException(failure)
+
+    override suspend fun <T> withCredential(call: suspend (Credential) -> T): T =
+        throw GoogleAccessException(failure)
 }

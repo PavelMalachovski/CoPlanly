@@ -102,6 +102,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.data.consent.HealthConsentWithdrawal
+import com.coparently.app.data.remote.google.GoogleCalendarConnection
 import com.coparently.app.data.repository.RatioSubmission
 import com.coparently.app.data.sync.SyncStatus
 import com.coparently.app.domain.expenses.SplitRatio
@@ -229,11 +230,14 @@ fun SettingsScreen(
     val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
 
-    val isSignedIn by syncViewModel.isSignedIn.collectAsState()
+    val googleConnection by syncViewModel.connection.collectAsState()
     val isSyncEnabled by syncViewModel.isSyncEnabled.collectAsState()
     val googleSyncState by syncViewModel.syncState.collectAsState()
     val firestoreSyncStatus by syncViewModel.firestoreSyncStatus.collectAsState()
     val userEmail by syncViewModel.userEmail.collectAsState()
+    // The Google Calendar row says what this device stores now, each time Settings opens: the
+    // ViewModel lives as long as the activity, and outlives an account deleted or switched since.
+    LaunchedEffect(Unit) { syncViewModel.refreshConnection() }
 
     val settingsUiState by settingsViewModel.settingsState.collectAsState()
     val caresFor by settingsViewModel.caresFor.collectAsState()
@@ -778,15 +782,31 @@ fun SettingsScreen(
                         }
                     )
                     Divider()
+                    // A connection Google ended opens its section by itself: the Reconnect
+                    // button should not wait behind a chevron.
+                    LaunchedEffect(googleConnection) {
+                        if (googleConnection == GoogleCalendarConnection.NEEDS_RECONNECT) {
+                            googleExpanded = true
+                        }
+                    }
+                    val needsReconnect = googleConnection == GoogleCalendarConnection.NEEDS_RECONNECT
                     // One row, expanded on demand — the card this replaces stacked a toggle,
                     // a status line and two full-width buttons into a single surface.
                     SectionRow(
                         icon = Icons.Default.EventAvailable,
                         title = stringResource(R.string.settings_google_sync),
-                        supporting = if (isSignedIn) {
-                            userEmail ?: stringResource(R.string.settings_unknown)
+                        supporting = when (googleConnection) {
+                            GoogleCalendarConnection.CONNECTED ->
+                                userEmail ?: stringResource(R.string.settings_unknown)
+                            GoogleCalendarConnection.NEEDS_RECONNECT ->
+                                stringResource(R.string.settings_gcal_needs_reconnect)
+                            GoogleCalendarConnection.NOT_CONNECTED ->
+                                stringResource(R.string.settings_gcal_not_signed_in)
+                        },
+                        supportingColor = if (needsReconnect) {
+                            MaterialTheme.colorScheme.error
                         } else {
-                            stringResource(R.string.settings_gcal_not_signed_in)
+                            MaterialTheme.colorScheme.onSurfaceVariant
                         },
                         onClick = { googleExpanded = !googleExpanded },
                         // One trailing control, and it is the disclosure (UX-11). The switch
@@ -806,7 +826,7 @@ fun SettingsScreen(
                     )
                     AnimatedVisibility(visible = googleExpanded, enter = sectionEnter(), exit = sectionExit()) {
                         GoogleCalendarActions(
-                            isSignedIn = isSignedIn,
+                            connection = googleConnection,
                             isSyncEnabled = isSyncEnabled,
                             onToggleSync = { enabled ->
                                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -832,7 +852,9 @@ fun SettingsScreen(
                             },
                             onCalendarSignOut = {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                coroutineScope.launch { syncViewModel.signOut() }
+                                // Google's own keys only. This used to be the app's sign-out,
+                                // which reset the push switch, the family on screen and more.
+                                coroutineScope.launch { syncViewModel.disconnectGoogleCalendar() }
                             }
                         )
                     }
@@ -1273,17 +1295,17 @@ private fun ValueLabel(
 /**
  * The Google Calendar actions, revealed under its row.
  *
- * @param isSignedIn Whether a Google account is connected
+ * @param connection Whether Google Calendar is connected, needs a reconnect, or never was
  * @param isSyncEnabled Whether syncing is switched on
  * @param syncState Current Google sync state
- * @param onSignIn Starts Google Sign-In
+ * @param onSignIn Starts Google Sign-In — a first connection or a reconnect
  * @param onSyncNow Pulls events from Google now
  * @param onCalendarSignOut Disconnects the Google account (does not sign out of the app)
  */
 @Composable
 @Suppress("LongParameterList") // one call site; splitting it would only add a wrapper type
 private fun GoogleCalendarActions(
-    isSignedIn: Boolean,
+    connection: GoogleCalendarConnection,
     isSyncEnabled: Boolean,
     onToggleSync: (Boolean) -> Unit,
     syncState: GoogleCalendarSyncState,
@@ -1316,7 +1338,10 @@ private fun GoogleCalendarActions(
                 checked = isSyncEnabled,
                 modifier = Modifier.semantics { contentDescription = syncLabel },
                 onCheckedChange = onToggleSync,
-                enabled = isSignedIn || !isSyncEnabled
+                // On only while connected, off always. The switch is stored and survives a
+                // disconnect now, so "on with nothing connected" is reachable — and must stay
+                // switchable off. (This read `signedIn || !enabled`, the other way round.)
+                enabled = connection == GoogleCalendarConnection.CONNECTED || isSyncEnabled
             )
         }
 
@@ -1347,29 +1372,72 @@ private fun GoogleCalendarActions(
             else -> Unit
         }
 
-        if (!isSignedIn) {
-            Button(
-                onClick = onSignIn,
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !syncing
-            ) {
-                Text(stringResource(R.string.sync_sign_in_google))
-            }
-        } else {
-            Button(
-                onClick = onSyncNow,
-                modifier = Modifier.fillMaxWidth(),
-                enabled = isSyncEnabled && !syncing
-            ) {
-                Text(stringResource(R.string.settings_sync_from_google))
-            }
-            OutlinedButton(
-                onClick = onCalendarSignOut,
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !syncing
-            ) {
-                Text(stringResource(R.string.settings_calendar_sign_out))
-            }
+        GoogleCalendarButtons(
+            connection = connection,
+            canSyncNow = isSyncEnabled && !syncing,
+            busy = syncing,
+            onSignIn = onSignIn,
+            onSyncNow = onSyncNow,
+            onCalendarSignOut = onCalendarSignOut
+        )
+    }
+}
+
+/**
+ * The buttons under the Google Calendar row: sign in while nothing is connected, Reconnect once
+ * Google has ended the connection, Sync now while it holds — and the disconnect wherever a Google
+ * account is still stored, so a parent who no longer wants it need not reconnect to be rid of it.
+ *
+ * Reconnect runs the same sign-in as a first connection. Before it existed, a connection Google had
+ * ended still showed the address and the Sync button, and every sync failed with "Not connected".
+ *
+ * @param connection Whether Google Calendar is connected, needs a reconnect, or never was
+ * @param canSyncNow Whether "Sync from Google Calendar" can run: sync on, and nothing running
+ * @param busy Whether something is running, which every button waits for
+ * @param onSignIn Starts Google Sign-In
+ * @param onSyncNow Pulls events from Google now
+ * @param onCalendarSignOut Disconnects the Google account (does not sign out of the app)
+ */
+@Composable
+@Suppress("LongParameterList") // one call site, the section above
+private fun GoogleCalendarButtons(
+    connection: GoogleCalendarConnection,
+    canSyncNow: Boolean,
+    busy: Boolean,
+    onSignIn: () -> Unit,
+    onSyncNow: () -> Unit,
+    onCalendarSignOut: () -> Unit
+) {
+    when (connection) {
+        GoogleCalendarConnection.NOT_CONNECTED -> Button(
+            onClick = onSignIn,
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !busy
+        ) {
+            Text(stringResource(R.string.sync_sign_in_google))
+        }
+        GoogleCalendarConnection.NEEDS_RECONNECT -> Button(
+            onClick = onSignIn,
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !busy
+        ) {
+            Text(stringResource(R.string.sync_google_reconnect))
+        }
+        GoogleCalendarConnection.CONNECTED -> Button(
+            onClick = onSyncNow,
+            modifier = Modifier.fillMaxWidth(),
+            enabled = canSyncNow
+        ) {
+            Text(stringResource(R.string.settings_sync_from_google))
+        }
+    }
+    if (connection != GoogleCalendarConnection.NOT_CONNECTED) {
+        OutlinedButton(
+            onClick = onCalendarSignOut,
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !busy
+        ) {
+            Text(stringResource(R.string.settings_calendar_sign_out))
         }
     }
 }

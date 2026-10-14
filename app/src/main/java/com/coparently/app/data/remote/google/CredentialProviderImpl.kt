@@ -4,15 +4,20 @@ import android.util.Log
 import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.google.api.client.auth.oauth2.BearerToken
 import com.google.api.client.auth.oauth2.Credential
+import com.google.api.client.googleapis.json.GoogleJsonResponseException
 import com.google.api.client.http.HttpRequest
 import com.google.api.client.http.HttpRequestInitializer
+import com.google.api.client.http.HttpResponseException
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Implementation of CredentialProvider for Google Calendar API.
- * Creates Credential from stored access token using modern OAuth2 flow.
- * Token refresh is handled automatically by CredentialManagerService.
+ * [CredentialProvider] over the tokens [CredentialManagerService] keeps.
+ *
+ * Every credential comes through [CredentialManagerService.accessToken], which renews an expired
+ * token. This used to check `isSignedIn()` first — "the access token is good for five more
+ * minutes" — and return null when it was not, so the renewal it was written to perform never ran,
+ * and an import failed about an hour after Google Calendar was connected.
  */
 @Singleton
 class CredentialProviderImpl @Inject constructor(
@@ -20,28 +25,51 @@ class CredentialProviderImpl @Inject constructor(
     private val encryptedPreferences: EncryptedPreferences
 ) : CredentialProvider {
 
-    companion object {
-        private const val TAG = "CredentialProvider"
+    override suspend fun getCredential(forceRefresh: Boolean): Credential =
+        when (val access = credentialManagerService.accessToken(forceRefresh)) {
+            is GoogleAccess.Granted -> credentialFor(access.accessToken)
+            is GoogleAccess.Denied -> {
+                Log.w(TAG, "No Google credential: ${access.failure}")
+                throw GoogleAccessException(access.failure)
+            }
+        }
+
+    override suspend fun <T> withCredential(call: suspend (Credential) -> T): T {
+        val credential = getCredential()
+        return try {
+            call(credential)
+        } catch (e: HttpResponseException) {
+            when {
+                e.statusCode == HTTP_UNAUTHORIZED -> callAgainRenewed(call)
+                // A renewed token would carry the same permissions.
+                lacksCalendarScope(e) -> endConnection()
+                else -> throw e
+            }
+        }
     }
 
-    override suspend fun getCredential(): Credential? {
-        if (!credentialManagerService.isSignedIn()) {
-            Log.d(TAG, "User is not signed in")
-            return null
+    /**
+     * Runs [call] once more with a token renewed just now. Google refusing that one too — minutes
+     * old, from Google's own token endpoint — is not something any further try can answer.
+     */
+    private suspend fun <T> callAgainRenewed(call: suspend (Credential) -> T): T {
+        val renewed = getCredential(forceRefresh = true)
+        return try {
+            call(renewed)
+        } catch (e: HttpResponseException) {
+            if (e.statusCode == HTTP_UNAUTHORIZED || lacksCalendarScope(e)) endConnection() else throw e
         }
+    }
 
-        // Obtains a valid access token, refreshing over the network when it has expired.
-        // This used to be wrapped in `runBlocking`, which made that refresh block whatever
-        // thread asked — and the caller asked from the main one. See [CredentialProvider].
-        val (accessToken, error) = credentialManagerService.getAccessToken()
+    /** Ends a connection Google refused for good, and tells the caller to ask for a reconnect. */
+    private fun endConnection(): Nothing {
+        credentialManagerService.markNeedsReconnect()
+        throw GoogleAccessException(GoogleAccessFailure.NEEDS_RECONNECT)
+    }
 
-        if (accessToken == null) {
-            Log.e(TAG, "Failed to get access token: $error")
-            return null
-        }
-
-        // Create a Credential with access token
-        return Credential.Builder(BearerToken.authorizationHeaderAccessMethod())
+    /** A credential that sends [accessToken] as a bearer token. */
+    private fun credentialFor(accessToken: String): Credential =
+        Credential.Builder(BearerToken.authorizationHeaderAccessMethod())
             .setRequestInitializer(object : HttpRequestInitializer {
                 override fun initialize(request: HttpRequest) {
                     // Always use the latest token from preferences
@@ -56,5 +84,29 @@ class CredentialProviderImpl @Inject constructor(
                 setAccessToken(accessToken)
                 // Don't set expiration to allow automatic refresh handling
             }
+
+    companion object {
+        private const val TAG = "CredentialProvider"
+        private const val HTTP_UNAUTHORIZED = 401
+        private const val HTTP_FORBIDDEN = 403
+
+        /** The Calendar API's reason for a token that lacks the scope the call needs. */
+        private const val INSUFFICIENT_PERMISSIONS = "insufficientPermissions"
+
+        /** The same refusal in the `WWW-Authenticate` header (RFC 6750 §3.1). */
+        private const val INSUFFICIENT_SCOPE = "insufficient_scope"
+
+        /**
+         * Whether Google refused [e] for want of the Calendar permission — an account that unticked
+         * Calendar on Google's consent screen, or a grant made without the scope. A 403 for
+         * anything else (a rate limit, an API not enabled for the project) is not about the
+         * connection and is left to the caller.
+         */
+        internal fun lacksCalendarScope(e: HttpResponseException): Boolean {
+            if (e.statusCode != HTTP_FORBIDDEN) return false
+            val reasons = (e as? GoogleJsonResponseException)?.details?.errors.orEmpty().map { it.reason }
+            return INSUFFICIENT_PERMISSIONS in reasons ||
+                e.headers?.authenticate?.contains(INSUFFICIENT_SCOPE) == true
+        }
     }
 }

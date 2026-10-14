@@ -136,8 +136,8 @@ class AuthStateViewModel @Inject constructor(
             // token that stays on the profile keeps this phone receiving the account's pushes —
             // the co-parent's chat included — for whoever signs in next.
             fcmService.unregisterToken()
-            // The school connections' tokens (MON-8) are the account's, and the one piece of
-            // `EncryptedPreferences` a Google Calendar disconnect deliberately leaves alone.
+            // The school connections' tokens (MON-8) are the account's, and `EncryptedPreferences`'
+            // `clear()` deliberately keeps them, so they go here, explicitly.
             schoolConnections.clearAll()
             // Room survives sign-out, and a reminder reads its title from Room when it fires: left
             // armed, the account's events would go on announcing themselves on a signed-out phone.

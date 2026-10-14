@@ -23,9 +23,10 @@ import kotlin.test.assertTrue
  * `EncryptedPreferencesMigrationTest`.
  *
  * It also keeps [EncryptedPreferences.clear]'s one exemption pinned: a marker under
- * [PreferenceKeys.PARENT_SLOT_MARKER_PREFIX] survives whatever calls `clear()` — Sign out and a
- * Google Calendar disconnect both do — because a device that loses it while holding history
+ * [PreferenceKeys.PARENT_SLOT_MARKER_PREFIX] survives whatever calls `clear()` — Sign out, an
+ * account switch and account deletion do — because a device that loses it while holding history
  * stamped in the old slot takes `ParentSlotMigrator`'s "nothing to do" branch on the next sync.
+ * A Google Calendar disconnect no longer calls `clear()` at all; it removes Google's own keys.
  */
 class EncryptedPreferencesTest {
 
@@ -104,6 +105,60 @@ class EncryptedPreferencesTest {
         val reopened = EncryptedPreferences(context, ReversingCipher)
         assertEquals("dad", reopened.getString(markerKey))
         assertNull(reopened.getAccessToken())
+    }
+
+    @Test
+    fun `disconnecting Google Calendar removes Google's keys and nothing else`() {
+        // "Sign out from Calendar sync" used to reach `clear()`, and with it the push opt-out, the
+        // telemetry answer, the family on screen, the sync cursors and the calendar filters.
+        val preferences = EncryptedPreferences(context, ReversingCipher)
+        preferences.putAccessToken("access-1")
+        preferences.putRefreshToken("refresh-1")
+        preferences.putTokenExpiry(1_234L)
+        preferences.putUserEmail("alice@example.test")
+        preferences.putCalendarId("work")
+        preferences.putGoogleIdToken("id-token")
+        preferences.putString(PreferenceKeys.PUSH_ENABLED, "false")
+        preferences.putString(PreferenceKeys.TELEMETRY_CONSENT, "GRANTED")
+        preferences.putString("${PreferenceKeys.SELECTED_FAMILY_PREFIX}u1", "u1__u2")
+        preferences.putString("${PreferenceKeys.EVENT_SYNC_CURSOR_PREFIX}u1", "1700000000000")
+        preferences.putString(PreferenceKeys.HIDDEN_EVENT_TYPES, "school")
+        preferences.putBoolean(PreferenceKeys.GOOGLE_CALENDAR_SYNC_ENABLED, true)
+
+        preferences.removeGoogleCalendarAccount()
+
+        val reopened = EncryptedPreferences(context, ReversingCipher)
+        assertNull(reopened.getAccessToken())
+        assertNull(reopened.getRefreshToken())
+        assertNull(reopened.getTokenExpiry())
+        assertNull(reopened.getUserEmail())
+        assertNull(reopened.getGoogleIdToken())
+        // Its getter falls back to "primary"; the stored value is what has to go.
+        assertEquals("primary", reopened.getCalendarId())
+        assertEquals("false", reopened.getString(PreferenceKeys.PUSH_ENABLED))
+        assertEquals("GRANTED", reopened.getString(PreferenceKeys.TELEMETRY_CONSENT))
+        assertEquals("u1__u2", reopened.getString("${PreferenceKeys.SELECTED_FAMILY_PREFIX}u1"))
+        assertEquals("1700000000000", reopened.getString("${PreferenceKeys.EVENT_SYNC_CURSOR_PREFIX}u1"))
+        assertEquals("school", reopened.getString(PreferenceKeys.HIDDEN_EVENT_TYPES))
+        // The switch is the parent's choice, not part of the connection: reconnecting finds it as left.
+        assertTrue(reopened.getBoolean(PreferenceKeys.GOOGLE_CALENDAR_SYNC_ENABLED, false))
+    }
+
+    @Test
+    fun `a refused connection loses its tokens and keeps its address`() {
+        // The address is what tells "reconnect" apart from "never connected".
+        val preferences = EncryptedPreferences(context, ReversingCipher)
+        preferences.putAccessToken("access-1")
+        preferences.putRefreshToken("refresh-1")
+        preferences.putTokenExpiry(1_234L)
+        preferences.putUserEmail("alice@example.test")
+
+        preferences.removeGoogleTokens()
+
+        assertNull(preferences.getAccessToken())
+        assertNull(preferences.getRefreshToken())
+        assertNull(preferences.getTokenExpiry())
+        assertEquals("alice@example.test", preferences.getUserEmail())
     }
 
     @Test
