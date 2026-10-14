@@ -180,10 +180,10 @@ or have deleted what was recorded about them — or an adult who was that child 
 - **A guest** (for example a grandparent) whom you grant time-limited access to one child's
   record — without its photographs.
 - **A family friend** (for example a grandparent or a nanny) whom you grant time-limited read
-  access to the family calendar. In their own app they see the family's shared events — never
-  private ones, and none still waiting for the other parent's answer — and the two parents' first
-  names, which name the family and who added each event. They never see the custody schedule,
-  your messages, expenses or records about your child.
+  access to the family calendar. Their account can read the family's shared events — never
+  private ones, which never leave your phone — and their app shows the ones both parents have
+  agreed to, with the two parents' first names, which name the family and who added each event.
+  They never see the custody schedule, your messages, expenses or records about your child.
 - **A professional** — a mediator, lawyer, guardian ad litem or therapist — whom **both** parents
   let read the family calendar, custody schedule and parenting plan, read-only, for at most 180
   days. They never see your messages, expenses or records about your child. Access starts only
