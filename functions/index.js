@@ -4643,8 +4643,57 @@ const GOOGLE_TOKEN_HOST = 'oauth2.googleapis.com';
 /** The path on [GOOGLE_TOKEN_HOST]. */
 const GOOGLE_TOKEN_PATH = '/token';
 
-/** Where a uid's refresh-token fingerprint is recorded. Nothing but Admin ever reads it. */
+/** Where a uid's refresh-token fingerprints are recorded. Nothing but Admin ever reads it. */
 const GOOGLE_OAUTH_COLLECTION = 'google_oauth';
+
+/**
+ * How many refresh tokens one account keeps working: the newest five connections, so a second
+ * phone — or a reinstall — does not end the first one's. Bounded, so an account that reconnects
+ * every week does not keep every token it was ever issued.
+ */
+const GOOGLE_REFRESH_TOKENS_KEPT = 5;
+
+/** How long Google's token endpoint may stay silent before it counts as unreachable. */
+const GOOGLE_TOKEN_TIMEOUT_MS = 15000;
+
+/**
+ * A failure at Google's token endpoint: what Google answered, or that it did not answer.
+ *
+ * The message carries Google's own description for the log; it never reaches the app, which is
+ * told only what [googleTokenFailure] makes of [status] and [oauthError].
+ */
+class GoogleTokenError extends Error {
+  /**
+   * @param {string} message For the log.
+   * @param {number} status The HTTP status, 0 when no usable answer arrived.
+   * @param {string} oauthError The `error` field of Google's answer (`invalid_grant`, …), or ''.
+   */
+  constructor(message, status, oauthError) {
+    super(message);
+    this.name = 'GoogleTokenError';
+    this.status = status || 0;
+    this.oauthError = oauthError || '';
+  }
+}
+
+exports.GoogleTokenError = GoogleTokenError;
+
+/**
+ * The OAuth `error` code in the body of a refusal from Google's token endpoint, or ''.
+ *
+ * @param {string} body What Google answered.
+ * @return {string} `invalid_grant`, `invalid_client`, … — '' when the body is not an OAuth error.
+ */
+function googleOAuthErrorOf(body) {
+  try {
+    const parsed = JSON.parse(body);
+    return parsed && typeof parsed.error === 'string' ? parsed.error : '';
+  } catch (err) {
+    return '';
+  }
+}
+
+exports.googleOAuthErrorOf = googleOAuthErrorOf;
 
 /**
  * The OAuth client this deployment speaks for, or null when it is not configured.
@@ -4672,6 +4721,10 @@ exports.googleOAuthConfig = googleOAuthConfig;
  * the dependency graph, and the body is drained on failure so the error says what Google said
  * rather than only its status code.
  *
+ * Every failure is a [GoogleTokenError]: a refusal carries Google's status and OAuth error code,
+ * and no answer — a network error, a silence longer than [GOOGLE_TOKEN_TIMEOUT_MS], a success
+ * that is not JSON — carries status 0.
+ *
  * @param {!Object<string, string>} form The form fields to post.
  * @return {!Promise<!Object>} Google's parsed JSON response.
  */
@@ -4697,17 +4750,97 @@ function postToGoogleToken(form) {
           try {
             resolve(JSON.parse(body));
           } catch (err) {
-            reject(new Error(`Google returned a body that is not JSON: ${body}`));
+            // Not echoed: a success body is where tokens travel.
+            reject(new GoogleTokenError('Google returned a body that is not JSON', 0, ''));
           }
           return;
         }
-        reject(new Error(`Google token endpoint said ${response.statusCode}: ${body}`));
+        reject(new GoogleTokenError(
+            `Google token endpoint said ${response.statusCode}: ${body}`,
+            response.statusCode, googleOAuthErrorOf(body)));
       });
     });
-    request.on('error', reject);
+    request.setTimeout(GOOGLE_TOKEN_TIMEOUT_MS, () => {
+      request.destroy(new GoogleTokenError('Google token endpoint did not answer in time', 0, ''));
+    });
+    request.on('error', (err) => reject(err instanceof GoogleTokenError ?
+      err : new GoogleTokenError(`Could not reach Google: ${err.message}`, 0, '')));
     request.write(payload);
     request.end();
   });
+}
+
+/**
+ * What the app is told when Google's token endpoint fails, by whether anything but a new
+ * connection can help.
+ *
+ * - **`invalid_grant`** is Google saying this refresh token or code is dead: revoked in the Google
+ *   account, unused for six months, already redeemed, or — while the consent screen is in
+ *   Testing — seven days old. `failed-precondition` / `reconnect`: the app drops the token and
+ *   offers Reconnect. It used to reach the app as a bare `internal`, which no client could tell
+ *   from a network blip, so the app went on refreshing a token Google had ended.
+ * - **No answer, a 429 or a 5xx**: Google could not be reached or is struggling.
+ *   `unavailable` / `google-unavailable`: the app keeps the token and says to try again.
+ * - **Any other refusal** names this deployment's client or request (`invalid_client` after a
+ *   rotated secret, `unauthorized_client`, …). The token may be fine and the owner has to fix the
+ *   configuration, so the app is told `internal` / `google-refused`, which it also reads as "try
+ *   again" — a corrected deployment then finds every connection still in place.
+ *
+ * Google's own words go to the log, never to the app.
+ *
+ * @param {*} err What the post rejected with.
+ * @return {!functions.https.HttpsError} The error the callable throws.
+ */
+function googleTokenFailure(err) {
+  const status = err && Number.isInteger(err.status) ? err.status : 0;
+  const oauthError = err && typeof err.oauthError === 'string' ? err.oauthError : '';
+  console.warn(`Google token endpoint failed (status ${status}, error ${oauthError || 'none'}):`,
+      err && err.message);
+  if (oauthError === 'invalid_grant') {
+    return new functions.https.HttpsError(
+        'failed-precondition',
+        'Google no longer accepts this connection; connect Google Calendar again',
+        {reason: 'reconnect', cause: 'invalid_grant'});
+  }
+  if (status === 0 || status === 429 || status >= 500) {
+    return new functions.https.HttpsError(
+        'unavailable', 'Google could not be reached; try again', {reason: 'google-unavailable'});
+  }
+  return new functions.https.HttpsError(
+      'internal', 'Google refused the request',
+      {reason: 'google-refused', cause: oauthError || String(status)});
+}
+
+/**
+ * Posts [form] through [post], turning a failure into the error the app can act on.
+ *
+ * @param {function(!Object<string, string>): !Promise<!Object>} post Posts to Google.
+ * @param {!Object<string, string>} form The form fields to post.
+ * @return {!Promise<!Object>} Google's parsed JSON response.
+ */
+async function requestGoogleTokens(post, form) {
+  try {
+    return await post(form);
+  } catch (err) {
+    throw googleTokenFailure(err);
+  }
+}
+
+/**
+ * The refresh-token fingerprints a `google_oauth/{uid}` document accepts, newest first.
+ *
+ * Reads both shapes: the `refreshTokenHashes` list, and the single `refreshTokenHash` that a
+ * document written before the list carries — an account connected then keeps working without
+ * reconnecting, and its fingerprint is the oldest.
+ *
+ * @param {?Object|undefined} data The stored document, or nothing when there is none.
+ * @return {!Array<string>} Fingerprints, newest first, each once.
+ */
+function recordedFingerprints(data) {
+  const stored = data || {};
+  const listed = Array.isArray(stored.refreshTokenHashes) ? stored.refreshTokenHashes : [];
+  return [...new Set([...listed, stored.refreshTokenHash])]
+      .filter((hash) => typeof hash === 'string' && hash);
 }
 
 /**
@@ -4733,7 +4866,15 @@ exports.refreshTokenFingerprint = refreshTokenFingerprint;
  * oracle turning any stolen refresh token into an access token, which is precisely the
  * capability the secret's removal takes away from an attacker. So the exchange records a hash
  * of the refresh token against the caller's uid, and the refresh grant refuses a token that is
- * not the one this account was issued.
+ * not one this account was issued.
+ *
+ * **A list, not one fingerprint.** The document used to hold a single `refreshTokenHash`, so
+ * every exchange replaced the one before: connecting Calendar on a second phone, reinstalling,
+ * or switching Google accounts silently refused the other phone's token on its next refresh,
+ * about an hour later. It now keeps the [GOOGLE_REFRESH_TOKENS_KEPT] newest, under
+ * `refreshTokenHashes`, newest first — and the newest alone under `refreshTokenHash` too, the
+ * field the functions deployed before the list read, so a rollback still accepts the device that
+ * connected last. One transaction, so two phones connecting at once cannot lose each other.
  *
  * The auth code itself needs no such check: Google issues it for this project's client and to
  * whoever completed the consent screen, so a caller can only ever redeem their own.
@@ -4753,7 +4894,7 @@ async function exchangeGoogleAuthCodeImpl(db, config, post, uid, authCode) {
   // answer `unauthorized_client` for a code that the identical request without the field
   // redeems. A code obtained through the native Android sign-in flow has no redirect URI to
   // match, so there is nothing to send.
-  const response = await post({
+  const response = await requestGoogleTokens(post, {
     code: authCode,
     client_id: config.clientId,
     client_secret: config.clientSecret,
@@ -4768,9 +4909,17 @@ async function exchangeGoogleAuthCodeImpl(db, config, post, uid, authCode) {
   }
 
   if (refreshToken) {
-    await db.collection(GOOGLE_OAUTH_COLLECTION).doc(uid).set({
-      refreshTokenHash: refreshTokenFingerprint(refreshToken),
-      updatedAtMillis: Date.now(),
+    const ref = db.collection(GOOGLE_OAUTH_COLLECTION).doc(uid);
+    const fingerprint = refreshTokenFingerprint(refreshToken);
+    await db.runTransaction(async (tx) => {
+      const snap = await tx.get(ref);
+      const earlier = recordedFingerprints(snap.exists ? snap.data() : null)
+          .filter((hash) => hash !== fingerprint);
+      tx.set(ref, {
+        refreshTokenHashes: [fingerprint, ...earlier].slice(0, GOOGLE_REFRESH_TOKENS_KEPT),
+        refreshTokenHash: fingerprint,
+        updatedAtMillis: Date.now(),
+      });
     });
   }
 
@@ -4784,12 +4933,13 @@ async function exchangeGoogleAuthCodeImpl(db, config, post, uid, authCode) {
 exports.exchangeGoogleAuthCodeImpl = exchangeGoogleAuthCodeImpl;
 
 /**
- * Refreshes an access token, but only for the refresh token this account was issued.
+ * Refreshes an access token, but only for a refresh token this account was issued — any of the
+ * [GOOGLE_REFRESH_TOKENS_KEPT] newest, so each device it connected keeps working.
  *
  * A token with no recorded fingerprint is refused rather than trusted on first use: trusting it
  * would let whoever presents a stolen token first bind it to themselves. The cost is one
- * re-consent for anybody whose Calendar was connected before this shipped, which is a screen
- * they have already seen once and the app already prompts for when a refresh fails.
+ * re-consent for anybody whose Calendar was connected before this shipped, or whose token fell
+ * off the list. The refusal says `reconnect`, which the app turns into its Reconnect button.
  *
  * @param {FirebaseFirestore.Firestore} db Firestore instance.
  * @param {!{clientId: string, clientSecret: string}} config The OAuth client.
@@ -4800,15 +4950,15 @@ exports.exchangeGoogleAuthCodeImpl = exchangeGoogleAuthCodeImpl;
  */
 async function refreshGoogleAccessTokenImpl(db, config, post, uid, refreshToken) {
   const snap = await db.collection(GOOGLE_OAUTH_COLLECTION).doc(uid).get();
-  const recorded = snap.exists && snap.data() ? snap.data().refreshTokenHash : '';
-  if (!recorded || recorded !== refreshTokenFingerprint(refreshToken)) {
+  const recorded = recordedFingerprints(snap.exists ? snap.data() : null);
+  if (!recorded.includes(refreshTokenFingerprint(refreshToken))) {
     throw new functions.https.HttpsError(
         'permission-denied',
         'This refresh token was not issued to this account',
-        {reason: 'unknown-refresh-token'});
+        {reason: 'reconnect', cause: 'unknown-refresh-token'});
   }
 
-  const response = await post({
+  const response = await requestGoogleTokens(post, {
     refresh_token: refreshToken,
     client_id: config.clientId,
     client_secret: config.clientSecret,
