@@ -959,6 +959,25 @@ function rekeyedLegacyCalendarFriendGrant(docId, data) {
 exports.rekeyedLegacyCalendarFriendGrant = rekeyedLegacyCalendarFriendGrant;
 
 /**
+ * The two parents' first names, as a friend's grant carries them (phase 2): the friend's calendar
+ * names whose day it is and who added an event, and a friend may not read `users/{uid}`. Each name
+ * goes through [previewFirstName], so an address is never copied and a missing one is left out.
+ *
+ * @param {!Object<string, ?Object>} profilesByUid Each parent's stored profile, or null.
+ * @return {?Object<string, string>} uid → first name, or null when neither has one to give.
+ */
+function grantParentNames(profilesByUid) {
+  const names = {};
+  for (const [uid, profile] of Object.entries(profilesByUid)) {
+    const first = previewFirstName(profile && profile.name);
+    if (first) names[uid] = first;
+  }
+  return Object.keys(names).length > 0 ? names : null;
+}
+
+exports.grantParentNames = grantParentNames;
+
+/**
  * Body of the `acceptCalendarFriendInvitation` callable — lets a trusted third person read the
  * family's calendar without occupying a parent slot.
  *
@@ -979,6 +998,9 @@ exports.rekeyedLegacyCalendarFriendGrant = rekeyedLegacyCalendarFriendGrant;
  * The inviter must be a **paired parent**: `partnerId` is what proves they hold a slot, and it
  * also supplies the second uid the grant records, so a friend admitted by one parent can read
  * both parents' events — which is what "see the calendar" means for a family of two.
+ *
+ * The grant also carries the two parents' first names ([grantParentNames]) as they stood at
+ * redemption: the friend reads no parent's profile, and her calendar has to say whose day it is.
  *
  * @param {FirebaseFirestore.Firestore} db Firestore instance.
  * @param {string} acceptingUserId The signed-in caller's UID.
@@ -1097,6 +1119,12 @@ async function acceptCalendarFriendInvitationImpl(db, acceptingUserId, accepting
       typeof legacy.data.expiresAtMillis === 'number' && legacy.data.expiresAtMillis > Date.now();
     const legacyTargetRef = legacyLive ? db.collection('calendar_friends').doc(legacy.id) : null;
     const legacyTargetTaken = legacyTargetRef ? (await tx.get(legacyTargetRef)).exists : false;
+    // The co-parent's name for the grant: the friend cannot read either parent's profile.
+    const partnerSnap = await tx.get(db.collection('users').doc(partnerId));
+    const parentNames = grantParentNames({
+      [invite.fromUserId]: inviter,
+      [partnerId]: partnerSnap.exists ? partnerSnap.data() : null,
+    });
 
     const name = await guestName(accepterRef, acceptingEmail);
     const photo = await accepterPhoto(accepterRef);
@@ -1115,7 +1143,7 @@ async function acceptCalendarFriendInvitationImpl(db, acceptingUserId, accepting
           grantedBy: invite.fromUserId,
           grantedAtMillis,
           expiresAtMillis,
-        }, photo));
+        }, photo, parentNames ? {parentNames} : {}));
     // A legacy grant that names no family honestly is left where it is, as the backfill leaves
     // it: it admits nothing, and deciding what it meant is a person's call.
     if (legacy !== null) {

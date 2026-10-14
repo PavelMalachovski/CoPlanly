@@ -50,12 +50,28 @@ object FriendMappers {
                 grantedBy = (stored["grantedBy"] as? String).orEmpty(),
                 grantedAtMillis = (stored["grantedAtMillis"] as? Number)?.toLong() ?: 0L,
                 expiresAtMillis = expiresAtMillis,
-                familyId = familyId
+                familyId = familyId,
+                parentNames = parentNames(stored["parentNames"], parents)
             )
         } else {
             null
         }
     }
+
+    /**
+     * The parents' first names a grant carries (phase 2): only [parents]' uids, only non-blank
+     * text. A malformed value reads as no names rather than costing the friend her grant — the
+     * names label the calendar, they admit nothing.
+     */
+    private fun parentNames(stored: Any?, parents: List<String>): Map<String, String> =
+        (stored as? Map<*, *>)
+            ?.mapNotNull { (uid, name) ->
+                val key = (uid as? String)?.takeIf { it in parents }
+                val value = (name as? String)?.takeIf { it.isNotBlank() }
+                if (key != null && value != null) key to value else null
+            }
+            ?.toMap()
+            .orEmpty()
 
     /**
      * The `(familyId, friendUid)` a grant document names in its own fields, or null when either

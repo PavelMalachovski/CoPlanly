@@ -175,6 +175,44 @@ describe('acceptCalendarFriendInvitation', () => {
     assert.ok(!('photoUrl' in db._docs.calendar_friends[GRANT_ID]));
   });
 
+  it('names both parents by first name on the grant', async () => {
+    // Phase 2, spec §4.4: the friend's calendar names whose day it is, and a friend may not read
+    // the parents' profiles, so their first names travel on the grant she can read.
+    const db = seeded({}, {
+      alice: {id: 'alice', name: 'Alice Smith', role: 'mom', partnerId: 'bob'},
+      bob: {id: 'bob', name: 'Bob', role: 'dad', partnerId: 'alice'},
+      nina: {id: 'nina', name: 'Nina'},
+    });
+
+    await myFunctions.acceptCalendarFriendInvitationImpl(db, 'nina', 'nina@example.com', ref);
+
+    assert.deepStrictEqual(db._docs.calendar_friends[GRANT_ID].parentNames, {alice: 'Alice', bob: 'Bob'});
+  });
+
+  it('never copies an e-mail address as a name', async () => {
+    const db = seeded({}, {
+      alice: {id: 'alice', name: 'Alice', role: 'mom', partnerId: 'bob'},
+      bob: {id: 'bob', name: 'bob@example.com', role: 'dad', partnerId: 'alice'},
+      nina: {id: 'nina', name: 'Nina'},
+    });
+
+    await myFunctions.acceptCalendarFriendInvitationImpl(db, 'nina', 'nina@example.com', ref);
+
+    assert.deepStrictEqual(db._docs.calendar_friends[GRANT_ID].parentNames, {alice: 'Alice'});
+  });
+
+  it('writes no parentNames key when neither parent has a name to give', async () => {
+    const db = seeded({}, {
+      alice: {id: 'alice', name: 'alice@example.com', role: 'mom', partnerId: 'bob'},
+      bob: {id: 'bob', role: 'dad', partnerId: 'alice'},
+      nina: {id: 'nina', name: 'Nina'},
+    });
+
+    await myFunctions.acceptCalendarFriendInvitationImpl(db, 'nina', 'nina@example.com', ref);
+
+    assert.ok(!('parentNames' in db._docs.calendar_friends[GRANT_ID]));
+  });
+
   it('marks the invitation accepted', async () => {
     const db = seeded();
     await myFunctions.acceptCalendarFriendInvitationImpl(db, 'nina', 'nina@example.com', ref);

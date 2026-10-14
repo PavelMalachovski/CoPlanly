@@ -80,6 +80,10 @@ enum class FriendRole {
  * @property expiresAtMillis When access ends, epoch millis. Never absent and never zero — the one
  *   default this feature must not have is "forever", which is why [CalendarFriendPolicy] treats
  *   a missing value as expired rather than as unlimited.
+ * @property parentNames The two parents' first names by uid, as they stood when the grant was made
+ *   (phase 2). The friend reads no parent's profile, and her calendar has to say whose day it is
+ *   and who added an event. Only [familyParents] appear, and a parent with no name to give is
+ *   absent; an older grant carries none.
  */
 data class CalendarFriendGrant(
     val friendUid: String,
@@ -89,7 +93,8 @@ data class CalendarFriendGrant(
     val grantedBy: String,
     val grantedAtMillis: Long,
     val expiresAtMillis: Long,
-    val familyId: String = ""
+    val familyId: String = "",
+    val parentNames: Map<String, String> = emptyMap()
 ) {
     companion object {
         /**
