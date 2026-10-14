@@ -101,7 +101,8 @@ so.
 | Test (`app/src/androidTest/.../e2e/`) | Covers between the two parents | What only phones still add |
 | --- | --- | --- |
 | `TwoParentPairingTest` | Pairing on both phones, both slots, one conversation, `pairing_accepted` queued; a code naming its inviter before anything is linked, and refusing what the accept would (§5.7) | The QR scan, the pairing screens, the link opening the app |
-| `TwoParentEventsTest`, `MultiFamilyTest` | Events through the sync's own query, a private event never on the server, tombstones; a second family's audience (§5.2) | The grid as drawn |
+| `TwoParentEventsTest`, `MultiFamilyTest` | Events through the sync's own query, a private event never on the server, tombstones; a second family's audience, the family learnt by the inviter's own pairing listener without taking over the screen (§5.2) | The grid as drawn |
+| `MultiFamilyRecordsTest` | One parent in two families: with the second family on screen, an edit and a sync leave a child and a pet of the first family with that family's audience, marked synced on the writer's phone, and refused to the second family's parent (§5.2) | The forms; an older build on the writer's phone, which only the rules deploy refuses |
 | `TwoParentChatTest`, `OneParentOnScreenTest` | Chat across the date line to unread, DELIVERED, READ; one parent's real screens (§5.1) | Two screens at once, displayed times, the push |
 | `TwoParentAttachmentsTest` | Chat attachments and the vault, bytes and digests, a stranger refused (§5.5) | A viewer app opening the file |
 | `TwoParentExpensesTest`, `TwoParentAgreementsTest` | A shared expense on the other parent's balance; the split ratio agreed, proposed, accepted, declined, withdrawn; the parenting plan's agreement lapsing on a reword, the other half unwritable | The Expenses and plan screens, the banners |
@@ -110,7 +111,7 @@ so.
 | `TwoParentRequestsAndEventPushesTest` | Change requests accepted, declined, cancelled; `event_created`; event revisions immutable, none for a private event | The request screens |
 | `TwoParentCustodyTest` | A pattern proposed, accepted, declined in two zones; single-day and group swaps; a self-accepted swap refused | The grid's band, markers and banners |
 | `OnScreenAgreementsTest` | A's **real app** answering B on screen: B's change request raises the calendar's inline banner, A opens the inbox from it and accepts, B holds it accepted and the event moved; B's custody proposal pops up on A's Home naming B, accepted then (a second one) declined; B's day swaps pop up on Home, one accepted, one declined; a seasonal layer A accepts makes today's month cell say "With B" (§3.11) | Two screens at once, the push that makes A look, the band's colours and motion, the plan citation line (§3.12), a child's own band (§3.13) |
-| `OnScreenFamiliesTest` | A paired with B and C, B's family on screen: C's message puts the dot on Home's switcher chip, named "New messages in another family"; C's row in the dialog says so; switching there brings C's thread onto the Chat tab, and A's reply reaches C (§5.2) | The push from the other family switching on tap, the chip on Expenses, TalkBack, change-request and schedule dots |
+| `OnScreenFamiliesTest` | A paired with B and C, B's family on screen: C's family reaching A's open app with no sync run by hand, B's staying on screen; C's message puts the dot on Home's switcher chip, named "New messages in another family"; C's row in the dialog says so; switching there makes the new-event form name C rather than B and brings C's thread onto the Chat tab, and A's reply reaches C (§5.2) | The push from the other family switching on tap, the chip on Expenses, TalkBack, change-request and schedule dots |
 | `TwoParentAccessTest` | A calendar friend, a guest and a professional (two consents, never the chat, §5.4) redeemed and revoked; unpair on both phones with `pairing_removed`; a calendar feed serving shared events only until revoked; an export hash registered once and verified without an account; receipt photos; account deletion unpairing the co-parent (§7) | The invitation screens, a calendar app subscribing to the feed, the verification page |
 
 ---
@@ -139,6 +140,11 @@ them the evening before, from the commit you will build the app from.
   2. [ ] Invoke `backfillFamilyDocuments`.
   3. [ ] Invoke `backfillRecordFamilyIds`.
   4. [ ] `firebase deploy --only firestore:rules,firestore:indexes`.
+  5. [ ] Invoke `repairChildAndPetAudiences` with `{dryRun: true}` and write its counts down:
+         they are the scope of the October 2026 cross-family leak (`docs/legal/DPIA.md` R20).
+  6. [ ] Invoke it again without `dryRun`, after step 4 (the rules carry the `child_info`/`pets`
+         family bound, so nothing can write the leak again). A dry run afterwards reports
+         `repaired: 0`.
 
   If you run step 4 before step 3, each co-parent's expenses look empty on the other phone
   until step 3 has run.
@@ -660,6 +666,32 @@ the tap actually landing on that screen.
 - [ ] **Google Calendar** connect and import. This needs REL-3's OAuth env and a functions
       deploy. It also covers SEC-5 (tokens in `EncryptedPreferences`): relaunch the app and the
       account stays connected.
+- [ ] **Google Calendar past the hour** (October 2026). Connect, wait **over an hour** (an
+      access token lives one), force-stop and relaunch. Settings → Sync → **Google Calendar
+      sync** still shows the address, and **Sync from Google Calendar** imports without a
+      sign-in. Before the fix the row read "Not signed in" about 55 minutes after connecting, or
+      kept the address and failed with "Not connected" and no button. The **Enable sync** switch
+      survives the restart too. If a second phone is connected to the same Google account, it
+      keeps working after this one connects (the server keeps each device's token, the five
+      newest).
+- [ ] **Reconnect when Google ends it.** With the OAuth consent screen in **Testing**, Google
+      ends the connection 7 days after it was made (`docs/google-oauth-testing-mode.md`); removing
+      CoPlanly's access under the Google account's third-party connections does the same at once.
+      The phone learns it on the next import, so tap **Sync from Google Calendar**: it says access
+      to Google Calendar expired or was revoked (never "Not connected"), and the row turns to
+      **"Access expired or was revoked"** in the error colour and opens by itself on **Reconnect
+      Google Calendar**. Relaunch: the row still says so. Reconnect → consent → the address is
+      back and Sync works; the Enable sync switch is as it was.
+- [ ] **"Sign out from Calendar sync" touches Google alone.** First turn the push switch off and,
+      on an account with two families, switch to the second. Then **Sign out from Calendar sync**:
+      the row reads "Not signed in", and the push switch, the family on screen, the calendar
+      filters and the telemetry answer are unchanged (the disconnect used to reset them all).
+      Reconnecting finds the Enable sync switch as it was left. "Sign out of app" still clears
+      everything.
+  - **If it fails:** tags `CredentialManager`, `CredentialProvider`, `CalendarSync`,
+    `SyncViewModel`; `data/remote/google/CredentialManagerService.kt` (`connection()`,
+    `accessToken()`), `CredentialProviderImpl.withCredential`, and `functions/index.js`'
+    `refreshGoogleAccessTokenImpl` (`refreshTokenHashes`, the `reconnect` reason).
 - [ ] **SEC-5 upgrade:** with Google Calendar connected on the *previous* build, install
       this one over it (no uninstall). Calendar is still connected, Settings keep their values,
       and the app does not ask the telemetry question again — the old store was copied into
@@ -754,6 +786,11 @@ share a custody schedule, and **`firebase deploy --only firestore:rules`** with 
 `proposalPlanCitation` clauses — until then the live rules refuse every proposal that cites the
 plan (their `hasOnly` lists do not name the key), and the repository falls back to a local save.
 
+- [ ] **An answer is saved at all** (October 2026). Force-stop the app, open it, go straight to
+      the Parenting plan and type an answer **at once**; tick one of B's answers as agreed. Leave,
+      force-stop, relaunch: both are still there, and they appear on **B's** phone. Every answer
+      and agreement used to be dropped without a word: the save read the pairing state's first
+      value, which is always "still loading" (tag `ParentingPlanVM`; `ParentingPlanViewModel.edit`).
 - [ ] A and B each answer **"How will you divide weekdays, weekends and school holidays"** with the
       same words (e.g. "Week on, week off, changing on Monday") and each ticks the other's. The
       question reads **Agreed**, and a row **Propose as the schedule** appears under it. It does
@@ -1295,7 +1332,7 @@ Preconditions: A and B are paired, and each phone has its own account signed in.
 
 ### 5.2 Family switcher and chat following the selected family (M-8) · 3A, 2P or 1P fallback
 
-> **[CI e2e]** `MultiFamilyTest` proves the data side: with a second co-parent selected, a new event gets that family's audience and `familyId` and its announcement goes to that thread, and none of it reaches the first co-parent. `OnScreenFamiliesTest` drives the switcher on A's real screens: with B's family on screen, C's chat message puts the dot on Home's chip (its description names "New messages"), C's row in the dialog says the same, choosing it brings C's thread onto the Chat tab, and A's reply reaches C. Still manual: the push from the other family, the chip on Expenses, the change-request and schedule kinds of the dot, TalkBack, and live arrival on several screens at once.
+> **[CI e2e]** `MultiFamilyTest` proves the data side: A's own pairing listener brings C's family in without taking over the screen, with a second co-parent selected a new event gets that family's audience and `familyId` and its announcement goes to that thread, and none of it reaches the first co-parent. `MultiFamilyRecordsTest` pins the October 2026 leak: with C's family on screen, A's edit and sync leave a child and a pet of B's family with B's audience, and C is refused both. `OnScreenFamiliesTest` drives the switcher on A's real screens: C's family reaches the open app by itself, with B's family on screen C's chat message puts the dot on Home's chip (its description names "New messages"), C's row in the dialog says the same, choosing it makes the new-event form name C rather than B and brings C's thread onto the Chat tab, and A's reply reaches C. Still manual: the push from the other family, the chip on Expenses, the change-request and schedule kinds of the dot, TalkBack, and live arrival on several screens at once.
 
 Preconditions: A is paired with **both** B and C (two families). Invite C from Settings → Family.
 
@@ -1312,6 +1349,30 @@ Preconditions: A is paired with **both** B and C (two families). Invite C from S
     colour** in B's family, and B's calendar and custody band look as they did.
   - The wrong way round: C (new) shares a code and A opens it as a `coplanly://pair` link. A is
     told to link the other way round, and nothing changes in B's family.
+
+- [ ] **The second family reaches A at once** (October 2026, tester report #4). With A's app
+      **open** on B's family, C redeems A's code: within seconds, with no pull to refresh and no
+      relaunch, the switcher chip appears on A's Home and its dialog lists C's family — and A
+      **stays on B's family**. C's thread exists when A switches to it. (Before the fix A's phone
+      learnt of C only from the next sync tick or the push.)
+- [ ] **The push lands on the new family.** Repeat the pairing — with a fourth account, or after
+      unpairing C — while A's app is **closed** (swiped away), and tap the **"Invitation
+      accepted"** notification on A. Within a few seconds of opening, the app is on the **new
+      family** — Home's chip names its co-parent — although the phone had not learnt of the family
+      before the tap (a switch it does not know yet waits up to a minute for it).
+- [ ] **Names and colours follow the family on screen** (tester report #11). On A, switch to C's
+      family: the new-event form's owner cards name **C**, in C's colour, never B; Home's changes
+      line and the calendar name C; the parenting plan is C's family's; an export of C's thread is
+      signed with C's name. Switch back to B: everything names B again.
+- [ ] **A child stays in its family** (October 2026, the cross-family leak). A has a child (and a
+      pet) entered for B's family, with a medical note. On A, switch to **C's family**, edit that
+      child (add an allergy), and pull to refresh — or wait for a sync. On **C's** phone the child
+      and the pet never appear, under any family; on **B's** phone the edit arrives. This checks
+      this build's client; an older build on A still writes the leak until the `firestore.rules`
+      deploy with the `child_info`/`pets` family bound refuses it.
+  - **If it fails:** tags `SyncService`, `PairingRepositoryImpl`, `SelectedFamily`;
+    `domain/family/FamilyAudience.kt` (`recordPartnerFor`), `PairingRepositoryImpl.
+    onPairingStateObserved`, `presentation/common/CoParentOnScreen.kt`.
 
 - [ ] Home and Expenses show a **switcher chip** beside the gear.
   - It names the family on screen by its co-parent.
@@ -1375,6 +1436,22 @@ Preconditions: A is paired with **both** B and C (two families). Invite C from S
       writes. A PR that changes `app/src/test/resources/wire/current/` is the one to do this check
       for; otherwise it confirms what CI saw. The phone adds the real sync timing, both builds'
       screens, and the conflict rule under a failed upload.
+- [ ] **Chat cards about an event open the event** (October 2026; `ChatCardTarget`). B creates an
+      event with a description on B's own day; on A, tap its **"New event: …"** card in the
+      thread at once, before any sync: the event's preview opens over the thread, description
+      included, with Edit and **no** Delete, and Edit opens the event form. Same for "Event
+      changed: …", "Event accepted: …" and "Event declined: …". With TalkBack, the card reads
+      "Open the event", not "Open the change request".
+- [ ] B creates an event on **A's** day (it waits for A's answer): its card on A opens the
+      change-request inbox, where it is listed under **Events waiting on you**.
+- [ ] B deletes an event, then A taps that event's earlier "New event" card: a snackbar says
+      **"That event no longer exists."** and nothing opens. The "Event removed: …" card itself,
+      and expense and custody-proposal cards, open nothing and show no chevron.
+- [ ] A change-request card still opens the inbox with that request highlighted, and a day-swap
+      card the inbox with nothing highlighted, as before.
+  - **If it fails:** tag `ChatEventCardViewModel`; `presentation/chat/ChatCardTarget.kt`,
+    `ChatEventCards.kt` (`ChatEventCardHost`, `LocalChatEventCard`),
+    `AwaitingAnswers.eventAwaitsAnswerFrom`.
 
 ### 5.4 Professional access (MON-18) · 3A, 2P or 1P fallback
 

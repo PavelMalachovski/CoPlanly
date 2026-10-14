@@ -110,7 +110,13 @@ in" without being told the answer by a field it could have forged.
 
 A Room column on each, nullable — **null means "mine alone", the state every record is in before
 its owner pairs**. Stamped at create, never re-derived; `FamilyIdBackfill` names the family on
-rows written before there was one to name, from the sync pass, once per co-parent.
+rows written before there was one to name, from the sync pass, once per co-parent — **and only
+while there is exactly one** (October 2026). With two co-parents an unstamped row could belong to
+either family and nothing on the phone says which, so it stamps nothing and the row stays "mine
+alone", the same guess the server's `stampOwnBlankFamilyIds` declines as `ambiguous`. It used to
+stamp the family on screen and run again on every switch, which moved a parent's unstamped
+records — a child's medical record among them — into whichever family they were looking at
+(CLAUDE.md item 38).
 
 **The rules do not switch here, and this heading used to say they did.** Working through it, the
 order in the first draft was wrong in a way worth writing down, because the obvious fix is worse

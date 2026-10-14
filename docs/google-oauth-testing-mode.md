@@ -12,6 +12,25 @@
 - ⚠️ Только пользователи, добавленные в список тестеров, могут войти
 - ⚠️ Обычные пользователи не смогут использовать Google Sign-In
 
+## In Testing, Google ends Calendar access after 7 days
+
+While the consent screen's publishing status is **Testing** (and its user type External), Google
+issues refresh tokens that **expire 7 days after consent** to any app that asks for more than the
+name, e-mail address and profile — and Google Calendar is more. Nothing in CoPlanly can extend
+that. What a tester sees:
+
+- After the seventh day, the next **Sync from Google Calendar** fails: Google answers the
+  server's `refreshGoogleAccessToken` with `invalid_grant`, the function tells the app
+  `failed-precondition` with `reason: 'reconnect'`, and the app drops the dead tokens and keeps
+  the address.
+- Settings → Sync → Google Calendar sync then reads **"Access expired or was revoked"** and opens
+  on **Reconnect Google Calendar**. Reconnecting asks for consent again and works for another
+  7 days; the "Enable sync" switch is kept as it was.
+
+A weekly reconnect during the closed test is Testing mode, not a bug. **For lasting sync, publish
+the consent screen** ("Решение 2" below); the Calendar scope is a sensitive one, so Google's
+verification applies.
+
 ## Решение 1: Добавление тестовых пользователей (для разработки)
 
 ### Шаг 1: Добавление тестовых пользователей
