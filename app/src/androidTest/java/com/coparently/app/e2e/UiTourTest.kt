@@ -13,6 +13,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.coparently.app.R
 import com.coparently.app.data.family.SelectedFamilySource
 import com.coparently.app.domain.family.FamilyKey
+import com.coparently.app.domain.repository.FriendRepository
 import com.coparently.app.e2e.EmulatorEnvironment.step
 import com.coparently.app.presentation.navigation.BottomNavDestination
 import dagger.hilt.android.testing.HiltAndroidTest
@@ -55,6 +56,9 @@ class UiTourTest : AliceOnScreenTest() {
     @Inject
     lateinit var selectedFamilySource: SelectedFamilySource
 
+    @Inject
+    lateinit var friendRepository: FriendRepository
+
     private val variant by lazy { UiTourVariant.current() }
     private val localized by lazy { variant.localized(context) }
     private val content by lazy { UiTourContent.forLanguage(variant.language) }
@@ -86,6 +90,7 @@ class UiTourTest : AliceOnScreenTest() {
         section("family") { familyScreens() }
         section("records") { recordScreens() }
         section("switcher") { switcherSection() }
+        section("friend_view") { friendViewSection() }
         section("sign_out") { signOutSection() }
     }
 
@@ -127,6 +132,21 @@ class UiTourTest : AliceOnScreenTest() {
         camera.shot("change_requests_inbox") {
             driver.press("Review", dialogButton(R.string.home_dialog_review))
             driver.appeared(hasText(content.events.dentist, substring = true))
+            driver.linger()
+        }
+        // Answered on screen rather than seeded, so the tour walks the answer path too. The swap's
+        // card comes before the request's (InboxItems), so the first Decline is the swap's; once
+        // its card has gone to History the only Accept left is the request's — in English the two
+        // buttons share their labels.
+        camera.shot("change_requests_history") {
+            val swapWaiting = hasText(string(R.string.day_swap_inbox_waiting))
+            driver.press("decline Bob's swap", textButton(R.string.day_swap_decline))
+            driver.awaitGone("the swap's card", swapWaiting, CROSS_DEVICE_TIMEOUT_MS)
+            driver.press("accept Bob's request", textButton(R.string.change_request_accept))
+            val requestDecline = textButton(R.string.change_request_decline)
+            driver.awaitGone("the request's buttons", requestDecline, CROSS_DEVICE_TIMEOUT_MS)
+            driver.scrollToEnd()
+            driver.await("History", hasContentDescription(string(R.string.request_section_history)))
             driver.linger()
         }
         driver.backToTabs()
@@ -298,6 +318,13 @@ class UiTourTest : AliceOnScreenTest() {
     private fun recordScreens() {
         fromSettings("pairing", R.string.settings_pairing_title)
         fromSettings("friends", R.string.friend_section_title)
+        // The sheet's button repeats the invite row's label, and the row stays behind the sheet.
+        camera.shot("friends_invite_sheet") {
+            driver.press("Invite a family friend", row(R.string.friend_invite_action))
+            driver.await("the invite sheet", hasText(string(R.string.friend_invite_will_see_lead), substring = true))
+            driver.pressLast("the sheet's Invite", textButton(R.string.friend_invite_action))
+            driver.await("the friend's code", textButton(R.string.friend_invite_share), CROSS_DEVICE_TIMEOUT_MS)
+        }
         fromSettings("professionals", R.string.professional_section_title)
         fromSettings("export", R.string.export_settings_title)
         scrolls("export", 1)
@@ -377,6 +404,42 @@ class UiTourTest : AliceOnScreenTest() {
         driver.dismissDialog()
     }
 
+    /**
+     * Alice as a family friend of another family (phase 2): Dave and Erin pair, Dave invites her and
+     * adds an event she takes part in, and she redeems the code — so her Friends screen lists that
+     * family's calendar, which opens on Dave's event. Last before signing out: a grant switches
+     * Alice's Friends screen to the friend's branch for the rest of the run.
+     */
+    private fun friendViewSection() {
+        val joined = runCatching {
+            runBlocking {
+                val dave = newParent("Dave")
+                val erin = newParent("Erin")
+                val pairing = dave.pairingRepository.createOrReuseInviteCode().getOrThrow()
+                erin.pairingRepository.redeem(pairing.code).getOrThrow()
+                erin.awaitPairedWith(dave.uid)
+                dave.awaitPairedWith(erin.uid)
+                val invite = dave.friendRepository.inviteFriend(System.currentTimeMillis() + FRIEND_ACCESS_MS)
+                    .getOrThrow()
+                friendRepository.acceptFriendInvite(invite.code).getOrThrow()
+                seed.friendFamilyEvent(dave, aliceUid, content.events.birthdayParty)
+            }
+        }
+        val familyRow = row(R.string.friend_calendar_title)
+        camera.shot("friend_calendar_list") {
+            joined.getOrThrow()
+            openSettings()
+            driver.press("Family friends", row(R.string.friend_section_title))
+            driver.await("the friend's family row", familyRow, CROSS_DEVICE_TIMEOUT_MS)
+        }
+        camera.shot("friend_calendar") {
+            driver.press("the family calendar", familyRow)
+            driver.appeared(hasText(content.events.birthdayParty, substring = true))
+            driver.linger()
+        }
+        driver.backToTabs()
+    }
+
     private fun signOutSection() {
         camera.shot("sign_out_confirm") {
             openSettings()
@@ -411,6 +474,9 @@ class UiTourTest : AliceOnScreenTest() {
         private const val SETTINGS_SCREENFULS = 4
         private const val CUSTODY_SCREENFULS = 3
         private const val KEYBOARD_MS = 1_500L
+
+        /** How long Dave admits Alice as a family friend: the invite's longest choice. */
+        private const val FRIEND_ACCESS_MS = 90L * 24 * 60 * 60 * 1000
 
         /** Puts the app back on the device's language once the tour is over. */
         @JvmStatic

@@ -52,6 +52,14 @@ test('database and encryption changes need the SEC-2 upgrade run', () => {
   assert.ok(sectionsFor([K + 'data/security/DatabaseKey.kt']).includes('2.1'));
 });
 
+test('requests on Home, the answers feed and the inbox need the requests check', () => {
+  assert.ok(sectionsFor([K + 'domain/changerequests/RequestHistory.kt']).includes('5.8'));
+  assert.ok(sectionsFor([K + 'presentation/changerequests/InboxItems.kt']).includes('5.8'));
+  assert.ok(sectionsFor([K + 'presentation/home/RequestsRow.kt']).includes('5.8'));
+  assert.ok(sectionsFor([K + 'presentation/home/HomeFeed.kt']).includes('5.8'));
+  assert.ok(!sectionsFor([K + 'presentation/home/HomeScreen.kt']).includes('5.8'));
+});
+
 test('chat changes need the cross-time-zone chat check', () => {
   assert.deepEqual(sectionsFor([K + 'presentation/chat/ChatScreen.kt']), ['5.1']);
 });

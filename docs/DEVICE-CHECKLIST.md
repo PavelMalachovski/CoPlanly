@@ -1535,10 +1535,30 @@ nothing). Accounts: A and B paired, D and E paired (a second, unrelated family),
 
 > **[CI e2e]** `TwoParentAccessTest#aCalendarFriendOfTwoFamiliesReadsBothAndLosesOnlyTheOneThatRevokes`
 > runs the mechanism: two grants, both families' events read, both families listing F and reading
-> her profile, one revoke leaving the other family standing. What a phone adds is the screens.
+> her profile, one revoke leaving the other family standing. `#aFamilyFriendSeesTheFamilysCalendarThroughTheApp`
+> (phase 2) reads the calendar through the app's own source: the parents' first names on the grant,
+> no private event and no event of the inviter's other family, and "access ended" after a revoke.
+> What a phone adds is the screens.
 
-- [ ] A: Settings → Family → **Friend with calendar access** → Invite. F redeems the code (Settings
-      → the same row → enter the code). F's row reads "Access until {date}", exactly as before.
+- [ ] A: Settings → Family → **Family friends**. Above the list: one line on who a family friend
+      is, and the table (Calendar, Custody schedule, Expenses, Chat, Children's records, How long)
+      with a check or a cross beside each yes and no, and "1 week, 30 days or 90 days" as the
+      friend's how long. At 150 % and 200 % text the two columns become lines under each row, and
+      nothing is cut off. TalkBack reads each row as one sentence.
+- [ ] A → **Invite a family friend**: above the lengths the sheet says what F **will see** (the
+      family's events, except private ones; view only) and **won't see** (the custody schedule,
+      expenses, chat, children's records). After **Invite a family friend**: the code, where F types
+      it, **Share code** and **Done**. Share code opens the share sheet with one message naming A,
+      the code, the path "Settings → Family friends → I have a code from the parents" and the Play
+      Store link — in A's language.
+- [ ] F: Settings → **Family friends** → **I have a code from the parents** opens a field in place;
+      **Open the family calendar** redeems the code and opens the calendar at once. F's list then
+      shows **Family calendar** "A and B · access until {date}", and **My profile** reads "Access
+      until {date}", exactly as before.
+- [ ] F's calendar: four weeks of the family's events, paged with the arrows, each with its time and
+      "Added by {first name}"; no private event; nothing about whose day it is. An event B created
+      with F taking part carries **You take part**; tapping an event shows its details with no
+      action.
 - [ ] D invites F too; F redeems. F's row now reads "Families: 2 · the first access ends {date}",
       the earlier of the two ends. Nothing about the first family changed.
 - [ ] F opens her profile and saves it. A **and** D each open Friends → F: her name, role and
@@ -1547,10 +1567,13 @@ nothing). Accounts: A and B paired, D and E paired (a second, unrelated family),
       families (M-8), switching family shows each family's friends under that family.
 - [ ] B → F → **Remove access**. F's row returns to "Access until {date}" for the D–E family; D and
       E still list her.
+- [ ] With the A–B calendar open on F's phone when B removes her, it says **Your access to this
+      calendar has ended** rather than the events it last showed; the D–E calendar still opens.
 - **Fallback (1P, 2P):** do the steps signing in and out as each account; the rows update on the
   next open rather than live.
 - **If it fails:** tag `FriendRepository`; `presentation/friends/`, `firestore.rules`
-  `isCalendarFriendOf`, `functions/index.js` `acceptCalendarFriendInvitationImpl`.
+  `isCalendarFriendOf`, `functions/index.js` `acceptCalendarFriendInvitationImpl`
+  (`grantParentNames` for the names).
 
 ### 5.7 The pairing link and the inviter's name · 2P, 1P + a second account fallback
 
@@ -1588,6 +1611,36 @@ A is signed in and not paired; B is signed in on another phone, with no family.
 - **If it fails:** tag `PairingViewModel`, `PairingFunctions`; `presentation/pairing/`,
   `domain/pairing/PairingUri.kt`, `functions/index.js` `previewPairingInvitationImpl`,
   `web/pair/index.html`, the App Link filter in `AndroidManifest.xml`.
+
+### 5.8 Requests on Home and the inbox's history · 2P, 1P fallback
+
+A and B paired, with a custody schedule. The phase 2 tester feedback: a parent wanted to see which
+requests they had already accepted or declined, and the co-parent's words on an event that waits
+for an answer.
+
+> **[CI]** The rules are unit tests — `RequestHistoryTest`, `RequestInboxTest`, `InboxItemsTest`,
+> `RequestsRowTextTest`, `HomeFeedTest` and `RequestsSourceTest` — and the screens render in the
+> screenshot matrix (`requests_*`). What a phone adds is the two phones answering each other live.
+
+- [ ] Home's **Requests** row, on A, in each state: nothing waiting and no recent answer — "No
+      requests yet"; B sends a change request — "1 waiting on you", with 1 beside the row; A sends
+      one — "… · 1 waiting on B"; B accepts or declines one of A's — "Yesterday: B accepted your
+      request" (or today's, or a weekday's) as long as it is under a week old. The row's number and
+      the calendar banner's are the same.
+- [ ] B answers A's requests on B's phone — accepts one, declines one; A withdraws a third. A's inbox
+      (**Requests**) shows each under **History** with its outcome on a neutral chip and who decided
+      when; an answer A gave while offline reads **Queued** until it leaves. Home's feed lists B's
+      answers as "Accepted"/"Declined" rows, one per answer, and its last row opens the History.
+- [ ] B creates an event on A's days with a description: A's card under **Waiting on you** shows
+      B's words beside B's initial, the time on A's clock, and the month with that day ringed and the
+      custody colours. On B's phone the same card reads "Waiting for A" with no buttons. In B's event
+      form, while the event would wait for A, the description says "A will see this when answering".
+- [ ] A parent in two families: the row, the inbox and the History hold only the family on screen;
+      switching families switches them.
+- **Fallback (1P):** sign in as B on the same phone to send and answer, then back as A; the states
+  arrive on the next open rather than live.
+- **If it fails:** tag `ChangeRequestViewModel`, `HomeViewModel`; `presentation/changerequests/`,
+  `domain/changerequests/`, `presentation/home/RequestsRow.kt`, `presentation/home/HomeFeed.kt`.
 
 ---
 

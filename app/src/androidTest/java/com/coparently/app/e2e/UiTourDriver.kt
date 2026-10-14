@@ -9,6 +9,7 @@ import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.onFirst
+import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextInput
@@ -49,6 +50,22 @@ class UiTourDriver(
         await(description, matcher, timeoutMillis)
         rule.onAllNodes(matcher).onFirst().performSemanticsAction(SemanticsActions.OnClick)
         rule.settle()
+    }
+
+    /**
+     * [press] on the **last** node matching [matcher]: the one in the window opened last, such as
+     * a sheet's button that repeats the label of the row behind it. Wait for the window first —
+     * the row alone already matches.
+     */
+    fun pressLast(description: String, matcher: SemanticsMatcher, timeoutMillis: Long = WAIT_MS) {
+        await(description, matcher, timeoutMillis)
+        rule.onAllNodes(matcher).onLast().performSemanticsAction(SemanticsActions.OnClick)
+        rule.settle()
+    }
+
+    /** Waits, moving Compose time, until nothing matches [matcher]; fails after [timeoutMillis]. */
+    fun awaitGone(description: String, matcher: SemanticsMatcher, timeoutMillis: Long = WAIT_MS) {
+        rule.pumpUntil(description, timeoutMillis) { !exists(matcher) }
     }
 
     /** [press] if [matcher] is on screen now; returns whether it was. */

@@ -275,6 +275,13 @@ const RULES = [
       'app/src/main/res/values*/pairing_strings.xml'],
   },
   {
+    sections: ['5.8'],
+    why: 'requests: Home\'s Requests row, the co-parent\'s answers in its feed, or the inbox and its history',
+    paths: ['K/presentation/changerequests/**', 'K/domain/changerequests/**',
+      'K/presentation/home/Requests*', 'K/presentation/home/HomeFeed*',
+      'app/src/main/res/values*/change_requests_strings.xml'],
+  },
+  {
     sections: ['5.6'],
     why: 'a calendar friend, whose grants are one per family',
     paths: ['K/presentation/friends/**', 'K/domain/friends/**', 'K/data/repository/Friend*',

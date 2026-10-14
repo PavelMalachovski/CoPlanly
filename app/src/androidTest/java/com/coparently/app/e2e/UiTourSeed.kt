@@ -38,6 +38,7 @@ import com.coparently.app.domain.repository.ExpenseRepository
 import com.coparently.app.domain.repository.MessageRepository
 import com.coparently.app.domain.repository.PetRepository
 import com.coparently.app.e2e.EmulatorEnvironment.step
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeout
 import java.io.File
@@ -137,6 +138,32 @@ class UiTourSeed @Inject constructor(
                     familyId = family.id
                 )
             )
+        }
+    }
+
+    /**
+     * An event in Dave's family that names [friendUid] as taking part (phase 2) — what the tour's
+     * family friend sees in that family's calendar, with "You take part" on it. Written through
+     * Dave's own repository, so it carries his family's id and audience, and waited for on the
+     * server, where the friend's calendar reads it.
+     */
+    suspend fun friendFamilyEvent(dave: EmulatorParent, friendUid: String, title: String) {
+        val start = LocalDate.now().plusDays(FRIEND_EVENT_OFFSET).atTime(FRIEND_EVENT_HOUR, 0)
+        val now = LocalDateTime.now()
+        val event = Event(
+            id = UUID.randomUUID().toString(),
+            title = title,
+            startDateTime = start,
+            endDateTime = start.plusHours(2),
+            eventType = "other",
+            parentOwner = dave.database.userDao().getUserById(dave.uid)?.role ?: ContactWindow.SLOT_ONE,
+            createdAt = now,
+            updatedAt = now,
+            friendParticipates = friendUid
+        )
+        dave.eventRepository.insertEvent(event)
+        withTimeout(EmulatorParent.WAIT_MS) {
+            while (!EmulatorEnvironment.documentExists("events/${event.id}")) delay(POLL_MS)
         }
     }
 
@@ -447,6 +474,11 @@ class UiTourSeed @Inject constructor(
         const val MAX = "Max"
 
         private const val LAYER_ID = "autumn-break"
+
+        /** Dave's event for the family friend: two days ahead, mid-afternoon. */
+        private const val FRIEND_EVENT_OFFSET = 2L
+        private const val FRIEND_EVENT_HOUR = 15
+        private const val POLL_MS = 250L
         private const val LAYER_START_OFFSET = 21L
         private const val LAYER_DAYS = 6L
         private const val SWAP_OFFSET = 9L
