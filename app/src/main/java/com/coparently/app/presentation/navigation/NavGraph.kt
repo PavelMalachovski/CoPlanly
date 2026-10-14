@@ -997,10 +997,16 @@ fun NavGraph(
                         onOpenChangeRequest = { eventId ->
                             navController.navigate(Screen.ChangeRequests.createRoute(eventId))
                         },
-                        // A day-swap chat card: the inbox with nothing highlighted — its
+                        // A day-swap chat card, and a card about an event still waiting on this
+                        // parent's answer: the inbox with nothing highlighted — a day swap's
                         // entity is a date the event-id argument would misread.
                         onOpenInbox = {
                             navController.navigate(Screen.ChangeRequests.createRoute())
+                        },
+                        // A card about an event opens its preview over the thread; the preview's
+                        // Edit opens the editor, as Home's and the calendar's previews do.
+                        onEditEvent = { eventId ->
+                            navController.navigate(Screen.EditEvent.createRoute(eventId))
                         },
                         // The banner over a thread kept after the co-parent deleted their account:
                         // the same export screen Settings → Family opens, naming that thread.
@@ -1047,10 +1053,16 @@ fun NavGraph(
                         onOpenChangeRequest = { eventId ->
                             navController.navigate(Screen.ChangeRequests.createRoute(eventId))
                         },
-                        // A day-swap chat card: the inbox with nothing highlighted — its
+                        // A day-swap chat card, and a card about an event still waiting on this
+                        // parent's answer: the inbox with nothing highlighted — a day swap's
                         // entity is a date the event-id argument would misread.
                         onOpenInbox = {
                             navController.navigate(Screen.ChangeRequests.createRoute())
+                        },
+                        // A card about an event opens its preview over the thread; the preview's
+                        // Edit opens the editor, as Home's and the calendar's previews do.
+                        onEditEvent = { eventId ->
+                            navController.navigate(Screen.EditEvent.createRoute(eventId))
                         },
                         // The banner over a thread kept after the co-parent deleted their account:
                         // the same export screen Settings → Family opens, naming that thread.

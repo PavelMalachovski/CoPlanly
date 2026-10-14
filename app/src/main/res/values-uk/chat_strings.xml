@@ -50,6 +50,10 @@
 
     <!-- Accessibility label for the change-request card's clickable bubble. -->
     <string name="chat_open_change_request">Відкрити запит на зміну</string>
+    <!-- Accessibility label for a card about an event ("New event: …"): the tap opens the event itself. -->
+    <string name="chat_open_event">Відкрити подію</string>
+    <!-- Shown after tapping a card about an event that was deleted, or that this parent can no longer read. -->
+    <string name="chat_event_missing">Цієї події більше немає.</string>
 
     <!-- Message templates (domain/model/MessageTemplate.kt). The body is seeded into the
          composer for the user to edit before sending, so the bracketed hints are translated

@@ -8,6 +8,8 @@ import org.junit.Test
 import java.time.LocalDate
 import java.time.LocalDateTime
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 /**
  * The one count Home's "Awaiting your answer" row and the calendar's change-request banner print
@@ -62,6 +64,21 @@ class AwaitingAnswersTest {
         )
 
         assertEquals(1, AwaitingAnswers.eventCount(events, me))
+    }
+
+    @Test
+    fun `an event waits for an answer only while pending, and never from its creator`() {
+        // The rule a chat card about an event routes by too: the inbox opens for exactly the
+        // events this count includes, and an event outside it opens as a preview.
+        fun awaits(candidate: Event, uid: String = me) = AwaitingAnswers.eventAwaitsAnswerFrom(candidate, uid)
+
+        assertTrue(awaits(event("theirs", coParent, EventAcceptance.PENDING)))
+        assertFalse(awaits(event("mine", me, EventAcceptance.PENDING)))
+        assertFalse(awaits(event("plain", coParent, EventAcceptance.NOT_REQUIRED)))
+        assertFalse(awaits(event("accepted", coParent, EventAcceptance.ACCEPTED)))
+        assertFalse(awaits(event("declined", coParent, EventAcceptance.DECLINED)))
+        // Not before the signed-in uid is known, like the count.
+        assertFalse(awaits(event("theirs", coParent, EventAcceptance.PENDING), uid = ""))
     }
 
     @Test

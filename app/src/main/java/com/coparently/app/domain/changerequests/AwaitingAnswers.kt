@@ -41,8 +41,16 @@ object AwaitingAnswers {
      * creator cannot decide their own (`EventAcceptanceTransition`), so the inbox never lists
      * them for the creator.
      */
-    fun eventCount(events: List<Event>, uid: String): Int =
-        if (uid.isEmpty()) 0 else events.count { it.acceptance.isPending && it.createdByFirebaseUid != uid }
+    fun eventCount(events: List<Event>, uid: String): Int = events.count { eventAwaitsAnswerFrom(it, uid) }
+
+    /**
+     * Whether [event] waits for [uid]'s answer: still pending, and created by somebody else. The
+     * rule [eventCount] counts by, and the one a chat card about an event reads to decide whether
+     * the inbox is where it opens — so a card never sends a parent to an inbox that does not list
+     * the event. False while [uid] is not known yet (empty), as everything in this object is.
+     */
+    fun eventAwaitsAnswerFrom(event: Event, uid: String): Boolean =
+        uid.isNotEmpty() && event.acceptance.isPending && event.createdByFirebaseUid != uid
 
     /**
      * Everything the inbox asks [uid] to answer: incoming change requests, day-swap offers and
