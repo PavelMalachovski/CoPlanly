@@ -1,5 +1,6 @@
 package com.coparently.app.presentation.common
 
+import app.cash.turbine.ReceiveTurbine
 import app.cash.turbine.test
 import com.coparently.app.domain.model.PairingState
 import com.coparently.app.domain.model.PartnerSummary
@@ -126,6 +127,133 @@ class ParentsSourceTest {
         }
 
         verify(exactly = 1) { pairing.observePairingState() }
+    }
+
+    // ---- the family on screen (tester report #11) --------------------------------------------
+
+    private val barbora = PartnerSummary(
+        id = "u2",
+        name = "Barbora",
+        email = "barbora@example.com",
+        pairedSinceMillis = 1L,
+        role = "dad"
+    )
+    private val pavel = PartnerSummary(
+        id = "u3",
+        name = "Pavel",
+        email = "pavel@example.com",
+        pairedSinceMillis = null,
+        role = "dad",
+        colorCode = "hue1|200"
+    )
+
+    /** Olya's row, projected onto [partnerUid]'s family — what the family switcher writes. */
+    private fun showing(partnerUid: String?) = listOf(me.copy(partnerId = partnerUid))
+
+    private fun usersShowing(rows: MutableStateFlow<List<User>>): UserRepository = mockk {
+        every { observeCurrentUserId() } returns MutableStateFlow<String?>("u1")
+        every { getAllUsers() } returns rows
+    }
+
+    /**
+     * The server's link names Barbora — `partnerId` stays on the first co-parent — and Pavel, the
+     * second, is read through a listener of his own.
+     */
+    private fun pairedWithBarbora(pavelsProfile: MutableStateFlow<PartnerSummary> = MutableStateFlow(pavel)) =
+        mockk<PairingRepository> {
+            every { observePairingState() } returns MutableStateFlow(PairingState.Paired(barbora))
+            every { observeCoParentProfile("u3") } returns pavelsProfile
+        }
+
+    /**
+     * The next answer that names a co-parent. A switch first answers "paired, not named yet"
+     * while the new co-parent's profile is read — and must never answer with the previous one.
+     */
+    private suspend fun ReceiveTurbine<Parents>.awaitCoParent(): Parents {
+        while (true) {
+            val parents = awaitItem()
+            if (parents.coParent != null) return parents
+            assertEquals(true, parents.isPaired, "a family switch is not an unpair")
+        }
+    }
+
+    @Test
+    fun `the co-parent is the family on screen's, not the first one the server names`() = runTest {
+        // Tester report #11: with Pavel's family switched to, the new-event form named Barbora
+        // and drew her colour, because the names came from the server's `partnerId` alone.
+        val source = ParentsSource(usersShowing(MutableStateFlow(showing("u3"))), pairedWithBarbora())
+
+        source.observe().test {
+            val parents = awaitCoParent()
+            assertEquals(NamedParent("u3", "dad", "Pavel", colorCode = "hue1|200"), parents.coParent)
+            assertEquals(true, parents.isPaired)
+            // The expense balance attributes payments by this map: Pavel's must count as his.
+            assertEquals(mapOf("u1" to "mom", "u3" to "dad"), parents.roleByUid)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `switching families renames the co-parent, and never names one with the other's uid`() = runTest {
+        val rows = MutableStateFlow(showing("u2"))
+        val source = ParentsSource(usersShowing(rows), pairedWithBarbora())
+
+        source.observe().test {
+            assertEquals(NamedParent("u2", "dad", "Barbora"), awaitCoParent().coParent)
+
+            rows.value = showing("u3")
+            assertEquals(NamedParent("u3", "dad", "Pavel", colorCode = "hue1|200"), awaitCoParent().coParent)
+
+            rows.value = showing("u2")
+            assertEquals(NamedParent("u2", "dad", "Barbora"), awaitCoParent().coParent)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `the co-parent on screen renaming themselves reaches the names as it happens`() = runTest {
+        val pavelsProfile = MutableStateFlow(pavel)
+        val source = ParentsSource(usersShowing(MutableStateFlow(showing("u3"))), pairedWithBarbora(pavelsProfile))
+
+        source.observe().test {
+            assertEquals("Pavel", awaitCoParent().coParent?.name)
+
+            pavelsProfile.value = pavel.copy(name = "Pavlík")
+
+            assertEquals("Pavlík", awaitCoParent().coParent?.name)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `the family the pairing listener already follows costs no listener of its own`() = runTest {
+        val pairing = pairedWithBarbora()
+        val source = ParentsSource(usersShowing(MutableStateFlow(showing("u2"))), pairing)
+
+        source.observe().test {
+            assertEquals("Barbora", awaitItem().coParent?.name)
+            cancelAndIgnoreRemainingEvents()
+        }
+
+        verify(exactly = 0) { pairing.observeCoParentProfile(any()) }
+    }
+
+    @Test
+    fun `an unpaired account names no co-parent, whatever a stale projection says`() = runTest {
+        // The server decides *whether* there is a co-parent; the projection only decides which.
+        val pairing = mockk<PairingRepository> {
+            every { observePairingState() } returns MutableStateFlow(PairingState.NotPaired())
+        }
+        val source = ParentsSource(usersShowing(MutableStateFlow(showing("u3"))), pairing)
+
+        source.observe().test {
+            val parents = awaitItem()
+            assertNull(parents.coParent)
+            assertEquals(false, parents.isPaired)
+            cancelAndIgnoreRemainingEvents()
+        }
+
+        verify(exactly = 0) { pairing.observeCoParentProfile(any()) }
     }
 
     @Test

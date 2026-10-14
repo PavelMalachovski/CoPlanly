@@ -60,6 +60,7 @@ import com.coparently.app.data.versions.EventVersionRecorder
 import com.coparently.app.di.FirebaseModule
 import com.coparently.app.domain.activity.ActivityAnnouncer
 import com.coparently.app.domain.chat.AttachmentUploadGate
+import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.model.Message
 import com.coparently.app.domain.model.PairingState
 import com.coparently.app.presentation.common.ParentsSource
@@ -78,8 +79,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeout
 import java.io.Closeable
@@ -393,6 +396,32 @@ class EmulatorParent private constructor(
         pairingRepository.observePairingState()
             .filterIsInstance<PairingState.Paired>()
             .first { it.partner.id == partnerUid }
+    }
+
+    /**
+     * Waits until this phone lists a family with [partnerUid], learnt the way an open app learns
+     * it: from its own pairing listener, collected meanwhile as the app's screens collect it.
+     *
+     * [awaitPairedWith] cannot wait for a second co-parent. The server keeps `partnerId` on the
+     * first one, so this phone's pairing state goes on naming them; what the second pairing
+     * changes is the set (`partnerIds`), which the listener mirrors into Room for the switcher
+     * (tester report #4). The family list is what this waits on, not any state the listener
+     * emits.
+     */
+    suspend fun awaitFamilyWith(partnerUid: String) {
+        val familyId = FamilyKey.of(uid, partnerUid)
+        coroutineScope {
+            val listening = launch { pairingRepository.observePairingState().collect {} }
+            try {
+                withTimeout(WAIT_MS) {
+                    selectedFamilySource.observeFamilies(uid).first { families ->
+                        families.any { it.familyId == familyId }
+                    }
+                }
+            } finally {
+                listening.cancel()
+            }
+        }
     }
 
     /** Signs out, closes Room, deletes the named Firebase app and this phone's directories. */

@@ -3,6 +3,8 @@ package com.coparently.app.presentation.parentingplan
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.coparently.app.data.chat.ChatPartner
+import com.coparently.app.data.chat.ChatPartnerSource
 import com.coparently.app.data.crashlytics.CrashlyticsManager
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.ParentingPlanPair
@@ -16,6 +18,8 @@ import com.coparently.app.domain.repository.PairingRepository
 import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.ParentsSource
+import com.coparently.app.presentation.common.observeSignedInUser
+import com.coparently.app.presentation.common.projectedCoParentUid
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -28,6 +32,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -110,11 +115,18 @@ class ParentingPlanViewModel @Inject constructor(
      * Built from the pairing state rather than from [Parents.coParent], which is null for a pair
      * that predates slot assignment — gating on it would hide the feature from exactly the
      * long-standing pairs most likely to want it.
+     *
+     * **The family on screen**, by the rule the chat and the names follow
+     * ([ChatPartnerSource.resolve]): the pairing state says whether there is a co-parent, the
+     * family switcher's projection on the signed-in row says which. The pairing state's own
+     * partner is the *first* co-parent whatever the switcher says, so a parent showing their second
+     * family was shown the first family's plan beside the second family's custody proposal.
      */
     private val scope: Flow<PlanScope?> = combine(
         userRepository.observeCurrentUserId(),
-        pairingRepository.observePairingState()
-    ) { uid, pairing -> scopeFor(uid, pairing) }.distinctUntilChanged()
+        pairingRepository.observePairingState(),
+        userRepository.observeSignedInUser().map { it?.projectedCoParentUid() }
+    ) { uid, pairing, projected -> scopeFor(uid, pairing, projected) }.distinctUntilChanged()
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val uiState: StateFlow<ParentingPlanUiState> = scope
@@ -200,9 +212,9 @@ class ParentingPlanViewModel @Inject constructor(
     /** The family a plan belongs to, and which half of it is this parent's. */
     private data class PlanScope(val familyId: String, val myUid: String, val partnerUid: String)
 
-    private fun scopeFor(uid: String?, pairing: PairingState): PlanScope? {
+    private fun scopeFor(uid: String?, pairing: PairingState, projected: String?): PlanScope? {
         val myUid = uid?.takeIf { it.isNotBlank() }
-        val partnerUid = (pairing as? PairingState.Paired)?.partner?.id?.takeIf { it.isNotBlank() }
+        val partnerUid = (ChatPartnerSource.resolve(pairing, projected) as? ChatPartner.Linked)?.partnerUid
         // One exit rather than three guard clauses: `FamilyKey.orNull` already answers null for
         // every case the guards would have caught, so the checks here exist only to smart-cast.
         return if (myUid != null && partnerUid != null) {

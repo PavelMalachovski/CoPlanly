@@ -8,6 +8,7 @@ import com.coparently.app.domain.model.CustodyModelType
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.model.PairingState
 import com.coparently.app.domain.model.PartnerSummary
+import com.coparently.app.domain.model.User
 import com.coparently.app.domain.money.SupportedCurrency
 import com.coparently.app.domain.repository.ChangeRequestRepository
 import com.coparently.app.domain.repository.EventRepository
@@ -63,20 +64,28 @@ class HomeViewModelTest {
     private val agendaEvents = MutableStateFlow<List<Event>>(emptyList())
     private lateinit var viewModel: HomeViewModel
 
+    private lateinit var eventRepository: EventRepository
+    private lateinit var changeRequestRepository: ChangeRequestRepository
+    private lateinit var custodyModelRepository: CustodyModelRepository
+    private lateinit var monthSpendDependencies: MonthSpendDependencies
+    private lateinit var messageRepository: MessageRepository
+
     @Before
     fun setUp() {
         Dispatchers.setMain(dispatcher)
 
-        val eventRepository = mockk<EventRepository> {
+        eventRepository = mockk {
             every { getAllEvents() } returns flowOf(emptyList())
             every { getEventsByDateRange(any(), any()) } returns agendaEvents
             coEvery { getEventById("e1") } returns storedEvent
             coEvery { getEventById("gone") } returns null
         }
-        val changeRequestRepository = mockk<ChangeRequestRepository> {
+        changeRequestRepository = mockk {
             every { getAllChangeRequests() } returns flowOf(emptyList())
+            // Asked only once a uid is known, which the switch test below gives Home.
+            every { getPendingIncomingCount(any()) } returns flowOf(0)
         }
-        val custodyModelRepository = mockk<CustodyModelRepository> {
+        custodyModelRepository = mockk {
             every { getActiveModel() } returns activeModel
             // The awaiting-swaps flow (items 4/13) subscribes at construction.
             every { observeDayOverrides() } returns flowOf(emptyMap())
@@ -87,7 +96,8 @@ class HomeViewModelTest {
         val preferencesRepository = mockk<PreferencesRepository> {
             every { getDefaultCurrencyFlow() } returns flowOf(SupportedCurrency.DEFAULT)
         }
-        val messageRepository = mockk<MessageRepository>(relaxed = true)
+        monthSpendDependencies = MonthSpendDependencies(expenseRepository, preferencesRepository)
+        messageRepository = mockk(relaxed = true)
         val userRepository = mockk<UserRepository> {
             coEvery { getCurrentUser() } returns null
             coEvery { getCurrentUserId() } returns null
@@ -101,11 +111,16 @@ class HomeViewModelTest {
             every { observePairingState() } returns pairingState
         }
 
-        viewModel = HomeViewModel(
+        viewModel = homeViewModel(userRepository, pairingRepository)
+    }
+
+    /** A Home over the repositories [setUp] made, with [userRepository] and [pairingRepository] for identity. */
+    private fun homeViewModel(userRepository: UserRepository, pairingRepository: PairingRepository) =
+        HomeViewModel(
             eventRepository = eventRepository,
             changeRequestRepository = changeRequestRepository,
             custodyModelRepository = custodyModelRepository,
-            monthSpendDependencies = MonthSpendDependencies(expenseRepository, preferencesRepository),
+            monthSpendDependencies = monthSpendDependencies,
             messageRepository = messageRepository,
             familyKindSource = FamilyKindSource(userRepository, pairingRepository),
             homeIdentityDependencies = HomeIdentityDependencies(
@@ -115,7 +130,6 @@ class HomeViewModelTest {
                 testFamilyMembersSource()
             )
         )
-    }
 
     private val storedEvent = java.time.LocalDateTime.of(2026, 9, 1, 9, 0).let { at ->
         com.coparently.app.domain.model.Event(
@@ -336,4 +350,43 @@ class HomeViewModelTest {
                 cancelAndIgnoreRemainingEvents()
             }
         }
+
+    @Test
+    fun `the dashboard names, and counts unread for, the family on screen`() = runTest(dispatcher) {
+        // Tester report #11. With two families the server's link names the first co-parent and
+        // the family switcher's projection the one on screen. Home named the first in its changes
+        // header, and read the projection once, at construction, for the unread count — so a
+        // switch left both on the family the parent had just left.
+        val zuzana = User(id = "u1", email = "zuzana@example.com", name = "Zuzana", role = "mom", colorCode = "#FF4081")
+        val barbora = PartnerSummary(id = "u2", name = "Barbora", email = "b@example.com", pairedSinceMillis = null)
+        val pavel = PartnerSummary(id = "u3", name = "Pavel", email = "p@example.com", pairedSinceMillis = null)
+        val rows = MutableStateFlow(listOf(zuzana.copy(partnerId = "u3")))
+        val users = mockk<UserRepository> {
+            coEvery { getCurrentUser() } returns zuzana
+            coEvery { getCurrentUserId() } returns "u1"
+            every { observeCurrentUserId() } returns flowOf("u1")
+            every { getAllUsers() } returns rows
+        }
+        val pairing = mockk<PairingRepository> {
+            every { observePairingState() } returns MutableStateFlow(PairingState.Paired(barbora))
+            every { observeCoParentProfile("u3") } returns flowOf(pavel)
+        }
+        every { messageRepository.observeUnreadCount("u1__u3", "u1") } returns flowOf(4)
+        every { messageRepository.observeUnreadCount("u1__u2", "u1") } returns flowOf(1)
+        val home = homeViewModel(users, pairing)
+
+        home.uiState.test {
+            dispatcher.scheduler.advanceUntilIdle()
+            val onPavels = expectMostRecentItem() as HomeUiState.Dashboard
+            assertEquals("Pavel", onPavels.partner?.name)
+            assertEquals(4, onPavels.unreadCount)
+
+            rows.value = listOf(zuzana.copy(partnerId = "u2"))
+            dispatcher.scheduler.advanceUntilIdle()
+            val onBarboras = expectMostRecentItem() as HomeUiState.Dashboard
+            assertEquals("Barbora", onBarboras.partner?.name)
+            assertEquals(1, onBarboras.unreadCount)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
 }

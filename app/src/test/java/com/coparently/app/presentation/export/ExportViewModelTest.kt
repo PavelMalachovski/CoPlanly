@@ -111,15 +111,21 @@ class ExportViewModelTest {
         Dispatchers.resetMain()
     }
 
+    /**
+     * @param partnerOnScreen The co-parent of the family on screen.
+     * @param serverPartner The co-parent the server's link names — the first one, which for a
+     *   parent showing their second family is not [partnerOnScreen].
+     */
     private fun viewModel(
         partnerOnScreen: PartnerSummary? = partner,
-        thread: String? = null
+        thread: String? = null,
+        serverPartner: PartnerSummary? = partnerOnScreen
     ) = ExportViewModel(
         source,
         OptionalRecordSections(planSource, journal),
         writer,
         receipts,
-        testParentsSource(me, partnerOnScreen),
+        testParentsSource(me, partner = serverPartner, onScreen = partnerOnScreen),
         userRepository,
         departedThreads,
         SavedStateHandle(listOfNotNull(thread?.let { ExportViewModel.ARG_THREAD to it }).toMap())
@@ -175,6 +181,31 @@ class ExportViewModelTest {
         }
         // Names, never roles: the slot identifiers "mom"/"dad" must not reach a court document.
         assertEquals(listOf("Alice", "Bob"), record.captured.parents)
+        vm.state.first { it.working == null }
+    }
+
+    @Test
+    fun `with a second family on screen, the record names its co-parent and not the first`() = runTest {
+        // Tester report #11. The thread, the family and the receipt followed the family on screen
+        // while the names followed the server's first co-parent: Carol's record was signed "Bob".
+        val carol = PartnerSummary(
+            id = "u3",
+            name = "Carol",
+            email = "carol@example.com",
+            pairedSinceMillis = null,
+            role = "dad"
+        )
+        val record = slot<CommunicationRecord>()
+        coEvery { writer.save(any(), capture(record), any()) } returns ExportedFile(mockk<Uri>(), "text/csv")
+        val vm = viewModel(partnerOnScreen = carol, serverPartner = partner)
+
+        vm.files.test {
+            vm.export(ExportFormat.CSV, RecordFixtures.labels(), fallbacks)
+            awaitItem()
+        }
+
+        coVerify { source.gather(myUid = "u1", conversationId = "u1__u3", from = any(), to = any(), zone = any()) }
+        assertEquals(listOf("Alice", "Carol"), record.captured.parents)
         vm.state.first { it.working == null }
     }
 

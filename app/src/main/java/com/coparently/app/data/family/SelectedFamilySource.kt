@@ -11,6 +11,7 @@ import com.google.gson.Gson
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -79,6 +80,24 @@ class SelectedFamilySource @Inject constructor(
     private val gson = Gson()
 
     /**
+     * A switch [select] was asked for before this device knew the family, waiting for the
+     * [reconcile] that brings the family in — or for [PENDING_SWITCH_MILLIS] to pass.
+     *
+     * The tap on a `pairing_accepted` push names the family the pairing just made
+     * (`MainActivity.readLaunchIntent`), and it can arrive before the partner list in Room holds
+     * that family: the push goes out the moment the server writes the link, and this device learns
+     * the new co-parent from its own pairing listener or its next sync, either of which may run
+     * after the tap. Refused outright, the tap opened on the family already on screen. Kept in
+     * memory only, for the account that asked; any later [select] replaces it, and a reconcile
+     * that still does not know the family keeps it, because a cached snapshot older than the
+     * pairing can reconcile first.
+     */
+    private val pendingSwitch = AtomicReference<PendingSwitch?>(null)
+
+    /** See [pendingSwitch]. */
+    private data class PendingSwitch(val uid: String, val familyId: String, val untilMillis: Long)
+
+    /**
      * The families the signed-in parent is in, oldest relationship first.
      *
      * Derived from the stored co-parent list rather than from `families/{id}`: this has to work
@@ -129,8 +148,10 @@ class SelectedFamilySource @Inject constructor(
     /**
      * Points this device at [familyId].
      *
-     * A no-op for a family the account is not in: a stale switcher tap must not blank the
-     * co-parent every downstream reader depends on.
+     * Changes nothing now for a family this device does not know: a stale switcher tap must not
+     * blank the co-parent every downstream reader depends on. The request waits, briefly, for a
+     * [reconcile] that brings the family in ([pendingSwitch]) — a family the account is not in
+     * never arrives, so nothing ever comes of it.
      *
      * @return The family now selected, or null when [familyId] named none of them.
      */
@@ -138,16 +159,19 @@ class SelectedFamilySource @Inject constructor(
         val uid = currentUid() ?: return null
         val target = families().firstOrNull { it.familyId == familyId }
         if (target == null) {
-            Log.w(TAG, "Ignoring a switch to a family the signed-in user is not part of")
+            pendingSwitch.set(PendingSwitch(uid, familyId, System.currentTimeMillis() + PENDING_SWITCH_MILLIS))
+            Log.w(TAG, "A switch to a family this device does not know yet waits for the next reconcile")
             return null
         }
+        pendingSwitch.set(null)
         encryptedPreferences.putString(key(uid), familyId)
         applyProjection(uid, target)
         return target
     }
 
     /**
-     * Re-applies the projection without changing the choice.
+     * Re-applies the projection without changing the choice — unless a switch [select] could
+     * not make yet names a family this device now knows ([pendingSwitch]).
      *
      * Called after anything that can move the set of families under the selection — a sync that
      * brings a new co-parent down, an unpair, a fresh sign-in. Without it a device that had
@@ -156,13 +180,26 @@ class SelectedFamilySource @Inject constructor(
      */
     suspend fun reconcile() {
         val uid = currentUid() ?: return
-        val target = selected()
+        val target = askedFor(uid) ?: selected()
         if (target == null) {
             applyProjection(uid, null)
             return
         }
         encryptedPreferences.putString(key(uid), target.familyId)
         applyProjection(uid, target)
+    }
+
+    /**
+     * The family a waiting switch names, once [families] holds it — the switch is then spent.
+     * Null while it does not, and for a switch another account asked for or one that has lapsed,
+     * which are dropped.
+     */
+    private suspend fun askedFor(uid: String): FamilyOption? {
+        val pending = pendingSwitch.get() ?: return null
+        val live = pending.uid == uid && System.currentTimeMillis() <= pending.untilMillis
+        val target = if (live) families().firstOrNull { it.familyId == pending.familyId } else null
+        if (target != null || !live) pendingSwitch.compareAndSet(pending, null)
+        return target
     }
 
     /**
@@ -213,5 +250,12 @@ class SelectedFamilySource @Inject constructor(
 
     private companion object {
         const val TAG = "SelectedFamily"
+
+        /**
+         * How long a switch to a family this device does not know yet may wait for it. Long enough
+         * for a cold start's pairing listener or sync to answer, short enough that a tap is never
+         * applied long after the parent has moved on.
+         */
+        const val PENDING_SWITCH_MILLIS = 60_000L
     }
 }

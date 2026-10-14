@@ -235,6 +235,78 @@ class PairingRepositoryImplTest {
     }
 
     @Test
+    fun `a co-parent the server adds beside the first is mirrored at once, without a switch`() = runTest {
+        // Tester report #4. A parent already paired with u2 shares their code and u3 redeems it.
+        // The server adds u3 to `partnerIds` and keeps `partnerId` on u2, so the state this phone
+        // shows still names u2 — and the mirror used to watch that one field, so nothing happened
+        // here: no sync, no family in Room for the switcher, no thread, until a sync tick or a
+        // push happened along. The co-parent the set gained is what a transition is now about.
+        coEvery { userDao.getUserById("user-a") } returns
+            userEntity(partnerId = "u2").copy(partnerIdsJson = "[\"u2\"]")
+        val listeners = stubRealtimeListeners()
+
+        repository.observePairingState().test {
+            assertEquals(PairingState.Loading, awaitItem())
+            runCurrent()
+            listeners.emitInvites()
+            listeners.emitUser(userDoc(partnerId = "u2", pairedAt = 123L))
+            listeners.emitPartner(partnerDoc(name = "Barbora", role = "dad"))
+            awaitItem()
+            // The first link a process sees asks for one sync, as it always has.
+            verify(exactly = 1) { syncRequester.requestSyncNow() }
+
+            listeners.emitUser(userDoc(partnerId = "u2", pairedAt = 456L, partnerIds = listOf("u2", "u3")))
+            runCurrent()
+            listeners.emitPartner(partnerDoc(name = "Barbora", role = "dad"))
+            assertEquals("u2", (awaitItem() as PairingState.Paired).partner.id)
+
+            verify(exactly = 2) { syncRequester.requestSyncNow() }
+            coVerify { userDao.updateUser(match { it.partnerIdsJson == "[\"u2\",\"u3\"]" }) }
+            coVerify(exactly = 2) { selectedFamilySource.reconcile() }
+            coVerify { messageRepository.ensureConversation("user-a", "u3", any()) }
+
+            // The same set again — the first co-parent renaming themselves — does nothing more.
+            listeners.emitPartner(partnerDoc(name = "Barbara", role = "dad"))
+            assertEquals("Barbara", (awaitItem() as PairingState.Paired).partner.name)
+            cancelAndIgnoreRemainingEvents()
+        }
+
+        verify(exactly = 2) { syncRequester.requestSyncNow() }
+        coVerify(exactly = 1) { userDao.updateUser(any()) }
+        coVerify(exactly = 2) { selectedFamilySource.reconcile() }
+        coVerify(exactly = 1) { messageRepository.ensureConversation("user-a", "u3", any()) }
+        // A new family joins the switcher; it does not take over the screen.
+        coVerify(exactly = 0) { selectedFamilySource.select(any()) }
+    }
+
+    @Test
+    fun `a co-parent the pairing state does not carry is read from their own document`() = runTest {
+        // What a screen showing the second family names: their profile, live, never the first's.
+        val listener = slot<EventListener<DocumentSnapshot>>()
+        val document = mockk<DocumentReference>(relaxed = true)
+        every { usersCollection.document("u3") } returns document
+        every { document.addSnapshotListener(capture(listener)) } returns mockk(relaxed = true)
+
+        repository.observeCoParentProfile("u3").test {
+            runCurrent()
+            listener.captured.onEvent(partnerDoc(name = "Pavel", role = "dad", colorCode = "hue1|200"), null)
+
+            assertEquals(
+                PartnerSummary(
+                    id = "u3",
+                    name = "Pavel",
+                    email = "",
+                    pairedSinceMillis = null,
+                    role = "dad",
+                    colorCode = "hue1|200"
+                ),
+                awaitItem()
+            )
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
     fun `an ended link asks for no sync, because there is nothing new to fetch`() = runTest {
         coEvery { userDao.getUserById("user-a") } returns userEntity(partnerId = "u2")
         val listeners = stubRealtimeListeners()
@@ -826,10 +898,19 @@ class PairingRepositoryImplTest {
         )
     }
 
-    private fun userDoc(partnerId: String, pairedAt: Long? = null): DocumentSnapshot {
+    /**
+     * This account's own document. [partnerIds] is the array `acceptPairingInvitation` grows;
+     * absent, as on a document written before it existed, the singular [partnerId] is the set.
+     */
+    private fun userDoc(
+        partnerId: String,
+        pairedAt: Long? = null,
+        partnerIds: List<String>? = null
+    ): DocumentSnapshot {
         val snapshot = mockk<DocumentSnapshot>(relaxed = true)
         every { snapshot.getString("partnerId") } returns partnerId
         every { snapshot.getLong("pairedAt") } returns pairedAt
+        every { snapshot.get("partnerIds") } returns partnerIds
         return snapshot
     }
 

@@ -9,6 +9,7 @@ import com.coparently.app.domain.custody.SharedCustody
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.PairingState
 import com.coparently.app.domain.model.PartnerSummary
+import com.coparently.app.domain.model.User
 import com.coparently.app.domain.parentingplan.ParentingPlanEntry
 import com.coparently.app.domain.repository.PairingRepository
 import com.coparently.app.domain.repository.UserRepository
@@ -54,9 +55,17 @@ class ParentingPlanViewModelTest {
         every { observeShared() } returns shared
     }
 
-    private fun viewModel(pairing: PairingState = PairingState.Paired(partner)): ParentingPlanViewModel {
+    /**
+     * @param shownPartnerUid The co-parent of the family on screen, as the family switcher projects
+     *   it onto the signed-in row; null leaves the row unprojected, as right after a pairing.
+     */
+    private fun viewModel(
+        pairing: PairingState = PairingState.Paired(partner),
+        shownPartnerUid: String? = null
+    ): ParentingPlanViewModel {
         val userRepository = mockk<UserRepository> {
             every { observeCurrentUserId() } returns flowOf("u1")
+            every { getAllUsers() } returns flowOf(listOf(signedInRow(shownPartnerUid)))
         }
         val pairingRepository = mockk<PairingRepository> {
             every { observePairingState() } returns flowOf(pairing)
@@ -70,6 +79,16 @@ class ParentingPlanViewModelTest {
             custody
         )
     }
+
+    /** The signed-in parent's Room row, projected onto [shownPartnerUid]'s family. */
+    private fun signedInRow(shownPartnerUid: String?) = User(
+        id = "u1",
+        email = "olya@example.com",
+        name = "Olya",
+        role = "mom",
+        colorCode = "#FF4081",
+        partnerId = shownPartnerUid
+    )
 
     @Before
     fun setUp() {
@@ -88,6 +107,22 @@ class ParentingPlanViewModelTest {
         advanceUntilIdle()
 
         assertEquals(ParentingPlanUiState.NoCoParent, vm.uiState.value)
+    }
+
+    @Test
+    fun `the plan is the family on screen's, not the first co-parent's`() = runTest(dispatcher) {
+        // With two families the server's link names the first co-parent (u2); the switcher shows
+        // the second (u3). The plan, its names and the custody proposal beside it must all be
+        // that family's — the names and the proposal already were.
+        every { repository.observe("u1__u3", "u1") } returns flowOf(
+            ParentingPlanPair(yours = ParentingPlanEntry(answers = mapOf("q1" to "Weekends")), theirs = null)
+        )
+        val vm = viewModel(shownPartnerUid = "u3")
+        backgroundScope.launch { vm.uiState.collect {} }
+        advanceUntilIdle()
+
+        assertEquals("u3", (vm.uiState.value as ParentingPlanUiState.Ready).coParentUid)
+        verify(exactly = 0) { repository.observe(familyId, any()) }
     }
 
     @Test
