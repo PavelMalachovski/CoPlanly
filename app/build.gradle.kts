@@ -154,7 +154,8 @@ android {
         // Overridden per upload by the release workflow (-PCOPLANLY_VERSION_CODE), because Play
         // refuses a second bundle with the same versionCode.
         versionCode = (project.findProperty("COPLANLY_VERSION_CODE") as String?)?.toInt() ?: 2
-        versionName = "1.1.0"
+        // A release tag (`v1.2.0`) overrides it through -PCOPLANLY_VERSION_NAME; see release.yml.
+        versionName = (project.findProperty("COPLANLY_VERSION_NAME") as String?) ?: "1.1.0"
 
         testInstrumentationRunner = "com.coparently.app.HiltTestRunner"
 

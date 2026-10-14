@@ -217,6 +217,21 @@ the Firestore region, and the first published price tier's currency set.)*
       for why it is not the unrecoverable event the roadmap used to describe).
 - [ ] `./gradlew bundleRelease`, and keep the mapping file for each release: without it Crashlytics
       stack traces are unreadable.
+- [ ] **Uploading from CI** (`.github/workflows/release.yml`, Actions → *Release bundle*, or push
+      a `v1.2.0` tag). It builds in the cloud and uploads to a Play track through the Play
+      Developer API. Once, by hand:
+      1. Upload the **first** AAB in Play Console yourself (*Testing → Internal testing → Create
+         release*), from the workflow's `coplanly-release-aab` artefact of a run with track `none`.
+         The API can only add to an app that already has a bundle.
+      2. In Google Cloud (any project — the Firebase one is fine) enable the **Google Play Android
+         Developer API**, create a service account with no roles, and create a JSON key for it.
+      3. In Play Console → *Users and permissions* → *Invite new users*, invite the service
+         account's e-mail, give it **app permissions** for CoPlanly: *Release apps to testing
+         tracks* (and *Release to production…* only if CI should prepare production drafts).
+      4. Paste the whole JSON into the repository secret `PLAY_SERVICE_ACCOUNT_JSON`.
+      Until the app has been reviewed and published once, Play accepts only **draft** releases:
+      run with `release_status: draft` and press *Roll out* in the console. `production` is always
+      uploaded as a draft.
 
 ### 2.4 What the listing needs
 

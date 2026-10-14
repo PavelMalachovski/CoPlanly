@@ -285,8 +285,18 @@ enrolment rule in the console rather than on this sentence; Play's requirements 
       uploads the bundle and R8's `mapping.txt` as artifacts — the mapping kept, or Crashlytics
       stack traces from that build are unreadable. It says in its summary whether the bundle came
       out signed. **Never run**: the secrets do not exist until the keystore does.
-- [ ] Put the five secrets in the repository, run the workflow once, and install what it built on
-      a phone before anything is uploaded (REL-7).
+- [x] **The Play upload is scripted too** (October 2026, owner decision — it used to be left out
+      on purpose). `release.yml` takes a `track` (`internal` by default, `alpha` = closed testing,
+      `beta`, `production`, or `none` to build only) and a `release_status`, and a pushed `v1.2.0`
+      tag runs it with the internal track and that version name. It uploads through the Play
+      Developer API (`r0adkll/upload-google-play`, service account key in the
+      `PLAY_SERVICE_ACCOUNT_JSON` secret) only a signed bundle that passed `check-r8-mapping.js`,
+      sends the mapping file with it, and uploads `production` as a draft whatever it is asked.
+- [ ] Put the five secrets in the repository, run the workflow once with track `none`, and install
+      what it built on a phone before anything is uploaded (REL-7). Then upload the **first**
+      bundle by hand in Play Console (the API cannot), create the service account (LAUNCH-PLAYBOOK
+      §2.3), add `PLAY_SERVICE_ACCOUNT_JSON`, and upload with `release_status: draft` until the app
+      has been published once.
 
 ### REL-3 · P0 · Deploy the rules, the functions, and the storage rules
 

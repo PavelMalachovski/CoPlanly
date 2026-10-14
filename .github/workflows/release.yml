@@ -1,4 +1,5 @@
-# Builds the signed Android App Bundle Google Play takes — by hand, never on a push.
+# Builds the signed Android App Bundle Google Play takes and, when asked, uploads it to Play.
+# Never on an ordinary push: by hand (workflow_dispatch) or by pushing a release tag (`v1.2.0`).
 #
 # REL-2's second half. `ci.yml` runs `assembleRelease` on every pull request so R8 is exercised,
 # and it must keep doing so on a machine that holds no key. This workflow is the one that *does*
@@ -12,30 +13,73 @@
 #   GOOGLE_SERVICES_JSON_BASE64       `base64 -w0 app/google-services.json` for the `app.coplanly`
 #                                     client — the file is gitignored, and a release build without
 #                                     it has no Firebase project to talk to
+#   PLAY_SERVICE_ACCOUNT_JSON         only for the upload: the JSON key of a Google Cloud service
+#                                     account invited in Play Console (Users and permissions) with
+#                                     the release permissions for this app. Pasted as plain text.
 #
 # `app/build.gradle.kts` reads the four `COPLANLY_RELEASE_*` properties from the environment and
 # refuses to sign unless all four are present and the store file exists, so a run with a secret
 # missing produces an *unsigned* bundle and says so in the summary rather than failing obscurely.
+# An unsigned bundle is never uploaded: Play would refuse it, and the step fails first with the
+# reason.
 #
 # What comes out: the `.aab`, a signed `.apk` of the same build to install on a phone by hand
 # (download the `coplanly-release-apk` artifact, unzip, open the `.apk` on the phone), and R8's
 # `mapping.txt`, as artifacts. The APK is the same release build Play would serve, signed with the
 # upload key, so Google sign-in works once that key's SHA-1 is in the Firebase app; an unsigned
-# run (a signing secret missing) produces an APK Android refuses to install, and the summary says so. Keep the mapping with every
-# upload — without it Crashlytics stack traces from that build are unreadable — and run
-# `node tools/check-r8-mapping.js` here as CI does, because a release that renames a Gson field
-# ships a child's medical profile as an empty object (audit §2.8).
+# run (a signing secret missing) produces an APK Android refuses to install, and the summary says
+# so. Keep the mapping with every upload — without it Crashlytics stack traces from that build are
+# unreadable (the Play upload sends it to Play too) — and run `node tools/check-r8-mapping.js` here
+# as CI does, because a release that renames a Gson field ships a child's medical profile as an
+# empty object (audit §2.8). The upload happens only after that check passed.
 #
-# `versionCode` is 100 + the run number (passed as -PCOPLANLY_VERSION_CODE).
-# Not automated on purpose: the Play upload and the closed-track roll-out
-# are decisions, and REL-7 (install the build, confirm a medical profile reaches the co-parent
-# non-empty) is a test only a device can run.
+# Upload to Play (`track`): `none` builds only, as this workflow did before; `internal` is the
+# internal-testing track (the default, and what a tag push uses); `alpha` is Play's closed testing
+# track, `beta` open testing. `production` is always uploaded as a **draft** whatever
+# `release_status` says, so a release to everyone is still a button pressed in the console. Two
+# limits of the Play API worth knowing before the first run:
+#   - the very first bundle of an app has to be uploaded by hand in Play Console; the API can
+#     only add to an app that already has one;
+#   - while the app has never been reviewed and published ("draft app"), Play accepts only
+#     `release_status: draft` — run with `draft` until then, and roll the release out in the
+#     console.
+#
+# `versionCode` is 100 + the run number (passed as -PCOPLANLY_VERSION_CODE); a re-run of the same
+# run reuses its number and Play refuses it — start a new run instead. `versionName` is the tag
+# without its `v` on a tag push, and the default in `app/build.gradle.kts` otherwise.
+# Still not automated, on purpose: REL-7 (install the build, confirm a medical profile reaches the
+# co-parent non-empty) is a test only a device can run — run it on the internal track's build
+# before promoting anything further.
 
 name: Release bundle
 
 on:
+  push:
+    tags:
+      - 'v*'
   workflow_dispatch:
     inputs:
+      track:
+        description: "Google Play track to upload to ('none' builds only)"
+        type: choice
+        options:
+          - internal
+          - alpha
+          - beta
+          - production
+          - none
+        default: internal
+      release_status:
+        description: "Release status on Play ('draft' until the app has been published once; production is always draft)"
+        type: choice
+        options:
+          - completed
+          - draft
+        default: completed
+      whats_new:
+        description: "Release notes (en-US, up to 500 characters; optional)"
+        required: false
+        default: ""
       track_note:
         description: "Free text recorded in the run summary (e.g. 'closed test 3')"
         required: false
@@ -43,6 +87,16 @@ on:
 
 permissions:
   contents: read
+
+# Two runs uploading at once would race for the same track.
+concurrency:
+  group: release-bundle
+  cancel-in-progress: false
+
+env:
+  # A tag push has no inputs: it uploads to the internal track, completed.
+  PLAY_TRACK: ${{ github.event.inputs.track || 'internal' }}
+  PLAY_STATUS: ${{ github.event.inputs.track == 'production' && 'draft' || github.event.inputs.release_status || 'completed' }}
 
 jobs:
   bundle:
@@ -52,6 +106,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Expressions have no arithmetic, so the offset is added here.
+      - name: Number this build
+        run: echo "VERSION_CODE=$(( 100 + ${{ github.run_number }} ))" >> "$GITHUB_ENV"
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
@@ -60,6 +118,19 @@ jobs:
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
+
+      # The tag reaches the script through the environment and is checked before use: a tag name
+      # is text anyone with push access chooses.
+      - name: Read the version name from the tag
+        if: github.ref_type == 'tag'
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          if ! [[ "$TAG" =~ ^v([0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?)$ ]]; then
+            echo "::error::Tag '$TAG' is not v<major>.<minor>.<patch> — not building a release from it"
+            exit 1
+          fi
+          echo "VERSION_NAME=${BASH_REMATCH[1]}" >> "$GITHUB_ENV"
 
       # Decoded into the working directory, which is discarded with the runner. Nothing here is
       # written to a path Gradle caches.
@@ -93,12 +164,18 @@ jobs:
           COPLANLY_RELEASE_KEY_PASSWORD: ${{ secrets.COPLANLY_RELEASE_KEY_PASSWORD }}
         # Every upload to Play needs a higher versionCode than the last. The run number only
         # grows, and the offset keeps it above the hard-coded default in app/build.gradle.kts.
-        run: ./gradlew bundleRelease assembleRelease -PCOPLANLY_VERSION_CODE=$(( 100 + ${{ github.run_number }} ))
+        run: |
+          args=(bundleRelease assembleRelease "-PCOPLANLY_VERSION_CODE=$VERSION_CODE")
+          if [ -n "${VERSION_NAME:-}" ]; then
+            args+=("-PCOPLANLY_VERSION_NAME=$VERSION_NAME")
+          fi
+          ./gradlew "${args[@]}"
 
       - name: Verify R8 kept the Gson field names
         run: node tools/check-r8-mapping.js
 
       - name: Say whether the bundle is signed
+        id: signing
         env:
           STORE_PASSWORD: ${{ secrets.COPLANLY_RELEASE_STORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.COPLANLY_RELEASE_KEY_ALIAS }}
@@ -107,17 +184,24 @@ jobs:
           # anyone who can run the workflow types, and this step holds the signing passwords.
           TRACK_NOTE: ${{ github.event.inputs.track_note }}
         run: |
+          if [ -n "${COPLANLY_RELEASE_STORE_FILE:-}" ] && [ -n "$STORE_PASSWORD" ] \
+            && [ -n "$KEY_ALIAS" ] && [ -n "$KEY_PASSWORD" ]; then
+            signed=true
+          else
+            signed=false
+          fi
+          echo "signed=$signed" >> "$GITHUB_OUTPUT"
           {
             echo "## Release bundle"
             echo
-            if [ -n "${COPLANLY_RELEASE_STORE_FILE:-}" ] && [ -n "$STORE_PASSWORD" ] \
-              && [ -n "$KEY_ALIAS" ] && [ -n "$KEY_PASSWORD" ]; then
+            if [ "$signed" = true ]; then
               echo "- Signing: **signed with the upload key**"
             else
               echo "- Signing: **UNSIGNED** — one or more of the four COPLANLY_RELEASE_* secrets is missing"
             fi
             echo "- Note: $TRACK_NOTE"
-            echo "- versionCode: $(( 100 + ${{ github.run_number }} )), versionName: $(grep -E 'versionName' app/build.gradle.kts | tr -s ' ')"
+            echo "- versionCode: $VERSION_CODE, versionName: ${VERSION_NAME:-$(grep -E 'versionName =' app/build.gradle.kts | grep -oE '"[^"]+"' | tail -1)}"
+            echo "- Google Play: track \`$PLAY_TRACK\`, status \`$PLAY_STATUS\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload the bundle
@@ -143,3 +227,48 @@ jobs:
           path: app/build/outputs/mapping/release/
           if-no-files-found: error
           retention-days: 90
+
+      # Everything the Play step needs, checked in one place so a missing piece fails with its
+      # name rather than inside the action. The release notes go through the environment, like
+      # the note above, and are written to the file layout the action reads.
+      - name: Prepare the Google Play upload
+        id: play
+        if: env.PLAY_TRACK != 'none'
+        env:
+          SIGNED: ${{ steps.signing.outputs.signed }}
+          HAS_PLAY_KEY: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON != '' }}
+          WHATS_NEW: ${{ github.event.inputs.whats_new }}
+        run: |
+          if [ "$SIGNED" != true ]; then
+            echo "::error::The bundle is unsigned — Google Play refuses it. Set the four COPLANLY_RELEASE_* secrets, or run with track 'none'."
+            exit 1
+          fi
+          if [ "$HAS_PLAY_KEY" != true ]; then
+            echo "::error::PLAY_SERVICE_ACCOUNT_JSON is not set — cannot upload to Google Play. Run with track 'none' to build only."
+            exit 1
+          fi
+          aab=$(ls app/build/outputs/bundle/release/*.aab | head -1)
+          echo "aab=$aab" >> "$GITHUB_OUTPUT"
+          if [ -n "$WHATS_NEW" ]; then
+            mkdir -p "$RUNNER_TEMP/whatsnew"
+            printf '%s' "${WHATS_NEW:0:500}" > "$RUNNER_TEMP/whatsnew/whatsnew-en-US"
+            echo "whatsnew=$RUNNER_TEMP/whatsnew" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload to Google Play
+        if: env.PLAY_TRACK != 'none'
+        uses: r0adkll/upload-google-play@v1.1.5
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: app.coplanly
+          releaseFiles: ${{ steps.play.outputs.aab }}
+          releaseName: ${{ env.VERSION_CODE }} (${{ env.VERSION_NAME || github.sha }})
+          track: ${{ env.PLAY_TRACK }}
+          status: ${{ env.PLAY_STATUS }}
+          mappingFile: app/build/outputs/mapping/release/mapping.txt
+          whatsNewDirectory: ${{ steps.play.outputs.whatsnew }}
+
+      - name: Record the upload
+        if: env.PLAY_TRACK != 'none'
+        run: |
+          echo "- Uploaded to Google Play: **$PLAY_TRACK** ($PLAY_STATUS)" >> "$GITHUB_STEP_SUMMARY"
