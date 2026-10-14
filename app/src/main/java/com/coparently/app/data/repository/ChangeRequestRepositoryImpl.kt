@@ -61,7 +61,10 @@ class ChangeRequestRepositoryImpl @Inject constructor(
 
     override suspend fun updateStatus(requestId: String, status: ChangeRequestStatus) {
         val request = changeRequestDao.getChangeRequestById(requestId)?.toDomain() ?: return
-        val updated = request.copy(status = status, respondedAt = LocalDateTime.now())
+        // Not sent until [publish] says so. The row being answered is almost always the mirror's
+        // copy of the co-parent's request, which is synced; copied as it was, an answer given
+        // offline read as sent at once, and the History never said "Queued" (CQ-20).
+        val updated = request.copy(status = status, respondedAt = LocalDateTime.now(), syncedToFirestore = false)
         changeRequestDao.insertChangeRequest(updated.toEntity())
 
         if (firebaseAuthService.getCurrentUser() == null) return
@@ -128,8 +131,11 @@ class ChangeRequestRepositoryImpl @Inject constructor(
             .collect { documents ->
                 documents.forEach { data ->
                     runCatching { data.toDomain() }.getOrNull()?.let { remote ->
+                        // Firestore's local echo of this phone's own write arrives before the
+                        // server has it: still queued, and [publish] marks it sent once it lands.
+                        val sent = data[FirestoreChangeRequestDataSource.HAS_PENDING_WRITES] != true
                         changeRequestDao.insertChangeRequest(
-                            remote.copy(syncedToFirestore = true).toEntity()
+                            remote.copy(syncedToFirestore = sent).toEntity()
                         )
                     }
                 }

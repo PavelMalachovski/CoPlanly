@@ -2344,7 +2344,11 @@ whatever you were doing; a stale "known issue" costs more than a missing one.
   this entry outlived the fix by a while: `ChangeRequestsScreen` shows a Queued chip on
   `!syncedToFirestore` and the ViewModel's state is `Saved`, not `Sent`. Kept for the rule it
   states — "sent" is a claim the app can only make once the write landed, and `MessagesList`'s
-  honest tick is the model for any new outbox.
+  honest tick is the model for any new outbox. Two ways it still broke, both fixed in the phase 2
+  review: an answer copied the mirrored request's synced flag (`updateStatus` now stores it unsent
+  until `publish` lands), and the mirror filed Firestore's local echo of this phone's own write as
+  synced — the data source marks such a document `HAS_PENDING_WRITES`, and the mirror keeps it
+  queued.
 
 - ~~**A proposed split ratio cannot be withdrawn, and the proposer is told nothing.**~~ **Fixed
   (UX-17)**: `FamilySettingsRepository.withdrawProposal` is called from `ExpenseViewModel`, and the
