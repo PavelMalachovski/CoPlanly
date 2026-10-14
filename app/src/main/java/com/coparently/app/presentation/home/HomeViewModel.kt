@@ -4,7 +4,6 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.coparently.app.data.repository.CustodyModelRepository
-import com.coparently.app.domain.changerequests.AwaitingAnswers
 import com.coparently.app.domain.chat.ChatReadState
 import com.coparently.app.domain.chat.ConversationKey
 import com.coparently.app.domain.custody.CustodyResolver
@@ -601,20 +600,17 @@ class HomeViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), FamilyKind.ALL)
 
     /**
-     * Day swaps still waiting for this parent's answer, soonest first.
+     * Day swaps still waiting for this parent's answer in the family on screen, soonest first.
      *
-     * Same source and same filter as the inbox (`DaySwapInbox`), so the main page can never
-     * disagree with the screen that answers them. `LocalDate.now()` is read per emission, as
-     * `RequestsSource` reads it: this flow outlives midnight.
+     * The inbox's own list, from [requests], so the main page can never disagree with the screen
+     * that answers them — grouped, so a week offered as one agreement raises one dialog rather
+     * than seven in a row. It used to read Room's one active custody model, which keeps the
+     * previous family's swaps while the family on screen has no custody document, so another
+     * family's swap popped up here (phase 2 review).
      */
-    private val awaitingSwaps: StateFlow<List<DaySwapGroup>> = combine(
-        custodyModelRepository.observeDayOverrides(),
-        _userId
-    ) { overrides, uid ->
-        // Grouped, so a week offered as one agreement raises one dialog rather than seven in a
-        // row — each dismissal revealing the next, which is what the reporter saw.
-        AwaitingAnswers.swapOffers(overrides, uid, LocalDate.now())
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())
+    private val awaitingSwaps: StateFlow<List<DaySwapGroup>> = requests
+        .map { state -> (state as? RequestsState.Ready)?.inbox?.waitingOnMe?.swaps.orEmpty() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())
 
     /**
      * Incoming change requests plus pending events still waiting for this parent's answer, in the

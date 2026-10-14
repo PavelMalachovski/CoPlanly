@@ -149,14 +149,19 @@ class CustodyModelRepository(
      *
      * `by lazy` so that merely constructing this singleton does not reach for the user
      * repository or start anything.
+     *
+     * Each value names the family it was read for, for [observeSharedOf].
      */
-    private val shared: Flow<SharedCustody?> by lazy {
+    private val tagged: Flow<FamilyDocument> by lazy {
         sharedUpstream().shareIn(
             scope,
             SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS, replayExpirationMillis = 0),
             replay = 1
         )
     }
+
+    /** [tagged] without the family: the document of whichever family this device follows. */
+    private val shared: Flow<SharedCustody?> by lazy { tagged.map { it.custody } }
 
     /**
      * Gets the active custody model as a Flow.
@@ -252,6 +257,21 @@ class CustodyModelRepository(
      * denied — once, transiently, exactly the case a terminal `catch` would turn permanent.
      */
     fun observeShared(): Flow<SharedCustody?> = shared
+
+    /**
+     * The shared document of [familyId], and null while that is not the family this device
+     * follows, or has no document.
+     *
+     * For a screen that speaks for one family (phase 2 review): the requests inbox, Home's swap
+     * pop-up and the mini months. [observeShared] follows the family on screen, but it replays the
+     * previous family's document until the next one's listener answers; and Room's one active
+     * model, behind [observeDayOverrides], keeps the previous family's swaps for as long as the
+     * next family has no document at all. Asked by family id, neither reaches the wrong family.
+     *
+     * @param familyId `FamilyKey.of` the two parents, which is also the document's id.
+     */
+    fun observeSharedOf(familyId: String): Flow<SharedCustody?> =
+        tagged.map { document -> document.custody.takeIf { document.documentId == familyId } }
 
     /**
      * The pair's shared pattern, read once.
@@ -708,16 +728,17 @@ class CustodyModelRepository(
      * safe reset when the failure could have come from any stage.
      */
     @OptIn(ExperimentalCoroutinesApi::class)
-    private fun sharedUpstream(): Flow<SharedCustody?> =
+    private fun sharedUpstream(): Flow<FamilyDocument> =
         observePair()
             .flatMapLatest { pair ->
                 if (pair == null) {
-                    flowOf(null)
+                    flowOf(FamilyDocument(documentId = null, custody = null))
                 } else {
                     firestoreCustodyDataSource.observeCustody(pair.documentId)
+                        .map { custody -> FamilyDocument(pair.documentId, custody) }
                 }
             }
-            .onEach { remote -> mirrorIntoRoom(remote) }
+            .onEach { document -> mirrorIntoRoom(document.custody) }
             .retryWhen { cause, attempt ->
                 Log.w(
                     TAG,
@@ -1272,6 +1293,14 @@ class CustodyModelRepository(
         val participants: List<String>,
         val myUid: String
     )
+
+    /**
+     * The shared document as it arrived, with the family it was read for.
+     *
+     * @property documentId The family's id, or null while this device follows no pair.
+     * @property custody The document, or null while it does not exist.
+     */
+    private data class FamilyDocument(val documentId: String?, val custody: SharedCustody?)
 
     private companion object {
         const val TAG = "CustodyModelRepo"

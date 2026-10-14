@@ -1,9 +1,13 @@
 package com.coparently.app.presentation.changerequests
 
 import com.coparently.app.data.repository.CustodyModelRepository
+import com.coparently.app.domain.custody.DayOverride
+import com.coparently.app.domain.custody.SharedCustody
 import com.coparently.app.domain.events.EventAcceptance
 import com.coparently.app.domain.model.ChangeRequest
 import com.coparently.app.domain.model.ChangeRequestStatus
+import com.coparently.app.domain.model.CustodyModel
+import com.coparently.app.domain.model.CustodyModelType
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.model.PairingState
 import com.coparently.app.domain.model.PartnerSummary
@@ -18,6 +22,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
+import java.time.LocalDate
 import java.time.LocalDateTime
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -58,16 +63,45 @@ class RequestsSourceTest {
         acceptance = EventAcceptance.PENDING
     )
 
+    /** Bob's offer to swap a day five days from now, still waiting for Alice. */
+    private val bobsSwap = mapOf(
+        LocalDate.now().plusDays(5).toString() to DayOverride(
+            toParent = "dad",
+            requestedBy = "u2",
+            requestedAt = "2026-10-10T09:00:00"
+        )
+    )
+
+    /** The custody document of the family Alice shares with Bob, holding [bobsSwap]. */
+    private val bobsFamilyCustody = SharedCustody(
+        model = CustodyModel(
+            id = "m1",
+            modelType = CustodyModelType.WEEK_ON_WEEK_OFF,
+            patternDays = 14,
+            momDayIndices = (0..6).toSet(),
+            startDate = LocalDate.of(2026, 8, 3)
+        ),
+        lastModifiedBy = "u2",
+        lastModifiedAtMillis = 1L,
+        createdAt = "2026-08-01T09:00:00",
+        dayOverrides = bobsSwap
+    )
+
     /**
      * @param shown The co-parent the family switcher projects onto the signed-in row.
      * @param coParents Every co-parent the row lists.
+     * @param roomSwaps What Room's one active custody model holds, whichever family it came from.
+     * @param documents Each family's custody document, by family id; a family not named has none.
      */
+    @Suppress("LongParameterList") // one fixture for every source the requests are derived from
     private fun source(
         pairing: PairingState,
         shown: String? = null,
         coParents: List<String> = emptyList(),
         requests: List<ChangeRequest> = emptyList(),
-        events: List<Event> = emptyList()
+        events: List<Event> = emptyList(),
+        roomSwaps: Map<String, DayOverride> = emptyMap(),
+        documents: Map<String, SharedCustody> = emptyMap()
     ): RequestsSource {
         val row = User(
             id = "u1",
@@ -84,8 +118,9 @@ class RequestsSourceTest {
             },
             eventRepository = mockk<EventRepository> { every { getAllEvents() } returns flowOf(events) },
             custodyModelRepository = mockk<CustodyModelRepository> {
-                every { observeDayOverrides() } returns flowOf(emptyMap())
-                every { observeShared() } returns flowOf(null)
+                every { observeDayOverrides() } returns flowOf(roomSwaps)
+                every { observeShared() } returns flowOf(documents.values.firstOrNull())
+                every { observeSharedOf(any()) } answers { flowOf(documents[firstArg()]) }
             },
             userRepository = mockk<UserRepository> {
                 every { observeCurrentUserId() } returns flowOf("u1")
@@ -113,6 +148,31 @@ class RequestsSourceTest {
         assertEquals("u3", ready.scope.coParentUid)
         assertEquals("u1__u3", ready.scope.familyId)
         assertEquals(false, ready.scope.soleFamily)
+    }
+
+    @Test
+    fun `another family's day swap is in neither section`() = runTest {
+        // Alice switched to Carol's family, which has no custody document, so Room's one active
+        // model still holds the schedule — and Bob's swap — of the family she shares with Bob.
+        val carolsFamily = source(
+            PairingState.Paired(bob),
+            shown = "u3",
+            coParents = listOf("u2", "u3"),
+            roomSwaps = bobsSwap,
+            documents = mapOf("u1__u2" to bobsFamilyCustody)
+        ).observe().first()
+        val bobsFamily = source(
+            PairingState.Paired(bob),
+            shown = "u2",
+            coParents = listOf("u2", "u3"),
+            roomSwaps = bobsSwap,
+            documents = mapOf("u1__u2" to bobsFamilyCustody)
+        ).observe().first()
+
+        val inCarols = assertIs<RequestsState.Ready>(carolsFamily).inbox
+        assertEquals(emptyList(), inCarols.waitingOnMe.swaps)
+        assertEquals(emptyList(), inCarols.waitingOnThem.swaps)
+        assertEquals(1, assertIs<RequestsState.Ready>(bobsFamily).inbox.waitingOnMe.swaps.size)
     }
 
     @Test

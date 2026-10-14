@@ -27,11 +27,16 @@ import io.mockk.slot
 import io.mockk.unmockkStatic
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestCoroutineScheduler
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -471,6 +476,37 @@ class CustodyModelRepositoryTest {
         coVerify(exactly = 0) { custodyModelDao.deactivateAllModels() }
     }
 
+    // ---- the family on screen's own document (phase 2 review) ----------------
+
+    @Test
+    fun `another family's document is never this family's`() = runTest(dispatcher) {
+        every { firestoreCustodyDataSource.observeCustody(DOCUMENT_ID) } returns flowOf(remoteCustody())
+
+        // The device follows the family on screen, uidA and uidB. Asked about uidA and uidC's
+        // family, it answers with nothing — never uidB's schedule and swaps under uidC's name.
+        assertEquals(REMOTE_MODEL_ID, repository.observeSharedOf(DOCUMENT_ID).first { it != null }?.model?.id)
+        assertNull(repository.observeSharedOf(OTHER_DOCUMENT_ID).first())
+    }
+
+    @Test
+    fun `a switch never shows the previous family's document as the next one's`() = runTest(dispatcher) {
+        val users = MutableStateFlow(listOf(signedInWith(PARTNER_UID)))
+        every { userRepository.getAllUsers() } returns users
+        every { firestoreCustodyDataSource.observeCustody(DOCUMENT_ID) } returns flowOf(remoteCustody())
+        // The next family's listener has not answered yet.
+        every { firestoreCustodyDataSource.observeCustody(OTHER_DOCUMENT_ID) } returns flow { awaitCancellation() }
+        repository.observeShared().first { it != null }
+
+        users.value = listOf(signedInWith(OTHER_PARTNER_UID))
+        val seen = mutableListOf<SharedCustody?>()
+        backgroundScope.launch { repository.observeSharedOf(OTHER_DOCUMENT_ID).toList(seen) }
+        runCurrent()
+
+        // The shared stream replays uidB's document until uidC's answers. Read for uidC's family,
+        // that replay is "not known yet", never uidB's schedule.
+        assertTrue("saw $seen", seen.all { it == null })
+    }
+
     // ---- contact windows (MON-6b) -------------------------------------------
 
     @Test
@@ -860,15 +896,17 @@ class CustodyModelRepositoryTest {
     // ---- fixtures ---------------------------------------------------------
 
     /** Points both the one-shot and the streaming uid lookups at [partnerUid]. */
+    private fun signedInWith(partnerUid: String?) = User(
+        id = MY_UID,
+        email = "mom@example.com",
+        name = "Mom",
+        role = "mom",
+        colorCode = "#FF4081",
+        partnerId = partnerUid
+    )
+
     private fun pairedWith(partnerUid: String?) {
-        val me = User(
-            id = MY_UID,
-            email = "mom@example.com",
-            name = "Mom",
-            role = "mom",
-            colorCode = "#FF4081",
-            partnerId = partnerUid
-        )
+        val me = signedInWith(partnerUid)
         coEvery { userRepository.getCurrentUserId() } returns MY_UID
         coEvery { userRepository.getUserById(MY_UID) } returns me
         every { userRepository.observeCurrentUserId() } returns flowOf(MY_UID)
@@ -946,6 +984,10 @@ class CustodyModelRepositoryTest {
 
         /** What `CustodyKey.of("uidA", "uidB")` derives — pinned as a literal on purpose. */
         const val DOCUMENT_ID = "uidA__uidB"
+
+        /** uidA's second co-parent, and their family's document. */
+        const val OTHER_PARTNER_UID = "uidC"
+        const val OTHER_DOCUMENT_ID = "uidA__uidC"
         val PARTICIPANTS = listOf("uidA", "uidB")
 
         const val LOCAL_MODEL_ID = "local-model-1"

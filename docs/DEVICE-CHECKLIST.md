@@ -1443,7 +1443,7 @@ Preconditions: A is paired with **both** B and C (two families). Invite C from S
       changed: …", "Event accepted: …" and "Event declined: …". With TalkBack, the card reads
       "Open the event", not "Open the change request".
 - [ ] B creates an event on **A's** day (it waits for A's answer): its card on A opens the
-      change-request inbox, where it is listed under **Events waiting on you**.
+      **Requests** inbox, where it is listed under **Waiting for your answer**.
 - [ ] B deletes an event, then A taps that event's earlier "New event" card: a snackbar says
       **"That event no longer exists."** and nothing opens. The "Event removed: …" card itself,
       and expense and custody-proposal cards, open nothing and show no chevron.
@@ -1623,15 +1623,16 @@ for an answer.
 > screenshot matrix (`requests_*`). What a phone adds is the two phones answering each other live.
 
 - [ ] Home's **Requests** row, on A, in each state: nothing waiting and no recent answer — "No
-      requests yet"; B sends a change request — "1 waiting on you", with 1 beside the row; A sends
-      one — "… · 1 waiting on B"; B accepts or declines one of A's — "Yesterday: B accepted your
-      request" (or today's, or a weekday's) as long as it is under a week old. The row's number and
-      the calendar banner's are the same.
+      requests yet"; B sends a change request — "1 waiting for your answer", with 1 beside the row;
+      A sends one — "… · 1 waiting for B"; B accepts or declines one of A's — "Yesterday: B accepted
+      your request" (or today's, or a weekday's) as long as it is under a week old. The row's number
+      and the calendar banner's are the same, except that a custody proposal waiting for A counts on
+      the row and draws its own banner instead.
 - [ ] B answers A's requests on B's phone — accepts one, declines one; A withdraws a third. A's inbox
       (**Requests**) shows each under **History** with its outcome on a neutral chip and who decided
       when; an answer A gave while offline reads **Queued** until it leaves. Home's feed lists B's
       answers as "Accepted"/"Declined" rows, one per answer, and its last row opens the History.
-- [ ] B creates an event on A's days with a description: A's card under **Waiting on you** shows
+- [ ] B creates an event on A's days with a description: A's card under **Waiting for your answer** shows
       B's words beside B's initial, the time on A's clock, and the month with that day ringed and the
       custody colours. On B's phone the same card reads "Waiting for A" with no buttons. In B's event
       form, while the event would wait for A, the description says "A will see this when answering".

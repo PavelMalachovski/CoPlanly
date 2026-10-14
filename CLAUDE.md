@@ -2183,10 +2183,18 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     feedback phase 2). `presentation/changerequests/RequestsSource` scopes the change requests, day
     swaps, events awaiting an answer and the custody proposal to the family the switcher shows
     (`domain/changerequests/RequestScope`), and everything that speaks of requests reads it: the
-    inbox (`ChangeRequestsScreen`, titled **Requests**, in three sections — *Waiting on you*,
-    *Waiting on {co-parent}*, *History*), Home's **Requests** row and the co-parent's feed
-    (`RequestsRow`, `HomeFeed`), and the calendar banner — so the row's number and the banner's are
-    one figure (`RequestInbox`). Four things not to undo.
+    inbox (`ChangeRequestsScreen`, titled **Requests**, in three sections — *Waiting for your
+    answer*, *Waiting for {co-parent}*, *History*), Home's **Requests** row, its swap pop-up and the
+    co-parent's feed (`RequestsRow`, `HomeFeed`), and the calendar banner — so the row and the
+    banner count from one `RequestInbox`: the row its `count`, the banner `countWithoutProposal`,
+    because a waiting custody proposal draws a banner of its own. Five things not to undo.
+    - **Swaps and the proposal come from the family's own custody document**, asked for by its id
+      (`CustodyModelRepository.observeSharedOf`), and so do the mini months' custody days — never
+      from Room's one active custody model (`observeDayOverrides`, `getActiveModel`), which keeps
+      the previous family's schedule and swaps while the family on screen has no document, and
+      never from `observeShared` alone, which replays the previous family's document until the next
+      one's listener answers. Reading Room is how another family's swap reached this inbox, Home's
+      count and its pop-up (phase 2 review).
     - **History is derived, never stored.** `RequestHistory` builds it from the records
       themselves — a decided or withdrawn change request, an answered swap, an accepted or declined
       event, a decided proposal — with who decided and when, and marks an answer this phone has not

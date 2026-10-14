@@ -102,6 +102,10 @@ class ChangeRequestViewModel @Inject constructor(
      * The mini month of every event waiting for an answer, either way, by event id: the event's
      * month, drawn with the family's custody and the family's visible events (spec §5.3).
      *
+     * The custody is the family's own document ([RequestsState.Ready.custody]), never Room's one
+     * active model, which still holds the previous family's schedule while the family on screen
+     * has none: a family without a schedule gets mini months without custody days (phase 2 review).
+     *
      * Computed off the main thread — every waiting event expands the family's recurring events
      * over its own month's grid — but collected on the ViewModel's own: only the computation
      * hops to `Dispatchers.Default`. A `flowOn` producer there kept [requests] subscribed from a
@@ -109,15 +113,16 @@ class ChangeRequestViewModel @Inject constructor(
      * and resumed this scope after its dispatcher had gone — in the unit tests, after `resetMain`,
      * which surfaced as an uncaught exception in whichever test ran next.
      */
-    val miniMonths: StateFlow<Map<String, MiniMonthModel>> = combine(
-        requests,
-        custodyModelRepository.getActiveModel(),
-        custodyModelRepository.observeDayOverrides()
-    ) { state, model, overrides -> Triple(state, model, overrides) }
-        .mapLatest { (state, model, overrides) ->
+    val miniMonths: StateFlow<Map<String, MiniMonthModel>> = requests
+        .mapLatest { state ->
             val ready = state as? RequestsState.Ready ?: return@mapLatest emptyMap()
             withContext(Dispatchers.Default) {
-                val custodyFor = CustodyResolver.resolver(model, overrides, legacy = { null })
+                val custody = ready.custody
+                val custodyFor = CustodyResolver.resolver(
+                    custody?.model,
+                    custody?.dayOverrides.orEmpty(),
+                    legacy = { null }
+                )
                 (ready.inbox.waitingOnMe.events + ready.inbox.waitingOnThem.events).associate { event ->
                     event.id to MiniMonthModel.forAwaitingEvent(event, ready.events, custodyFor)
                 }

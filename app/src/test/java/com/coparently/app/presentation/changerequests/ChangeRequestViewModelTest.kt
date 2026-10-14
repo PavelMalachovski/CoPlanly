@@ -69,6 +69,7 @@ class ChangeRequestViewModelTest {
     private val custodyModelRepository = mockk<CustodyModelRepository>(relaxed = true) {
         every { observeDayOverrides() } returns flowOf(emptyMap())
         every { observeShared() } returns flowOf(null)
+        every { observeSharedOf(any()) } returns flowOf(null)
     }
     private val planReferences = mockk<PlanReferenceSource>()
     private val olya = User(
@@ -251,6 +252,48 @@ class ChangeRequestViewModelTest {
 
         assertEquals(setOf("e-waiting"), months.keys)
         assertEquals(YearMonth.of(2026, 10), months.getValue("e-waiting").month)
+    }
+
+    /** An event Pavel created on 21 October, waiting for Olya's answer. */
+    private val waitingInOctober = event.copy(
+        id = "e-waiting",
+        startDateTime = LocalDateTime.of(2026, 10, 21, 16, 0),
+        endDateTime = LocalDateTime.of(2026, 10, 21, 17, 30),
+        createdByFirebaseUid = "u2",
+        familyId = "u1__u2",
+        acceptance = EventAcceptance.PENDING
+    )
+
+    @Test
+    fun `a family with no custody document gets no other family's days on its mini months`() =
+        runTest(dispatcher) {
+            every { eventRepository.getAllEvents() } returns flowOf(listOf(waitingInOctober))
+            // Room's one active model is another family's: this family has no document of its own.
+            every { custodyModelRepository.getActiveModel() } returns
+                flowOf(CustodyModel.weekOnWeekOff(id = "elsewhere", startDate = LocalDate.of(2026, 9, 7)))
+            val vm = viewModel()
+            backgroundScope.launch { vm.miniMonths.collect {} }
+            advanceUntilIdle()
+            requests.emit(emptyList())
+
+            val months = vm.miniMonths.first { it.isNotEmpty() }
+
+            assertEquals(emptyMap(), months.getValue("e-waiting").custody)
+        }
+
+    @Test
+    fun `the family's own custody document colours its mini months`() = runTest(dispatcher) {
+        every { eventRepository.getAllEvents() } returns flowOf(listOf(waitingInOctober))
+        every { custodyModelRepository.observeSharedOf("u1__u2") } returns flowOf(sharedWithProposal("u2", null))
+        val vm = viewModel()
+        backgroundScope.launch { vm.miniMonths.collect {} }
+        advanceUntilIdle()
+        requests.emit(emptyList())
+
+        val months = vm.miniMonths.first { it.isNotEmpty() }
+
+        // Every day of October 2026's grid, Monday 28 September to Sunday 1 November.
+        assertEquals(35, months.getValue("e-waiting").custody.size)
     }
 
     private fun sharedWithProposal(by: String, citation: String?): SharedCustody {

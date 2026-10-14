@@ -3009,10 +3009,11 @@ after the owner's answers:
   `MiniMonth` with the day ringed; the event form tells the creator their description will be read
   there. Design item 1, CLAUDE.md item 40.
 - **Requests and their history** (item 3). One source for the family on screen feeds the inbox
-  (now **Requests**: waiting on you, waiting on the co-parent, History), Home's always-present
-  **Requests** row and the co-parent's answers in Home's feed, and the calendar banner — one number
-  everywhere, and a History derived from the records rather than stored. CLAUDE.md item 40;
-  checklist §5.8.
+  (now **Requests**: waiting for your answer, waiting for the co-parent, History), Home's
+  always-present **Requests** row, its swap pop-up and the co-parent's answers in Home's feed, and
+  the calendar banner — all counted from one inbox (the banner leaves out a custody proposal, which
+  has a banner of its own), with swaps from the family's own custody document, and a History
+  derived from the records rather than stored. CLAUDE.md item 40; checklist §5.8.
 
 Left: the device runs (§5.6, §5.8), the functions deploy (`parentNames` on new grants; existing
 grants name nobody until re-invited — no backfill, spec §4.4, the feature has only closed-test

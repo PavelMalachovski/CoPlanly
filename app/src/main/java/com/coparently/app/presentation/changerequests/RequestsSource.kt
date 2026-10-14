@@ -5,6 +5,7 @@ import com.coparently.app.data.chat.ChatPartnerSource
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.domain.changerequests.RequestInbox
 import com.coparently.app.domain.changerequests.RequestScope
+import com.coparently.app.domain.custody.SharedCustody
 import com.coparently.app.domain.family.FamilyAudience
 import com.coparently.app.domain.model.ChangeRequest
 import com.coparently.app.domain.model.Event
@@ -42,12 +43,15 @@ sealed interface RequestsState {
      * @property changeRequests The family's change requests, every status — what a chat card's
      *   highlight looks a request up in.
      * @property events The family's events, every acceptance — what the mini months draw from.
+     * @property custody The family's own custody document — its schedule and swaps, what the mini
+     *   months colour the days with — or null while it has none or has not arrived.
      */
     data class Ready(
         val scope: RequestScope,
         val inbox: RequestInbox,
         val changeRequests: List<ChangeRequest>,
-        val events: List<Event>
+        val events: List<Event>,
+        val custody: SharedCustody? = null
     ) : RequestsState
 }
 
@@ -61,9 +65,10 @@ sealed interface RequestsState {
  * projection on the signed-in row says which. A parent in two families sees one family's requests
  * at a time; another family's waiting items are what the switcher's dot says.
  *
- * Day swaps and the custody proposal come from the custody document [CustodyModelRepository]
- * already keeps on the family on screen; change requests and events are narrowed here through
- * [RequestScope].
+ * Day swaps and the custody proposal come from that family's own custody document, asked for by
+ * its id ([CustodyModelRepository.observeSharedOf]) — never from Room's one active custody model,
+ * which keeps the previous family's swaps while the family on screen has no document (phase 2
+ * review). Change requests and events are narrowed here through [RequestScope].
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class RequestsSource @Inject constructor(
@@ -92,17 +97,18 @@ class RequestsSource @Inject constructor(
     private fun readyFor(scope: RequestScope): Flow<RequestsState> = combine(
         changeRequestRepository.getAllChangeRequests(),
         eventRepository.getAllEvents(),
-        custodyModelRepository.observeDayOverrides(),
-        custodyModelRepository.observeShared()
-    ) { requests, events, overrides, shared ->
+        custodyModelRepository.observeSharedOf(scope.familyId)
+    ) { requests, events, custody ->
         val familyRequests = requests.filter(scope::covers)
         val familyEvents = events.filter(scope::covers)
+        val swaps = custody?.dayOverrides.orEmpty()
         RequestsState.Ready(
             scope = scope,
             // Read per emission rather than once: this flow outlives midnight.
-            inbox = RequestInbox.build(scope, familyRequests, familyEvents, overrides, shared, LocalDate.now()),
+            inbox = RequestInbox.build(scope, familyRequests, familyEvents, swaps, custody, LocalDate.now()),
             changeRequests = familyRequests,
-            events = familyEvents
+            events = familyEvents,
+            custody = custody
         )
     }
 
