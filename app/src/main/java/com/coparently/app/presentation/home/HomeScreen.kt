@@ -27,8 +27,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ChildCare
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Contacts
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.EventAvailable
@@ -76,6 +78,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
+import com.coparently.app.domain.changerequests.HistoryEntry
+import com.coparently.app.domain.changerequests.RequestOutcome
+import com.coparently.app.domain.changerequests.RequestSubject
 import com.coparently.app.domain.custody.HandoverInfo
 import com.coparently.app.domain.events.AllDayEvent
 import com.coparently.app.domain.expenses.CurrencyBalance
@@ -83,6 +88,7 @@ import com.coparently.app.domain.home.WeekEntry
 import com.coparently.app.domain.model.FamilyKind
 import com.coparently.app.presentation.calendar.components.DayAgendaCard
 import com.coparently.app.presentation.changerequests.ChangeRequestViewModel
+import com.coparently.app.presentation.changerequests.swapDatesText
 import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.FamilySwitcherChip
 import com.coparently.app.presentation.common.ParentNames
@@ -137,7 +143,8 @@ private const val STACK_TILES_FONT_SCALE = 1.3f
  * below drop the card-per-row chrome in favour of a timeline rail and one grouped list.
  *
  * @param onOpenEvent Opens an event by id
- * @param onOpenChangeRequests Opens the change-request inbox
+ * @param onOpenChangeRequests Opens the requests inbox
+ * @param onOpenRequestHistory Opens the requests inbox at its History
  * @param onOpenContacts Opens the contacts list
  * @param onOpenChildInfo Opens the child records
  * @param onOpenPets Opens the pet records
@@ -156,6 +163,7 @@ private const val STACK_TILES_FONT_SCALE = 1.3f
 fun HomeScreen(
     onOpenEvent: (String) -> Unit,
     onOpenChangeRequests: () -> Unit,
+    onOpenRequestHistory: () -> Unit,
     onOpenContacts: () -> Unit,
     onOpenChildInfo: () -> Unit,
     onOpenPets: () -> Unit,
@@ -256,10 +264,10 @@ fun HomeScreen(
                 Dashboard(
                     state = state,
                     parentNames = parentNames,
-                    hasPendingProposal = pendingProposal != null,
                     contentPadding = padding,
                     onOpenEvent = openEvent,
                     onOpenChangeRequests = onOpenChangeRequests,
+                    onOpenRequestHistory = onOpenRequestHistory,
                     onOpenContacts = onOpenContacts,
                     onOpenChildInfo = onOpenChildInfo,
                     onOpenPets = onOpenPets,
@@ -385,7 +393,8 @@ private fun PairingInvitation(
  * @param parentNames Resolves a slot to that parent's name
  * @param contentPadding The scaffold's own insets
  * @param onOpenEvent Opens an event by id, with the tapped occurrence's start when there is one
- * @param onOpenChangeRequests Opens the change-request inbox
+ * @param onOpenChangeRequests Opens the requests inbox
+ * @param onOpenRequestHistory Opens the requests inbox at its History
  * @param onOpenContacts Opens the contacts list
  * @param onOpenChildInfo Opens the child records
  * @param onOpenPets Opens the pet records
@@ -400,10 +409,10 @@ private fun PairingInvitation(
 private fun Dashboard(
     state: HomeUiState.Dashboard,
     parentNames: ParentNames,
-    hasPendingProposal: Boolean,
     contentPadding: PaddingValues,
     onOpenEvent: (String, LocalDateTime?) -> Unit,
     onOpenChangeRequests: () -> Unit,
+    onOpenRequestHistory: () -> Unit,
     onOpenContacts: () -> Unit,
     onOpenChildInfo: () -> Unit,
     onOpenPets: () -> Unit,
@@ -458,25 +467,16 @@ private fun Dashboard(
 
         // Items 4/13 (Aug 2026 walkthrough): whatever waits on this parent's answer — a day
         // swap, an event change, a pending event — must be visible on the main page, with one
-        // tap into the inbox that answers it. Day swaps were previously reachable from nowhere.
-        val awaitingCount = state.awaitingSwaps.size + state.awaitingRequestCount +
-            if (hasPendingProposal) 1 else 0
-        if (awaitingCount > 0) {
-            item {
-                SectionGroup {
-                    SectionRow(
-                        title = stringResource(R.string.home_awaiting_title),
-                        icon = Icons.Default.SwapHoriz,
-                        onClick = onOpenChangeRequests,
-                        trailing = {
-                            Text(
-                                text = awaitingCount.toString(),
-                                style = MaterialTheme.typography.titleSmallEmphasized,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    )
-                }
+        // tap into the inbox that answers it. Since phase 2 (spec §6.1) the row is always there
+        // while paired, and says what waits on each parent and the co-parent's latest answer, so
+        // a parent who answered everything still has a way to what they answered.
+        item {
+            SectionGroup {
+                RequestsRow(
+                    state = state.requests,
+                    coParentName = parentNames.labelForUid(state.partner?.id),
+                    onClick = onOpenChangeRequests
+                )
             }
         }
 
@@ -572,6 +572,7 @@ private fun Dashboard(
                 ActivityGroup(
                     items = state.recentChanges,
                     onOpenChangeRequests = onOpenChangeRequests,
+                    onOpenRequestHistory = onOpenRequestHistory,
                     // A change names the event, not one occurrence of it.
                     onOpenEvent = { eventId -> onOpenEvent(eventId, null) }
                 )
@@ -617,6 +618,39 @@ private fun HomeColumn(modifier: Modifier, content: LazyListScope.() -> Unit) {
         contentPadding = PaddingValues(Spacing.L),
         verticalArrangement = Arrangement.spacedBy(Spacing.M),
         content = content
+    )
+}
+
+/**
+ * Home's Requests row (phase 2, spec §6.1): always there while paired. Its line names what waits
+ * on each parent and the co-parent's latest answer, or says there are no requests yet; the count
+ * beside it is what waits on this parent alone, and a chevron stands in for zero.
+ *
+ * @param state What the row says
+ * @param coParentName The co-parent of the family on screen, by name
+ * @param onClick Opens the inbox
+ */
+@Composable
+private fun RequestsRow(state: RequestsRowState, coParentName: String, onClick: () -> Unit) {
+    val today by rememberToday()
+    // `asString` is composable, so each part is resolved here rather than inside joinToString.
+    val line = RequestsRowText.parts(state, coParentName, today).map { it.asString() }.joinToString(" · ")
+    SectionRow(
+        title = stringResource(R.string.home_requests_title),
+        icon = Icons.Default.SwapHoriz,
+        supporting = line,
+        onClick = onClick,
+        trailing = {
+            if (state.waitingOnMe > 0) {
+                Text(
+                    text = state.waitingOnMe.toString(),
+                    style = MaterialTheme.typography.titleSmallEmphasized,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            } else {
+                HomeChevron()
+            }
+        }
     )
 }
 
@@ -979,39 +1013,42 @@ internal fun TimelineRow(
 
 /**
  * The co-parent's recent changes as one grouped list. A change *request* carries an inline
- * "Review" action, because it is the only entry in this feed that is waiting on the reader.
+ * "Review" action, because it is the only entry in this feed that is waiting on the reader. An
+ * answer to one of the reader's requests carries its outcome on a neutral disc and opens the
+ * inbox's History, and the group ends with the way to every request and answer.
  *
  * @param items Activity entries, newest first
- * @param onOpenChangeRequests Opens the change-request inbox
+ * @param onOpenChangeRequests Opens the requests inbox
+ * @param onOpenRequestHistory Opens the requests inbox at its History
  * @param onOpenEvent Opens an event by id
  */
 @Composable
 private fun ActivityGroup(
     items: List<ActivityItem>,
     onOpenChangeRequests: () -> Unit,
+    onOpenRequestHistory: () -> Unit,
     onOpenEvent: (String) -> Unit
 ) {
     SectionGroup {
-        items.forEachIndexed { index, item ->
+        items.forEach { item ->
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable {
-                        if (item.isChangeRequest) onOpenChangeRequests() else onOpenEvent(item.eventId)
+                        when {
+                            item.answer != null -> onOpenRequestHistory()
+                            item.isChangeRequest -> onOpenChangeRequests()
+                            else -> onOpenEvent(item.eventId)
+                        }
                     }
                     .padding(horizontal = Spacing.L, vertical = Spacing.M),
                 horizontalArrangement = Arrangement.spacedBy(Spacing.M),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = item.kind.icon(),
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(IconSizes.Small)
-                )
+                ActivityMarker(item)
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = stringResource(item.kind.labelRes(), item.title),
+                        text = activityLabel(item),
                         style = MaterialTheme.typography.bodyMedium,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
@@ -1031,8 +1068,78 @@ private fun ActivityGroup(
                     )
                 }
             }
-            if (index != items.lastIndex) Divider()
+            Divider()
         }
+        SectionRow(
+            title = stringResource(R.string.home_requests_all),
+            onClick = onOpenRequestHistory,
+            trailing = { HomeChevron() }
+        )
+    }
+}
+
+/**
+ * The mark at a feed row's start, in a slot a standard icon wide so every row's text lines up: the
+ * kind's icon, or for an answer a check or a cross on a neutral disc — never a parent's colour, and
+ * not green and red either, which the theme reserves for holidays and errors (spec §6.1).
+ */
+@Composable
+private fun ActivityMarker(item: ActivityItem) {
+    val answer = item.answer
+    Box(
+        modifier = Modifier
+            .size(IconSizes.Standard)
+            .then(
+                if (answer != null) {
+                    Modifier.background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
+                } else {
+                    Modifier
+                }
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = when {
+                answer == null -> item.kind.icon()
+                answer.outcome == RequestOutcome.ACCEPTED -> Icons.Default.Check
+                else -> Icons.Default.Close
+            },
+            contentDescription = null,
+            tint = if (answer != null) {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            } else {
+                MaterialTheme.colorScheme.primary
+            },
+            modifier = Modifier.size(IconSizes.Small)
+        )
+    }
+}
+
+/** What a feed row says: the kind's sentence, or for an answer, what was answered and how. */
+@Composable
+private fun activityLabel(item: ActivityItem): String {
+    val answer = item.answer
+    return if (answer == null) stringResource(item.kind.labelRes(), item.title) else answerLabel(answer)
+}
+
+@Composable
+private fun answerLabel(answer: HistoryEntry): String {
+    val accepted = answer.outcome == RequestOutcome.ACCEPTED
+    return when (val subject = answer.subject) {
+        is RequestSubject.NewTime -> stringResource(
+            if (accepted) R.string.home_activity_accepted_new_time else R.string.home_activity_declined_new_time,
+            subject.eventTitle
+        )
+        is RequestSubject.DaySwap -> stringResource(
+            if (accepted) R.string.home_activity_accepted_swap else R.string.home_activity_declined_swap,
+            swapDatesText(subject.firstDate, subject.dayCount)
+        )
+        is RequestSubject.NewEvent -> stringResource(
+            if (accepted) R.string.home_activity_accepted_event else R.string.home_activity_declined_event,
+            subject.eventTitle
+        )
+        // Never in the feed: a custody decision has its own banner and pop-up (HomeFeed).
+        RequestSubject.CustodySchedule -> stringResource(R.string.request_history_custody)
     }
 }
 
@@ -1057,6 +1164,8 @@ private fun ActivityKind.icon(): ImageVector = when (this) {
     ActivityKind.EVENT_UPDATED -> Icons.Default.Edit
     ActivityKind.PICKUP_CONFIRMED -> Icons.Default.CheckCircle
     ActivityKind.CHANGE_REQUESTED -> Icons.Default.SwapHoriz
+    // An answer draws its outcome instead (ActivityMarker); this is only the kind's own mark.
+    ActivityKind.ANSWER -> Icons.Default.Check
 }
 
 private fun ActivityKind.labelRes(): Int = when (this) {
@@ -1064,6 +1173,8 @@ private fun ActivityKind.labelRes(): Int = when (this) {
     ActivityKind.EVENT_UPDATED -> R.string.home_activity_event_updated
     ActivityKind.PICKUP_CONFIRMED -> R.string.home_activity_pickup_confirmed
     ActivityKind.CHANGE_REQUESTED -> R.string.home_activity_change_requested
+    // An answer is worded from its subject (answerLabel); this is only the kind's own sentence.
+    ActivityKind.ANSWER -> R.string.home_activity_accepted_event
 }
 
 @LightDarkPreviews

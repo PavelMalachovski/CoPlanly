@@ -13,9 +13,6 @@ interface ChangeRequestRepository {
     /** All change requests known locally, newest first. */
     fun getAllChangeRequests(): Flow<List<ChangeRequest>>
 
-    /** Number of pending requests waiting for [userId] to respond. */
-    fun getPendingIncomingCount(userId: String): Flow<Int>
-
     /** Requests attached to a specific event, newest first. */
     fun getChangeRequestsForEvent(eventId: String): Flow<List<ChangeRequest>>
 

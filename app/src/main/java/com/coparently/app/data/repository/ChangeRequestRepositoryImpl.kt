@@ -36,10 +36,6 @@ class ChangeRequestRepositoryImpl @Inject constructor(
         }
     }
 
-    override fun getPendingIncomingCount(userId: String): Flow<Int> {
-        return changeRequestDao.getPendingIncomingCount(userId)
-    }
-
     override fun getChangeRequestsForEvent(eventId: String): Flow<List<ChangeRequest>> {
         return changeRequestDao.getChangeRequestsForEvent(eventId).map { entities ->
             entities.map { it.toDomain() }

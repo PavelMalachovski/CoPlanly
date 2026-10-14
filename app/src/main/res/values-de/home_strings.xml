@@ -44,7 +44,6 @@
     <string name="home_activity_change_requested">Änderung angefragt: %1$s</string>
     <string name="home_activity_review">Prüfen</string>
 
-    <string name="home_awaiting_title">Warten auf deine Antwort</string>
     <string name="home_dialog_swap_title">Tagestausch</string>
     <string name="home_dialog_swap_message">%1$s schlägt einen Tagestausch für %2$s vor.</string>
     <string name="home_dialog_requests_title">Änderungsanfragen</string>
@@ -58,4 +57,25 @@
 
     <!-- The empty seven-day card's action. -->
     <string name="home_week_empty_action">Termin hinzufügen</string>
+    <string name="home_requests_title">Anfragen</string>
+    <plurals name="home_requests_waiting_on_you">
+        <item quantity="one">%1$d wartet auf deine Antwort</item>
+        <item quantity="other">%1$d warten auf deine Antwort</item>
+    </plurals>
+    <plurals name="home_requests_waiting_on_them">
+        <item quantity="one">%1$d wartet auf %2$s</item>
+        <item quantity="other">%1$d warten auf %2$s</item>
+    </plurals>
+    <string name="home_requests_answer_accepted">%1$s: %2$s hat deine Anfrage angenommen</string>
+    <string name="home_requests_answer_declined">%1$s: %2$s hat deine Anfrage abgelehnt</string>
+    <string name="home_requests_day_today">Heute</string>
+    <string name="home_requests_day_yesterday">Gestern</string>
+    <string name="home_requests_none">Noch keine Anfragen</string>
+    <string name="home_requests_all">Alle Anfragen und Antworten</string>
+    <string name="home_activity_accepted_new_time">Deine neue Zeit angenommen: %1$s</string>
+    <string name="home_activity_declined_new_time">Deine neue Zeit abgelehnt: %1$s</string>
+    <string name="home_activity_accepted_swap">Dein Tagestausch angenommen: %1$s</string>
+    <string name="home_activity_declined_swap">Dein Tagestausch abgelehnt: %1$s</string>
+    <string name="home_activity_accepted_event">Angenommen: %1$s</string>
+    <string name="home_activity_declined_event">Abgelehnt: %1$s</string>
 </resources>

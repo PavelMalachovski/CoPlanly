@@ -20,12 +20,6 @@ interface ChangeRequestDao {
     fun getAllChangeRequests(): Flow<List<ChangeRequestEntity>>
 
     /**
-     * Number of pending requests addressed to [userId] — drives the inbox badge.
-     */
-    @Query("SELECT COUNT(*) FROM change_requests WHERE status = 'PENDING' AND requestedTo = :userId")
-    fun getPendingIncomingCount(userId: String): Flow<Int>
-
-    /**
      * Change requests attached to a specific event, newest first.
      */
     @Query("SELECT * FROM change_requests WHERE eventId = :eventId ORDER BY createdAt DESC")

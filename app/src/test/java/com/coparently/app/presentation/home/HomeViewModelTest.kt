@@ -3,6 +3,7 @@ package com.coparently.app.presentation.home
 import app.cash.turbine.test
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.domain.custody.ContactWindow
+import com.coparently.app.domain.model.ChangeRequest
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.CustodyModelType
 import com.coparently.app.domain.model.Event
@@ -17,6 +18,7 @@ import com.coparently.app.domain.repository.MessageRepository
 import com.coparently.app.domain.repository.PairingRepository
 import com.coparently.app.domain.repository.PreferencesRepository
 import com.coparently.app.domain.repository.UserRepository
+import com.coparently.app.presentation.changerequests.RequestsSource
 import com.coparently.app.presentation.common.FamilyKindSource
 import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.presentation.common.testFamilyMembersSource
@@ -82,13 +84,13 @@ class HomeViewModelTest {
         }
         changeRequestRepository = mockk {
             every { getAllChangeRequests() } returns flowOf(emptyList())
-            // Asked only once a uid is known, which the switch test below gives Home.
-            every { getPendingIncomingCount(any()) } returns flowOf(0)
         }
         custodyModelRepository = mockk {
             every { getActiveModel() } returns activeModel
             // The awaiting-swaps flow (items 4/13) subscribes at construction.
             every { observeDayOverrides() } returns flowOf(emptyMap())
+            // The requests row reads the family's custody document for its proposal.
+            every { observeShared() } returns flowOf(null)
         }
         val expenseRepository = mockk<ExpenseRepository> {
             every { getAllExpenses() } returns flowOf(emptyList())
@@ -118,7 +120,13 @@ class HomeViewModelTest {
     private fun homeViewModel(userRepository: UserRepository, pairingRepository: PairingRepository) =
         HomeViewModel(
             eventRepository = eventRepository,
-            changeRequestRepository = changeRequestRepository,
+            requestsSource = RequestsSource(
+                changeRequestRepository,
+                eventRepository,
+                custodyModelRepository,
+                userRepository,
+                pairingRepository
+            ),
             custodyModelRepository = custodyModelRepository,
             monthSpendDependencies = monthSpendDependencies,
             messageRepository = messageRepository,
@@ -386,6 +394,59 @@ class HomeViewModelTest {
             val onBarboras = expectMostRecentItem() as HomeUiState.Dashboard
             assertEquals("Barbora", onBarboras.partner?.name)
             assertEquals(1, onBarboras.unreadCount)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `the requests row counts what waits on each parent in the family on screen`() = runTest(dispatcher) {
+        // Phase 2, spec §6.1/§6.3: the row is always there while paired, and counts the family on
+        // screen only — a request from the parent's other family is what the switcher's dot says.
+        val olya = User(
+            id = "u1",
+            email = "olya@example.com",
+            name = "Olya",
+            role = "mom",
+            colorCode = "#FF4081",
+            partnerId = "u2",
+            partnerIds = listOf("u2", "u3")
+        )
+        val pavel = PartnerSummary(id = "u2", name = "Pavel", email = "p@example.com", pairedSinceMillis = null)
+        val users = mockk<UserRepository> {
+            coEvery { getCurrentUser() } returns olya
+            coEvery { getCurrentUserId() } returns "u1"
+            every { observeCurrentUserId() } returns flowOf("u1")
+            every { getAllUsers() } returns flowOf(listOf(olya))
+        }
+        val pairing = mockk<PairingRepository> {
+            every { observePairingState() } returns MutableStateFlow(PairingState.Paired(pavel))
+            every { observeCoParentProfile(any()) } returns flowOf(pavel)
+        }
+        val at = java.time.LocalDateTime.of(2026, 10, 10, 9, 0)
+        fun request(id: String, from: String, to: String) = ChangeRequest(
+            id = id,
+            eventId = "e-$id",
+            eventTitle = "Swimming",
+            requestedBy = from,
+            requestedTo = to,
+            currentStartDateTime = at.plusDays(1),
+            proposedStartDateTime = at.plusDays(2),
+            createdAt = at
+        )
+        every { changeRequestRepository.getAllChangeRequests() } returns flowOf(
+            listOf(
+                request("theirs", from = "u2", to = "u1"),
+                request("mine", from = "u1", to = "u2"),
+                request("elsewhere", from = "u3", to = "u1")
+            )
+        )
+        val home = homeViewModel(users, pairing)
+
+        home.uiState.test {
+            dispatcher.scheduler.advanceUntilIdle()
+            val dashboard = expectMostRecentItem() as HomeUiState.Dashboard
+            assertEquals(RequestsRowState(waitingOnMe = 1, waitingOnThem = 1), dashboard.requests)
+            assertEquals(1, dashboard.awaitingRequestCount)
             cancelAndIgnoreRemainingEvents()
         }
     }

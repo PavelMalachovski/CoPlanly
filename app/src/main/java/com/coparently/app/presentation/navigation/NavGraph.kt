@@ -289,6 +289,13 @@ fun NavGraph(
                         onOpenChangeRequests = {
                             navController.navigate(Screen.ChangeRequests.createRoute())
                         },
+                        onOpenRequestHistory = {
+                            navController.navigate(
+                                Screen.ChangeRequests.createRoute(
+                                    section = com.coparently.app.presentation.changerequests.InboxSection.HISTORY
+                                )
+                            )
+                        },
                         onOpenContacts = {
                             navController.navigate(Screen.Contacts.route)
                         },

@@ -48,7 +48,6 @@
     <string name="home_activity_change_requested">Запит на зміну: %1$s</string>
     <string name="home_activity_review">Переглянути</string>
 
-    <string name="home_awaiting_title">Чекають на вашу відповідь</string>
     <string name="home_dialog_swap_title">Обмін днями</string>
     <!-- No full stop after the date: FormatStyle.FULL ends it with "р.", and a sentence ending in
          an abbreviation takes no second period (it read "2026 р.." — docs/AUDIT-2026-10-design.md
@@ -67,4 +66,30 @@
 
     <!-- The empty seven-day card's action. -->
     <string name="home_week_empty_action">Додати подію</string>
+    <string name="home_requests_title">Запити</string>
+    <plurals name="home_requests_waiting_on_you">
+        <item quantity="one">%1$d чекає на вашу відповідь</item>
+        <item quantity="few">%1$d чекають на вашу відповідь</item>
+        <item quantity="many">%1$d чекають на вашу відповідь</item>
+        <item quantity="other">%1$d чекають на вашу відповідь</item>
+    </plurals>
+    <plurals name="home_requests_waiting_on_them">
+        <item quantity="one">%1$d чекає на відповідь: %2$s</item>
+        <item quantity="few">%1$d чекають на відповідь: %2$s</item>
+        <item quantity="many">%1$d чекають на відповідь: %2$s</item>
+        <item quantity="other">%1$d чекають на відповідь: %2$s</item>
+    </plurals>
+    <!-- A noun phrase and the name in brackets, not "X прийняв(ла)": a name cannot agree with a gendered verb. -->
+    <string name="home_requests_answer_accepted">%1$s: ваш запит прийнято (%2$s)</string>
+    <string name="home_requests_answer_declined">%1$s: ваш запит відхилено (%2$s)</string>
+    <string name="home_requests_day_today">Сьогодні</string>
+    <string name="home_requests_day_yesterday">Учора</string>
+    <string name="home_requests_none">Поки немає запитів</string>
+    <string name="home_requests_all">Усі запити та відповіді</string>
+    <string name="home_activity_accepted_new_time">Ваш новий час прийнято: %1$s</string>
+    <string name="home_activity_declined_new_time">Ваш новий час відхилено: %1$s</string>
+    <string name="home_activity_accepted_swap">Ваш обмін днями прийнято: %1$s</string>
+    <string name="home_activity_declined_swap">Ваш обмін днями відхилено: %1$s</string>
+    <string name="home_activity_accepted_event">Прийнято: %1$s</string>
+    <string name="home_activity_declined_event">Відхилено: %1$s</string>
 </resources>

@@ -7,9 +7,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
+import java.time.format.TextStyle
 import java.util.Locale
 
 /**
@@ -51,6 +53,12 @@ sealed interface UiText {
     data class Date(val date: LocalDate) : UiText
 
     /**
+     * A day of the week by name ("Sunday", "neděle"), in the reader's locale at resolution time,
+     * its first letter capitalised — it leads a line ("Sunday: Pavel accepted your request").
+     */
+    data class Weekday(val day: DayOfWeek) : UiText
+
+    /**
      * Text that is already what the user should read — a name they typed, an email address.
      * Never an English sentence: that is the defect this type exists to remove.
      */
@@ -63,6 +71,7 @@ fun UiText.asString(): String = when (this) {
     is UiText.Res -> stringResource(id, *args.map { arg -> resolveArg(arg) }.toTypedArray())
     is UiText.Plural -> pluralStringResource(id, count, *args.map { arg -> resolveArg(arg) }.toTypedArray())
     is UiText.Date -> formatDate(date, LocalConfiguration.current.locales[0])
+    is UiText.Weekday -> formatWeekday(day, LocalConfiguration.current.locales[0])
     is UiText.Raw -> value
 }
 
@@ -78,6 +87,7 @@ fun UiText.asString(context: Context): String = when (this) {
         *args.map { arg -> resolveArg(arg, context) }.toTypedArray()
     )
     is UiText.Date -> formatDate(date, context.resources.configuration.locales[0])
+    is UiText.Weekday -> formatWeekday(day, context.resources.configuration.locales[0])
     is UiText.Raw -> value
 }
 
@@ -88,3 +98,6 @@ private fun resolveArg(arg: Any, context: Context): Any = if (arg is UiText) arg
 
 private fun formatDate(date: LocalDate, locale: Locale): String =
     DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale).format(date)
+
+private fun formatWeekday(day: DayOfWeek, locale: Locale): String =
+    day.getDisplayName(TextStyle.FULL, locale).replaceFirstChar { it.titlecase(locale) }
