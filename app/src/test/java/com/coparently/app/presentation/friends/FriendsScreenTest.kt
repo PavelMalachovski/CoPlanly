@@ -44,6 +44,8 @@ class FriendsScreenTest {
             every { observeMyGrants() } returns flowOf(listOf(grandmasGrant))
             every { observeMyProfile() } returns flowOf(null)
         }
+        // Built outside the composition, as lint's ViewModelConstructorInComposable asks.
+        val viewModel = FriendViewModel(repository, testParentsSource())
         rule.setContent {
             CoPlanlyTheme {
                 FriendsScreen(
@@ -51,7 +53,7 @@ class FriendsScreenTest {
                     onOpenFriend = {},
                     onOpenMyProfile = {},
                     onOpenFriendCalendar = {},
-                    viewModel = FriendViewModel(repository, testParentsSource())
+                    viewModel = viewModel
                 )
             }
         }

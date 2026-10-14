@@ -25,6 +25,7 @@ import com.coparently.app.domain.changerequests.RequestSubject
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.PillChip
 import com.coparently.app.presentation.common.SectionGroup
+import com.coparently.app.presentation.common.stacksAtLargeFont
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.utils.dateWithTime
 
@@ -74,17 +75,24 @@ private fun HistoryRow(entry: HistoryEntry, parentNames: ParentNames, myUid: Str
             .padding(horizontal = Spacing.L, vertical = Spacing.M),
         verticalArrangement = Arrangement.spacedBy(Spacing.XS)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.S),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = subjectTitle(entry.subject),
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.weight(1f)
-            )
+        // From the large-font scale the chip goes under the title, as every row with a trailing
+        // chip does: beside it, German broke "Betreuungsplan" mid-word at 150 %.
+        if (stacksAtLargeFont()) {
+            Text(text = subjectTitle(entry.subject), style = MaterialTheme.typography.bodyLarge)
             OutcomeChip(entry)
+        } else {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.S),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = subjectTitle(entry.subject),
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.weight(1f)
+                )
+                OutcomeChip(entry)
+            }
         }
         proposedTime(entry.subject)?.let { time ->
             Text(text = time.format(dateWithTime("MMMEd")), style = MaterialTheme.typography.bodyMedium)

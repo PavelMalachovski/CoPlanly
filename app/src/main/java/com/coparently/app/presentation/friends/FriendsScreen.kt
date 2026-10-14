@@ -57,8 +57,9 @@ import java.time.format.FormatStyle
  * are the reason the profile exists, and a list that only ever offered "remove access" would put
  * a destructive action where a person's name is and hide everything worth reading.
  *
- * A friend reads the other side: one row per family that admitted them, opening its calendar, and
- * their own profile. A code just redeemed opens the calendar it names at once.
+ * A friend reads the other side: one row per family that admitted them, opening its calendar,
+ * their own profile, and the row for another family's code. A code just redeemed opens the
+ * calendar it names at once.
  *
  * @param onNavigateUp Returns to Settings.
  * @param onOpenFriend Opens one friend's card, by uid.
@@ -97,12 +98,21 @@ fun FriendsScreen(
                 .padding(Spacing.L),
             verticalArrangement = Arrangement.spacedBy(Spacing.M)
         ) {
-            // The friend's own view of this screen: their families' calendars and the way into
-            // their profile. A friend has no family friends to list and no invitations to mint,
-            // so they see neither — the screen answers whichever side of the relationship is
-            // signed in rather than showing controls that would be refused.
+            // The friend's own view of this screen: their families' calendars, the way into
+            // their profile and the row for another family's code. A friend has no family friends
+            // to list and no invitations to mint, so they see neither — the screen answers
+            // whichever side of the relationship is signed in rather than showing controls that
+            // would be refused.
             if (myGrants.isNotEmpty()) {
                 MyFamilies(grants = myGrants, onOpenCalendar = onOpenFriendCalendar, onOpenMyProfile = onOpenMyProfile)
+                // A friend of one family may be sent another's code, and its message sends her
+                // here to type it (L-5: a friend may hold a grant in each family).
+                FriendRedeemRow(
+                    state = redeem,
+                    onExpand = viewModel::expandRedeem,
+                    onCodeChange = viewModel::updateCode,
+                    onRedeem = viewModel::redeemCode
+                )
             } else {
                 ParentView(
                     friends = friends,
@@ -194,8 +204,8 @@ private fun ParentView(friends: List<CalendarFriendGrant>, redeem: FriendRedeemS
     }
 
     // Somebody handed a code needs somewhere to type it, and this screen is where Settings sends
-    // them. Only while the account holds no grant and admits no friend: the friend's own view
-    // replaces this one as soon as a grant arrives.
+    // them. Only while the account holds no grant and admits no friend: once a grant arrives the
+    // friend's own view replaces this one, and carries the same row for another family's code.
     if (friends.isEmpty()) {
         FriendRedeemRow(
             state = redeem,
