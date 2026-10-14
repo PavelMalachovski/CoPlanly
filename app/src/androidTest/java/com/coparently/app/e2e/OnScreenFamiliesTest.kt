@@ -29,7 +29,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -41,11 +40,13 @@ import javax.inject.Inject
  * paired before the test, and Carol, a third phone paired during it.
  *
  * `MultiFamilyTest` proves the data side — what Alice writes in Carol's family stays there. This
- * proves what she **sees**: with Bob's family on screen, a message from Carol puts a dot on Home's
- * switcher chip whose description names the kind ("New messages in another family"), Carol's row
- * in the switcher dialog says the same, switching there brings Carol's thread onto the Chat tab
- * (chat follows the selected family, `ChatPartnerSource`), and what Alice types into it reaches
- * Carol.
+ * proves what she **sees**: Carol's family reaching the switcher while the app is open, by Alice's
+ * own pairing listener and without taking over the screen (tester report #4); with Bob's family on
+ * screen, a message from Carol puts a dot on Home's switcher chip whose description names the kind
+ * ("New messages in another family"), Carol's row in the switcher dialog says the same; switching
+ * there makes the new-event form name Carol rather than Bob (tester report #11) and brings Carol's
+ * thread onto the Chat tab (chat follows the selected family, `ChatPartnerSource`), and what Alice
+ * types into it reaches Carol.
  *
  * What a phone still adds (`docs/DEVICE-CHECKLIST.md` §5.2): the push from the family not on
  * screen switching families when tapped, the chip on Expenses, TalkBack reading the dot, and two
@@ -64,7 +65,22 @@ class OnScreenFamiliesTest : AliceOnScreenTest() {
         val carol = runBlocking { pairCarolWithAlice(code) }
         val switcher = hasContentDescription(string(R.string.settings_family_switch), substring = true) and
             hasClickAction()
+        // Nothing runs Alice's sync: her open app learns Carol's family from its own pairing
+        // listener, which adds the co-parent the server's set gained while `partnerId` stays on Bob.
         waitFor("the family switcher chip on Home", switcher)
+        runBlocking {
+            assertEquals(
+                "Alice's phone does not know both families",
+                setOf(bob.uid, carol.uid),
+                selectedFamilySource.families().map { it.partnerUid }.toSet()
+            )
+            // A new family joins the switcher; it does not take over the screen.
+            assertEquals(
+                "Carol's family took over Alice's screen",
+                FamilyKey.of(aliceUid, bob.uid),
+                selectedFamilySource.selected()?.familyId
+            )
+        }
 
         // Carol writes while Bob's family is on screen: a dot, never a count, naming the kind.
         val carolThread = ConversationKey.of(aliceUid, carol.uid)
@@ -92,6 +108,20 @@ class OnScreenFamiliesTest : AliceOnScreenTest() {
             hasText(string(R.string.family_switcher_unread_row), substring = true)
         waitFor("Carol's row in the switcher dialog", carolsRow)
         tap(carolsRow)
+
+        // The new-event form names the family on screen: its owner cards are Alice and Carol, not
+        // Alice and Bob, the co-parent the server's link still names (tester report #11).
+        step("families: the new-event form names Carol")
+        openTab(BottomNavDestination.CALENDAR)
+        tap(hasContentDescription(string(R.string.calendar_add_event)) and hasClickAction())
+        waitFor("the owner card naming Carol", ownerCardNaming(carol.name))
+        assertTrue(
+            "the new-event form in Carol's family still names Bob",
+            composeTestRule.onAllNodes(ownerCardNaming(bob.name)).fetchSemanticsNodes().isEmpty()
+        )
+        step("families: back to the calendar")
+        Espresso.pressBackUnconditionally()
+        composeTestRule.settle()
 
         // Chat follows the selected family: the tab opens Carol's thread, in place.
         step("families: open the Chat tab")
@@ -146,29 +176,31 @@ class OnScreenFamiliesTest : AliceOnScreenTest() {
     }
 
     /**
-     * Pairs a third phone with Alice through the real callable, redeeming [code] from her screen,
-     * then runs Alice's sync — the step that brings a second co-parent onto a phone (`partnerIds`
-     * into Room, the selection reconciled) — and keeps Bob's family on screen, as a parent who has
-     * not switched would have.
+     * Pairs a third phone with Alice through the real callable, redeeming [code] from her screen.
+     *
+     * Nothing is run on Alice's side: her app is open, and bringing the second family onto her
+     * phone is its own pairing listener's job. This used to run her `SyncService.performFullSync()`
+     * here, because that listener watched only `partnerId`, which the server keeps on Bob — an
+     * open phone learnt of a second co-parent only on the next sync (tester report #4).
      */
     private suspend fun pairCarolWithAlice(code: String): EmulatorParent {
         step("families: pair Carol")
         val carol = newParent("Carol")
         carol.pairingRepository.redeem(code).getOrThrow()
         carol.awaitPairedWith(aliceUid)
-        step("families: Alice's sync brings the second family")
-        syncService.performFullSync().getOrThrow()
-        assertEquals(
-            "Alice's sync did not bring Carol's family",
-            setOf(bob.uid, carol.uid),
-            selectedFamilySource.families().map { it.partnerUid }.toSet()
-        )
-        assertNotNull(
-            "Alice's phone does not know Bob's family",
-            selectedFamilySource.select(FamilyKey.of(aliceUid, bob.uid))
-        )
         return carol
     }
+
+    /**
+     * An owner card on the event form whose description names [name], selected or not
+     * (`AddEditEventScreen`'s "Assign to …" cards).
+     */
+    private fun ownerCardNaming(name: String): SemanticsMatcher =
+        hasContentDescription(
+            string(R.string.event_form_cd_assign_to, name, string(R.string.event_form_cd_selected))
+        ) or hasContentDescription(
+            string(R.string.event_form_cd_assign_to, name, string(R.string.event_form_cd_not_selected))
+        )
 
     private companion object {
         /** A node showing an invitation code — `InviteCodeText` on the pairing screen's card. */

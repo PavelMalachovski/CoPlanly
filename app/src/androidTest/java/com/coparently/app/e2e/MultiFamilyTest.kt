@@ -4,7 +4,6 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.coparently.app.domain.chat.ConversationKey
 import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.model.Event
-import com.google.gson.Gson
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
@@ -35,14 +34,21 @@ class MultiFamilyTest : TwoParentTest() {
     fun whatAliceWritesInTheCarolFamilyStaysInTheCarolFamily() = runBlocking<Unit> {
         val carol = newParent("Carol")
         // Alice invites a second co-parent. Her own snapshot keeps naming Bob — the server pins
-        // `partnerId` to the first relationship — so only Carol's phone can be awaited here.
+        // `partnerId` to the first relationship and adds Carol to `partnerIds` — so her phone
+        // learns the new family from the set, through her own pairing listener, with no sync run
+        // by hand (tester report #4; this test used to copy the server's set into Room itself).
         val invite = alice.pairingRepository.createOrReuseInviteCode().getOrThrow()
         carol.pairingRepository.redeem(invite.code).getOrThrow()
         carol.awaitPairedWith(alice.uid)
+        alice.awaitFamilyWith(carol.uid)
 
-        learnFamiliesFromServer(alice)
         val carolFamily = FamilyKey.of(alice.uid, carol.uid)
         assertEquals(2, alice.selectedFamilySource.families().size)
+        assertEquals(
+            "a new family took over Alice's phone",
+            FamilyKey.of(alice.uid, bob.uid),
+            alice.selectedFamilySource.selected()?.familyId
+        )
         assertNotNull(alice.selectedFamilySource.select(carolFamily))
         assertEquals(carol.uid, alice.parentsSource.coParentUid())
 
@@ -82,21 +88,5 @@ class MultiFamilyTest : TwoParentTest() {
             "Alice's announcement leaked into the Bob thread",
             bobThread.documents.none { (it.get("attachments") as? List<*>).orEmpty().contains(event.id) }
         )
-    }
-
-    /**
-     * The step of `SyncService.syncUserData` that brings a second co-parent onto this phone.
-     *
-     * Pairing's own mirror adds only the co-parent the snapshot names, which for Alice is still
-     * Bob; the full set arrives as `partnerIds` on the next sync, which copies it into Room and
-     * reconciles the selection. `SyncService` itself needs the whole graph, so this repeats those
-     * two statements rather than the class — keep them in step with it.
-     */
-    private suspend fun learnFamiliesFromServer(parent: EmulatorParent) {
-        val remote = checkNotNull(parent.userRepository.getRemoteUserProfile(parent.uid))
-        val local = checkNotNull(parent.database.userDao().getUserById(parent.uid))
-        val withEveryFamily = local.copy(partnerIdsJson = Gson().toJson(remote.partnerIds))
-        parent.database.userDao().updateUser(withEveryFamily)
-        parent.selectedFamilySource.reconcile()
     }
 }
