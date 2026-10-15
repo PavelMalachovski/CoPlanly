@@ -863,6 +863,17 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   first line; a compile error still fails the leg through `$STATUS_FILE`), in `instrumented` and
   in `e2e`, which also restores the API 30 AVD snapshot (restore-only, so the two jobs never race
   to save it) and, like `rules`, caches the Firebase emulator jars.
+  **A boot that dies before the script starts is booted again, once, cold** (October 2026). The
+  cached API 30 snapshot sometimes comes up without its input service: `sys.boot_completed` reads 1
+  at once, the action's own unlock (`adb shell input keyevent 82`) fails with "No service published
+  for: input", and nothing runs — PR #130 lost the instrumented, e2e, R8 and upgrade jobs to it, the
+  upgrade job twice in a row. Every emulator script now touches `$STARTED_FILE` first; when the step
+  failed and that file is missing, a "Did … start?" step stops what is left of the emulator and the
+  same step runs again with `-no-snapshot`, where boot completes only once every service is up. The
+  check step reads whichever attempt ran last and leaves a notice when it was the second. Two things
+  not to undo: **a test that started and then failed or hung is never retried** — that is a result,
+  and "flake" is not a root cause — and the retry is a **cold** boot, because a second snapshot boot
+  can die the same way.
 - **The app ships a hand-written baseline profile** (`app/src/main/baseline-prof.txt`, week 8):
   package wildcards over the start path, installed by `profileinstaller` on a sideloaded or
   closed-test install. Recording one needs a Macrobenchmark module and a device per release, which
