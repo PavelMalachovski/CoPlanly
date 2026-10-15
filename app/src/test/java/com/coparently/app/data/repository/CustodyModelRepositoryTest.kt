@@ -1133,7 +1133,8 @@ class CustodyModelRepositoryTest {
                 activityAnnouncer.announce(
                     match { it.kind == ActivityKind.CUSTODY_PROPOSED && it.planCitation == PLAN_CITATION },
                     any(),
-                    any()
+                    any(),
+                    PARTNER_UID
                 )
             }
         }
@@ -1148,7 +1149,8 @@ class CustodyModelRepositoryTest {
             activityAnnouncer.announce(
                 match { it.kind == ActivityKind.CUSTODY_PROPOSED && it.planCitation == null },
                 any(),
-                any()
+                any(),
+                PARTNER_UID
             )
         }
     }
@@ -1289,7 +1291,7 @@ class CustodyModelRepositoryTest {
         coVerify(exactly = 1) { requestDeadlines.start(any()) }
         coVerify(exactly = 1) { firestoreCustodyDataSource.setCustody(DOCUMENT_ID, PARTICIPANTS, any()) }
         coVerify(exactly = 1) {
-            activityAnnouncer.announce(match { it.kind == ActivityKind.DAY_SWAP_OFFERED }, any(), any())
+            activityAnnouncer.announce(match { it.kind == ActivityKind.DAY_SWAP_OFFERED }, any(), any(), PARTNER_UID)
         }
         coVerify(exactly = 1) {
             fcmService.queueNotificationForUser(
@@ -1330,7 +1332,7 @@ class CustodyModelRepositoryTest {
         coVerifyOrder {
             firestoreCustodyDataSource.setCustody(DOCUMENT_ID, PARTICIPANTS, any())
             requestDeadlines.start(any())
-            activityAnnouncer.announce(match { it.kind == ActivityKind.CUSTODY_PROPOSED }, any(), any())
+            activityAnnouncer.announce(match { it.kind == ActivityKind.CUSTODY_PROPOSED }, any(), any(), PARTNER_UID)
             fcmService.queueNotificationForUser(
                 PARTNER_UID,
                 match {
@@ -1403,6 +1405,92 @@ class CustodyModelRepositoryTest {
             assertFalse(repository.withdrawUnanswered(DOCUMENT_ID, PROPOSED_AT))
             coVerify(exactly = 1) { firestoreCustodyDataSource.transact(any(), any(), any()) }
         }
+
+    // A clock waits for the server for up to ten seconds (ruling 14). A push tap can switch the
+    // family on screen in that time, so the card is posted to the thread of the pair the request was
+    // written for, never to whichever family is on screen when it is announced: it names that
+    // family's days or schedule.
+
+    @Test
+    fun `an offer's card goes to its own family's thread though the screen switches while its clock is written`() =
+        runTest(dispatcher) {
+            val onScreen = switchesFamilyWhileAClockIsWritten()
+            // The document keeps each write, as Firestore does, so a run's last map holds its days.
+            var stored = remoteCustody()
+            coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID) } answers { stored }
+            coEvery { firestoreCustodyDataSource.setCustody(DOCUMENT_ID, any(), any()) } answers { stored = thirdArg() }
+            val first = LocalDate.now().plusDays(10)
+
+            repository.applyDayOverrides(first.toString(), offerOf(first.toString()), AnswerByPick.DEFAULT)
+            onScreen.value = PARTNER_UID
+            val run = listOf(first.plusDays(1).toString(), first.plusDays(2).toString())
+            repository.applyDayOverridesForDates(run, ::offerOfRun, AnswerByPick.DEFAULT)
+
+            // Both times uidC's family was on screen by the time the card was posted.
+            assertEquals(OTHER_PARTNER_UID, onScreen.value)
+            coVerify(exactly = 2) { activityAnnouncer.announce(any(), any(), any(), any()) }
+            coVerify(exactly = 2) {
+                activityAnnouncer.announce(
+                    match { it.kind == ActivityKind.DAY_SWAP_OFFERED },
+                    any(),
+                    any(),
+                    PARTNER_UID
+                )
+            }
+            // As the clock and the push already did.
+            coVerify(exactly = 2) {
+                requestDeadlines.start(match { it.familyId == DOCUMENT_ID && it.responderUid == PARTNER_UID })
+            }
+            coVerify(exactly = 2) { fcmService.queueNotificationForUser(PARTNER_UID, any()) }
+        }
+
+    @Test
+    fun `a proposal's card goes to its own family's thread though the screen switches while its clock is written`() =
+        runTest(dispatcher) {
+            val onScreen = switchesFamilyWhileAClockIsWritten()
+            coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID) } returns remoteCustody()
+            // A trip ten days from now: far enough ahead for the proposal to get a clock.
+            val from = LocalDate.now().plusDays(10)
+            val trip = SeasonalLayer.allWith("trip", "Trip", from..from.plusDays(3), "dad")
+
+            val result = repository.submitPattern(
+                remoteCustody().model.copy(seasonalLayers = listOf(trip)),
+                answerBy = AnswerByPick.DEFAULT
+            )
+
+            assertEquals(PatternSubmission.PROPOSED, result)
+            assertEquals(OTHER_PARTNER_UID, onScreen.value)
+            coVerify(exactly = 1) { activityAnnouncer.announce(any(), any(), any(), any()) }
+            coVerify(exactly = 1) {
+                activityAnnouncer.announce(
+                    match { it.kind == ActivityKind.CUSTODY_PROPOSED && it.entityId == DOCUMENT_ID },
+                    any(),
+                    any(),
+                    PARTNER_UID
+                )
+            }
+            coVerify(exactly = 1) {
+                requestDeadlines.start(match { it.familyId == DOCUMENT_ID && it.responderUid == PARTNER_UID })
+            }
+            coVerify(exactly = 1) { fcmService.queueNotificationForUser(PARTNER_UID, any()) }
+        }
+
+    /**
+     * uidA in uidB's and uidC's families with uidB's on screen, until a clock is started: then a push
+     * tap switches the screen to uidC's family, before the clock's write returns.
+     *
+     * @return The co-parent of the family on screen, for a test to move back or to read.
+     */
+    private fun switchesFamilyWhileAClockIsWritten(): MutableStateFlow<String> {
+        val onScreen = MutableStateFlow(PARTNER_UID)
+        val me = signedInWith(PARTNER_UID).copy(partnerIds = listOf(PARTNER_UID, OTHER_PARTNER_UID))
+        coEvery { userRepository.getUserById(MY_UID) } answers { me.copy(partnerId = onScreen.value) }
+        coEvery { requestDeadlines.start(any()) } answers {
+            onScreen.value = OTHER_PARTNER_UID
+            clockFor(firstArg())
+        }
+        return onScreen
+    }
 
     /** A one-day offer of [date] to slot 1, as `CalendarViewModel.offerDaySwap` makes it. */
     private fun offerOf(date: String): (Map<String, DayOverride>) -> Result<Map<String, DayOverride>> = { current ->

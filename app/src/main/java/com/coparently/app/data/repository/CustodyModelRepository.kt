@@ -542,6 +542,10 @@ constructor(
      * The chat card for a proposal or a decision. [planCitation] rides only on the proposal's own
      * card (MON-21): the custody document drops it once the proposal is answered, and the chat is
      * the immutable place the export can still read it from.
+     *
+     * Posted to [pair]'s own thread, never the family on screen at the time: a proposal's clock
+     * waits for the server first (phase 3a), and a family switched meanwhile must not be shown
+     * another family's schedule.
      */
     private suspend fun announceProposal(pair: CustodyPair, kind: ActivityKind, planCitation: String? = null) {
         activityAnnouncer.announce(
@@ -552,7 +556,8 @@ constructor(
                 title = pair.documentId,
                 whenIso = nowIso(),
                 planCitation = planCitation
-            )
+            ),
+            partnerUid = pair.partnerUid()
         )
     }
 
@@ -1226,7 +1231,10 @@ constructor(
     )
 
     /**
-     * One chat card and one push for a swap, however many days it covers.
+     * One chat card and one push for a swap, however many days it covers, both to [pair]'s own
+     * thread: never the family on screen at the time, because an offer's clock waits for the
+     * server first (phase 3a), and a family switched meanwhile must not be shown another
+     * family's days.
      *
      * @param dayCount Days in the offer. One picks the single-day wording on the other phone;
      *   more picks the grouped one, which is the whole point of the group.
@@ -1250,7 +1258,8 @@ constructor(
                 entityId = date,
                 title = date,
                 whenIso = date
-            )
+            ),
+            partnerUid = pair.partnerUid()
         )
         notifyPartnerOfSwap(pair, date, status, dayCount, answerByMillis)
     }
