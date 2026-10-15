@@ -181,20 +181,34 @@ class AnswerByTest {
     }
 
     @Test
-    fun `a picked date too near falls back to tomorrow, and nothing is further than 31 days`() {
-        // Too near: today's evening is an hour away, so the pick reads the Tomorrow time instead.
-        val evening = at("2026-10-10T19:00")
-        assertEquals(at("2026-10-11T19:00"), AnswerBy.resolve(OnDate(date(10, 10)), evening, null, ZONE))
-        assertEquals(at("2026-10-11T19:00"), AnswerBy.resolve(OnDate(date(9, 1)), evening, null, ZONE))
+    fun `a picked date too near falls back to tomorrow, and nothing is further than 30 days`() {
+        // Too near: its evening is less than two hours away. At 19:00 today's 20:00 is one, so the pick
+        // reads the Tomorrow time instead; so does a date that has gone by.
+        val sevenPm = at("2026-10-10T19:00")
+        assertEquals(at("2026-10-11T19:00"), AnswerBy.resolve(OnDate(date(10, 10)), sevenPm, null, ZONE))
+        assertEquals(at("2026-10-11T19:00"), AnswerBy.resolve(OnDate(date(9, 1)), sevenPm, null, ZONE))
 
-        // Too far: 31 days after 10:07 is 09:07 by the clock, because the clocks go back on 25 October;
-        // the bound is rounded down to 09:00.
-        val farthest = at("2026-11-10T09:00")
+        // Today stays pickable while its evening is at least two hours away: ten hours off at 10:07, and
+        // exactly two at 18:00. A millisecond later it is less than two, and the pick reads Tomorrow.
+        assertEquals(at("2026-10-10T20:00"), AnswerBy.resolve(OnDate(date(10, 10)), NOW, null, ZONE))
+        val sixPm = at("2026-10-10T18:00")
+        assertEquals(at("2026-10-10T20:00"), AnswerBy.resolve(OnDate(date(10, 10)), sixPm, null, ZONE))
+        assertEquals(at("2026-10-11T18:15"), AnswerBy.resolve(OnDate(date(10, 10)), sixPm + 1, null, ZONE))
+        // Tomorrow's evening is far enough, even when it is nearer than the Tomorrow chip.
+        assertEquals(
+            at("2026-10-11T20:00"),
+            AnswerBy.resolve(OnDate(date(10, 11)), at("2026-10-10T21:00"), null, ZONE)
+        )
+
+        // Too far: 30 days after 10:07 is 09:07 by the clock, because the clocks go back on 25 October;
+        // the bound is rounded down to 09:00. It stops a day short of the 31 days the rules allow.
+        assertEquals(30 * 24 * HOUR, AnswerBy.MAX_AHEAD_MILLIS)
+        val farthest = at("2026-11-09T09:00")
         assertEquals(farthest, AnswerBy.offer(NOW, null, ZONE).latestMillis)
         assertEquals(farthest, AnswerBy.resolve(OnDate(date(12, 31)), NOW, null, ZONE))
         assertTrue(farthest <= NOW + AnswerBy.MAX_AHEAD_MILLIS)
 
-        // A cap further away than that does not lift the bound: the rules refuse a longer deadline.
+        // A cap further away than that does not lift the bound.
         val farCap = at("2027-01-31T00:00")
         assertEquals(farthest, AnswerBy.offer(NOW, farCap, ZONE).latestMillis)
         assertEquals(farthest, AnswerBy.resolve(OnDate(LocalDate.of(2027, 1, 30)), NOW, farCap, ZONE))

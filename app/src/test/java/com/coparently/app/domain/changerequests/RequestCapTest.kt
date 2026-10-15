@@ -122,4 +122,53 @@ class RequestCapTest {
         assertEquals(at("2026-10-12T00:00"), RequestCap.forProposal(withChild, agreed, TODAY, ZONE))
         assertNull(RequestCap.forProposal(withChild, withChild.copy(id = "proposed"), TODAY, ZONE))
     }
+
+    @Test
+    fun `a change to only one child's afternoon caps a proposal too`() {
+        // Child 1 stays with slot 1 every day. No family day, no family afternoon and no day of the child's
+        // moves below: only the child's own afternoon differs.
+        val staysPut = ChildScheduleOverride("child-1", 14, (0..13).toSet(), date(10, 5))
+        val withoutAfternoon = agreed.copy(childOverrides = listOf(staysPut))
+        // The child is with slot 1 on cycle day 8 (Tuesday 13 October, then every fortnight), so an afternoon
+        // with the other parent that day is one they would see.
+        val ownAfternoon = staysPut.copy(contactWindows = listOf(afternoon(8, "dad")))
+        val withAfternoon = agreed.copy(childOverrides = listOf(ownAfternoon))
+        assertEquals(withoutAfternoon.getCustodyFor(date(10, 13)), withAfternoon.getCustodyFor(date(10, 13)))
+        assertEquals(at("2026-10-13T00:00"), RequestCap.forProposal(withoutAfternoon, withAfternoon, TODAY, ZONE))
+        // Either way round: taking the afternoon away changes the same day.
+        assertEquals(at("2026-10-13T00:00"), RequestCap.forProposal(withAfternoon, withoutAfternoon, TODAY, ZONE))
+        // From the 14th, the next one is a fortnight later.
+        assertEquals(
+            at("2026-10-27T00:00"),
+            RequestCap.forProposal(withoutAfternoon, withAfternoon, date(10, 14), ZONE)
+        )
+        // An afternoon with the parent who already has the child that day is drawn nowhere: no change.
+        val sameParent = staysPut.copy(contactWindows = listOf(afternoon(8, "mom")))
+        val unseenForChild = agreed.copy(childOverrides = listOf(sameParent))
+        assertNull(RequestCap.forProposal(withoutAfternoon, unseenForChild, TODAY, ZONE))
+
+        // A child with a schedule of its own in only one of the two follows the family in the other, so the
+        // family's afternoons are its afternoons there. This child has the family's days and one afternoon
+        // with slot 1 on a day of the other parent.
+        val familyDays = ChildScheduleOverride("child-1", 14, (0..6).toSet(), date(10, 5))
+        val withOwnAfternoon = agreed.copy(
+            childOverrides = listOf(familyDays.copy(contactWindows = listOf(afternoon(8, "mom"))))
+        )
+        assertEquals(at("2026-10-13T00:00"), RequestCap.forProposal(agreed, withOwnAfternoon, TODAY, ZONE))
+
+        // The family's afternoon on a day of its own parent (cycle day 1) is drawn nowhere, so a child that
+        // stops following the family loses nothing: the same family, the same days, no cap.
+        val unseen = agreed.copy(contactWindows = listOf(afternoon(1, "mom")))
+        val unseenChildAlone = unseen.copy(childOverrides = listOf(familyDays))
+        assertNull(RequestCap.forProposal(unseen, unseenChildAlone, TODAY, ZONE))
+        // With the other parent it is seen: the child no longer has it from 20 October (the 6th is behind us),
+        // although the family's windows, and the child's days, are the same in both.
+        val seen = agreed.copy(contactWindows = listOf(afternoon(1, "dad")))
+        val seenChildAlone = seen.copy(childOverrides = listOf(familyDays))
+        assertEquals(at("2026-10-20T00:00"), RequestCap.forProposal(seen, seenChildAlone, TODAY, ZONE))
+    }
+
+    /** 15:00 to 19:00 on cycle day [dayIndex], with [parent]. */
+    private fun afternoon(dayIndex: Int, parent: String) =
+        ContactWindow(dayIndex, LocalTime.of(15, 0), LocalTime.of(19, 0), parent)
 }

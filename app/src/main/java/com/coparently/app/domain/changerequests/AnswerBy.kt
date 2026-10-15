@@ -41,7 +41,8 @@ sealed interface AnswerByPick {
     data class Preset(val preset: AnswerByPreset) : AnswerByPick
 
     /**
-     * A date from the date picker. Its deadline is that evening, at [AnswerBy.PICKED_DATE_HOUR].
+     * A date from the date picker. Its deadline is that evening, at [AnswerBy.PICKED_DATE_HOUR], unless
+     * that is less than two hours away: such a date reads the Tomorrow time instead (ruling 11).
      *
      * @property date The day the proposer picked.
      */
@@ -132,7 +133,7 @@ data class AnswerByOffer(
  *   the same time are one chip.
  *
  * Every deadline is on a quarter hour of the device's clock, so it reads "by Tue 13 Oct, 10:15": a
- * preset is rounded up, and a limit (`L`, halfway, 31 days) is rounded down so that it never passes
+ * preset is rounded up, and a limit (`L`, halfway, 30 days) is rounded down so that it never passes
  * what it limits. Nothing here reads the time or the zone itself; both are passed in, so a test can
  * stand at any moment and a screen shows what its sender will send.
  */
@@ -154,11 +155,13 @@ object AnswerBy {
     const val LAST_CHANCE_RESERVE_MILLIS = 86_400_000L
 
     /**
-     * The furthest a deadline may be from now: 31 days of elapsed time, the bound `firestore.rules`
-     * puts on a clock's `answerByMillis` (spec §5.2). It is not counted in wall-clock days, which
-     * would pass the bound by an hour when the clocks go back.
+     * The furthest a deadline may be from now: 30 days of elapsed time. `firestore.rules` allows 31
+     * (spec §5.2) and stays at 31; the client stops a day short. A phone's clock can run ahead of the
+     * server's, and a clock the rule refuses leaves the request with no deadline at all (ruling 8), so
+     * a pick keeps a day clear of the bound instead of sitting on it. It is counted in elapsed time, as
+     * the rule counts it; wall-clock days would pass it by an hour when the clocks go back.
      */
-    const val MAX_AHEAD_MILLIS = 2_678_400_000L
+    const val MAX_AHEAD_MILLIS = 2_592_000_000L
 
     private const val SHORT_PRESET_DAYS = 3L
     private const val LONG_PRESET_DAYS = 7L
@@ -189,8 +192,10 @@ object AnswerBy {
      * - [AnswerByBand.TOO_SOON] gives null, whatever the pick;
      * - [AnswerByBand.FIXED] gives its one deadline, whatever the pick;
      * - [AnswerByBand.CHOICES] gives a preset its chip's time, merged or not. A date reads its
-     *   evening, and is clamped rather than refused (ruling 11): one that would end before "Tomorrow"
-     *   reads the Tomorrow time, and one past the latest time reads that.
+     *   evening, and is clamped rather than refused (ruling 11): one whose evening is less than
+     *   [NO_DEADLINE_UNDER_MILLIS] away, the band's own minimum, reads the Tomorrow time (today stays
+     *   pickable until two hours before its 20:00, and a date that has gone by is always too near),
+     *   and one past the latest time reads that.
      */
     fun resolve(pick: AnswerByPick, nowMillis: Long, capMillis: Long?, zone: ZoneId): Long? {
         val offer = offer(nowMillis, capMillis, zone)
@@ -226,8 +231,12 @@ object AnswerBy {
         is AnswerByPick.Preset -> minOf(presetMillis(pick.preset, nowMillis, zone), latest)
         is AnswerByPick.OnDate -> {
             val evening = pick.date.atTime(PICKED_DATE_HOUR, 0).atZone(zone).toInstant().toEpochMilli()
-            val earliest = presetMillis(AnswerByPreset.TOMORROW, nowMillis, zone)
-            minOf(maxOf(evening, earliest), latest)
+            val chosen = if (evening - nowMillis < NO_DEADLINE_UNDER_MILLIS) {
+                presetMillis(AnswerByPreset.TOMORROW, nowMillis, zone)
+            } else {
+                evening
+            }
+            minOf(chosen, latest)
         }
     }
 
