@@ -475,6 +475,7 @@ jobs:
         continue-on-error: true
         env:
           STATUS_FILE: ${{ runner.temp }}/r8-probe-status
+          STARTED_FILE: ${{ runner.temp }}/r8-probe-started
           STOP_EMULATOR: 'true'
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -486,14 +487,55 @@ jobs:
           force-avd-creation: false
           disable-animations: true
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          script: bash tools/ci-background-build.sh wait && bash tools/run-r8-probe.sh
+          script: touch "$STARTED_FILE"; bash tools/ci-background-build.sh wait && bash tools/run-r8-probe.sh
+
+      # As in the `instrumented` job: a boot that died before the script started is booted again, cold.
+      - name: Did the R8 probe start?
+        id: probe-started
+        if: steps.probe.outcome == 'failure'
+        env:
+          STARTED_FILE: ${{ runner.temp }}/r8-probe-started
+        run: |
+          if [ -f "$STARTED_FILE" ]; then
+            echo "started=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "started=false" >> "$GITHUB_OUTPUT"
+            # The action kills its emulator when it fails but does not wait for it to exit,
+            # and the second boot must not start beside the first.
+            bash tools/stop-emulator.sh
+          fi
+
+      - name: Run the R8 probe in the minified app (again, on a cold boot)
+        id: probe-retry
+        if: steps.probe-started.outputs.started == 'false'
+        timeout-minutes: 15
+        continue-on-error: true
+        env:
+          STATUS_FILE: ${{ runner.temp }}/r8-probe-status
+          STARTED_FILE: ${{ runner.temp }}/r8-probe-started
+          STOP_EMULATOR: 'true'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 30
+          arch: x86_64
+          target: default
+          profile: pixel_2
+          ram-size: 4096M
+          force-avd-creation: false
+          disable-animations: true
+          emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: touch "$STARTED_FILE"; bash tools/ci-background-build.sh wait && bash tools/run-r8-probe.sh
 
       - name: The probe finished and passed
         if: always()
         env:
           STATUS_FILE: ${{ runner.temp }}/r8-probe-status
-          STEP_OUTCOME: ${{ steps.probe.outcome }}
+          STEP_OUTCOME: ${{ steps.probe-retry.outcome == 'skipped' && steps.probe.outcome || steps.probe-retry.outcome }}
+          RETRIED: ${{ steps.probe-retry.outcome != 'skipped' }}
         run: |
+          if [ "$RETRIED" = "true" ]; then
+            echo "::notice::The emulator died at boot before the script started; this result is from a second, cold boot."
+          fi
           if [ ! -f "$STATUS_FILE" ]; then
             echo "::error::The R8 probe did not finish: the emulator step died or timed out before it wrote an exit status."
             exit 1
@@ -811,6 +853,7 @@ jobs:
         continue-on-error: true
         env:
           STATUS_FILE: ${{ runner.temp }}/instrumented-status
+          STARTED_FILE: ${{ runner.temp }}/instrumented-started
           STOP_EMULATOR: 'true'
           # Only the legs whose emulator survives screenrecord record (tools/ci-changes.js).
           RECORD_SCREEN: ${{ matrix.record }}
@@ -827,14 +870,64 @@ jobs:
           # Waits for the background build, then records the screen in 170 s segments while the
           # tests run (on legs with `record`) and pulls the MP4s after; the exit status is the
           # tests', and a recorder that fails never fails the job.
-          script: bash tools/ci-background-build.sh wait && bash tools/with-screen-recording.sh ./gradlew connectedDebugAndroidTest ${{ matrix.test-args }}
+          script: touch "$STARTED_FILE"; bash tools/ci-background-build.sh wait && bash tools/with-screen-recording.sh ./gradlew connectedDebugAndroidTest ${{ matrix.test-args }}
+
+      # **A boot that dies before the script starts is booted again, once, cold.** The cached API 30
+      # snapshot sometimes comes up without its input service: `sys.boot_completed` reads 1 at once,
+      # the action's own unlock (`adb shell input keyevent 82`) fails with "No service published for:
+      # input", and the script never runs (PR #130: runs 366, 369 and 373, in four jobs). The script's
+      # first command touches $STARTED_FILE, so "never started" is a fact on disk; when the step
+      # failed without it, the next step boots the same AVD again with `-no-snapshot`, where
+      # boot_completed waits for every service. A test that started and then failed or hung is a
+      # result, and is never retried. The check step after reads whichever attempt ran last and
+      # says when it was the second.
+      - name: Did the instrumented tests start?
+        id: tests-started
+        if: steps.tests.outcome == 'failure'
+        env:
+          STARTED_FILE: ${{ runner.temp }}/instrumented-started
+        run: |
+          if [ -f "$STARTED_FILE" ]; then
+            echo "started=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "started=false" >> "$GITHUB_OUTPUT"
+            # The action kills its emulator when it fails but does not wait for it to exit,
+            # and the second boot must not start beside the first.
+            bash tools/stop-emulator.sh
+          fi
+
+      - name: Run instrumented tests (again, on a cold boot)
+        id: tests-retry
+        if: steps.tests-started.outputs.started == 'false'
+        timeout-minutes: 15
+        continue-on-error: true
+        env:
+          STATUS_FILE: ${{ runner.temp }}/instrumented-status
+          STARTED_FILE: ${{ runner.temp }}/instrumented-started
+          STOP_EMULATOR: 'true'
+          RECORD_SCREEN: ${{ matrix.record }}
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api-level }}
+          target: ${{ matrix.target }}
+          arch: ${{ matrix.arch }}
+          profile: pixel_2
+          ram-size: 4096M
+          force-avd-creation: false
+          disable-animations: true
+          emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: touch "$STARTED_FILE"; bash tools/ci-background-build.sh wait && bash tools/with-screen-recording.sh ./gradlew connectedDebugAndroidTest ${{ matrix.test-args }}
 
       - name: The instrumented tests finished and passed
         if: always()
         env:
           STATUS_FILE: ${{ runner.temp }}/instrumented-status
-          STEP_OUTCOME: ${{ steps.tests.outcome }}
+          STEP_OUTCOME: ${{ steps.tests-retry.outcome == 'skipped' && steps.tests.outcome || steps.tests-retry.outcome }}
+          RETRIED: ${{ steps.tests-retry.outcome != 'skipped' }}
         run: |
+          if [ "$RETRIED" = "true" ]; then
+            echo "::notice::The emulator died at boot before the script started; this result is from a second, cold boot."
+          fi
           if [ ! -f "$STATUS_FILE" ]; then
             echo "::error::The instrumented tests did not finish: the emulator step died or timed out before they wrote an exit status."
             exit 1
@@ -1001,6 +1094,7 @@ jobs:
         env:
           FIREBASE_JAVA_HOME: ${{ steps.jdk21.outputs.path }}
           STATUS_FILE: ${{ runner.temp }}/e2e-status
+          STARTED_FILE: ${{ runner.temp }}/e2e-started
         with:
           api-level: 30
           arch: x86_64
@@ -1012,14 +1106,55 @@ jobs:
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           # Stops the emulator itself once the tests are done (tools/stop-emulator.sh), since a
           # snapshot boot is what the `instrumented` job's shutdown hang was seen on.
-          script: adb logcat -G 16M || true; bash tools/ci-background-build.sh wait && bash tools/e2e/run-two-parent-tests.sh; status=$?; echo "$status" > "$STATUS_FILE"; mkdir -p app/build/outputs && adb logcat -d -v time > app/build/outputs/e2e-logcat.txt 2>&1; echo "::group::logcat — E2E steps (timed), failures, crashes"; grep -E "I/E2E|E/E2E.*FAILED|AndroidRuntime" app/build/outputs/e2e-logcat.txt | tail -n 400; echo "::endgroup::"; echo "::group::logcat — thread dumps of failed tests"; grep -E "E/E2E" app/build/outputs/e2e-logcat.txt | tail -n 800; echo "::endgroup::"; bash tools/stop-emulator.sh; exit $status
+          script: touch "$STARTED_FILE"; adb logcat -G 16M || true; bash tools/ci-background-build.sh wait && bash tools/e2e/run-two-parent-tests.sh; status=$?; echo "$status" > "$STATUS_FILE"; mkdir -p app/build/outputs && adb logcat -d -v time > app/build/outputs/e2e-logcat.txt 2>&1; echo "::group::logcat — E2E steps (timed), failures, crashes"; grep -E "I/E2E|E/E2E.*FAILED|AndroidRuntime" app/build/outputs/e2e-logcat.txt | tail -n 400; echo "::endgroup::"; echo "::group::logcat — thread dumps of failed tests"; grep -E "E/E2E" app/build/outputs/e2e-logcat.txt | tail -n 800; echo "::endgroup::"; bash tools/stop-emulator.sh; exit $status
+
+      # As in the `instrumented` job: a boot that died before the script started is booted again, cold.
+      - name: Did the two-parent tests start?
+        id: e2e-tests-started
+        if: steps.e2e-tests.outcome == 'failure'
+        env:
+          STARTED_FILE: ${{ runner.temp }}/e2e-started
+        run: |
+          if [ -f "$STARTED_FILE" ]; then
+            echo "started=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "started=false" >> "$GITHUB_OUTPUT"
+            # The action kills its emulator when it fails but does not wait for it to exit,
+            # and the second boot must not start beside the first.
+            bash tools/stop-emulator.sh
+          fi
+
+      - name: Run the two-parent tests (again, on a cold boot)
+        id: e2e-tests-retry
+        if: steps.e2e-tests-started.outputs.started == 'false'
+        timeout-minutes: 15
+        continue-on-error: true
+        uses: reactivecircus/android-emulator-runner@v2
+        env:
+          FIREBASE_JAVA_HOME: ${{ steps.jdk21.outputs.path }}
+          STATUS_FILE: ${{ runner.temp }}/e2e-status
+          STARTED_FILE: ${{ runner.temp }}/e2e-started
+        with:
+          api-level: 30
+          arch: x86_64
+          target: default
+          profile: pixel_2
+          ram-size: 4096M
+          force-avd-creation: false
+          disable-animations: true
+          emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: touch "$STARTED_FILE"; adb logcat -G 16M || true; bash tools/ci-background-build.sh wait && bash tools/e2e/run-two-parent-tests.sh; status=$?; echo "$status" > "$STATUS_FILE"; mkdir -p app/build/outputs && adb logcat -d -v time > app/build/outputs/e2e-logcat.txt 2>&1; echo "::group::logcat — E2E steps (timed), failures, crashes"; grep -E "I/E2E|E/E2E.*FAILED|AndroidRuntime" app/build/outputs/e2e-logcat.txt | tail -n 400; echo "::endgroup::"; echo "::group::logcat — thread dumps of failed tests"; grep -E "E/E2E" app/build/outputs/e2e-logcat.txt | tail -n 800; echo "::endgroup::"; bash tools/stop-emulator.sh; exit $status
 
       - name: The two-parent tests finished and passed
         if: always()
         env:
           STATUS_FILE: ${{ runner.temp }}/e2e-status
-          STEP_OUTCOME: ${{ steps.e2e-tests.outcome }}
+          STEP_OUTCOME: ${{ steps.e2e-tests-retry.outcome == 'skipped' && steps.e2e-tests.outcome || steps.e2e-tests-retry.outcome }}
+          RETRIED: ${{ steps.e2e-tests-retry.outcome != 'skipped' }}
         run: |
+          if [ "$RETRIED" = "true" ]; then
+            echo "::notice::The emulator died at boot before the script started; this result is from a second, cold boot."
+          fi
           if [ ! -f "$STATUS_FILE" ]; then
             echo "::error::The two-parent tests did not finish: the emulator step died or timed out before they wrote an exit status."
             exit 1
@@ -1257,6 +1392,7 @@ jobs:
         uses: reactivecircus/android-emulator-runner@v2
         env:
           STATUS_FILE: ${{ runner.temp }}/upgrade-status
+          STARTED_FILE: ${{ runner.temp }}/upgrade-started
           BASE_APK: upgrade-base/app/build/outputs/apk/debug/app-debug.apk
           RESULTS_DIR: app/build/outputs/upgrade-results
         with:
@@ -1268,14 +1404,56 @@ jobs:
           force-avd-creation: false
           disable-animations: true
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          script: adb logcat -G 16M || true; bash tools/ci-background-build.sh wait && bash tools/upgrade/run-upgrade-test.sh; status=$?; echo "$status" > "$STATUS_FILE"; bash tools/stop-emulator.sh; exit $status
+          script: touch "$STARTED_FILE"; adb logcat -G 16M || true; bash tools/ci-background-build.sh wait && bash tools/upgrade/run-upgrade-test.sh; status=$?; echo "$status" > "$STATUS_FILE"; bash tools/stop-emulator.sh; exit $status
+
+      # As in the `instrumented` job: a boot that died before the script started is booted again, cold.
+      - name: Did the upgrade check start?
+        id: upgrade-run-started
+        if: steps.upgrade-run.outcome == 'failure'
+        env:
+          STARTED_FILE: ${{ runner.temp }}/upgrade-started
+        run: |
+          if [ -f "$STARTED_FILE" ]; then
+            echo "started=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "started=false" >> "$GITHUB_OUTPUT"
+            # The action kills its emulator when it fails but does not wait for it to exit,
+            # and the second boot must not start beside the first.
+            bash tools/stop-emulator.sh
+          fi
+
+      - name: Install the base build, seed it, upgrade, verify (again, on a cold boot)
+        id: upgrade-run-retry
+        if: steps.upgrade-run-started.outputs.started == 'false'
+        timeout-minutes: 15
+        continue-on-error: true
+        uses: reactivecircus/android-emulator-runner@v2
+        env:
+          STATUS_FILE: ${{ runner.temp }}/upgrade-status
+          STARTED_FILE: ${{ runner.temp }}/upgrade-started
+          BASE_APK: upgrade-base/app/build/outputs/apk/debug/app-debug.apk
+          RESULTS_DIR: app/build/outputs/upgrade-results
+        with:
+          api-level: 30
+          arch: x86_64
+          target: default
+          profile: pixel_2
+          ram-size: 4096M
+          force-avd-creation: false
+          disable-animations: true
+          emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: touch "$STARTED_FILE"; adb logcat -G 16M || true; bash tools/ci-background-build.sh wait && bash tools/upgrade/run-upgrade-test.sh; status=$?; echo "$status" > "$STATUS_FILE"; bash tools/stop-emulator.sh; exit $status
 
       - name: The upgrade finished and passed
         if: always()
         env:
           STATUS_FILE: ${{ runner.temp }}/upgrade-status
-          STEP_OUTCOME: ${{ steps.upgrade-run.outcome }}
+          STEP_OUTCOME: ${{ steps.upgrade-run-retry.outcome == 'skipped' && steps.upgrade-run.outcome || steps.upgrade-run-retry.outcome }}
+          RETRIED: ${{ steps.upgrade-run-retry.outcome != 'skipped' }}
         run: |
+          if [ "$RETRIED" = "true" ]; then
+            echo "::notice::The emulator died at boot before the script started; this result is from a second, cold boot."
+          fi
           if [ ! -f "$STATUS_FILE" ]; then
             echo "::error::The upgrade check did not finish: the emulator step died or timed out before it wrote an exit status."
             exit 1
