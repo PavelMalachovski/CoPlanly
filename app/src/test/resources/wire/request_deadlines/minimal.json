@@ -1,0 +1,39 @@
+{
+  "about": "A clock with only the keys its create requires: a change request's, before any phone has received, opened or answered it. Every optional field reads as absent.",
+  "document": {
+    "answerByMillis": 1778259200000,
+    "createdAt": {
+      "$timestamp": 1778000000000
+    },
+    "familyId": "uidA__uidB",
+    "kind": "change",
+    "participants": [
+      "uidA",
+      "uidB"
+    ],
+    "proposerUid": "uidA",
+    "ref": "cr-old-1",
+    "responderUid": "uidB"
+  },
+  "reads": {
+    "answerByMillis": 1778259200000,
+    "capMillis": null,
+    "closedAtMillis": null,
+    "createdAtMillis": 1778000000000,
+    "dayCount": null,
+    "deliveredAtMillis": null,
+    "familyId": "uidA__uidB",
+    "firstDate": null,
+    "kind": "change",
+    "lastChanceAtMillis": null,
+    "lastChanceUntilMillis": null,
+    "outcome": null,
+    "proposerUid": "uidA",
+    "ref": "cr-old-1",
+    "reminderTimesMillis": [],
+    "remindersPlanned": null,
+    "remindersShown": 0,
+    "responderUid": "uidB",
+    "seenAtMillis": null
+  }
+}
