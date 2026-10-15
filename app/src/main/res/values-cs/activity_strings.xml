@@ -18,4 +18,7 @@
     <string name="activity_custody_proposed">Navržen nový rozvrh péče</string>
     <string name="activity_custody_accepted">Nový rozvrh péče schválen</string>
     <string name="activity_custody_declined">Návrh rozvrhu péče odmítnut</string>
+    <string name="activity_request_last_chance">Poslední šance odpovědět: %1$s</string>
+    <string name="activity_request_unanswered">Bez odpovědi: %1$s</string>
+    <string name="activity_subject_custody_schedule">rozvrh péče</string>
 </resources>

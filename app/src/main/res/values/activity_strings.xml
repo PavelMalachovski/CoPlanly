@@ -21,4 +21,9 @@
     <string name="activity_custody_proposed">New custody schedule proposed</string>
     <string name="activity_custody_accepted">New custody schedule agreed</string>
     <string name="activity_custody_declined">Custody proposal turned down</string>
+    <string name="activity_request_last_chance">Last chance to answer: %1$s</string>
+    <string name="activity_request_unanswered">No answer: %1$s</string>
+    <!-- The %1$s of the two request cards above when the request is a custody proposal, which has
+         no title of its own. Lower case: it follows a colon. -->
+    <string name="activity_subject_custody_schedule">custody schedule</string>
 </resources>

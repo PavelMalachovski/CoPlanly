@@ -18,4 +18,7 @@
     <string name="activity_custody_proposed">Neuer Betreuungsplan vorgeschlagen</string>
     <string name="activity_custody_accepted">Neuer Betreuungsplan vereinbart</string>
     <string name="activity_custody_declined">Betreuungsvorschlag abgelehnt</string>
+    <string name="activity_request_last_chance">Letzte Chance zu antworten: %1$s</string>
+    <string name="activity_request_unanswered">Keine Antwort: %1$s</string>
+    <string name="activity_subject_custody_schedule">Betreuungsplan</string>
 </resources>

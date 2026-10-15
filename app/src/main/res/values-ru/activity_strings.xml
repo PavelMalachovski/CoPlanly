@@ -18,4 +18,7 @@
     <string name="activity_custody_proposed">Предложен новый график опеки</string>
     <string name="activity_custody_accepted">Новый график опеки согласован</string>
     <string name="activity_custody_declined">Предложение графика опеки отклонено</string>
+    <string name="activity_request_last_chance">Последний шанс ответить: %1$s</string>
+    <string name="activity_request_unanswered">Нет ответа: %1$s</string>
+    <string name="activity_subject_custody_schedule">график опеки</string>
 </resources>

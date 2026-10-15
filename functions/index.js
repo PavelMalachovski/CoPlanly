@@ -3992,6 +3992,24 @@ function sentAtMillisOf(timestamp) {
 }
 
 /**
+ * The chat cards (`ActivityKind` names in `message.activity.kind`) that are a record and never
+ * a push (phase 3a, request deadlines). Every other message is pushed, cards included.
+ *
+ * - `REQUEST_LAST_CHANCE`: the proposer gave the other parent a last chance. They are told by
+ *   its own push type, `request_last_chance`, which carries the new end; a chat push as well
+ *   would tell them twice.
+ * - `REQUEST_UNANSWERED`: the request ended with no answer. Nothing more is sent to the parent
+ *   who did not answer once their last chance has run (the spec's "nagging" rule); the end is
+ *   the proposer's news, not theirs.
+ *
+ * The names must stay the ones the app writes (`ActivityKind` in `ActivityAnnouncement.kt`): a
+ * name that drifts here is a card that is pushed again, with nothing failing.
+ *
+ * @const {!Set<string>}
+ */
+const SILENT_CARD_KINDS = new Set(['REQUEST_LAST_CHANCE', 'REQUEST_UNANSWERED']);
+
+/**
  * Queues a push notification for the other participant when a chat message is created,
  * unless they have already read past it.
  *
@@ -4032,11 +4050,16 @@ function sentAtMillisOf(timestamp) {
  * notification for it — not a live bug, but worth fixing at that point rather than being
  * rediscovered as one.
  *
+ * A chat card's kind (`message.activity.kind`) is read first: the two in [SILENT_CARD_KINDS]
+ * push nobody, and are skipped before anything is looked up.
+ *
  * @param {FirebaseFirestore.Firestore} db Firestore instance.
  * @param {Object} message The created `messages/{messageId}` document's data.
  * @return {Promise<void>}
  */
 async function notifyOfChatMessage(db, message) {
+  if (message && message.activity && SILENT_CARD_KINDS.has(message.activity.kind)) return;
+
   const conversationId = message && message.conversationId;
   if (!conversationId) return;
 
@@ -4727,6 +4750,12 @@ async function deleteAccountDataImpl(db, uid, bucket, nowMillis) {
   // Holds both parents' uids, so it is personal data of a deleted account either way.
   removed.family_settings = await deleteQueryInBatches(
       db, db.collection('family_settings').where('participants', 'array-contains', uid));
+
+  // The clocks of this account's requests (phase 3a): each names both parents in `participants`,
+  // whichever of them proposed. They are personal data of a deleted account either way, and of no
+  // use to the parent who stays: a request with nobody left to answer it has no deadline to keep.
+  removed.request_deadlines = await deleteQueryInBatches(
+      db, db.collection('request_deadlines').where('participants', 'array-contains', uid));
 
   // Both directions of the calendar-friend relationship: the grant this user holds over
   // somebody's family, and the grants their own family handed out.

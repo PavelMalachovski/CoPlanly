@@ -391,6 +391,36 @@ describe('deleteAccountDataImpl', () => {
     assert.deepStrictEqual(db._store.invitations, []);
   });
 
+  // Phase 3a. A request's clock (`request_deadlines/{id}`) names both parents in `participants`,
+  // whichever of them proposed, and the request it times. It is personal data of a deleted
+  // account either way, and of no use to the parent who stays. A clock between two other people
+  // is not this account's.
+  it('deletes every request clock naming the departing parent', async () => {
+    const seed = family();
+    seed.request_deadlines = [
+      {
+        id: `swap_${ALICE}_grp-1`, kind: 'swap', ref: 'grp-1', familyId: `${ALICE}__${BOB}`,
+        proposerUid: ALICE, responderUid: BOB, participants: [ALICE, BOB],
+      },
+      {
+        id: `change_${BOB}_cr-2`, kind: 'change', ref: 'cr-2', familyId: `${ALICE}__${BOB}`,
+        proposerUid: BOB, responderUid: ALICE, participants: [ALICE, BOB],
+      },
+      {
+        id: `event_${BOB}_ev-bob`, kind: 'event', ref: 'ev-bob', familyId: `${BOB}__carol`,
+        proposerUid: BOB, responderUid: 'carol', participants: [BOB, 'carol'],
+      },
+    ];
+    const db = fakeDb(seed);
+
+    const removed = await myFunctions.deleteAccountDataImpl(db, ALICE);
+
+    assert.deepStrictEqual(db._store.request_deadlines.map((clock) => clock.id),
+        [`event_${BOB}_ev-bob`],
+        'only the clock that does not name the deleted account may survive');
+    assert.strictEqual(removed.request_deadlines, 2);
+  });
+
   // Queued pushes *addressed to* the deleted account go — they would otherwise be delivered
   // to whatever device still holds its token. The one unpair queues *for the co-parent* is a
   // different thing and must survive: it is how Bob learns the link ended, and it is the last
