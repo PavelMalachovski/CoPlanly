@@ -46,7 +46,7 @@
    - **Developer contact information**: ваш email
 4. Нажмите **SAVE AND CONTINUE**
 5. На шаге **Scopes** добавьте:
-   - `https://www.googleapis.com/auth/calendar` (Google Calendar API)
+   - `https://www.googleapis.com/auth/calendar.events.owned.readonly` (Google Calendar API)
 6. Нажмите **SAVE AND CONTINUE**
 7. На шаге **Test users** добавьте тестовые email адреса:
    - Добавьте свой email и email всех, кто будет тестировать приложение
@@ -144,7 +144,7 @@
 **Причина:** Scope для Google Calendar не добавлен или не предоставлен пользователем.
 
 **Решение:**
-1. ✅ Убедитесь, что scope `https://www.googleapis.com/auth/calendar` добавлен в OAuth consent screen
+1. ✅ Убедитесь, что scope `https://www.googleapis.com/auth/calendar.events.owned.readonly` добавлен в OAuth consent screen
 2. ✅ При входе предоставьте разрешение на доступ к Google Calendar
 
 ### Проблема: "App is currently being tested"
@@ -162,7 +162,7 @@
 
 - [ ] Google Calendar API включена в Google Cloud Console
 - [ ] OAuth consent screen настроен
-- [ ] Scope `https://www.googleapis.com/auth/calendar` добавлен в OAuth consent screen
+- [ ] Scope `https://www.googleapis.com/auth/calendar.events.owned.readonly` добавлен в OAuth consent screen
 - [ ] Ваш email добавлен в Test users
 - [ ] OAuth 2.0 Client ID для **Web application** создан
 - [ ] Web Client ID добавлен в `strings.xml` как `default_web_client_id`

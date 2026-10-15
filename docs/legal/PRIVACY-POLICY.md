@@ -236,13 +236,37 @@ stays there.
 
 ### Google Calendar, if you connect it
 
-If you connect a Google account, we request access to your calendars so events can be
-imported and exported. The resulting access and refresh tokens are **stored encrypted on your
-device only**. To obtain and renew them, the one-time authorisation code and, on each renewal,
-the refresh token pass through our server (a Google Cloud Function), which forwards them to
-Google and does not keep them. The server keeps only a one-way fingerprint (a SHA-256 hash) of
-your refresh token, linked to your account, so that a token stolen from somebody else cannot be
-renewed through our service. Disconnecting in Settings deletes the tokens from your device.
+If you connect a Google account (Settings → Sync), CoPlanly asks Google for **read-only access
+to the events on the calendars you own** — Google shows it as "See the events on Google calendars
+you own" (the `calendar.events.owned.readonly` permission) — and uses it for one thing: when you
+switch the sync on or tap to sync, it reads the events of your **primary** Google Calendar for the
+next twelve months and copies them into the calendar on your phone. It never creates, changes or
+deletes anything in your Google Calendar, and never reads a calendar somebody else shares with
+you.
+
+- **What is kept:** from each event, its title, description, start and end. Nothing else from
+  your Google account is stored.
+- **Where:** only in the app's encrypted database on **your phone**. Every imported event is
+  marked **private**: it is not uploaded to our servers and is not shown to your co-parent, a
+  family friend or anybody else — unless you open one yourself and switch "Private event" off,
+  which makes it an ordinary shared event of your family from then on.
+- **The access itself:** the access and refresh tokens Google issues are **stored encrypted on
+  your device only**. To obtain and renew them, the one-time authorisation code and, on each
+  renewal, the refresh token pass through our server (a Google Cloud Function in
+  `europe-west3`), which forwards them to Google and does not keep them. The server keeps only
+  one-way fingerprints (SHA-256 hashes) of the refresh tokens of your five most recent
+  connections, linked to your account, so that a token stolen from somebody else cannot be
+  renewed through our service.
+- **Ending it:** disconnecting in Settings deletes the tokens from your phone and asks Google to
+  withdraw CoPlanly's access; the events already imported stay in your calendar on the phone
+  until you delete them or your account. You can also remove CoPlanly's access yourself in your
+  Google Account's list of connected apps — the sure way if your phone was offline when you
+  disconnected. Deleting your CoPlanly account deletes the fingerprints.
+
+CoPlanly's use and transfer to any other app of information received from Google APIs will
+adhere to the [Google API Services User Data Policy](https://developers.google.com/terms/api-services-user-data-policy),
+including the Limited Use requirements. We do not use your Google data for advertising, do not
+sell it, and do not read it: the events never reach our servers.
 
 ### Your child's school system (Bakaláři), if you connect it
 
@@ -413,7 +437,7 @@ within which a claim arising from the family's affairs can generally still be br
   once linked;
 - deletes every read-only calendar link into your families, whichever of you created it;
 - unlinks the two of you, so their access ends immediately;
-- deletes the fingerprint of your Google Calendar authorisation, if you connected one, and
+- deletes the fingerprints of your Google Calendar authorisations, if you connected one, and
   any notifications still queued for you, and the daily count of your writing-help requests;
 - removes your account and your family from the receipts of exports you or your co-parent made.
   The fingerprint, period, format, size and registration time stay, so that an export already

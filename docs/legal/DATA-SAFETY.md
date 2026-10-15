@@ -98,6 +98,16 @@ RECORD_AUDIO permission is requested on the first tap of the microphone, never a
 **Private events never leave the device.** Events marked private are excluded from every sync
 path. They are not collected in Play's sense.
 
+**Google Calendar is read, never written, and what is read stays on the phone** (October 2026).
+Connecting it asks Google only to see the events on calendars the parent owns
+(`calendar.events.owned.readonly`). An import stores the primary calendar's events for the next
+twelve months on the phone as **private** events, which are not collected, as above; a parent who
+switches one to shared makes it an ordinary *Calendar event*, already declared. The authorisation
+passes through the `exchangeGoogleAuthCode`/`refreshGoogleAccessToken` functions, which keep only
+SHA-256 fingerprints of the five most recent refresh tokens (`google_oauth/{uid}`); no Play data
+type covers a credential's fingerprint, and nothing from the calendar reaches our servers.
+Google's API Services User Data Policy (Limited Use) applies, and the privacy policy says so.
+
 **Analytics and crash reporting are optional, and off until asked** (REL-5, shipped). Three
 things now have to be true at once before either SDK collects anything, and this is what the
 declaration should say:

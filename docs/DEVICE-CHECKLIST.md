@@ -667,6 +667,20 @@ the tap actually landing on that screen.
 - [ ] **Google Calendar** connect and import. This needs REL-3's OAuth env and a functions
       deploy. It also covers SEC-5 (tokens in `EncryptedPreferences`): relaunch the app and the
       account stays connected.
+- [ ] **Google is asked to read, and nothing more** (October 2026, `GoogleCalendarAccess`). The
+      OAuth consent screen's Data access must list `.../auth/calendar.events.owned.readonly` first
+      (`docs/AUDIT-2026-09-play-final.md` A-7). Connect afresh: Google's consent lists one
+      Calendar permission, "See the events on Google calendars you own", and nothing that edits or
+      deletes. **Sync from Google Calendar** imports the primary calendar, including an event
+      somebody else invited you to, which sits on your calendar too; each imported event opens
+      with **Private** on, and the co-parent's phone never shows it. A connection made on the
+      previous build (the full `calendar` scope) still imports after this build is installed over
+      it, without reconnecting.
+  - **If it fails:** an import that ends the connection at once with "Access expired or was
+    revoked" (Google's 403 `insufficient_scope`) means `events.list` refused the scope on this
+    account. Revert `GoogleCalendarAccess.SCOPE` to `calendar.events.readonly`, with the privacy
+    policy, `web/index.html` and the consent screen (`tools/check-invariants.js` check 6 holds the
+    texts to it).
 - [ ] **Google Calendar past the hour** (October 2026). Connect, wait **over an hour** (an
       access token lives one), force-stop and relaunch. Settings → Sync → **Google Calendar
       sync** still shows the address, and **Sync from Google Calendar** imports without a

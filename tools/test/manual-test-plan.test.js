@@ -69,6 +69,13 @@ test('functions changes need the owner-ops deploys, the paired checks and accoun
   assert.deepEqual(sectionsFor(['functions/calendar-feed.js']), ['0', '5.3']);
 });
 
+test('the Google Calendar connection and its import need the Google Calendar checks', () => {
+  // Beside 5.3, which every remote data source and the sync already ask for.
+  for (const file of ['data/remote/google/GoogleCalendarAccess.kt', 'data/sync/CalendarSyncRepository.kt']) {
+    assert.ok(sectionsFor([K + file]).includes('3.9'), file);
+  }
+});
+
 test('strings need both language-picker checks', () => {
   assert.deepEqual(sectionsFor(['app/src/main/res/values-de/expenses_strings.xml']), ['3.6', '4.2']);
 });
