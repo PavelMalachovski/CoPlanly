@@ -223,6 +223,12 @@ class PushNotifier(private val context: Context) {
      * thread itself holds the full history — and, being a distinct constant, never collides with
      * (or is replaced by) a pairing notification. Every other notification type keeps a
      * timestamp id so unrelated notifications keep accumulating.
+     *
+     * **The body is set twice, on purpose** (phase 3a). `setContentText` is the collapsed line and
+     * what `EXTRA_TEXT` holds; a [NotificationCompat.BigTextStyle] carries the whole body for when
+     * the notification is expanded. A plain notification cuts a long body to one line, which for a
+     * request's first push is exactly where its deadline sits ("Answer by <time>.") and for a last
+     * chance where its time sits ("until <time>"). Every push gets the style, not only those.
      */
     private fun show(target: NotificationTarget): Int {
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -236,6 +242,7 @@ class PushNotifier(private val context: Context) {
         val notification = NotificationCompat.Builder(context, PushRouting.channelOf(target.type).id)
             .setContentTitle(target.text.title)
             .setContentText(target.text.body)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(target.text.body))
             // android.R.drawable.ic_dialog_info is a framework placeholder and
             // renders as a grey blob in the status bar.
             .setSmallIcon(R.drawable.ic_notification)

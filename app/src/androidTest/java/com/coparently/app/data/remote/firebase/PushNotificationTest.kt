@@ -89,11 +89,15 @@ class PushNotificationTest {
         for ((type, spec) in PushNotifier.PUSH_TEXT) {
             val inEnglish = postAndRead(english, payload(type))
             val inGerman = postAndRead(german, payload(type))
+            val bodyInEnglish = expectedBody(english, type, spec)
+            val bodyInGerman = expectedBody(german, type, spec)
 
             assertEquals("$type title (en)", english.getString(spec.title), inEnglish.title)
-            assertEquals("$type text (en)", expectedBody(english, type, spec), inEnglish.text)
+            assertEquals("$type text (en)", bodyInEnglish, inEnglish.text)
+            assertEquals("$type expanded text (en)", bodyInEnglish, inEnglish.bigText)
             assertEquals("$type title (de)", german.getString(spec.title), inGerman.title)
-            assertEquals("$type text (de)", expectedBody(german, type, spec), inGerman.text)
+            assertEquals("$type text (de)", bodyInGerman, inGerman.text)
+            assertEquals("$type expanded text (de)", bodyInGerman, inGerman.bigText)
             assertNotEquals("$type is worded in German, not in English", inEnglish.title, inGerman.title)
             assertNotEquals("$type text is worded in German, not in English", inEnglish.text, inGerman.text)
             assertCarriesItsNames(type, spec, inEnglish.text)
@@ -133,6 +137,7 @@ class PushNotificationTest {
         val shown = read(awaitPosted(id!!))
         assertEquals(ACTOR_NAME, shown.title)
         assertEquals(PREVIEW, shown.text)
+        assertEquals(PREVIEW, shown.bigText)
     }
 
     @Test
@@ -179,6 +184,9 @@ class PushNotificationTest {
         assertTrue("\"${withOne.text}\" ends with \"$sentence\"", withOne.text.endsWith(sentence))
         assertEquals("$today. $sentence", withOne.text)
         assertEquals(withoutOne.title, withOne.title)
+        // Expanded, the whole of it: the deadline sentence is what a collapsed line would cut.
+        assertEquals(withoutOne.text, withoutOne.bigText)
+        assertEquals(withOne.text, withOne.bigText)
     }
 
     @Test
@@ -315,8 +323,11 @@ class PushNotificationTest {
 
     // ---- helpers ---------------------------------------------------------------------------
 
-    /** Title and text as the posted notification holds them. */
-    private data class Shown(val title: String, val text: String)
+    /**
+     * Title, collapsed text and expanded text as the posted notification holds them: the text is
+     * `setContentText`'s, the big text the `BigTextStyle`'s, and the two carry the same body.
+     */
+    private data class Shown(val title: String, val text: String, val bigText: String)
 
     /** A full payload for [type]: every name a type may need, addressed to [SIGNED_IN]. */
     private fun payload(type: String): Map<String, String> = mapOf(
@@ -400,7 +411,8 @@ class PushNotificationTest {
         val extras = posted.notification.extras
         return Shown(
             title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty(),
-            text = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString().orEmpty()
+            text = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString().orEmpty(),
+            bigText = extras.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString().orEmpty()
         )
     }
 
