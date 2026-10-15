@@ -91,7 +91,7 @@ A request's clock (§5.1) and its own record together put it in exactly one stat
 | State | When | Proposer sees | Answering parent sees |
 | --- | --- | --- | --- |
 | **Open** | sent, not answered, before the deadline | "Waiting for <name>" with deadline, delivered/opened, reminders (§6.3) | "Waiting for your answer" with "Answer by … · … left" (§6.2) |
-| **No answer, last chance possible** | deadline passed, no answer, the button still available | the card stays in "Waiting for <name>": "No answer", unchanged calendar, the button (§6.4) | the card is in History as "No answer"; no answer buttons |
+| **No answer, last chance possible** | deadline passed, no answer, the button still available (§4.4) | the card stays in "Waiting for <name>": "No answer", unchanged calendar, the button (§6.4) | the card moves to "Waiting for <proposer>", without answer buttons: "You didn't answer by the deadline. <proposer> can give you a last chance until <time>." — the next move is the proposer's |
 | **Last chance** | the proposer pressed the button; 24 hours not yet up | the card says "Last chance until …" | back in "Waiting for your answer", with the last-chance banner (§6.5) |
 | **No answer** (final) | the last chance ran out, or the button was never pressed and is no longer available | History: "No answer" (§6.6) | History: "No answer" |
 | **Answered** | accepted or declined, as today | History, as today | History, as today |
@@ -105,16 +105,26 @@ exactly as today: open until answered.
 - Options: **Tomorrow** (now + 24 h), **3 days** (now + 72 h, default), **A week** (now + 7 days),
   **Pick a date…** (that date at 20:00). Every deadline is rounded up to the next quarter hour, so
   it reads "by Tue 13 Oct, 10:00", in the reader's clock format (`shortTime()`, R-9).
-- **The first affected moment** caps it: for a day swap, 00:00 of the earliest day in the offer; for
-  a change request, the earlier of the event's current and proposed start; for an event awaiting
-  acceptance, its start; for a custody proposal, 00:00 of the date it takes effect, if that is in
-  the future, otherwise no cap.
-- An option is offered only if it ends at least 24 hours before the cap, so the last chance still
-  fits. Options that don't are shown disabled.
-- **Urgent requests.** When less than 25 hours remain before the cap, the options are replaced by
-  one fixed line: "Answer by <cap − 1 h> — before it starts". No last chance (§4.4). When less than
-  2 hours remain, the request is sent without a deadline, as today, and the form says "Too soon for
-  a deadline — it goes out as a plain request".
+- **The cap is the first affected moment**: the earliest moment, today or later, that the request
+  would change.
+  - Day swap: 00:00 of the earliest day in the offer.
+  - Change request: the earlier of the event's current and proposed start that is still ahead. A
+    change to a recurring series, whose stored start is its long-past first occurrence, therefore
+    takes the proposed start, or has no cap.
+  - Event awaiting acceptance: its start.
+  - Custody proposal: 00:00 of the first day `CustodyPatternDiff` reports as changing, today or
+    later.
+  - Nothing ahead: no cap.
+- **The owner's rule is that a near cap compresses the chain** rather than refusing it. With
+  `L = cap − 24 h`, the latest deadline that still leaves a full last chance:
+  - **48 hours or more to the cap**: the four options, each ending no later than `L`. An option
+    that would end later reads `L`'s time instead ("By Fri, 20:00"), and options that land on the
+    same time merge into one chip. The default stays "3 days", compressed.
+  - **2 to 48 hours to the cap**: no options. One fixed line, "Answer by <time>", where the time
+    is halfway from now to the cap, rounded down to the quarter hour. A last chance, if given,
+    ends 1 hour before the cap, and is not offered when less than an hour would be left (§4.4).
+  - **Under 2 hours**: no deadline. The request goes out as today, and the form says "Too soon for
+    a deadline — it goes out as a plain request".
 
 ### 4.3 Reminders
 
@@ -124,8 +134,12 @@ exactly as today: open until answered.
 - **Quiet hours.** A reminder falling between 21:00 and 08:00 on the answering parent's own clock
   moves to 08:00; if that would be after the deadline, it moves back to 20:30 the evening before; if
   that is before the request was sent, it is dropped. Two reminders that land on the same time
-  become one. The count the proposer sees ("of 3") is the number that survived, decided once, when
-  the request is sent (§5.1, `remindersPlanned`).
+  become one.
+- **The answering phone plans them**, in its own time zone, when it first receives the clock. Only
+  that phone knows the zone: no profile stores one. It writes the count that survived
+  (`remindersPlanned`) and their times (`reminderTimesMillis`) together with `deliveredAtMillis`
+  (§5.1). So the proposer's send form can only say "up to 3 reminders, none at night", and the
+  proposer's card reads the real plan once the request is delivered ("Reminders: 1 of 2 · next …").
 - A reminder is posted only while the request is still Open: answered, withdrawn, or past the
   deadline means it is silently skipped.
 - **The reminder is a local notification** on the answering parent's phone, not a push (§5.3). Each
@@ -136,12 +150,14 @@ exactly as today: open until answered.
 - **At the deadline**, if unanswered:
   - the proposer's phone shows a notification, "<name> didn't answer by the deadline", and the card
     shows "No answer" with "Give a last chance — 24 hours" and "Once. <name> will have until <time>.";
-  - the answering parent's card moves to History as "No answer" and loses its buttons;
+  - the answering parent's card moves to "Waiting for <proposer>" without its buttons (§4.1);
   - day-swap markers of this offer disappear from the calendar on both phones; nothing else in the
     calendar moves, because nothing was ever accepted.
-- **The button** is available from the deadline until 1 hour before the cap. With no cap, it is
-  available for 7 days. Pressing it once:
-  - sets the window to min(24 hours, cap − now);
+- **The button** is available for 24 hours after the deadline, and never later than 1 hour before
+  the cap. The proposer's decision must not hang either: a pending custody proposal blocks the other
+  parent's own proposals (`COPARENT_PROPOSAL_WAITING`) until it ends, so the end comes at most 48
+  hours after the deadline. Pressing it once:
+  - sets the window to min(24 hours, cap − 1 hour − now);
   - sends the answering parent a push, "Last chance to answer";
   - brings the card back to their "Waiting for your answer", under the banner "Last chance · … left";
   - posts a chat card "Last chance: <request>" to the thread.
@@ -149,22 +165,27 @@ exactly as today: open until answered.
   The button never appears twice for one request. There are no further reminders during the last
   chance: the push is the reminder.
 - **The end.** When the last chance runs out, or the button's own time runs out unused, the
-  request is "No answer" for good:
-  - the proposer's phone shows "No answer from <name>" and posts a chat card "No answer: <request>";
-  - where the record allows it, the request is closed in its own record too, so a co-parent on an
-    older build stops being asked: a change request becomes `CANCELLED` (its author may set that
-    today), a custody proposal is withdrawn (`CustodyModelRepository.withdrawProposal`, today
-    without a caller). A day swap and an event keep their pending records (§5.5);
-  - "No answer" is shown in every History and printed by the export through the chat card.
+  request is "No answer" for good. The proposer's phone, from a job at that moment or on its next
+  start:
+  1. writes the closure into the clock — `outcome: "no_answer"` and `closedAtMillis` (§5.1);
+  2. shows "No answer from <name>";
+  3. posts a chat card "No answer: <request>", which pushes nobody (§4.6);
+  4. withdraws a custody proposal, so it stops blocking the other parent. It does this in a
+     transaction that first checks it is still the same pending proposal (its `proposedAt`), in the
+     clock's family (§5.6).
+
+  A change request, a day swap and an event keep their pending records. The closure in the clock is
+  what every new build reads (§5.5), and "No answer" stays in History even when the record is gone.
 - **An answer after "No answer"** cannot be given on this build: the buttons are gone. A co-parent
-  on an older build can still answer a swap or an event (§5.5). Such an answer counts — it is an
-  explicit yes or no — and History shows it as "Accepted after the deadline" / "Declined after the
-  deadline".
+  on an older build can still answer a change request, a swap or an event (§5.5). Such an answer
+  counts — it is an explicit yes or no. History shows it as the answer it is, and the chat shows the
+  order: the "No answer" card, then the answer's card.
 
 ### 4.5 Delivered and opened
 
-- **Delivered**: the answering parent's phone records when it first receives the request's clock
-  and schedules the reminders. Until then the proposer's card claims nothing beyond "Sent".
+- **Delivered**: the answering parent's phone records when it first receives the request's clock,
+  plans and schedules the reminders, and writes their plan with it (§4.3). Until then the proposer's
+  card claims nothing beyond "Sent".
 - **Opened**: the answering parent's phone records the first time the request is shown to them —
   its card on screen in "Waiting for your answer", Home's pop-up for it, or a tap on its
   notification. The proposer sees "<name> opened it · <time>", and, once delivered but not opened,
@@ -180,6 +201,13 @@ exactly as today: open until answered.
   Open or under a last chance.
 - **Chat**: two new activity kinds, "Last chance" and "No answer" (`ActivityKind`), each with a
   plain-text fallback, so an older build shows the sentence. No card per reminder or per opening.
+  Every chat message is pushed today (`onChatMessageCreated` → `notifyOfChatMessage`), cards
+  included. That would send the last chance twice and push "No answer" to the parent who was just
+  told nothing more comes. So `notifyOfChatMessage` skips these two kinds: a functions change and
+  a deploy, with a test.
+- **The family switcher's dot** (design item 13): `OtherFamiliesSignals` reads each other family's
+  clocks too. One more listener per other family, shared and bounded like the others, so a
+  request in History never lights it.
 - **Export**: nothing new — the chat cards are already part of the record (CLAUDE.md item 26).
 
 ## 5. Where it lives
@@ -203,35 +231,47 @@ So each request gets one small document beside it, which an older build never re
 | `createdAtMillis` | proposer, at create | the server's time of creation |
 | `answerByMillis` | proposer, at create | the deadline (§4.2) |
 | `capMillis` | proposer, at create | the first affected moment, or absent |
-| `remindersPlanned` | proposer, at create | 0–3 (§4.3) |
-| `deliveredAtMillis` | answering parent's phone, once | §4.5 |
+| `deliveredAtMillis`, `remindersPlanned`, `reminderTimesMillis` | answering parent's phone, once, together | §4.3, §4.5: the plan in its own zone, 0–3 times |
 | `seenAtMillis` | answering parent's phone, once | §4.5 |
 | `remindersShown` | answering parent's phone, +1 each | up to `remindersPlanned` |
 | `lastChanceAtMillis`, `lastChanceUntilMillis` | proposer, once | §4.4 |
+| `outcome`, `closedAtMillis` | proposer, once | the end of §4.4: `"no_answer"` and when |
 
-- **The id is derived** from the request, so both phones find it without asking: `swap_<groupId>`,
-  `change_<id>`, `event_<id>`, `proposal_<familyId>_<proposedAt>`. A swap made by this build always
-  carries a `groupId`, even for one day.
+- **The id is derived** from the request, so both phones find it without asking:
+  `swap_<proposerUid>_<groupId>`, `change_<proposerUid>_<id>`, `event_<proposerUid>_<id>`,
+  `proposal_<proposerUid>_<familyId>_<proposedAt>`. The proposer's uid is in the id because the
+  other parent can see the rest. The rules bind it to the caller (§5.2), and a phone ignores a clock
+  whose proposer is not the request's author. Without it, the other parent could create a request's
+  clock first and strip its deadline, or fake an early "No answer".
+- **New: a one-day swap offer also carries a `groupId`.** Today `DayOverrideTransition.offer`
+  writes none for a single day. Older builds are unaffected: `notifyPartnerOfSwap` picks the push
+  type by the number of days, not by the group.
 - **The states of §4.1 are derived** on each phone, from the clock, the request's own record and the
-  phone's clock — never stored. The pure decision lives in one place, `domain/changerequests/`
-  (`RequestClock`), which every screen, the reminder worker and the inbox read.
+  phone's clock. Only the end is stored: the clock's `outcome`, written by the proposer. A record can
+  disappear or be replaced (a withdrawn proposal, a swap's date offered again), and an orphaned
+  clock without `outcome` shows nothing: its request was superseded. The pure decision lives in one
+  place, `domain/changerequests/` (`RequestClock`), which every screen, the reminder worker and the
+  inbox read.
 - **Written in the same action as the request**, after its own write; offline, Firestore queues both.
   A request whose clock never arrives behaves as one without a clock.
 
 ### 5.2 `firestore.rules`
 
 - **Read**: the two `participants`, with a list query keyed on `participants` and `familyId`.
-- **Create**: by the proposer only, naming as responder their live co-parent in the named family.
-  `answerByMillis` must be after the request time and at most 31 days after it; no
-  delivered/seen/reminder/last-chance field may be present.
+- **Create**: by the proposer only, with the caller's uid as the id's second segment, naming as
+  responder their live co-parent in the named family. `answerByMillis` must be after the request
+  time and at most 31 days after it. No field of the table written later may be present.
 - **Update**:
-  - the responder may add `deliveredAtMillis` and `seenAtMillis`, each once, each not in the
-    future;
+  - the responder may add `deliveredAtMillis`, `remindersPlanned` (0–3) and `reminderTimesMillis`
+    (that many numbers, between creation and the deadline) once, together; and `seenAtMillis` once.
+    Neither time may be in the future;
   - the responder may raise `remindersShown` by one, never above `remindersPlanned`;
   - the proposer may add `lastChanceAtMillis` and `lastChanceUntilMillis` once, only after
     `answerByMillis`. The start must be within a few minutes of the request time; the end must be at
-    most 24 hours after the start and not after `capMillis`.
-  - Nothing else changes.
+    most 24 hours after the start and not after `capMillis`;
+  - the proposer may add `outcome` (`"no_answer"` only) and `closedAtMillis` once, only after
+    `answerByMillis`;
+  - nothing else changes.
 - **Delete**: nobody; account deletion runs as admin (§7).
 - The rules do **not** refuse a late answer in `change_requests`, the custody document or `events`:
   that would add a document read to three hot rules for an edge that only an older build reaches
@@ -243,9 +283,10 @@ So each request gets one small document beside it, which an older build never re
   `EventReminderScheduler` does for events). It is scheduled when the phone first receives the clock,
   which is also when it writes `deliveredAtMillis`.
 - **The phone learns of a clock** through the requests source's listener while the app runs, and
-  through `SyncWorker`'s periodic pass while it doesn't. New: handling a request's own push
-  (`day_swap_offered` and the rest) also asks for a sync (`SyncRequester`), so the clock arrives
-  with it rather than on the next tick — today a push only posts its notification.
+  through `SyncWorker` while it doesn't. Every push addressed to the signed-in account already asks
+  for a sync (`CoPlanlyMessagingService` → `SyncWorker.syncNow`), so the clock arrives with the
+  request's push. What is new is only that the sync pass reads the family's clocks and schedules
+  their reminders.
 - **When a reminder fires** the worker re-reads the request and its clock and posts only while the
   request is Open, then reports `remindersShown`.
 - **The proposer's notifications** ("didn't answer by the deadline", "No answer") are local too, on
@@ -260,7 +301,7 @@ So each request gets one small document beside it, which an older build never re
   The cost: a phone that never syncs gets no reminders. That phone also missed the request's own
   push, and the proposer's card says so: no "delivered".
 
-### 5.4 One new push type
+### 5.4 One new push type, and one new push field
 
 `request_last_chance`, client-produced, addressed to the answering parent and carrying the family
 (`PushPayload.FAMILY_ID`). It needs all four places (CLAUDE.md item 15) plus `PushRouting`:
@@ -270,16 +311,45 @@ So each request gets one small document beside it, which an older build never re
 - the five `push_strings.xml`;
 - `PushRouting`: it opens the Requests inbox on that card, on the **schedule** channel.
 
+**`answerBy` on the request pushes the proposer's phone queues** — the day-swap offers,
+`change_request_created` and `custody_proposal_proposed`: the deadline as epoch-millis text.
+- The push is queued before the clock is written, so this field is how the first notification can
+  say "Answer by <time>." (§6.2). `PushNotifier` adds that sentence when the field is present.
+- `notification_queue`'s create rule bounds it like the other keys (`isValidLength(…, 0, 20)`), and
+  an older build ignores it.
+- **An event awaiting acceptance has no push of its own.** `EventRepositoryImpl` queues none; it
+  reaches the co-parent through its chat card's `chat_message` push. So its deadline appears on its
+  card and in its reminders, not in that first notification.
+
 ### 5.5 A co-parent on an older build
 
 - **What they see.** They see and answer requests as today and never see a deadline. Their app
   never writes delivered or opened, so the proposer's card claims neither (§4.5). The last-chance
   push is dropped by their `PushNotifier`, as any unknown type is. The chat cards fall back to
   plain text.
-- **A late answer.** A change request or proposal closed at the end (§4.4) is closed for them too.
-  A day swap or an event stays pending in its record, so they can still accept it late. That
-  answer takes effect and History says "after the deadline". This is accepted for the update window
-  rather than enforced in the rules (§5.2).
+- **A late answer.** A proposal withdrawn at the end (§4.4) is gone for them too. A change
+  request, a day swap or an event stays pending in its record, so they can still answer it late.
+  That answer takes effect and History shows it as the answer (§4.4). This is accepted for the
+  update window rather than enforced in the rules (§5.2).
+- **Why a change request is not closed in its record.** The end could set it `CANCELLED`, but
+  `ChangeRequestRepositoryImpl.updateStatus` rewrites the whole document from Room with `set()`, and
+  `changeRequestStatusMove` lets the requester set `CANCELLED` from any status. A last-minute
+  answer not yet on the proposer's phone would be overwritten: the event moved, the request
+  cancelled. It would also push `change_request_cancelled` to the parent who was just told nothing
+  more comes.
+
+### 5.6 The family is the clock's, never the one on screen
+
+Every background step takes the family from the clock (`familyId`), because the switcher may show
+another family by then (CLAUDE.md items 38 and 41):
+- the reminder worker;
+- the proposer's deadline and end notifications;
+- the end's chat card and proposal withdrawal.
+
+Three calls act on the family on screen today and need a family-explicit form for this:
+`CustodyModelRepository.withdrawProposal` and `decideProposal` (both through `currentPair()`), and
+`ActivityAnnouncer.announce` (the thread of `users/{me}.partnerId`). Calling them as they are from a
+job would withdraw or post in the wrong family.
 
 ## 6. The screens (the canvas)
 
@@ -294,14 +364,16 @@ So each request gets one small document beside it, which an older build never re
 - **Shared composable.** One composable for all four (`AnswerByField`), so the options, the cap and
   the wording live in one place.
 - **Helper lines** under the chips:
-  - "By <date, time>. <name> gets <n> reminders, none at night."
+  - "By <date, time>. <name> gets up to <n> reminders, none at night." (<n> is what fits the
+    window; the answering phone plans the real times, §4.3.)
   - "No answer by then — you'll be told and can give a last chance of 24 hours. Nothing changes in
     the calendar without an answer."
-- **Urgent and too-soon cases** replace the chips with one line (§4.2).
+- **A near cap** (2–48 hours) and **too soon** (under 2 hours) replace the chips with one line (§4.2).
 
 ### 6.2 The answering parent's card (artboard 2)
 
-- **The notification.** The request's existing notification adds "Answer by <time>."
+- **The notification.** The request's own push adds "Answer by <time>." (the `answerBy` field,
+  §5.4). An event awaiting acceptance has no push of its own, so it shows its deadline on the card.
 - **The card line.** The card adds one line, with a clock icon, in `primary`: "Answer by <date,
   time> · <left>". "<left>" reads "3 days", "16 h" or "45 min".
 - **Unchanged.** Everything else on the card — the creator's words, the mini month, the buttons —
@@ -340,8 +412,9 @@ So each request gets one small document beside it, which an older build never re
 - **The "No answer" row** has the neutral outlined chip and a meta line: "Deadline <date> · last
   chance until <time> · opened <date> · <n> reminders · calendar unchanged".
 - **Contrast.** "Declined" and "Accepted" keep today's chips.
-- **Late answers.** A late answer from an older build reads "Accepted after the deadline" /
-  "Declined after the deadline".
+- **Late answers.** A late answer from an older build reads as the answer it is: the answer times
+  in the records are naive wall-clock strings, which cannot be compared honestly with a deadline.
+  The chat keeps the order (§4.4).
 
 ## 7. Privacy and the legal documents
 
@@ -358,18 +431,31 @@ So each request gets one small document beside it, which an older build never re
 - **Account deletion** removes every `request_deadlines` document naming the departing uid in
   `participants`. Add the collection to `deleteAccountDataImpl` and to the three places
   `web/README.md` says must agree.
+- **Ops.** This ships with a rules deploy (the new collection, the push type and field) and a
+  functions deploy (`notifyOfChatMessage` skipping the two cards, account deletion). Until the
+  functions are deployed, the two new chat cards are pushed like any other message. Add both to the
+  owner's deploy list (`docs/ROADMAP.md`, "Yours only").
 
 ## 8. Testing
 
 - **JVM**:
-  - `RequestClock`: every state of §4.1 at each boundary, the cap, urgent and too-soon, the last
-    chance's window and expiry, a late answer.
+  - `RequestClock`: every state of §4.1 at each boundary, the cap, the last chance's window and
+    the button's expiry, the stored `outcome`, an orphaned clock, a clock whose proposer is not the
+    request's author (ignored), and a late answer.
   - The reminder plan: counts by window, quiet hours moved and dropped, merges, time zones.
-  - The deadline options: disabled options, rounding.
-  - `RequestInbox` and `RequestHistory` placing each state, and "after the deadline".
+  - The deadline options in all three bands of §4.2: compressed and merged chips, the midpoint
+    deadline, too soon, rounding; and the cap of each kind, including a recurring series and a
+    proposal through `CustodyPatternDiff`.
+  - `RequestInbox` and `RequestHistory` placing each state.
+  - `OtherFamiliesSignals`: a request in History does not light the dot.
+- **Functions**: `notifyOfChatMessage` pushes nothing for the two new card kinds, and still pushes
+  every other message.
 - **Rules** (`firestore-tests/rules/request-deadlines.test.js`):
   - create, read, update and delete for the proposer, the responder and a stranger;
-  - each field written once, by its writer only;
+  - an id whose uid segment is not the caller's, refused;
+  - each field written once, by its writer only, the responder's plan as one write;
+  - the closure only after the deadline, and `outcome` only `"no_answer"`;
+  - `answerBy` on a push bounded, and `request_last_chance` in the allow-list;
   - `remindersShown` +1 within `remindersPlanned`;
   - the last chance only after the deadline, within 24 hours and the cap;
   - a list query without `participants` refused.
@@ -384,7 +470,7 @@ So each request gets one small document beside it, which an older build never re
 - **Wire**: a `WireContract` for `request_deadlines`, with hand-written fixtures (one without the
   optional fields, one with a field from a newer build).
 - **Screenshots**:
-  - `AnswerByField` (default, urgent, too soon);
+  - `AnswerByField` (default, compressed chips, the one-line deadline, too soon);
   - the card's status block (sent, delivered, opened, reminders);
   - the "No answer" card with its button;
   - the last-chance banner;
@@ -416,19 +502,26 @@ So each request gets one small document beside it, which an older build never re
 ## 10. Calls I made (the owner may overrule any)
 
 1. The four deadline options, the 20:00 time for a picked date, rounding to the quarter hour.
-2. The 24-hour room for a last chance when offering options; urgent mode under 25 hours; no deadline
-   under 2 hours.
-3. The reminder times by window, and quiet hours 21:00–08:00 on the answering parent's clock.
-4. The button's availability (until 1 hour before the cap, or 7 days without one), and a last chance
-   shorter than 24 hours when the cap is nearer.
+2. How a near cap compresses the chain: options capped 24 hours before it, a midpoint deadline
+   between 2 and 48 hours, no deadline under 2 hours.
+3. The reminder times by window, quiet hours 21:00–08:00 on the answering parent's clock, and the
+   answering phone planning them.
+4. The button available for 24 hours after the deadline (never later than 1 hour before the cap),
+   so the end comes at most 48 hours after the deadline; a last chance shorter than 24 hours when
+   the cap is nearer.
 5. No reminders during the last chance.
 6. "Delivered" as the condition for showing "hasn't opened it yet" and the reminders count.
-7. A change request closed as `CANCELLED` and a proposal withdrawn at the final "No answer"; a swap
-   and an event left pending in their records.
-8. Late answers from an older build count, and are labelled "after the deadline".
-9. Reminders as local notifications on the answering phone, the proposer's notifications local too,
-   and one push type for the last chance.
-10. Two chat cards, "Last chance" and "No answer", and no card per reminder or opening.
+7. While a last chance is still possible, the answering parent's card waits under "Waiting for
+   <proposer>", without buttons.
+8. At the end only a custody proposal is withdrawn; a change request, a swap and an event keep
+   their records, and the clock stores the outcome.
+9. Late answers from an older build count, and show as the answer itself.
+10. Reminders as local notifications on the answering phone, the proposer's notifications local
+    too, one push type for the last chance, and an `answerBy` field on the request pushes.
+11. Two chat cards, "Last chance" and "No answer", pushed to nobody (a functions change); no card
+    per reminder or opening.
+12. The switcher's dot reads the other families' clocks (one more listener each).
+13. The proposer's uid in the clock's id.
 
 ## 11. Left to the builder
 
